@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a47c3729f34851f0dfa7f6e">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Core Technical Design</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Core Technical Design</h1>
+      <p>A technical discussion of Trawler's core functions: how traffic is captured, modelled, and served — how we sniff it, how the network and CA are configured, the stack we build on, and the hard problems we can't wish away.</p>
+      <div class="meta">Draft v2 · 2026-07-03 · Trawler</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="context">Where we are today</h2>
+    <div class="callout" data-c="context-callout">
+      <p>Today <code>src/main.rs</code> is a correct but minimal spine: a <a href="https://crates.io/crates/hudsucker">hudsucker</a> MITM proxy on <code>127.0.0.1:3000</code>, a persisted self-signed CA, and a <code>LogHandler</code> that logs request/response metadata via <code>tracing</code>. Bodies are never touched, nothing is stored, and there is no interface. This doc is the <strong>technical discussion of the core functions only</strong> — it is not a project plan, and it deliberately excludes replay, breakpoints, and WebSocket-frame features.</p>
+    </div>
+
+    <h2 id="decisions">Decisions locked for v1</h2>
+    <p>Three forks are settled; all are reversible behind the store and interface boundaries.</p>
+    <div class="cards">
+      <div class="card" data-c="decision-api">
+        <h3>API-first core</h3>
+        <p><code>trawler-core</code> is UI-agnostic. The product surface is a <strong>local control API</strong>; any UI (TUI, web, or <code>curl</code>) is a client. No UI committed to yet.</p>
+      </div>
+      <div class="card" data-c="decision-store">
+        <h3>In-memory ring buffer</h3>
+        <p>A bounded live buffer, no disk. Nothing survives restart. SQLite / HAR slot in later behind the store boundary.</p>
+      </div>
+      <div class="card" data-c="decision-body">
+        <h3>Buffer-then-forward capture</h3>
+        <p>Collect each body up to a flat <strong>10 MB per-request</strong> cap, then forward; pass through above the cap. One <a href="#cap-streaming">special case</a>: streaming bodies.</p>
+      </div>
+    </div>
+    <div class="callout" data-c="decision-defaults">
+      <p><strong>Chosen defaults (easy to flip):</strong> <span class="badge">axum 0.8</span> · <span class="badge">SSE + REST</span> over WebSocket · <span class="badge">Arc&lt;Mutex&lt;Store&gt;&gt; + broadcast</span> over an actor · <span class="badge">10 MB</span> per-request body cap.</p>
+    </div>
+
+    <h2 id="architecture">Architecture spine</h2>
+    <p>The whole system is one domain object — the <strong>Flow</strong> — plus a stream of events about it. The proxy handler is a dumb <strong>producer</strong>; a central store owns the canonical flows; every interface is a <strong>subscriber</strong>. Live-tailing and filtering fall out of this rather than being bolted on.</p>
+    <div class="diagram" data-c="arch-diagram">
+      <pre class="mermaid">
+flowchart LR
+    client(["client apps"]) &lt;--&gt; hud["hudsucker MITM"]
+    hud &lt;--&gt; rec["Recorder HttpHandler"]
+    rec -- record --> store[("Store: ring buffer")]
+    rec -- FlowEvent --> bus{{"broadcast bus"}}
+    bus -- live --> sse["SSE /stream"]
+    store -- queries --> rest["axum REST"]
+    sse --> ui["UI / curl"]
+    rest --> ui
+      </pre>
+      <div class="caption">Capture path knows nothing about interfaces. Writes go to the store; live events ride a broadcast channel.</div>
+    </div>
+    <div class="callout" data-c="arch-concurrency">
+      <p><strong>Concurrency:</strong> no actor ceremony. The <code>Recorder</code> holds an <code>Arc&lt;Store&gt;</code> (a lock around the ring buffer) plus a <code>broadcast::Sender&lt;FlowEvent&gt;</code>; axum wraps a <code>broadcast::Receiver</code> in a <code>BroadcastStream</code> for the SSE endpoint. The body-cap counter is a plain <code>std::sync::atomic::AtomicUsize</code> (not a tokio primitive) to stay off the async hot path.</p>
+    </div>
+
+    <h2 id="types">Core types</h2>
+    <p>The <code>Flow</code> is the top-level unit of capture — one per HTTP exchange. Everything else is a field of it. Concrete shapes and the reason each exists:</p>
+
+    <h3 id="type-flow">Flow</h3>
+    <pre data-c="type-flow-code">Flow {
+    id: FlowId(Uuid::new_v4()),
+    started_at: SystemTime::now(),
+    request:  RequestRec  { method: GET, uri: "https://api.example.com/v1/items", .. },
+    response: Some(ResponseRec { status: 200, .. }),
+    duration_ms: Some(84),
+}</pre>
+    <p><strong>Why:</strong> the unit the ring buffer stores, the SSE stream fans out, and the REST API returns. <code>response</code> is an <code>Option</code> because a flow exists the moment the request is seen, before any reply.</p>
+
+    <h3 id="type-reqres">RequestRec / ResponseRec</h3>
+    <pre data-c="type-reqres-code">RequestRec {
+    method:  POST,
+    uri:     "https://api.example.com/v1/upload",
+    version: HTTP_11,          // hudsucker normalizes the upstream leg to HTTP/1.1
+    headers: { content-type: application/json, authorization: Bearer … },
+    body:    BodyRec::Captured { bytes, size: 14 },
+}
+ResponseRec {
+    status:  201,
+    headers: { content-type: application/json },
+    body:    BodyRec::NotCaptured { reason: TooLarge { actual: 15_728_640 } },
+}</pre>
+    <p><strong>Why:</strong> splitting request from response lets the store emit a partial <code>Flow</code> (request-only) the instant <code>handle_request</code> fires — before the upstream round-trip completes — enabling low-latency live updates.</p>
+
+    <h3 id="type-body">BodyRec</h3>
+    <pre data-c="type-body-code">enum BodyRec {
+    Captured    { bytes: Bytes, size: usize },
+    Truncated   { prefix: Bytes, captured: usize, total_hint: Option&lt;usize&gt; },
+    Streaming   { content_type: String },   // text/event-stream etc. — forwarded, never buffered
+    NotCaptured { reason: NotCapturedReason },
+    Empty,
+}</pre>
+    <p><strong>Why:</strong> a plain <code>Option&lt;Bytes&gt;</code> can't distinguish "empty body", "skipped because streaming", and "too large" — distinctions the UI must render differently and a consumer must handle without guessing.</p>
+
+    <h3 id="type-event">FlowEvent</h3>
+    <pre data-c="type-event-code">enum FlowEvent {          // broadcast; axum SSE maps each variant to an SSE event
+    RequestCaptured  { flow_id: FlowId, req: RequestRec },
+    ResponseCaptured { flow_id: FlowId, res: ResponseRec, duration_ms: u64 },
+    FlowEvicted      { flow_id: FlowId },
+}</pre>
+    <p><strong>Why:</strong> the stream must push incremental lifecycle transitions (request before response, ring-buffer eviction). A single "flow updated" event can't express these without overloading its payload.</p>
+
+    <h3 id="type-view">FlowView</h3>
+    <pre data-c="type-view-code">// The JSON returned by GET /flows/:id — a flattened, UI-ready projection
+{
+  "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "started_at": "2026-07-03T12:34:56.789Z",
+  "duration_ms": 84,
+  "method": "POST", "uri": "https://api.example.com/v1/items", "status": 201,
+  "request_body":  { "state": "captured",  "size": 14, "data_base64": "eyJuYW1lIjoiZm9vIn0=" },
+  "response_body": { "state": "streaming", "content_type": "text/event-stream" }
+}</pre>
+    <p><strong>Why:</strong> a read-only serialized projection for REST/SSE consumers. Decoupling it from the internal <code>Flow</code> lets the storage layer evolve without breaking the API contract.</p>
+
+    <h2 id="body-capture">Body capture</h2>
+    <p>In <code>handle_request</code> / <code>handle_response</code> the body is drained with <code>http_body_util::BodyExt::collect().await?.to_bytes()</code> (hyper 1 removed <code>hyper::body::to_bytes</code>). This is a destructive read, so the body is <strong>reconstructed</strong> with <code>Body::from(bytes)</code> before forwarding — even on the cap-exceeded path, so a capture decision never breaks the connection.</p>
+    <div class="callout" data-c="body-cap-rule">
+      <p><strong>v1 rule — kept deliberately simple: one config value, a 10 MB cap applied per request.</strong> Buffer each request and response body up to 10 MB, then forward. If a body exceeds 10 MB, forward it untouched and record <code>BodyRec::NotCaptured { TooLarge }</code>. Every body is judged on its own size — there is no shared or global budget across requests, so parallel traffic never interferes.</p>
+    </div>
+
+    <h3 id="cap-streaming">The one special case — streaming responses</h3>
+    <p>A flat per-request cap handles ordinary bodies cleanly. The single case it doesn't cover is a body that <em>never ends</em>: a Server-Sent Events stream (<code>Content-Type: text/event-stream</code>) or a live log tail trickles bytes and may never reach the 10 MB cap or send an EOF. If Trawler waits to finish buffering before forwarding, that exchange stalls and the client sees nothing.</p>
+    <p><strong>Example.</strong> A page subscribes to <code>GET /notifications</code> (SSE); the server pushes one small event every few seconds and never closes the stream. Buffering waits forever, so the page never receives its events — a break caused by the proxy, not the server.</p>
+    <div class="diagram" data-c="cap-streaming-diagram">
+      <pre class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant P as Trawler
+    participant O as Origin
+    C->>P: GET /notifications
+    P->>O: GET /notifications
+    O-->>P: event 1
+    O-->>P: event 2
+    Note over P: still buffering, waiting for the body to end
+    O-->>P: event 3, stream stays open
+    Note over C: client received nothing, looks frozen
+      </pre>
+      <div class="caption">Buffering a body that never ends hangs the whole exchange. Fix: detect streaming Content-Types and forward as-is, recording a <code>BodyRec::Streaming</code> marker instead of bytes.</div>
+    </div>
+
+    <p>The fix is small and doesn't complicate the cap: detect streaming <code>Content-Type</code>s and forward those bodies without buffering, recording a <code>BodyRec::Streaming</code> marker instead of bytes. Everything else uses the flat 10 MB-per-request rule.</p>
+
+    <h2 id="api">Control API surface (inspect-only)</h2>
+    <p><strong>SSE + REST</strong>, scriptable from day one. v1 is purely for <em>inspecting</em> traffic — no mutation endpoints.</p>
+    <table data-c="api-table">
+      <thead><tr><th>Endpoint</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET /flows?host=&amp;method=&amp;status=&amp;content_type=&amp;q=</code></td><td>Filtered listing — where filter/search lands</td></tr>
+        <tr><td><code>GET /flows/:id</code></td><td>Full flow detail (a <code>FlowView</code>)</td></tr>
+        <tr><td><code>GET /flows/:id/{request,response}/body?decode=1</code></td><td>Raw bytes, or decoded + pretty-printed</td></tr>
+        <tr><td><code>GET /stream</code></td><td>SSE of live <code>FlowEvent</code>s</td></tr>
+        <tr><td><code>GET /ca.crt</code></td><td>Download the root CA — the delivery path for iOS / Android trust</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="decoding">Decoding stays view-side</h2>
+    <div class="callout" data-c="decoding-callout">
+      <p>Capture stores <strong>raw bytes + <code>content-encoding</code></strong> faithfully. The <code>?decode=1</code> path runs the chain lazily at view time: <code>content-encoding (gzip/deflate/br)</code> → charset → format detect (JSON/XML/form) → pretty-print. Same bytes, many renderings — the capture path stays fast and honest.</p>
+    </div>
+
+    <h2 id="sniffing">How interception works (sniffing the data)</h2>
+    <p>Trawler is an <strong>explicit proxy</strong>: clients are configured to send their traffic to it. Two cases follow — <strong>plain HTTP</strong>, an unencrypted pass-through we can read directly, and <strong>HTTPS</strong>, which is decrypted via two TLS legs with a plaintext gap in the middle. A diagram for each is below.</p>
+    <div class="callout" data-c="explicit-vs-transparent">
+      <p><strong>Explicit proxy vs. transparent (NAT) interception.</strong> An <em>explicit</em> proxy is one the client knows about and is configured to use: the app sends its requests — or a <code>CONNECT</code> for HTTPS — straight to <code>127.0.0.1:3000</code>. That is Trawler v1.</p>
+      <p><em>Transparent (NAT) interception</em> is the opposite: the client is <strong>not</strong> configured and has no idea a proxy exists. A router or firewall rule (macOS <code>pf</code>, Linux <code>iptables</code>/<code>nftables</code>) silently rewrites the packet's destination so it lands on the proxy instead of the real server — "NAT" because it rewrites network addresses in transit. Since there is no <code>CONNECT</code> line announcing the target, the proxy must infer the destination host from the TLS <strong>SNI</strong> field in the ClientHello. It catches apps that ignore proxy settings, but it needs root and OS-specific network plumbing — so it is out of scope for v1.</p>
+    </div>
+
+    <h3 id="sniff-http">Case 1 — Plain HTTP</h3>
+    <p>No TLS, nothing to decrypt. The client sends the proxy a full absolute-form request line — <code>GET http://api.example.com/items</code> — Trawler records it, forwards it to the origin, records the response, and passes it back. Both <code>handle_request</code> and <code>handle_response</code> see everything in the clear.</p>
+    <div class="diagram" data-c="http-diagram">
+      <pre class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant P as Trawler
+    participant O as Origin
+    C->>P: GET http://api.example.com/items
+    Note over P: handle_request, capture in the clear
+    P->>O: GET /items
+    O->>P: 200 OK plus body
+    Note over P: handle_response, capture and broadcast
+    P->>C: 200 OK plus body
+      </pre>
+      <div class="caption">Plain HTTP: no encryption, a straight pass-through. Trawler reads request and response directly — no CA and no TLS involved.</div>
+    </div>
+
+    <h3 id="sniff-https">Case 2 — HTTPS via CONNECT</h3>
+    <p>The encrypted case is the interesting one: <strong>two TLS legs</strong> — one to the client, one to the origin — with a <strong>plaintext HTTP gap</strong> in the middle, and that gap is where the handler observes decoded requests and responses. Step by step:</p>
+    <ol data-c="sniffing-steps">
+      <li>Client is pointed at <code>127.0.0.1:3000</code> (system proxy settings or <code>HTTP_PROXY</code>/<code>HTTPS_PROXY</code>).</li>
+      <li>Client sends <code>CONNECT host:443</code>; <code>handle_request</code> fires on the CONNECT — an inspect / short-circuit point.</li>
+      <li><code>should_intercept</code> decides; if false, a raw <code>copy_bidirectional</code> TCP tunnel is opened with <em>no</em> visibility.</li>
+      <li>If intercepting, the proxy replies <code>200 OK</code> and peeks 4 bytes — <code>0x16 0x03</code> marks a TLS ClientHello (literal <code>GET </code> marks plain HTTP re-sent through the tunnel).</li>
+      <li><code>gen_server_config(host:port)</code> returns a cached leaf <code>ServerConfig</code> or builds one signed by the CA; <code>TlsAcceptor</code> completes the <strong>client-leg</strong> TLS handshake (ALPN selects http/1.1).</li>
+      <li>The first decrypted request arrives; <code>handle_request</code> fires with a fully-parsed <code>Request</code> before the upstream send.</li>
+      <li>The proxy drains the body, applies the cap, rebuilds the body, and <strong>lazily</strong> opens the <strong>upstream leg</strong> (TCP + TLS) — HTTP/1.1 only, because <code>normalize_request</code> unconditionally sets <code>HTTP_11</code>.</li>
+      <li>Origin responds; the proxy drains and captures the response body the same way.</li>
+      <li><code>handle_response</code> fires; the flow lands in the ring buffer and a <code>FlowEvent</code> is broadcast to SSE subscribers.</li>
+      <li>The response is re-encrypted over the client leg and delivered.</li>
+    </ol>
+    <div class="diagram" data-c="sniffing-diagram">
+      <pre class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant P as Trawler
+    participant O as Origin
+    C->>P: CONNECT host:443
+    Note over P: handle_request on CONNECT
+    P->>C: 200 OK
+    Note over P: peek 4 bytes, 0x16 0x03 means TLS
+    Note over P: gen_server_config, cache hit or build leaf
+    C->>P: TLS ClientHello
+    P->>C: ServerHello plus leaf cert
+    Note over C,P: client-leg TLS up, ALPN http/1.1
+    C->>P: GET /v1/items decrypted
+    Note over P: handle_request, drain and capture body
+    P->>O: TLS handshake, lazy upstream leg
+    O->>P: ServerHello
+    Note over P,O: upstream TLS up, HTTP/1.1 only
+    P->>O: GET /v1/items
+    O->>P: 200 OK plus body decrypted
+    Note over P: handle_response, capture and broadcast FlowEvent
+    P->>C: 200 OK plus body re-encrypted
+      </pre>
+      <div class="caption">CONNECT + dual-TLS interception. The upstream leg opens lazily on the first tunneled request; hudsucker forces HTTP/1.1 upstream regardless of what the client negotiated.</div>
+    </div>
+
+    <h2 id="cert-model">Certificate &amp; trust model</h2>
+    <p>Trawler holds a single self-signed CA (ECDSA P-256), generated on first launch and persisted to <code>ca/trawler-ca.pem</code> / <code>.key</code>. For each HTTPS connection, the <code>host:port</code> from the CONNECT line keys a <a href="https://crates.io/crates/moka">moka</a> cache (1,000 entries, ~182-day TTL, W-TinyLFU eviction). On a miss, rcgen builds a leaf whose CN + DNS SAN is the hostname, signs it with the CA, and caches the <code>Arc&lt;ServerConfig&gt;</code>. Warm hits are sub-microsecond.</p>
+    <div class="diagram" data-c="cert-diagram">
+      <pre class="mermaid">
+flowchart TD
+    A["CONNECT host:443 arrives"] --> B{"Cache hit for host:port?"}
+    B -- yes --> E["Return cached ServerConfig"]
+    B -- no --> C["Build leaf cert for hostname"]
+    C --> D["Sign with CA key; subject key = CA key"]
+    D --> F["Build ServerConfig; ALPN http/1.1"]
+    F --> G["Store in moka cache 1000 / ~182d TTL"]
+    G --> E
+    E --> H["TlsAcceptor.accept client-leg TLS"]
+      </pre>
+      <div class="caption">Per-host leaf lifecycle. A cold miss is a single ECDSA sign (~15–50 µs), not a keygen — see below.</div>
+    </div>
+    <div class="callout warn" data-c="cert-quirks">
+      <p><strong>Two hudsucker realities to know (both verified):</strong></p>
+      <ul>
+        <li><strong>Every leaf reuses the CA's key</strong> as its subject key — no per-host key is generated (<code>signed_by(&amp;ca_key, &amp;ca_cert, &amp;ca_key)</code>). All hosts share one private key. It's a deliberate shortcut: a cold miss is one sign op, not a keygen. Fine for a local debug tool.</li>
+        <li><strong>IP-address CONNECT targets are a bug:</strong> hudsucker always emits a <em>DNS-type</em> SAN, even for an IP literal. RFC 5280 requires an IP-type SAN for IPs, so modern TLS stacks reject these — connecting to <code>https://a.b.c.d</code> through the proxy fails. Worth documenting / patching.</li>
+      </ul>
+    </div>
+
+    <h2 id="network">Network configuration &amp; CA trust</h2>
+    <p>Two independent problems: <strong>routing</strong> traffic to <code>127.0.0.1:3000</code>, and <strong>trusting</strong> the CA so leaf certs are accepted. Configure the proxy without trusting the CA → TLS errors; trust the CA without routing → no captured traffic. v1 supports <strong>explicit forward-proxy mode only</strong> (transparent/NAT interception is out of scope). ECH is a non-issue here: browsers suppress ECH under an explicit proxy, so the CONNECT line always carries the plaintext host.</p>
+    <table data-c="network-table">
+      <thead><tr><th>Platform</th><th>Route</th><th>Trust</th><th>Gotcha</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>macOS</td>
+          <td>Network &gt; Proxies (HTTP + HTTPS → 127.0.0.1:3000); also <code>HTTP_PROXY</code>/<code>HTTPS_PROXY</code> for CLI.</td>
+          <td><code>sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem</code> (one interactive admin prompt).</td>
+          <td>Go bypasses the proxy for localhost destinations; Java needs JVM proxy flags + a <code>cacerts</code> import; Flutter desktop ignores the system keychain.</td>
+        </tr>
+        <tr>
+          <td>Windows</td>
+          <td>Settings &gt; Proxy (manual, 127.0.0.1:3000) or system env vars.</td>
+          <td>Per-user (no admin, browsers): <code>certutil -user -addstore Root trawler-ca.pem</code>. Machine-wide: elevated <code>certutil -addstore Root …</code>.</td>
+          <td>EDR/AV may flag <code>certutil</code> root-store writes as a persistence technique; Firefox needs its own NSS import.</td>
+        </tr>
+        <tr>
+          <td>Linux</td>
+          <td><code>HTTP_PROXY</code>/<code>HTTPS_PROXY</code> for CLI; DE proxy panel for GUI.</td>
+          <td>System: copy to <code>/usr/local/share/ca-certificates</code> + <code>update-ca-certificates</code> (or the <code>/etc/pki</code> anchors path). Plus NSS <code>certutil</code> for Chrome/Chromium.</td>
+          <td>Flatpak/Snap browsers use sandboxed cert stores neither method reaches; Chrome NSS path moved in M146.</td>
+        </tr>
+        <tr>
+          <td>iOS</td>
+          <td>Wi-Fi &gt; Configure Proxy (manual, Mac's LAN IP:3000); per-network.</td>
+          <td>Open <code>http://&lt;ip&gt;:3000/ca.crt</code> in Safari to install the profile, <em>then</em> Settings &gt; General &gt; About &gt; Certificate Trust Settings → toggle full trust (mandatory, frequently missed).</td>
+          <td>iOS 18.0–18.1 had a bug hiding the trust toggle (fixed 18.2). Pinned apps never work.</td>
+        </tr>
+        <tr>
+          <td>Android</td>
+          <td>Wi-Fi &gt; Modify network &gt; Proxy (manual, LAN IP:3000).</td>
+          <td>Owned/debug apps: <code>network_security_config.xml</code> with a <code>user</code> trust anchor. Rooted/emulator: Magisk Cert-Fixer or the ADB nsenter/Zygote bind-mount (Android 14+ APEX store).</td>
+          <td>API 24+ apps reject user CAs by default → most Play Store apps are opaque. System-store install triggers Chrome CT errors. Best-effort only.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="stack">Tech stack &amp; libraries</h2>
+    <p>Recommended v1 stack, with the alternatives that were weighed and rejected.</p>
+    <table data-c="stack-table">
+      <thead><tr><th>Layer</th><th>Choice</th><th>Why</th><th>Alternatives weighed</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Proxy foundation</td><td><strong>hudsucker 0.24.1</strong></td>
+          <td>Owns CONNECT + dual-TLS + per-host leaf issuance + handler dispatch — saves ~600–800 lines of subtle plumbing. Built on hyper 1, shares the runtime with axum. Actively maintained.</td>
+          <td>Direct hyper 1 (v2 fallback if h2 proves inadequate); <code>http-mitm-proxy</code> (lighter middle ground).</td>
+        </tr>
+        <tr>
+          <td>TLS</td><td><strong>rustls 0.23</strong> (hudsucker <code>rustls-client</code>)</td>
+          <td>TLS 1.2/1.3 on both legs, ALPN, client-cert capable; native rcgen integration. Not truly zero-C — the aws-lc-rs/ring backends need a C compiler (NASM on Windows).</td>
+          <td>native-tls / OpenSSL: system C lib, no server-side client-cert auth. Rejected.</td>
+        </tr>
+        <tr>
+          <td>Cert generation</td><td><strong>rcgen 0.14</strong></td>
+          <td>Generates the CA + leaf certs. hudsucker 0.24 <em>requires</em> the new <code>Issuer</code> API.</td>
+          <td>Staying on 0.13 blocks the hudsucker upgrade. Not viable.</td>
+        </tr>
+        <tr>
+          <td>Async runtime</td><td><strong>tokio 1</strong> (full)</td>
+          <td>One multi-threaded runtime shared by proxy + API. Body-cap counter is a std <code>AtomicUsize</code> with <code>AcqRel</code> CAS.</td>
+          <td>actix-rt's per-worker single-threaded runtimes conflict — the core reason actix-web is out.</td>
+        </tr>
+        <tr>
+          <td>Control API</td><td><strong>axum 0.8</strong></td>
+          <td>hyper 1 + Tower, same stack; <code>Sse&lt;S&gt;</code> over a <code>BroadcastStream</code>; <code>Json&lt;T&gt;</code> handlers. No executor boundary to cross.</td>
+          <td>actix-web (runtime conflict), warp (stalled), poem (no edge). Rejected.</td>
+        </tr>
+        <tr>
+          <td>Serialization</td><td><strong>serde + serde_json</strong></td>
+          <td>DTO derive + axum's <code>Json</code> extractor.</td>
+          <td>simd-json only if serialization ever profiles hot. Premature.</td>
+        </tr>
+        <tr>
+          <td>Body plumbing</td><td><strong>http-body-util + bytes</strong></td>
+          <td>Drain via <code>BodyExt::collect().await?.to_bytes()</code>; <code>bytes::Bytes</code> is the zero-copy buffer under hyper/axum.</td>
+          <td>Manual <code>Body</code> polling — reimplements what the combinators give. No benefit.</td>
+        </tr>
+        <tr>
+          <td>Logging</td><td><strong>tracing + tracing-subscriber</strong></td>
+          <td>Already integrated; composes with Tower middleware for per-request spans.</td>
+          <td>env_logger / log — no structured fields or spans.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="stack-deps">
+      <p><strong>Concrete dependency changes required</strong> (the current <code>Cargo.toml</code> pins are behind):</p>
+      <ul>
+        <li>Upgrade <code>hudsucker</code> 0.22 → <strong>0.24</strong> and <code>rcgen</code> 0.13 → <strong>0.14</strong> <em>together</em>. This fixes two breaking changes: 0.23 added a mandatory rustls <code>CryptoProvider</code> to <code>RcgenAuthority::new()</code>; 0.24 changed its first args from <code>(KeyPair, Certificate)</code> to an <code>rcgen::Issuer</code>. <code>load_or_create_ca()</code> and the <code>RcgenAuthority::new</code> call are the only affected sites.</li>
+        <li>Add <strong><code>axum</code></strong> (+ <code>tokio-stream</code> for <code>BroadcastStream</code>), <strong><code>serde_json</code></strong>, and <strong><code>http-body-util</code></strong> as direct dependencies (hudsucker uses http-body-util internally but does not re-export it).</li>
+      </ul>
+    </div>
+
+    <h2 id="challenges">Technical challenges &amp; limits</h2>
+    <p>An honest catalog — what breaks interception, and Trawler's stance. Severity for a debug-your-own-traffic tool: <span class="badge" style="color:var(--warn)">blocker</span> <span class="badge" style="color:var(--accent)">major</span> <span class="badge" style="color:var(--muted)">minor</span>.</p>
+    <table data-c="challenges-table">
+      <thead><tr><th>Challenge</th><th>What it means for Trawler</th><th>Severity</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Certificate pinning</td>
+          <td>Apps that pin a cert/key (most mobile banking, payments, high-value apps) reject our leaf regardless of CA trust — the connection fails app-side and <strong>no flow is recorded</strong>. Only bypass is owning the server key, or app instrumentation (Frida), both out of scope. Browser traffic is unaffected (Chrome ignores static pins for locally-installed roots).</td>
+          <td><span class="badge" style="color:var(--warn)">blocker</span></td>
+        </tr>
+        <tr>
+          <td>Streaming bodies</td>
+          <td>With a flat 10 MB-per-request cap there is no shared-budget or race issue; the only special case is a body that never ends (SSE, live log). Detect streaming <code>Content-Type</code>s and forward without buffering — see <a href="#cap-streaming">Body capture</a>.</td>
+          <td><span class="badge" style="color:var(--accent)">major</span></td>
+        </tr>
+        <tr>
+          <td>HTTP/2 end-to-end</td>
+          <td>hudsucker's <code>http2</code> feature is h2 ALPN-accept + HTTP/1.1 normalization, <em>not</em> true end-to-end h2. Without the feature (current), h2 is never advertised → clients use http/1.1. HPACK, priorities, and push are invisible. v1: stay http/1.1-only; don't advertise h2 interception.</td>
+          <td><span class="badge" style="color:var(--accent)">major</span></td>
+        </tr>
+        <tr>
+          <td>HTTP/3 / QUIC</td>
+          <td>UDP-based; a TCP CONNECT proxy is transparent to it → QUIC bypasses Trawler entirely (a growing slice of browser traffic). Mitigation: optional, opt-in blocking of outbound UDP/443 to force TCP fallback, with guaranteed cleanup on shutdown; breaks non-browser QUIC that lacks fallback.</td>
+          <td><span class="badge" style="color:var(--accent)">major</span></td>
+        </tr>
+        <tr>
+          <td>Mutual TLS (client certs)</td>
+          <td>If the origin requests a client cert, Trawler can't complete the upstream handshake (no client key) — the flow fails. Needs a <strong>per-host bypass/tunnel list</strong>. Full interception is possible only when the client credentials are supplied to the proxy.</td>
+          <td><span class="badge" style="color:var(--accent)">major</span></td>
+        </tr>
+        <tr>
+          <td>Non-proxy-aware apps</td>
+          <td>Raw-socket / custom-stack apps ignore proxy settings (Go to localhost, Java w/o JVM flags, Flutter desktop, bare Node <code>http</code> in Electron) → no flow recorded. Explicit-proxy covers browsers, CLI, CFNetwork/WinINet. Transparent mode is future work (root + per-OS).</td>
+          <td><span class="badge" style="color:var(--accent)">major</span></td>
+        </tr>
+        <tr>
+          <td>Encrypted Client Hello (ECH)</td>
+          <td>Not a threat to explicit-proxy host discovery (browsers suppress ECH under a proxy; CONNECT carries the plaintext host). The only exposure is the upstream leg to ECH-enforcing origins, which relies on retry-without-ECH fallback today. Becomes major only if transparent mode is added.</td>
+          <td><span class="badge" style="color:var(--muted)">minor</span></td>
+        </tr>
+        <tr>
+          <td>Performance under load</td>
+          <td>Cold leaf = one ECDSA P-256 sign (~15–50 µs; CA key reused, no keygen); warm moka hits sub-µs; the double handshake adds ~5–15 ms/conn, dominated by networking. Not a bottleneck for localhost debugging. One requirement: ring-buffer eviction must weight by <em>body bytes</em>, not flow count.</td>
+          <td><span class="badge" style="color:var(--muted)">minor</span></td>
+        </tr>
+        <tr>
+          <td>HSTS / preload</td>
+          <td>No impact once the CA is trusted — HSTS only forces HTTPS, which Trawler terminates normally.</td>
+          <td><span class="badge" style="color:var(--muted)">minor</span></td>
+        </tr>
+        <tr>
+          <td>wss transport</td>
+          <td>wss flows through the tunnel; the <code>Upgrade</code> request is captured as a normal HTTP record, but frames are currently forwarded uninspected (NoopHandler). Frame-level capture is available later via hudsucker's <code>WebSocketHandler</code> — out of v1 scope.</td>
+          <td><span class="badge" style="color:var(--muted)">minor</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="authorization-callout">
+      <p><strong>Authorization boundary.</strong> Interception requires a locally-trusted root CA and decrypts everything routed through it. Trawler is for inspecting <em>your own</em> traffic on devices and services you own or are authorized to test — this constraint is a first-class part of the design, not a disclaimer.</p>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
