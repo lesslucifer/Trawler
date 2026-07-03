@@ -1,0 +1,22 @@
+[package]
+name = "trawler"
+version = "0.1.0"
+edition = "2021"
+description = "A native HTTP(S) debugging proxy that intercepts and inspects network traffic, à la Charles / Proxyman"
+license = "MIT"
+repository = "https://github.com/lesslucifer/Trawler"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+hudsucker = { version = "0.22", features = ["rcgen-ca"] }
+rcgen = "0.13"
+rustls-pemfile = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+http = "1"
+bytes = "1"
+async-trait = "0.1"
+
+[profile.release]
+lto = true
+codegen-units = 1
