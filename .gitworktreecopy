@@ -1,0 +1,17 @@
+# Files/patterns to copy from the source worktree into a newly-created worktree.
+# Applied by the post-checkout hook (.cargo-husky/hooks/post-checkout). Prefixes:
+#   ~>   symlink instead of copy (for heavy dirs)
+#   !    run a bash command in the new worktree
+
+# Environment files — each worktree needs its own .env (gitignored, never committed)
+**/*.env*
+
+# Generated CA — copy so every worktree presents the same system-trusted CA
+# instead of generating a fresh, untrusted one (config.rs resolves ./ca from cwd)
+ca/*
+
+# Symlink the cargo build cache so a new worktree builds incrementally
+~> target
+
+# If you ever need an isolated build dir per worktree instead of the symlink,
+# comment out the target line above.
