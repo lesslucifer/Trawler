@@ -1,0 +1,12 @@
+schema: test/v1
+level: epic                   # commit | working-unit | epic — sets which layers the charter requires
+tests:
+  unit:
+    count: 42
+    covers: "config defaults/paths; store ring accounting, newest-first, filters, eviction, events; flow retention/host/content-type; capture decision table + byte round-trip; decode gzip/deflate round-trips; view JSON contracts; recorder header mapping"
+  integration:
+    count: 7
+    covers: "control API list/get/body raw+?decode/stream via tower::oneshot, CA download (6); CA generate-then-reload idempotence (1)"
+  e2e:
+    count: 4
+    covers: "capture epic — 4 fns / 6 scenarios: plain HTTP GET+POST, SSE passthrough + over-cap body forwarded, gzip raw+?decode + CA download, HTTPS MITM decrypt+capture"
