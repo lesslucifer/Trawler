@@ -85,7 +85,7 @@ impl HttpHandler for Recorder {
             body: body_rec,
         };
 
-        let duration_ms = exchange.start.elapsed().as_millis() as u64;
+        let duration_ms = u64::try_from(exchange.start.elapsed().as_millis()).unwrap_or(u64::MAX);
         self.store.set_response(exchange.flow_id, response, duration_ms);
 
         Response::from_parts(parts, forwarded)

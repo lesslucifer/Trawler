@@ -12,7 +12,7 @@ pub fn decode_body(
 ) -> Vec<u8> {
     let decompressed = match content_encoding.map(str::trim).map(str::to_ascii_lowercase).as_deref()
     {
-        Some("gzip") | Some("x-gzip") => decompress(GzDecoder::new(raw), raw),
+        Some("gzip" | "x-gzip") => decompress(GzDecoder::new(raw), raw),
         Some("deflate") => decompress(ZlibDecoder::new(raw), raw),
         _ => raw.to_vec(),
     };
@@ -33,7 +33,7 @@ fn decompress<R: Read>(mut decoder: R, raw: &[u8]) -> Vec<u8> {
 }
 
 fn is_json(content_type: Option<&str>) -> bool {
-    content_type.map(|ct| ct.to_ascii_lowercase().contains("json")).unwrap_or(false)
+    content_type.is_some_and(|ct| ct.to_ascii_lowercase().contains("json"))
 }
 
 fn pretty_json(bytes: Vec<u8>) -> Vec<u8> {

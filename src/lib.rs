@@ -69,7 +69,7 @@ pub async fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {
                 error!("control API stopped: {e}");
             }
         }
-        _ = shutdown_signal() => {
+        () = shutdown_signal() => {
             info!("shutting down");
         }
     }

@@ -68,12 +68,10 @@ impl FlowFilter {
             let needle = ct.to_ascii_lowercase();
             let hit = flow
                 .request_content_type()
-                .map(|c| c.to_ascii_lowercase().contains(&needle))
-                .unwrap_or(false)
+                .is_some_and(|c| c.to_ascii_lowercase().contains(&needle))
                 || flow
                     .response_content_type()
-                    .map(|c| c.to_ascii_lowercase().contains(&needle))
-                    .unwrap_or(false);
+                    .is_some_and(|c| c.to_ascii_lowercase().contains(&needle));
             if !hit {
                 return false;
             }

@@ -23,10 +23,10 @@ fn git(dir: &Path, args: &[&str]) {
 fn install_post_checkout_hook(repo: &Path) {
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join(".cargo-husky/hooks/post-checkout");
     let hooks_dir = repo.join(".git/hooks");
-    fs::create_dir_all(&hooks_dir).unwrap();
+    fs::create_dir_all(&hooks_dir).expect("failed to create hooks dir");
     let dest = hooks_dir.join("post-checkout");
-    fs::copy(&src, &dest).unwrap();
-    fs::set_permissions(&dest, fs::Permissions::from_mode(0o755)).unwrap();
+    fs::copy(&src, &dest).expect("failed to copy post-checkout hook");
+    fs::set_permissions(&dest, fs::Permissions::from_mode(0o755)).expect("failed to chmod hook");
 }
 
 #[test]

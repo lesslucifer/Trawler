@@ -36,6 +36,7 @@ pub struct BodyQuery {
     decode: Option<String>,
 }
 
+#[derive(Clone, Copy)]
 enum Leg {
     Request,
     Response,
@@ -149,7 +150,7 @@ fn bad_id() -> Response {
 }
 
 fn wants_decode(query: &BodyQuery) -> bool {
-    matches!(query.decode.as_deref(), Some("1") | Some("true"))
+    matches!(query.decode.as_deref(), Some("1" | "true"))
 }
 
 fn header_value<'a>(headers: &'a [Header], name: &str) -> Option<&'a str> {
