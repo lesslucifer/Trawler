@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Testing Standard</h1>
       <p>The permanent, project-wide rule for how Trawler is tested: each unit of work carries a mandatory kind of test — <strong>Epic → e2e, Working Unit → integration, Commit → unit</strong>.</p>
-      <div class="meta">Draft v4 · 2026-07-04 · Trawler</div>
+      <div class="meta">Draft v5 · 2026-07-05 · Trawler</div>
     </div>
   </header>
   <main>
@@ -152,7 +152,24 @@ flowchart TD
     </div>
 
     <h2 id="ci">CI gates</h2>
-    <p>Merge is unattended, so a red gate blocks it: every push runs <code>fmt</code>, <code>clippy -D warnings</code>, the full test suite and a coverage floor; mutation and dependency/advisory audits run on a schedule; the same fast gates also run locally as git hooks via <code>cargo-husky</code>.</p>
+    <p>Merge is unattended, so a red gate blocks it: every push runs <code>fmt</code>, <code>clippy -D warnings</code>, the full test suite and a coverage floor; mutation and dependency/advisory audits run on a schedule; the same fast gates also run locally as git hooks via <code>cargo-husky</code>. Beyond these mechanical gates, marking work done also requires a <a href="#verification">test manifest note</a> the workflow judges against the Done-gate.</p>
+
+    <h2 id="verification">Testing DoD — the test manifest note</h2>
+    <div class="callout" data-c="manifest-rule">
+      <p><strong>MUST</strong> — every finished change auto-writes its test manifest as a YAML <code>git notes</code> entry (schema below); the workflow judges it against the charter <a href="#charter">Done-gate</a>. <strong>No manifest ⇒ the work isn't done.</strong></p>
+    </div>
+    <pre data-c="manifest-yaml">schema: test/v1               # manifest format version
+level: commit                 # commit | working-unit | epic — sets which layers the charter requires
+tests:                        # per layer: how many + what they cover (facts, checked against the diff)
+  unit:
+    count: 42
+    covers: "decision table + byte round-trip; ring accounting, filters, eviction; decode round-trips; view JSON"
+  integration:                # omit a layer block entirely if it wasn't touched
+    count: 7
+    covers: "control API list/get/body/stream (tower::oneshot); CA generate-then-reload"
+  e2e:
+    count: 6
+    covers: "plain + HTTPS MITM capture; SSE passthrough; over-cap body; gzip ?decode; CA download"</pre>
   </main>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';

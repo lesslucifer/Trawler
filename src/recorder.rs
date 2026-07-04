@@ -91,3 +91,31 @@ impl HttpHandler for Recorder {
         Response::from_parts(parts, forwarded)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::headers_to_vec;
+    use http::{HeaderMap, HeaderValue};
+
+    #[test]
+    fn maps_and_preserves_duplicates() {
+        let mut map = HeaderMap::new();
+        map.append("x-dup", "one".parse().unwrap());
+        map.append("x-dup", "two".parse().unwrap());
+        map.insert("content-type", "text/plain".parse().unwrap());
+        let out = headers_to_vec(&map);
+        let dup: Vec<_> =
+            out.iter().filter(|h| h.name == "x-dup").map(|h| h.value.as_str()).collect();
+        assert_eq!(dup, vec!["one", "two"]);
+        assert!(out.iter().any(|h| h.name == "content-type" && h.value == "text/plain"));
+    }
+
+    #[test]
+    fn non_utf8_value_is_lossy() {
+        let mut map = HeaderMap::new();
+        map.insert("x-bin", HeaderValue::from_bytes(&[0xff, 0xfe]).unwrap());
+        let out = headers_to_vec(&map);
+        let v = out.iter().find(|h| h.name == "x-bin").unwrap();
+        assert!(v.value.contains('\u{FFFD}'));
+    }
+}

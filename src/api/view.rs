@@ -159,3 +159,119 @@ pub fn sse_event(event: &FlowEvent) -> (&'static str, Value) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{sse_event, BodyView, FlowSummary, FlowView};
+    use crate::event::FlowEvent;
+    use crate::flow::{BodyRec, NotCapturedReason, ResponseRec};
+    use crate::test_support::{captured, FlowBuilder};
+    use serde_json::json;
+
+    fn body_view(body: &BodyRec) -> serde_json::Value {
+        serde_json::to_value(BodyView::from(body)).unwrap()
+    }
+
+    #[test]
+    fn body_view_wire_shapes() {
+        assert_eq!(
+            body_view(&captured(b"hi")),
+            json!({"state":"captured","size":2,"data_base64":"aGk="})
+        );
+        let trunc = BodyRec::Truncated {
+            prefix: bytes::Bytes::from_static(b"hi"),
+            captured: 2,
+            total_hint: Some(9),
+        };
+        assert_eq!(
+            body_view(&trunc),
+            json!({"state":"truncated","captured":2,"total_hint":9,"data_base64":"aGk="})
+        );
+        assert_eq!(
+            body_view(&BodyRec::Streaming { content_type: "text/event-stream".into() }),
+            json!({"state":"streaming","content_type":"text/event-stream"})
+        );
+        assert_eq!(
+            body_view(&BodyRec::NotCaptured { reason: NotCapturedReason::TooLarge { actual: 42 } }),
+            json!({"state":"not_captured","reason":"too_large","actual":42})
+        );
+        assert_eq!(
+            body_view(&BodyRec::NotCaptured { reason: NotCapturedReason::ReadError }),
+            json!({"state":"not_captured","reason":"read_error","actual":null})
+        );
+        assert_eq!(body_view(&BodyRec::Empty), json!({"state":"empty"}));
+    }
+
+    #[test]
+    fn flow_view_full_shape() {
+        let flow = FlowBuilder::new()
+            .method("POST")
+            .uri("http://x/y")
+            .req_header("A", "b")
+            .req_body(captured(b"req"))
+            .status(201)
+            .resp_header("C", "d")
+            .resp_body(captured(b"res"))
+            .build();
+        let v = serde_json::to_value(FlowView::from(&flow)).unwrap();
+        assert_eq!(v["method"], "POST");
+        assert_eq!(v["uri"], "http://x/y");
+        assert_eq!(v["status"], 201);
+        assert_eq!(v["duration_ms"], 1);
+        assert_eq!(v["request_headers"], json!([{"name":"A","value":"b"}]));
+        assert_eq!(v["response_headers"], json!([{"name":"C","value":"d"}]));
+        assert_eq!(v["request_body"]["state"], "captured");
+        assert_eq!(v["response_body"]["state"], "captured");
+        assert!(v["started_at"].as_str().unwrap().contains('T'));
+    }
+
+    #[test]
+    fn flow_view_without_response() {
+        let v = serde_json::to_value(FlowView::from(&FlowBuilder::new().build())).unwrap();
+        assert_eq!(v["status"], serde_json::Value::Null);
+        assert_eq!(v["response_body"], serde_json::Value::Null);
+        assert_eq!(v["response_headers"], json!([]));
+    }
+
+    #[test]
+    fn flow_summary_is_lean() {
+        let flow = FlowBuilder::new()
+            .req_body(captured(b"req"))
+            .status(200)
+            .resp_body(captured(b"res"))
+            .build();
+        let v = serde_json::to_value(FlowSummary::from(&flow)).unwrap();
+        assert_eq!(v["request_body_state"], "captured");
+        assert_eq!(v["response_body_state"], "captured");
+        assert!(v.get("request_headers").is_none());
+        assert!(v.get("request_body").is_none());
+    }
+
+    #[test]
+    fn sse_event_shapes() {
+        let flow = FlowBuilder::new().method("GET").uri("http://x/").build();
+        let (name, data) =
+            sse_event(&FlowEvent::RequestCaptured { flow_id: flow.id, req: flow.request.clone() });
+        assert_eq!(name, "request");
+        assert_eq!(data["method"], "GET");
+        assert_eq!(data["uri"], "http://x/");
+        assert_eq!(data["request_body_state"], "empty");
+
+        let res = ResponseRec {
+            status: 200,
+            version: "HTTP/1.1".into(),
+            headers: vec![],
+            body: BodyRec::Empty,
+        };
+        let (name, data) =
+            sse_event(&FlowEvent::ResponseCaptured { flow_id: flow.id, res, duration_ms: 7 });
+        assert_eq!(name, "response");
+        assert_eq!(data["status"], 200);
+        assert_eq!(data["duration_ms"], 7);
+        assert_eq!(data["response_body_state"], "empty");
+
+        let (name, data) = sse_event(&FlowEvent::FlowEvicted { flow_id: flow.id });
+        assert_eq!(name, "evicted");
+        assert_eq!(data["flow_id"], flow.id.to_string());
+    }
+}

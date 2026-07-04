@@ -12,6 +12,10 @@ pub struct Config {
     pub ring_max_bytes: usize,
     pub broadcast_capacity: usize,
     pub cert_cache_size: u64,
+    /// Extra CA certificates (PEM) the proxy-to-origin connector trusts, on top
+    /// of the webpki roots. Empty by default; lets callers reach an origin whose
+    /// cert chains to a private/test CA.
+    pub upstream_extra_root_pems: Vec<String>,
 }
 
 impl Default for Config {
@@ -25,6 +29,7 @@ impl Default for Config {
             ring_max_bytes: 256 * MEGABYTE,
             broadcast_capacity: 1024,
             cert_cache_size: 1_000,
+            upstream_extra_root_pems: Vec::new(),
         }
     }
 }
@@ -36,5 +41,29 @@ impl Config {
 
     pub fn ca_key_path(&self) -> PathBuf {
         self.ca_dir.join("trawler-ca.key")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn defaults() {
+        let c = Config::default();
+        assert_eq!(c.proxy_addr.port(), 3000);
+        assert_eq!(c.api_addr.port(), 3001);
+        assert_eq!(c.body_cap, 10 * MEGABYTE);
+        assert_eq!(c.ring_max_bytes, 256 * MEGABYTE);
+        assert_eq!(c.broadcast_capacity, 1024);
+        assert_eq!(c.cert_cache_size, 1000);
+        assert_eq!(c.ca_dir, PathBuf::from("ca"));
+    }
+
+    #[test]
+    fn ca_paths_derive_from_dir() {
+        let c = Config { ca_dir: PathBuf::from("/tmp/foo"), ..Default::default() };
+        assert_eq!(c.ca_cert_path(), PathBuf::from("/tmp/foo/trawler-ca.pem"));
+        assert_eq!(c.ca_key_path(), PathBuf::from("/tmp/foo/trawler-ca.key"));
     }
 }

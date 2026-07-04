@@ -42,3 +42,80 @@ fn pretty_json(bytes: Vec<u8>) -> Vec<u8> {
         Err(_) => bytes,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::decode_body;
+    use crate::test_support::{gzip, zlib};
+
+    #[test]
+    fn gzip_round_trip_and_aliases() {
+        let raw = b"hello world hello world";
+        assert_eq!(decode_body(&gzip(raw), Some("gzip"), None), raw);
+        assert_eq!(decode_body(&gzip(raw), Some("x-gzip"), None), raw);
+        assert_eq!(decode_body(&gzip(raw), Some("GZIP"), None), raw);
+    }
+
+    #[test]
+    fn deflate_round_trip() {
+        let raw = b"deflate me deflate me";
+        assert_eq!(decode_body(&zlib(raw), Some("deflate"), None), raw);
+    }
+
+    #[test]
+    fn unknown_or_absent_encoding_is_identity() {
+        let raw = b"plain bytes";
+        assert_eq!(decode_body(raw, None, None), raw);
+        assert_eq!(decode_body(raw, Some("br"), None), raw);
+        assert_eq!(decode_body(raw, Some("identity"), None), raw);
+    }
+
+    #[test]
+    fn corrupt_gzip_falls_back_to_raw() {
+        let junk = b"\x1f\x8b not really gzip";
+        assert_eq!(decode_body(junk, Some("gzip"), None), junk);
+    }
+
+    #[test]
+    fn json_pretty_only_for_json_content_type() {
+        let compact = br#"{"a":1,"b":2}"#;
+        let pretty = decode_body(compact, None, Some("application/json"));
+        assert!(pretty.contains(&b'\n'));
+        assert!(pretty.len() > compact.len());
+        assert_eq!(decode_body(compact, None, Some("text/plain")), compact);
+    }
+
+    #[test]
+    fn invalid_json_unchanged() {
+        let bad = b"{not json";
+        assert_eq!(decode_body(bad, None, Some("application/json")), bad);
+    }
+
+    #[test]
+    fn gzip_then_json_pretty() {
+        let compact = br#"{"a":1}"#;
+        let out = decode_body(&gzip(compact), Some("gzip"), Some("application/JSON"));
+        assert!(out.len() > compact.len());
+        let parsed: serde_json::Value = serde_json::from_slice(&out).unwrap();
+        assert_eq!(parsed["a"], 1);
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn gzip_lossless(data in proptest::collection::vec(proptest::prelude::any::<u8>(), 0..500)) {
+            proptest::prop_assert_eq!(decode_body(&gzip(&data), Some("gzip"), None), data);
+        }
+
+        #[test]
+        fn deflate_lossless(data in proptest::collection::vec(proptest::prelude::any::<u8>(), 0..500)) {
+            proptest::prop_assert_eq!(decode_body(&zlib(&data), Some("deflate"), None), data);
+        }
+
+        #[test]
+        fn junk_passes_through_and_never_panics(data in proptest::collection::vec(proptest::prelude::any::<u8>(), 0..500)) {
+            proptest::prop_assert_eq!(decode_body(&data, Some("nope"), None), data.clone());
+            let _ = decode_body(&data, Some("gzip"), Some("application/json"));
+            let _ = decode_body(&data, Some("deflate"), None);
+        }
+    }
+}

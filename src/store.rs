@@ -140,6 +140,16 @@ impl Store {
         self.inner.lock().expect("store lock").flows.get(&id).cloned()
     }
 
+    #[cfg(test)]
+    fn total_bytes(&self) -> usize {
+        self.inner.lock().expect("store lock").total_bytes
+    }
+
+    #[cfg(test)]
+    fn len(&self) -> usize {
+        self.inner.lock().expect("store lock").flows.len()
+    }
+
     pub fn list(&self, filter: &FlowFilter) -> Vec<Flow> {
         let ring = self.inner.lock().expect("store lock");
         ring.order
@@ -154,6 +164,190 @@ impl Store {
     fn announce_evictions(&self, evicted: Vec<FlowId>) {
         for flow_id in evicted {
             let _ = self.tx.send(FlowEvent::FlowEvicted { flow_id });
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::event::FlowEvent;
+    use crate::flow::{BodyRec, Flow, FlowId, ResponseRec};
+    use crate::test_support::{captured, FlowBuilder};
+
+    fn store() -> Store {
+        Store::new(1_000_000, 64)
+    }
+
+    fn resp(status: u16) -> ResponseRec {
+        ResponseRec {
+            status,
+            version: "HTTP/1.1".into(),
+            headers: Vec::new(),
+            body: BodyRec::Empty,
+        }
+    }
+
+    fn uris(flows: &[Flow]) -> Vec<&str> {
+        flows.iter().map(|f| f.request.uri.as_str()).collect()
+    }
+
+    #[test]
+    fn insert_get_and_missing() {
+        let s = store();
+        let flow = FlowBuilder::new().build();
+        let id = flow.id;
+        s.insert(flow);
+        assert!(s.get(id).is_some());
+        assert!(s.get(FlowId::new()).is_none());
+    }
+
+    #[test]
+    fn list_is_newest_first() {
+        let s = store();
+        for u in ["http://a/", "http://b/", "http://c/"] {
+            s.insert(FlowBuilder::new().uri(u).build());
+        }
+        let list = s.list(&FlowFilter::default());
+        assert_eq!(uris(&list), vec!["http://c/", "http://b/", "http://a/"]);
+    }
+
+    #[test]
+    fn set_response_updates_and_ignores_unknown() {
+        let s = store();
+        let flow = FlowBuilder::new().build();
+        let id = flow.id;
+        s.insert(flow);
+        s.set_response(id, resp(201), 42);
+        let got = s.get(id).unwrap();
+        assert_eq!(got.response.unwrap().status, 201);
+        assert_eq!(got.duration_ms, Some(42));
+        s.set_response(FlowId::new(), resp(200), 1);
+    }
+
+    #[test]
+    fn eviction_is_byte_weighted_oldest_first() {
+        let s = Store::new(10, 64);
+        s.insert(FlowBuilder::new().uri("http://old/").req_body(captured(&[0u8; 8])).build());
+        s.insert(FlowBuilder::new().uri("http://s1/").req_body(captured(&[0u8; 3])).build());
+        s.insert(FlowBuilder::new().uri("http://s2/").req_body(captured(&[0u8; 3])).build());
+        let list = s.list(&FlowFilter::default());
+        assert_eq!(uris(&list), vec!["http://s2/", "http://s1/"]);
+        assert_eq!(s.total_bytes(), 6);
+    }
+
+    #[test]
+    fn keep_newest_even_if_over_cap() {
+        let s = Store::new(10, 64);
+        s.insert(FlowBuilder::new().req_body(captured(&[0u8; 100])).build());
+        assert_eq!(s.len(), 1);
+        assert!(s.total_bytes() > 10);
+    }
+
+    #[test]
+    fn filter_fields_and_composition() {
+        let s = store();
+        s.insert(
+            FlowBuilder::new()
+                .method("POST")
+                .uri("http://api.example.com/users")
+                .req_header("Content-Type", "application/json")
+                .status(201)
+                .build(),
+        );
+        s.insert(
+            FlowBuilder::new()
+                .method("GET")
+                .uri("http://cdn.other.com/img")
+                .status(200)
+                .resp_header("Content-Type", "image/png")
+                .build(),
+        );
+
+        let one = |f: FlowFilter| s.list(&f).len();
+        assert_eq!(one(FlowFilter { host: Some("EXAMPLE".into()), ..Default::default() }), 1);
+        assert_eq!(one(FlowFilter { method: Some("post".into()), ..Default::default() }), 1);
+        assert_eq!(one(FlowFilter { status: Some(200), ..Default::default() }), 1);
+        assert_eq!(one(FlowFilter { content_type: Some("json".into()), ..Default::default() }), 1);
+        assert_eq!(one(FlowFilter { content_type: Some("png".into()), ..Default::default() }), 1);
+        assert_eq!(one(FlowFilter { q: Some("users".into()), ..Default::default() }), 1);
+        assert_eq!(
+            one(FlowFilter { method: Some("GET".into()), status: Some(201), ..Default::default() }),
+            0
+        );
+        assert_eq!(one(FlowFilter::default()), 2);
+    }
+
+    #[test]
+    fn status_filter_excludes_responseless() {
+        let s = store();
+        s.insert(FlowBuilder::new().build());
+        assert_eq!(s.list(&FlowFilter { status: Some(200), ..Default::default() }).len(), 0);
+    }
+
+    #[test]
+    fn events_on_insert_response_and_evict() {
+        let s = Store::new(10, 64);
+        let mut rx = s.subscribe();
+
+        let first = FlowBuilder::new().req_body(captured(&[0u8; 8])).build();
+        let first_id = first.id;
+        s.insert(first);
+        assert!(
+            matches!(rx.try_recv(), Ok(FlowEvent::RequestCaptured { flow_id, .. }) if flow_id == first_id)
+        );
+
+        s.set_response(first_id, resp(200), 5);
+        assert!(
+            matches!(rx.try_recv(), Ok(FlowEvent::ResponseCaptured { flow_id, duration_ms, .. }) if flow_id == first_id && duration_ms == 5)
+        );
+
+        let second = FlowBuilder::new().req_body(captured(&[0u8; 8])).build();
+        let second_id = second.id;
+        s.insert(second);
+        assert!(
+            matches!(rx.try_recv(), Ok(FlowEvent::RequestCaptured { flow_id, .. }) if flow_id == second_id)
+        );
+        assert!(
+            matches!(rx.try_recv(), Ok(FlowEvent::FlowEvicted { flow_id }) if flow_id == first_id)
+        );
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn ring_accounting(sizes in proptest::collection::vec(0usize..40, 0..30), max in 1usize..80) {
+            let s = Store::new(max, 256);
+            for sz in &sizes {
+                let body = if *sz == 0 { BodyRec::Empty } else { captured(&vec![0u8; *sz]) };
+                s.insert(FlowBuilder::new().req_body(body).build());
+            }
+            let held: usize = s.list(&FlowFilter::default()).iter().map(|f| f.retained_bytes()).sum();
+            proptest::prop_assert_eq!(held, s.total_bytes());
+            proptest::prop_assert!(s.total_bytes() <= max || s.len() == 1);
+        }
+
+        #[test]
+        fn listing_strictly_newest_first(n in 0usize..30) {
+            let s = Store::new(1_000_000, 256);
+            for i in 0..n {
+                s.insert(FlowBuilder::new().uri(&format!("http://h/{i}")).build());
+            }
+            let list = s.list(&FlowFilter::default());
+            let got: Vec<String> = list.iter().map(|f| f.request.uri.clone()).collect();
+            let expected: Vec<String> = (0..n).rev().map(|i| format!("http://h/{i}")).collect();
+            proptest::prop_assert_eq!(got, expected);
+        }
+
+        #[test]
+        fn filter_only_shrinks(n in 1usize..20, needle in "[a-c]{1,3}") {
+            let s = Store::new(1_000_000, 256);
+            for i in 0..n {
+                let pre = if i % 2 == 0 { "aa" } else { "bb" };
+                s.insert(FlowBuilder::new().uri(&format!("http://{pre}{i}/")).build());
+            }
+            let all = s.list(&FlowFilter::default()).len();
+            let filtered = s.list(&FlowFilter { host: Some(needle), ..Default::default() }).len();
+            proptest::prop_assert!(filtered <= all);
         }
     }
 }

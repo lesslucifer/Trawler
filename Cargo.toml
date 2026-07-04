@@ -31,9 +31,17 @@ flate2 = "1"
 time = { version = "0.3", features = ["formatting"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "aws-lc-rs"] }
+rustls-pemfile = "2"
+webpki-roots = "0.26"
 
 [dev-dependencies]
 cargo-husky = { version = "1", default-features = false, features = ["user-hooks"] }
+proptest = "1"
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
 
 [profile.release]
 lto = true

@@ -139,3 +139,88 @@ impl Flow {
         self.response.as_ref().and_then(|r| Self::header_value(&r.headers, "content-type"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_support::{captured, FlowBuilder};
+
+    #[test]
+    fn retained_len_by_variant() {
+        assert_eq!(captured(b"abc").retained_len(), 3);
+        let trunc = BodyRec::Truncated {
+            prefix: Bytes::from_static(b"ab"),
+            captured: 2,
+            total_hint: Some(9),
+        };
+        assert_eq!(trunc.retained_len(), 2);
+        assert_eq!(BodyRec::Streaming { content_type: "x".into() }.retained_len(), 0);
+        assert_eq!(
+            BodyRec::NotCaptured { reason: NotCapturedReason::TooLarge { actual: 99 } }
+                .retained_len(),
+            0
+        );
+        assert_eq!(BodyRec::Empty.retained_len(), 0);
+    }
+
+    #[test]
+    fn state_by_variant() {
+        assert_eq!(captured(b"").state(), "captured");
+        assert_eq!(
+            BodyRec::Truncated { prefix: Bytes::new(), captured: 0, total_hint: None }.state(),
+            "truncated"
+        );
+        assert_eq!(BodyRec::Streaming { content_type: "x".into() }.state(), "streaming");
+        assert_eq!(
+            BodyRec::NotCaptured { reason: NotCapturedReason::ReadError }.state(),
+            "not_captured"
+        );
+        assert_eq!(BodyRec::Empty.state(), "empty");
+    }
+
+    #[test]
+    fn bytes_present_only_when_retained() {
+        assert_eq!(captured(b"hi").bytes().map(|b| b.as_ref()), Some(&b"hi"[..]));
+        let trunc = BodyRec::Truncated {
+            prefix: Bytes::from_static(b"pre"),
+            captured: 3,
+            total_hint: None,
+        };
+        assert_eq!(trunc.bytes().map(|b| b.as_ref()), Some(&b"pre"[..]));
+        assert!(BodyRec::Empty.bytes().is_none());
+        assert!(BodyRec::Streaming { content_type: "x".into() }.bytes().is_none());
+        assert!(BodyRec::NotCaptured { reason: NotCapturedReason::ReadError }.bytes().is_none());
+    }
+
+    #[test]
+    fn retained_bytes_sums_request_and_response() {
+        assert_eq!(FlowBuilder::new().req_body(captured(b"12345")).build().retained_bytes(), 5);
+        let both =
+            FlowBuilder::new().req_body(captured(b"12345")).resp_body(captured(b"abc")).build();
+        assert_eq!(both.retained_bytes(), 8);
+    }
+
+    #[test]
+    fn host_parsing() {
+        let host = |uri: &str| FlowBuilder::new().uri(uri).build().host();
+        assert_eq!(host("http://example.com/x").as_deref(), Some("example.com"));
+        assert_eq!(host("http://example.com:8080/x").as_deref(), Some("example.com"));
+        assert_eq!(host("http://127.0.0.1:3000/").as_deref(), Some("127.0.0.1"));
+        assert!(host("http://[::1]:8080/").unwrap().contains("::1"));
+        assert_eq!(host("/only/path"), None);
+        assert_eq!(host("not a uri"), None);
+    }
+
+    #[test]
+    fn content_type_lookup_case_insensitive_first_wins() {
+        let flow = FlowBuilder::new()
+            .req_header("Content-Type", "application/json")
+            .req_header("content-type", "text/plain")
+            .status(200)
+            .resp_header("CONTENT-TYPE", "text/html")
+            .build();
+        assert_eq!(flow.request_content_type(), Some("application/json"));
+        assert_eq!(flow.response_content_type(), Some("text/html"));
+        assert_eq!(FlowBuilder::new().build().response_content_type(), None);
+    }
+}

@@ -24,6 +24,10 @@ unit** (all code it adds/changes). Tests are deterministic and hermetic
 
 ## Documentation tiers — synthesize UP, never duplicate DOWN
 
+**Decide a doc's tier BEFORE creating it and put it in that tier's folder —
+never default into `docs/` (SUPER CRITICAL). T1 = permanent AND shape-level; any
+plan/spec/test-plan/backlog fails that and is T3 (`docs/work/`), never T1.**
+
 Spec: `docs/documentation-system.html`. **T0** this file (user-edited only) ·
 **T1** `docs/*.html` architecture + process · **T2** `docs/use-cases/` (what) &
 `docs/decisions/` (why), read index-first · **T3** `docs/work/` scratch, distill
