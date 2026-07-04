@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a48bd229f34851f0dfa8043">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Documentation System</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Documentation System</h1>
+      <p>Five tiers so every AI session reads current truth — information synthesizes UP, is read DOWN, and is never duplicated down.</p>
+      <div class="meta">Draft v3 · 2026-07-04 · Trawler · T1 process doc</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="tiers">The five tiers</h2>
+    <div class="callout" data-c="prime-directive">
+      <strong>Prime directive.</strong> Source code (T4) is the source of truth; docs carry only
+      what code cannot say — intent, rationale, behavior contracts, the map of the system's shape.
+      Every fact lives at exactly one tier; elsewhere, link. When a doc and the code disagree,
+      <strong>code wins</strong> — the session that finds the conflict fixes the doc in that same
+      session.
+    </div>
+    <div class="diagram" data-c="tier-flow">
+      <pre class="mermaid">
+flowchart TB
+    T0["<b>T0 · CLAUDE.md</b><br/>fixed rules + tier map<br/><i>manual edits only</i>"]
+    T1["<b>T1 · Permanent spine</b><br/>docs/*.html<br/><i>changes only when the shape changes</i>"]
+    T2["<b>T2 · Indexed knowledge bases</b><br/>docs/use-cases/ (what) · docs/decisions/ (why)<br/><i>topical files behind an index</i>"]
+    T3["<b>T3 · Working docs</b><br/>docs/work/<br/><i>short-lived, per task</i>"]
+    T4["<b>T4 · Source code</b><br/>src/…<br/><i>the source of truth</i>"]
+    T0 -->|read| T1 -->|read| T2 -->|read| T3 -->|read| T4
+    T4 -.->|distill| T3 -.->|synthesize| T2 -.->|shape changes only| T1 -.->|propose to user| T0
+      </pre>
+      <div class="caption">Solid: what a session reads, top-down. Dashed: how knowledge synthesizes upward after work completes.</div>
+    </div>
+    <table data-c="tier-table">
+      <thead>
+        <tr><th>Tier</th><th>Location</th><th>Question it answers</th><th>Belongs here</th><th>Banned here</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge id">T0</span></td>
+          <td><code>CLAUDE.md</code></td>
+          <td>“What are the fixed rules?”</td>
+          <td>Conventions + the tier map, one line per tier</td>
+          <td>Anything that changes with the code</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">T1</span></td>
+          <td><code>docs/*.html</code></td>
+          <td>“What is the shape of this system?”</td>
+          <td>Components, boundaries, data flow, cross-module invariants, process standards</td>
+          <td>Per-feature behavior, signatures, anything that changes weekly</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">T2</span></td>
+          <td><code>docs/use-cases/</code> · <code>docs/decisions/</code></td>
+          <td>“What must it do?” · “Why is it this way?”</td>
+          <td>Behavior contracts (use-cases) · context, choice, consequences (decisions)</td>
+          <td>Implementation detail; restating one KB in the other</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">T3</span></td>
+          <td><code>docs/work/</code></td>
+          <td>“What is this task figuring out?”</td>
+          <td>Anything — plans, dead ends, raw findings; no quality bar</td>
+          <td>Nothing, but nothing here is citable truth after the task ends</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">T4</span></td>
+          <td><code>src/…</code></td>
+          <td>“How does it work, exactly?”</td>
+          <td>Everything mechanical — names and structure carry intent</td>
+          <td>Comments restating docs</td>
+        </tr>
+      </tbody>
+    </table>
+    <p data-c="tier-notes">
+      Tiers are ordered by stability: T0 changes only by the user's hand (an agent proposes a diff
+      in chat and stops), T4 changes every commit. T1 is deliberately hard to grow — a page must be
+      permanent <em>and</em> shape-level, else it belongs in T2. T4 is never hand-documented; docs
+      reference it by path and symbol (<code>src/capture.rs · CaptureSession</code>), never by
+      generated API pages or mirrored descriptions.
+    </p>
+    <div class="callout warn" data-c="no-code-in-docs">
+      <strong>No code in docs.</strong> Docs never copy code — no snippets, signatures, or config
+      values; path + symbol references only, so nothing can rot into a stale copy. Every T1/T2
+      claim must be either verifiable against <code>src/</code> via those references or be pure
+      rationale/contract that code cannot express. Sole exception: wire formats and API
+      request/response examples that define a contract.
+    </div>
+
+    <h2 id="t2">T2 · Indexed knowledge bases</h2>
+    <p>
+      Each KB directory holds topical files behind exactly one <code>*-index.html</code>. The
+      index is a pure routing table — one row per topic file with a one-line scope, ID prefix
+      (never reused or renumbered), and status — and contains no knowledge of its own. Sessions read index-first: open only the
+      relevant topic file(s), synthesize back into only those files, never bulk-read a KB. Topic
+      boundaries follow the architecture's component map; when a file outgrows one comfortable
+      read, split it and update the index.
+    </p>
+    <table data-c="index-example">
+      <thead>
+        <tr><th colspan="4">Example — <code>use-cases-index.html</code> routing table</th></tr>
+        <tr><th>Topic file</th><th>IDs</th><th>Scope (one line)</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>capture.html</code></td><td><span class="badge id">UC-CAP-*</span></td><td>Intercepting, recording and storing HTTP(S) flows</td><td><span class="badge auto">active</span></td></tr>
+        <tr><td><code>tls-ca.html</code></td><td><span class="badge id">UC-TLS-*</span></td><td>CA lifecycle, per-host cert minting, trust installation</td><td><span class="badge auto">active</span></td></tr>
+        <tr><td><code>control-api.html</code></td><td><span class="badge id">UC-API-*</span></td><td>REST + SSE control surface: querying, streaming, filtering</td><td><span class="badge auto">active</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="t2-use-cases">use-cases/ — behavior contracts (what)</h3>
+    <p>
+      Each entry <span class="badge id">UC-&lt;AREA&gt;-&lt;n&gt;</span> states trigger, expected
+      behavior, edge cases, and what constitutes failure — contract-level, implementation-free.
+      Use-cases are current truth: updated in place, superseded behavior deleted (history lives in
+      git and snapshots).
+    </p>
+
+    <h3 id="t2-decisions">decisions/ — decision records (why)</h3>
+    <p>
+      Each entry <span class="badge id">DEC-&lt;n&gt;</span> records context, options, the choice,
+      and its consequences. Append-only: never rewritten — a reversal flips the old record to
+      <em>superseded by DEC-m</em> and adds a new one. An agent about to “fix” something odd checks
+      here first to learn whether the oddity is load-bearing.
+    </p>
+
+    <h2 id="t3">T3 · Working docs</h2>
+    <p>
+      The scratch space where a task thinks, named <code>docs/work/YYYY-MM-DD-&lt;slug&gt;.html</code>.
+      No quality bar, no altitude rule. Every work doc ends the same way: distilled up, then moved
+      to <code>docs/work/archive/</code> — which sessions never read; if the archive still holds
+      something needed, that fact wasn't distilled.
+    </p>
+    <div class="diagram" data-c="t3-lifecycle">
+      <pre class="mermaid">
+stateDiagram-v2
+    [*] --> Active : task starts, doc created
+    Active --> Active : findings, plans, dead ends accumulate
+    Active --> Distilling : task's code lands
+    Distilling --> Archived : durable facts synthesized to T2 / T1
+    Archived --> [*] : moved to docs/work/archive/
+      </pre>
+      <div class="caption">A work doc neither distilled nor archived is a bug in the process.</div>
+    </div>
+    <table data-c="distill-checklist">
+      <thead><tr><th>Distillation checklist — if yes…</th><th>…write it to</th></tr></thead>
+      <tbody>
+        <tr><td>Behavior changed or got defined?</td><td>Relevant <code>use-cases/</code> topic file (+ index row if new topic)</td></tr>
+        <tr><td>Non-obvious choice made or reversed?</td><td>New <code>decisions/</code> record</td></tr>
+        <tr><td>Component map or invariant changed?</td><td><code>architecture.html</code></td></tr>
+        <tr><td>Repeating process emerged or changed?</td><td>Relevant T1 process doc</td></tr>
+        <tr><td>T0 rule should change?</td><td>Propose to the user in chat — never edit CLAUDE.md</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="protocol">Session protocol</h2>
+    <p>T0 arrives automatically with every session; everything else is opened on demand, index-first.</p>
+    <table data-c="reading-table">
+      <thead><tr><th>Task type</th><th>Read before touching code</th></tr></thead>
+      <tbody>
+        <tr><td>New feature</td><td>T1 architecture → relevant use-case topic(s) → related decisions. T3 work doc if the task spans sessions or needs a plan.</td></tr>
+        <tr><td>Bug fix</td><td>Relevant use-case topic (what <em>should</em> happen) → T4. Check decisions before “fixing” anything that looks deliberate.</td></tr>
+        <tr><td>Refactor</td><td>T1 architecture (boundaries to preserve) → decisions touching the area.</td></tr>
+        <tr><td>Docs task</td><td>Per T0: open comments of every doc to be touched, first; snapshot before editing.</td></tr>
+        <tr><td>“How/why does X…?”</td><td>Index → one topic file → T4. Never answer from memory of a previous session.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="write-back">
+      <strong>Write-back rule.</strong> A task is done not when the code lands but when the
+      distillation checklist has run and the affected T2 (rarely T1) files reflect the new truth —
+      in the same session as the change, never “later”.
+    </div>
+
+    <h2 id="layout">Layout</h2>
+    <table data-c="target-tree">
+      <thead><tr><th>Location</th><th>Tier</th><th>Content</th></tr></thead>
+      <tbody>
+        <tr><td><code>CLAUDE.md</code></td><td>T0</td><td>Rules + tier map</td></tr>
+        <tr><td><code>docs/*.html</code></td><td>T1</td><td>Architecture + process standards, flat</td></tr>
+        <tr><td><code>docs/use-cases/</code> · <code>docs/decisions/</code></td><td>T2</td><td>One index + topic files each</td></tr>
+        <tr><td><code>docs/work/</code> · <code>docs/work/archive/</code></td><td>T3</td><td>Working docs</td></tr>
+        <tr><td><code>src/…</code></td><td>T4</td><td>The truth</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

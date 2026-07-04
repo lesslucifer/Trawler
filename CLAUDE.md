@@ -15,3 +15,11 @@
 - **At the start of any docs task**, read the comment file of each doc you'll
   touch and address `"status": "open"` entries first (mark them resolved + reply).
   **Snapshot a doc before editing it** and after a round share `<doc>.html?diff=latest`.
+
+## Documentation tiers — synthesize UP, never duplicate DOWN
+
+Spec: `docs/documentation-system.html`. **T0** this file (user-edited only) ·
+**T1** `docs/*.html` permanent spine · **T2** `docs/use-cases/` (what) &
+`docs/decisions/` (why), indexed, read index-first · **T3** `docs/work/`
+scratch, distill then archive · **T4** `src/` — the truth. One fact, one tier;
+on conflict code wins; distill before a task ends.
