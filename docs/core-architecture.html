@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4895b49f34851f0dfa7ff7">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Core Architecture</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Core Architecture</h1>
+      <p>How the codebase is actually built: the crate shape, the modules and the types they own, the request/response lifecycle through the code, the concurrency model, and where each decision from the <a href="core-technical-design.html">Core Technical Design</a> landed in source.</p>
+      <div class="meta">Draft v1 · 2026-07-04 · Trawler</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="overview">What this is</h2>
+    <div class="callout" data-c="overview-callout">
+      <p>This is the <strong>implementation</strong> companion to the <a href="core-technical-design.html">Core Technical Design</a>. The design doc argues the <em>why</em>; this doc maps the <em>how</em> onto the source tree that now exists. The v1 core is complete and verified end to end: plain-HTTP and HTTPS-via-CONNECT capture, a byte-weighted in-memory store, a broadcast bus, and an inspect-only REST + SSE control API. Replay, breakpoints, and WebSocket-frame capture remain out of scope by design.</p>
+    </div>
+    <div class="callout" data-c="verified-callout">
+      <p><strong>Verified working (smoke test):</strong> <span class="badge">CA generated + served</span> <span class="badge">plain HTTP GET/POST captured</span> <span class="badge">HTTPS MITM decrypt + capture</span> <span class="badge">/flows filtering</span> <span class="badge">/flows/{id} detail</span> <span class="badge">raw + <code>?decode=1</code> bodies</span> <span class="badge">live SSE lifecycle</span>.</p>
+    </div>
+
+    <h2 id="crate-shape">Crate shape — core is a library</h2>
+    <p>The product is an <strong>API-first core</strong>, so the core is a <strong>library crate</strong> (<code>trawler</code>, <code>src/lib.rs</code>) and the executable is a thin launcher (<code>src/main.rs</code>) that only installs logging and calls <code>trawler::run(Config)</code>. Any interface — TUI, web UI, <code>curl</code> — is a client of the running control API, never a compile-time dependency of the core.</p>
+    <div class="diagram" data-c="crate-diagram">
+      <pre class="mermaid">
+flowchart TD
+    main["src/main.rs — bin launcher"] --> lib["src/lib.rs — run(): composition root"]
+    lib --> cfg["config.rs — Config"]
+    lib --> ca["ca.rs — CaMaterial"]
+    lib --> store["store.rs — Store (ring + bus)"]
+    lib --> rec["recorder.rs — Recorder: HttpHandler"]
+    lib --> api["api/* — axum router"]
+    rec --> cap["capture.rs"]
+    rec --> flow["flow.rs — Flow, *Rec, BodyRec"]
+    store --> ev["event.rs — FlowEvent"]
+    api --> view["api/view.rs — FlowView / Summary"]
+    api --> dec["api/decode.rs — gzip/deflate + JSON"]
+      </pre>
+      <div class="caption">Module graph. <code>lib.rs::run</code> is the single composition root; everything below it is decoupled and independently testable.</div>
+    </div>
+    <table data-c="module-table">
+      <thead><tr><th>Module</th><th>Owns</th><th>Key items</th></tr></thead>
+      <tbody>
+        <tr><td><code>config.rs</code></td><td>All runtime knobs, with defaults</td><td><code>Config</code> (addrs, <code>body_cap</code>, <code>ring_max_bytes</code>, <code>broadcast_capacity</code>, <code>cert_cache_size</code>)</td></tr>
+        <tr><td><code>flow.rs</code></td><td>The domain model</td><td><code>Flow</code>, <code>RequestRec</code>, <code>ResponseRec</code>, <code>BodyRec</code>, <code>FlowId</code>, <code>Header</code></td></tr>
+        <tr><td><code>event.rs</code></td><td>Lifecycle events</td><td><code>FlowEvent</code></td></tr>
+        <tr><td><code>capture.rs</code></td><td>Body drain / cap / streaming rule</td><td><code>capture(headers, body, cap) → (BodyRec, Body)</code></td></tr>
+        <tr><td><code>store.rs</code></td><td>Canonical flows + the bus</td><td><code>Store</code>, <code>FlowFilter</code>, the byte-weighted <code>Ring</code></td></tr>
+        <tr><td><code>recorder.rs</code></td><td>The proxy-side producer</td><td><code>Recorder</code> (<code>impl HttpHandler</code>)</td></tr>
+        <tr><td><code>ca.rs</code></td><td>Certificate authority material</td><td><code>CaMaterial</code>, <code>load_or_create</code></td></tr>
+        <tr><td><code>api/</code></td><td>The control API</td><td><code>router</code>, <code>AppState</code>, route handlers, view projections, decode chain</td></tr>
+        <tr><td><code>lib.rs</code></td><td>Composition + lifecycle</td><td><code>run(Config)</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="runtime">Runtime wiring</h2>
+    <p>One <code>tokio</code> runtime hosts both servers. The <strong>proxy</strong> (hudsucker) listens on <code>127.0.0.1:3000</code>; the <strong>control API</strong> (axum) listens on <code>127.0.0.1:3001</code>. The <code>Recorder</code> is the only bridge between them, and it only ever <em>writes</em> to the store — it holds no reference to any interface.</p>
+    <div class="diagram" data-c="runtime-diagram">
+      <pre class="mermaid">
+flowchart LR
+    client(["client apps"]) &lt;--&gt; hud["hudsucker MITM :3000"]
+    ca["CaMaterial → RcgenAuthority"] --> hud
+    hud &lt;--&gt; rec["Recorder (HttpHandler)"]
+    rec -- "insert / set_response" --> store[("Store: byte-weighted ring")]
+    store -- "FlowEvent" --> bus{{"broadcast::Sender"}}
+    bus -- "BroadcastStream" --> sse["axum SSE /stream :3001"]
+    store -- "get / list" --> rest["axum REST :3001"]
+    sse --> ui["UI / curl"]
+    rest --> ui
+      </pre>
+      <div class="caption">The capture path knows nothing about interfaces. The <strong>Store</strong> owns the broadcast sender and emits a <code>FlowEvent</code> on every <code>insert</code>/<code>set_response</code>/eviction; the API is purely a subscriber and reader.</div>
+    </div>
+    <div class="callout" data-c="concurrency-callout">
+      <p><strong>Concurrency, no actor ceremony.</strong> <code>Recorder</code> holds an <code>Arc&lt;Store&gt;</code>. Inside, the ring buffer is a <code>std::sync::Mutex&lt;Ring&gt;</code> — critical sections are pure, synchronous data ops (push, lookup, evict), so a std mutex keeps locking off the async machinery. The <code>broadcast::Sender&lt;FlowEvent&gt;</code> send is non-blocking and is called while the lock is held only for the eviction list; axum's SSE endpoint wraps a <code>broadcast::Receiver</code> in a <code>tokio_stream::wrappers::BroadcastStream</code>. There is <strong>no global body-cap counter</strong> — the v1 cap is judged per body, so parallel traffic never contends on a shared budget.</p>
+    </div>
+
+    <h2 id="lifecycle">Request / response lifecycle in code</h2>
+    <p>hudsucker calls <code>handle_request</code> then <code>handle_response</code> on <strong>the same cloned handler instance</strong> for each exchange. That is exactly what lets the <code>Recorder</code> correlate a response with its request: it stashes the <code>FlowId</code> and a start <code>Instant</code> in per-exchange scratch fields between the two calls — no external map, no request id plumbing.</p>
+    <div class="diagram" data-c="lifecycle-diagram">
+      <pre class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant R as Recorder (per-exchange clone)
+    participant Cap as capture()
+    participant S as Store
+    participant B as broadcast bus
+    participant A as axum API
+    C-&gt;&gt;R: handle_request(req)
+    Note over R: return early if method == CONNECT
+    R-&gt;&gt;Cap: capture(headers, body, cap)
+    Cap--&gt;&gt;R: (BodyRec, rebuilt Body)
+    R-&gt;&gt;R: stash flow_id + start Instant
+    R-&gt;&gt;S: insert(Flow::new(request))
+    S-&gt;&gt;B: FlowEvent::RequestCaptured
+    R-&gt;&gt;C: forward request upstream
+    C-&gt;&gt;R: handle_response(res)
+    R-&gt;&gt;Cap: capture(headers, body, cap)
+    Cap--&gt;&gt;R: (BodyRec, rebuilt Body)
+    R-&gt;&gt;S: set_response(flow_id, response, duration_ms)
+    S-&gt;&gt;B: FlowEvent::ResponseCaptured
+    B--&gt;&gt;A: SSE subscribers receive events live
+    A--&gt;&gt;C: GET /flows/{id} → FlowView
+      </pre>
+      <div class="caption">The read is destructive, so <code>capture()</code> always hands back a freshly rebuilt <code>Body</code> to forward — even when the body is too large to keep. A capture decision can never break the connection.</div>
+    </div>
+    <div class="callout warn" data-c="connect-callout">
+      <p><strong>Why the CONNECT guard matters.</strong> In hudsucker 0.24, <code>handle_request</code> fires on the <code>CONNECT</code> line itself (before the tunnel is set up), not only on the decrypted requests inside it. Without the <code>method == CONNECT</code> early-return, every HTTPS exchange would record a bogus <code>CONNECT host:443</code> flow. The guard is the first line of <code>handle_request</code>.</p>
+    </div>
+
+    <h2 id="types">Core types</h2>
+    <p>The domain model in <code>flow.rs</code> mirrors the design doc's types; the rationale for each lives there. Implementation notes only:</p>
+    <table data-c="types-table">
+      <thead><tr><th>Type</th><th>Shape in code</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td><code>Flow</code></td><td><code>id, started_at, request, response: Option, duration_ms: Option</code></td><td>The ring's unit. <code>retained_bytes()</code> drives eviction weight.</td></tr>
+        <tr><td><code>RequestRec</code> / <code>ResponseRec</code></td><td><code>method/status, uri, version, headers: Vec&lt;Header&gt;, body: BodyRec</code></td><td>Method/version stored as strings; headers as ordered pairs (preserves duplicates and non-UTF-8 via lossy decode). Split so a request-only <code>Flow</code> is emitted the instant the request is seen.</td></tr>
+        <tr><td><code>BodyRec</code></td><td><code>Captured · Truncated · Streaming · NotCaptured · Empty</code></td><td>Only <code>Captured</code>/<code>Truncated</code> retain bytes (<code>bytes::Bytes</code>, ref-counted). <code>retained_len()</code> reports the memory a body costs; everything else is 0.</td></tr>
+        <tr><td><code>FlowEvent</code></td><td><code>RequestCaptured · ResponseCaptured · FlowEvicted</code></td><td>Broadcast payload; carries the record per the design, but the SSE layer projects a compact notification (no base64) from it.</td></tr>
+        <tr><td><code>FlowView</code> / <code>FlowSummary</code> / <code>BodyView</code></td><td><code>api/view.rs</code>, all <code>#[derive(Serialize)]</code></td><td>Read-only projections. <code>FlowView</code> is the full detail; <code>FlowSummary</code> is the lean listing row (no bodies, no headers); <code>BodyView</code> is <code>#[serde(tag = "state")]</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="store">Store — byte-weighted ring buffer</h2>
+    <p>The design calls out one hard requirement: <em>ring-buffer eviction must weight by body bytes, not flow count</em>. The <code>Ring</code> tracks a running <code>total_bytes</code> and evicts oldest-first until it is back under <code>ring_max_bytes</code>.</p>
+    <div class="diagram" data-c="evict-diagram">
+      <pre class="mermaid">
+flowchart TD
+    A["insert(flow) / set_response(...)"] --> B["total_bytes += flow.retained_bytes()"]
+    B --> C{"over max_bytes AND more than 1 flow?"}
+    C -- "no" --> D["done"]
+    C -- "yes" --> E["pop oldest FlowId from order"]
+    E --> F["remove from map; total_bytes -= its retained_bytes"]
+    F --> G["push FlowId to evicted list"]
+    G --> C
+    D --> H["emit FlowEvent::FlowEvicted for each evicted id"]
+      </pre>
+      <div class="caption">Insertion order lives in a <code>VecDeque&lt;FlowId&gt;</code>; the flows themselves in a <code>HashMap&lt;FlowId, Flow&gt;</code> for O(1) lookup and in-place response updates. The <code>order.len() &gt; 1</code> guard keeps the newest flow even if it alone exceeds the cap.</div>
+    </div>
+    <p><code>FlowFilter</code> backs <code>GET /flows</code>: case-insensitive matching on <code>host</code> (parsed from the URI authority), <code>method</code>, exact <code>status</code>, <code>content_type</code> (request or response), and a free-text <code>q</code> over the URI. Listing walks the deque newest-first.</p>
+
+    <h2 id="capture">Capture path</h2>
+    <div class="callout" data-c="capture-callout">
+      <p><strong>Buffer-then-forward, per-request 10 MB cap.</strong> <code>capture()</code> drains the body with <code>http_body_util::BodyExt::collect().await</code>, then decides: <code>Empty</code> (0 bytes), <code>NotCaptured { TooLarge }</code> (over the cap — forwarded intact but not kept), or <code>Captured</code>. Because the drain is destructive, it always rebuilds the outgoing body with <code>Body::from(Full::new(bytes))</code> before returning it.</p>
+    </div>
+    <div class="callout warn" data-c="streaming-callout">
+      <p><strong>The one special case — streaming.</strong> A body with <code>Content-Type: text/event-stream</code> may never end, so it is <strong>never buffered</strong>: <code>capture()</code> checks the content type first and, on a match, records <code>BodyRec::Streaming</code> and forwards the <em>original</em> body untouched. Buffering it would hang the exchange forever. The streaming content-type list is a single spot in <code>capture.rs</code>, easy to extend.</p>
+    </div>
+
+    <h2 id="api">Control API surface (inspect-only)</h2>
+    <p>Built with axum 0.8 (note the <code>{id}</code> path-parameter syntax — a 0.8 change from <code>:id</code>). All endpoints live on the API port.</p>
+    <table data-c="api-table">
+      <thead><tr><th>Endpoint</th><th>Handler → returns</th></tr></thead>
+      <tbody>
+        <tr><td><code>GET /flows?host=&amp;method=&amp;status=&amp;content_type=&amp;q=</code></td><td><code>list_flows</code> → <code>[FlowSummary]</code></td></tr>
+        <tr><td><code>GET /flows/{id}</code></td><td><code>get_flow</code> → <code>FlowView</code> (400 on bad id, 404 if missing)</td></tr>
+        <tr><td><code>GET /flows/{id}/request/body?decode=1</code></td><td><code>request_body</code> → raw bytes, or decoded (204 if no bytes retained)</td></tr>
+        <tr><td><code>GET /flows/{id}/response/body?decode=1</code></td><td><code>response_body</code> → raw bytes, or decoded</td></tr>
+        <tr><td><code>GET /stream</code></td><td><code>stream</code> → SSE of compact <code>request</code>/<code>response</code>/<code>evicted</code> events</td></tr>
+        <tr><td><code>GET /ca.crt</code></td><td><code>ca_cert</code> → the root CA PEM (<code>application/x-x509-ca-cert</code>)</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="decode-callout">
+      <p><strong>Decoding stays view-side.</strong> Capture stores raw bytes faithfully. <code>?decode=1</code> runs <code>api/decode.rs</code> lazily: reverse <code>content-encoding</code> (<code>gzip</code>/<code>deflate</code> today via <code>flate2</code>), then pretty-print if the content type is JSON. Brotli, charset transcoding, and XML/form pretty-printing are the obvious next extensions — all isolated in that one module. Unknown encodings pass through untouched rather than failing.</p>
+    </div>
+
+    <h2 id="ca">Certificate authority</h2>
+    <p><code>ca.rs</code> produces a <code>CaMaterial { issuer, cert_pem }</code>. On first run it generates an ECDSA CA (self-signed via rcgen), persists <code>ca/trawler-ca.pem</code> / <code>.key</code>, and serves <code>cert_pem</code> at <code>/ca.crt</code>. The <code>issuer</code> feeds hudsucker's <code>RcgenAuthority</code>, which caches and issues a per-host leaf on each CONNECT.</p>
+    <div class="callout" data-c="ca-api-callout">
+      <p><strong>rcgen 0.14 / hudsucker 0.24 shape (the breaking change the design doc flagged).</strong> The CA is now an <code>rcgen::Issuer&lt;'static, KeyPair&gt;</code> built with <code>Issuer::from_ca_cert_pem(cert_pem, key_pair)</code>, and <code>RcgenAuthority::new(issuer, cache_size, provider)</code> takes an explicit rustls <code>CryptoProvider</code> — here <code>aws_lc_rs::default_provider()</code>, also passed to the upstream connector via <code>with_rustls_connector(...)</code>. The two hudsucker realities from the design still hold: every leaf reuses the CA key as its subject key, and IP-literal CONNECT targets get a DNS-type SAN (a known quirk). See the <a href="core-technical-design.html#cert-model">design doc</a>.</p>
+    </div>
+
+    <h2 id="decisions">Implementation decisions &amp; deviations</h2>
+    <p>Where the code makes a concrete choice the design left open — or deliberately diverges — it is recorded here. All are reversible behind the store / interface boundaries.</p>
+    <div class="cards">
+      <div class="card" data-c="dec-crate">
+        <h3>Library + thin binary</h3>
+        <p>The API-first core is a real <code>lib</code> crate; <code>main.rs</code> is ~10 lines. Makes the core embeddable and unit-testable without a process.</p>
+      </div>
+      <div class="card" data-c="dec-ports">
+        <h3>/ca.crt on the API port</h3>
+        <p>Design text shows <code>:3000/ca.crt</code>. A forward-proxy port expects proxy-form requests, so a browser opening <code>:3000/ca.crt</code> is ambiguous. We serve every control endpoint — including <code>/ca.crt</code> — on <code>:3001</code>. Mobile devices just point at the API port.</p>
+      </div>
+      <div class="card" data-c="dec-correlate">
+        <h3>Correlate via handler clone</h3>
+        <p>hudsucker clones the handler per exchange, so request↔response correlation is per-exchange scratch state in <code>Recorder</code> — no shared request-id map.</p>
+      </div>
+      <div class="card" data-c="dec-events">
+        <h3>Store owns the bus</h3>
+        <p>Events are emitted by the <code>Store</code> on write, not by the <code>Recorder</code>. One place decides what a "captured / evicted" event means, and it is the same place that mutates state.</p>
+      </div>
+      <div class="card" data-c="dec-cap">
+        <h3>Per-request cap, no global budget</h3>
+        <p>Following the locked v1 rule: each body is judged on its own size. No shared atomic counter, no cross-request interference.</p>
+      </div>
+      <div class="card" data-c="dec-sse">
+        <h3>Compact SSE payloads</h3>
+        <p>SSE events are lifecycle notifications (ids, method/uri/status, body <em>state</em>) — not base64 bodies. Clients fetch detail on demand, keeping the live stream light.</p>
+      </div>
+    </div>
+
+    <h2 id="deps">Dependencies</h2>
+    <div class="callout" data-c="deps-callout">
+      <p><strong>Applied the design's mandated upgrade.</strong> <code>hudsucker</code> 0.22 → <strong>0.24</strong> and <code>rcgen</code> 0.13 → <strong>0.14</strong> together (the <code>Issuer</code> + <code>CryptoProvider</code> break). Added as direct deps: <span class="badge">axum 0.8</span> <span class="badge">tokio-stream (sync)</span> <span class="badge">serde + serde_json</span> <span class="badge">http-body-util</span> <span class="badge">uuid (v4)</span> <span class="badge">base64</span> <span class="badge">flate2</span> <span class="badge">time (formatting)</span>. Dropped the unused <code>rustls-pemfile</code> and <code>async-trait</code> (hudsucker 0.24's <code>HttpHandler</code> uses native <code>async fn</code>).</p>
+    </div>
+
+    <h2 id="run">Build &amp; run</h2>
+    <table data-c="run-table">
+      <thead><tr><th>Step</th><th>Command / value</th></tr></thead>
+      <tbody>
+        <tr><td>Run</td><td><code>cargo run</code> (or <code>RUST_LOG=trawler=debug cargo run</code>)</td></tr>
+        <tr><td>Proxy</td><td><code>127.0.0.1:3000</code> — point clients / <code>HTTP(S)_PROXY</code> here</td></tr>
+        <tr><td>Control API</td><td><code>127.0.0.1:3001</code> — REST + SSE + <code>/ca.crt</code></td></tr>
+        <tr><td>Trust CA</td><td>fetch <code>http://127.0.0.1:3001/ca.crt</code>, install per the <a href="core-technical-design.html#network">platform table</a></td></tr>
+        <tr><td>Quick check</td><td><code>curl -x http://127.0.0.1:3000 http://example.com/</code> → appears in <code>GET /flows</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="scope">What is intentionally not built (v1)</h2>
+    <div class="callout" data-c="scope-callout">
+      <p>Out of scope by design, and where each will slot in: <strong>replay / breakpoints / request rewriting</strong> (new mutation endpoints + a handler hook), <strong>WebSocket-frame capture</strong> (hudsucker's <code>WebSocketHandler</code>), <strong>persistence — SQLite / HAR</strong> (behind the <code>Store</code> boundary), <strong>transparent / NAT interception</strong> (root + per-OS plumbing), and <strong>true end-to-end HTTP/2</strong> (hudsucker's <code>http2</code> feature). The current store and interface boundaries were chosen so none of these force a rewrite. See the design doc's <a href="core-technical-design.html#challenges">challenges table</a>.</p>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

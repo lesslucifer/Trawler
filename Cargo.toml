@@ -6,16 +6,31 @@ description = "A native HTTP(S) debugging proxy that intercepts and inspects net
 license = "MIT"
 repository = "https://github.com/lesslucifer/Trawler"
 
+[lib]
+name = "trawler"
+path = "src/lib.rs"
+
+[[bin]]
+name = "trawler"
+path = "src/main.rs"
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
-hudsucker = { version = "0.22", features = ["rcgen-ca"] }
-rcgen = "0.13"
-rustls-pemfile = "2"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+hudsucker = { version = "0.24", features = ["rcgen-ca", "rustls-client"] }
+rcgen = { version = "0.14", features = ["pem", "crypto"] }
+axum = "0.8"
+tokio-stream = { version = "0.1", features = ["sync"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+http-body-util = "0.1"
 http = "1"
 bytes = "1"
-async-trait = "0.1"
+uuid = { version = "1", features = ["v4"] }
+base64 = "0.22"
+flate2 = "1"
+time = { version = "0.3", features = ["formatting"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [profile.release]
 lto = true
