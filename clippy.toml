@@ -1,0 +1,7 @@
+allow-unwrap-in-tests = true
+allow-dbg-in-tests = true
+allow-print-in-tests = true
+
+disallowed-methods = [
+    { path = "std::thread::sleep", reason = "blocks a runtime thread; use tokio::time::sleep" },
+]

@@ -68,12 +68,10 @@ impl FlowFilter {
             let needle = ct.to_ascii_lowercase();
             let hit = flow
                 .request_content_type()
-                .map(|c| c.to_ascii_lowercase().contains(&needle))
-                .unwrap_or(false)
+                .is_some_and(|c| c.to_ascii_lowercase().contains(&needle))
                 || flow
                     .response_content_type()
-                    .map(|c| c.to_ascii_lowercase().contains(&needle))
-                    .unwrap_or(false);
+                    .is_some_and(|c| c.to_ascii_lowercase().contains(&needle));
             if !hit {
                 return false;
             }
@@ -321,7 +319,7 @@ mod tests {
                 let body = if *sz == 0 { BodyRec::Empty } else { captured(&vec![0u8; *sz]) };
                 s.insert(FlowBuilder::new().req_body(body).build());
             }
-            let held: usize = s.list(&FlowFilter::default()).iter().map(|f| f.retained_bytes()).sum();
+            let held: usize = s.list(&FlowFilter::default()).iter().map(super::super::flow::Flow::retained_bytes).sum();
             proptest::prop_assert_eq!(held, s.total_bytes());
             proptest::prop_assert!(s.total_bytes() <= max || s.len() == 1);
         }

@@ -1,0 +1,152 @@
+#!/bin/bash
+# Installed to .git/hooks by cargo-husky (user-hooks feature).
+# Copies files matching patterns in .gitworktreecopy from the source worktree
+# (the one `git worktree add` was invoked from) to the new worktree.
+# Falls back to the main worktree if the source cannot be detected.
+#
+# $1 = prev HEAD, $2 = new HEAD, $3 = 1 if branch checkout, 0 if file checkout
+
+# Only run on branch checkouts
+[ "$3" != "1" ] && exit 0
+
+CURRENT_DIR=$(pwd)
+MAIN_WORKTREE=$(git worktree list | head -1 | awk '{print $1}')
+WORKTREES=$(git worktree list | awk '{print $1}')
+
+# Read a process's current working directory (Linux via /proc, macOS via lsof)
+get_cwd() {
+  local pid=$1
+  if [ -r "/proc/$pid/cwd" ]; then
+    readlink "/proc/$pid/cwd" 2>/dev/null
+  elif command -v lsof >/dev/null 2>&1; then
+    lsof -a -d cwd -p "$pid" -Fn 2>/dev/null | awk '/^n/ {print substr($0, 2); exit}'
+  fi
+}
+
+# Walk up the process tree from PPID and return the first ancestor whose
+# CWD is inside a known worktree other than this one.
+find_source_worktree() {
+  local pid=$PPID
+  local cwd wt
+  local depth=0
+  while [ -n "$pid" ] && [ "$pid" != "0" ] && [ "$pid" != "1" ] && [ $depth -lt 10 ]; do
+    cwd=$(get_cwd "$pid")
+    if [ -n "$cwd" ] && [ "$cwd" != "$CURRENT_DIR" ]; then
+      while IFS= read -r wt; do
+        [ -z "$wt" ] && continue
+        case "$cwd" in
+          "$wt"|"$wt"/*)
+            echo "$wt"
+            return 0
+            ;;
+        esac
+      done <<< "$WORKTREES"
+    fi
+    pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
+    depth=$((depth + 1))
+  done
+  return 1
+}
+
+SOURCE_WORKTREE=$(find_source_worktree)
+SOURCE_WORKTREE="${SOURCE_WORKTREE:-$MAIN_WORKTREE}"
+
+# Don't run in the source worktree itself
+[ "$SOURCE_WORKTREE" = "$CURRENT_DIR" ] && exit 0
+
+COPY_FILE="$CURRENT_DIR/.gitworktreecopy"
+[ ! -f "$COPY_FILE" ] && COPY_FILE="$SOURCE_WORKTREE/.gitworktreecopy"
+[ ! -f "$COPY_FILE" ] && exit 0
+
+if [ "$SOURCE_WORKTREE" = "$MAIN_WORKTREE" ]; then
+  echo "Setting up worktree from .gitworktreecopy (source: main worktree)..."
+else
+  echo "Setting up worktree from .gitworktreecopy (source: $SOURCE_WORKTREE)..."
+fi
+
+copied=0
+linked=0
+skipped=0
+symlinked_dirs=""
+
+while IFS= read -r raw_pattern || [ -n "$raw_pattern" ]; do
+  [[ -z "$raw_pattern" || "$raw_pattern" =~ ^# ]] && continue
+
+  # Check for ! prefix (bash command mode)
+  if [[ "$raw_pattern" == "!"* ]]; then
+    cmd="${raw_pattern#!}"
+    cmd="${cmd#"${cmd%%[![:space:]]*}"}"
+    echo "  ⚡ Running: $cmd"
+    (cd "$CURRENT_DIR" && eval "$cmd")
+    continue
+  fi
+
+  # Check for ~> prefix (symlink mode)
+  symlink=false
+  if [[ "$raw_pattern" == "~>"* ]]; then
+    symlink=true
+    pattern="${raw_pattern#~>}"
+    pattern="${pattern#"${pattern%%[![:space:]]*}"}"
+  else
+    pattern="$raw_pattern"
+  fi
+
+  # Handle direct directory symlinks (e.g. ~> target)
+  if [ "$symlink" = true ] && [ -d "$SOURCE_WORKTREE/$pattern" ]; then
+    dest="$CURRENT_DIR/$pattern"
+    if [ -d "$dest" ] || [ -L "$dest" ]; then
+      skipped=$((skipped + 1))
+    else
+      mkdir -p "$(dirname "$dest")"
+      ln -s "$SOURCE_WORKTREE/$pattern" "$dest"
+      echo "  ↗ Symlinked $pattern/"
+      linked=$((linked + 1))
+      symlinked_dirs="$symlinked_dirs $pattern"
+    fi
+    continue
+  fi
+
+  # Convert glob pattern to find arguments
+  # e.g. **/*.env -> -name "*.env", specific/path -> exact match
+  if [[ "$pattern" == **"**"** ]]; then
+    name_pattern="${pattern##**/}"
+    exclude_args=""
+    for d in $symlinked_dirs; do
+      exclude_args="$exclude_args -not -path './$d/*'"
+    done
+    matches=$(cd "$SOURCE_WORKTREE" && eval find . -name target -prune -o -name .git -prune -o -name \"$name_pattern\" $exclude_args -type f -print 2>/dev/null | sed 's|^\./||')
+  else
+    matches=$(cd "$SOURCE_WORKTREE" && compgen -G "$pattern" 2>/dev/null)
+  fi
+
+  if [ -z "$matches" ]; then
+    echo "  ⚠ No files matched: $pattern"
+    continue
+  fi
+
+  while IFS= read -r file; do
+    src="$SOURCE_WORKTREE/$file"
+    dest="$CURRENT_DIR/$file"
+
+    # Skip if destination already exists
+    if [ -f "$dest" ] || [ -L "$dest" ]; then
+      skipped=$((skipped + 1))
+      continue
+    fi
+
+    # Create parent directories if needed
+    mkdir -p "$(dirname "$dest")"
+
+    if [ "$symlink" = true ]; then
+      ln -s "$src" "$dest"
+      echo "  ↗ Symlinked $file"
+      linked=$((linked + 1))
+    else
+      cp "$src" "$dest"
+      echo "  ✓ Copied $file"
+      copied=$((copied + 1))
+    fi
+  done <<< "$matches"
+done < "$COPY_FILE"
+
+echo "Done: $copied copied, $linked symlinked, $skipped skipped (already existed)"

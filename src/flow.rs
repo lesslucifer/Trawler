@@ -180,13 +180,13 @@ mod tests {
 
     #[test]
     fn bytes_present_only_when_retained() {
-        assert_eq!(captured(b"hi").bytes().map(|b| b.as_ref()), Some(&b"hi"[..]));
+        assert_eq!(captured(b"hi").bytes().map(std::convert::AsRef::as_ref), Some(&b"hi"[..]));
         let trunc = BodyRec::Truncated {
             prefix: Bytes::from_static(b"pre"),
             captured: 3,
             total_hint: None,
         };
-        assert_eq!(trunc.bytes().map(|b| b.as_ref()), Some(&b"pre"[..]));
+        assert_eq!(trunc.bytes().map(std::convert::AsRef::as_ref), Some(&b"pre"[..]));
         assert!(BodyRec::Empty.bytes().is_none());
         assert!(BodyRec::Streaming { content_type: "x".into() }.bytes().is_none());
         assert!(BodyRec::NotCaptured { reason: NotCapturedReason::ReadError }.bytes().is_none());

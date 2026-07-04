@@ -89,7 +89,7 @@ mod tests {
         let (rec, fwd) = capture(&HeaderMap::new(), body(&data), 10).await;
         match rec {
             BodyRec::NotCaptured { reason: NotCapturedReason::TooLarge { actual } } => {
-                assert_eq!(actual, 50)
+                assert_eq!(actual, 50);
             }
             other => panic!("expected TooLarge, got {other:?}"),
         }
