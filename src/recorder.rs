@@ -42,7 +42,11 @@ fn headers_to_vec(map: &HeaderMap) -> Vec<Header> {
 }
 
 impl HttpHandler for Recorder {
-    async fn handle_request(&mut self, _ctx: &HttpContext, req: Request<Body>) -> RequestOrResponse {
+    async fn handle_request(
+        &mut self,
+        _ctx: &HttpContext,
+        req: Request<Body>,
+    ) -> RequestOrResponse {
         if req.method() == Method::CONNECT {
             return req.into();
         }

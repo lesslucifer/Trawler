@@ -52,12 +52,7 @@ pub async fn list_flows(
         content_type: query.content_type,
         q: query.q,
     };
-    let summaries = state
-        .store
-        .list(&filter)
-        .iter()
-        .map(FlowSummary::from)
-        .collect();
+    let summaries = state.store.list(&filter).iter().map(FlowSummary::from).collect();
     Json(summaries)
 }
 
@@ -103,10 +98,7 @@ pub async fn ca_cert(State(state): State<AppState>) -> Response {
     (
         [
             (header::CONTENT_TYPE, "application/x-x509-ca-cert"),
-            (
-                header::CONTENT_DISPOSITION,
-                "attachment; filename=\"trawler-ca.pem\"",
-            ),
+            (header::CONTENT_DISPOSITION, "attachment; filename=\"trawler-ca.pem\""),
         ],
         state.ca_cert_pem.as_bytes().to_vec(),
     )
@@ -143,9 +135,8 @@ fn body_response(state: &AppState, id: &str, leg: Leg, decode: bool) -> Response
         bytes.to_vec()
     };
 
-    let content_type = header_value(headers, "content-type")
-        .unwrap_or("application/octet-stream")
-        .to_owned();
+    let content_type =
+        header_value(headers, "content-type").unwrap_or("application/octet-stream").to_owned();
     ([(header::CONTENT_TYPE, content_type)], out).into_response()
 }
 
@@ -162,8 +153,5 @@ fn wants_decode(query: &BodyQuery) -> bool {
 }
 
 fn header_value<'a>(headers: &'a [Header], name: &str) -> Option<&'a str> {
-    headers
-        .iter()
-        .find(|h| h.name.eq_ignore_ascii_case(name))
-        .map(|h| h.value.as_str())
+    headers.iter().find(|h| h.name.eq_ignore_ascii_case(name)).map(|h| h.value.as_str())
 }

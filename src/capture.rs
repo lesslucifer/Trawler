@@ -9,10 +9,7 @@ const STREAMING_CONTENT_TYPES: &[&str] = &["text/event-stream"];
 fn streaming_content_type(headers: &HeaderMap) -> Option<String> {
     let raw = headers.get(header::CONTENT_TYPE)?.to_str().ok()?;
     let base = raw.split(';').next().unwrap_or(raw).trim();
-    STREAMING_CONTENT_TYPES
-        .iter()
-        .any(|s| base.eq_ignore_ascii_case(s))
-        .then(|| raw.to_string())
+    STREAMING_CONTENT_TYPES.iter().any(|s| base.eq_ignore_ascii_case(s)).then(|| raw.to_string())
 }
 
 /// Drain a body up to `cap`, decide how it was captured, and return a fresh body
@@ -39,9 +36,6 @@ pub async fn capture(headers: &HeaderMap, body: Body, cap: usize) -> (BodyRec, B
             };
             (rec, Body::from(Full::new(bytes)))
         }
-        Err(_) => (
-            BodyRec::NotCaptured { reason: NotCapturedReason::ReadError },
-            Body::empty(),
-        ),
+        Err(_) => (BodyRec::NotCaptured { reason: NotCapturedReason::ReadError }, Body::empty()),
     }
 }

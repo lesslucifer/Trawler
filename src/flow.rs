@@ -124,18 +124,11 @@ impl Flow {
     }
 
     pub fn host(&self) -> Option<String> {
-        self.request
-            .uri
-            .parse::<http::Uri>()
-            .ok()
-            .and_then(|u| u.host().map(str::to_owned))
+        self.request.uri.parse::<http::Uri>().ok().and_then(|u| u.host().map(str::to_owned))
     }
 
     fn header_value<'a>(headers: &'a [Header], name: &str) -> Option<&'a str> {
-        headers
-            .iter()
-            .find(|h| h.name.eq_ignore_ascii_case(name))
-            .map(|h| h.value.as_str())
+        headers.iter().find(|h| h.name.eq_ignore_ascii_case(name)).map(|h| h.value.as_str())
     }
 
     pub fn request_content_type(&self) -> Option<&str> {
@@ -143,8 +136,6 @@ impl Flow {
     }
 
     pub fn response_content_type(&self) -> Option<&str> {
-        self.response
-            .as_ref()
-            .and_then(|r| Self::header_value(&r.headers, "content-type"))
+        self.response.as_ref().and_then(|r| Self::header_value(&r.headers, "content-type"))
     }
 }

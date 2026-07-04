@@ -132,9 +132,7 @@ impl Store {
             ring.total_bytes += after.saturating_sub(before);
             ring.evict()
         };
-        let _ = self
-            .tx
-            .send(FlowEvent::ResponseCaptured { flow_id: id, res, duration_ms });
+        let _ = self.tx.send(FlowEvent::ResponseCaptured { flow_id: id, res, duration_ms });
         self.announce_evictions(evicted);
     }
 

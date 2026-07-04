@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a48aa529f34851f0dfa8011">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Testing Standard</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Testing Standard</h1>
+      <p>The permanent, project-wide rule for how Trawler is tested: each unit of work carries a mandatory kind of test — <strong>Epic → e2e, Working Unit → integration, Commit → unit</strong>.</p>
+      <div class="meta">Draft v4 · 2026-07-04 · Trawler</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="why">Why this is a standard, not a suggestion</h2>
+    <div class="callout warn" data-c="why-callout">
+      <p>Every line of Trawler is written by an AI agent and <strong>no human reads the diff before it lands</strong>. The tests are the reviewer that catches the off-by-one, and the executable spec the feature is written against. So: if a behaviour isn't tested it isn't guaranteed; every documented quirk becomes a named regression test so it can't silently return; and the suite itself is audited by mutation testing. This document binds all of that to the way work is decomposed — it applies to every feature, present and future.</p>
+    </div>
+
+    <h2 id="charter">The charter — work maps to a test level</h2>
+    <p>All work decomposes into three nested levels, and each carries a non-negotiable test obligation scoped to exactly what it delivers. Lower levels never substitute for higher ones: each tests what only <em>it</em> can see.</p>
+    <div class="diagram" data-c="charter-diagram">
+      <pre class="mermaid">
+flowchart TD
+    E["EPIC — a big feature"] --> W1["Working Unit"]
+    E --> W2["Working Unit"]
+    W1 --> C1["commit"]
+    W1 --> C2["commit"]
+    W2 --> C3["commit"]
+    E -. "MUST have" .-> ET["e2e test — full epic flow"]
+    W1 -. "MUST have" .-> IT1["integration test — WU contract"]
+    W2 -. "MUST have" .-> IT2["integration test — WU contract"]
+    C1 -. "MUST have" .-> UT1["unit tests — all code in commit"]
+    C2 -. "MUST have" .-> UT2["unit tests"]
+    C3 -. "MUST have" .-> UT3["unit tests"]
+      </pre>
+      <div class="caption">The decomposition tree and its test obligations.</div>
+    </div>
+    <table data-c="charter-table">
+      <thead><tr><th>Level</th><th>Definition</th><th>Mandatory test</th><th>Done-gate</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Epic</strong> <span class="badge">e2e</span></td>
+          <td>A big, user-visible feature — the largest unit of planning.</td>
+          <td>End-to-end test covering the full epic flow.</td>
+          <td>Not <em>complete</em> until the e2e passes, every WU is done, and each documented quirk has a named regression test.</td>
+        </tr>
+        <tr>
+          <td><strong>Working Unit</strong> <span class="badge">integration</span></td>
+          <td>A slice of an epic with a <strong>clear, bounded scope and one explicit requirement</strong>; independently shippable.</td>
+          <td>Integration test(s) covering the WU's contract.</td>
+          <td>Not <em>merge-ready</em> until its requirement is written down (one testable sentence) and an integration test asserts it; any new wire contract is snapshot-locked.</td>
+        </tr>
+        <tr>
+          <td><strong>Commit</strong> <span class="badge">unit</span></td>
+          <td>The smallest coherent increment; a WU is built from one or more.</td>
+          <td>Unit test(s) covering <em>all</em> code the commit adds or changes.</td>
+          <td><em>Rejected</em> if it adds/changes code with no unit coverage, or if fmt/clippy/coverage-floor gates fail.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="charter-compose-callout">
+      <p><strong>Levels compose, they don't substitute.</strong> A green e2e never excuses a missing WU integration test, and a WU test never excuses unit tests on its commits — coverage is additive. When a WU is genuinely one small commit, both obligations may be met together, but both must be met explicitly.</p>
+    </div>
+
+    <h2 id="layers">The three layers</h2>
+    <p>What each test kind <em>is</em> in this project — stable across all epics; only the subject changes. Effort concentrates at the bottom, where correctness weight and change frequency are highest.</p>
+    <div class="diagram" data-c="pyramid-diagram">
+      <pre class="mermaid">
+flowchart TD
+    E2E["E2E · per EPIC · few, high value<br/>real client → whole system → real dependency"]
+    INT["INTEGRATION · per WORKING UNIT<br/>a component/endpoint at its real boundary"]
+    UNIT["UNIT · per COMMIT · the bulk<br/>pure functions &amp; branches + all-input invariants"]
+    E2E --> INT --> UNIT
+      </pre>
+      <div class="caption">Widest at the bottom: most confidence comes from cheap unit tests on every commit; a focused integration layer proves each WU's contract; a deliberately thin e2e layer proves each epic's full flow.</div>
+    </div>
+    <table data-c="layer-def-table">
+      <thead><tr><th>Layer</th><th>Job &amp; boundary — may touch</th><th>Lives in</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Unit</strong></td>
+          <td>One function/type/branch in isolation. Fabricated inputs; no sockets/fs; private items fair game; a runtime only if the code under test is async.</td>
+          <td>Inline <code>#[cfg(test)] mod tests</code> beside the code.</td>
+        </tr>
+        <tr>
+          <td><strong>Integration</strong></td>
+          <td>A WU's contract at its real boundary — public crate surface, an in-process router (<code>tower::oneshot</code>), a seeded <code>Store</code>, temp-dir fs. No full product.</td>
+          <td><code>tests/&lt;subsystem&gt;.rs</code> (public API only).</td>
+        </tr>
+        <tr>
+          <td><strong>E2E</strong></td>
+          <td>An epic's full flow through the running system on ephemeral ports: real client → real transport → local test dependency. Asserts external behaviour <em>and</em> internal fidelity.</td>
+          <td><code>tests/e2e_&lt;epic&gt;.rs</code> + shared <code>tests/common/</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="principles">The testing contract</h2>
+    <p>Five rules every test obeys at every level; a test that breaks one fails review (mechanically, via the <a href="#ci">CI gates</a>).</p>
+    <table data-c="principles-table">
+      <thead><tr><th>Rule</th><th>Meaning &amp; enforcement</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Deterministic</strong></td><td>Same input → same result. No <code>sleep()</code> as synchronization; assert <em>presence</em> of durations/timestamps, never exact values; seed randomness.</td></tr>
+        <tr><td><strong>Hermetic</strong></td><td>No public network, no shared global files. Ephemeral ports (<code>:0</code>); filesystem tests use <code>tempfile</code>, never repo paths; local test servers only.</td></tr>
+        <tr><td><strong>Behaviour, not implementation</strong></td><td>Assert observable contracts (JSON a client sees, bytes forwarded) so behaviour-preserving refactors stay green. Test names read as specifications.</td></tr>
+        <tr><td><strong>Invariant-first</strong></td><td>Properties that must hold for <em>all</em> inputs get a <code>proptest</code> generator, not three hand-picked cases.</td></tr>
+        <tr><td><strong>Fast &amp; isolated</strong></td><td>Each test owns its state and runs in parallel; the unit layer is milliseconds. <code>cargo nextest</code> gives per-test process isolation.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="crosscutting">Cross-cutting techniques</h2>
+    <table data-c="crosscutting-table">
+      <thead><tr><th>Technique</th><th>What it does</th><th>Tool</th></tr></thead>
+      <tbody>
+        <tr><td>Property testing</td><td>Proves all-input invariants over generated inputs; shrinks to a minimal failing case.</td><td><code>proptest</code></td></tr>
+        <tr><td>Snapshot the wire contract</td><td>Locks externally visible JSON; unintended changes surface as a reviewable diff.</td><td><code>insta</code></td></tr>
+        <tr><td>Concurrency stress</td><td>N tasks mutate shared state; assert no panic and invariants hold — pragmatic coverage of mutex/broadcast designs.</td><td><code>tokio</code> tasks</td></tr>
+        <tr><td>Mutation testing</td><td>Flips operators / deletes lines and fails if the suite still passes — measures whether tests catch real bugs.</td><td><code>cargo-mutants</code></td></tr>
+        <tr><td>Shared fixtures</td><td>Builders, local test servers, ephemeral CAs, proxy client — so higher-level tests read as scenarios, not boilerplate.</td><td><code>tests/common/</code></td></tr>
+        <tr><td>Named regression tests</td><td>Each documented quirk gets a test named for it (e.g. <code>streaming_body_never_buffered</code>).</td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="tooling">Tooling</h2>
+    <table data-c="tooling-table">
+      <thead><tr><th>Tool</th><th>Role</th><th>Layer</th></tr></thead>
+      <tbody>
+        <tr><td><code>tokio</code> (<code>macros</code>, <code>test-util</code>)</td><td><code>#[tokio::test]</code> for async tests.</td><td>all</td></tr>
+        <tr><td><code>tower</code> (<code>ServiceExt</code>)</td><td><code>oneshot</code> the axum router without a socket.</td><td>integration</td></tr>
+        <tr><td><code>reqwest</code> (proxy + custom root)</td><td>E2E client: routes through the proxy, trusts a fetched CA.</td><td>e2e</td></tr>
+        <tr><td><code>axum</code> / <code>hyper</code></td><td>Local test origin/dependency servers.</td><td>e2e</td></tr>
+        <tr><td><code>tempfile</code></td><td>Isolated temp dirs for filesystem tests.</td><td>integration · e2e</td></tr>
+        <tr><td><code>proptest</code> · <code>insta</code></td><td>Property tests · snapshot tests.</td><td>unit · integration</td></tr>
+        <tr><td><code>cargo-nextest</code> · <code>cargo-llvm-cov</code> · <code>cargo-mutants</code> <span class="badge">CI</span></td><td>Runner · coverage gate · mutation gate.</td><td>all</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="layout">Repository layout</h2>
+    <div class="diagram" data-c="layout-diagram">
+      <pre class="mermaid">
+flowchart TD
+    src["src/*.rs — inline #[cfg(test)] mod tests (unit + property, per COMMIT)"]
+    tests["tests/ — integration crate, public API only"]
+    tests --> int["&lt;subsystem&gt;.rs — integration, per WORKING UNIT"]
+    tests --> e2e["e2e_&lt;epic&gt;.rs — one per EPIC"]
+    tests --> common["common/ — builders, test servers, test CA, proxy client"]
+      </pre>
+      <div class="caption">Unit tests sit beside the code (private access, fast). Integration &amp; e2e live in <code>tests/</code> and see only the public surface — the same view a real embedder has, keeping the public API honest.</div>
+    </div>
+
+    <h2 id="ci">CI gates</h2>
+    <p>Merge is unattended, so a red gate blocks it: every push runs <code>fmt</code>, <code>clippy -D warnings</code>, the full test suite and a coverage floor; mutation and dependency/advisory audits run on a schedule; the same fast gates also run locally as git hooks via <code>cargo-husky</code>.</p>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -41,27 +41,24 @@ pub enum BodyView {
 impl From<&BodyRec> for BodyView {
     fn from(body: &BodyRec) -> Self {
         match body {
-            BodyRec::Captured { bytes, size } => BodyView::Captured {
-                size: *size,
-                data_base64: STANDARD.encode(bytes),
-            },
+            BodyRec::Captured { bytes, size } => {
+                BodyView::Captured { size: *size, data_base64: STANDARD.encode(bytes) }
+            }
             BodyRec::Truncated { prefix, captured, total_hint } => BodyView::Truncated {
                 captured: *captured,
                 total_hint: *total_hint,
                 data_base64: STANDARD.encode(prefix),
             },
-            BodyRec::Streaming { content_type } => BodyView::Streaming {
-                content_type: content_type.clone(),
-            },
+            BodyRec::Streaming { content_type } => {
+                BodyView::Streaming { content_type: content_type.clone() }
+            }
             BodyRec::NotCaptured { reason } => match reason {
-                NotCapturedReason::TooLarge { actual } => BodyView::NotCaptured {
-                    reason: "too_large",
-                    actual: Some(*actual),
-                },
-                NotCapturedReason::ReadError => BodyView::NotCaptured {
-                    reason: "read_error",
-                    actual: None,
-                },
+                NotCapturedReason::TooLarge { actual } => {
+                    BodyView::NotCaptured { reason: "too_large", actual: Some(*actual) }
+                }
+                NotCapturedReason::ReadError => {
+                    BodyView::NotCaptured { reason: "read_error", actual: None }
+                }
             },
             BodyRec::Empty => BodyView::Empty,
         }

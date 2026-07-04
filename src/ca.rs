@@ -32,12 +32,8 @@ pub fn load_or_create(config: &Config) -> CaMaterial {
     let mut params = CertificateParams::default();
     params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
     params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign];
-    params
-        .distinguished_name
-        .push(DnType::CommonName, "Trawler Proxy CA");
-    params
-        .distinguished_name
-        .push(DnType::OrganizationName, "Trawler");
+    params.distinguished_name.push(DnType::CommonName, "Trawler Proxy CA");
+    params.distinguished_name.push(DnType::OrganizationName, "Trawler");
 
     let key_pair = KeyPair::generate().expect("generate CA key");
     let cert = params.self_signed(&key_pair).expect("self-sign CA");
@@ -46,10 +42,7 @@ pub fn load_or_create(config: &Config) -> CaMaterial {
     fs::create_dir_all(&config.ca_dir).expect("create CA dir");
     fs::write(&cert_path, &cert_pem).expect("write CA cert");
     fs::write(&key_path, key_pair.serialize_pem()).expect("write CA key");
-    info!(
-        "generated new CA at {} — trust this certificate to decrypt HTTPS",
-        cert_path.display()
-    );
+    info!("generated new CA at {} — trust this certificate to decrypt HTTPS", cert_path.display());
 
     let issuer = Issuer::from_ca_cert_pem(&cert_pem, key_pair).expect("build CA issuer");
     CaMaterial { issuer, cert_pem }

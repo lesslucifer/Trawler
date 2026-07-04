@@ -1,0 +1,10 @@
+#!/bin/sh
+# Fast local mirror of the CI commit gate. Installed by cargo-husky.
+set -e
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+echo "[pre-commit] cargo fmt --check"
+cargo fmt --all -- --check
+
+echo "[pre-commit] cargo clippy -D warnings"
+cargo clippy --all-targets --all-features -- -D warnings

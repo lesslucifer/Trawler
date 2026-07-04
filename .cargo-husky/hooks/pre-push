@@ -1,0 +1,12 @@
+#!/bin/sh
+# Fast local mirror of the CI test gate. Installed by cargo-husky.
+set -e
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+if command -v cargo-nextest >/dev/null 2>&1; then
+  echo "[pre-push] cargo nextest run --all"
+  cargo nextest run --all
+else
+  echo "[pre-push] cargo test --all (install cargo-nextest for faster runs)"
+  cargo test --all
+fi
