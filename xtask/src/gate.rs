@@ -260,12 +260,10 @@ impl Gate<'_> {
     }
 
     fn check_tracked_docs(&self, report: &mut Report) {
-        let tracked: Vec<String> =
-            git(self.repo, &["ls-tree", "-r", "--name-only", &report.tip, "--", "docs"])
-                .map(|out| out.lines().map(str::to_string).collect())
-                .unwrap_or_default();
-        for path in tracked {
-            if is_expected_tracked_doc(&path) {
+        let tracked = git(self.repo, &["ls-tree", "-r", "--name-only", &report.tip, "--", "docs"])
+            .unwrap_or_default();
+        for path in tracked.lines() {
+            if is_expected_tracked_doc(path) {
                 continue;
             }
             let (what, fix) = if path.starts_with("docs/work/") {
