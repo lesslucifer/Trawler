@@ -70,6 +70,8 @@ pub struct FlowView {
     pub method: String,
     pub uri: String,
     pub status: Option<u16>,
+    pub request_http_version: String,
+    pub response_http_version: Option<String>,
     pub request_headers: Vec<HeaderView>,
     pub response_headers: Vec<HeaderView>,
     pub request_body: BodyView,
@@ -85,6 +87,8 @@ impl From<&Flow> for FlowView {
             method: flow.request.method.clone(),
             uri: flow.request.uri.clone(),
             status: flow.response.as_ref().map(|r| r.status),
+            request_http_version: flow.request.version.clone(),
+            response_http_version: flow.response.as_ref().map(|r| r.version.clone()),
             request_headers: flow.request.headers.iter().map(HeaderView::from).collect(),
             response_headers: flow
                 .response
@@ -208,6 +212,8 @@ mod tests {
         assert_eq!(v["method"], "POST");
         assert_eq!(v["uri"], "http://x/y");
         assert_eq!(v["status"], 201);
+        assert_eq!(v["request_http_version"], "HTTP/1.1");
+        assert_eq!(v["response_http_version"], "HTTP/1.1");
         assert_eq!(v["duration_ms"], 1);
         assert_eq!(v["request_headers"], json!([{"name":"A","value":"b"}]));
         assert_eq!(v["response_headers"], json!([{"name":"C","value":"d"}]));
@@ -220,6 +226,7 @@ mod tests {
     fn flow_view_without_response() {
         let v = serde_json::to_value(FlowView::from(&FlowBuilder::new().build())).unwrap();
         assert_eq!(v["status"], serde_json::Value::Null);
+        assert_eq!(v["response_http_version"], serde_json::Value::Null);
         assert_eq!(v["response_body"], serde_json::Value::Null);
         assert_eq!(v["response_headers"], json!([]));
     }
