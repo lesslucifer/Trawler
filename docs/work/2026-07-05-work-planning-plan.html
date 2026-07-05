@@ -13,9 +13,9 @@
       <div class="meta">Draft v5 · 2026-07-05 · Trawler · T3 work doc · epic/work-planning</div>
     </div>
   </header>
-  <main>
+  <main data-artifact="epic-plan">
     <h2 id="goal">Epic requirement</h2>
-    <p data-c="goal-stmt">
+    <p data-c="goal-stmt" data-item="intent">
       Planning and result-reporting get defined <strong>outputs</strong>. For each output the T1
       standard gives a <strong>checklist of what must at least be in it</strong> and a
       <strong>mechanical check</strong> — a script in the <code>verify-dod</code> family that
@@ -27,8 +27,14 @@
       work is built on it, and forgetting is not a failure mode because no one has to remember.
     </p>
 
+    <p data-c="uc-reqs" data-item="use-cases">
+      Use-case requirements: none — a process epic; no <code>UC-*</code> contract is delivered or
+      changed. The contract delivered is the standard itself: every future epic/WU plans and
+      reports through the four governed outputs below.
+    </p>
+
     <h2 id="expected">Expected result — observable</h2>
-    <ul data-c="expected-list">
+    <ul data-c="expected-list" data-item="expected">
       <li><code>docs/work-planning.html</code> (T1) exists and owns: the planning outputs of an
         epic and of a WU, the result-report outputs of an epic and of a WU, one minimum-content
         checklist per output, the markup contract that makes the items machine-findable, and the
@@ -48,7 +54,7 @@
     </ul>
 
     <h2 id="non-goals">Non-goals</h2>
-    <ul data-c="non-goals-list">
+    <ul data-c="non-goals-list" data-item="non-goals">
       <li><strong>No fixed templates.</strong> The standard constrains substance (items that must
         exist), never form. A skeleton to copy-paste is explicitly what we don't want.</li>
       <li><strong>No git machinery.</strong> No git hooks — commit/merge time is too late for a
@@ -188,6 +194,40 @@ flowchart LR
       remembering one.
     </p>
 
+    <h2 id="wu-summaries">WU summaries</h2>
+    <div data-c="wu-summary-blocks" data-item="wu-summaries">
+      <div data-wu="E-PLAN.W1">
+        <p><strong>E-PLAN.W1</strong> — <span data-item="wu-summary">the T1 standard
+        (<code>docs/work-planning.html</code>), <code>workflow.html</code> link updates and
+        DEC-4</span> · maps to <span data-item="wu-maps-to">the epic intent: outputs +
+        checklists defined once, owned by T1</span> · expected:
+        <span data-item="wu-expected">an agent can plan and report any epic/WU from the standard
+        alone</span> · deps: <span data-item="wu-deps">none</span>.</p>
+      </div>
+      <div data-wu="E-PLAN.W2">
+        <p><strong>E-PLAN.W2</strong> — <span data-item="wu-summary">the mechanical check
+        (<code>cargo xtask verify-doc</code>) and its harness trigger wiring
+        (PostToolUse + Stop hooks)</span> · maps to <span data-item="wu-maps-to">the epic
+        intent: verification that cannot be forgotten, at authoring time</span> · expected:
+        <span data-item="wu-expected">a red ready doc interrupts its author on the same write;
+        a turn cannot end red</span> · deps: <span data-item="wu-deps">E-PLAN.W1 — the
+        checklists the script enforces are the ones the T1 owns</span>.</p>
+      </div>
+    </div>
+    <p data-c="epic-e2e-plan" data-item="e2e-plan">
+      <strong>E2E test plan.</strong> The epic's full flow — write a red ready governed doc →
+      problems fed back → fix → green → turn may end — is proven end to end by the hook-script
+      integration tests (PostToolUse and Stop suites in <code>xtask/tests/doc_hooks.rs</code>)
+      plus a live dry-run of <code>verify-doc</code> on this very plan; no product flow changes,
+      so the <code>tests/</code> e2e layer is waived with that reason in the epic test note.
+    </p>
+    <p data-c="epic-distillation-plan" data-item="distillation-plan">
+      <strong>Distillation plan.</strong> T1 <code>docs/work-planning.html</code> (new — the
+      standard is permanent shape) and <code>workflow.html</code> (links only); T2
+      <code>docs/decisions/work-planning.html</code> (DEC-4) + index row. At close this plan and
+      all result reports archive to <code>docs/.archive/</code> with lineage.
+    </p>
+
     <h2 id="wu1">WU E-PLAN.W1 · wu/work-planning/standard</h2>
     <p data-c="wu1-req">
       <strong>Requirement.</strong> Author T1 <code>docs/work-planning.html</code> owning the four
@@ -269,7 +309,7 @@ flowchart LR
     </p>
 
     <h2 id="open">Open questions</h2>
-    <ul data-c="open-list">
+    <ul data-c="open-list" data-item="open-questions">
       <li>None — every question so far was settled in the comment rounds: simple tag
         verification over substance heuristics, drafts silent until declared ready, the write
         itself never blocked, pre-standard docs skipped, one combined result doc for a collapsed
