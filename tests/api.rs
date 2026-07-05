@@ -138,6 +138,29 @@ async fn ca_cert_download() {
 }
 
 #[tokio::test]
+async fn stream_signals_lag_instead_of_silent_gap() {
+    let store = Arc::new(Store::new(1_000_000, 1));
+    let r = router_with(store.clone());
+
+    let req = Request::builder().uri("/stream").body(Body::empty()).unwrap();
+    let res = r.clone().oneshot(req).await.unwrap();
+    let mut stream = res.into_body().into_data_stream();
+
+    for i in 0..3 {
+        store.insert(FlowBuilder::new().uri(&format!("http://flood/{i}")).build());
+    }
+
+    let frame = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .expect("no SSE frame before timeout")
+        .expect("stream ended")
+        .expect("frame error");
+    let text = String::from_utf8_lossy(&frame);
+    assert!(text.contains("event: lagged"), "got: {text}");
+    assert!(text.contains("\"skipped\":2"), "got: {text}");
+}
+
+#[tokio::test]
 async fn stream_delivers_live_event() {
     let store = Arc::new(Store::new(1_000_000, 64));
     let r = router_with(store.clone());

@@ -7,6 +7,7 @@ use axum::response::sse::{Event, KeepAlive, Sse};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Deserialize;
+use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
@@ -86,11 +87,13 @@ pub async fn response_body(
 pub async fn stream(
     State(state): State<AppState>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    let events = BroadcastStream::new(state.store.subscribe()).filter_map(|result| {
-        let event = result.ok()?;
-        let (name, data) = view::sse_event(&event);
+    let events = BroadcastStream::new(state.store.subscribe()).map(|result| {
+        let (name, data) = match result {
+            Ok(event) => view::sse_event(&event),
+            Err(BroadcastStreamRecvError::Lagged(skipped)) => view::sse_lagged(skipped),
+        };
         let payload = serde_json::to_string(&data).unwrap_or_default();
-        Some(Ok(Event::default().event(name).data(payload)))
+        Ok(Event::default().event(name).data(payload))
     });
     Sse::new(events).keep_alive(KeepAlive::default())
 }

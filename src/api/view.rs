@@ -160,6 +160,12 @@ pub fn sse_event(event: &FlowEvent) -> (&'static str, Value) {
     }
 }
 
+/// Emitted when a slow SSE consumer falls behind the broadcast buffer, so the
+/// gap in lifecycle events is visible instead of silent.
+pub fn sse_lagged(skipped: u64) -> (&'static str, Value) {
+    ("lagged", json!({ "skipped": skipped }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{sse_event, BodyView, FlowSummary, FlowView};
@@ -273,5 +279,12 @@ mod tests {
         let (name, data) = sse_event(&FlowEvent::FlowEvicted { flow_id: flow.id });
         assert_eq!(name, "evicted");
         assert_eq!(data["flow_id"], flow.id.to_string());
+    }
+
+    #[test]
+    fn sse_lagged_shape() {
+        let (name, data) = super::sse_lagged(7);
+        assert_eq!(name, "lagged");
+        assert_eq!(data, json!({ "skipped": 7 }));
     }
 }
