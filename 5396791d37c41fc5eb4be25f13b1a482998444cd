@@ -1,0 +1,12 @@
+schema: test/v2
+level: epic
+epic: E-WFT
+branch: epic/wf-tooling
+tests:
+  unit:
+    waived: "adopted commits are process-spawn plumbing and build-target config; asserted end-to-end by the hermeticity regression tests"
+  integration:
+    count: 2
+    covers: "GIT_DIR poisoned at a nonexistent repo: xtask git plumbing (dod_gate) and hook-suite repo helpers (dod_hooks) still target their own temp repos"
+  e2e:
+    waived: "repo-local tooling epic - the integration layer already drives the hermeticity contract against real scratch git repos; no larger flow exists"
