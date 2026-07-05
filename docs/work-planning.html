@@ -37,8 +37,9 @@
 
     <p data-c="collapse-rule"><strong>Collapsed epics.</strong> A one-WU epic may combine the two
     plans into a single doc and the two results into a single doc — each declares both roles
-    (<code>data-artifact="epic-plan wu-plan"</code>) and must satisfy the union of both
-    checklists; an item whose tag both checklists share is satisfied once.</p>
+    (<code>data-artifact="epic-plan wu-plan"</code> for the plans,
+    <code>data-artifact="epic-result wu-result"</code> for the results) and must satisfy the union
+    of both checklists; an item whose tag both checklists share is satisfied once.</p>
 
     <h2 id="loop">The verification loop</h2>
 
@@ -167,7 +168,7 @@ flowchart LR
       <thead><tr><th>Hook</th><th>Fires</th><th>Does</th></tr></thead>
       <tbody>
         <tr><td>PostToolUse (<code>.claude/hooks/verify-doc-post.sh</code>)</td><td>every Write/Edit of an <code>.html</code> file</td><td>runs <code>verify-doc</code> on the written file; red ⇒ the problem blocks are injected into the session as feedback — the write itself is never blocked, the doc gets fixed <em>now</em>; drafts and ungoverned docs stay silent</td></tr>
-        <tr><td>Stop (<code>.claude/hooks/verify-doc-stop.sh</code>)</td><td>turn end</td><td>runs <code>verify-doc</code> over every doc under <code>docs/</code> in the working tree; any ready governed doc red ⇒ the turn is refused with the problems as the reason — the backstop that also catches docs edited around the file tools (shell, scripts)</td></tr>
+        <tr><td>Stop (<code>.claude/hooks/verify-doc-stop.sh</code>)</td><td>turn end</td><td>runs <code>verify-doc</code> over every doc under <code>docs/</code> in the working tree (tracked or untracked; gitignored archives excluded); any ready governed doc red ⇒ the turn is refused with the problems as the reason — the backstop that also catches docs edited around the file tools (shell, scripts)</td></tr>
       </tbody>
     </table>
 
