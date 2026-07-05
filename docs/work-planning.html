@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4a719b9f34851f0dfa839d">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Work Planning & Result Reports</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Work Planning &amp; Result Reports</h1>
+      <p>What the planning phase of an epic or WU must output, what the result report after the work must contain — minimum-content checklists verified by a script the agent harness triggers at authoring time. Never fixed templates, never git hooks.</p>
+      <div class="meta">v1 · 2026-07-05 · Trawler · T1 process doc</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outputs">The four outputs</h2>
+
+    <p>Every epic produces two governed docs and every WU produces two more — all T3, all named by
+    the normal rule in <a href="documentation-system.html">the documentation system</a>
+    (<code>docs/work/YYYY-MM-DD-&lt;slug&gt;-plan.html</code> / <code>…-result.html</code>), all
+    distilled then archived like any T3. The checklist constrains <strong>substance</strong>
+    (items that must exist), never <strong>form</strong>: a plan may be prose, tables, diagrams or
+    widgets, shaped to fit its task. A skeleton to copy-paste is exactly what this standard
+    refuses to be (<a href="decisions/work-planning.html">DEC-4</a>).</p>
+
+    <table data-c="outputs-table">
+      <thead><tr><th>Output</th><th><code>data-artifact</code></th><th>Written</th></tr></thead>
+      <tbody>
+        <tr><td>Epic plan</td><td><code>epic-plan</code></td><td>before the epic branch carries any WU work; carries only a <em>summary</em> per WU</td></tr>
+        <tr><td>WU plan</td><td><code>wu-plan</code></td><td>its own doc, before that WU's code</td></tr>
+        <tr><td>WU result report</td><td><code>wu-result</code></td><td>at the WU's completion, before its merge into the epic</td></tr>
+        <tr><td>Epic result report</td><td><code>epic-result</code></td><td>at epic close, before the merge into <code>main</code></td></tr>
+      </tbody>
+    </table>
+
+    <p data-c="collapse-rule"><strong>Collapsed epics.</strong> A one-WU epic may combine the two
+    plans into a single doc and the two results into a single doc — each declares both roles
+    (<code>data-artifact="epic-plan wu-plan"</code>) and must satisfy the union of both
+    checklists; an item whose tag both checklists share is satisfied once.</p>
+
+    <h2 id="loop">The verification loop</h2>
+
+    <div class="diagram" data-c="loop-diagram">
+      <pre class="mermaid">
+flowchart LR
+  A["author a governed doc<br/>data-status='draft' — silent,<br/>iterate freely"] --> RDY["flip it ready"]
+  RDY --> H{"PostToolUse hook<br/>verify-doc on every write<br/>of a ready doc"}
+  H -- "red — problems fed back" --> F["fix the doc now"] --> H
+  H -- green --> W["work proceeds on a green doc"]
+  W --> S{"Stop hook at turn end<br/>any ready governed doc red?"}
+  S -- "red — turn refused" --> F
+  S -- green --> D["turn ends"]
+      </pre>
+      <div class="caption">Drafts iterate in silence; declaring the doc ready is the checkpoint. From there every edit re-verifies and red never survives a turn.</div>
+    </div>
+
+    <h2 id="markup">The markup contract</h2>
+
+    <p>Free form and a mechanical check coexist through four attributes. <strong>Tagging is
+    strict by design: the tag <em>is</em> the contract.</strong> Content sitting under a wrong or
+    missing tag is red on purpose — tag each checklist item as you write it, with the exact tag
+    from the tables below, on whatever element holds it (any element, any order, any form around
+    it).</p>
+
+    <table data-c="markup-table">
+      <thead><tr><th>Attribute</th><th>Where</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>data-artifact</code></td><td>once per doc (the <code>&lt;html&gt;</code> or <code>&lt;body&gt;</code> tag, or any one element)</td><td>declares what the doc is: <code>epic-plan · wu-plan · wu-result · epic-result</code>, space-separated when combined. A doc with no <code>data-artifact</code> is not governed and is ignored — pre-standard docs are skipped, never retrofitted</td></tr>
+        <tr><td><code>data-status</code></td><td>next to <code>data-artifact</code></td><td><code>draft</code> while authoring — all checks silent; <code>ready</code> or absent = ready, verified on every write. The flip to ready is the checkpoint. Flipping back to draft to silence a red doc is visible to the reviews that read these docs</td></tr>
+        <tr><td><code>data-item</code></td><td>the element holding a checklist item</td><td>exactly one of the type's tags below, non-empty content inside</td></tr>
+        <tr><td><code>data-wu</code></td><td>epic plan only, inside the <code>wu-summaries</code> item</td><td>one block per WU, value = the WU id (e.g. <code>E-CAP.W2</code>); each block carries the four <code>data-item</code> sub-tags</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="checklists">The checklists — minimum content per output</h2>
+
+    <h3 id="checklist-epic-plan">Epic plan</h3>
+    <table data-c="epic-plan-table">
+      <thead><tr><th>Item</th><th><code>data-item</code></th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>Intent</td><td><code>intent</code></td><td>One requirement paragraph: what user-visible change, and why now</td></tr>
+        <tr><td>Use-case requirements</td><td><code>use-cases</code></td><td>The use-case contracts this epic delivers or changes — existing <code>UC-*</code> ids referenced, new/changed behavior stated contract-level; these become the T2 use-case updates at distillation. A process epic that touches no UC says so explicitly</td></tr>
+        <tr><td>Expected result</td><td><code>expected</code></td><td>Observable acceptance — what exists/behaves differently after, checkable by a reader who wasn't there</td></tr>
+        <tr><td>Non-goals</td><td><code>non-goals</code></td><td>What is deliberately out of scope</td></tr>
+        <tr><td>WU summaries</td><td><code>wu-summaries</code></td><td>One <code>data-wu</code> block per WU with four sub-tags: what it builds (<code>wu-summary</code>), which UC / requirement it maps to (<code>wu-maps-to</code>), expected outcomes (<code>wu-expected</code>), dependencies on other WUs or "none" (<code>wu-deps</code>). Not the full WU plan — that lives in the WU's own plan doc</td></tr>
+        <tr><td>E2E test plan</td><td><code>e2e-plan</code></td><td>The end-to-end flow(s) that will prove the whole epic, per <a href="testing-strategy.html">the testing standard</a>; a waiver intent is stated here, judged at review</td></tr>
+        <tr><td>Distillation plan</td><td><code>distillation-plan</code></td><td>Which T2 topic files / decision records (rarely T1) will absorb this epic's truth</td></tr>
+        <tr><td>Open questions</td><td><code>open-questions</code></td><td>What's undecided, each with a proposed default, or "none"</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="checklist-wu-plan">WU plan</h3>
+    <table data-c="wu-plan-table">
+      <thead><tr><th>Item</th><th><code>data-item</code></th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>Requirement</td><td><code>requirement</code></td><td>One explicit, testable sentence</td></tr>
+        <tr><td>Mapping</td><td><code>maps-to</code></td><td>Which epic, UC / requirement this WU serves — consistent with its summary block in the epic plan</td></tr>
+        <tr><td>Expected result</td><td><code>expected</code></td><td>Observable outcome of this WU alone</td></tr>
+        <tr><td>Test plan</td><td><code>test-plan</code></td><td>Concrete per level — what asserts what; waivers named with reasons</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="checklist-wu-result">WU result report</h3>
+    <table data-c="wu-result-table">
+      <thead><tr><th>Item</th><th><code>data-item</code></th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>Outcome</td><td><code>outcome</code></td><td>Delivered / deviated / dropped against its requirement and expected result — what actually shipped</td></tr>
+        <tr><td>Deviations</td><td><code>deviations</code></td><td>Every difference from the WU plan, with why (scope moved, approach changed, work discovered), or "none"</td></tr>
+        <tr><td>Evidence</td><td><code>evidence</code></td><td>Pointers: tests added, docs touched, tips/commits</td></tr>
+        <tr><td>Distillation</td><td><code>distillation</code></td><td>What went to T2/T1 — or "nothing citable", said explicitly</td></tr>
+        <tr><td>Follow-ups</td><td><code>follow-ups</code></td><td>Debt or new work discovered, or none</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="checklist-epic-result">Epic result report</h3>
+    <table data-c="epic-result-table">
+      <thead><tr><th>Item</th><th><code>data-item</code></th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>Outcome</td><td><code>outcome</code></td><td>Against the epic's intent, use-case requirements and expected result — did the user-visible change land as expected</td></tr>
+        <tr><td>Per-WU rollup</td><td><code>wu-rollup</code></td><td>Each planned WU's outcome; unplanned work accounted for</td></tr>
+        <tr><td>Deviations</td><td><code>deviations</code></td><td>Where the epic diverged from its plan, and why, or "none"</td></tr>
+        <tr><td>Evidence</td><td><code>evidence</code></td><td>E2E outcome, review verdicts, pointers to the landed work</td></tr>
+        <tr><td>Distillation summary</td><td><code>distillation</code></td><td>The T2/T1 docs now carrying this epic's truth, checked against the distillation plan; plan + reports archived</td></tr>
+        <tr><td>Follow-ups</td><td><code>follow-ups</code></td><td>Epics/WUs this work spawned, or none</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="verification">The mechanical check — <code>cargo xtask verify-doc</code></h2>
+
+    <pre data-c="verify-usage">cargo xtask verify-doc &lt;path&gt; [&lt;path&gt;…]    # exit 0 green/draft/ungoverned · exit 1 red</pre>
+
+    <p data-c="verify-checks">The script reads the doc's <code>data-artifact</code>, selects its
+    checklist(s), and checks exactly this — nothing cleverer, no content heuristics
+    (<a href="decisions/work-planning.html">DEC-4</a>):</p>
+
+    <ul data-c="verify-checks-list">
+      <li>every item's tagged section is <strong>present with non-empty content</strong>
+        (whitespace-only counts as empty);</li>
+      <li>the type's <strong>structure</strong> holds: an epic plan carries ≥ 1
+        <code>data-wu</code> block, each with its four sub-tags, all non-empty;</li>
+      <li><strong>no unknown tags</strong> for the type — the typo guard: an unknown
+        <code>data-item</code> is reported by name next to the missing item it likely misspells
+        ("unknown tag <code>expcted</code> / missing item <code>expected</code>"), so "content
+        there, tag wrong" is a named, fixable problem, never a mystery;</li>
+      <li>an unknown <code>data-artifact</code> value is red.</li>
+    </ul>
+
+    <p data-c="verify-output">Anything red prints one problem block per item — check id, expected
+    vs found, <code>fix →</code> — exit 1, same house style as
+    <a href="workflow.html">the DoD gate</a>. Depth of content is review territory: whether an
+    "observable expected result" is truly observable is judged where judgment already lives — the
+    review that reads the plan, the user's comment round — on top of, never instead of, the
+    script.</p>
+
+    <h2 id="trigger">Who triggers it — the harness, at authoring time</h2>
+
+    <p data-c="trigger-why">Git hooks are the wrong point: by commit or merge the work already
+    stands on the low-quality doc. An agent that must remember a check will eventually forget it.
+    So the trigger is the agent harness itself, via hooks versioned in
+    <code>.claude/settings.json</code> — the harness executes them, not the agent, and in an
+    AI-first repo every author <em>is</em> a harness session, so authoring-time coverage is
+    total.</p>
+
+    <table data-c="trigger-table">
+      <thead><tr><th>Hook</th><th>Fires</th><th>Does</th></tr></thead>
+      <tbody>
+        <tr><td>PostToolUse (<code>.claude/hooks/verify-doc-post.sh</code>)</td><td>every Write/Edit of an <code>.html</code> file</td><td>runs <code>verify-doc</code> on the written file; red ⇒ the problem blocks are injected into the session as feedback — the write itself is never blocked, the doc gets fixed <em>now</em>; drafts and ungoverned docs stay silent</td></tr>
+        <tr><td>Stop (<code>.claude/hooks/verify-doc-stop.sh</code>)</td><td>turn end</td><td>runs <code>verify-doc</code> over every doc under <code>docs/</code> in the working tree; any ready governed doc red ⇒ the turn is refused with the problems as the reason — the backstop that also catches docs edited around the file tools (shell, scripts)</td></tr>
+      </tbody>
+    </table>
+
+    <p data-c="trigger-manual">Manual runs work anytime for feedback; no workflow step depends on
+    anyone remembering one.</p>
+
+    <h2 id="gates">Relation to the DoD gates</h2>
+
+    <p data-c="gates-relation">None mechanically — no git hook, no gate change, no note schema.
+    The lifecycle duties (plan before work, WU result at WU close, epic result at epic close) are
+    stated here, kept honest at authoring time by the harness hooks, and judged like every other
+    judgment: <a href="workflow.html">the reviews</a> read the plan and result docs as inputs.
+    A docs-only WU or epic is exempt from test evidence, never from its plan and result docs —
+    those exist precisely when code doesn't.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
