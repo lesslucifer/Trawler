@@ -3,7 +3,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::git::{diff_names, diff_sha256, git, note, write_note};
-use crate::notes::{is_code, is_unarchived_work_doc, tier_of, CrNote, DocNote, TestNote};
+use crate::notes::{is_code, is_expected_tracked_doc, tier_of, CrNote, DocNote, TestNote};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Level {
@@ -255,25 +255,31 @@ impl Gate<'_> {
             }
         }
         if report.level == Level::Epic {
-            self.check_archived(report);
+            self.check_tracked_docs(report);
         }
     }
 
-    fn check_archived(&self, report: &mut Report) {
-        let list = |rev: &str| -> Vec<String> {
-            git(self.repo, &["ls-tree", "-r", "--name-only", rev, "--", "docs/work"])
+    fn check_tracked_docs(&self, report: &mut Report) {
+        let tracked: Vec<String> =
+            git(self.repo, &["ls-tree", "-r", "--name-only", &report.tip, "--", "docs"])
                 .map(|out| out.lines().map(str::to_string).collect())
-                .unwrap_or_default()
-        };
-        let at_base = list(&report.base);
-        for path in list(&report.tip) {
-            if is_unarchived_work_doc(&path) && !at_base.contains(&path) {
-                report.failures.push(Failure::new(
-                    "6·doc-note",
-                    format!("{path} was added in this epic and is still not archived"),
-                    "distill it, then move it under docs/work/archive/".to_string(),
-                ));
+                .unwrap_or_default();
+        for path in tracked {
+            if is_expected_tracked_doc(&path) {
+                continue;
             }
+            let (what, fix) = if path.starts_with("docs/work/") {
+                (
+                    format!("{path} is an in-flight work doc still tracked at the epic tip"),
+                    "distill it, then git rm it and move the file to docs/.archive/ (gitignored)",
+                )
+            } else {
+                (
+                    format!("{path} is tracked outside the expected doc locations"),
+                    "move it to docs/, docs/use-cases/ or docs/decisions/, or archive it to docs/.archive/ (gitignored)",
+                )
+            };
+            report.failures.push(Failure::new("6·doc-note", what, fix.to_string()));
         }
     }
 

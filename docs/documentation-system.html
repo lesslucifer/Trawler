@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Documentation System</h1>
       <p>Five tiers so every AI session reads current truth — information synthesizes UP, is read DOWN, and is never duplicated down.</p>
-      <div class="meta">Draft v4 · 2026-07-05 · Trawler · T1 process doc</div>
+      <div class="meta">Draft v5 · 2026-07-05 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -143,9 +143,10 @@ flowchart TB
     <h2 id="t3">T3 · Working docs</h2>
     <p>
       The scratch space where a task thinks, named <code>docs/work/YYYY-MM-DD-&lt;slug&gt;.html</code>.
-      No quality bar, no altitude rule. Every work doc ends the same way: distilled up, then moved
-      to <code>docs/work/archive/</code> — which sessions never read; if the archive still holds
-      something needed, that fact wasn't distilled.
+      No quality bar, no altitude rule. Every work doc ends the same way: distilled up, then
+      archived out of git — <code>git rm</code> the file and move it to <code>docs/.archive/</code>
+      (gitignored; the content stays reachable in git history). Sessions never read the archive —
+      if it still holds something needed, that fact wasn't distilled.
     </p>
     <div class="diagram" data-c="t3-lifecycle">
       <pre class="mermaid">
@@ -154,7 +155,7 @@ stateDiagram-v2
     Active --> Active : findings, plans, dead ends accumulate
     Active --> Distilling : task's code lands
     Distilling --> Archived : durable facts synthesized to T2 / T1
-    Archived --> [*] : moved to docs/work/archive/
+    Archived --> [*] : git rm + moved to docs/.archive/ (untracked)
       </pre>
       <div class="caption">A work doc neither distilled nor archived is a bug in the process.</div>
     </div>
@@ -174,7 +175,9 @@ stateDiagram-v2
     workflow standard</a>) carries a <code>doc/v1</code> note on <code>refs/notes/doc</code> with
     exactly one entry per doc file in the gated diff. <code>cargo xtask verify-dod</code> cross-checks
     it against <code>git diff --name-only</code> — no missing entries, no phantom entries, tiers derived
-    from paths — and hard-fails an epic whose in-flight work docs are not archived with lineage.
+    from paths — and hard-fails an epic that keeps unexpected docs tracked: at an epic tip the only
+    tracked paths under <code>docs/</code> are flat T1 files, <code>use-cases/</code> and
+    <code>decisions/</code>; anything under <code>docs/work/</code> must be archived out of git first.
     Standalone commits need it only when they touch <code>docs/</code>.</p>
     <pre data-c="doc-note-yaml">schema: doc/v1
 epic: E1                          # identity block, same as every note schema
@@ -185,9 +188,9 @@ changes:                          # exactly one entry per docs/ path in the gate
     tier: T2                      # derived from the path — T1 docs/*, T2 use-cases|decisions, T3 work/
     action: updated               # added | updated | archived | deleted
     distills: "UC-API-7 pagination contract — requirement + edge cases learned in the WU"
-  - path: docs/work/archive/2026-07-05-epic-capture-plan.html
+  - path: docs/work/2026-07-05-epic-capture-plan.html
     tier: T3
-    action: archived
+    action: archived              # = deleted from git, file moved to docs/.archive/ (untracked)
     distilled_to: [docs/use-cases/control-api.html]   # or "none: dead end — nothing citable"
 t2_waived: null                   # required reason when code changed but no T2 entry exists
 date: 2026-07-05</pre>
@@ -217,7 +220,8 @@ date: 2026-07-05</pre>
         <tr><td><code>CLAUDE.md</code></td><td>T0</td><td>Rules + tier map</td></tr>
         <tr><td><code>docs/*.html</code></td><td>T1</td><td>Architecture + process standards, flat</td></tr>
         <tr><td><code>docs/use-cases/</code> · <code>docs/decisions/</code></td><td>T2</td><td>One index + topic files each</td></tr>
-        <tr><td><code>docs/work/</code> · <code>docs/work/archive/</code></td><td>T3</td><td>Working docs</td></tr>
+        <tr><td><code>docs/work/</code></td><td>T3</td><td>Working docs — in-flight only; empty in git at every epic gate</td></tr>
+        <tr><td><code>docs/.archive/</code></td><td>T3</td><td>Archived work docs — gitignored, never tracked</td></tr>
         <tr><td><code>src/…</code></td><td>T4</td><td>The truth</td></tr>
       </tbody>
     </table>
