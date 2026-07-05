@@ -6,6 +6,9 @@
 #
 # $1 = prev HEAD, $2 = new HEAD, $3 = 1 if branch checkout, 0 if file checkout
 
+# Merge seams must stay addressable for the DoD walk: never fast-forward.
+git config merge.ff false 2>/dev/null || true
+
 # Only run on branch checkouts
 [ "$3" != "1" ] && exit 0
 

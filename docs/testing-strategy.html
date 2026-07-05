@@ -156,10 +156,13 @@ flowchart TD
 
     <h2 id="verification">Testing DoD — the test manifest note</h2>
     <div class="callout" data-c="manifest-rule">
-      <p><strong>MUST</strong> — every finished change auto-writes its test manifest as a YAML <code>git notes</code> entry (schema below); the workflow judges it against the charter <a href="#charter">Done-gate</a>. <strong>No manifest ⇒ the work isn't done.</strong></p>
+      <p><strong>MUST</strong> — every finished change writes its test manifest as a YAML <code>git notes</code> entry on its tip (schema below); <code>cargo xtask verify-dod</code> judges it against the charter <a href="#charter">Done-gate</a> at every merge (see <a href="workflow.html">the workflow standard</a>). <strong>No manifest ⇒ the work isn't done.</strong></p>
     </div>
-    <pre data-c="manifest-yaml">schema: test/v1               # manifest format version
-level: commit                 # commit | working-unit | epic — sets which layers the charter requires
+    <pre data-c="manifest-yaml">schema: test/v2               # manifest format version
+level: commit                 # commit | working-unit | epic — sets which layer the charter requires
+epic: E1                      # identity block — present for epic/WU work, omitted on standalone commits
+wu: E1.W2                     # working-unit level only
+branch: wu/capture/pagination # informative label; the ids are the truth
 tests:                        # per layer: how many + what they cover (facts, checked against the diff)
   unit:
     count: 42
@@ -167,9 +170,9 @@ tests:                        # per layer: how many + what they cover (facts, ch
   integration:                # omit a layer block entirely if it wasn't touched
     count: 7
     covers: "control API list/get/body/stream (tower::oneshot); CA generate-then-reload"
-  e2e:
-    count: 6
-    covers: "plain + HTTPS MITM capture; SSE passthrough; over-cap body; gzip ?decode; CA download"</pre>
+  e2e:                        # a required layer may instead be consciously waived — reviewed, never free
+    waived: "why no test is needed at this layer"</pre>
+    <p data-c="manifest-notes">The gate requires the level's mandatory layer (commit ⇒ unit, working unit ⇒ integration, epic ⇒ e2e) to show <code>count ≥ 1</code> or a non-empty <code>waived</code> reason; waiver justification is judged in review. v1 notes predating the workflow standard remain on old tips and are never re-gated.</p>
   </main>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';

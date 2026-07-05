@@ -169,6 +169,29 @@ stateDiagram-v2
       </tbody>
     </table>
 
+    <h2 id="doc-note">The doc note — distillation evidence</h2>
+    <p>Distillation is verified, not promised: every gated tip (see <a href="workflow.html">the
+    workflow standard</a>) carries a <code>doc/v1</code> note on <code>refs/notes/doc</code> with
+    exactly one entry per doc file in the gated diff. <code>cargo xtask verify-dod</code> cross-checks
+    it against <code>git diff --name-only</code> — no missing entries, no phantom entries, tiers derived
+    from paths — and hard-fails an epic whose in-flight work docs are not archived with lineage.
+    Standalone commits need it only when they touch <code>docs/</code>.</p>
+    <pre data-c="doc-note-yaml">schema: doc/v1
+epic: E1                          # identity block, same as every note schema
+wu: E1.W2                         # working-unit level only
+branch: wu/capture/pagination
+changes:                          # exactly one entry per docs/ path in the gated diff
+  - path: docs/use-cases/control-api.html
+    tier: T2                      # derived from the path — T1 docs/*, T2 use-cases|decisions, T3 work/
+    action: updated               # added | updated | archived | deleted
+    distills: "UC-API-7 pagination contract — requirement + edge cases learned in the WU"
+  - path: docs/work/archive/2026-07-05-epic-capture-plan.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/use-cases/control-api.html]   # or "none: dead end — nothing citable"
+t2_waived: null                   # required reason when code changed but no T2 entry exists
+date: 2026-07-05</pre>
+
     <h2 id="protocol">Session protocol</h2>
     <p>T0 arrives automatically with every session; everything else is opened on demand, index-first.</p>
     <table data-c="reading-table">
