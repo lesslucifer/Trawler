@@ -204,8 +204,12 @@ fn check_unknown(
 // declaration anywhere else must not silence the checks
 fn draft_declared(html: &str, artifact_pos: usize) -> bool {
     let start = html[..artifact_pos].rfind('<').unwrap_or(0);
-    let end = html[start..].find('>').map_or(html.len(), |i| start + i);
-    attr_positions(&html[start..end], "data-status").first().is_some_and(|(_, v)| v == "draft")
+    let Some(close) = html[start..].find('>') else {
+        return false;
+    };
+    attr_positions(&html[start..start + close], "data-status")
+        .first()
+        .is_some_and(|(_, v)| v == "draft")
 }
 
 fn attr_positions(html: &str, name: &str) -> Vec<(usize, String)> {
@@ -404,6 +408,12 @@ mod tests {
         let html = "<html><body><div data-status=\"draft\">aside</div>\
              <main data-artifact=\"wu-result\"><p data-item=\"outcome\">x</p></main></body></html>";
         assert!(verify_html(html).red(), "status must sit next to data-artifact to count");
+    }
+
+    #[test]
+    fn unclosed_artifact_tag_fails_toward_checking_not_draft_silence() {
+        let html = "<main data-artifact=\"wu-result\" data-status=\"draft\" truncated";
+        assert!(verify_html(html).red(), "a doc whose tag never closes must never fall silent");
     }
 
     #[test]
