@@ -6,6 +6,9 @@
 # Generated Certificate Authority — NEVER commit the private key
 /ca/
 
+# Archived docs stay out of git (their content history remains in git)
+/docs/.archive/
+
 # Environment / editor
 .env
 .env.local

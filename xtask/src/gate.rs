@@ -3,7 +3,7 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::git::{diff_names, diff_sha256, git, note, write_note};
-use crate::notes::{is_code, is_unarchived_work_doc, tier_of, CrNote, DocNote, TestNote};
+use crate::notes::{is_code, is_expected_tracked_doc, tier_of, CrNote, DocNote, TestNote};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Level {
@@ -88,7 +88,11 @@ impl Gate<'_> {
             exempt: !code_changed,
             failures: Vec::new(),
         };
-        if report.exempt {
+        if level == Level::Epic {
+            self.check_tracked_docs(&mut report);
+            report.exempt = report.exempt && report.failures.is_empty();
+        }
+        if !code_changed {
             return Ok(report);
         }
         let parsed = self.load_notes(&mut report, &names);
@@ -96,7 +100,7 @@ impl Gate<'_> {
         if level != Level::Commit {
             check_review(&mut report, parsed.cr.as_ref());
         }
-        self.check_docs(&mut report, parsed.doc.as_ref(), &names, code_changed);
+        self.check_docs(&mut report, parsed.doc.as_ref(), &names);
         if level == Level::Epic {
             self.walk(&mut report)?;
         }
@@ -186,13 +190,7 @@ impl Gate<'_> {
         }
     }
 
-    fn check_docs(
-        &self,
-        report: &mut Report,
-        doc: Option<&DocNote>,
-        names: &[String],
-        code_changed: bool,
-    ) {
+    fn check_docs(&self, report: &mut Report, doc: Option<&DocNote>, names: &[String]) {
         let doc_paths: Vec<&String> = names.iter().filter(|p| p.starts_with("docs/")).collect();
         if let Some(doc) = doc {
             let entries: BTreeMap<&str, &crate::notes::DocChange> =
@@ -240,7 +238,7 @@ impl Gate<'_> {
                     ));
                 }
             }
-            if code_changed && report.level != Level::Commit {
+            if report.level != Level::Commit {
                 let t2_updated = doc.changes.iter().any(|c| c.tier == "T2");
                 let t2_waived = doc.t2_waived.as_ref().is_some_and(|w| !w.trim().is_empty());
                 if !t2_updated && !t2_waived {
@@ -254,26 +252,27 @@ impl Gate<'_> {
                 }
             }
         }
-        if report.level == Level::Epic {
-            self.check_archived(report);
-        }
     }
 
-    fn check_archived(&self, report: &mut Report) {
-        let list = |rev: &str| -> Vec<String> {
-            git(self.repo, &["ls-tree", "-r", "--name-only", rev, "--", "docs/work"])
-                .map(|out| out.lines().map(str::to_string).collect())
-                .unwrap_or_default()
-        };
-        let at_base = list(&report.base);
-        for path in list(&report.tip) {
-            if is_unarchived_work_doc(&path) && !at_base.contains(&path) {
-                report.failures.push(Failure::new(
-                    "6·doc-note",
-                    format!("{path} was added in this epic and is still not archived"),
-                    "distill it, then move it under docs/work/archive/".to_string(),
-                ));
+    fn check_tracked_docs(&self, report: &mut Report) {
+        let tracked = git(self.repo, &["ls-tree", "-r", "--name-only", &report.tip, "--", "docs"])
+            .unwrap_or_default();
+        for path in tracked.lines() {
+            if is_expected_tracked_doc(path) {
+                continue;
             }
+            let (what, fix) = if path.starts_with("docs/work/") {
+                (
+                    format!("{path} is an in-flight work doc still tracked at the epic tip"),
+                    "distill it, then git rm it and move the file to docs/.archive/ (gitignored)",
+                )
+            } else {
+                (
+                    format!("{path} is tracked outside the expected doc locations"),
+                    "move it to docs/, docs/use-cases/ or docs/decisions/, or archive it to docs/.archive/ (gitignored)",
+                )
+            };
+            report.failures.push(Failure::new("6·doc-note", what, fix.to_string()));
         }
     }
 

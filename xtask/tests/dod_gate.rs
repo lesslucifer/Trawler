@@ -278,7 +278,7 @@ fn green_epic_walk_verifies_the_merged_wu() {
 }
 
 #[test]
-fn epic_gate_rejects_unarchived_work_docs() {
+fn epic_gate_rejects_tracked_work_docs() {
     let (repo, _) = epic_with_merged_wu();
     repo.write("docs/work/plan.html", "<html>plan</html>\n");
     repo.commit("plan doc");
@@ -289,20 +289,80 @@ fn epic_gate_rejects_unarchived_work_docs() {
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
     assert_eq!(checks_of(&report), vec!["6·doc-note"]);
-    assert!(format_report(&report).contains("still not archived"));
+    assert!(format_report(&report).contains("still tracked"));
+    assert!(format_report(&report).contains("docs/.archive/"));
 }
 
 #[test]
-fn archived_work_doc_with_lineage_passes_the_epic_gate() {
+fn epic_gate_rejects_docs_in_unexpected_locations() {
     let (repo, _) = epic_with_merged_wu();
-    repo.write("docs/work/archive/plan.html", "<html>plan</html>\n");
-    repo.commit("archived plan doc");
+    repo.write("docs/scratch/notes.html", "<html>stray</html>\n");
+    repo.commit("stray doc dir");
     let entry = format!(
-        "{T2_ENTRY}  - path: docs/work/archive/plan.html\n    tier: T3\n    action: archived\n    distilled_to: [docs/use-cases/api.html]\n"
+        "{T2_ENTRY}  - path: docs/scratch/notes.html\n    tier: T1\n    action: added\n    distills: \"stray\"\n"
     );
     bless_epic(&repo, &entry);
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(checks_of(&report), vec!["6·doc-note"]);
+    assert!(format_report(&report).contains("expected doc locations"));
+}
+
+#[test]
+fn docs_only_epic_still_rejects_stray_tracked_work_docs() {
+    let repo = Repo::new();
+    repo.git(&["checkout", "-q", "-b", "epic/x"]);
+    repo.write("docs/work/plan.html", "<html>plan</html>\n");
+    repo.commit("docs-only epic leaves a work doc");
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(!report.exempt, "a dirty docs tree must not be exempt");
+    assert_eq!(checks_of(&report), vec!["6·doc-note"]);
+
+    std::fs::remove_file(repo.path.join("docs/work/plan.html")).unwrap();
+    repo.commit("archive the work doc out of git");
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.exempt, "a clean docs-only epic stays exempt");
+}
+
+#[test]
+fn work_doc_archived_out_of_git_passes_the_epic_gate() {
+    let (repo, _) = epic_with_merged_wu();
+    repo.write("docs/work/plan.html", "<html>plan</html>\n");
+    repo.commit("plan doc");
+    std::fs::remove_file(repo.path.join("docs/work/plan.html")).unwrap();
+    repo.commit("archive the plan out of git");
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "unexpected failures: {}", format_report(&report));
+}
+
+#[test]
+fn archived_doc_note_entry_requires_distillation_lineage() {
+    let repo = Repo::new();
+    repo.write("docs/work/plan.html", "<html>plan</html>\n");
+    repo.commit("work doc on main");
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\n");
+    repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    std::fs::remove_file(repo.path.join("docs/work/plan.html")).unwrap();
+    let tip = repo.commit("wu change archives the plan");
+    bless_wu(&repo, &tip);
+    let bare =
+        format!("{T2_ENTRY}  - path: docs/work/plan.html\n    tier: T3\n    action: archived\n");
+    repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &bare, None));
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["6·doc-note"]);
+    assert!(format_report(&report).contains("lineage"));
+
+    let with_lineage = format!(
+        "{T2_ENTRY}  - path: docs/work/plan.html\n    tier: T3\n    action: archived\n    distilled_to: [docs/use-cases/api.html]\n"
+    );
+    repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &with_lineage, None));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
 }
 
