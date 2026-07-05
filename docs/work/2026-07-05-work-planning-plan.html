@@ -8,189 +8,208 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>E3 · work-planning — plan the work, gate the result</h1>
-      <p>T3 plan: standardize what an epic/WU plan must state before work starts, and close the loop with a result report the epic gate verifies against what actually landed.</p>
-      <div class="meta">Draft v1 · 2026-07-05 · Trawler · T3 work doc · epic/work-planning</div>
+      <h1>E3 · work-planning — plan outputs & result reports, checklist-verified</h1>
+      <p>T3 plan: define what the planning phase of an epic/WU must output and what the result report after the work must contain — as minimum-content checklists with a defined way to verify each, never as fixed templates.</p>
+      <div class="meta">Draft v2 · 2026-07-05 · Trawler · T3 work doc · epic/work-planning</div>
     </div>
   </header>
   <main>
     <h2 id="goal">Epic requirement</h2>
     <p data-c="goal-stmt">
-      Planning and result-reporting become checkable structure instead of convention. A T1
-      standard defines what every epic and working-unit plan must state <em>before</em> work
-      starts — requirement, expected result, test plan — and every epic closes with a
-      <strong>result report</strong> on its tip (a <code>report/v1</code> git note, the fifth
-      evidence note) that <code>verify-dod</code> cross-checks against the work that actually
-      merged. Deviations from the plan surface in evidence, never only in an agent's word.
+      Planning and result-reporting get defined <strong>outputs</strong>. For each output the T1
+      standard gives a <strong>checklist of what must at least be in it</strong> and a
+      <strong>verification procedure</strong> that checks presence <em>and quality</em> of every
+      item — while the form stays free: a plan or report may be prose, tables, diagrams or
+      widgets, shaped creatively to fit its task. No fixed templates, no git-notes or hook
+      machinery — this epic is about content standards and their verification, not about gates.
     </p>
 
     <h2 id="expected">Expected result — observable</h2>
     <ul data-c="expected-list">
-      <li><code>docs/work-planning.html</code> (T1) exists and is the single owner of the plan
-        shape and the <code>report/v1</code> schema; <code>workflow.html</code> links to it
-        (plan-artifact cells, evidence table, DoD-E row) instead of restating it.</li>
-      <li><code>cargo xtask verify-dod epic</code> goes red when the epic tip lacks a valid
-        <code>report/v1</code> note, or when the report disagrees with the epic walk — a merged
-        WU seam missing from the report, or a WU reported delivered that never merged.</li>
-      <li>The green path is unchanged except the receipt's <code>checks</code> list appends
-        <code>report</code>.</li>
-      <li>E3's own merge into <code>main</code> is the first demonstration: it carries the first
-        <code>report/v1</code>, written against this plan.</li>
+      <li><code>docs/work-planning.html</code> (T1) exists and owns: the planning outputs of an
+        epic and of a WU, the result-report outputs of an epic and of a WU, one minimum-content
+        checklist per output, and the verification procedure for each checklist.</li>
+      <li>An agent starting any epic can produce a conforming plan — and close any epic/WU with a
+        conforming result report — from the standard alone, without copying a skeleton.</li>
+      <li>Each checklist is verifiable: running the defined procedure on a document yields a
+        pass, or concrete findings naming the missing/weak items.</li>
+      <li><code>workflow.html</code>'s plan-artifact cells link to the standard instead of
+        half-defining it.</li>
     </ul>
 
     <h2 id="non-goals">Non-goals</h2>
     <ul data-c="non-goals-list">
-      <li>No per-WU report notes — the epic report carries one entry per WU; a WU tip already
-        holds <code>test/v2 + cr/v2 + dod/v1</code>. Upgrade only if an epic report proves too
-        coarse in practice.</li>
-      <li>No tracker files, dashboards, or tooling beyond git notes and <code>verify-dod</code>.</li>
-      <li>No changes to the <code>test/v2</code>, <code>cr/v2</code>, <code>doc/v1</code> schemas.</li>
+      <li><strong>No fixed templates.</strong> The standard constrains substance (items that must
+        exist), never form. A skeleton to copy-paste is explicitly what we don't want.</li>
+      <li><strong>No git machinery.</strong> No new note schemas, no <code>verify-dod</code>
+        checks, no hooks. Existing DoD gates stay untouched; wiring checklist verification into
+        them is a possible later epic, not this one.</li>
+      <li>No tracker files or dashboards.</li>
       <li>No work estimates anywhere in plans or reports (AI-first rule).</li>
     </ul>
 
     <h2 id="gap">The gap</h2>
     <p data-c="gap-stmt">
       <code>workflow.html</code> mandates "one T3 work doc listing its WUs, each with requirement
-      sentence + detailed test plan" but nothing owns the plan's required shape — E1's brainstorm
-      and E2's plan already diverge. DoD-W's "requirement recorded before the code" is a judgment
-      with no standard to judge against. And the gates prove tests ran, review passed and docs
-      distilled — but nothing proves <em>we delivered what we planned</em>: a silently dropped WU
-      or a scope swap leaves no evidence anywhere.
+      sentence + detailed test plan" — and stops there. E1's brainstorm and E2's plan already
+      diverge in what they contain; nothing says what a <em>complete</em> plan holds, and nothing
+      at all defines what to produce <em>after</em> the work: today an epic ends with evidence
+      notes and distilled T2 docs, but no result report states what was delivered against what
+      was planned, what deviated and why. Quality of plans and reports is judged by taste,
+      per-session, with no checklist to judge against.
     </p>
 
-    <h2 id="shape">Proposed shape — what the T1 will norm</h2>
+    <h2 id="shape">Proposed shape — four outputs, four checklists, one verification loop</h2>
     <div class="diagram" data-c="loop-diagram">
       <pre class="mermaid">
 flowchart LR
-  P["Plan (T3, before work)<br/>intent · expected result · non-goals<br/>per WU: requirement + expected + test plan"] --> W["WUs execute<br/>plan amended in place as scope moves"]
-  W --> R["report/v1 note on the epic tip<br/>outcome per WU · deviations · unplanned work"]
-  R --> G{"verify-dod epic<br/>report ↔ walk cross-check"}
-  G -- red --> W
-  G -- green --> M["main · adequacy judged by epic review"]
+  EP["Epic plan"] -->|verify vs checklist| WORK["WUs execute"]
+  WP["WU plan entries"] -->|verify vs checklist| WORK
+  WORK --> WR["WU result report"]
+  WR -->|verify vs checklist| NEXT["next WU"]
+  NEXT --> WORK
+  WORK --> ER["Epic result report"]
+  ER -->|verify vs checklist| CLOSE["distill · archive · done"]
       </pre>
-      <div class="caption">The loop this epic closes: expectation stated before work, outcome verified after, both as evidence.</div>
+      <div class="caption">Every artifact is verified against its checklist before the work moves on: plans before code, result reports before close.</div>
     </div>
-    <p data-c="shape-plan">
-      <strong>The plan</strong> (one T3 doc per epic, written before the epic branch does work;
-      this document follows the shape it proposes): epic intent as one requirement paragraph ·
-      expected result as observable acceptance, not intention · non-goals · one section per WU
-      with its requirement sentence, expected result and detailed test plan · design notes and
-      open questions as needed. The plan is living during the epic — amended in place, snapshots
-      keep evolution reviewable — but every deviation from the original expectation must resurface
-      in the result report.
+    <p data-c="shape-outputs">
+      <strong>The four outputs.</strong> Planning phase: the <em>epic plan</em> (one T3 doc per
+      epic) containing a <em>plan entry per WU</em>. After the work: a <em>result report per
+      WU</em> (recorded when the WU completes) and an <em>epic result report</em> (at epic close).
+      Result reports live in the epic's T3 doc or beside it — form and location flexible, the
+      checklist is what's mandatory. All T3 lifecycle rules (distill, then archive) apply
+      unchanged.
     </p>
-    <p data-c="shape-report">
-      <strong>The report</strong> (at epic close, before the merge into <code>main</code>): a
-      <code>report/v1</code> YAML note on the epic tip. Identity block like every note schema ·
-      plan path · the epic's expected result restated in one line (evidence stays self-describing
-      after the plan is archived) · epic outcome · one entry per planned WU
-      (<code>delivered | deviated | dropped</code>, one line of what/why + evidence pointer) ·
-      unplanned work accounted. Existence and consistency with git are mechanical; adequacy and
-      honesty of the prose are judged by the epic review, whose finders read plan and report.
+    <p data-c="shape-checklists">
+      <strong>Draft checklists</strong> — v0, to be refined and owned by the T1. Each item must be
+      <em>present and substantive</em>: specific to this task, observable where it claims to be,
+      never boilerplate.
     </p>
-    <pre data-c="report-schema">
-schema: report/v1
-epic: E3
-branch: epic/work-planning
-plan: docs/work/2026-07-05-work-planning-plan.html
-expected: "plan shape + result report standardized (T1); report/v1 verified at the epic gate"
-outcome: delivered                # delivered | deviated | dropped
-wus:
-  - wu: E3.W1
-    requirement: "T1 standard doc; workflow.html links it"
-    outcome: delivered
-    evidence: "docs/work-planning.html · workflow.html evidence row"
-  - wu: E3.W2
-    requirement: "report/v1 parsing + epic-gate cross-check"
-    outcome: deviated
-    note: "one line on what changed and why"
-unplanned: []                     # WU seams / standalone commits absent from the plan, each with a reason
-date: 2026-07-05</pre>
+    <table data-c="checklist-epic-plan">
+      <thead><tr><th colspan="2">Epic plan — must at least contain</th></tr></thead>
+      <tbody>
+        <tr><td>Intent</td><td>One requirement paragraph: what user-visible change, and why now</td></tr>
+        <tr><td>Expected result</td><td>Observable acceptance — what exists/behaves differently after, checkable by a reader who wasn't there</td></tr>
+        <tr><td>Non-goals</td><td>What is deliberately out of scope</td></tr>
+        <tr><td>WU decomposition</td><td>Every WU with its full plan entry (below); order/dependencies when they exist</td></tr>
+        <tr><td>Open questions</td><td>What's undecided, each with a proposed default</td></tr>
+      </tbody>
+    </table>
+    <table data-c="checklist-wu-plan">
+      <thead><tr><th colspan="2">WU plan entry — must at least contain</th></tr></thead>
+      <tbody>
+        <tr><td>Requirement</td><td>One explicit, testable sentence</td></tr>
+        <tr><td>Expected result</td><td>Observable outcome of this WU alone</td></tr>
+        <tr><td>Test plan</td><td>Concrete per level — what asserts what; waivers named with reasons</td></tr>
+      </tbody>
+    </table>
+    <table data-c="checklist-wu-result">
+      <thead><tr><th colspan="2">WU result report — must at least contain</th></tr></thead>
+      <tbody>
+        <tr><td>Outcome</td><td>Delivered / deviated / dropped against its requirement and expected result — what actually shipped</td></tr>
+        <tr><td>Deviations</td><td>Every difference from the plan entry, with why (scope moved, approach changed, work discovered)</td></tr>
+        <tr><td>Evidence</td><td>Pointers: tests added, docs touched, tips/commits</td></tr>
+        <tr><td>Distillation</td><td>What went to T2/T1 — or "nothing citable", said explicitly</td></tr>
+        <tr><td>Follow-ups</td><td>Debt or new work discovered, or none</td></tr>
+      </tbody>
+    </table>
+    <table data-c="checklist-epic-result">
+      <thead><tr><th colspan="2">Epic result report — must at least contain</th></tr></thead>
+      <tbody>
+        <tr><td>Outcome</td><td>Against the epic's intent and expected result — did the user-visible change land as expected</td></tr>
+        <tr><td>Per-WU rollup</td><td>Each planned WU's outcome; unplanned work accounted for</td></tr>
+        <tr><td>Deviations</td><td>Where the epic diverged from its plan, and why</td></tr>
+        <tr><td>Evidence</td><td>E2E outcome, review verdicts, pointers to the landed work</td></tr>
+        <tr><td>Distillation summary</td><td>The T2/T1 docs now carrying this epic's truth; plan + reports archived</td></tr>
+        <tr><td>Follow-ups</td><td>Epics/WUs this work spawned, or none</td></tr>
+      </tbody>
+    </table>
+    <p data-c="shape-verification">
+      <strong>The verification way.</strong> A checklist is verified by a
+      <strong>fresh-context agent that did not author the document</strong>, run at the loop's
+      four points (plans before work starts, reports before the work is called done). The
+      verifier walks the checklist as a rubric — for each item: is it present, is it substantive
+      (task-specific, observable where required, not boilerplate), is it consistent with the
+      other items — and returns pass or findings (item, what's missing/weak, concrete fix). The
+      author fixes and re-verifies until pass. Quality is enforced by the second pair of eyes,
+      not by parsing.
+    </p>
 
     <h2 id="wu1">WU E3.W1 · wu/work-planning/standard</h2>
     <p data-c="wu1-req">
-      <strong>Requirement.</strong> Author T1 <code>docs/work-planning.html</code> owning the plan
-      shape, the definitions of expected result at epic and WU level, the <code>report/v1</code>
-      schema, and the mechanical/judgment split for the report gate. Update
-      <code>workflow.html</code> to link it: plan-artifact cells point at the standard, the
-      evidence table gains a <code>report/v1</code> row (epic level), DoD-E gains the report
-      check. Record the design decision as DEC-4 (report as a git note, not a doc section).
+      <strong>Requirement.</strong> Author T1 <code>docs/work-planning.html</code> owning the four
+      outputs, their four checklists, the substantive-not-boilerplate quality bar, and the
+      verification procedure. Update <code>workflow.html</code> to link the standard from its
+      plan-artifact cells. Record the founding decision (DEC-4: checklists over templates —
+      substance constrained, form free).
     </p>
     <p data-c="wu1-expected">
-      <strong>Expected result.</strong> An agent starting an epic can produce a conforming plan
-      from the standard alone; one fact per tier holds — the schema lives only in the new T1,
-      <code>workflow.html</code> only links.
+      <strong>Expected result.</strong> The standard is self-sufficient: an agent can plan and
+      report any epic/WU from it alone; one fact per tier holds — <code>workflow.html</code>
+      links, never restates.
     </p>
     <table data-c="wu1-tests">
       <thead><tr><th>Test plan</th><th>Level</th></tr></thead>
       <tbody>
-        <tr><td>Docs-only WU — integration waived (docs-only diffs are exempt at every gate); adequacy = review + user comment round on the T1 doc</td><td>WU</td></tr>
+        <tr><td>Docs-only WU — integration waived (docs-only diffs are exempt); adequacy = the E3.W2 verification dry-run below + user comment round on the T1 doc</td><td>WU</td></tr>
       </tbody>
     </table>
 
-    <h2 id="wu2">WU E3.W2 · wu/work-planning/gate</h2>
+    <h2 id="wu2">WU E3.W2 · wu/work-planning/verify</h2>
     <p data-c="wu2-req">
-      <strong>Requirement.</strong> <code>verify-dod</code> learns the report: the epic gate adds
-      check 8 — a <code>report/v1</code> note on the tip parses, identity is consistent with the
-      other notes, and the WU entries cross-check against the walk's WU seams (every merged seam
-      reported; every WU reported <code>delivered</code>/<code>deviated</code> has a seam;
-      <code>dropped</code> needs none; seams absent from the plan must appear under
-      <code>unplanned</code> with a reason). The wu gate additionally checks a tracked
-      <code>docs/work/*-plan.html</code> exists at the merge — plan-before-code gains a mechanical
-      existence check while adequacy stays judgment. Red output follows the house style: check id,
-      expected vs found, fix →.
+      <strong>Requirement.</strong> Make the verification runnable and repeatable: a
+      <code>plan-review</code> skill (same shape as the existing <code>code-review</code> skill —
+      fresh-context checklist verifiers, findings, verdict) that takes any plan or result report
+      plus the artifact type, and verifies it against the T1's checklist. Dry-run it on this very
+      plan (E3's) and on E2's plan; findings fix the documents or the checklists — whichever is
+      wrong.
     </p>
     <p data-c="wu2-expected">
-      <strong>Expected result.</strong> An epic merge without a consistent report is physically
-      refused by the pre-merge-commit hook; a green gate appends <code>report</code> to the
-      receipt's checks; any tip remains re-verifiable offline, including the report.
+      <strong>Expected result.</strong> One command/skill invocation verifies any planning or
+      result artifact; the dry-runs prove the checklists are checkable in practice, not just
+      stated.
     </p>
     <table data-c="wu2-tests">
       <thead><tr><th>Test plan</th><th>Level</th></tr></thead>
       <tbody>
-        <tr><td>Unit: <code>report/v1</code> schema parse + identity validation (<code>xtask/src/notes.rs</code>)</td><td>commit</td></tr>
-        <tr><td>Unit: seam↔report reconciliation logic (delivered/deviated need a seam, dropped must not have one, unplanned must carry a reason)</td><td>commit</td></tr>
-        <tr><td>Integration (<code>xtask/tests/dod_gate.rs</code>): epic gate red when the tip has no report note</td><td>WU</td></tr>
-        <tr><td>Integration: red when a merged WU seam is missing from the report</td><td>WU</td></tr>
-        <tr><td>Integration: red when a WU reported delivered has no seam</td><td>WU</td></tr>
-        <tr><td>Integration: red when an unplanned seam lacks an <code>unplanned</code> entry</td><td>WU</td></tr>
-        <tr><td>Integration: green with a consistent report; receipt checks append <code>report</code></td><td>WU</td></tr>
-        <tr><td>Integration: wu gate red when no tracked <code>docs/work/*-plan.html</code> exists at the merge</td><td>WU</td></tr>
-        <tr><td>Integration: docs-only epic stays exempt — no report demanded</td><td>WU</td></tr>
+        <tr><td>Skill/docs-only WU — integration waived; adequacy = dry-run evidence: a deliberately incomplete plan (missing non-goals, boilerplate expected-result) must come back with findings naming exactly those items; this plan and E2's must pass or yield actionable findings</td><td>WU</td></tr>
       </tbody>
     </table>
 
     <h2 id="notes">Design notes</h2>
-    <p data-c="design-note-not-doc">
-      <strong>Why a note, not a report section in the plan doc.</strong> E2 (doc-archive, in
-      flight) removes archived docs from the tracked tree — at the epic tip the plan file no
-      longer exists, so a file-content check would be inspecting deleted content. Notes are the
-      house evidence channel: tamper-evident (they orphan on rewrite), queryable by identity
-      (<code>cargo xtask dod list</code>), and the epic walk already enumerates WU seams to
-      reconcile against. The report is <em>evidence</em>, not documentation — durable knowledge
-      still distills to T2 exactly as before; the report proves the plan→result loop closed.
+    <p data-c="design-checklist-not-template">
+      <strong>Checklists over templates.</strong> A fixed template optimizes for uniformity and
+      rots into cargo-cult sections; a checklist optimizes for completeness while letting each
+      task pick the form that carries it best (E2's plan was right to be 57 terse lines; a
+      protocol-heavy epic may need diagrams and a widget). The standard therefore never
+      prescribes headings or order — only items, their meaning, and the quality bar.
     </p>
-    <p data-c="design-wu-granularity">
-      <strong>WU-level expectations without WU-level reports.</strong> A WU's expectation lives in
-      its plan section; its result is one entry in the epic report. The collapse rule carries
-      over: a one-WU epic still reports, with one entry.
+    <p data-c="design-verification">
+      <strong>Why agent-verification, not parsing.</strong> "Expected result is observable" or
+      "deviation explains why" cannot be checked mechanically without forcing rigid structure —
+      which is the rejected template in disguise. The house already trusts fresh-context judgment
+      bound to a specific artifact (the code-review skill); checklist verification is the same
+      pattern pointed at planning docs.
     </p>
-    <p data-c="design-e2-interaction">
-      <strong>E2 interaction.</strong> E3 branches off <code>main</code>, which does not yet carry
-      E2's absolute tracked-docs check; the two are independent — the plan-existence check at the
-      wu gate looks at merge-time trees (plan tracked while the epic is live), E2's check looks at
-      epic tips (plan archived by then). Whichever lands second rebases nothing.
+    <p data-c="design-gates-untouched">
+      <strong>Relation to the DoD gates.</strong> None, deliberately. The workflow's mechanical
+      gates keep verifying tests/review/docs evidence exactly as today. This standard is
+      procedural: verification happens at the four loop points because the standard says so.
+      If it earns its keep, hooking it into gates is a separate, later decision.
     </p>
 
     <h2 id="open">Open questions</h2>
     <ul data-c="open-list">
-      <li><strong>Report granularity</strong> — epic-only is proposed. Want per-WU report notes
-        anyway (heavier, but each WU merge would self-report)?</li>
-      <li><strong>Restating <code>expected</code> in the note</strong> — proposed yes (one line),
-        so the evidence is self-describing after the plan leaves the tree; the alternative is a
-        bare plan path and a trip through git history.</li>
-      <li><strong>Plan-existence check at the wu gate</strong> — proposed in. Drop it if
-        plan-before-code should stay pure judgment.</li>
+      <li><strong>Is W2 in scope?</strong> Proposed yes — a checklist nobody can run uniformly
+        will drift. The lean alternative: the T1 defines the procedure prose-only and sessions
+        spawn ad-hoc verifier agents; drop W2 if that's preferred.</li>
+      <li><strong>Where do result reports live?</strong> Proposed: appended to the epic's plan
+        doc (one place per epic, plan and results side by side); a separate result doc stays
+        allowed when size warrants. Alternative: always separate docs.</li>
+      <li><strong>Verification outcome recording.</strong> Proposed: one line in the verified doc
+        (who/when/verdict) — enough to see it happened, no new evidence machinery. Alternative:
+        none at all.</li>
     </ul>
   </main>
   <script type="module">
