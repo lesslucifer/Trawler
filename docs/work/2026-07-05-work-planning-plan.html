@@ -9,8 +9,8 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E3 · work-planning — plan outputs & result reports, checklist-verified</h1>
-      <p>T3 plan: define what the planning phase of an epic/WU must output and what the result report after the work must contain — as minimum-content checklists with a defined way to verify each, never as fixed templates.</p>
-      <div class="meta">Draft v2 · 2026-07-05 · Trawler · T3 work doc · epic/work-planning</div>
+      <p>T3 plan: define what the planning phase of an epic/WU must output and what the result report after the work must contain — as minimum-content checklists verified by a script that the existing hooks trigger mechanically, never as fixed templates.</p>
+      <div class="meta">Draft v3 · 2026-07-05 · Trawler · T3 work doc · epic/work-planning</div>
     </div>
   </header>
   <main>
@@ -18,21 +18,28 @@
     <p data-c="goal-stmt">
       Planning and result-reporting get defined <strong>outputs</strong>. For each output the T1
       standard gives a <strong>checklist of what must at least be in it</strong> and a
-      <strong>verification procedure</strong> that checks presence <em>and quality</em> of every
-      item — while the form stays free: a plan or report may be prose, tables, diagrams or
-      widgets, shaped creatively to fit its task. No fixed templates, no git-notes or hook
-      machinery — this epic is about content standards and their verification, not about gates.
+      <strong>mechanical check</strong> — a script in the <code>verify-dod</code> family that
+      verifies a doc against its checklist and prints the problems when it falls short — while
+      the form stays free: a plan or report may be prose, tables, diagrams or widgets, shaped
+      creatively to fit its task. Nobody remembers to run the script: the existing git hooks
+      trigger it, so forgetting is not a failure mode any more than forgetting
+      <code>clippy</code> is.
     </p>
 
     <h2 id="expected">Expected result — observable</h2>
     <ul data-c="expected-list">
       <li><code>docs/work-planning.html</code> (T1) exists and owns: the planning outputs of an
         epic and of a WU, the result-report outputs of an epic and of a WU, one minimum-content
-        checklist per output, and the verification procedure for each checklist.</li>
+        checklist per output, the markup contract that makes the items machine-findable, and the
+        trigger points where the check runs.</li>
       <li>An agent starting any epic can produce a conforming plan — and close any epic/WU with a
         conforming result report — from the standard alone, without copying a skeleton.</li>
-      <li>Each checklist is verifiable: running the defined procedure on a document yields a
-        pass, or concrete findings naming the missing/weak items.</li>
+      <li><code>cargo xtask verify-doc &lt;path&gt;</code> verifies any governed doc against its
+        checklist: exit 0, or exit 1 with one problem block per missing/weak item in the house
+        red style (item, expected vs found, fix →).</li>
+      <li>The check is impossible to forget: the hooks that already gate the repo invoke it —
+        a commit touching a governed doc, a WU merge, an epic merge each fail while a required
+        doc is absent or red.</li>
       <li><code>workflow.html</code>'s plan-artifact cells link to the standard instead of
         half-defining it.</li>
     </ul>
@@ -41,9 +48,9 @@
     <ul data-c="non-goals-list">
       <li><strong>No fixed templates.</strong> The standard constrains substance (items that must
         exist), never form. A skeleton to copy-paste is explicitly what we don't want.</li>
-      <li><strong>No git machinery.</strong> No new note schemas, no <code>verify-dod</code>
-        checks, no hooks. Existing DoD gates stay untouched; wiring checklist verification into
-        them is a possible later epic, not this one.</li>
+      <li><strong>No new evidence machinery.</strong> No new note schemas, no receipts — the
+        check is re-runnable on any doc at any time, its verdict is never stored. Triggering
+        reuses the hooks that already exist (pre-commit, pre-merge-commit); no new hook types.</li>
       <li>No tracker files or dashboards.</li>
       <li>No work estimates anywhere in plans or reports (AI-first rule).</li>
     </ul>
@@ -63,23 +70,25 @@
     <div class="diagram" data-c="loop-diagram">
       <pre class="mermaid">
 flowchart LR
-  EP["Epic plan"] -->|verify vs checklist| WORK["WUs execute"]
-  WP["WU plan entries"] -->|verify vs checklist| WORK
-  WORK --> WR["WU result report"]
-  WR -->|verify vs checklist| NEXT["next WU"]
-  NEXT --> WORK
-  WORK --> ER["Epic result report"]
-  ER -->|verify vs checklist| CLOSE["distill · archive · done"]
+  EP["Epic plan<br/>+ WU plan entries"] -->|"verify-doc @ pre-commit"| WORK["WUs execute"]
+  WORK --> WR["WU result doc (T3)"]
+  WR --> G1{"wu merge gate<br/>plan + WU result present & green"}
+  G1 -- red: merge refused --> WORK
+  G1 -- green --> NEXT["next WU"] --> WORK
+  NEXT --> ER["Epic result doc (T3)"]
+  ER --> G2{"epic merge gate<br/>epic result present & green"}
+  G2 -- red: merge refused --> WORK
+  G2 -- green --> CLOSE["distill · archive · done"]
       </pre>
-      <div class="caption">Every artifact is verified against its checklist before the work moves on: plans before code, result reports before close.</div>
+      <div class="caption">Every artifact is checked mechanically at a point git already controls: committing a governed doc verifies it on the spot; the merges refuse to happen while a required doc is absent or red.</div>
     </div>
     <p data-c="shape-outputs">
       <strong>The four outputs.</strong> Planning phase: the <em>epic plan</em> (one T3 doc per
-      epic) containing a <em>plan entry per WU</em>. After the work: a <em>result report per
-      WU</em> (recorded when the WU completes) and an <em>epic result report</em> (at epic close).
-      Result reports live in the epic's T3 doc or beside it — form and location flexible, the
-      checklist is what's mandatory. All T3 lifecycle rules (distill, then archive) apply
-      unchanged.
+      epic) containing a <em>plan entry per WU</em>. After the work: a <em>result report per WU</em>
+      (written when the WU completes) and an <em>epic result report</em> (at epic close) — each
+      result report is its own separate T3 doc under the normal naming rule
+      (<code>docs/work/YYYY-MM-DD-&lt;wu-or-epic-slug&gt;-result.html</code>). All T3 lifecycle
+      rules (distill, then archive) apply unchanged.
     </p>
     <p data-c="shape-checklists">
       <strong>Draft checklists</strong> — v0, to be refined and owned by the T1. Each item must be
@@ -126,23 +135,37 @@ flowchart LR
       </tbody>
     </table>
     <p data-c="shape-verification">
-      <strong>The verification way.</strong> A checklist is verified by a
-      <strong>fresh-context agent that did not author the document</strong>, run at the loop's
-      four points (plans before work starts, reports before the work is called done). The
-      verifier walks the checklist as a rubric — for each item: is it present, is it substantive
-      (task-specific, observable where required, not boilerplate), is it consistent with the
-      other items — and returns pass or findings (item, what's missing/weak, concrete fix). The
-      author fixes and re-verifies until pass. Quality is enforced by the second pair of eyes,
-      not by parsing.
+      <strong>The mechanical check.</strong> Free form and a mechanical check coexist through a
+      minimal <strong>markup contract</strong>: a governed doc declares what it is
+      (<code>data-artifact="epic-plan | wu-result | epic-result"</code>, WU plan entries marked
+      inside the epic plan) and each checklist item is tagged where it lives
+      (<code>data-item="intent"</code>, <code>data-item="expected"</code>, …) — any element, any
+      order, any form around it. <code>cargo xtask verify-doc &lt;path&gt;</code> reads the
+      artifact type, selects its checklist, and checks every item: present, non-empty above a
+      substance floor, no placeholders (TBD/TODO), no estimate language (AI-first rule), plus
+      per-type consistency (an epic plan must hold ≥ 1 WU entry, each complete). Anything red
+      prints as one problem block per item — check id, expected vs found, fix → — exit 1.
+    </p>
+    <p data-c="shape-trigger">
+      <strong>Who triggers it — nobody, by design.</strong> An agent that must remember a check
+      will eventually forget it, so the script rides the hooks that already refuse bad git
+      actions: <strong>pre-commit</strong> runs <code>verify-doc</code> on every governed doc in
+      the commit's diff (instant feedback, the red doc never enters history);
+      the <strong>wu merge gate</strong> refuses the merge while the epic plan or the WU's
+      result doc is absent or red; the <strong>epic merge gate</strong> does the same for the
+      epic result doc. Manual runs work anytime for feedback, but no workflow step depends on an
+      agent remembering one — exactly the <code>fmt</code>/<code>clippy</code>/<code>verify-dod</code>
+      trust boundary.
     </p>
 
     <h2 id="wu1">WU E3.W1 · wu/work-planning/standard</h2>
     <p data-c="wu1-req">
       <strong>Requirement.</strong> Author T1 <code>docs/work-planning.html</code> owning the four
-      outputs, their four checklists, the substantive-not-boilerplate quality bar, and the
-      verification procedure. Update <code>workflow.html</code> to link the standard from its
-      plan-artifact cells. Record the founding decision (DEC-4: checklists over templates —
-      substance constrained, form free).
+      outputs, their four checklists, the markup contract (<code>data-artifact</code> /
+      <code>data-item</code> vocabulary), the substance rules the script enforces, and the three
+      trigger points. Update <code>workflow.html</code> to link the standard from its
+      plan-artifact cells. Record the founding decision (DEC-4: checklists over templates,
+      script over memory — substance constrained mechanically, form free).
     </p>
     <p data-c="wu1-expected">
       <strong>Expected result.</strong> The standard is self-sufficient: an agent can plan and
@@ -158,22 +181,29 @@ flowchart LR
 
     <h2 id="wu2">WU E3.W2 · wu/work-planning/verify</h2>
     <p data-c="wu2-req">
-      <strong>Requirement.</strong> Make the verification runnable and repeatable: a
-      <code>plan-review</code> skill (same shape as the existing <code>code-review</code> skill —
-      fresh-context checklist verifiers, findings, verdict) that takes any plan or result report
-      plus the artifact type, and verifies it against the T1's checklist. Dry-run it on this very
-      plan (E3's) and on E2's plan; findings fix the documents or the checklists — whichever is
-      wrong.
+      <strong>Requirement.</strong> Implement <code>cargo xtask verify-doc &lt;path&gt;</code>
+      (artifact type read from the doc's markup; checklist per the T1) and wire the three trigger
+      points: pre-commit verifies governed docs in the diff; the wu and epic merge gates require
+      their docs present and green. How a gate locates the docs belonging to the merge (the doc
+      self-declares its epic/wu identity in its markup) is settled here. Retrofit this plan with
+      the markers and dry-run the script on it — findings fix the doc or the checklist, whichever
+      is wrong.
     </p>
     <p data-c="wu2-expected">
-      <strong>Expected result.</strong> One command/skill invocation verifies any planning or
-      result artifact; the dry-runs prove the checklists are checkable in practice, not just
-      stated.
+      <strong>Expected result.</strong> A red governed doc cannot enter history; a WU cannot merge
+      without a green plan and WU result doc; an epic cannot merge without a green epic result
+      doc; every failure prints the exact missing/weak items.
     </p>
     <table data-c="wu2-tests">
       <thead><tr><th>Test plan</th><th>Level</th></tr></thead>
       <tbody>
-        <tr><td>Skill/docs-only WU — integration waived; adequacy = dry-run evidence: a deliberately incomplete plan (missing non-goals, boilerplate expected-result) must come back with findings naming exactly those items; this plan and E2's must pass or yield actionable findings</td><td>WU</td></tr>
+        <tr><td>Unit: marker extraction — artifact type, items, WU entries; unknown types and missing markers rejected</td><td>commit</td></tr>
+        <tr><td>Unit: substance rules — empty item, below-floor item, TBD/TODO placeholder, estimate language each red with the right problem block</td><td>commit</td></tr>
+        <tr><td>Integration (<code>xtask/tests/</code>): incomplete epic plan (no non-goals, placeholder expected result) → exit 1 naming exactly those items; conforming plan → exit 0</td><td>WU</td></tr>
+        <tr><td>Integration: pre-commit refuses a commit whose diff contains a red governed doc</td><td>WU</td></tr>
+        <tr><td>Integration: wu merge refused when the epic plan or the WU result doc is absent or red; green docs → merge lands</td><td>WU</td></tr>
+        <tr><td>Integration: epic merge refused without a green epic result doc</td><td>WU</td></tr>
+        <tr><td>Integration: ungoverned docs (no <code>data-artifact</code>, e.g. a brainstorm) are ignored everywhere</td><td>WU</td></tr>
       </tbody>
     </table>
 
@@ -186,30 +216,34 @@ flowchart LR
       prescribes headings or order — only items, their meaning, and the quality bar.
     </p>
     <p data-c="design-verification">
-      <strong>Why agent-verification, not parsing.</strong> "Expected result is observable" or
-      "deviation explains why" cannot be checked mechanically without forcing rigid structure —
-      which is the rejected template in disguise. The house already trusts fresh-context judgment
-      bound to a specific artifact (the code-review skill); checklist verification is the same
-      pattern pointed at planning docs.
+      <strong>How far the mechanical check reaches.</strong> The markup contract is what lets a
+      script verify substance without a rigid template: items are addressable wherever the author
+      put them, so the script checks presence, floors and red-flag content — the minimum quality
+      the manager's checklist demands. Whether an "observable expected result" is <em>truly</em>
+      observable stays a semantic call: that lives where judgment already lives (the code review
+      that reads the plan, the user's comment round), on top of — never instead of — the script.
     </p>
     <p data-c="design-gates-untouched">
-      <strong>Relation to the DoD gates.</strong> None, deliberately. The workflow's mechanical
-      gates keep verifying tests/review/docs evidence exactly as today. This standard is
-      procedural: verification happens at the four loop points because the standard says so.
-      If it earns its keep, hooking it into gates is a separate, later decision.
+      <strong>Relation to the DoD gates.</strong> Additive, not entangled: <code>verify-doc</code>
+      is its own subcommand with its own checklist logic; the existing hooks and merge gates gain
+      one more call site, and no evidence note or receipt schema changes. The docs-only exemption
+      keeps meaning "no test/review evidence demanded" — it does not exempt a WU or epic from
+      having its plan and result docs, since those exist precisely when code doesn't.
     </p>
 
     <h2 id="open">Open questions</h2>
     <ul data-c="open-list">
-      <li><strong>Is W2 in scope?</strong> Proposed yes — a checklist nobody can run uniformly
-        will drift. The lean alternative: the T1 defines the procedure prose-only and sessions
-        spawn ad-hoc verifier agents; drop W2 if that's preferred.</li>
-      <li><strong>Where do result reports live?</strong> Proposed: appended to the epic's plan
-        doc (one place per epic, plan and results side by side); a separate result doc stays
-        allowed when size warrants. Alternative: always separate docs.</li>
-      <li><strong>Verification outcome recording.</strong> Proposed: one line in the verified doc
-        (who/when/verdict) — enough to see it happened, no new evidence machinery. Alternative:
-        none at all.</li>
+      <li><strong>How aggressive are the substance rules?</strong> Proposed start: non-empty,
+        a small per-item character floor, placeholder words, estimate language — tuned against
+        real docs during W2's dry-run. Too-strict heuristics would push authors into padding,
+        which is boilerplate by another name.</li>
+      <li><strong>Pre-standard docs.</strong> E1's brainstorm and E2's plan predate the markup
+        contract. Proposed: grandfathered exactly like v1 notes — ungoverned docs are ignored;
+        only docs declaring <code>data-artifact</code> are checked, and everything from E3 on
+        must declare it (the merge gates enforce that from E3's WUs onward).</li>
+      <li><strong>Result doc for a collapsed epic.</strong> A one-WU epic writes one combined
+        result doc proposed (<code>data-artifact</code> declares both roles) rather than two
+        near-identical files.</li>
     </ul>
   </main>
   <script type="module">
