@@ -1,0 +1,12 @@
+schema: test/v2
+level: working-unit
+epic: E2
+wu: E2.W1
+branch: wu/doc-archive/gate
+tests:
+  unit:
+    count: 1
+    covers: "is_expected_tracked_doc path classification: flat T1 files, use-cases, decisions, docs/work, docs/.archive, stray subdirs, non-docs paths"
+  integration:
+    count: 5
+    covers: "dod_gate.rs: epic gate rejects a tracked docs/work doc at the tip and a doc in an unexpected location; a docs-only epic with a stray work doc is red, clean stays exempt; a work doc git-rm'd within the epic passes; an archived doc-note entry requires distilled_to lineage (red without, green with)"
