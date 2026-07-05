@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E3 · work-planning — plan outputs & result reports, checklist-verified</h1>
       <p>T3 plan: define what the planning phase of an epic/WU must output and what the result report after the work must contain — as minimum-content checklists verified by a script the agent harness triggers at authoring time, never as fixed templates, never as git hooks.</p>
-      <div class="meta">Draft v4 · 2026-07-05 · Trawler · T3 work doc · epic/work-planning</div>
+      <div class="meta">Draft v5 · 2026-07-05 · Trawler · T3 work doc · epic/work-planning</div>
     </div>
   </header>
   <main>
@@ -85,74 +85,86 @@ flowchart LR
       <div class="caption">Drafts iterate in silence — no false positives mid-authoring. Declaring the doc ready is the checkpoint; from there every edit re-verifies, and red never survives a turn. The backstop also catches docs edited around the file tools (e.g. via shell).</div>
     </div>
     <p data-c="shape-outputs">
-      <strong>The four outputs.</strong> Planning phase: the <em>epic plan</em> (one T3 doc per
-      epic) containing a <em>plan entry per WU</em>. After the work: a <em>result report per WU</em>
-      (written when the WU completes) and an <em>epic result report</em> (at epic close) — each
-      result report is its own separate T3 doc under the normal naming rule
-      (<code>docs/work/YYYY-MM-DD-&lt;wu-or-epic-slug&gt;-result.html</code>); a collapsed
-      one-WU epic writes one combined result doc declaring both roles. All T3 lifecycle rules
-      (distill, then archive) apply unchanged.
+      <strong>The four outputs — each its own T3 doc.</strong> Planning phase: the
+      <em>epic plan</em> (one doc per epic, carrying only a <em>summary</em> per WU — what it
+      builds, what it maps to, expected outcomes, dependencies) and a <em>WU plan</em> per WU
+      (its own doc, written before that WU's code, where the full WU planning lives). After the
+      work: a <em>WU result report</em> (when the WU completes) and an <em>epic result report</em>
+      (at epic close). Naming follows the normal T3 rule
+      (<code>docs/work/YYYY-MM-DD-&lt;slug&gt;-plan.html</code> / <code>…-result.html</code>);
+      a collapsed one-WU epic may combine the two plans in one doc and the two results in one
+      doc, each declaring both roles. All T3 lifecycle rules (distill, then archive) apply
+      unchanged.
     </p>
     <p data-c="shape-checklists">
-      <strong>Draft checklists</strong> — v0, to be refined and owned by the T1. The script
-      verifies each item's tagged section exists with content; whether the content is
-      substantive — task-specific, observable where it claims to be, never boilerplate — is the
-      quality bar the standard states and the existing reviews judge.
+      <strong>Draft checklists</strong> — v0, to be refined and owned by the T1. Every item has
+      an <strong>exact, normative tag</strong>; the script verifies each tagged section exists
+      with content. <strong>Tagging is strict by design</strong>: content sitting under a wrong
+      or missing tag is red — the tag <em>is</em> the contract — and the verifier reports
+      unknown tags by name next to the missing item, so a typo reads as "unknown tag
+      <code>expcted</code> / missing item <code>expected</code>" and the fix is obvious. Whether
+      the content is substantive — task-specific, observable where it claims to be, never
+      boilerplate — is the quality bar the standard states and the existing reviews judge.
     </p>
     <table data-c="checklist-epic-plan">
-      <thead><tr><th colspan="2">Epic plan — must at least contain</th></tr></thead>
+      <thead><tr><th colspan="3">Epic plan (<code>data-artifact="epic-plan"</code>) — must at least contain</th></tr></thead>
       <tbody>
-        <tr><td>Intent</td><td>One requirement paragraph: what user-visible change, and why now</td></tr>
-        <tr><td>Expected result</td><td>Observable acceptance — what exists/behaves differently after, checkable by a reader who wasn't there</td></tr>
-        <tr><td>Non-goals</td><td>What is deliberately out of scope</td></tr>
-        <tr><td>WU decomposition</td><td>Every WU with its full plan entry (below); order/dependencies when they exist</td></tr>
-        <tr><td>Open questions</td><td>What's undecided, each with a proposed default</td></tr>
+        <tr><td>Intent</td><td><code>data-item="intent"</code></td><td>One requirement paragraph: what user-visible change, and why now</td></tr>
+        <tr><td>Use-case requirements</td><td><code>data-item="use-cases"</code></td><td>The clear use-case contracts this epic delivers or changes — existing <code>UC-*</code> ids referenced, new/changed behavior stated contract-level (these become the T2 use-case updates at distillation)</td></tr>
+        <tr><td>Expected result</td><td><code>data-item="expected"</code></td><td>Observable acceptance — what exists/behaves differently after, checkable by a reader who wasn't there</td></tr>
+        <tr><td>Non-goals</td><td><code>data-item="non-goals"</code></td><td>What is deliberately out of scope</td></tr>
+        <tr><td>WU summaries</td><td><code>data-item="wu-summaries"</code>, one <code>data-wu="&lt;id&gt;"</code> block per WU</td><td>Per WU — a summary of what it builds (<code>data-item="wu-summary"</code>), which UC / requirement it maps to (<code>"wu-maps-to"</code>), expected outcomes (<code>"wu-expected"</code>), dependencies on other WUs or "none" (<code>"wu-deps"</code>). Not the full WU plan — that lives in the WU's own plan doc</td></tr>
+        <tr><td>E2E test plan</td><td><code>data-item="e2e-plan"</code></td><td>The end-to-end flow(s) that will prove the whole epic, per the testing charter</td></tr>
+        <tr><td>Distillation plan</td><td><code>data-item="distillation-plan"</code></td><td>Which T2 topic files / decision records (rarely T1) will absorb this epic's truth</td></tr>
+        <tr><td>Open questions</td><td><code>data-item="open-questions"</code></td><td>What's undecided, each with a proposed default, or "none"</td></tr>
       </tbody>
     </table>
     <table data-c="checklist-wu-plan">
-      <thead><tr><th colspan="2">WU plan entry — must at least contain</th></tr></thead>
+      <thead><tr><th colspan="3">WU plan (<code>data-artifact="wu-plan"</code>, its own doc) — must at least contain</th></tr></thead>
       <tbody>
-        <tr><td>Requirement</td><td>One explicit, testable sentence</td></tr>
-        <tr><td>Expected result</td><td>Observable outcome of this WU alone</td></tr>
-        <tr><td>Test plan</td><td>Concrete per level — what asserts what; waivers named with reasons</td></tr>
+        <tr><td>Requirement</td><td><code>data-item="requirement"</code></td><td>One explicit, testable sentence</td></tr>
+        <tr><td>Mapping</td><td><code>data-item="maps-to"</code></td><td>Which epic, UC / requirement this WU serves — consistent with its summary row in the epic plan</td></tr>
+        <tr><td>Expected result</td><td><code>data-item="expected"</code></td><td>Observable outcome of this WU alone</td></tr>
+        <tr><td>Test plan</td><td><code>data-item="test-plan"</code></td><td>Concrete per level — what asserts what; waivers named with reasons</td></tr>
       </tbody>
     </table>
     <table data-c="checklist-wu-result">
-      <thead><tr><th colspan="2">WU result report — must at least contain</th></tr></thead>
+      <thead><tr><th colspan="3">WU result report (<code>data-artifact="wu-result"</code>) — must at least contain</th></tr></thead>
       <tbody>
-        <tr><td>Outcome</td><td>Delivered / deviated / dropped against its requirement and expected result — what actually shipped</td></tr>
-        <tr><td>Deviations</td><td>Every difference from the plan entry, with why (scope moved, approach changed, work discovered)</td></tr>
-        <tr><td>Evidence</td><td>Pointers: tests added, docs touched, tips/commits</td></tr>
-        <tr><td>Distillation</td><td>What went to T2/T1 — or "nothing citable", said explicitly</td></tr>
-        <tr><td>Follow-ups</td><td>Debt or new work discovered, or none</td></tr>
+        <tr><td>Outcome</td><td><code>data-item="outcome"</code></td><td>Delivered / deviated / dropped against its requirement and expected result — what actually shipped</td></tr>
+        <tr><td>Deviations</td><td><code>data-item="deviations"</code></td><td>Every difference from the WU plan, with why (scope moved, approach changed, work discovered), or "none"</td></tr>
+        <tr><td>Evidence</td><td><code>data-item="evidence"</code></td><td>Pointers: tests added, docs touched, tips/commits</td></tr>
+        <tr><td>Distillation</td><td><code>data-item="distillation"</code></td><td>What went to T2/T1 — or "nothing citable", said explicitly</td></tr>
+        <tr><td>Follow-ups</td><td><code>data-item="follow-ups"</code></td><td>Debt or new work discovered, or none</td></tr>
       </tbody>
     </table>
     <table data-c="checklist-epic-result">
-      <thead><tr><th colspan="2">Epic result report — must at least contain</th></tr></thead>
+      <thead><tr><th colspan="3">Epic result report (<code>data-artifact="epic-result"</code>) — must at least contain</th></tr></thead>
       <tbody>
-        <tr><td>Outcome</td><td>Against the epic's intent and expected result — did the user-visible change land as expected</td></tr>
-        <tr><td>Per-WU rollup</td><td>Each planned WU's outcome; unplanned work accounted for</td></tr>
-        <tr><td>Deviations</td><td>Where the epic diverged from its plan, and why</td></tr>
-        <tr><td>Evidence</td><td>E2E outcome, review verdicts, pointers to the landed work</td></tr>
-        <tr><td>Distillation summary</td><td>The T2/T1 docs now carrying this epic's truth; plan + reports archived</td></tr>
-        <tr><td>Follow-ups</td><td>Epics/WUs this work spawned, or none</td></tr>
+        <tr><td>Outcome</td><td><code>data-item="outcome"</code></td><td>Against the epic's intent, use-case requirements and expected result — did the user-visible change land as expected</td></tr>
+        <tr><td>Per-WU rollup</td><td><code>data-item="wu-rollup"</code></td><td>Each planned WU's outcome; unplanned work accounted for</td></tr>
+        <tr><td>Deviations</td><td><code>data-item="deviations"</code></td><td>Where the epic diverged from its plan, and why, or "none"</td></tr>
+        <tr><td>Evidence</td><td><code>data-item="evidence"</code></td><td>E2E outcome, review verdicts, pointers to the landed work</td></tr>
+        <tr><td>Distillation summary</td><td><code>data-item="distillation"</code></td><td>The T2/T1 docs now carrying this epic's truth (vs the distillation plan); plan + reports archived</td></tr>
+        <tr><td>Follow-ups</td><td><code>data-item="follow-ups"</code></td><td>Epics/WUs this work spawned, or none</td></tr>
       </tbody>
     </table>
     <p data-c="shape-verification">
-      <strong>The mechanical check — simple tag verification.</strong> Free form and a mechanical
+      <strong>The mechanical check — strict tag verification.</strong> Free form and a mechanical
       check coexist through a minimal <strong>markup contract</strong>: a governed doc declares
-      what it is (<code>data-artifact="epic-plan | wu-result | epic-result"</code>, WU plan
-      entries marked inside the epic plan), declares its state
-      (<code>data-status="draft"</code> while authoring; absent or <code>ready</code> = ready),
-      and tags the section holding each checklist item
-      (<code>data-item="intent"</code>, <code>data-item="expected"</code>, …) — any element, any
-      order, any form around it; the standard instructs authors to tag as they write.
+      what it is (<code>data-artifact="epic-plan | wu-plan | wu-result | epic-result"</code>),
+      declares its state (<code>data-status="draft"</code> while authoring; absent or
+      <code>ready</code> = ready), and tags the section holding each checklist item with that
+      item's <em>exact</em> tag from the tables above — any element, any order, any form around
+      it; the standard instructs authors to tag as they write, and to tag precisely.
       <code>cargo xtask verify-doc &lt;path&gt;</code> reads the artifact type, selects its
       checklist, and checks exactly this: every item's tagged section is present with non-empty
-      content, and the type's structure holds (an epic plan carries ≥ 1 WU entry, each entry
-      complete). Nothing cleverer — depth of content is review territory. Anything red prints as
-      one problem block per item — check id, expected vs found, fix → — exit 1. Docs that declare
-      no <code>data-artifact</code> are not governed and are ignored — pre-existing docs (E1's
+      content, the type's structure holds (an epic plan carries ≥ 1 <code>data-wu</code> block,
+      each with its four sub-tags), and no unknown tags exist for the type — the typo guard that
+      turns "content there, tag wrong" into a named, fixable problem instead of a mystery.
+      Nothing cleverer — depth of content is review territory. Anything red prints as one
+      problem block per item — check id, expected vs found, fix → — exit 1. Docs that declare no
+      <code>data-artifact</code> are not governed and are ignored — pre-existing docs (E1's
       brainstorm, E2's plan) are simply skipped, never retrofitted.
     </p>
     <p data-c="shape-trigger">
@@ -179,14 +191,16 @@ flowchart LR
     <h2 id="wu1">WU E3.W1 · wu/work-planning/standard</h2>
     <p data-c="wu1-req">
       <strong>Requirement.</strong> Author T1 <code>docs/work-planning.html</code> owning the four
-      outputs, their four checklists, the markup contract (<code>data-artifact</code> /
-      <code>data-status</code> / <code>data-item</code> vocabulary and the instruction to tag
-      while authoring), the simple presence checks the script enforces, and the two harness
-      trigger points. Update <code>workflow.html</code> to link the standard from its
-      plan-artifact cells and to name the plan/result docs as inputs the existing reviews judge.
-      Record the founding decision (DEC-4: checklists over templates, script over memory,
-      authoring-time over commit-time — git hooks rejected because the work would already stand
-      on a low-quality doc).
+      outputs, their four checklists with the exact normative tag per item, the markup contract
+      (<code>data-artifact</code> / <code>data-status</code> / <code>data-item</code> /
+      <code>data-wu</code> vocabulary, the instruction to tag precisely while authoring, and the
+      strictness rule: the tag is the contract), the presence checks the script enforces, and
+      the two harness trigger points. Update <code>workflow.html</code>: plan-artifact cells
+      link the standard (WU cell changes shape — own plan doc + summary row in the epic plan)
+      and the plan/result docs are named as inputs the existing reviews judge. Record the
+      founding decision (DEC-4: checklists over templates, script over memory, authoring-time
+      over commit-time — git hooks rejected because the work would already stand on a
+      low-quality doc).
     </p>
     <p data-c="wu1-expected">
       <strong>Expected result.</strong> The standard is self-sufficient: an agent can plan and
@@ -219,9 +233,9 @@ flowchart LR
     <table data-c="wu2-tests">
       <thead><tr><th>Test plan</th><th>Level</th></tr></thead>
       <tbody>
-        <tr><td>Unit: marker extraction — artifact type, draft/ready status (absent = ready), items, WU entries; unknown types and missing markers rejected</td><td>commit</td></tr>
-        <tr><td>Unit: presence checks — missing tag and empty tagged section each red with the right problem block; whitespace-only counts as empty</td><td>commit</td></tr>
-        <tr><td>Integration (<code>xtask/tests/</code>): epic plan missing two tagged items → exit 1 naming exactly those; conforming plan → exit 0; combined result doc for a collapsed epic checked against both checklists</td><td>WU</td></tr>
+        <tr><td>Unit: marker extraction — artifact type, draft/ready status (absent = ready), items, <code>data-wu</code> blocks with sub-tags; unknown artifact types rejected</td><td>commit</td></tr>
+        <tr><td>Unit: presence checks — missing tag and empty tagged section each red with the right problem block; whitespace-only counts as empty; unknown <code>data-item</code> for the type reported by name beside the item it likely misspells</td><td>commit</td></tr>
+        <tr><td>Integration (<code>xtask/tests/</code>): epic plan missing two tagged items → exit 1 naming exactly those; a misspelled tag → red pairing unknown tag with missing item; a <code>data-wu</code> block lacking a sub-tag → red; conforming docs of all four types → exit 0; combined plan and combined result docs for a collapsed epic checked against both their checklists</td><td>WU</td></tr>
         <tr><td>Integration: PostToolUse hook script — Write/Edit JSON for a red ready doc → feedback carrying the problem blocks; green ready doc → silent; draft → silent; ungoverned path (brainstorm, T1 doc) → silent</td><td>WU</td></tr>
         <tr><td>Integration: Stop hook script — a red ready tracked doc → block with reason; drafts or all-green → allow</td><td>WU</td></tr>
       </tbody>
