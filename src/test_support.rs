@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(clippy::return_self_not_must_use)]
 
 use std::io::Write;
 

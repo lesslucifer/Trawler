@@ -34,8 +34,8 @@ pub use flow::{Flow, FlowId};
 pub use recorder::Recorder;
 pub use store::Store;
 
-#[cfg(test)]
-mod test_support;
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_support;
 
 /// Install the process-global rustls crypto provider exactly once. Wrapped in a
 /// `Once` so repeated `serve()` calls — notably many e2e tests in one process —

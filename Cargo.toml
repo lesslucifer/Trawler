@@ -14,6 +14,9 @@ path = "src/lib.rs"
 name = "trawler"
 path = "src/main.rs"
 
+[features]
+test-utils = []
+
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 hudsucker = { version = "0.24", features = ["rcgen-ca", "rustls-client"] }
@@ -36,6 +39,7 @@ rustls-pemfile = "2"
 webpki-roots = "0.26"
 
 [dev-dependencies]
+trawler = { path = ".", features = ["test-utils"] }
 cargo-husky = { version = "1", default-features = false, features = ["user-hooks"] }
 proptest = "1"
 tempfile = "3"
