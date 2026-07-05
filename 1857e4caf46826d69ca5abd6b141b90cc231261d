@@ -1,0 +1,9 @@
+schema: test/v2
+level: commit
+branch: main
+tests:
+  unit:
+    waived: "changed code is process-spawn plumbing; asserted end-to-end by the hermeticity regression tests"
+  integration:
+    count: 2
+    covers: "GIT_DIR poisoned at a nonexistent repo: xtask git plumbing (dod_gate) and hook-suite repo helpers (dod_hooks) still target their own temp repos"
