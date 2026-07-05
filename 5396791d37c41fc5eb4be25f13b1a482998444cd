@@ -1,0 +1,22 @@
+schema: doc/v1
+epic: E-WFT
+branch: epic/wf-tooling
+changes:
+  - path: docs/documentation-system.html
+    tier: T1
+    action: updated
+    distills: "epic/WU ids renamed to slug-abbrev codes (E-<CODE> / E-<CODE>.W<m>)"
+  - path: docs/testing-strategy.html
+    tier: T1
+    action: updated
+    distills: "id format rename; workflow-tooling suites run behind the hook-tests feature (explicit --all-features)"
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "identity ids are E-<CODE> / E-<CODE>.W<m>; examples updated throughout"
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "DEC-2: GIT_* env scrub is load-bearing - inherited GIT_DIR redirects hermetic test repos onto the real repository"
+t2_waived: null
+date: 2026-07-05
