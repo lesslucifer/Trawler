@@ -1,0 +1,15 @@
+schema: cr/v2
+scope: "WU E-PLAN.W2 verify -> epic/work-planning"
+epic: E-PLAN
+wu: E-PLAN.W2
+branch: wu/work-planning/verify
+base: bd1a7d18195a8e8b3a523f24f61f151bbeb229fb
+head: c4d5e71f48330d20ba6c2ac6cb0fdf5c26c8a1e3
+diff_sha256: 2a3d78721c0fa7bb0937882651dd7cf35b3507823bb7fe4e17963fb22104db21
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 26, verified: 6, waived: 1 }
+waivers:
+  - finding: "attr_positions allocates a full Vec for the single first-data-status lookup"
+    reason: "micro-allocation in developer tooling; a find-first variant duplicates the scanner or changes its signature across three call sites for no measurable gain"
+verdict: PASS
+date: 2026-07-05
