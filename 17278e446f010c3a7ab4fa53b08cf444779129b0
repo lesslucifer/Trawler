@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E1.W1 workflow-gate -> epic/workflow"
+epic: E1
+wu: E1.W1
+branch: wu/workflow/gate
+base: 7df01f056ed0dda4f2ef3b4c45f8141d6736d0fc
+head: 17278e446f010c3a7ab4fa53b08cf444779129b0
+diff_sha256: 6355b79a64896da0c4d591a0cb9b4817e966e030b5f4b899c45a4c1a792dd088
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-05
