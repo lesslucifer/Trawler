@@ -1,0 +1,9 @@
+schema: doc/v1
+branch: main
+changes:
+  - path: docs/testing-strategy.html
+    tier: T1
+    action: updated
+    distills: "hook/gate suites are workflow tooling, feature-gated behind hook-tests and excluded from default runs; explicit --all-features, clippy keeps them compiling"
+t2_waived: "build config only — no product behavior contract changed; rule lives in the T1 testing standard"
+date: 2026-07-05
