@@ -5,6 +5,18 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+// Git exports GIT_DIR to hook processes; inherited (e.g. when this suite runs under
+// pre-push), it redirects every "hermetic" repo call to the real repository.
+fn git_cmd() -> Command {
+    let mut cmd = Command::new("git");
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(key);
+        }
+    }
+    cmd
+}
+
 struct Env {
     home: PathBuf,
     fake_path: String,
@@ -27,7 +39,7 @@ impl Env {
     }
 
     fn git(&self, dir: &Path, args: &[&str]) -> bool {
-        Command::new("git")
+        git_cmd()
             .args(args)
             .current_dir(dir)
             .env("HOME", &self.home)
@@ -75,6 +87,16 @@ fn repo_with_wu_branch(env: &Env, tmp: &Path) -> PathBuf {
     env.git_ok(&repo, &["add", "-A"]);
     env.git_ok(&repo, &["commit", "-q", "-m", "wu change"]);
     repo
+}
+
+#[test]
+fn test_repos_ignore_inherited_hook_env() {
+    std::env::set_var("GIT_DIR", "/nonexistent/.git");
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    assert!(env.git(&repo, &["rev-parse", "-q", "--verify", "wu/x/one"]));
+    std::env::remove_var("GIT_DIR");
 }
 
 #[test]
@@ -130,7 +152,7 @@ fn pre_commit_gates_conflicted_merge_completion_on_epic() {
 
     env.git_ok(&repo, &["checkout", "-q", "epic/x"]);
     let wu_tip = {
-        let out = Command::new("git")
+        let out = git_cmd()
             .args(["rev-parse", "wu/x/one"])
             .current_dir(&repo)
             .output()

@@ -2,10 +2,21 @@ use std::io::Write as _;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+// Git exports GIT_DIR (and friends) to hook processes; inherited, it overrides -C and
+// silently redirects every call to the enclosing repo instead of `repo`.
+fn cmd(repo: &Path) -> Command {
+    let mut cmd = Command::new("git");
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(key);
+        }
+    }
+    cmd.arg("-C").arg(repo);
+    cmd
+}
+
 pub fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
-    let out = Command::new("git")
-        .arg("-C")
-        .arg(repo)
+    let out = cmd(repo)
         .args(args)
         .output()
         .map_err(|e| format!("failed to spawn git {}: {e}", args.join(" ")))?;
@@ -33,9 +44,7 @@ pub fn diff_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, Str
 
 pub fn diff_sha256(repo: &Path, base: &str, tip: &str) -> Result<String, String> {
     let range = format!("{base}..{tip}");
-    let diff = Command::new("git")
-        .arg("-C")
-        .arg(repo)
+    let diff = cmd(repo)
         .args(["diff", "--no-color", "--no-ext-diff", &range])
         .output()
         .map_err(|e| format!("failed to spawn git diff: {e}"))?;
