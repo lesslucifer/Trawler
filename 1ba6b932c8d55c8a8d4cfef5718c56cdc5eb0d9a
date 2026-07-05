@@ -1,0 +1,9 @@
+schema: doc/v1
+branch: main
+changes:
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "DEC-2 choice row: every spawned git scrubs inherited GIT_* — pre-push GIT_DIR redirect discovered live, pinned by regression tests"
+t2_waived: null
+date: 2026-07-05
