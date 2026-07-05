@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-PLAN
+wu: E-PLAN.W2
+base: bd1a7d18195a8e8b3a523f24f61f151bbeb229fb
+tip: c4d5e71f48330d20ba6c2ac6cb0fdf5c26c8a1e3
+diff_sha256: 2a3d78721c0fa7bb0937882651dd7cf35b3507823bb7fe4e17963fb22104db21
+checks: [notes, manifest, review, review-base, diff-binding, doc-note]
+date: 2026-07-05
