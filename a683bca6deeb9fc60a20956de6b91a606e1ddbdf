@@ -1,0 +1,12 @@
+schema: cr/v2
+scope: "epic E2 doc-archive -> main"
+epic: E2
+branch: epic/doc-archive
+base: f8176db7b0250c28cd618d6112dae6741d444cd7
+head: a683bca6deeb9fc60a20956de6b91a606e1ddbdf
+diff_sha256: dd65d518305c24407297774aad72278402f88be8a3a8a0f559e6093c1e1f8c3c
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-05
