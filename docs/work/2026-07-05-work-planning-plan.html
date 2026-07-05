@@ -22,9 +22,9 @@
       verifies a doc against its checklist and prints the problems when it falls short — while
       the form stays free: a plan or report may be prose, tables, diagrams or widgets, shaped
       creatively to fit its task. Nobody remembers to run the script and nothing waits for git:
-      the agent harness triggers it <em>the moment a governed doc is written</em>, so a
-      low-quality plan is caught while it is being authored — before any work is built on it —
-      and forgetting is not a failure mode because no one has to remember.
+      the agent harness triggers it <em>the moment a governed doc is declared ready</em> — and on
+      every edit after — so a low-quality plan is caught while it is being authored, before any
+      work is built on it, and forgetting is not a failure mode because no one has to remember.
     </p>
 
     <h2 id="expected">Expected result — observable</h2>
@@ -38,10 +38,11 @@
       <li><code>cargo xtask verify-doc &lt;path&gt;</code> verifies any governed doc against its
         checklist: exit 0, or exit 1 with one problem block per missing/weak item in the house
         red style (item, expected vs found, fix →).</li>
-      <li>The check is impossible to forget and never late: a harness hook in the project's
-        <code>.claude/settings.json</code> runs <code>verify-doc</code> on every Write/Edit of a
-        governed doc and feeds the problems straight back into the authoring session; a turn-end
-        backstop refuses to conclude while a governed doc in the tree is red.</li>
+      <li>The check is impossible to forget, never late, and never noisy: a harness hook in the
+        project's <code>.claude/settings.json</code> runs <code>verify-doc</code> on every
+        Write/Edit of a <em>ready</em> governed doc and feeds the problems straight back into the
+        authoring session — drafts iterate in silence; a turn-end backstop refuses to conclude
+        while a ready governed doc in the tree is red.</li>
       <li><code>workflow.html</code>'s plan-artifact cells link to the standard instead of
         half-defining it.</li>
     </ul>
@@ -73,14 +74,15 @@
     <div class="diagram" data-c="loop-diagram">
       <pre class="mermaid">
 flowchart LR
-  A["agent writes / edits a governed doc<br/>(epic plan · WU result · epic result)"] --> H{"harness PostToolUse hook<br/>cargo xtask verify-doc"}
-  H -- "red — problems injected<br/>into the session" --> F["agent fixes the doc<br/>right now"] --> A
+  A["agent authors a governed doc<br/>data-status='draft' — hook silent,<br/>iterate freely"] --> RDY["author flips it ready"]
+  RDY --> H{"harness PostToolUse hook<br/>verify-doc on every write<br/>of a ready doc"}
+  H -- "red — problems injected<br/>into the session" --> F["agent fixes the doc<br/>right now"] --> H
   H -- green --> W["work proceeds<br/>on a green doc"]
-  W --> S{"harness Stop hook at turn end<br/>any governed doc red?"}
+  W --> S{"harness Stop hook at turn end<br/>any ready doc red?"}
   S -- "red — turn refused to end" --> F
   S -- green --> D["turn ends"]
       </pre>
-      <div class="caption">The check fires while the doc is being authored — before any work builds on it. The turn-end backstop catches docs edited around the file tools (e.g. via shell).</div>
+      <div class="caption">Drafts iterate in silence — no false positives mid-authoring. Declaring the doc ready is the checkpoint; from there every edit re-verifies, and red never survives a turn. The backstop also catches docs edited around the file tools (e.g. via shell).</div>
     </div>
     <p data-c="shape-outputs">
       <strong>The four outputs.</strong> Planning phase: the <em>epic plan</em> (one T3 doc per
@@ -92,9 +94,10 @@ flowchart LR
       (distill, then archive) apply unchanged.
     </p>
     <p data-c="shape-checklists">
-      <strong>Draft checklists</strong> — v0, to be refined and owned by the T1. Each item must be
-      <em>present and substantive</em>: specific to this task, observable where it claims to be,
-      never boilerplate.
+      <strong>Draft checklists</strong> — v0, to be refined and owned by the T1. The script
+      verifies each item's tagged section exists with content; whether the content is
+      substantive — task-specific, observable where it claims to be, never boilerplate — is the
+      quality bar the standard states and the existing reviews judge.
     </p>
     <table data-c="checklist-epic-plan">
       <thead><tr><th colspan="2">Epic plan — must at least contain</th></tr></thead>
@@ -136,18 +139,21 @@ flowchart LR
       </tbody>
     </table>
     <p data-c="shape-verification">
-      <strong>The mechanical check.</strong> Free form and a mechanical check coexist through a
-      minimal <strong>markup contract</strong>: a governed doc declares what it is
-      (<code>data-artifact="epic-plan | wu-result | epic-result"</code>, WU plan entries marked
-      inside the epic plan) and each checklist item is tagged where it lives
+      <strong>The mechanical check — simple tag verification.</strong> Free form and a mechanical
+      check coexist through a minimal <strong>markup contract</strong>: a governed doc declares
+      what it is (<code>data-artifact="epic-plan | wu-result | epic-result"</code>, WU plan
+      entries marked inside the epic plan), declares its state
+      (<code>data-status="draft"</code> while authoring; absent or <code>ready</code> = ready),
+      and tags the section holding each checklist item
       (<code>data-item="intent"</code>, <code>data-item="expected"</code>, …) — any element, any
-      order, any form around it. <code>cargo xtask verify-doc &lt;path&gt;</code> reads the
-      artifact type, selects its checklist, and checks every item: present, non-empty above a
-      substance floor, no placeholders (TBD/TODO), no estimate language (AI-first rule), plus
-      per-type consistency (an epic plan must hold ≥ 1 WU entry, each complete). Anything red
-      prints as one problem block per item — check id, expected vs found, fix → — exit 1. Docs
-      that declare no <code>data-artifact</code> are not governed and are ignored — pre-existing
-      docs (E1's brainstorm, E2's plan) are simply skipped, never retrofitted.
+      order, any form around it; the standard instructs authors to tag as they write.
+      <code>cargo xtask verify-doc &lt;path&gt;</code> reads the artifact type, selects its
+      checklist, and checks exactly this: every item's tagged section is present with non-empty
+      content, and the type's structure holds (an epic plan carries ≥ 1 WU entry, each entry
+      complete). Nothing cleverer — depth of content is review territory. Anything red prints as
+      one problem block per item — check id, expected vs found, fix → — exit 1. Docs that declare
+      no <code>data-artifact</code> are not governed and are ignored — pre-existing docs (E1's
+      brainstorm, E2's plan) are simply skipped, never retrofitted.
     </p>
     <p data-c="shape-trigger">
       <strong>Who triggers it — the harness, at authoring time.</strong> Git hooks are the wrong
@@ -156,21 +162,27 @@ flowchart LR
       itself, via hooks versioned in the project's <code>.claude/settings.json</code> — the
       harness executes them, not the agent, and in an AI-first repo every author <em>is</em> a
       harness session, so authoring-time coverage is total:
-      a <strong>PostToolUse hook</strong> fires on every Write/Edit whose target is a governed
-      doc, runs <code>verify-doc</code> on it, and on red injects the problem blocks straight
-      back into the session as blocking feedback — the authoring agent must fix the doc
-      <em>now</em>, before anything is built on it; and a <strong>Stop hook</strong> backstops
-      the loop — a turn is refused to end while any governed doc in the working tree is red,
-      which also catches docs edited around the file tools (shell, scripts). Manual runs work
-      anytime for feedback; no workflow step depends on anyone remembering one.
+      a <strong>PostToolUse hook</strong> fires on every Write/Edit whose target is a
+      <em>ready</em> governed doc, runs <code>verify-doc</code> on it, and on red injects the
+      problem blocks straight back into the session as feedback — the authoring agent must fix
+      the doc <em>now</em>, before anything is built on it; and a <strong>Stop hook</strong>
+      backstops the loop — a turn is refused to end while any ready governed doc in the working
+      tree is red, which also catches docs edited around the file tools (shell, scripts).
+      Drafts (<code>data-status="draft"</code>) are exempt from both, so a doc under construction
+      never spams false positives — it iterates silently, across turns and review rounds if
+      needed, and the flip to ready is the moment it gets checked. A doc left draft while work
+      proceeds on it is exactly the kind of finding the reviews that read these docs exist to
+      catch. Manual runs work anytime for feedback; no workflow step depends on anyone
+      remembering one.
     </p>
 
     <h2 id="wu1">WU E3.W1 · wu/work-planning/standard</h2>
     <p data-c="wu1-req">
       <strong>Requirement.</strong> Author T1 <code>docs/work-planning.html</code> owning the four
       outputs, their four checklists, the markup contract (<code>data-artifact</code> /
-      <code>data-item</code> vocabulary), the substance rules the script enforces, and the two
-      harness trigger points. Update <code>workflow.html</code> to link the standard from its
+      <code>data-status</code> / <code>data-item</code> vocabulary and the instruction to tag
+      while authoring), the simple presence checks the script enforces, and the two harness
+      trigger points. Update <code>workflow.html</code> to link the standard from its
       plan-artifact cells and to name the plan/result docs as inputs the existing reviews judge.
       Record the founding decision (DEC-4: checklists over templates, script over memory,
       authoring-time over commit-time — git hooks rejected because the work would already stand
@@ -193,25 +205,25 @@ flowchart LR
       <strong>Requirement.</strong> Implement <code>cargo xtask verify-doc &lt;path&gt;</code>
       (artifact type read from the doc's markup; checklist per the T1) plus the two harness
       hooks in the project's <code>.claude/settings.json</code> with their scripts under
-      <code>.claude/hooks/</code>: PostToolUse (parse the tool-call JSON, skip ungoverned paths,
-      run <code>verify-doc</code>, return the problems as blocking feedback) and Stop (scan
-      tracked governed docs, refuse the turn end while any is red). Retrofit this plan with the
-      markers and dry-run the script on it — findings fix the doc or the checklist, whichever is
-      wrong.
+      <code>.claude/hooks/</code>: PostToolUse (parse the tool-call JSON, skip ungoverned paths
+      and drafts, run <code>verify-doc</code>, return the problems as feedback) and Stop (scan
+      tracked governed docs, refuse the turn end while any ready one is red). Retrofit this plan
+      with the markers and dry-run the script on it — findings fix the doc or the checklist,
+      whichever is wrong.
     </p>
     <p data-c="wu2-expected">
-      <strong>Expected result.</strong> Writing a red governed doc puts its problem blocks in
-      front of the authoring agent in the same breath; a turn cannot end while a governed doc is
-      red; ungoverned docs stay untouched by all of it.
+      <strong>Expected result.</strong> Writing a red ready doc puts its problem blocks in front
+      of the authoring agent in the same breath; a turn cannot end while a ready governed doc is
+      red; drafts and ungoverned docs stay untouched by all of it.
     </p>
     <table data-c="wu2-tests">
       <thead><tr><th>Test plan</th><th>Level</th></tr></thead>
       <tbody>
-        <tr><td>Unit: marker extraction — artifact type, items, WU entries; unknown types and missing markers rejected</td><td>commit</td></tr>
-        <tr><td>Unit: substance rules — empty item, below-floor item, TBD/TODO placeholder, estimate language each red with the right problem block</td><td>commit</td></tr>
-        <tr><td>Integration (<code>xtask/tests/</code>): incomplete epic plan (no non-goals, placeholder expected result) → exit 1 naming exactly those items; conforming plan → exit 0; combined result doc for a collapsed epic checked against both checklists</td><td>WU</td></tr>
-        <tr><td>Integration: PostToolUse hook script — Write/Edit JSON for a red governed doc → blocking output carrying the problem blocks; green doc → silent; ungoverned path (e.g. a brainstorm, a T1 doc) → silent</td><td>WU</td></tr>
-        <tr><td>Integration: Stop hook script — a red tracked governed doc → block with reason; all green → allow</td><td>WU</td></tr>
+        <tr><td>Unit: marker extraction — artifact type, draft/ready status (absent = ready), items, WU entries; unknown types and missing markers rejected</td><td>commit</td></tr>
+        <tr><td>Unit: presence checks — missing tag and empty tagged section each red with the right problem block; whitespace-only counts as empty</td><td>commit</td></tr>
+        <tr><td>Integration (<code>xtask/tests/</code>): epic plan missing two tagged items → exit 1 naming exactly those; conforming plan → exit 0; combined result doc for a collapsed epic checked against both checklists</td><td>WU</td></tr>
+        <tr><td>Integration: PostToolUse hook script — Write/Edit JSON for a red ready doc → feedback carrying the problem blocks; green ready doc → silent; draft → silent; ungoverned path (brainstorm, T1 doc) → silent</td><td>WU</td></tr>
+        <tr><td>Integration: Stop hook script — a red ready tracked doc → block with reason; drafts or all-green → allow</td><td>WU</td></tr>
       </tbody>
     </table>
 
@@ -224,12 +236,13 @@ flowchart LR
       prescribes headings or order — only items, their meaning, and the quality bar.
     </p>
     <p data-c="design-verification">
-      <strong>How far the mechanical check reaches.</strong> The markup contract is what lets a
-      script verify substance without a rigid template: items are addressable wherever the author
-      put them, so the script checks presence, floors and red-flag content — the minimum quality
-      the manager's checklist demands. Whether an "observable expected result" is <em>truly</em>
-      observable stays a semantic call: that lives where judgment already lives (the code review
-      that reads the plan, the user's comment round), on top of — never instead of — the script.
+      <strong>How far the mechanical check reaches.</strong> Deliberately simple: the markup
+      contract makes every checklist item addressable wherever the author put it, and the script
+      verifies the tagged sections exist with content — no heuristics about how the content
+      reads. That keeps false positives near zero and the contract easy to satisfy honestly.
+      Whether an "observable expected result" is <em>truly</em> observable stays a semantic call:
+      that lives where judgment already lives (the code review that reads the plan, the user's
+      comment round), on top of — never instead of — the script.
     </p>
     <p data-c="design-gates-untouched">
       <strong>Relation to the DoD gates.</strong> None mechanically — no git hook, no gate, no
@@ -243,14 +256,10 @@ flowchart LR
 
     <h2 id="open">Open questions</h2>
     <ul data-c="open-list">
-      <li><strong>How aggressive are the substance rules?</strong> Proposed start: non-empty,
-        a small per-item character floor, placeholder words, estimate language — tuned against
-        real docs during W2's dry-run. Too-strict heuristics would push authors into padding,
-        which is boilerplate by another name.</li>
-      <li><strong>Should the PostToolUse red also block the write itself?</strong> Proposed no —
-        the edit lands and the problems land with it, so iteration stays cheap; the Stop hook
-        guarantees red never survives a turn. Blocking every intermediate save would fight
-        incremental authoring.</li>
+      <li>None — every question so far was settled in the comment rounds: simple tag
+        verification over substance heuristics, drafts silent until declared ready, the write
+        itself never blocked, pre-standard docs skipped, one combined result doc for a collapsed
+        epic.</li>
     </ul>
   </main>
   <script type="module">
