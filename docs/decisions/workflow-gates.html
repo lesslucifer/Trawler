@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4a1a999f34851f0dfa82a2">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Decisions: Workflow Gates</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Decisions — Workflow Gates</h1>
+      <p>Why DoD evidence is shaped the way it is.</p>
+      <div class="meta">v1 · 2026-07-05 · Trawler · <a href="decisions-index.html">index</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="dec-2"><span class="badge id">DEC-2</span> DoD evidence is four per-tip git notes, judged by a recomputing gate</h2>
+    <table data-c="dec-2-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-05</td></tr>
+        <tr><th>Origin</th><td>Epic E1 (workflow standard) — manager decisions D1–D13 in the archived brainstorm (<code>docs/work/archive/2026-07-05-workflow-brainstorm.html</code>)</td></tr>
+        <tr><th>Where</th><td><code>xtask/src/gate.rs</code> · <code>.cargo-husky/hooks/pre-merge-commit</code> · <a href="../workflow.html">workflow.html</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-2-context">Context</h3>
+    <p>Every line is AI-written and merges are unattended; agents cannot be trusted to remember
+    ritual steps or honestly self-report completion. Evidence must be mechanical, queryable after
+    branches are deleted, and tamper-evident against amend/rebase.</p>
+
+    <h3 id="dec-2-choices">Choices (each looks "fixable" — it isn't)</h3>
+    <table data-c="dec-2-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
+      <tbody>
+        <tr><td>Four notes (<code>test</code>/<code>cr</code>/<code>doc</code>/<code>dod</code>), not one blob</td><td>Each has one writer and one lifecycle: manifests and doc notes are authored during work, the review note by a review run, the receipt only by the gate on green. Merging them would let one writer forge another's evidence.</td></tr>
+        <tr><td>The <code>dod/v1</code> receipt exists although it is recomputable</td><td>Manager decision (brainstorm Q4): a queryable index of completed work. It is safe because it is never blind-trusted — any tip can be re-verified offline; a hand-minted receipt fails recomputation.</td></tr>
+        <tr><td><code>merge.ff = false</code> everywhere</td><td>The epic walk recovers WU tips as <code>merge^2</code>; a fast-forward erases the seam and hides evidence. The post-checkout hook re-heals the config.</td></tr>
+        <tr><td>The walk skips the epic tip when it is a non-merge commit</td><td>One commit cannot carry both an epic-level and a commit-level <code>test</code> note (one note body per ref per commit). The tip's own diff is covered by the epic gate itself.</td></tr>
+        <tr><td>Diff hashing uses <code>git diff --no-color --no-ext-diff</code></td><td>The review-time hash and the gate-time recomputation must be byte-identical across user configs; bare <code>git diff</code> respects local color/ext-diff settings.</td></tr>
+        <tr><td><code>waived</code> (judgment, with reason) vs <code>exempt</code> (rule: docs/infra-only)</td><td>Waivers stay visible and reviewable — an unjustified one is a review finding; exemptions are mechanical and carry no note at all. Collapsing the two would either bury judgments or demand ceremony for prose fixes.</td></tr>
+        <tr><td>Code paths are <code>src/</code>, <code>xtask/</code>, <code>tests/</code></td><td>The gate itself is code; scoping "code" to <code>src/</code> alone would have exempted the tool that enforces the rules.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-2-consequences">Consequences</h3>
+    <p>Hooks can be bypassed (<code>--no-verify</code>, ff-merge) but not the epic walk — smuggled
+    content turns the next gate red. Deferred: <code>verify-dod --remote</code> (assert origin has the
+    notes refs) once a second machine or CI consumes them.</p>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

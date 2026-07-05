@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4a19b19f34851f0dfa8297">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Workflow Standard</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Workflow Standard</h1>
+      <p>How work is planned, gated and merged: epic → working unit → commit, one hook-enforced DoD gate per level, completeness proven from git notes — never from an agent's word.</p>
+      <div class="meta">v1 · 2026-07-05 · Trawler · T1 process doc</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="levels">The three levels</h2>
+
+    <p>Work decomposes per the charter in <a href="testing-strategy.html">the testing standard</a>,
+    which owns each level's definition and mandatory test. This doc owns everything around that:
+    branches, gates, evidence, merges. Identity ids are <span class="badge id">E&lt;n&gt;</span> for
+    epics, <span class="badge id">E&lt;n&gt;.W&lt;m&gt;</span> for working units; git is the registry —
+    no tracker file.</p>
+
+    <table data-c="levels-table">
+      <thead><tr><th>Level</th><th>Branch</th><th>Plan artifact</th><th>Gate</th><th>Evidence on the gated tip</th></tr></thead>
+      <tbody>
+        <tr><td>Epic</td><td><code>epic/&lt;slug&gt;</code> off <code>main</code></td><td>one T3 work doc listing its WUs</td><td>DoD-E at the merge into <code>main</code></td><td><code>test/v2</code> (epic) · <code>cr/v2</code> PASS · <code>doc/v1</code> · <code>dod/v1</code></td></tr>
+        <tr><td>Working Unit</td><td><code>wu/&lt;epic-slug&gt;/&lt;slug&gt;</code> off its epic</td><td>its row in the epic plan: requirement sentence + detailed test plan, written before code</td><td>DoD-W at the merge into the epic</td><td><code>test/v2</code> (working-unit) · <code>cr/v2</code> PASS · <code>doc/v1</code> · <code>dod/v1</code></td></tr>
+        <tr><td>Commit</td><td>on its WU branch</td><td>—</td><td>DoD-C, hooks at commit/push</td><td>none — hooks refuse red commits</td></tr>
+      </tbody>
+    </table>
+
+    <p data-c="collapse"><strong>Collapse rule</strong>: a small epic may be one WU, a small WU one
+    commit — every gate is still met explicitly, with all notes written.
+    <strong>Direct-to-main rule</strong>: docs/infra-only changes may land without a gate; a standalone
+    <em>code</em> commit (outside any WU) carries a <code>test/v2</code> note, <code>level: commit</code>,
+    unit ≥ 1 or waived. Code paths are <code>src/</code>, <code>xtask/</code>, <code>tests/</code>.</p>
+
+    <h2 id="lifecycle">Lifecycle</h2>
+
+    <div class="diagram" data-c="lifecycle-diagram">
+      <pre class="mermaid">
+flowchart TD
+  P["T3 epic plan: WUs, requirements, test plans"] --> B["branch epic/&lt;slug&gt;"]
+  B --> W["branch wu/&lt;epic&gt;/&lt;slug&gt;"]
+  W --> C["commits — hooks enforce DoD-C"]
+  C --> R["write test/v2 + doc/v1 notes,<br/>code review → cr/v2 PASS on tip"]
+  R --> G1{"merge --no-ff into the epic<br/>hook: verify-dod wu"}
+  G1 -- red: merge refused --> C
+  G1 -- "green: dod/v1 receipt" --> M1["WU landed — next WU"]
+  M1 --> W
+  M1 --> R2["epic done: e2e, epic notes,<br/>epic-scope review vs main"]
+  R2 --> G2{"merge --no-ff into main<br/>hook: verify-dod epic — walks every seam"}
+  G2 -- red: merge refused --> W
+  G2 -- green --> D["epic on main · T3 plan archived · T2 current"]
+      </pre>
+      <div class="caption">The merge is the gate: pre-merge-commit runs the verifier and a red gate makes the merge itself fail. Merges are always --no-ff (repo config merge.ff=false) so every gated tip stays addressable from main.</div>
+    </div>
+
+    <h2 id="dod">DoD checklists</h2>
+
+    <p><span class="badge auto">mechanical</span> = a hook or <code>verify-dod</code> enforces it;
+    <em>judgment</em> = a reviewer decides, and the gate verifies the judgment happened against exactly
+    this diff. Where quality can't be mechanized, the mechanical check is that the judgment
+    <em>happened</em>: a PASS note bound to the diff by <code>diff_sha256</code>.</p>
+
+    <h3 id="dod-c">DoD-C · every commit</h3>
+    <table data-c="dod-c-table">
+      <thead><tr><th>Check</th><th>Verified by</th></tr></thead>
+      <tbody>
+        <tr><td><code>fmt</code> + <code>clippy -D warnings</code> green</td><td><span class="badge auto">pre-commit hook</span></td></tr>
+        <tr><td>Unit tests cover all code the commit adds/changes</td><td><span class="badge auto">pre-push hook</span> (suite) · WU review judges the coverage</td></tr>
+        <tr><td>One coherent increment; imperative message names it; self-documenting code</td><td>WU review (judgment)</td></tr>
+        <tr><td><em>Standalone only:</em> <code>level: commit</code> manifest, unit ≥ 1 or waived</td><td><span class="badge auto">epic walk · pre-push range check</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dod-w">DoD-W · working unit, gated at its merge into the epic</h3>
+    <table data-c="dod-w-table">
+      <thead><tr><th>Check</th><th>Verified by</th></tr></thead>
+      <tbody>
+        <tr><td>Requirement sentence + test plan recorded before the code, in the epic plan</td><td>review (judgment)</td></tr>
+        <tr><td>Integration test(s) assert the WU contract; wire contracts snapshot-locked</td><td><span class="badge auto">gate check 2</span> (integration ≥ 1 or waived) · adequacy = review</td></tr>
+        <tr><td><code>test/v2</code> + <code>doc/v1</code> notes on the tip; review PASS bound to this exact diff</td><td><span class="badge auto">gate checks 1–6</span></td></tr>
+        <tr><td>T2 synthesis: use-case/decision updated, or <code>t2_waived</code> with reason</td><td><span class="badge auto">gate check 6</span> · adequacy = epic review</td></tr>
+        <tr><td>Merge <code>--no-ff</code> into the epic; notes on origin</td><td><span class="badge auto">pre-merge-commit hook</span> · <span class="badge auto">pre-push notes sync</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dod-e">DoD-E · epic, gated at its merge into main</h3>
+    <table data-c="dod-e-table">
+      <thead><tr><th>Check</th><th>Verified by</th></tr></thead>
+      <tbody>
+        <tr><td>Every WU merged <code>--no-ff</code> with green DoD-W evidence; standalone commits carry their manifests</td><td><span class="badge auto">gate check 7</span> — the walk re-verifies every first-parent seam</td></tr>
+        <tr><td>E2E covers the full flow; every documented quirk has a named regression test</td><td><span class="badge auto">gate check 2</span> (e2e ≥ 1 or waived) · quirk tests = epic review</td></tr>
+        <tr><td>Epic-scope notes on the tip; review PASS vs <code>main</code>, diff-bound</td><td><span class="badge auto">gate checks 1–6</span></td></tr>
+        <tr><td>Docs distilled: T3 plan archived with lineage, T2 current, T1 only if the shape changed</td><td><span class="badge auto">gate check 6</span> (file-tree + diff facts) · adequacy = review</td></tr>
+        <tr><td>Merge <code>--no-ff</code> into <code>main</code>; notes on origin; branches deleted</td><td><span class="badge auto">hooks</span> · merge ritual</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="waivers">Waivers</h2>
+
+    <p data-c="waiver-rule">A required test layer may be consciously skipped:
+    <code>integration: { waived: "&lt;why&gt;" }</code> replaces <code>count ≥ 1</code> at any level.
+    The gate accepts a waiver mechanically (present, non-empty reason); whether it is <em>justified</em>
+    is a review question — an unjustified waiver is a review finding. Vocabulary:
+    <strong>waived</strong> = judged unnecessary, reason recorded, reviewable ·
+    <strong>exempt</strong> = a rule says no evidence is needed (docs/infra-only diffs).</p>
+
+    <h2 id="evidence">Evidence — four notes, one tip</h2>
+
+    <table data-c="notes-table">
+      <thead><tr><th>Note</th><th>Ref</th><th>Proves</th><th>Schema owner</th></tr></thead>
+      <tbody>
+        <tr><td><code>test/v2</code></td><td><code>refs/notes/test</code></td><td>what tests back this work (per-layer counts/waivers)</td><td><a href="testing-strategy.html">testing standard</a></td></tr>
+        <tr><td><code>cr/v2</code></td><td><code>refs/notes/cr</code></td><td>an independent review judged exactly this diff: PASS/FAIL + <code>diff_sha256</code></td><td><code>.claude/skills/code-review/</code></td></tr>
+        <tr><td><code>doc/v1</code></td><td><code>refs/notes/doc</code></td><td>every changed doc file accounted for; distillation lineage</td><td><a href="documentation-system.html">documentation system</a></td></tr>
+        <tr><td><code>dod/v1</code></td><td><code>refs/notes/dod</code></td><td>the gate ran green here (receipt below)</td><td>this doc</td></tr>
+      </tbody>
+    </table>
+
+    <p data-c="identity">Every schema carries the same identity block — identity never rides on branch
+    names: <code>epic: E1</code> · <code>wu: E1.W2</code> (WU work only) · <code>branch: …</code>
+    (informative). Standalone commits omit epic/wu. Query by identity:
+    <code>cargo xtask dod list --epic E1</code>.</p>
+
+    <p data-c="tamper">The chain is tamper-evident: notes attach to commits, reviews pin the diff bytes.
+    Amending or rebasing a gated branch orphans its notes — the next gate goes red by itself. Notes sync
+    to origin automatically on push (pre-push hook). The receipt is written only by the gate tool and only
+    on green, and is never blind-trusted: any tip can be re-verified at any time, offline.</p>
+
+    <pre data-c="receipt-schema">schema: dod/v1
+level: working-unit               # commit | working-unit | epic
+epic: E1
+wu: E1.W2                         # omitted at epic level
+branch: wu/capture/pagination     # omitted when gating a raw sha
+base: &lt;merge-base at gate time&gt;
+tip: &lt;the gated tip — the note hangs here&gt;
+diff_sha256: &lt;sha256 of git diff --no-color --no-ext-diff base..tip&gt;
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, walk]
+date: YYYY-MM-DD</pre>
+
+    <h2 id="gate">The gate — <code>cargo xtask verify-dod</code></h2>
+
+    <pre data-c="gate-usage">cargo xtask verify-dod wu   wu/&lt;epic&gt;/&lt;slug&gt;      # target inferred from the name, or --target
+cargo xtask verify-dod epic epic/&lt;slug&gt;           # target defaults to main
+cargo xtask verify-dod commit &lt;sha&gt;               # standalone commit check
+cargo xtask verify-dod hook &lt;wu|epic&gt;             # merge-hook mode: tip = MERGE_HEAD, target = HEAD
+cargo xtask verify-dod range &lt;old&gt; &lt;new&gt;          # pre-push mode: standalone commits in a pushed range
+cargo xtask dod list [--epic E1]                  # query receipts</pre>
+
+    <table data-c="gate-checks">
+      <thead><tr><th>#</th><th>Check</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Required notes present on the tip, schemas parse, identity consistent across them</td></tr>
+        <tr><td>2</td><td>Manifest <code>level</code> matches the gate; required layer (commit ⇒ unit, WU ⇒ integration, epic ⇒ e2e) shows count ≥ 1 or a waiver</td></tr>
+        <tr><td>3</td><td><code>cr/v2</code> verdict is PASS</td></tr>
+        <tr><td>4</td><td>Review <code>base</code> equals the current merge-base — stale reviews rejected</td></tr>
+        <tr><td>5</td><td><code>diff_sha256</code> equals the gated diff recomputed now, byte-identical</td></tr>
+        <tr><td>6</td><td><code>doc/v1</code> matches <code>git diff --name-only</code> exactly (no missing/phantom entries, tiers correct); code change ⇒ T2 entry or <code>t2_waived</code>; epic ⇒ no unarchived <code>docs/work/*.html</code> added in range, archives carry <code>distilled_to</code></td></tr>
+        <tr><td>7</td><td><em>Epic:</em> first-parent walk — each merge's <code>^2</code> re-verified as a WU, each non-merge commit checked as standalone (docs-only exempt; the tip itself is covered by the epic gate)</td></tr>
+      </tbody>
+    </table>
+
+    <p data-c="gate-output">All green ⇒ receipt written, exit 0. Anything red ⇒ exit 1 and one block per
+    failure — check id, expected vs found, and a concrete <code>fix →</code> action — written for the
+    fixing agent to consume. Red gates write nothing.</p>
+
+    <h2 id="hooks">Hooks</h2>
+
+    <table data-c="hooks-table">
+      <thead><tr><th>Hook</th><th>Enforces</th></tr></thead>
+      <tbody>
+        <tr><td><code>pre-commit</code></td><td><code>fmt</code> + <code>clippy -D warnings</code></td></tr>
+        <tr><td><code>pre-push</code></td><td>full suite · auto-pushes <code>refs/notes/*</code> · range-checks standalone commits on <code>main</code>/<code>epic/*</code> pushes</td></tr>
+        <tr><td><code>pre-merge-commit</code></td><td>runs the gate on <code>MERGE_HEAD</code>: into <code>epic/*</code> ⇒ wu gate, into <code>main</code> ⇒ epic gate; docs/infra-only merges pass ungated; red refuses the merge</td></tr>
+        <tr><td><code>post-checkout</code></td><td>heals <code>merge.ff = false</code> · worktree setup</td></tr>
+      </tbody>
+    </table>
+
+    <p data-c="bypass"><strong>Bypass honesty</strong>: <code>--no-verify</code> skips hooks and a
+    fast-forward skips <code>pre-merge-commit</code> — but the next gate's walk re-verifies every seam,
+    so smuggled content turns the epic gate red before it reaches <code>main</code>, and receipts can't
+    be minted by hand without failing recomputation.</p>
+
+    <h2 id="judges">Who judges</h2>
+
+    <p>Every <em>judgment</em> above is a run of the <strong>code-review skill</strong>
+    (<code>.claude/skills/code-review/</code>): Gate 0 mechanical preflight, five fresh-context finders
+    (one rubric dimension each), one adversarial verifier per finding that tries to refute it, verdict,
+    and the <code>cr/v2</code> note. The triggering session orchestrates but never judges its own diff;
+    finders read the tip's <code>test/v2</code> and <code>doc/v1</code> notes so waivers and distillation
+    claims get judged. On FAIL the triggering session fixes and re-reviews until PASS. The gate only
+    verifies a PASS exists for exactly this diff — the review machinery can evolve without touching the
+    gate.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
