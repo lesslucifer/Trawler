@@ -1,0 +1,21 @@
+schema: doc/v1
+epic: E-PLAN
+branch: epic/work-planning
+changes:
+  - path: docs/work-planning.html
+    tier: T1
+    action: added
+    distills: "the work-planning standard: four governed outputs, exact-tag checklists, markup contract, verify-doc checks, harness trigger points"
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "plan-artifact cells, DoD-W/DoD-E rows and the judges section link the standard; plan/result docs named as review inputs"
+  - path: docs/decisions/work-planning.html
+    tier: T2
+    action: added
+    distills: "DEC-4: checklists over templates, strict tags without content heuristics, harness hooks over git hooks, drafts silent, write never blocked, verdicts never stored"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "index row for DEC-4"
+date: 2026-07-06
