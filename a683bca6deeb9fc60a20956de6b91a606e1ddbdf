@@ -1,0 +1,13 @@
+schema: test/v2
+level: epic
+epic: E2
+branch: epic/doc-archive
+tests:
+  unit:
+    count: 1
+    covers: "is_expected_tracked_doc path classification: flat T1 files, use-cases, decisions, docs/work, docs/.archive (incl. force-added paths), stray subdirs, non-docs paths"
+  integration:
+    count: 5
+    covers: "dod_gate.rs: epic gate rejects tracked docs/work docs and unexpected doc locations at the tip; a docs-only epic with a stray work doc is red while a clean one stays exempt; a work doc git-rm'd within the epic passes; archived doc-note entries require distilled_to lineage"
+  e2e:
+    waived: "repo-local tool epic - the integration layer already drives the gate contract against real scratch git repos; no larger flow exists"
