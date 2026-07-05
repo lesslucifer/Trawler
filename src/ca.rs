@@ -16,11 +16,23 @@ pub struct CaMaterial {
 }
 
 /// Load the persisted CA, or generate and persist a new one on first run.
+/// A partial state (one file of the pair missing) aborts instead of
+/// regenerating: silently overwriting the survivor would invalidate every
+/// client that already trusts the old certificate.
 pub fn load_or_create(config: &Config) -> CaMaterial {
     let cert_path = config.ca_cert_path();
     let key_path = config.ca_key_path();
 
-    if cert_path.exists() && key_path.exists() {
+    let (have_cert, have_key) = (cert_path.exists(), key_path.exists());
+    assert!(
+        have_cert == have_key,
+        "partial CA state in {}: {} exists but {} is missing — restore it or delete both to regenerate the CA",
+        config.ca_dir.display(),
+        if have_cert { cert_path.display() } else { key_path.display() },
+        if have_cert { key_path.display() } else { cert_path.display() },
+    );
+
+    if have_cert && have_key {
         let key_pem = fs::read_to_string(&key_path).expect("read CA key");
         let cert_pem = fs::read_to_string(&cert_path).expect("read CA cert");
         let key_pair = KeyPair::from_pem(&key_pem).expect("parse CA key");
