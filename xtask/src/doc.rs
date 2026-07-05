@@ -51,10 +51,12 @@ struct Occurrence {
 type Tagged = (usize, Occurrence);
 
 pub fn verify_html(html: &str) -> Verdict {
-    let Some((_, artifact_decl)) = attr_positions(html, "data-artifact").into_iter().next() else {
+    let Some((artifact_pos, artifact_decl)) =
+        attr_positions(html, "data-artifact").into_iter().next()
+    else {
         return Verdict::Ungoverned;
     };
-    if attr_positions(html, "data-status").first().is_some_and(|(_, v)| v == "draft") {
+    if draft_declared(html, artifact_pos) {
         return Verdict::Draft;
     }
 
@@ -196,6 +198,14 @@ fn check_unknown(
         );
         failures.push(Failure { check: format!("{scope}·unknown-tag"), what, fix });
     }
+}
+
+// the markup contract co-locates data-status with data-artifact - a draft
+// declaration anywhere else must not silence the checks
+fn draft_declared(html: &str, artifact_pos: usize) -> bool {
+    let start = html[..artifact_pos].rfind('<').unwrap_or(0);
+    let end = html[start..].find('>').map_or(html.len(), |i| start + i);
+    attr_positions(&html[start..end], "data-status").first().is_some_and(|(_, v)| v == "draft")
 }
 
 fn attr_positions(html: &str, name: &str) -> Vec<(usize, String)> {
@@ -387,6 +397,13 @@ mod tests {
     fn absent_status_means_ready_and_checked() {
         let v = verify_html(&doc("wu-result", "", ""));
         assert!(v.red());
+    }
+
+    #[test]
+    fn draft_status_on_an_unrelated_element_does_not_silence_the_checks() {
+        let html = "<html><body><div data-status=\"draft\">aside</div>\
+             <main data-artifact=\"wu-result\"><p data-item=\"outcome\">x</p></main></body></html>";
+        assert!(verify_html(html).red(), "status must sit next to data-artifact to count");
     }
 
     #[test]
