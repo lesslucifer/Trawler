@@ -1,7 +1,10 @@
 #!/bin/sh
-# Fast local mirror of the CI test gate. Installed by cargo-husky.
+# Fast local mirror of the CI test gate + DoD evidence sync. Installed by cargo-husky.
 set -e
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+remote="$1"
+refspecs=$(cat)
 
 if command -v cargo-nextest >/dev/null 2>&1; then
   echo "[pre-push] cargo nextest run --all"
@@ -9,4 +12,24 @@ if command -v cargo-nextest >/dev/null 2>&1; then
 else
   echo "[pre-push] cargo test --all (install cargo-nextest for faster runs)"
   cargo test --all
+fi
+
+zero=0000000000000000000000000000000000000000
+printf '%s\n' "$refspecs" | while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "$remote_ref" ] && continue
+  [ "$local_sha" = "$zero" ] && continue
+  [ "$remote_sha" = "$zero" ] && continue
+  case "$remote_ref" in
+  refs/heads/main | refs/heads/epic/*)
+    echo "[pre-push] cargo xtask verify-dod range $remote_sha $local_sha"
+    cargo xtask verify-dod range "$remote_sha" "$local_sha"
+    ;;
+  esac
+done
+
+notes=$(git for-each-ref --format='%(refname)' refs/notes)
+if [ -n "$notes" ]; then
+  echo "[pre-push] syncing notes refs to $remote"
+  # shellcheck disable=SC2086
+  git push --no-verify --quiet "$remote" $notes || echo "[pre-push] warning: notes sync failed"
 fi
