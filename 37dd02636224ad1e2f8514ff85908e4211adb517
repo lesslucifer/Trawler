@@ -1,0 +1,10 @@
+schema: cr/v1
+scope: "E0 core baseline (full codebase, post-fix re-run) -> main"
+base: 4b825dc642cb6eb9a060e54bf8d69288fbee4904
+head: 37dd02636224ad1e2f8514ff85908e4211adb517
+diff_sha256: 80ef86da6225a6fed681d00d369d9ed44cb04a91ef1088679ba9f772cc94f8d1
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-05
