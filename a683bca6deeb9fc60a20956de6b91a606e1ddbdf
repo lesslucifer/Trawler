@@ -1,0 +1,8 @@
+schema: dod/v1
+level: epic
+epic: E2
+base: f8176db7b0250c28cd618d6112dae6741d444cd7
+tip: a683bca6deeb9fc60a20956de6b91a606e1ddbdf
+diff_sha256: dd65d518305c24407297774aad72278402f88be8a3a8a0f559e6093c1e1f8c3c
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, walk]
+date: 2026-07-05
