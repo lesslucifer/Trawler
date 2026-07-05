@@ -92,8 +92,8 @@ returning to the caller (§7) so finder quality stays visible.
 ```yaml
 schema: cr/v2
 scope: "WU capture-pagination -> epic/capture"   # the caller's label
-epic: E1                        # identity block — matches the tip's other notes
-wu: E1.W2                       # working-unit scope only
+epic: E-CAP                     # identity block — matches the tip's other notes
+wu: E-CAP.W2                    # working-unit scope only
 branch: wu/capture/pagination   # informative; the ids are the truth
 base: <full sha — the merge-base pinned in §1>
 head: <full sha — the reviewed tip; the note is attached to it>

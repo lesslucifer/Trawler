@@ -19,6 +19,15 @@ path = "src/main.rs"
 
 [features]
 test-utils = []
+hook-tests = []
+
+[[test]]
+name = "dod_hooks"
+required-features = ["hook-tests"]
+
+[[test]]
+name = "worktree_setup_hook"
+required-features = ["hook-tests"]
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }

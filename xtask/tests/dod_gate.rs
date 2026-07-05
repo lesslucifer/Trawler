@@ -1,5 +1,4 @@
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::path::PathBuf;
 
 use tempfile::TempDir;
 use xtask::gate::{format_report, Gate, Level};
@@ -27,13 +26,7 @@ impl Repo {
     }
 
     fn git(&self, args: &[&str]) -> String {
-        let out = Command::new("git").arg("-C").arg(&self.path).args(args).output().unwrap();
-        assert!(
-            out.status.success(),
-            "git {args:?} failed: {}",
-            String::from_utf8_lossy(&out.stderr)
-        );
-        String::from_utf8_lossy(&out.stdout).trim_end().to_string()
+        xtask::git::git(&self.path, args).unwrap_or_else(|e| panic!("{e}"))
     }
 
     fn write(&self, rel: &str, content: &str) {
@@ -76,6 +69,17 @@ fn cr_note(epic: &str, wu: Option<&str>, base: &str, sha: &str, verdict: &str) -
         "schema: cr/v2\n{}base: {base}\nhead: x\ndiff_sha256: {sha}\nverdict: {verdict}\ndate: 2026-07-05\n",
         identity(epic, wu)
     )
+}
+
+#[test]
+fn git_calls_ignore_inherited_hook_env() {
+    std::env::set_var("GIT_DIR", "/nonexistent/.git");
+    let repo = Repo::new();
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn more() {}\n");
+    let tip = repo.commit("change");
+    let base = repo.sha("HEAD~1");
+    assert_eq!(diff_sha256(&repo.path, &base, &tip).unwrap().len(), 64);
+    std::env::remove_var("GIT_DIR");
 }
 
 fn doc_note(epic: &str, wu: Option<&str>, changes: &str, t2_waived: Option<&str>) -> String {
@@ -471,11 +475,10 @@ fn docs_only_wu_gate_is_exempt_and_writes_no_receipt() {
     assert_eq!(code, 0, "got: {message}");
     assert!(message.contains("exempt"), "got: {message}");
     let tip = repo.sha("wu/x/docs");
-    let out = Command::new("git")
-        .args(["-C", repo.path.to_str().unwrap(), "notes", "--ref=dod", "show", &tip])
-        .output()
-        .unwrap();
-    assert!(!out.status.success(), "no receipt may be written for an exempt tip");
+    assert!(
+        xtask::git::git(&repo.path, &["notes", "--ref=dod", "show", &tip]).is_err(),
+        "no receipt may be written for an exempt tip"
+    );
 }
 
 #[test]

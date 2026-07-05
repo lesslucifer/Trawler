@@ -19,9 +19,11 @@
 
     <p>Work decomposes per the charter in <a href="testing-strategy.html">the testing standard</a>,
     which owns each level's definition and mandatory test. This doc owns everything around that:
-    branches, gates, evidence, merges. Identity ids are <span class="badge id">E&lt;n&gt;</span> for
-    epics, <span class="badge id">E&lt;n&gt;.W&lt;m&gt;</span> for working units; git is the registry —
-    no tracker file.</p>
+    branches, gates, evidence, merges. <strong>Naming convention</strong> — an epic's id is
+    <span class="badge id">E-&lt;CODE&gt;</span> where <code>&lt;CODE&gt;</code> is a short uppercase
+    abbreviation of its slug (e.g. <code>E-INFRA</code>, <code>E-UI</code>); working units are
+    numbered within their epic, <span class="badge id">E-&lt;CODE&gt;.W&lt;m&gt;</span>
+    (e.g. <code>E-INFRA.W1</code>, <code>E-UI.W5</code>). Git is the registry — no tracker file.</p>
 
     <table data-c="levels-table">
       <thead><tr><th>Level</th><th>Branch</th><th>Plan artifact</th><th>Gate</th><th>Evidence on the gated tip</th></tr></thead>
@@ -123,9 +125,9 @@ flowchart TD
     </table>
 
     <p data-c="identity">Every schema carries the same identity block — identity never rides on branch
-    names: <code>epic: E1</code> · <code>wu: E1.W2</code> (WU work only) · <code>branch: …</code>
+    names: <code>epic: E-CAP</code> · <code>wu: E-CAP.W2</code> (WU work only) · <code>branch: …</code>
     (informative). Standalone commits omit epic/wu. Query by identity:
-    <code>cargo xtask dod list --epic E1</code>.</p>
+    <code>cargo xtask dod list --epic E-CAP</code>.</p>
 
     <p data-c="tamper">The chain is tamper-evident: notes attach to commits, reviews pin the diff bytes.
     Amending or rebasing a gated branch orphans its notes — the next gate goes red by itself. Notes sync
@@ -134,8 +136,8 @@ flowchart TD
 
     <pre data-c="receipt-schema">schema: dod/v1
 level: working-unit               # commit | working-unit | epic
-epic: E1
-wu: E1.W2                         # omitted at epic level
+epic: E-CAP
+wu: E-CAP.W2                      # omitted at epic level
 branch: wu/capture/pagination     # omitted when gating a raw sha
 base: &lt;merge-base at gate time&gt;
 tip: &lt;the gated tip — the note hangs here&gt;
@@ -150,7 +152,7 @@ cargo xtask verify-dod epic epic/&lt;slug&gt;           # target defaults to mai
 cargo xtask verify-dod commit &lt;sha&gt;               # standalone commit check
 cargo xtask verify-dod hook &lt;wu|epic&gt;             # merge-hook mode: tip = MERGE_HEAD, target = HEAD
 cargo xtask verify-dod range &lt;old&gt; &lt;new&gt;          # pre-push mode: standalone commits in a pushed range
-cargo xtask dod list [--epic E1]                  # query receipts</pre>
+cargo xtask dod list [--epic E-CAP]               # query receipts</pre>
 
     <table data-c="gate-checks">
       <thead><tr><th>#</th><th>Check</th></tr></thead>

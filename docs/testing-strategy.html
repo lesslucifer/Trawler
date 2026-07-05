@@ -152,7 +152,7 @@ flowchart TD
     </div>
 
     <h2 id="ci">CI gates</h2>
-    <p>Merge is unattended, so a red gate blocks it: every push runs <code>fmt</code>, <code>clippy -D warnings</code>, the full test suite and a coverage floor; mutation and dependency/advisory audits run on a schedule; the same fast gates also run locally as git hooks via <code>cargo-husky</code>. Beyond these mechanical gates, marking work done also requires a <a href="#verification">test manifest note</a> the workflow judges against the Done-gate.</p>
+    <p>Merge is unattended, so a red gate blocks it: every push runs <code>fmt</code>, <code>clippy -D warnings</code>, the full test suite and a coverage floor; mutation and dependency/advisory audits run on a schedule; the same fast gates also run locally as git hooks via <code>cargo-husky</code>. Workflow-tooling suites (the git-hook and gate tests) are not product tests: they are feature-gated behind <code>hook-tests</code> (<code>required-features</code>) and excluded from default runs — run them explicitly via <code>cargo test --all --all-features</code> when touching hooks or the gate; the pre-commit <code>clippy --all-features</code> pass keeps them compiling at every commit. Beyond these mechanical gates, marking work done also requires a <a href="#verification">test manifest note</a> the workflow judges against the Done-gate.</p>
 
     <h2 id="verification">Testing DoD — the test manifest note</h2>
     <div class="callout" data-c="manifest-rule">
@@ -160,8 +160,8 @@ flowchart TD
     </div>
     <pre data-c="manifest-yaml">schema: test/v2               # manifest format version
 level: commit                 # commit | working-unit | epic — sets which layer the charter requires
-epic: E1                      # identity block — present for epic/WU work, omitted on standalone commits
-wu: E1.W2                     # working-unit level only
+epic: E-CAP                   # identity block — present for epic/WU work, omitted on standalone commits
+wu: E-CAP.W2                  # working-unit level only
 branch: wu/capture/pagination # informative label; the ids are the truth
 tests:                        # per layer: how many + what they cover (facts, checked against the diff)
   unit:
