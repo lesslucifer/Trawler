@@ -1,0 +1,12 @@
+schema: cr/v2
+scope: "epic E-WFT wf-tooling -> main"
+epic: E-WFT
+branch: epic/wf-tooling
+base: a9cd23078406a073e8b7769e4358b99f9970ccaf
+head: 5396791d37c41fc5eb4be25f13b1a482998444cd
+diff_sha256: 8c880d3ff0557f61a24f58e848c248bef7242ab5ba22c87110cfd0a5505b0545
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 4, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-05
