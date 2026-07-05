@@ -148,14 +148,15 @@ pub fn is_code(path: &str) -> bool {
     path.starts_with("src/") || path.starts_with("xtask/") || path.starts_with("tests/")
 }
 
-pub fn is_unarchived_work_doc(path: &str) -> bool {
-    path.strip_prefix("docs/work/")
-        .is_some_and(|rest| !rest.contains('/') && rest.ends_with(".html"))
+pub fn is_expected_tracked_doc(path: &str) -> bool {
+    path.strip_prefix("docs/").is_some_and(|rest| {
+        !rest.contains('/') || rest.starts_with("use-cases/") || rest.starts_with("decisions/")
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{is_code, is_unarchived_work_doc, tier_of, CrNote, DocNote, TestNote};
+    use super::{is_code, is_expected_tracked_doc, tier_of, CrNote, DocNote, TestNote};
 
     #[test]
     fn parses_test_note_with_counts_waiver_and_identity() {
@@ -250,7 +251,6 @@ t2_waived: null
         assert_eq!(tier_of("docs/use-cases/capture.html"), Some("T2"));
         assert_eq!(tier_of("docs/decisions/event-bus.html"), Some("T2"));
         assert_eq!(tier_of("docs/work/plan.html"), Some("T3"));
-        assert_eq!(tier_of("docs/work/archive/plan.html"), Some("T3"));
         assert_eq!(tier_of("src/lib.rs"), None);
 
         assert!(is_code("src/lib.rs"));
@@ -259,8 +259,13 @@ t2_waived: null
         assert!(!is_code("docs/workflow.html"));
         assert!(!is_code("Cargo.toml"));
 
-        assert!(is_unarchived_work_doc("docs/work/plan.html"));
-        assert!(!is_unarchived_work_doc("docs/work/archive/plan.html"));
-        assert!(!is_unarchived_work_doc("docs/workflow.html"));
+        assert!(is_expected_tracked_doc("docs/workflow.html"));
+        assert!(is_expected_tracked_doc("docs/use-cases/capture.html"));
+        assert!(is_expected_tracked_doc("docs/decisions/decisions-index.html"));
+        assert!(!is_expected_tracked_doc("docs/work/plan.html"));
+        assert!(!is_expected_tracked_doc("docs/work/archive/plan.html"));
+        assert!(!is_expected_tracked_doc("docs/.archive/plan.html"));
+        assert!(!is_expected_tracked_doc("docs/scratch/notes.html"));
+        assert!(!is_expected_tracked_doc("src/lib.rs"));
     }
 }

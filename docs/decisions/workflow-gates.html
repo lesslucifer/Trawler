@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions — Workflow Gates</h1>
       <p>Why DoD evidence is shaped the way it is.</p>
-      <div class="meta">v1 · 2026-07-05 · Trawler · <a href="decisions-index.html">index</a></div>
+      <div class="meta">v2 · 2026-07-05 · Trawler · <a href="decisions-index.html">index</a></div>
     </div>
   </header>
   <main>
@@ -18,7 +18,7 @@
     <table data-c="dec-2-facts">
       <tbody>
         <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-05</td></tr>
-        <tr><th>Origin</th><td>Epic E1 (workflow standard) — manager decisions D1–D13 in the archived brainstorm (<code>docs/work/archive/2026-07-05-workflow-brainstorm.html</code>)</td></tr>
+        <tr><th>Origin</th><td>Epic E1 (workflow standard) — manager decisions D1–D13 in the archived brainstorm (<code>docs/.archive/2026-07-05-workflow-brainstorm.html</code>, untracked; content in git history before E2)</td></tr>
         <tr><th>Where</th><td><code>xtask/src/gate.rs</code> · <code>.cargo-husky/hooks/pre-merge-commit</code> · <a href="../workflow.html">workflow.html</a></td></tr>
       </tbody>
     </table>
@@ -47,6 +47,39 @@
     <p>Hooks can be bypassed (<code>--no-verify</code>, ff-merge) but not the epic walk — smuggled
     content turns the next gate red. Deferred: <code>verify-dod --remote</code> (assert origin has the
     notes refs) once a second machine or CI consumes them.</p>
+
+    <h2 id="dec-3"><span class="badge id">DEC-3</span> Archived docs leave git; the epic gate enforces the tracked-doc layout absolutely</h2>
+    <table data-c="dec-3-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-05</td></tr>
+        <tr><th>Origin</th><td>Epic E2 (doc-archive) — user direction: archives must not be tracked</td></tr>
+        <tr><th>Where</th><td><code>xtask/src/gate.rs · check_tracked_docs</code> · <code>xtask/src/notes.rs · is_expected_tracked_doc</code> · <a href="../documentation-system.html">documentation-system.html</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-3-context">Context</h3>
+    <p>Archived T3 docs were tracked under <code>docs/work/archive/</code>. Sessions must never read
+    archives, yet tracked files invite reads, bloat the tree, and make "what docs exist" ambiguous.
+    Archiving already requires distillation, so the tracked copy carries no information the tiers
+    and git history don't.</p>
+
+    <h3 id="dec-3-choices">Choices</h3>
+    <table data-c="dec-3-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
+      <tbody>
+        <tr><td>Archiving = <code>git rm</code> + move to gitignored <code>docs/.archive/</code></td><td>The archive stays greppable locally for forensics, but git carries only living docs; the pre-archive content remains addressable in history via the commits that added it.</td></tr>
+        <tr><td>The epic gate checks the whole <code>docs/</code> tree at the tip (flat T1 files, <code>use-cases/</code>, <code>decisions/</code>), not just paths added since base</td><td>A base-relative check fails open: junk landed through an ungated path (or grandfathered before the rule) never turns any gate red. The absolute check makes every epic re-assert repo-wide doc hygiene; main was migrated clean in E2 so any hit is real.</td></tr>
+        <tr><td><code>archived</code> doc-note entries keep requiring <code>distilled_to</code>, judged wherever the deletion appears in a gated diff</td><td>A work doc created and archived inside one epic nets out of the epic diff — its lineage evidence lives at the WU seam that deleted it, so the requirement cannot be re-hung on the epic note.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-3-consequences">Consequences</h3>
+    <p>Archives don't replicate through clones — a fresh clone starts with an empty
+    <code>docs/.archive/</code>, which is by design: nothing citable may live there. Any doc path
+    outside the tier layout (a stray <code>docs/&lt;dir&gt;/</code>) now blocks the next epic merge
+    until it is moved into a tier folder or archived. The layout check runs <em>before</em> the
+    docs-only exemption, so even an exempt (docs-only) epic merge re-asserts hygiene — a stray doc
+    cannot ride an ungated merge into <code>main</code>.</p>
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
