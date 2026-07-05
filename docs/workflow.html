@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Workflow Standard</h1>
       <p>How work is planned, gated and merged: epic → working unit → commit, one hook-enforced DoD gate per level, completeness proven from git notes — never from an agent's word.</p>
-      <div class="meta">v2 · 2026-07-05 · Trawler · T1 process doc</div>
+      <div class="meta">v3 · 2026-07-05 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -28,8 +28,8 @@
     <table data-c="levels-table">
       <thead><tr><th>Level</th><th>Branch</th><th>Plan artifact</th><th>Gate</th><th>Evidence on the gated tip</th></tr></thead>
       <tbody>
-        <tr><td>Epic</td><td><code>epic/&lt;slug&gt;</code> off <code>main</code></td><td>one T3 work doc listing its WUs</td><td>DoD-E at the merge into <code>main</code></td><td><code>test/v2</code> (epic) · <code>cr/v2</code> PASS · <code>doc/v1</code> · <code>dod/v1</code></td></tr>
-        <tr><td>Working Unit</td><td><code>wu/&lt;epic-slug&gt;/&lt;slug&gt;</code> off its epic</td><td>its row in the epic plan: requirement sentence + detailed test plan, written before code</td><td>DoD-W at the merge into the epic</td><td><code>test/v2</code> (working-unit) · <code>cr/v2</code> PASS · <code>doc/v1</code> · <code>dod/v1</code></td></tr>
+        <tr><td>Epic</td><td><code>epic/&lt;slug&gt;</code> off <code>main</code></td><td>epic plan per <a href="work-planning.html">the work-planning standard</a>, WU summaries included</td><td>DoD-E at the merge into <code>main</code></td><td><code>test/v2</code> (epic) · <code>cr/v2</code> PASS · <code>doc/v1</code> · <code>dod/v1</code></td></tr>
+        <tr><td>Working Unit</td><td><code>wu/&lt;epic-slug&gt;/&lt;slug&gt;</code> off its epic</td><td>its own WU plan doc per <a href="work-planning.html">the standard</a> + a summary block in the epic plan, written before code</td><td>DoD-W at the merge into the epic</td><td><code>test/v2</code> (working-unit) · <code>cr/v2</code> PASS · <code>doc/v1</code> · <code>dod/v1</code></td></tr>
         <tr><td>Commit</td><td>on its WU branch</td><td>—</td><td>DoD-C, hooks at commit/push</td><td>none — hooks refuse red commits</td></tr>
       </tbody>
     </table>
@@ -83,7 +83,7 @@ flowchart TD
     <table data-c="dod-w-table">
       <thead><tr><th>Check</th><th>Verified by</th></tr></thead>
       <tbody>
-        <tr><td>Requirement sentence + test plan recorded before the code, in the epic plan</td><td>review (judgment)</td></tr>
+        <tr><td>WU plan doc + epic-plan summary block written before the code; WU result report written at completion — contents per <a href="work-planning.html">the work-planning standard</a>, checklist-verified at authoring time</td><td><span class="badge auto">harness hooks (verify-doc)</span> · substance = review (judgment)</td></tr>
         <tr><td>Integration test(s) assert the WU contract; wire contracts snapshot-locked</td><td><span class="badge auto">gate check 2</span> (integration ≥ 1 or waived) · adequacy = review</td></tr>
         <tr><td><code>test/v2</code> + <code>doc/v1</code> notes on the tip; review PASS bound to this exact diff</td><td><span class="badge auto">gate checks 1–6</span></td></tr>
         <tr><td>T2 synthesis: use-case/decision updated, or <code>t2_waived</code> with reason</td><td><span class="badge auto">gate check 6</span> · adequacy = epic review</td></tr>
@@ -96,6 +96,7 @@ flowchart TD
       <thead><tr><th>Check</th><th>Verified by</th></tr></thead>
       <tbody>
         <tr><td>Every WU merged <code>--no-ff</code> with green DoD-W evidence; standalone commits carry their manifests</td><td><span class="badge auto">gate check 7</span> — the walk re-verifies every first-parent seam</td></tr>
+        <tr><td>Epic result report written at close — contents per <a href="work-planning.html">the work-planning standard</a>, checklist-verified at authoring time</td><td><span class="badge auto">harness hooks (verify-doc)</span> · substance = epic review</td></tr>
         <tr><td>E2E covers the full flow; every documented quirk has a named regression test</td><td><span class="badge auto">gate check 2</span> (e2e ≥ 1 or waived) · quirk tests = epic review</td></tr>
         <tr><td>Epic-scope notes on the tip; review PASS vs <code>main</code>, diff-bound</td><td><span class="badge auto">gate checks 1–6</span></td></tr>
         <tr><td>Docs distilled: T3 plan archived out of git (→ <code>docs/.archive/</code>, untracked) with lineage, T2 current, T1 only if the shape changed</td><td><span class="badge auto">gate check 6</span> (file-tree + diff facts) · adequacy = review</td></tr>
@@ -198,7 +199,9 @@ cargo xtask dod list [--epic E-CAP]               # query receipts</pre>
     (one rubric dimension each), one adversarial verifier per finding that tries to refute it, verdict,
     and the <code>cr/v2</code> note. The triggering session orchestrates but never judges its own diff;
     finders read the tip's <code>test/v2</code> and <code>doc/v1</code> notes so waivers and distillation
-    claims get judged. On FAIL the triggering session fixes and re-reviews until PASS. The gate only
+    claims get judged — and the work's plan and result docs
+    (<a href="work-planning.html">work-planning standard</a>) as inputs, so delivered-vs-planned and
+    the substance behind a green checklist get judged too. On FAIL the triggering session fixes and re-reviews until PASS. The gate only
     verifies a PASS exists for exactly this diff — the review machinery can evolve without touching the
     gate.</p>
 
