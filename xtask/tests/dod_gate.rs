@@ -382,6 +382,42 @@ fn hook_mode_refuses_octopus_merges() {
     assert!(message.contains("octopus"), "got: {message}");
 }
 
+fn docs_only_wu(repo: &Repo) {
+    repo.git(&["checkout", "-q", "-b", "wu/x/docs", "epic/x"]);
+    repo.write("docs/use-cases/api.html", "<html>docs-only wu</html>\n");
+    repo.commit("docs-only wu change");
+}
+
+#[test]
+fn docs_only_wu_seam_is_exempt_in_the_epic_walk() {
+    let (repo, _) = epic_with_merged_wu();
+    docs_only_wu(&repo);
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "merge noteless docs-only wu", "wu/x/docs"]);
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "unexpected failures: {}", format_report(&report));
+}
+
+#[test]
+fn docs_only_wu_gate_is_exempt_and_writes_no_receipt() {
+    let repo = wu_with_change();
+    docs_only_wu(&repo);
+
+    let args: Vec<String> =
+        ["verify-dod", "wu", "wu/x/docs"].iter().map(|s| (*s).to_string()).collect();
+    let (code, message) = xtask::run(&args, &repo.path).unwrap();
+    assert_eq!(code, 0, "got: {message}");
+    assert!(message.contains("exempt"), "got: {message}");
+    let tip = repo.sha("wu/x/docs");
+    let out = Command::new("git")
+        .args(["-C", repo.path.to_str().unwrap(), "notes", "--ref=dod", "show", &tip])
+        .output()
+        .unwrap();
+    assert!(!out.status.success(), "no receipt may be written for an exempt tip");
+}
+
 #[test]
 fn docs_only_standalone_commit_is_exempt() {
     let (repo, _) = epic_with_merged_wu();

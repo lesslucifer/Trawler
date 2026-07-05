@@ -167,7 +167,9 @@ cargo xtask dod list [--epic E1]                  # query receipts</pre>
 
     <p data-c="gate-output">All green ⇒ receipt written, exit 0. Anything red ⇒ exit 1 and one block per
     failure — check id, expected vs found, and a concrete <code>fix →</code> action — written for the
-    fixing agent to consume. Red gates write nothing.</p>
+    fixing agent to consume. Red gates write nothing. Docs/infra-only diffs are <em>exempt</em> at every
+    level: green, no notes demanded, no receipt written — one shared rule behind the hook's ungated doc
+    merges and the walk's exempt seams.</p>
 
     <h2 id="hooks">Hooks</h2>
 

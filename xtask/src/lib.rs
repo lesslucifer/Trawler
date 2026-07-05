@@ -5,7 +5,7 @@ pub mod notes;
 use std::path::{Path, PathBuf};
 
 use gate::{format_report, Gate, Level};
-use git::{diff_names, git, note};
+use git::{git, note};
 use notes::DodReceipt;
 
 pub const USAGE: &str = "\
@@ -56,6 +56,9 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
 fn gate_run(repo: &Path, level: Level, tip: &str, target: &str) -> Result<(i32, String), String> {
     let gate = Gate { repo };
     let report = gate.verify(level, tip, target)?;
+    if report.exempt {
+        return Ok((0, format_report(&report)));
+    }
     if report.green() {
         gate.write_receipt(&report)?;
         Ok((0, format!("{} - dod/v1 receipt written", format_report(&report))))
@@ -84,11 +87,6 @@ fn hook(repo: &Path, level: &str) -> Result<(i32, String), String> {
             ))
         }
     };
-    let base = git(repo, &["merge-base", "HEAD", &tip])?;
-    let names = diff_names(repo, &base, &tip)?;
-    if !names.iter().any(|p| notes::is_code(p)) {
-        return Ok((0, "docs/infra-only merge - gate not required".to_string()));
-    }
     gate_run(repo, lvl, &tip, "HEAD")
 }
 

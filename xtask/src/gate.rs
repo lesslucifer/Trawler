@@ -50,6 +50,7 @@ pub struct Report {
     pub diff_sha256: String,
     pub epic: Option<String>,
     pub wu: Option<String>,
+    pub exempt: bool,
     pub failures: Vec<Failure>,
 }
 
@@ -84,9 +85,10 @@ impl Gate<'_> {
             diff_sha256: sha,
             epic: None,
             wu: None,
+            exempt: !code_changed,
             failures: Vec::new(),
         };
-        if level == Level::Commit && !code_changed {
+        if report.exempt {
             return Ok(report);
         }
         let parsed = self.load_notes(&mut report, &names);
@@ -281,11 +283,14 @@ impl Gate<'_> {
         for line in lines.lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();
             let (seam, inner) = match parts.as_slice() {
-                [merge, first, second] => {
-                    if git(self.repo, &["merge-base", "--is-ancestor", second, first]).is_ok() {
+                [merge, mainline, wu_tip] => {
+                    // --first-parent ordering: parent one is the epic mainline, parent two the
+                    // merged-in WU tip. A wu_tip already reachable from the mainline is a
+                    // back-merge of landed history, not a WU seam - nothing new to gate.
+                    if git(self.repo, &["merge-base", "--is-ancestor", wu_tip, mainline]).is_ok() {
                         continue;
                     }
-                    (*merge, self.verify(Level::Wu, second, first)?)
+                    (*merge, self.verify(Level::Wu, wu_tip, mainline)?)
                 }
                 [commit, first] => {
                     if *commit == report.tip {
@@ -431,6 +436,13 @@ pub fn short(sha: &str) -> &str {
 }
 
 pub fn format_report(report: &Report) -> String {
+    if report.exempt {
+        return format!(
+            "verify-dod {} exempt on {} - docs/infra-only, gate not required",
+            report.level.as_note_level(),
+            short(&report.tip)
+        );
+    }
     if report.green() {
         return format!(
             "verify-dod {} green on {}",
@@ -465,8 +477,17 @@ mod tests {
             diff_sha256: "cafe".to_string(),
             epic: None,
             wu: None,
+            exempt: false,
             failures,
         }
+    }
+
+    #[test]
+    fn exempt_report_says_so_and_never_shows_failures() {
+        let mut r = report(vec![]);
+        r.exempt = true;
+        assert!(format_report(&r).contains("exempt"));
+        assert!(format_report(&r).contains("gate not required"));
     }
 
     #[test]
