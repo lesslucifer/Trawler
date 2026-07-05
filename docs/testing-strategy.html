@@ -160,8 +160,8 @@ flowchart TD
     </div>
     <pre data-c="manifest-yaml">schema: test/v2               # manifest format version
 level: commit                 # commit | working-unit | epic — sets which layer the charter requires
-epic: E1                      # identity block — present for epic/WU work, omitted on standalone commits
-wu: E1.W2                     # working-unit level only
+epic: E-CAP                   # identity block — present for epic/WU work, omitted on standalone commits
+wu: E-CAP.W2                  # working-unit level only
 branch: wu/capture/pagination # informative label; the ids are the truth
 tests:                        # per layer: how many + what they cover (facts, checked against the diff)
   unit:

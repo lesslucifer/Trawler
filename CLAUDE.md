@@ -41,6 +41,25 @@ non-negotiable and additive (they compose, never substitute): **Epic → e2e**
 unit** (all code it adds/changes). Tests are deterministic and hermetic
 (ephemeral ports, tempfiles, local servers — never the public network).
 
+## Workflow (mandatory — how work lands)
+
+Spec: `docs/workflow.html`. **Epic → Working Unit → commit**; branches
+`epic/<slug>` off `main`, `wu/<epic-slug>/<slug>` off its epic; git is the
+registry, no tracker file. **Ids**: epic = `E-<CODE>` (uppercase slug abbrev,
+e.g. `E-INFRA`, `E-UI`); WU = numeric within its epic, `E-<CODE>.W<m>`
+(e.g. `E-INFRA.W1`, `E-UI.W5`). Plan before code: the epic's
+T3 plan lists each WU's requirement sentence + test plan. Small epic = one WU,
+small WU = one commit — every gate still met explicitly.
+
+**The merge is the gate**: always `--no-ff`; hooks run `cargo xtask verify-dod`
+and a red gate refuses the merge — never bypass (`--no-verify`/ff only defers
+the red: the epic gate re-walks every seam). Before merging a tip: `test/v2` +
+`doc/v1` notes on it, then the **code-review skill** → `cr/v2` PASS bound to
+that exact diff (never judge your own diff). Green writes the `dod/v1` receipt.
+Never amend/rebase a gated branch — it orphans the notes. Skipping a test
+layer = `waived: "<why>"` in the note; docs/infra-only diffs are exempt.
+Standalone code commits outside a WU carry `test/v2` with `level: commit`.
+
 ## Documentation rules
 
 - **All project docs are interactive HTML in `docs/`, never markdown** (CLAUDE.md
