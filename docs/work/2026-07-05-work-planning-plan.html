@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trawler — E3 work-planning plan</title>
+  <title>Trawler — E-PLAN work-planning plan</title>
 </head>
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>E3 · work-planning — plan outputs & result reports, checklist-verified</h1>
+      <h1>E-PLAN · work-planning — plan outputs & result reports, checklist-verified</h1>
       <p>T3 plan: define what the planning phase of an epic/WU must output and what the result report after the work must contain — as minimum-content checklists verified by a script the agent harness triggers at authoring time, never as fixed templates, never as git hooks.</p>
       <div class="meta">Draft v5 · 2026-07-05 · Trawler · T3 work doc · epic/work-planning</div>
     </div>
@@ -188,7 +188,7 @@ flowchart LR
       remembering one.
     </p>
 
-    <h2 id="wu1">WU E3.W1 · wu/work-planning/standard</h2>
+    <h2 id="wu1">WU E-PLAN.W1 · wu/work-planning/standard</h2>
     <p data-c="wu1-req">
       <strong>Requirement.</strong> Author T1 <code>docs/work-planning.html</code> owning the four
       outputs, their four checklists with the exact normative tag per item, the markup contract
@@ -210,11 +210,11 @@ flowchart LR
     <table data-c="wu1-tests">
       <thead><tr><th>Test plan</th><th>Level</th></tr></thead>
       <tbody>
-        <tr><td>Docs-only WU — integration waived (docs-only diffs are exempt); adequacy = the E3.W2 verification dry-run below + user comment round on the T1 doc</td><td>WU</td></tr>
+        <tr><td>Docs-only WU — integration waived (docs-only diffs are exempt); adequacy = the E-PLAN.W2 verification dry-run below + user comment round on the T1 doc</td><td>WU</td></tr>
       </tbody>
     </table>
 
-    <h2 id="wu2">WU E3.W2 · wu/work-planning/verify</h2>
+    <h2 id="wu2">WU E-PLAN.W2 · wu/work-planning/verify</h2>
     <p data-c="wu2-req">
       <strong>Requirement.</strong> Implement <code>cargo xtask verify-doc &lt;path&gt;</code>
       (artifact type read from the doc's markup; checklist per the T1) plus the two harness
