@@ -1,0 +1,8 @@
+schema: dod/v1
+level: epic
+epic: E-PLAN
+base: 78d41452d1bd8cf6eb55f1678fbd51580b57078f
+tip: be5f34ec5ff44564bc28ae27e221b702dc7d91e2
+diff_sha256: e2a1205ffb60ff7f651ab641c6ccd555c52e29a35efb7da30a38e4232945ba2e
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, walk]
+date: 2026-07-06
