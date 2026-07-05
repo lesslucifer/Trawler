@@ -49,8 +49,8 @@ pub struct FlowFilter {
 impl FlowFilter {
     pub fn matches(&self, flow: &Flow) -> bool {
         if let Some(host) = &self.host {
-            let flow_host = flow.host().unwrap_or_default();
-            if !flow_host.to_ascii_lowercase().contains(&host.to_ascii_lowercase()) {
+            let flow_host = flow.host().unwrap_or_default().to_ascii_lowercase();
+            if !flow_host.contains(&host.to_ascii_lowercase()) {
                 return false;
             }
         }
@@ -118,19 +118,21 @@ impl Store {
     }
 
     pub fn set_response(&self, id: FlowId, res: ResponseRec, duration_ms: u64) {
+        let event_res = res.clone();
         let evicted = {
             let mut ring = self.inner.lock().expect("store lock");
             let Some(flow) = ring.flows.get_mut(&id) else {
                 return;
             };
             let before = flow.retained_bytes();
-            flow.response = Some(res.clone());
+            flow.response = Some(res);
             flow.duration_ms = Some(duration_ms);
             let after = flow.retained_bytes();
             ring.total_bytes += after.saturating_sub(before);
             ring.evict()
         };
-        let _ = self.tx.send(FlowEvent::ResponseCaptured { flow_id: id, res, duration_ms });
+        let _ =
+            self.tx.send(FlowEvent::ResponseCaptured { flow_id: id, res: event_res, duration_ms });
         self.announce_evictions(evicted);
     }
 

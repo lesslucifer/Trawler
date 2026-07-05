@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 use super::decode;
 use super::view::{self, FlowSummary, FlowView};
-use crate::flow::{BodyRec, FlowId, Header};
+use crate::flow::{header_value, BodyRec, FlowId, Header};
 use crate::store::{FlowFilter, Store};
 
 #[derive(Clone)]
@@ -154,8 +154,4 @@ fn bad_id() -> Response {
 
 fn wants_decode(query: &BodyQuery) -> bool {
     matches!(query.decode.as_deref(), Some("1" | "true"))
-}
-
-fn header_value<'a>(headers: &'a [Header], name: &str) -> Option<&'a str> {
-    headers.iter().find(|h| h.name.eq_ignore_ascii_case(name)).map(|h| h.value.as_str())
 }

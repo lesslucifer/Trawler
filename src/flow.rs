@@ -101,16 +101,23 @@ pub struct Flow {
     pub request: RequestRec,
     pub response: Option<ResponseRec>,
     pub duration_ms: Option<u64>,
+    host: Option<String>,
+}
+
+pub(crate) fn header_value<'a>(headers: &'a [Header], name: &str) -> Option<&'a str> {
+    headers.iter().find(|h| h.name.eq_ignore_ascii_case(name)).map(|h| h.value.as_str())
 }
 
 impl Flow {
     pub fn new(request: RequestRec) -> Self {
+        let host = request.uri.parse::<http::Uri>().ok().and_then(|u| u.host().map(str::to_owned));
         Self {
             id: FlowId::new(),
             started_at: SystemTime::now(),
             request,
             response: None,
             duration_ms: None,
+            host,
         }
     }
 
@@ -119,20 +126,18 @@ impl Flow {
             + self.response.as_ref().map_or(0, |r| r.body.retained_len())
     }
 
-    pub fn host(&self) -> Option<String> {
-        self.request.uri.parse::<http::Uri>().ok().and_then(|u| u.host().map(str::to_owned))
-    }
-
-    fn header_value<'a>(headers: &'a [Header], name: &str) -> Option<&'a str> {
-        headers.iter().find(|h| h.name.eq_ignore_ascii_case(name)).map(|h| h.value.as_str())
+    /// Derived once at construction, so filter scans under the store lock never
+    /// re-parse the URI.
+    pub fn host(&self) -> Option<&str> {
+        self.host.as_deref()
     }
 
     pub fn request_content_type(&self) -> Option<&str> {
-        Self::header_value(&self.request.headers, "content-type")
+        header_value(&self.request.headers, "content-type")
     }
 
     pub fn response_content_type(&self) -> Option<&str> {
-        self.response.as_ref().and_then(|r| Self::header_value(&r.headers, "content-type"))
+        self.response.as_ref().and_then(|r| header_value(&r.headers, "content-type"))
     }
 }
 
@@ -182,7 +187,7 @@ mod tests {
 
     #[test]
     fn host_parsing() {
-        let host = |uri: &str| FlowBuilder::new().uri(uri).build().host();
+        let host = |uri: &str| FlowBuilder::new().uri(uri).build().host().map(str::to_owned);
         assert_eq!(host("http://example.com/x").as_deref(), Some("example.com"));
         assert_eq!(host("http://example.com:8080/x").as_deref(), Some("example.com"));
         assert_eq!(host("http://127.0.0.1:3000/").as_deref(), Some("127.0.0.1"));
