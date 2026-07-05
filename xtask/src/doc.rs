@@ -41,6 +41,7 @@ impl Verdict {
     }
 }
 
+#[derive(Clone)]
 struct Occurrence {
     value: String,
     span: (usize, usize),
@@ -60,6 +61,13 @@ pub fn verify_html(html: &str) -> Verdict {
     let mut failures = Vec::new();
     let mut artifacts: Vec<String> = Vec::new();
     let mut required: Vec<&str> = Vec::new();
+    if artifact_decl.split_whitespace().next().is_none() {
+        failures.push(Failure {
+            check: "artifact".to_string(),
+            what: "data-artifact is declared but empty".to_string(),
+            fix: "declare one of: epic-plan, wu-plan, wu-result, epic-result (space-separated when combined)".to_string(),
+        });
+    }
     for token in artifact_decl.split_whitespace() {
         if let Some(items) = checklist(token) {
             artifacts.push(token.to_string());
@@ -80,7 +88,13 @@ pub fn verify_html(html: &str) -> Verdict {
         return Verdict::Checked { artifacts, failures };
     }
 
-    let wu_blocks: Vec<Occurrence> = occurrences(html, "data-wu");
+    let wu_blocks: Vec<Occurrence> = attr_positions(html, "data-wu")
+        .into_iter()
+        .map(|(pos, value)| {
+            let (span, filled) = element_content(html, pos);
+            Occurrence { value, span, filled }
+        })
+        .collect();
     let in_wu_block = |pos: usize| wu_blocks.iter().any(|b| pos >= b.span.0 && pos < b.span.1);
     let (sub_items, top_items): (Vec<Tagged>, Vec<Tagged>) = attr_positions(html, "data-item")
         .into_iter()
@@ -102,15 +116,10 @@ pub fn verify_html(html: &str) -> Verdict {
             });
         }
         for block in &wu_blocks {
-            let inside: Vec<(usize, Occurrence)> = sub_items
+            let inside: Vec<Tagged> = sub_items
                 .iter()
                 .filter(|(pos, _)| *pos >= block.span.0 && *pos < block.span.1)
-                .map(|(pos, occ)| {
-                    (
-                        *pos,
-                        Occurrence { value: occ.value.clone(), span: occ.span, filled: occ.filled },
-                    )
-                })
+                .map(|(pos, occ)| (*pos, occ.clone()))
                 .collect();
             let label = format!("wu·{}", block.value);
             check_items(&mut failures, WU_SUB, &inside, &label);
@@ -187,16 +196,6 @@ fn check_unknown(
         );
         failures.push(Failure { check: format!("{scope}·unknown-tag"), what, fix });
     }
-}
-
-fn occurrences(html: &str, attr: &str) -> Vec<Occurrence> {
-    attr_positions(html, attr)
-        .into_iter()
-        .map(|(pos, value)| {
-            let (span, filled) = element_content(html, pos);
-            Occurrence { value, span, filled }
-        })
-        .collect()
 }
 
 fn attr_positions(html: &str, name: &str) -> Vec<(usize, String)> {
@@ -393,6 +392,13 @@ mod tests {
     #[test]
     fn unknown_artifact_is_red() {
         let v = verify_html(&doc("epic-planz", "", ""));
+        assert_eq!(failures(&v), vec!["artifact"]);
+    }
+
+    #[test]
+    fn empty_artifact_declaration_is_red_not_green() {
+        let v = verify_html(&doc("", "", "<p data-item=\"outcome\">x</p>"));
+        assert!(v.red(), "data-artifact=\"\" is an explicit but empty declaration");
         assert_eq!(failures(&v), vec!["artifact"]);
     }
 
