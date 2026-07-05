@@ -1,0 +1,30 @@
+schema: doc/v1
+epic: E1
+wu: E1.W1
+branch: wu/workflow/gate
+changes:
+  - path: docs/workflow.html
+    tier: T1
+    action: added
+    distills: "the workflow standard: levels, lifecycle, DoD-C/W/E, waivers, four-note evidence, gate contract, hooks map"
+  - path: docs/testing-strategy.html
+    tier: T1
+    action: updated
+    distills: "test/v2 manifest schema: identity block + waived layers; gate reference"
+  - path: docs/documentation-system.html
+    tier: T1
+    action: updated
+    distills: "doc/v1 distillation-evidence schema and its mechanical cross-check"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "index row for DEC-2"
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: added
+    distills: "DEC-2: why evidence is four notes, why the receipt exists, no-ff, tip-skip in the walk, diff-hash flags, waived vs exempt"
+  - path: docs/work/archive/2026-07-05-workflow-brainstorm.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/workflow.html, docs/decisions/workflow-gates.html]
+date: 2026-07-05
