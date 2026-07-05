@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a49cb839f34851f0dfa81c9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Decisions Index</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Decisions Index</h1>
+      <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
+      <div class="meta">v1 · 2026-07-05 · Trawler</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="index">Topic files</h2>
+    <table data-c="index-table">
+      <thead>
+        <tr><th>Topic file</th><th>IDs</th><th>Scope (one line)</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><a href="event-bus.html"><code>event-bus.html</code></a></td>
+          <td><span class="badge id">DEC-1</span></td>
+          <td>Broadcast bus payload shape and its costs</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="index-rules">
+      <p>Records are append-only and never renumbered. A reversal flips the old record to
+      <em>superseded by DEC-m</em> and adds a new one. An agent about to “fix” something odd
+      checks here first — the oddity may be load-bearing. Code-review verifiers treat an
+      applicable record as grounds to refute a finding.</p>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

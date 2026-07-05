@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a49cb849f34851f0dfa81cb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Decisions: Event Bus</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Decisions — Event Bus</h1>
+      <p>Why the broadcast bus is shaped the way it is.</p>
+      <div class="meta">v1 · 2026-07-05 · Trawler · <a href="decisions-index.html">index</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="dec-1"><span class="badge id">DEC-1</span> FlowEvent carries the full record, not a notification-sized projection</h2>
+    <table data-c="dec-1-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-05</td></tr>
+        <tr><th>Origin</th><td>Code review E0 — finding “<code>Store::insert</code> clones the full <code>RequestRec</code> (headers, version strings) solely to populate <code>FlowEvent::RequestCaptured</code>, whose only consumer reads method/uri/body-state.” Waived by this record.</td></tr>
+        <tr><th>Where</th><td><code>src/event.rs</code> (payload shape) · <code>src/store.rs</code> insert/set_response (the clone) · <code>src/api/view.rs sse_event</code> (the projection)</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-1-context">Context</h3>
+    <p><code>FlowEvent::RequestCaptured</code>/<code>ResponseCaptured</code> embed the full
+    <code>RequestRec</code>/<code>ResponseRec</code>. Filling the event forces a clone of the
+    record on every insert (header name/value <code>String</code>s allocate; captured body
+    <code>Bytes</code> are refcount bumps, never payload copies). The sole current consumer —
+    the SSE endpoint — projects a compact lifecycle notification and ignores the rest.</p>
+
+    <h3 id="dec-1-options">Options</h3>
+    <table data-c="dec-1-options-table">
+      <thead><tr><th>Option</th><th>Trade</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A — bus carries the record</strong> (chosen)</td><td>Every subscriber gets the whole domain object without a store read-back; cost is one record clone per lifecycle event.</td></tr>
+        <tr><td>B — bus carries notification-sized fields</td><td>No clone, but each new subscriber that needs more than the SSE view (TUI detail pane, HAR exporter, disk persister) must re-query the store per event, racing eviction.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-1-choice">Choice &amp; consequences</h3>
+    <div class="callout" data-c="dec-1-choice-callout">
+      <p><strong>Keep the record on the bus.</strong> The architecture’s subscriber model
+      (see <a href="../core-architecture.html">core architecture</a>: the bus “carries the
+      record per the design; the SSE layer projects a compact notification from it”) is the
+      point — interfaces subscribe and get everything, the store stays a query surface.
+      The per-event clone of header strings is the accepted price; body payloads are
+      <code>Bytes</code> and never copied.</p>
+    </div>
+    <p>Consequences: code review runs must not flag the insert/set_response record clone or
+    the “consumer uses only a few fields” asymmetry — refute against this record. Revisit
+    (supersede, don’t rewrite) only if profiling shows the clone on the proxy hot path is
+    material, or if the bus gains untrusted/remote subscribers (then P3 containment argues
+    for projections at the bus boundary instead).</p>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

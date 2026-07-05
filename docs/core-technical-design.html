@@ -31,8 +31,8 @@
         <p>A bounded live buffer, no disk. Nothing survives restart. SQLite / HAR slot in later behind the store boundary.</p>
       </div>
       <div class="card" data-c="decision-body">
-        <h3>Buffer-then-forward capture</h3>
-        <p>Collect each body up to a flat <strong>10 MB per-request</strong> cap, then forward; pass through above the cap. One <a href="#cap-streaming">special case</a>: streaming bodies.</p>
+        <h3>Bounded drain-then-forward capture</h3>
+        <p>Drain each body frame by frame up to a flat <strong>10 MB per-request</strong> cap; the moment the cap is crossed the rest streams through untouched, so reads are memory-bounded. One <a href="#cap-streaming">special case</a>: streaming bodies.</p>
       </div>
     </div>
     <div class="callout" data-c="decision-defaults">
@@ -90,7 +90,6 @@ ResponseRec {
     <h3 id="type-body">BodyRec</h3>
     <pre data-c="type-body-code">enum BodyRec {
     Captured    { bytes: Bytes, size: usize },
-    Truncated   { prefix: Bytes, captured: usize, total_hint: Option&lt;usize&gt; },
     Streaming   { content_type: String },   // text/event-stream etc. — forwarded, never buffered
     NotCaptured { reason: NotCapturedReason },
     Empty,
@@ -103,7 +102,7 @@ ResponseRec {
     ResponseCaptured { flow_id: FlowId, res: ResponseRec, duration_ms: u64 },
     FlowEvicted      { flow_id: FlowId },
 }</pre>
-    <p><strong>Why:</strong> the stream must push incremental lifecycle transitions (request before response, ring-buffer eviction). A single "flow updated" event can't express these without overloading its payload.</p>
+    <p><strong>Why:</strong> the stream must push incremental lifecycle transitions (request before response, ring-buffer eviction). A single "flow updated" event can't express these without overloading its payload. Events deliberately carry the full record — the clone this costs on insert is an accepted trade, see <a href="decisions/event-bus.html">DEC-1</a>.</p>
 
     <h3 id="type-view">FlowView</h3>
     <pre data-c="type-view-code">// The JSON returned by GET /flows/:id — a flattened, UI-ready projection
@@ -112,15 +111,16 @@ ResponseRec {
   "started_at": "2026-07-03T12:34:56.789Z",
   "duration_ms": 84,
   "method": "POST", "uri": "https://api.example.com/v1/items", "status": 201,
+  "request_http_version": "HTTP/1.1", "response_http_version": "HTTP/1.1",
   "request_body":  { "state": "captured",  "size": 14, "data_base64": "eyJuYW1lIjoiZm9vIn0=" },
   "response_body": { "state": "streaming", "content_type": "text/event-stream" }
 }</pre>
     <p><strong>Why:</strong> a read-only serialized projection for REST/SSE consumers. Decoupling it from the internal <code>Flow</code> lets the storage layer evolve without breaking the API contract.</p>
 
     <h2 id="body-capture">Body capture</h2>
-    <p>In <code>handle_request</code> / <code>handle_response</code> the body is drained with <code>http_body_util::BodyExt::collect().await?.to_bytes()</code> (hyper 1 removed <code>hyper::body::to_bytes</code>). This is a destructive read, so the body is <strong>reconstructed</strong> with <code>Body::from(bytes)</code> before forwarding — even on the cap-exceeded path, so a capture decision never breaks the connection.</p>
+    <p>In <code>handle_request</code> / <code>handle_response</code> the body is drained <strong>frame by frame</strong> (<code>http_body_util::BodyStream</code>), accumulating at most the cap. A body that ends within the cap is recorded and <strong>reconstructed</strong> with <code>Body::from(bytes)</code> before forwarding (the read is destructive). The moment the cap is crossed, the decision is made immediately: the buffered prefix frames are replayed and the remainder chains through as a stream — so a capture decision never breaks the connection, and an oversized or hostile body can never force more than cap-plus-one-frame into memory.</p>
     <div class="callout" data-c="body-cap-rule">
-      <p><strong>v1 rule — kept deliberately simple: one config value, a 10 MB cap applied per request.</strong> Buffer each request and response body up to 10 MB, then forward. If a body exceeds 10 MB, forward it untouched and record <code>BodyRec::NotCaptured { TooLarge }</code>. Every body is judged on its own size — there is no shared or global budget across requests, so parallel traffic never interferes.</p>
+      <p><strong>v1 rule — kept deliberately simple: one config value, a 10 MB cap applied per request.</strong> A body that exceeds 10 MB is forwarded in full and recorded as <code>BodyRec::NotCaptured { TooLarge }</code>; <code>actual</code> is the declared <code>content-length</code> when one exists, otherwise the bytes counted when capture stopped. The cap bounds both what is stored <em>and</em> what is ever buffered. Every body is judged on its own size — there is no shared or global budget across requests, so parallel traffic never interferes.</p>
     </div>
 
     <h3 id="cap-streaming">The one special case — streaming responses</h3>
@@ -160,7 +160,7 @@ sequenceDiagram
 
     <h2 id="decoding">Decoding stays view-side</h2>
     <div class="callout" data-c="decoding-callout">
-      <p>Capture stores <strong>raw bytes + <code>content-encoding</code></strong> faithfully. The <code>?decode=1</code> path runs the chain lazily at view time: <code>content-encoding (gzip/deflate/br)</code> → charset → format detect (JSON/XML/form) → pretty-print. Same bytes, many renderings — the capture path stays fast and honest.</p>
+      <p>Capture stores <strong>raw bytes + <code>content-encoding</code></strong> faithfully. The <code>?decode=1</code> path runs the chain lazily at view time: <code>content-encoding (gzip/deflate/br)</code> → charset → format detect (JSON/XML/form) → pretty-print. Same bytes, many renderings — the capture path stays fast and honest. Decoded output is capped (64 MB) as a zip-bomb guard: stored bodies are bounded by <code>body_cap</code>, but their decompressed form is not — past the cap the endpoint falls back to the raw bytes.</p>
     </div>
 
     <h2 id="sniffing">How interception works (sniffing the data)</h2>
@@ -230,7 +230,7 @@ sequenceDiagram
     </div>
 
     <h2 id="cert-model">Certificate &amp; trust model</h2>
-    <p>Trawler holds a single self-signed CA (ECDSA P-256), generated on first launch and persisted to <code>ca/trawler-ca.pem</code> / <code>.key</code>. For each HTTPS connection, the <code>host:port</code> from the CONNECT line keys a <a href="https://crates.io/crates/moka">moka</a> cache (1,000 entries, ~182-day TTL, W-TinyLFU eviction). On a miss, rcgen builds a leaf whose CN + DNS SAN is the hostname, signs it with the CA, and caches the <code>Arc&lt;ServerConfig&gt;</code>. Warm hits are sub-microsecond.</p>
+    <p>Trawler holds a single self-signed CA (ECDSA P-256), generated on first launch and persisted to <code>ca/trawler-ca.pem</code> / <code>.key</code>. A partial state — one file of the pair missing — aborts startup instead of regenerating: silently overwriting the survivor would invalidate every client that already trusts the old certificate. For each HTTPS connection, the <code>host:port</code> from the CONNECT line keys a <a href="https://crates.io/crates/moka">moka</a> cache (1,000 entries, ~182-day TTL, W-TinyLFU eviction). On a miss, rcgen builds a leaf whose CN + DNS SAN is the hostname, signs it with the CA, and caches the <code>Arc&lt;ServerConfig&gt;</code>. Warm hits are sub-microsecond.</p>
     <div class="diagram" data-c="cert-diagram">
       <pre class="mermaid">
 flowchart TD
