@@ -1,0 +1,14 @@
+schema: test/v2
+level: working-unit
+epic: E1
+wu: E1.W1
+branch: wu/workflow/gate
+tests:
+  unit:
+    count: 12
+    covers: "note schema parsing (counts, waivers, identity, malformed YAML); tier derivation and code-path classification; layer satisfaction rules; failure formatting; wu-target inference and flag parsing; sha256 vectors"
+  integration:
+    count: 19
+    covers: "dod_gate.rs (15): scratch repos proving green WU + parsable receipt, missing/stale/tampered evidence failures, identity omission/disagreement, waivers, doc-note completeness, epic walk incl. unarchived-T3 and noteless standalone commits; dod_hooks.rs (4): pre-merge-commit blocks red merges and picks the gate by target branch, pre-push syncs notes and range-checks"
+  e2e:
+    waived: "repo-local tool epic - the integration layer already drives the gate binary contract against real git repos; no larger flow exists"
