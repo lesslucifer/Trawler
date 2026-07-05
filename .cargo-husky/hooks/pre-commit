@@ -8,3 +8,19 @@ cargo fmt --all -- --check
 
 echo "[pre-commit] cargo clippy -D warnings"
 cargo clippy --all-targets --all-features -- -D warnings
+
+# Conflicted merges never reach pre-merge-commit; their completion lands here
+# with MERGE_HEAD on disk - gate it the same way.
+if [ -f "$(git rev-parse --git-path MERGE_HEAD)" ]; then
+  branch=$(git symbolic-ref --short -q HEAD || true)
+  case "$branch" in
+  main)
+    echo "[pre-commit] merge completion - cargo xtask verify-dod hook epic"
+    exec cargo xtask verify-dod hook epic
+    ;;
+  epic/*)
+    echo "[pre-commit] merge completion - cargo xtask verify-dod hook wu"
+    exec cargo xtask verify-dod hook wu
+    ;;
+  esac
+fi

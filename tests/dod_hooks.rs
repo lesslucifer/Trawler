@@ -122,6 +122,30 @@ fn merge_into_main_runs_the_epic_gate_and_other_targets_are_ungated() {
 }
 
 #[test]
+fn pre_commit_gates_conflicted_merge_completion_on_epic() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-commit");
+
+    env.git_ok(&repo, &["checkout", "-q", "epic/x"]);
+    let wu_tip = {
+        let out = Command::new("git")
+            .args(["rev-parse", "wu/x/one"])
+            .current_dir(&repo)
+            .output()
+            .expect("rev-parse");
+        String::from_utf8_lossy(&out.stdout).trim().to_string()
+    };
+    fs::write(repo.join(".git/MERGE_HEAD"), format!("{wu_tip}\n")).expect("write MERGE_HEAD");
+    fs::write(repo.join("a.txt"), "resolved").expect("write file");
+    env.git_ok(&repo, &["add", "-A"]);
+    env.git_ok(&repo, &["commit", "-q", "-m", "complete conflicted merge"]);
+
+    assert!(env.calls().contains("verify-dod hook wu"), "got: {}", env.calls());
+}
+
+#[test]
 fn pre_push_syncs_notes_refs_and_range_checks_epic_pushes() {
     let tmp = tempfile::tempdir().unwrap();
     let env = Env::new(tmp.path(), 0);

@@ -73,21 +73,40 @@ fn hook(repo: &Path, level: &str) -> Result<(i32, String), String> {
         "epic" => Level::Epic,
         _ => return Err(USAGE.to_string()),
     };
+    let heads = merge_tips(repo)?;
+    match heads.as_slice() {
+        [] => Ok((0, "no merge in progress - gate not required".to_string())),
+        [tip] => gate_run(repo, lvl, tip, "HEAD"),
+        _ => Ok((
+            1,
+            "octopus merge refused - the gate verifies one branch per merge; merge WUs one at a time"
+                .to_string(),
+        )),
+    }
+}
+
+fn merge_tips(repo: &Path) -> Result<Vec<String>, String> {
     let merge_head_file = git(repo, &["rev-parse", "--git-path", "MERGE_HEAD"])?;
-    let heads = std::fs::read_to_string(repo.join(&merge_head_file)).unwrap_or_default();
-    let heads: Vec<&str> = heads.lines().filter(|l| !l.trim().is_empty()).collect();
-    let tip = match heads.as_slice() {
-        [] => return Ok((0, "no MERGE_HEAD - not a merge, gate not required".to_string())),
-        [tip] => (*tip).to_string(),
-        _ => {
-            return Ok((
-                1,
-                "octopus merge refused - the gate verifies one branch per merge; merge WUs one at a time"
-                    .to_string(),
-            ))
+    if let Ok(content) = std::fs::read_to_string(repo.join(&merge_head_file)) {
+        let heads: Vec<String> =
+            content.lines().filter(|l| !l.trim().is_empty()).map(str::to_string).collect();
+        if !heads.is_empty() {
+            return Ok(heads);
         }
-    };
-    gate_run(repo, lvl, &tip, "HEAD")
+    }
+    // pre-merge-commit fires before git materializes MERGE_HEAD for automatic
+    // (ort) merges - at that point the merged revs are only visible in the
+    // reflog action. MERGE_HEAD exists for conflicted/--no-commit merges,
+    // whose completion the pre-commit hook gates through the same path.
+    let action = std::env::var("GIT_REFLOG_ACTION").unwrap_or_default();
+    tips_from_reflog(&action)
+        .into_iter()
+        .map(|rev| git(repo, &["rev-parse", &format!("{rev}^{{commit}}")]))
+        .collect()
+}
+
+fn tips_from_reflog(action: &str) -> Vec<&str> {
+    action.strip_prefix("merge ").map_or_else(Vec::new, |rest| rest.split_whitespace().collect())
 }
 
 fn range(repo: &Path, old: &str, new: &str) -> Result<(i32, String), String> {
@@ -172,6 +191,17 @@ mod tests {
         assert_eq!(infer_wu_target("wu/workflow/gate").as_deref(), Some("epic/workflow"));
         assert_eq!(infer_wu_target("feature/x"), None);
         assert_eq!(infer_wu_target("1a2b3c"), None);
+    }
+
+    #[test]
+    fn reflog_action_yields_merge_tips() {
+        assert_eq!(super::tips_from_reflog("merge wu/x/one"), vec!["wu/x/one"]);
+        assert_eq!(
+            super::tips_from_reflog("merge wu/x/one wu/x/two"),
+            vec!["wu/x/one", "wu/x/two"]
+        );
+        assert!(super::tips_from_reflog("pull origin main").is_empty());
+        assert!(super::tips_from_reflog("").is_empty());
     }
 
     #[test]

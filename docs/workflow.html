@@ -176,7 +176,7 @@ cargo xtask dod list [--epic E1]                  # query receipts</pre>
     <table data-c="hooks-table">
       <thead><tr><th>Hook</th><th>Enforces</th></tr></thead>
       <tbody>
-        <tr><td><code>pre-commit</code></td><td><code>fmt</code> + <code>clippy -D warnings</code></td></tr>
+        <tr><td><code>pre-commit</code></td><td><code>fmt</code> + <code>clippy -D warnings</code> · when completing a <em>conflicted</em> merge (MERGE_HEAD on disk — those never reach pre-merge-commit), runs the same merge gate</td></tr>
         <tr><td><code>pre-push</code></td><td>full suite · auto-pushes <code>refs/notes/*</code> · range-checks standalone commits on <code>main</code>/<code>epic/*</code> pushes</td></tr>
         <tr><td><code>pre-merge-commit</code></td><td>runs the gate on <code>MERGE_HEAD</code>: into <code>epic/*</code> ⇒ wu gate, into <code>main</code> ⇒ epic gate; docs/infra-only merges pass ungated; red refuses the merge</td></tr>
         <tr><td><code>post-checkout</code></td><td>heals <code>merge.ff = false</code> · worktree setup</td></tr>

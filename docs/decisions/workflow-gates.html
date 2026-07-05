@@ -39,6 +39,7 @@
         <tr><td>Diff hashing uses <code>git diff --no-color --no-ext-diff</code></td><td>The review-time hash and the gate-time recomputation must be byte-identical across user configs; bare <code>git diff</code> respects local color/ext-diff settings.</td></tr>
         <tr><td><code>waived</code> (judgment, with reason) vs <code>exempt</code> (rule: docs/infra-only)</td><td>Waivers stay visible and reviewable — an unjustified one is a review finding; exemptions are mechanical and carry no note at all. Collapsing the two would either bury judgments or demand ceremony for prose fixes.</td></tr>
         <tr><td>Code paths are <code>src/</code>, <code>xtask/</code>, <code>tests/</code></td><td>The gate itself is code; scoping "code" to <code>src/</code> alone would have exempted the tool that enforces the rules.</td></tr>
+        <tr><td>Hook mode resolves the merged tip from <code>GIT_REFLOG_ACTION</code>, with the <code>MERGE_HEAD</code> file as the first choice</td><td>Discovered live on E1's first gated merge, which failed open: <code>pre-merge-commit</code> fires <em>before</em> git materializes <code>MERGE_HEAD</code> for automatic (ort) merges — the merged revs exist only in the reflog action then. <code>MERGE_HEAD</code> is on disk only for conflicted/<code>--no-commit</code> merges, whose completion <code>pre-commit</code> gates through the same path.</td></tr>
       </tbody>
     </table>
 
