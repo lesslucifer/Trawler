@@ -223,6 +223,18 @@ fn identity_disagreement_across_notes_fails_check_1() {
 }
 
 #[test]
+fn identity_omitted_in_one_note_while_siblings_carry_it_fails_check_1() {
+    let repo = wu_with_change();
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    repo.note("doc", &tip, &format!("schema: doc/v1\nchanges:\n{T2_ENTRY}"));
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["1·notes"]);
+    assert!(format_report(&report).contains("identity"));
+}
+
+#[test]
 fn doc_note_must_account_for_every_changed_doc_file() {
     let repo = wu_with_change();
     let tip = repo.sha("wu/x/one");

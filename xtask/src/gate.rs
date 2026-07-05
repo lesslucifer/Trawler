@@ -280,7 +280,7 @@ impl Gate<'_> {
         let lines = git(self.repo, &["rev-list", "--first-parent", "--parents", &range])?;
         for line in lines.lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();
-            let sub = match parts.as_slice() {
+            let (seam, inner) = match parts.as_slice() {
                 [merge, first, second, ..] => {
                     if git(self.repo, &["merge-base", "--is-ancestor", second, first]).is_ok() {
                         continue;
@@ -295,7 +295,6 @@ impl Gate<'_> {
                 }
                 _ => continue,
             };
-            let (seam, inner) = sub;
             for f in inner.failures {
                 report.failures.push(Failure::new(
                     &format!("7·walk·{}", f.check),
@@ -396,9 +395,8 @@ fn check_review(report: &mut Report, cr: Option<&CrNote>) {
 }
 
 fn check_identity(report: &mut Report, ids: &[Option<(Option<String>, Option<String>)>]) {
-    let epics: Vec<&String> = ids.iter().flatten().filter_map(|(e, _)| e.as_ref()).collect();
-    let wus: Vec<&String> = ids.iter().flatten().filter_map(|(_, w)| w.as_ref()).collect();
-    if epics.windows(2).any(|w| w[0] != w[1]) || wus.windows(2).any(|w| w[0] != w[1]) {
+    let present: Vec<&(Option<String>, Option<String>)> = ids.iter().flatten().collect();
+    if present.windows(2).any(|w| w[0] != w[1]) {
         report.failures.push(Failure::new(
             "1·notes",
             "identity block disagrees across the tip's notes".to_string(),

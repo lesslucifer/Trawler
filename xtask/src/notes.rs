@@ -8,8 +8,6 @@ pub struct TestNote {
     pub epic: Option<String>,
     #[serde(default)]
     pub wu: Option<String>,
-    #[serde(default)]
-    pub branch: Option<String>,
     pub tests: Tests,
 }
 
@@ -71,8 +69,6 @@ pub struct CrNote {
     pub epic: Option<String>,
     #[serde(default)]
     pub wu: Option<String>,
-    #[serde(default)]
-    pub branch: Option<String>,
     pub base: String,
     pub diff_sha256: String,
     pub verdict: String,
@@ -85,8 +81,6 @@ pub struct DocNote {
     pub epic: Option<String>,
     #[serde(default)]
     pub wu: Option<String>,
-    #[serde(default)]
-    pub branch: Option<String>,
     #[serde(default)]
     pub changes: Vec<DocChange>,
     #[serde(default)]
