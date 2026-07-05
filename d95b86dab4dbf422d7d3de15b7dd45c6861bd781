@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+branch: main
+tests:
+  unit:
+    waived: "build-target config only (required-features gating, no code changed); verified by running the suite with and without --all-features"
