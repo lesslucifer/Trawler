@@ -52,6 +52,16 @@ curl -N http://127.0.0.1:3001/stream                   # live SSE of new flows
 For HTTPS, download and trust the CA (`http://127.0.0.1:3001/ca.crt`) — see the
 per-platform routing/trust table in the [Core Technical Design](docs/core-technical-design.html#network).
 
+## Control API
+
+| Endpoint | Returns |
+|---|---|
+| `GET /flows?host=&method=&status=&content_type=&q=` | flow summaries, newest first |
+| `GET /flows/{id}` | full flow detail (headers + body states) |
+| `GET /flows/{id}/request/body` · `…/response/body` | raw bytes; `?decode=1` for decoded |
+| `GET /stream` | live SSE lifecycle events (compact, no bodies) |
+| `GET /ca.crt` | root CA certificate (PEM) |
+
 ## Roadmap
 
 - [ ] Persistent session storage (SQLite / HAR) behind the store boundary

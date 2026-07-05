@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Documentation System</h1>
       <p>Five tiers so every AI session reads current truth — information synthesizes UP, is read DOWN, and is never duplicated down.</p>
-      <div class="meta">Draft v3 · 2026-07-04 · Trawler · T1 process doc</div>
+      <div class="meta">Draft v4 · 2026-07-05 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -22,6 +22,11 @@
       Every fact lives at exactly one tier; elsewhere, link. When a doc and the code disagree,
       <strong>code wins</strong> — the session that finds the conflict fixes the doc in that same
       session.
+    </div>
+    <div class="callout" data-c="ai-first">
+      <strong>AI-first.</strong> All code is written by AI agents and no human reads a diff before
+      it lands. Every doc targets an AI reader: optimize for machine consumption, and never include
+      work estimates — effort, timelines, and sizing carry no meaning here.
     </div>
     <div class="diagram" data-c="tier-flow">
       <pre class="mermaid">
@@ -84,6 +89,11 @@ flowchart TB
       permanent <em>and</em> shape-level, else it belongs in T2. T4 is never hand-documented; docs
       reference it by path and symbol (<code>src/capture.rs · CaptureSession</code>), never by
       generated API pages or mirrored descriptions.
+    </p>
+    <p data-c="tier-style">
+      Tier style: <strong>T0</strong> is super compact — hard cap 200 lines. <strong>T1</strong> is
+      concise and direct — no repeated information, no extra detail, no out-of-scope explanation;
+      anything deeper links down a tier.
     </p>
     <div class="callout warn" data-c="no-code-in-docs">
       <strong>No code in docs.</strong> Docs never copy code — no snippets, signatures, or config
@@ -173,8 +183,8 @@ stateDiagram-v2
     </table>
     <div class="callout" data-c="write-back">
       <strong>Write-back rule.</strong> A task is done not when the code lands but when the
-      distillation checklist has run and the affected T2 (rarely T1) files reflect the new truth —
-      in the same session as the change, never “later”.
+      distillation checklist has run and the affected T2 files and their index (rarely T1) reflect
+      the new truth — in the same session as the change, never “later”.
     </div>
 
     <h2 id="layout">Layout</h2>
