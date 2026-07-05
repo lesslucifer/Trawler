@@ -42,7 +42,6 @@ pub enum NotCapturedReason {
 #[derive(Clone, Debug)]
 pub enum BodyRec {
     Captured { bytes: Bytes, size: usize },
-    Truncated { prefix: Bytes, captured: usize, total_hint: Option<usize> },
     Streaming { content_type: String },
     NotCaptured { reason: NotCapturedReason },
     Empty,
@@ -54,7 +53,6 @@ impl BodyRec {
     pub fn retained_len(&self) -> usize {
         match self {
             BodyRec::Captured { size, .. } => *size,
-            BodyRec::Truncated { captured, .. } => *captured,
             _ => 0,
         }
     }
@@ -62,7 +60,6 @@ impl BodyRec {
     pub fn state(&self) -> &'static str {
         match self {
             BodyRec::Captured { .. } => "captured",
-            BodyRec::Truncated { .. } => "truncated",
             BodyRec::Streaming { .. } => "streaming",
             BodyRec::NotCaptured { .. } => "not_captured",
             BodyRec::Empty => "empty",
@@ -72,7 +69,6 @@ impl BodyRec {
     pub fn bytes(&self) -> Option<&Bytes> {
         match self {
             BodyRec::Captured { bytes, .. } => Some(bytes),
-            BodyRec::Truncated { prefix, .. } => Some(prefix),
             _ => None,
         }
     }
@@ -148,12 +144,6 @@ mod tests {
     #[test]
     fn retained_len_by_variant() {
         assert_eq!(captured(b"abc").retained_len(), 3);
-        let trunc = BodyRec::Truncated {
-            prefix: Bytes::from_static(b"ab"),
-            captured: 2,
-            total_hint: Some(9),
-        };
-        assert_eq!(trunc.retained_len(), 2);
         assert_eq!(BodyRec::Streaming { content_type: "x".into() }.retained_len(), 0);
         assert_eq!(
             BodyRec::NotCaptured { reason: NotCapturedReason::TooLarge { actual: 99 } }
@@ -166,10 +156,6 @@ mod tests {
     #[test]
     fn state_by_variant() {
         assert_eq!(captured(b"").state(), "captured");
-        assert_eq!(
-            BodyRec::Truncated { prefix: Bytes::new(), captured: 0, total_hint: None }.state(),
-            "truncated"
-        );
         assert_eq!(BodyRec::Streaming { content_type: "x".into() }.state(), "streaming");
         assert_eq!(
             BodyRec::NotCaptured { reason: NotCapturedReason::ReadError }.state(),
@@ -181,12 +167,6 @@ mod tests {
     #[test]
     fn bytes_present_only_when_retained() {
         assert_eq!(captured(b"hi").bytes().map(std::convert::AsRef::as_ref), Some(&b"hi"[..]));
-        let trunc = BodyRec::Truncated {
-            prefix: Bytes::from_static(b"pre"),
-            captured: 3,
-            total_hint: None,
-        };
-        assert_eq!(trunc.bytes().map(std::convert::AsRef::as_ref), Some(&b"pre"[..]));
         assert!(BodyRec::Empty.bytes().is_none());
         assert!(BodyRec::Streaming { content_type: "x".into() }.bytes().is_none());
         assert!(BodyRec::NotCaptured { reason: NotCapturedReason::ReadError }.bytes().is_none());

@@ -32,7 +32,6 @@ impl From<&Header> for HeaderView {
 #[serde(tag = "state", rename_all = "snake_case")]
 pub enum BodyView {
     Captured { size: usize, data_base64: String },
-    Truncated { captured: usize, total_hint: Option<usize>, data_base64: String },
     Streaming { content_type: String },
     NotCaptured { reason: &'static str, actual: Option<usize> },
     Empty,
@@ -44,11 +43,6 @@ impl From<&BodyRec> for BodyView {
             BodyRec::Captured { bytes, size } => {
                 BodyView::Captured { size: *size, data_base64: STANDARD.encode(bytes) }
             }
-            BodyRec::Truncated { prefix, captured, total_hint } => BodyView::Truncated {
-                captured: *captured,
-                total_hint: *total_hint,
-                data_base64: STANDARD.encode(prefix),
-            },
             BodyRec::Streaming { content_type } => {
                 BodyView::Streaming { content_type: content_type.clone() }
             }
@@ -183,15 +177,6 @@ mod tests {
         assert_eq!(
             body_view(&captured(b"hi")),
             json!({"state":"captured","size":2,"data_base64":"aGk="})
-        );
-        let trunc = BodyRec::Truncated {
-            prefix: bytes::Bytes::from_static(b"hi"),
-            captured: 2,
-            total_hint: Some(9),
-        };
-        assert_eq!(
-            body_view(&trunc),
-            json!({"state":"truncated","captured":2,"total_hint":9,"data_base64":"aGk="})
         );
         assert_eq!(
             body_view(&BodyRec::Streaming { content_type: "text/event-stream".into() }),
