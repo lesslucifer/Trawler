@@ -1,0 +1,11 @@
+schema: doc/v1
+epic: E-PLAN
+wu: E-PLAN.W2
+branch: wu/work-planning/verify
+changes:
+  - path: docs/work/2026-07-05-work-planning-plan.html
+    tier: T3
+    action: updated
+    distills: "epic-plan markers retrofitted per the standard (data-artifact on main, data-item per checklist item, data-wu summary blocks); use-case requirements, e2e test plan and distillation plan stated; verify-doc dry-run green"
+t2_waived: "the why lives in DEC-4 and the T1 standard, both landed with E-PLAN.W1; W2 implements exactly what they record - no new decision to add"
+date: 2026-07-05
