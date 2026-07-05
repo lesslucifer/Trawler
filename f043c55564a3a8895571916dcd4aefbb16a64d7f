@@ -1,0 +1,12 @@
+schema: test/v2
+level: working-unit
+epic: E-PLAN
+wu: E-PLAN.W2
+branch: wu/work-planning/verify
+tests:
+  unit:
+    count: 15
+    covers: "doc.rs marker extraction (artifact type, draft/ready with absent=ready, items, data-wu blocks with sub-tags, unknown artifact rejected, empty artifact declaration red); presence checks (missing tag, whitespace-only-empty, typo guard pairing unknown tag with missing item); attr scan ignores text mentions; nested same-tag close resolution; edit distance"
+  integration:
+    count: 15
+    covers: "verify_doc.rs (7): conforming docs of all four types exit 0; epic plan missing two items names exactly those; misspelled tag pairs unknown/missing; data-wu block lacking a sub-tag red; combined collapsed-epic docs checked against both checklists; drafts and ungoverned exit 0; multi-path output reports only red docs. doc_hooks.rs (8): PostToolUse feeds problems back exit 2 for red ready, silent for green/draft/ungoverned/non-html; Stop blocks on red tracked and untracked docs, allows drafts/green/no-docs"
