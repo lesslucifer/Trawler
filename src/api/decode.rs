@@ -2,6 +2,10 @@ use std::io::Read;
 
 use flate2::read::{GzDecoder, ZlibDecoder};
 
+/// Zip-bomb guard: stored bodies are capped at `body_cap`, but their decoded
+/// form is not — without this bound a high-ratio payload expands without limit.
+const MAX_DECODED_LEN: usize = 64 * 1024 * 1024;
+
 /// View-time decode chain, run lazily only for `?decode=1`: reverse
 /// `content-encoding`, then pretty-print if the payload is JSON. Capture stays
 /// fast and honest — raw bytes are what's stored; this is a rendering.
@@ -12,8 +16,8 @@ pub fn decode_body(
 ) -> Vec<u8> {
     let decompressed = match content_encoding.map(str::trim).map(str::to_ascii_lowercase).as_deref()
     {
-        Some("gzip" | "x-gzip") => decompress(GzDecoder::new(raw), raw),
-        Some("deflate") => decompress(ZlibDecoder::new(raw), raw),
+        Some("gzip" | "x-gzip") => decompress(GzDecoder::new(raw), raw, MAX_DECODED_LEN),
+        Some("deflate") => decompress(ZlibDecoder::new(raw), raw, MAX_DECODED_LEN),
         _ => raw.to_vec(),
     };
 
@@ -24,11 +28,12 @@ pub fn decode_body(
     }
 }
 
-fn decompress<R: Read>(mut decoder: R, raw: &[u8]) -> Vec<u8> {
+fn decompress<R: Read>(decoder: R, raw: &[u8], max: usize) -> Vec<u8> {
     let mut out = Vec::new();
-    match decoder.read_to_end(&mut out) {
-        Ok(_) => out,
-        Err(_) => raw.to_vec(),
+    let limit = u64::try_from(max).unwrap_or(u64::MAX).saturating_add(1);
+    match decoder.take(limit).read_to_end(&mut out) {
+        Ok(_) if out.len() <= max => out,
+        _ => raw.to_vec(),
     }
 }
 
@@ -45,8 +50,21 @@ fn pretty_json(bytes: Vec<u8>) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use super::decode_body;
+    use super::{decode_body, decompress};
     use crate::test_support::{gzip, zlib};
+    use flate2::read::GzDecoder;
+
+    #[test]
+    fn zip_bomb_over_limit_falls_back_to_raw() {
+        let bomb = gzip(&vec![0u8; 100_000]);
+        assert_eq!(decompress(GzDecoder::new(&bomb[..]), &bomb, 1_000), bomb);
+    }
+
+    #[test]
+    fn decoded_exactly_at_limit_passes() {
+        let data = vec![0u8; 1_000];
+        assert_eq!(decompress(GzDecoder::new(&gzip(&data)[..]), &gzip(&data), 1_000), data);
+    }
 
     #[test]
     fn gzip_round_trip_and_aliases() {
