@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU doc-archive-gate -> epic/doc-archive"
+epic: E2
+wu: E2.W1
+branch: wu/doc-archive/gate
+base: 23cd442e15e40c44bf1509116c733af054c0a368
+head: 02aa956f9027fc7c683679a41380a3b6834eba13
+diff_sha256: dd65d518305c24407297774aad72278402f88be8a3a8a0f559e6093c1e1f8c3c
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-05
