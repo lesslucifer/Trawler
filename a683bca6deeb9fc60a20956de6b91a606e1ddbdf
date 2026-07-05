@@ -1,0 +1,26 @@
+schema: doc/v1
+epic: E2
+branch: epic/doc-archive
+changes:
+  - path: docs/documentation-system.html
+    tier: T1
+    action: updated
+    distills: "archiving = git rm + move to gitignored docs/.archive/; T3 lifecycle, doc-note example and layout table updated; epic gate hard-fails unexpected tracked docs"
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "gate check 6 enforces the tracked-doc layout at the epic tip, ahead of the docs-only exemption; DoD-E distillation row points archives at docs/.archive/"
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "DEC-3: archived docs leave git; absolute tracked-doc check runs before the docs-only exemption; lineage judged at the seam that deletes the doc; DEC-2 origin path updated"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "index row for DEC-3"
+  - path: docs/work/archive/2026-07-05-workflow-brainstorm.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/workflow.html, docs/decisions/workflow-gates.html]
+t2_waived: null
+date: 2026-07-05
