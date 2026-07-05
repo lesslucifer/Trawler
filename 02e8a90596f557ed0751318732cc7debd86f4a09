@@ -1,0 +1,12 @@
+schema: cr/v2
+scope: "epic E1 workflow-standard -> main"
+epic: E1
+branch: epic/workflow
+base: 7df01f056ed0dda4f2ef3b4c45f8141d6736d0fc
+head: 02e8a90596f557ed0751318732cc7debd86f4a09
+diff_sha256: 6355b79a64896da0c4d591a0cb9b4817e966e030b5f4b899c45a4c1a792dd088
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-05
