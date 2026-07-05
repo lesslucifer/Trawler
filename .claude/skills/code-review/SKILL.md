@@ -43,7 +43,10 @@ dimension in `rubric.md`. Each finder prompt contains exactly:
   `.claude/skills/code-review/rubric.md` first — its dimension row, the
   principles, and the exclusions;
 - the scope (`BASE..HEAD_R`, plus working tree if in scope) — the finder runs
-  `git diff` itself and may read any file in the repo;
+  `git diff` itself and may read any file in the repo, including the tip's
+  `test/v2` and `doc/v1` notes (`git notes --ref=test|doc show HEAD_R`):
+  declared waivers and distillation claims are review subjects, not free
+  passes;
 - the return format: a list of candidate findings, each
   `{location: file:line, claim: <one falsifiable sentence>, severity: blocker|important|nit}`.
 
@@ -75,17 +78,23 @@ returning to the caller (§7) so finder quality stays visible.
 
 ## 6 · Evidence — YAML note on the reviewed tip
 
-- `DIFF_SHA=$(git diff BASE..HEAD_R | shasum -a 256 | cut -d' ' -f1)`
-  (pipe the working-tree diff in as well when it was in scope).
-- The note body is one YAML document, contract `cr/v1`. A DoD-check agent
-  parses it at done-gates: a Working Unit is not merge-ready and an epic is
+- `DIFF_SHA=$(git diff --no-color --no-ext-diff BASE..HEAD_R | shasum -a 256 | cut -d' ' -f1)`
+  (pipe the working-tree diff in as well when it was in scope). The flags
+  match `cargo xtask verify-dod`'s recomputation — the binding must be
+  byte-identical.
+- The note body is one YAML document, contract `cr/v2`.
+  `cargo xtask verify-dod` parses it at every merge gate (see
+  `docs/workflow.html`): a Working Unit is not merge-ready and an epic is
   not complete without a `PASS` note whose `diff_sha256` matches the tip
   being merged — so a later rewrite of the branch visibly orphans its
   evidence.
 
 ```yaml
-schema: cr/v1
+schema: cr/v2
 scope: "WU capture-pagination -> epic/capture"   # the caller's label
+epic: E1                        # identity block — matches the tip's other notes
+wu: E1.W2                       # working-unit scope only
+branch: wu/capture/pagination   # informative; the ids are the truth
 base: <full sha — the merge-base pinned in §1>
 head: <full sha — the reviewed tip; the note is attached to it>
 diff_sha256: <DIFF_SHA>
@@ -99,9 +108,8 @@ date: <YYYY-MM-DD>
 ```
 
 - Attach it: `git notes --ref=cr add -f -m "<yaml>" HEAD_R`.
-- Notes travel only when pushed explicitly — remind the caller:
-  `git push origin refs/notes/cr`. Audit any tip with
-  `git notes --ref=cr show <tip>`.
+- The pre-push hook syncs `refs/notes/*` to origin automatically. Audit any
+  tip with `git notes --ref=cr show <tip>`.
 
 ## 7 · Return to the caller
 
