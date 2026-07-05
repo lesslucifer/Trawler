@@ -345,6 +345,43 @@ fn standalone_commit_gets_green_with_its_manifest() {
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
 }
 
+fn second_wu(repo: &Repo) {
+    repo.git(&["checkout", "-q", "-b", "wu/x/two", "epic/x"]);
+    repo.write("src/other.rs", "pub fn other() {}\n");
+    repo.commit("second wu change");
+}
+
+#[test]
+fn epic_walk_rejects_octopus_merges() {
+    let repo = wu_with_change();
+    second_wu(&repo);
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "octopus merge", "wu/x/one", "wu/x/two"]);
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        format_report(&report).contains("octopus"),
+        "expected an octopus rejection, got: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn hook_mode_refuses_octopus_merges() {
+    let repo = wu_with_change();
+    second_wu(&repo);
+    repo.git(&["checkout", "-q", "epic/x"]);
+    let heads = format!("{}\n{}\n", repo.sha("wu/x/one"), repo.sha("wu/x/two"));
+    std::fs::write(repo.path.join(".git/MERGE_HEAD"), heads).unwrap();
+
+    let args: Vec<String> = ["verify-dod", "hook", "wu"].iter().map(|s| (*s).to_string()).collect();
+    let (code, message) = xtask::run(&args, &repo.path).unwrap();
+    assert_eq!(code, 1);
+    assert!(message.contains("octopus"), "got: {message}");
+}
+
 #[test]
 fn docs_only_standalone_commit_is_exempt() {
     let (repo, _) = epic_with_merged_wu();

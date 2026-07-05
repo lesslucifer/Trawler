@@ -70,8 +70,19 @@ fn hook(repo: &Path, level: &str) -> Result<(i32, String), String> {
         "epic" => Level::Epic,
         _ => return Err(USAGE.to_string()),
     };
-    let Ok(tip) = git(repo, &["rev-parse", "MERGE_HEAD"]) else {
-        return Ok((0, "no MERGE_HEAD - not a merge, gate not required".to_string()));
+    let merge_head_file = git(repo, &["rev-parse", "--git-path", "MERGE_HEAD"])?;
+    let heads = std::fs::read_to_string(repo.join(&merge_head_file)).unwrap_or_default();
+    let heads: Vec<&str> = heads.lines().filter(|l| !l.trim().is_empty()).collect();
+    let tip = match heads.as_slice() {
+        [] => return Ok((0, "no MERGE_HEAD - not a merge, gate not required".to_string())),
+        [tip] => (*tip).to_string(),
+        _ => {
+            return Ok((
+                1,
+                "octopus merge refused - the gate verifies one branch per merge; merge WUs one at a time"
+                    .to_string(),
+            ))
+        }
     };
     let base = git(repo, &["merge-base", "HEAD", &tip])?;
     let names = diff_names(repo, &base, &tip)?;

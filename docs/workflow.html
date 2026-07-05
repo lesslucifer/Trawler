@@ -140,7 +140,7 @@ branch: wu/capture/pagination     # omitted when gating a raw sha
 base: &lt;merge-base at gate time&gt;
 tip: &lt;the gated tip — the note hangs here&gt;
 diff_sha256: &lt;sha256 of git diff --no-color --no-ext-diff base..tip&gt;
-checks: [notes, manifest, review, review-base, diff-binding, doc-note, walk]
+checks: [notes, manifest, review, review-base, diff-binding, doc-note]   # epic receipts append: walk
 date: YYYY-MM-DD</pre>
 
     <h2 id="gate">The gate — <code>cargo xtask verify-dod</code></h2>
@@ -161,7 +161,7 @@ cargo xtask dod list [--epic E1]                  # query receipts</pre>
         <tr><td>4</td><td>Review <code>base</code> equals the current merge-base — stale reviews rejected</td></tr>
         <tr><td>5</td><td><code>diff_sha256</code> equals the gated diff recomputed now, byte-identical</td></tr>
         <tr><td>6</td><td><code>doc/v1</code> matches <code>git diff --name-only</code> exactly (no missing/phantom entries, tiers correct); code change ⇒ T2 entry or <code>t2_waived</code>; epic ⇒ no unarchived <code>docs/work/*.html</code> added in range, archives carry <code>distilled_to</code></td></tr>
-        <tr><td>7</td><td><em>Epic:</em> first-parent walk — each merge's <code>^2</code> re-verified as a WU, each non-merge commit checked as standalone (docs-only exempt; the tip itself is covered by the epic gate)</td></tr>
+        <tr><td>7</td><td><em>Epic:</em> first-parent walk — each merge's <code>^2</code> re-verified as a WU, each non-merge commit checked as standalone (docs-only exempt; the tip itself is covered by the epic gate). Octopus merges are refused, by the walk and by the hook: one WU per merge</td></tr>
       </tbody>
     </table>
 

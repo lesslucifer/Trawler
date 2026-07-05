@@ -281,7 +281,7 @@ impl Gate<'_> {
         for line in lines.lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();
             let (seam, inner) = match parts.as_slice() {
-                [merge, first, second, ..] => {
+                [merge, first, second] => {
                     if git(self.repo, &["merge-base", "--is-ancestor", second, first]).is_ok() {
                         continue;
                     }
@@ -292,6 +292,18 @@ impl Gate<'_> {
                         continue;
                     }
                     (*commit, self.verify(Level::Commit, commit, first)?)
+                }
+                [merge, _, _, _, ..] => {
+                    report.failures.push(Failure::new(
+                        "7·walk",
+                        format!(
+                            "{} is an octopus merge - parents beyond the second were never gated",
+                            short(merge)
+                        ),
+                        "merge one WU per merge commit; rebuild this seam as sequential --no-ff merges"
+                            .to_string(),
+                    ));
+                    continue;
                 }
                 _ => continue,
             };
