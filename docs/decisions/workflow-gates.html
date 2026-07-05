@@ -77,7 +77,9 @@
     <p>Archives don't replicate through clones — a fresh clone starts with an empty
     <code>docs/.archive/</code>, which is by design: nothing citable may live there. Any doc path
     outside the tier layout (a stray <code>docs/&lt;dir&gt;/</code>) now blocks the next epic merge
-    until it is moved into a tier folder or archived.</p>
+    until it is moved into a tier folder or archived. The layout check runs <em>before</em> the
+    docs-only exemption, so even an exempt (docs-only) epic merge re-asserts hygiene — a stray doc
+    cannot ride an ungated merge into <code>main</code>.</p>
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>

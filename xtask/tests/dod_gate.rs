@@ -309,6 +309,23 @@ fn epic_gate_rejects_docs_in_unexpected_locations() {
 }
 
 #[test]
+fn docs_only_epic_still_rejects_stray_tracked_work_docs() {
+    let repo = Repo::new();
+    repo.git(&["checkout", "-q", "-b", "epic/x"]);
+    repo.write("docs/work/plan.html", "<html>plan</html>\n");
+    repo.commit("docs-only epic leaves a work doc");
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(!report.exempt, "a dirty docs tree must not be exempt");
+    assert_eq!(checks_of(&report), vec!["6·doc-note"]);
+
+    std::fs::remove_file(repo.path.join("docs/work/plan.html")).unwrap();
+    repo.commit("archive the work doc out of git");
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.exempt, "a clean docs-only epic stays exempt");
+}
+
+#[test]
 fn work_doc_archived_out_of_git_passes_the_epic_gate() {
     let (repo, _) = epic_with_merged_wu();
     repo.write("docs/work/plan.html", "<html>plan</html>\n");

@@ -88,7 +88,11 @@ impl Gate<'_> {
             exempt: !code_changed,
             failures: Vec::new(),
         };
-        if report.exempt {
+        if level == Level::Epic {
+            self.check_tracked_docs(&mut report);
+            report.exempt = report.exempt && report.failures.is_empty();
+        }
+        if !code_changed {
             return Ok(report);
         }
         let parsed = self.load_notes(&mut report, &names);
@@ -96,7 +100,7 @@ impl Gate<'_> {
         if level != Level::Commit {
             check_review(&mut report, parsed.cr.as_ref());
         }
-        self.check_docs(&mut report, parsed.doc.as_ref(), &names, code_changed);
+        self.check_docs(&mut report, parsed.doc.as_ref(), &names);
         if level == Level::Epic {
             self.walk(&mut report)?;
         }
@@ -186,13 +190,7 @@ impl Gate<'_> {
         }
     }
 
-    fn check_docs(
-        &self,
-        report: &mut Report,
-        doc: Option<&DocNote>,
-        names: &[String],
-        code_changed: bool,
-    ) {
+    fn check_docs(&self, report: &mut Report, doc: Option<&DocNote>, names: &[String]) {
         let doc_paths: Vec<&String> = names.iter().filter(|p| p.starts_with("docs/")).collect();
         if let Some(doc) = doc {
             let entries: BTreeMap<&str, &crate::notes::DocChange> =
@@ -240,7 +238,7 @@ impl Gate<'_> {
                     ));
                 }
             }
-            if code_changed && report.level != Level::Commit {
+            if report.level != Level::Commit {
                 let t2_updated = doc.changes.iter().any(|c| c.tier == "T2");
                 let t2_waived = doc.t2_waived.as_ref().is_some_and(|w| !w.trim().is_empty());
                 if !t2_updated && !t2_waived {
@@ -253,9 +251,6 @@ impl Gate<'_> {
                     ));
                 }
             }
-        }
-        if report.level == Level::Epic {
-            self.check_tracked_docs(report);
         }
     }
 

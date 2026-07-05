@@ -169,7 +169,8 @@ cargo xtask dod list [--epic E1]                  # query receipts</pre>
     failure — check id, expected vs found, and a concrete <code>fix →</code> action — written for the
     fixing agent to consume. Red gates write nothing. Docs/infra-only diffs are <em>exempt</em> at every
     level: green, no notes demanded, no receipt written — one shared rule behind the hook's ungated doc
-    merges and the walk's exempt seams.</p>
+    merges and the walk's exempt seams. One exception: an epic tip runs the tracked-doc layout check
+    even when its diff is docs-only — a stray tracked doc turns the merge red, exempt or not.</p>
 
     <h2 id="hooks">Hooks</h2>
 
