@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4a7daf9f34851f0dfa83b7">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PLAN epic result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PLAN · epic result report</h1>
+      <p>Epic result: work planning &amp; result reports — outputs, checklists, harness-triggered verification.</p>
+      <div class="meta">v1 · 2026-07-05 · Trawler · T3 work doc · epic/work-planning</div>
+    </div>
+  </header>
+  <main data-artifact="epic-result">
+    <h2 id="outcome">Outcome</h2>
+    <p data-c="outcome" data-item="outcome">
+      <strong>Landed as planned.</strong> Against the intent and expected result: the four governed
+      outputs exist as a T1 standard an agent can plan and report from alone; the use-case
+      requirement (a process epic — the contract is the standard itself) is met by this epic
+      planning and reporting through its own four outputs; <code>cargo xtask verify-doc</code>
+      checks any governed doc and prints house-style problems; the check is impossible to forget —
+      the harness runs it on every write of a ready governed doc and refuses to end a turn red;
+      <code>workflow.html</code> links the standard instead of half-defining it.
+    </p>
+    <h2 id="wu-rollup">Per-WU rollup</h2>
+    <ul data-c="rollup" data-item="wu-rollup">
+      <li><strong>E-PLAN.W1</strong> (standard) — delivered; docs-only, gate-exempt merge
+        <code>bd1a7d1</code>; result: <code>2026-07-05-standard-result.html</code>.</li>
+      <li><strong>E-PLAN.W2</strong> (verify) — delivered; cr/v2 PASS, DoD-W green merge
+        <code>adfae69</code>; result: <code>2026-07-05-verify-result.html</code>.</li>
+      <li>Unplanned: pre-existing pedantic lint cleanup (toolchain 1.95) landed inside W2's branch
+        as its own commit.</li>
+    </ul>
+    <h2 id="deviations">Deviations</h2>
+    <ul data-c="deviations" data-item="deviations">
+      <li>The epic replanned twice before any work, in comment rounds (git-notes design dropped,
+        then git-hook triggering dropped for harness hooks) — all settled pre-W1; the plan's
+        Open questions closed at "none".</li>
+      <li>Mid-flight rebase onto main (E2 + E-WFT landed there); epic id E3 → E-PLAN per the
+        renamed scheme.</li>
+    </ul>
+    <h2 id="evidence">Evidence</h2>
+    <p data-c="evidence" data-item="evidence">
+      E2E: the epic's loop (red write → problems fed back → fix → green → turn ends) is proven by
+      the PostToolUse + Stop suites in <code>xtask/tests/doc_hooks.rs</code> and the live dry-run
+      on the epic's own plan (green, all pre-standard docs ungoverned); the <code>tests/</code>
+      e2e layer is waived with that reason in the epic test note. Reviews: W2 cr/v2 PASS
+      (26 candidates → 5 fixed, 1 waived) + epic-scope cr/v2 PASS vs main on this tip.
+      17 unit + 15 integration tests back the checker and hooks.
+    </p>
+    <h2 id="distillation">Distillation summary</h2>
+    <p data-c="distillation" data-item="distillation">
+      Exactly per the distillation plan: T1 <code>docs/work-planning.html</code> (new) +
+      <code>docs/workflow.html</code> v3 (links only); T2 <code>docs/decisions/work-planning.html</code>
+      (DEC-4) + index row. This plan, both WU results and this report archive to
+      <code>docs/.archive/</code> with lineage in the archiving commit.
+    </p>
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-c="follow-ups" data-item="follow-ups">
+      Sessions started before the hooks landed don't run them — coverage begins with the next
+      session. No new epics or WUs spawned.
+    </p>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
