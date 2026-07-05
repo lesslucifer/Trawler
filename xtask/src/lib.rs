@@ -1,3 +1,4 @@
+pub mod doc;
 pub mod gate;
 pub mod git;
 pub mod notes;
@@ -15,6 +16,7 @@ usage:
   cargo xtask verify-dod commit <sha>
   cargo xtask verify-dod hook <wu|epic>                       (tip = MERGE_HEAD, target = HEAD)
   cargo xtask verify-dod range <old> <new>
+  cargo xtask verify-doc <path> [<path>...]
   cargo xtask dod list [--epic <id>]";
 
 pub fn repo_root() -> Result<PathBuf, String> {
@@ -25,7 +27,8 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
     let strs: Vec<&str> = args.iter().map(String::as_str).collect();
     match strs.as_slice() {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
-        ["dod", "list", rest @ ..] => dod_list(rest, repo),
+        ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
+        ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
         _ => Err(USAGE.to_string()),
     }
 }
@@ -132,7 +135,7 @@ fn range(repo: &Path, old: &str, new: &str) -> Result<(i32, String), String> {
     }
 }
 
-fn dod_list(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
+fn dod_list(args: &[&str], repo: &Path) -> (i32, String) {
     use std::fmt::Write as _;
     let filter = target_value(args, "--epic");
     let listing = git(repo, &["notes", "--ref=dod", "list"]).unwrap_or_default();
@@ -158,9 +161,9 @@ fn dod_list(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         );
     }
     if out.is_empty() {
-        Ok((0, "no dod/v1 receipts found".to_string()))
+        (0, "no dod/v1 receipts found".to_string())
     } else {
-        Ok((0, out.trim_end().to_string()))
+        (0, out.trim_end().to_string())
     }
 }
 

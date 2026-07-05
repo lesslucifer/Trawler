@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4a724c9f34851f0dfa83a8">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Decisions: Work Planning</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Decisions — Work Planning</h1>
+      <p>Why plans and result reports are checklist-verified, not templated.</p>
+      <div class="meta">v1 · 2026-07-05 · Trawler · <a href="decisions-index.html">index</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="dec-4"><span class="badge id">DEC-4</span> Plan/result quality is a checklist verified by the harness at authoring time — never a template, never a git hook</h2>
+    <table data-c="dec-4-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-05</td></tr>
+        <tr><th>Origin</th><td>Epic E-PLAN (work-planning) — four manager review rounds on the plan doc</td></tr>
+        <tr><th>Where</th><td><a href="../work-planning.html">work-planning.html</a> · <code>xtask/src/doc.rs</code> · <code>.claude/hooks/verify-doc-*.sh</code> · <code>.claude/settings.json</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-4-context">Context</h3>
+    <p>Plans and result reports had no defined minimum: quality was judged by taste, per-session,
+    and nothing at all was produced <em>after</em> the work. Any check an agent must remember gets
+    forgotten; any check at commit/merge time fires after the work already stands on the
+    low-quality doc.</p>
+
+    <h3 id="dec-4-choices">Choices (each looks "fixable" — it isn't)</h3>
+    <table data-c="dec-4-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
+      <tbody>
+        <tr><td>Checklists over templates</td><td>Manager rejection of fixed templates: form must stay free and task-shaped. A template optimizes for uniformity and rots into cargo-cult sections; the checklist constrains substance only.</td></tr>
+        <tr><td>Verification = strict exact-tag presence, no content heuristics</td><td>Manager direction: "a simple section (with tag) verifying". Character floors and placeholder detection produce false positives that teach agents to game the checker; presence + non-empty + structure keeps the contract honest and the substance judgment stays with the reviews. The tag <em>is</em> the contract — content under a wrong tag is red on purpose, and the unknown-tag guard names the likely typo so the fix is obvious.</td></tr>
+        <tr><td>Harness hooks (PostToolUse + Stop), not git hooks</td><td>Manager rejection of git hooks: "commit/merge time is too late — the work is already done on a low-quality doc". The harness executes the check, not agent memory, and in an AI-first repo every author is a harness session, so authoring-time coverage is total.</td></tr>
+        <tr><td>The write itself is never blocked; drafts (<code>data-status="draft"</code>) are silent</td><td>A doc is written many times before it lands — blocking or nagging mid-authoring is pure false positive. The flip to ready is the checkpoint; from there every edit re-verifies and the Stop hook refuses to end a turn on a red ready doc.</td></tr>
+        <tr><td>Ungoverned docs (no <code>data-artifact</code>) are ignored</td><td>Pre-standard docs are skipped, never retrofitted — the standard governs docs that opt in by declaring themselves, so it can land without rewriting history.</td></tr>
+        <tr><td>Verdicts are never stored — no note schema, no gate change</td><td>The check is re-runnable on any doc at any time; storing its result would only create a stale copy of what one command recomputes.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-4-consequences">Consequences</h3>
+    <p>A red ready doc interrupts its author in the same breath as the write, and a turn cannot end
+    while one exists in the tree — so forgetting is not a failure mode. The escape hatch (flip back
+    to draft) is deliberate and visible: a doc left draft while work proceeds on it is a review
+    finding, not a mechanical one. New harness sessions pick the hooks up from versioned
+    <code>.claude/settings.json</code>; sessions started before the hooks landed don't run them —
+    the Stop backstop begins with the next session.</p>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

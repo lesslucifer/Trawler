@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)] // test code - panicking on setup failure is the assertion
+
 use std::path::PathBuf;
 
 use tempfile::TempDir;

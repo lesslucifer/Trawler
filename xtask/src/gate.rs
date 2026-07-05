@@ -100,7 +100,7 @@ impl Gate<'_> {
         if level != Level::Commit {
             check_review(&mut report, parsed.cr.as_ref());
         }
-        self.check_docs(&mut report, parsed.doc.as_ref(), &names);
+        Self::check_docs(&mut report, parsed.doc.as_ref(), &names);
         if level == Level::Epic {
             self.walk(&mut report)?;
         }
@@ -190,7 +190,7 @@ impl Gate<'_> {
         }
     }
 
-    fn check_docs(&self, report: &mut Report, doc: Option<&DocNote>, names: &[String]) {
+    fn check_docs(report: &mut Report, doc: Option<&DocNote>, names: &[String]) {
         let doc_paths: Vec<&String> = names.iter().filter(|p| p.starts_with("docs/")).collect();
         if let Some(doc) = doc {
             let entries: BTreeMap<&str, &crate::notes::DocChange> =
@@ -435,6 +435,7 @@ pub fn short(sha: &str) -> &str {
 }
 
 pub fn format_report(report: &Report) -> String {
+    use std::fmt::Write as _;
     if report.exempt {
         return format!(
             "verify-dod {} exempt on {} - docs/infra-only, gate not required",
@@ -449,7 +450,6 @@ pub fn format_report(report: &Report) -> String {
             short(&report.tip)
         );
     }
-    use std::fmt::Write as _;
     let mut out = String::new();
     for f in &report.failures {
         let _ = writeln!(out, "FAIL  {:<24} {}", f.check, f.what);
