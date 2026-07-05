@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4a3a9d9f34851f0dfa82cd">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E3 work-planning plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E3 · work-planning — plan the work, gate the result</h1>
+      <p>T3 plan: standardize what an epic/WU plan must state before work starts, and close the loop with a result report the epic gate verifies against what actually landed.</p>
+      <div class="meta">Draft v1 · 2026-07-05 · Trawler · T3 work doc · epic/work-planning</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="goal">Epic requirement</h2>
+    <p data-c="goal-stmt">
+      Planning and result-reporting become checkable structure instead of convention. A T1
+      standard defines what every epic and working-unit plan must state <em>before</em> work
+      starts — requirement, expected result, test plan — and every epic closes with a
+      <strong>result report</strong> on its tip (a <code>report/v1</code> git note, the fifth
+      evidence note) that <code>verify-dod</code> cross-checks against the work that actually
+      merged. Deviations from the plan surface in evidence, never only in an agent's word.
+    </p>
+
+    <h2 id="expected">Expected result — observable</h2>
+    <ul data-c="expected-list">
+      <li><code>docs/work-planning.html</code> (T1) exists and is the single owner of the plan
+        shape and the <code>report/v1</code> schema; <code>workflow.html</code> links to it
+        (plan-artifact cells, evidence table, DoD-E row) instead of restating it.</li>
+      <li><code>cargo xtask verify-dod epic</code> goes red when the epic tip lacks a valid
+        <code>report/v1</code> note, or when the report disagrees with the epic walk — a merged
+        WU seam missing from the report, or a WU reported delivered that never merged.</li>
+      <li>The green path is unchanged except the receipt's <code>checks</code> list appends
+        <code>report</code>.</li>
+      <li>E3's own merge into <code>main</code> is the first demonstration: it carries the first
+        <code>report/v1</code>, written against this plan.</li>
+    </ul>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-c="non-goals-list">
+      <li>No per-WU report notes — the epic report carries one entry per WU; a WU tip already
+        holds <code>test/v2 + cr/v2 + dod/v1</code>. Upgrade only if an epic report proves too
+        coarse in practice.</li>
+      <li>No tracker files, dashboards, or tooling beyond git notes and <code>verify-dod</code>.</li>
+      <li>No changes to the <code>test/v2</code>, <code>cr/v2</code>, <code>doc/v1</code> schemas.</li>
+      <li>No work estimates anywhere in plans or reports (AI-first rule).</li>
+    </ul>
+
+    <h2 id="gap">The gap</h2>
+    <p data-c="gap-stmt">
+      <code>workflow.html</code> mandates "one T3 work doc listing its WUs, each with requirement
+      sentence + detailed test plan" but nothing owns the plan's required shape — E1's brainstorm
+      and E2's plan already diverge. DoD-W's "requirement recorded before the code" is a judgment
+      with no standard to judge against. And the gates prove tests ran, review passed and docs
+      distilled — but nothing proves <em>we delivered what we planned</em>: a silently dropped WU
+      or a scope swap leaves no evidence anywhere.
+    </p>
+
+    <h2 id="shape">Proposed shape — what the T1 will norm</h2>
+    <div class="diagram" data-c="loop-diagram">
+      <pre class="mermaid">
+flowchart LR
+  P["Plan (T3, before work)<br/>intent · expected result · non-goals<br/>per WU: requirement + expected + test plan"] --> W["WUs execute<br/>plan amended in place as scope moves"]
+  W --> R["report/v1 note on the epic tip<br/>outcome per WU · deviations · unplanned work"]
+  R --> G{"verify-dod epic<br/>report ↔ walk cross-check"}
+  G -- red --> W
+  G -- green --> M["main · adequacy judged by epic review"]
+      </pre>
+      <div class="caption">The loop this epic closes: expectation stated before work, outcome verified after, both as evidence.</div>
+    </div>
+    <p data-c="shape-plan">
+      <strong>The plan</strong> (one T3 doc per epic, written before the epic branch does work;
+      this document follows the shape it proposes): epic intent as one requirement paragraph ·
+      expected result as observable acceptance, not intention · non-goals · one section per WU
+      with its requirement sentence, expected result and detailed test plan · design notes and
+      open questions as needed. The plan is living during the epic — amended in place, snapshots
+      keep evolution reviewable — but every deviation from the original expectation must resurface
+      in the result report.
+    </p>
+    <p data-c="shape-report">
+      <strong>The report</strong> (at epic close, before the merge into <code>main</code>): a
+      <code>report/v1</code> YAML note on the epic tip. Identity block like every note schema ·
+      plan path · the epic's expected result restated in one line (evidence stays self-describing
+      after the plan is archived) · epic outcome · one entry per planned WU
+      (<code>delivered | deviated | dropped</code>, one line of what/why + evidence pointer) ·
+      unplanned work accounted. Existence and consistency with git are mechanical; adequacy and
+      honesty of the prose are judged by the epic review, whose finders read plan and report.
+    </p>
+    <pre data-c="report-schema">
+schema: report/v1
+epic: E3
+branch: epic/work-planning
+plan: docs/work/2026-07-05-work-planning-plan.html
+expected: "plan shape + result report standardized (T1); report/v1 verified at the epic gate"
+outcome: delivered                # delivered | deviated | dropped
+wus:
+  - wu: E3.W1
+    requirement: "T1 standard doc; workflow.html links it"
+    outcome: delivered
+    evidence: "docs/work-planning.html · workflow.html evidence row"
+  - wu: E3.W2
+    requirement: "report/v1 parsing + epic-gate cross-check"
+    outcome: deviated
+    note: "one line on what changed and why"
+unplanned: []                     # WU seams / standalone commits absent from the plan, each with a reason
+date: 2026-07-05</pre>
+
+    <h2 id="wu1">WU E3.W1 · wu/work-planning/standard</h2>
+    <p data-c="wu1-req">
+      <strong>Requirement.</strong> Author T1 <code>docs/work-planning.html</code> owning the plan
+      shape, the definitions of expected result at epic and WU level, the <code>report/v1</code>
+      schema, and the mechanical/judgment split for the report gate. Update
+      <code>workflow.html</code> to link it: plan-artifact cells point at the standard, the
+      evidence table gains a <code>report/v1</code> row (epic level), DoD-E gains the report
+      check. Record the design decision as DEC-4 (report as a git note, not a doc section).
+    </p>
+    <p data-c="wu1-expected">
+      <strong>Expected result.</strong> An agent starting an epic can produce a conforming plan
+      from the standard alone; one fact per tier holds — the schema lives only in the new T1,
+      <code>workflow.html</code> only links.
+    </p>
+    <table data-c="wu1-tests">
+      <thead><tr><th>Test plan</th><th>Level</th></tr></thead>
+      <tbody>
+        <tr><td>Docs-only WU — integration waived (docs-only diffs are exempt at every gate); adequacy = review + user comment round on the T1 doc</td><td>WU</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="wu2">WU E3.W2 · wu/work-planning/gate</h2>
+    <p data-c="wu2-req">
+      <strong>Requirement.</strong> <code>verify-dod</code> learns the report: the epic gate adds
+      check 8 — a <code>report/v1</code> note on the tip parses, identity is consistent with the
+      other notes, and the WU entries cross-check against the walk's WU seams (every merged seam
+      reported; every WU reported <code>delivered</code>/<code>deviated</code> has a seam;
+      <code>dropped</code> needs none; seams absent from the plan must appear under
+      <code>unplanned</code> with a reason). The wu gate additionally checks a tracked
+      <code>docs/work/*-plan.html</code> exists at the merge — plan-before-code gains a mechanical
+      existence check while adequacy stays judgment. Red output follows the house style: check id,
+      expected vs found, fix →.
+    </p>
+    <p data-c="wu2-expected">
+      <strong>Expected result.</strong> An epic merge without a consistent report is physically
+      refused by the pre-merge-commit hook; a green gate appends <code>report</code> to the
+      receipt's checks; any tip remains re-verifiable offline, including the report.
+    </p>
+    <table data-c="wu2-tests">
+      <thead><tr><th>Test plan</th><th>Level</th></tr></thead>
+      <tbody>
+        <tr><td>Unit: <code>report/v1</code> schema parse + identity validation (<code>xtask/src/notes.rs</code>)</td><td>commit</td></tr>
+        <tr><td>Unit: seam↔report reconciliation logic (delivered/deviated need a seam, dropped must not have one, unplanned must carry a reason)</td><td>commit</td></tr>
+        <tr><td>Integration (<code>xtask/tests/dod_gate.rs</code>): epic gate red when the tip has no report note</td><td>WU</td></tr>
+        <tr><td>Integration: red when a merged WU seam is missing from the report</td><td>WU</td></tr>
+        <tr><td>Integration: red when a WU reported delivered has no seam</td><td>WU</td></tr>
+        <tr><td>Integration: red when an unplanned seam lacks an <code>unplanned</code> entry</td><td>WU</td></tr>
+        <tr><td>Integration: green with a consistent report; receipt checks append <code>report</code></td><td>WU</td></tr>
+        <tr><td>Integration: wu gate red when no tracked <code>docs/work/*-plan.html</code> exists at the merge</td><td>WU</td></tr>
+        <tr><td>Integration: docs-only epic stays exempt — no report demanded</td><td>WU</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="notes">Design notes</h2>
+    <p data-c="design-note-not-doc">
+      <strong>Why a note, not a report section in the plan doc.</strong> E2 (doc-archive, in
+      flight) removes archived docs from the tracked tree — at the epic tip the plan file no
+      longer exists, so a file-content check would be inspecting deleted content. Notes are the
+      house evidence channel: tamper-evident (they orphan on rewrite), queryable by identity
+      (<code>cargo xtask dod list</code>), and the epic walk already enumerates WU seams to
+      reconcile against. The report is <em>evidence</em>, not documentation — durable knowledge
+      still distills to T2 exactly as before; the report proves the plan→result loop closed.
+    </p>
+    <p data-c="design-wu-granularity">
+      <strong>WU-level expectations without WU-level reports.</strong> A WU's expectation lives in
+      its plan section; its result is one entry in the epic report. The collapse rule carries
+      over: a one-WU epic still reports, with one entry.
+    </p>
+    <p data-c="design-e2-interaction">
+      <strong>E2 interaction.</strong> E3 branches off <code>main</code>, which does not yet carry
+      E2's absolute tracked-docs check; the two are independent — the plan-existence check at the
+      wu gate looks at merge-time trees (plan tracked while the epic is live), E2's check looks at
+      epic tips (plan archived by then). Whichever lands second rebases nothing.
+    </p>
+
+    <h2 id="open">Open questions</h2>
+    <ul data-c="open-list">
+      <li><strong>Report granularity</strong> — epic-only is proposed. Want per-WU report notes
+        anyway (heavier, but each WU merge would self-report)?</li>
+      <li><strong>Restating <code>expected</code> in the note</strong> — proposed yes (one line),
+        so the evidence is self-describing after the plan leaves the tree; the alternative is a
+        bare plan path and a trip through git history.</li>
+      <li><strong>Plan-existence check at the wu gate</strong> — proposed in. Drop it if
+        plan-before-code should stay pure judgment.</li>
+    </ul>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
