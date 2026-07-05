@@ -1,0 +1,13 @@
+schema: test/v2
+level: epic
+epic: E-PLAN
+branch: epic/work-planning
+tests:
+  e2e:
+    waived: "process/tooling epic - no product flow changed; the epic's full loop (red write -> problems fed back -> fix -> green -> turn ends) is proven end to end by the PostToolUse and Stop suites in xtask/tests/doc_hooks.rs plus the live verify-doc dry-run on the epic's own governed docs"
+  integration:
+    count: 15
+    covers: "verify_doc.rs + doc_hooks.rs - the checker's contract and both harness hooks end to end"
+  unit:
+    count: 17
+    covers: "doc.rs marker extraction, presence/typo/structure checks, malformed-markup guards"
