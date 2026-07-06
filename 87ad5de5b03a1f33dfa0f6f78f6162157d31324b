@@ -1,9 +1,0 @@
-schema: doc/v1
-epic: E-NV
-wu: E-NV.W1
-changes:
-  - path: docs/work/2026-07-06-notes-view-plan.html
-    tier: T3
-    action: updated
-    distills: "pin the resolved layout (timeline + inline chips + modal), reference the skeleton chip-design spec rather than duplicate it"
-t2_waived: "no T2 use-case/decision yet -- debug serve is dev tooling; the epic-close distillation adds the debug-serve command line to T1 workflow.html"
