@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+epic: E-NMWF
+branch: epic/nmwf
+tests:
+  unit: { count: 1, covers: "epic walk: mr/v1 note authorises a doc commit lacking a trailer" }
