@@ -1,0 +1,16 @@
+schema: doc/v1
+epic: E-NMWF
+wu: E-NMWF.W3
+changes:
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "E-NMWF: manual review as a shipped, path-derived gate (rules, mr/v1 note, check 8, commit-msg hook, identity-only scope, E-MRSIG boundary)"
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "DEC-6: manual review design + identity-only/E-MRSIG deferral"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "route DEC-6"
