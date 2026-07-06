@@ -7,10 +7,15 @@ publish = false
 
 [features]
 hook-tests = []
+debug-tests = []
 
 [[test]]
 name = "dod_gate"
 required-features = ["hook-tests"]
+
+[[test]]
+name = "debug_serve"
+required-features = ["debug-tests"]
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }

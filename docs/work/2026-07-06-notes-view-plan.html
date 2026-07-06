@@ -206,13 +206,16 @@
         <code>tiny_http</code> if the raw socket handling turns fiddly, since nothing else depends
         on the choice. Record the pick in the result.
         <span class="ponytail">ponytail: stdlib first; crate only if it earns its keep.</span></li>
-        <li><strong>Page layout — resolved via a separate skeleton mockup.</strong> Three candidate
-        layouts (collapsible tree · commit-rows-with-four-note-columns · vertical timeline) are
-        rendered with real note data in
-        <a href="2026-07-06-notes-view-skeletons.html">the skeleton doc</a> for the reviewer to
-        pick / comment on. The chosen one becomes this WU's render target; commit order within a
-        group follows git's own order, notes shown in workflow order
-        (<code>test → cr → doc → dod</code>) per commit.</li>
+        <li><strong>Page layout — resolved.</strong> Three candidate layouts were rendered with
+        real note data in <a href="2026-07-06-notes-view-skeletons.html">the skeleton doc</a>; the
+        reviewer picked the <strong>vertical timeline with inline summary chips + click-to-modal</strong>.
+        Each commit is a node down its WU's timeline; each note is a one-glance chip
+        (<code>test(u/i/e)</code> · <code>cr&nbsp;⚑n</code> colored by verdict · <code>doc(n)</code> ·
+        <code>dod&nbsp;✓n</code>; an absent ref is a dashed, non-clickable <code>ref —</code>), and
+        clicking a chip opens a modal with that note's raw YAML. Notes shown in workflow order
+        (<code>test → cr → doc → dod</code>) per commit; commits newest-first by commit time. The
+        <a href="2026-07-06-notes-view-skeletons.html#chip-design">skeleton's chip-design table</a>
+        is the exact spec — not duplicated here.</li>
         <li><strong>Notes with no epic/wu field.</strong> <em>Resolved (reviewer: "just mark them
         as invalid"):</em> such notes go to an explicit <strong>invalid</strong> bucket on the page
         — surfaced, marked invalid, never merged into a real WU or silently dropped. Verify against
