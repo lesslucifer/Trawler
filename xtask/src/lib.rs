@@ -1,3 +1,4 @@
+pub mod debug;
 pub mod doc;
 pub mod gate;
 pub mod git;
@@ -17,7 +18,8 @@ usage:
   cargo xtask verify-dod hook <wu|epic>                       (tip = MERGE_HEAD, target = HEAD)
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
-  cargo xtask dod list [--epic <id>]";
+  cargo xtask dod list [--epic <id>]
+  cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";
 
 pub fn repo_root() -> Result<PathBuf, String> {
     git(Path::new("."), &["rev-parse", "--show-toplevel"]).map(PathBuf::from)
@@ -29,6 +31,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
+        ["debug", "serve", rest @ ..] => debug::serve(rest, repo),
         _ => Err(USAGE.to_string()),
     }
 }
