@@ -1,0 +1,12 @@
+schema: cr/v2
+scope: "epic/roadmap -> main"
+epic: E-RMAP
+branch: epic/roadmap
+base: 4937e4abf64fca89d6ad0dcb9a7aa4f6fd98b244
+head: 831b4035087790893b1e8a9f9efaaf0389b5ebf2
+diff_sha256: 5163c4666eb26d52a9f93ef0b12fe69a50b9500d0a8e00344ea266b09d227177
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-06
