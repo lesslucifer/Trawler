@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4b978f9f34851f0dfa8556">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Manual Review (epic plan / design)</title>
+</head>
+<body data-artifact="epic-plan" data-status="draft">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Manual Review — design &amp; epic plan</h1>
+      <p>A human sign-off gate in the workflow. This epic builds the whole enforcement skeleton — path-derived requirement, the commit-message carrier, the <code>mr/v1</code> note, the gate check, the walk — with <strong>identity-only authorisation</strong> (username / email). The unforgeable, hardware-backed cryptographic signature is a deliberately separate follow-up epic (<span class="badge id">E-MRSIG</span>, on the roadmap) that swaps only the auth check. <em>Draft — nothing implemented.</em></p>
+      <div class="meta">Draft v5 · 2026-07-06 · Trawler · T3 work doc</div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout warn" data-c="scope-callout">
+      <p><strong>Scope of this epic — read first.</strong> Authorisation here is an <em>identity assertion</em>: a
+      username or email listed in <code>.mr-allowed</code>. Because an agent knows the user's identity, it
+      <strong>can</strong> produce it — so this epic's guarantee is a <strong>forced stop + an audit trail of who
+      signed</strong>, not cryptographic proof. That is intentional: the hard, agent-unforgeable signature needs its
+      own design discussion and ships as <span class="badge id">E-MRSIG</span>. What this epic delivers is the entire
+      surrounding machinery, built so E-MRSIG only has to replace "is this identity allowed?" with "does this
+      signature verify?".</p>
+    </div>
+
+    <h2 id="strategy">The strategy — three rules, two carriers, one authoriser</h2>
+    <p>Manual review is required by the <strong>level and the diff's file paths</strong> — never by anything the
+    agent asserts about necessity. When required, an authorised human's identity must be recorded: in the commit
+    message at commit level, in the <code>mr/v1</code> note at WU/epic level.</p>
+
+    <table data-c="rules-table">
+      <thead><tr><th>Level / gate</th><th>Required when…</th><th>Authoriser recorded in…</th><th>Blocked at…</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Commit</strong></td><td>the commit touches <strong>docs</strong> (<code>is_doc</code>)</td><td>the <strong>commit message</strong> (an <code>mr</code> trailer)</td><td><code>commit-msg</code> hook — the commit is refused</td></tr>
+        <tr><td><strong>WU merge → epic</strong></td><td>the WU touches <strong>UI</strong> (<code>is_ui</code>, deferred to E-UIFOUND)</td><td>the <code>mr/v1</code> note on the tip</td><td>the merge gate</td></tr>
+        <tr><td><strong>Epic merge → main</strong></td><td><strong>always</strong></td><td>the <code>mr/v1</code> note on the tip</td><td>the merge gate</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="commit-carrier">
+      <p><strong>Why the commit message for docs.</strong> Reviewing after the commit exists is too late — you want
+      the commit <em>prevented</em> without a human OK, and a git note can't hang on a commit that doesn't exist yet.
+      So the authoriser travels <em>in the message</em>: the <code>commit-msg</code> hook sees the staged diff touches
+      <code>docs/</code>, requires an <code>mr: &lt;identity&gt;</code> trailer whose identity is in
+      <code>.mr-allowed</code>, and refuses the commit otherwise. (In E-MRSIG this trailer carries a signature seeded
+      by the change hash — the diff, which exists pre-commit via <code>git diff --cached</code> and recomputes after
+      as <code>parent..commit</code>; the carrier is designed for that now, it just holds an identity today.)</p>
+    </div>
+
+    <h2 id="mechanical">How the gate decides it's required</h2>
+    <pre data-c="formula">is_doc(path) = path.starts_with("docs/")
+is_ui(path)  = &lt;deferred to E-UIFOUND — the embedded web UI's asset paths&gt;
+
+commit  requires mr  ⇔  diff.any(is_doc)
+WU      requires mr  ⇔  diff.any(is_ui)
+epic    requires mr  ⇔  always</pre>
+    <p data-c="independent-of-exemption">The check runs <strong>independently of the docs/infra exemption</strong>: a
+    docs-only commit is exempt from <code>test</code>/<code>cr</code>/<code>doc</code> notes but still needs an
+    <code>mr</code> trailer — like the epic tracked-doc check (<a href="../decisions/workflow-gates.html">DEC-3</a>)
+    that fires on otherwise-exempt tips. When not required, nothing changes for that tip.</p>
+
+    <h2 id="auth">The authoriser — identity in <code>.mr-allowed</code></h2>
+    <p>One committed file lists who may sign off, by identity. The gate/hook checks the recorded authoriser is a
+    listed one — nothing more, this epic.</p>
+    <pre data-c="allowed-file"># .mr-allowed
+email:    vu.luu@workforceoptimizer.com
+username: vuluu
+# (E-MRSIG later adds a `key:` tier — a public key — for unforgeable signatures)</pre>
+    <p data-c="auth-check">Mechanical test: the identity in the trailer / note is present in <code>.mr-allowed</code>.
+    Optionally the hook also checks it equals the commit's committer identity — a weak sanity tie, still
+    agent-controllable. The point today is that the recorded name is a <em>known, accountable person</em> and that the
+    agent had to stop and ask; the file also seeds the trust anchor E-MRSIG will harden.</p>
+
+    <h2 id="never-auto">"Never automatically" — this epic vs. E-MRSIG</h2>
+    <div class="cards" data-c="never-auto-cards">
+      <div class="card"><h3>This epic (identity)</h3><p>The gate/hook is mechanical (identity present &amp; listed?), but the <em>human-only</em> part is procedural: the failure message and <a href="../workflow.html">workflow.html</a> instruct the agent to stop and get real confirmation, and never self-authorise. Enforced by honesty + the forced pause, like the rest of the DoD honesty layer.</p></div>
+      <div class="card"><h3>E-MRSIG (crypto)</h3><p>Replaces the identity check with a signature verify against a hardware-backed key. Then "the agent cannot produce it" becomes <em>true</em>, not asked. Everything else in this epic — rules, carriers, hook, gate check, walk — stays exactly as built.</p></div>
+    </div>
+    <p data-c="error-text">The gate/hook error is explicit, both epics:</p>
+    <pre data-c="error-block">FAIL  8·manual-review   commit &lt;sha&gt; touches docs with no valid mr authoriser
+      fix -> A HUMAN must review this and confirm. The AI agent MUST NOT self-authorise.
+             After the user has reviewed and said yes:
+               cargo xtask mr commit -m "&lt;msg&gt;" --as &lt;email|username&gt;      # doc commit
+               cargo xtask mr confirm &lt;wu|epic&gt; &lt;tip&gt; --as &lt;email|username&gt;  # WU / epic
+             The identity must be listed in .mr-allowed.</pre>
+
+    <h2 id="note">The evidence — message trailer &amp; <code>mr/v1</code> note</h2>
+    <p>No <code>status</code>/<code>waived</code> — <strong>manual review is not waivable</strong>: required means a
+    listed authoriser is recorded. Both carriers hold the same small identity record; the schema leaves room for the
+    signature E-MRSIG adds.</p>
+    <pre data-c="carriers">## commit level — a message trailer (one line):
+docs: revise capture use-case
+
+mr: email vu.luu@workforceoptimizer.com          # E-MRSIG: append the change-hash signature here
+
+## WU / epic level — the mr/v1 note on the tip:
+schema: mr/v1
+level: working-unit          # working-unit | epic
+tip: &lt;the gated tip&gt;
+tier: email                  # email | username  (which .mr-allowed tier matched)
+signer: vu.luu@workforceoptimizer.com
+date: YYYY-MM-DD</pre>
+
+    <h2 id="effects">Effects on the workflow</h2>
+    <table data-c="effects-table">
+      <thead><tr><th>Effect</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>Doc commits are blocked without a recorded authoriser</td><td>New <code>commit-msg</code> hook: staged diff touches <code>docs/</code> ⇒ an <code>mr</code> trailer with a listed identity is required or the commit is refused. Structural "prevent the commit", honesty-based today.</td></tr>
+        <tr><td>UI WUs &amp; every epic need one at merge</td><td>UI dormant until E-UIFOUND; epics always. The <code>pre-merge-commit</code> hook already refuses a red gate — check 8 makes an unauthorised tip red.</td></tr>
+        <tr><td>Forced stop + audit trail now; unforgeability later</td><td>This epic guarantees the pause and the record; E-MRSIG guarantees the agent can't fake it.</td></tr>
+        <tr><td>Tiny setup</td><td>Add your identity to <code>.mr-allowed</code> (one line). No keys this epic, so no setup script — that returns with E-MRSIG.</td></tr>
+        <tr><td>No manifest / plan / testing-doc change</td><td>Only the gate, the commit-msg hook, the note + trailer, <code>.mr-allowed</code>, workflow.html, and the roadmap note change.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="edge-cases">Edge cases &amp; resolutions</h2>
+    <table data-c="edge-table">
+      <thead><tr><th>Edge case</th><th>Resolution</th></tr></thead>
+      <tbody>
+        <tr><td>Plain <code>git commit</code> of a doc change (no trailer)</td><td>No <code>mr</code> trailer → <code>commit-msg</code> hook refuses, printing the <code>xtask mr commit</code> command.</td></tr>
+        <tr><td>Authoriser not in <code>.mr-allowed</code></td><td>Refused. Adding a person is a tracked, reviewable diff.</td></tr>
+        <tr><td>Agent self-authorises with a known identity</td><td>Possible this epic (honesty-based) — the explicit limitation E-MRSIG closes. The recorded identity still makes it an accountable, visible act.</td></tr>
+        <tr><td>Note written early, then more commits land</td><td>The note is tip-bound; a moved tip has no note → red. Forces the authoriser onto the final tip.</td></tr>
+        <tr><td>Docs-only epic</td><td>Epic always required → needs the note regardless of exemption (consistent with the epic tracked-doc check).</td></tr>
+        <tr><td>Non-doc standalone commit</td><td>Not <code>is_doc</code> → no commit-level mr; covered by its WU/epic sign-off.</td></tr>
+      </tbody>
+    </table>
+
+    <hr>
+    <p><em>Below: the epic-plan checklist items, filled from the strategy above.</em></p>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">Add a human sign-off checkpoint to the DoD workflow so changes to human-facing surfaces
+    cannot land silently: doc <em>commits</em> are refused at commit time unless the message names a listed
+    authoriser; UI WUs and every epic are refused at merge unless the tip's <code>mr/v1</code> note names one. The
+    requirement is derived mechanically from the diff's paths. Authorisation this epic is identity-only (username /
+    email) — a forced stop and an audit trail; the unforgeable cryptographic form is the follow-up epic
+    <span class="badge id">E-MRSIG</span>. The value now is the complete, correct machinery and a clean seam for that
+    hardening.</p>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <p data-item="use-cases">A process/tooling epic — it changes the workflow standard, the gate, and the hooks, not
+    the Trawler proxy product, so it touches no product <code>UC-*</code>. Its contract is the workflow itself:
+    <a href="../workflow.html">workflow.html</a> (T1) gains manual review as a path-derived check across the commit
+    and merge gates; a decision record captures the design and records the E-MRSIG deferral. The
+    <a href="../decisions/roadmap.html">roadmap</a> already carries E-MRSIG and the E-UIFOUND/<code>is_ui</code>
+    dependency. T2 target is <code>docs/decisions/</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <p data-item="expected">After this epic: (1) a <code>commit-msg</code> hook refuses a commit whose staged diff
+    touches <code>docs/</code> unless the message carries an <code>mr: &lt;identity&gt;</code> trailer with an
+    identity listed in <code>.mr-allowed</code>. (2) <code>cargo xtask verify-dod</code> fails a UI WU merge (once UI
+    paths exist) and every epic merge lacking a valid <code>mr/v1</code> note, with an explicit human-confirmation
+    instruction stating the agent must not self-authorise. (3) <code>.mr-allowed</code> supports
+    <code>email</code>/<code>username</code> tiers, the matched tier recorded on the note. (4)
+    <code>cargo xtask mr commit|confirm --as &lt;id&gt;</code> write the trailer / note after checking the identity is
+    listed. (5) Verification is offline in the hook/gate; a valid authoriser makes the gate green and records the
+    check in <code>dod/v1</code>; the walk re-verifies doc-commit trailers and merge-tip notes. (6) workflow.html
+    reflects the change and a decision record explains it, including the E-MRSIG boundary.</p>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <p data-item="non-goals">No cryptographic signatures, hardware keys, or key setup (all E-MRSIG). No waivers
+    (manual review is not waivable). No <code>manual_review</code> manifest flag (path-derived). No change to
+    <code>test/v2</code>, the plan docs, or testing-strategy.html. No <code>rejected</code> status — absence of a
+    listed authoriser is the rejection. This epic does <strong>not</strong> claim agent-unforgeability; that is
+    E-MRSIG's job and is stated plainly wherever the mechanism is documented.</p>
+
+    <h2 id="wu-summaries">WU summaries</h2>
+    <div data-item="wu-summaries">
+      <div data-wu="E-NMWF.W1">
+        <p data-item="wu-summary"><strong>W1 — the authoriser record, the anchor, the commands.</strong> Add the
+        <code>mr/v1</code> note + <code>mr</code> commit-trailer formats and their parser in <code>notes.rs</code>; the
+        committed <code>.mr-allowed</code> with tiered (email/username) parsing; and
+        <code>cargo xtask mr commit|confirm --as &lt;id&gt;</code> that check the identity is listed and write the
+        trailer / note. No gate/hook wiring yet.</p>
+        <p data-item="wu-maps-to">Expected-result items (3), (4): the recorded authoriser and its writer.</p>
+        <p data-item="wu-expected"><code>mr commit</code>/<code>mr confirm</code> with a listed identity produce a
+        well-formed trailer / note recording tier + signer; an unlisted identity is refused.</p>
+        <p data-item="wu-deps">none</p>
+      </div>
+      <div data-wu="E-NMWF.W2">
+        <p data-item="wu-summary"><strong>W2 — the mechanical gates.</strong> Add <code>is_doc</code>/<code>is_ui</code>
+        (UI stubbed); a <code>commit-msg</code> hook requiring a listed <code>mr</code> trailer when the staged diff
+        touches docs; and gate check 8 for WU/epic notes (authoriser present &amp; listed). Wire through the merge
+        gates, the epic walk (re-verify doc-commit trailers + merge-tip notes), and the range check; add
+        <code>mr</code> to the receipt <code>checks</code>.</p>
+        <p data-item="wu-maps-to">Expected-result items (1), (2), (5): the enforcement.</p>
+        <p data-item="wu-expected">Doc commits without a listed trailer are refused; UI/epic merges without a listed
+        note are red with the instruction; unlisted identities fail; non-required tips unaffected; the walk
+        re-verifies each seam.</p>
+        <p data-item="wu-deps">E-NMWF.W1</p>
+      </div>
+      <div data-wu="E-NMWF.W3">
+        <p data-item="wu-summary"><strong>W3 — distil &amp; surface.</strong> Update workflow.html (mr note + trailer;
+        the three rules; the commit-msg hook + gate check 8; the identity discipline and the E-MRSIG boundary;
+        lifecycle diagram). Add the decision record (design + E-MRSIG deferral). Add the <code>mr</code> ref to
+        <code>debug serve</code> (signer + tier). The roadmap E-MRSIG/<code>is_ui</code> notes are already in place.</p>
+        <p data-item="wu-maps-to">Expected-result item (6) and the distillation duty.</p>
+        <p data-item="wu-expected">workflow.html describes manual review as shipped with its honest identity-only
+        scope; the debug view shows the authoriser; the decision record explains the mechanism and the deferral.</p>
+        <p data-item="wu-deps">E-NMWF.W1, E-NMWF.W2</p>
+      </div>
+    </div>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <p data-item="e2e-plan">One hermetic end-to-end test over a scripted temp repo (style of
+    <code>dod_gate</code>/<code>dod_hooks</code>, scrubbed <code>GIT_*</code>), with a test <code>.mr-allowed</code>
+    listing a known identity: (a) commit touching <code>docs/x.html</code> with no <code>mr</code> trailer ⇒
+    <code>commit-msg</code> hook refuses; add the trailer via <code>mr commit --as</code> ⇒ commit succeeds and the
+    walk later re-verifies it. (b) Trailer with an <em>unlisted</em> identity ⇒ refused. (c) Epic tip with no note ⇒
+    gate red (always-on) with the instruction; with a listed note ⇒ green and the receipt records the check. (d) A
+    UI-path WU (synthetic <code>ui/app.tsx</code>) ⇒ red without a note, green with one. Covers the rules, both
+    carriers, and the listed/unlisted cases.</p>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <p data-item="distillation-plan">Truth lands in <a href="../workflow.html">workflow.html</a> (T1 — the rules, the
+    commit-msg hook + gate check 8, the note/trailer, the identity-only scope and the E-MRSIG boundary) and a new
+    decision record in <a href="../decisions/workflow-gates.html">workflow-gates.html</a> (or a fresh file) for
+    path-derivation + the identity model + the E-MRSIG deferral, added to the index. The
+    <a href="../decisions/roadmap.html">roadmap</a> already carries E-MRSIG and the <code>is_ui</code> dependency.
+    testing-strategy.html and the plan docs are untouched. This plan is archived to <code>docs/.archive/</code> at
+    epic close (DEC-3). No T2 use-case file.</p>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions">
+      <table data-c="oq-table">
+        <thead><tr><th>#</th><th>Question</th><th>Proposed default</th></tr></thead>
+        <tbody>
+          <tr><td>Q1</td><td>Should the <code>commit-msg</code> hook also require the <code>mr</code> identity to equal the commit's committer identity (a weak extra tie), or just require it be listed in <code>.mr-allowed</code>?</td><td>Just require it be listed; keep it simple, since neither is agent-proof until E-MRSIG.</td></tr>
+          <tr><td>Q2</td><td>Trailer key name — <code>mr:</code> vs a git-trailer-conventional <code>Mr-By:</code> / <code>Reviewed-By:</code>?</td><td><code>mr:</code> for brevity; revisit if it should read as a standard git trailer.</td></tr>
+          <tr><td>Q3</td><td><code>is_ui</code> path set.</td><td><strong>Deferred to E-UIFOUND</strong>, recorded in the roadmap.</td></tr>
+          <tr><td>Q4</td><td>Epic branch / id.</td><td><strong>Reuse <code>epic/nmwf</code></strong>; WU ids <code>E-NMWF.W1–W3</code>; the branch's debug-serve work lands in the same epic merge.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
