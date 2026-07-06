@@ -1,0 +1,12 @@
+schema: cr/v2
+scope: "epic/uishell -> main"
+epic: E-UISHELL
+branch: epic/uishell
+base: d1764ed1a8324567d951c418bbcfee8eaee5cb3f
+head: 2e8319ff3d78a3ad58865c8add6edb7fa826511d
+diff_sha256: bfc9e9126c63bacb339bb149e67311b3ab472698e2bf2da8cadb1717a5185252
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 7, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-06
