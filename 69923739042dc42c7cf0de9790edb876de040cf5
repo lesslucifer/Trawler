@@ -1,0 +1,7 @@
+schema: test/v2
+level: epic
+epic: E-NV
+tests:
+  unit: { waived: "epic tip is a docs-only distillation; the WU (E-NV.W1) carries the code tests: unit 9 + integration 1 (debug-tests)" }
+  integration: { waived: "the WU integration test is the full flow (one GET renders the whole page from real notes); no larger epic seam exists" }
+  e2e: { waived: "dev tooling, never in the product binary; the integration test exercises the whole render path end to end" }
