@@ -1,0 +1,8 @@
+schema: dod/v1
+level: epic
+epic: E-UISHELL
+base: d1764ed1a8324567d951c418bbcfee8eaee5cb3f
+tip: 2e8319ff3d78a3ad58865c8add6edb7fa826511d
+diff_sha256: bfc9e9126c63bacb339bb149e67311b3ab472698e2bf2da8cadb1717a5185252
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, walk]
+date: 2026-07-06
