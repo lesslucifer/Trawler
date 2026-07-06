@@ -1,0 +1,16 @@
+schema: test/v2
+level: working-unit
+epic: E-UISHELL
+wu: E-UISHELL.W1
+branch: wu/uishell/shell
+tests:
+  unit:
+    count: 2
+    covers: "ui_page handler serves the embedded asset as text/html wired to /flows,/stream,EventSource; router route-table regression across every pre-existing route plus GET /"
+  integration:
+    count: 1
+    covers: "the shell page's exact request sequence over the in-process router: GET / serves the page, filtered /flows round-trip (match and non-match), /stream emits the request event that triggers the page's live refetch"
+  e2e:
+    count: 1
+    covers: "full app: proxied traffic, page served, host filter narrows/empties, SSE event arrives on /stream, clean shutdown with the SSE stream deliberately held open (regression for the shutdown hang the WU fixed). Browser-level DOM/JS assertions intentionally not automated: no JS runtime in the test stack until the E-UIFOUND stack decision; compensated by the recorded Playwright manual check in the result report"
+date: 2026-07-06
