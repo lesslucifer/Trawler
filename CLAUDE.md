@@ -2,8 +2,8 @@
 
 Trawler — native MITM HTTP(S) debugging proxy, API-first core.
 
-**Stack**: Rust 2021 · tokio · hudsucker 0.24 (MITM proxy, `:3000`) · axum 0.8
-(control API: REST + SSE + `/ca.crt`, `:3001`) · rcgen 0.14 (CA). Lints:
+**Stack**: Rust 2021 · tokio · hudsucker 0.24 (MITM proxy, `:7420`) · axum 0.8
+(control API: REST + SSE + `/ca.crt`, `:7421`) · rcgen 0.14 (CA). Lints:
 clippy pedantic, `unsafe_code` forbidden (see `Cargo.toml`).
 
 **Layout**: lib crate `src/lib.rs` (`run(Config)` composition root) + thin bin
@@ -13,8 +13,8 @@ views, decode). Integration/e2e tests in `tests/` (`test-utils` feature =
 shared test support). Generated CA in `ca/`, git-ignored.
 
 **Commands**: `cargo run` (`RUST_LOG=trawler=debug` for logs) · `cargo test` ·
-`cargo clippy`. Quick check: `curl -x http://127.0.0.1:3000 http://example.com/`
-→ `curl http://127.0.0.1:3001/flows`.
+`cargo clippy`. Quick check: `curl -x http://127.0.0.1:7420 http://example.com/`
+→ `curl http://127.0.0.1:7421/flows`.
 
 Architecture & invariants: `docs/core-architecture.html` · rationale:
 `docs/core-technical-design.html`.
