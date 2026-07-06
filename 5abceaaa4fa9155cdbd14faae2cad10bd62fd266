@@ -1,0 +1,19 @@
+schema: doc/v1
+epic: E-H2
+changes:
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: created
+    distills: "T2 use-case routing table, seeded with capture.html"
+  - path: docs/use-cases/capture.html
+    tier: T2
+    action: created
+    distills: "UC-1 intercept without protocol distortion, UC-2 per-leg true version contract"
+  - path: docs/core-technical-design.html
+    tier: T1
+    action: updated
+    distills: "stale h2 claims corrected: per-leg ALPN negotiation, truthful version fields, challenges h2 row resolved"
+  - path: docs/core-architecture.html
+    tier: T1
+    action: updated
+    distills: "true end-to-end HTTP/2 removed from the not-built list"
