@@ -1,0 +1,5 @@
+schema: doc/v1
+epic: E-NMWF
+wu: E-NMWF.W1
+changes: []
+t2_waived: "W1 adds machinery only (no user-facing surface); workflow.html + decision record land in W3 distillation"
