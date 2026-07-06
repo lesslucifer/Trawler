@@ -1,0 +1,14 @@
+schema: test/v2
+level: working-unit
+epic: E-NV
+wu: E-NV.W3
+branch: wu/notes-view/search-paginate
+tests:
+  unit:
+    count: 9
+    covers: "debug.rs: request_target extraction; parse_query q/epics defaults + one-page floor; url_decode percent+plus+bare-percent; url_encode round-trips query specials (space, &, %, +); slice keeps newest-N epics whole and reports total; slice filters by query before slicing; page shows load-more only when epics hidden (href bumps page size); page renders search form with current query and scope; batch_bodies splits cat-file --batch output"
+  integration:
+    count: 3
+    covers: "debug_serve.rs: >3-epic temp repo — first page shows newest three epics whole with a correct load-more href (3 of 5 shown, epics=6); following load-more reveals all remaining epics with no overlap and drops the link; ?q= narrows to the matching epic only with the scope count"
+  e2e:
+    waived: "dev-only debug viewer (cargo xtask debug serve), no product flow to drive end to end"
