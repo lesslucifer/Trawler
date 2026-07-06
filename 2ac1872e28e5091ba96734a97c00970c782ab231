@@ -1,0 +1,14 @@
+schema: cr/v2
+scope: "WU E-NV.W3 search+pagination -> epic/notes-view"
+epic: E-NV
+wu: E-NV.W3
+branch: wu/notes-view/search-paginate
+base: fc5b7dd2270c4f807dea51babd8291e841b758a0
+head: 2ac1872e28e5091ba96734a97c00970c782ab231
+diff_sha256: 012e36d56a4cdfd00749529fc51cf9dd23e9fe4689a9725929170af07069f7bf
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 7, verified: 2, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-06
+notes: "7 candidates from 5 finders; 2 real (both nit, fixed in-session with regression tests: percent-decode invalid-escape truncation, out-of-range-offset garbled header); 5 refuted — Repo-struct dup pre-existing+not-worsened, skin-deep-pagination pre-existing collection cost outside the plan's payload-only contract, two to_lowercase allocs excluded as micro-opt off the hot path, test WHAT-comments actually supply WHY. Fix delta adversarially re-verified: no new defects, index math in-bounds, shown.is_empty() guard proven equivalent."
