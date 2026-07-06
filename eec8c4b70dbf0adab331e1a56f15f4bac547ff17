@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU block-direct-commits -> epic/mainlock"
+epic: E-MAINLOCK
+wu: E-MAINLOCK.W1
+branch: wu/mainlock/block-direct-commits
+base: 5a7c18e808918e04c6587db3ed48dd865f545f41
+head: eec8c4b70dbf0adab331e1a56f15f4bac547ff17
+diff_sha256: d34eddd080d4f7c49f9156ac81be0edd17ed665749570c4e5e2b615ea8bf97e6
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-06
