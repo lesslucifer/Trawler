@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-NV
+wu: E-NV.W3
+branch: wu/notes-view/search-paginate
+tests:
+  unit: { count: 22, covers: "query parse, per-field filter, slice/pagination math, out-of-range offset header, label rendering, percent round-trip + invalid-escape resilience, chip behaviors" }
+  integration: { count: 3, covers: "flat labeled render, first-page cap + load-more walks the rest, search narrows across pages" }
+  e2e: { waived: "dev-only xtask viewer, not a Trawler proxy/API flow" }
