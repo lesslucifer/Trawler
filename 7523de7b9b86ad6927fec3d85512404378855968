@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+epic: E-NMWF
+branch: epic/nmwf
+tests:
+  unit: { count: 1, covers: "e2e isolates check-8; check_commit_trailer error propagation exercised by suite" }
