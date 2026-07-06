@@ -1,0 +1,8 @@
+schema: doc/v1
+epic: E-NV
+changes:
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "records cargo xtask debug serve in the command reference next to dod list"
+t2_waived: "debug serve is dev tooling (xtask, never in the product binary) — no user-facing behaviour to capture in a T2 use-case; T1 workflow.html is the correct and only home"
