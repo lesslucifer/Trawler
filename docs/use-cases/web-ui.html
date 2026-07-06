@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4b687c9f34851f0dfa8491">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Use Cases: Web UI</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Use Cases — Web UI</h1>
+      <p>What a user can do in the browser against a running Trawler, stated as observable contracts.</p>
+      <div class="meta">v1 · 2026-07-06 · Trawler · seeded by epic <span class="badge id">E-UISHELL</span></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="uc-3">UC-3 — Watch live traffic in the browser, zero setup</h2>
+    <div data-c="uc-3-contract">
+      <p>With Trawler running, opening <code>GET /</code> on the control API port in a browser
+      serves a self-contained flow-list page straight from the binary — no install, no build
+      step, no configuration, no external assets required for the list to function.</p>
+      <ul>
+        <li>The page lists captured flows newest-first (time, method, host, path, status,
+        duration) and updates live as traffic passes the proxy — new flows appear without a
+        manual refresh, driven by the <code>GET /stream</code> SSE events.</li>
+        <li>A filter bar narrows the list by host, method, status and free text with exactly
+        the <code>GET /flows</code> query-parameter semantics — the page delegates filtering
+        to the API rather than reimplementing it.</li>
+        <li>The page is a plain client of the public control API; everything it shows is
+        equally reachable with <code>curl</code>. It renders untrusted capture data (URIs,
+        methods from proxied traffic) as text, never as markup.</li>
+        <li>Shutting Trawler down stays clean even while the page holds its never-ending
+        SSE connection open.</li>
+      </ul>
+    </div>
+
+    <div class="callout" data-c="provenance">
+      <p>Pinned by <code>ui_shell_serves_live_filterable_flow_list</code> in
+      <code>tests/e2e_capture.rs</code> (page served, filter narrows, SSE event arrives,
+      clean shutdown with the stream open) and the shell contract tests in
+      <code>tests/api.rs</code>. In-browser rendering is covered by a recorded manual check
+      (browser-level automation arrives with the E-UIFOUND stack decision). The shell's
+      minimal chrome is deliberate: it migrates onto the E-UIFOUND layout as its first tenant
+      (<a href="../decisions/roadmap.html">DEC-5</a>).</p>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

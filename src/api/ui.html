@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trawler</title>
+<style>
+  :root { --bg: #181b22; --paper: #20242e; --ink: #d7dce5; --muted: #8a93a5; --line: #2e3442; --accent: #5ab0f7; --ok: #4cc38a; --warn: #e5484d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 ui-sans-serif, system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--paper); border-bottom: 1px solid var(--line); position: sticky; top: 0; }
+  h1 { font-size: 15px; margin: 0 8px 0 0; }
+  h1 span { color: var(--accent); }
+  input { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; }
+  input:focus { outline: none; border-color: var(--accent); }
+  #q { flex: 1; min-width: 120px; }
+  #host { width: 160px; } #method { width: 90px; } #status { width: 80px; }
+  #live { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
+  #live.on { background: var(--ok); }
+  #count { color: var(--muted); white-space: nowrap; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 6px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; position: sticky; top: 49px; background: var(--bg); }
+  td.path { max-width: 40vw; overflow: hidden; text-overflow: ellipsis; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .s2 { color: var(--ok); } .s4, .s5 { color: var(--warn); }
+  #empty { padding: 40px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <div id="live" title="live stream"></div>
+  <h1><span>Trawler</span></h1>
+  <input id="q" placeholder="filter — free text" autofocus>
+  <input id="host" placeholder="host">
+  <input id="method" placeholder="method">
+  <input id="status" placeholder="status" inputmode="numeric">
+  <span id="count"></span>
+</header>
+<table>
+  <thead><tr>
+    <th>Time</th><th>Method</th><th>Host</th><th>Path</th>
+    <th class="num">Status</th><th class="num">Duration</th>
+  </tr></thead>
+  <tbody id="rows"></tbody>
+</table>
+<div id="empty">no flows yet — send traffic through the proxy</div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let timer;
+  const debounced = () => { clearTimeout(timer); timer = setTimeout(refresh, 150); };
+
+  async function refresh() {
+    const params = new URLSearchParams();
+    for (const key of ['q', 'host', 'method', 'status']) {
+      const value = $(key).value.trim();
+      if (value) params.set(key, value);
+    }
+    const res = await fetch('/flows?' + params);
+    render(await res.json());
+  }
+
+  function render(flows) {
+    $('rows').replaceChildren(...flows.map(row));
+    $('count').textContent = flows.length + (flows.length === 1 ? ' flow' : ' flows');
+    $('empty').style.display = flows.length ? 'none' : '';
+  }
+
+  function row(flow) {
+    let host = '', path = flow.uri;
+    try {
+      const u = new URL(flow.uri);
+      host = u.host;
+      path = u.pathname + u.search;
+    } catch {}
+    const tr = document.createElement('tr');
+    const cells = [
+      ['', new Date(flow.started_at).toLocaleTimeString()],
+      ['', flow.method],
+      ['', host],
+      ['path', path],
+      ['num s' + String(flow.status ?? '').charAt(0), flow.status ?? '…'],
+      ['num', flow.duration_ms == null ? '' : flow.duration_ms + ' ms'],
+    ];
+    for (const [cls, text] of cells) {
+      const td = document.createElement('td');
+      td.className = cls;
+      td.textContent = text;
+      td.title = String(text);
+      tr.append(td);
+    }
+    return tr;
+  }
+
+  for (const id of ['q', 'host', 'method', 'status']) $(id).addEventListener('input', debounced);
+
+  const stream = new EventSource('/stream');
+  for (const name of ['request', 'response', 'lagged']) stream.addEventListener(name, debounced);
+  stream.onopen = () => $('live').classList.add('on');
+  stream.onerror = () => $('live').classList.remove('on');
+
+  refresh();
+</script>
+</body>
+</html>

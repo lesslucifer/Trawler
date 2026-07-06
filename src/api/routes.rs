@@ -98,6 +98,10 @@ pub async fn stream(
     Sse::new(events).keep_alive(KeepAlive::default())
 }
 
+pub async fn ui_page() -> Response {
+    ([(header::CONTENT_TYPE, "text/html; charset=utf-8")], include_str!("ui.html")).into_response()
+}
+
 pub async fn ca_cert(State(state): State<AppState>) -> Response {
     (
         [
@@ -154,4 +158,22 @@ fn bad_id() -> Response {
 
 fn wants_decode(query: &BodyQuery) -> bool {
     matches!(query.decode.as_deref(), Some("1" | "true"))
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::body::to_bytes;
+
+    #[tokio::test]
+    async fn ui_page_serves_the_embedded_shell_as_html() {
+        let response = super::ui_page().await;
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
+        assert_eq!(response.headers()["content-type"], "text/html; charset=utf-8");
+        let body = to_bytes(response.into_body(), usize::MAX).await.expect("body");
+        let html = std::str::from_utf8(&body).expect("utf8");
+        assert_eq!(html, include_str!("ui.html"));
+        for wired in ["/flows", "/stream", "EventSource"] {
+            assert!(html.contains(wired), "shell page must wire {wired}");
+        }
+    }
 }
