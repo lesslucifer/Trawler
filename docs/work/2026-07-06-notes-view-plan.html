@@ -70,12 +70,14 @@
       <p>Observable after the epic:</p>
       <ul>
         <li><code>cargo xtask debug serve</code> prints a localhost URL (default
-        <code>http://127.0.0.1:3002</code>) and serves until Ctrl-C.</li>
+        <code>http://127.0.0.1:48027</code> — an uncommon high port so it won't collide with the
+        usual dev servers; <code>--port</code> overrides) and serves until Ctrl-C.</li>
         <li>Opening that URL shows every commit that carries any workflow note, grouped
         <span class="badge id">epic → WU → commit</span>, newest epic first; each commit shows its
         four notes' bodies (or a clear "— none —" for a ref with no note on that commit).</li>
-        <li>Commits with no <code>epic</code>/<code>wu</code> field (standalone commit-level notes)
-        group under an "ungrouped" bucket rather than being dropped.</li>
+        <li>Commits with no <code>epic</code>/<code>wu</code> field group under an
+        <strong>invalid</strong> bucket (marked invalid, not silently dropped) rather than a valid
+        WU.</li>
         <li>Adding a note to a commit and reloading the page shows it — no rebuild, no stale
         file.</li>
         <li>Running it in a clone with no notes shows an empty-state page, not a crash.</li>
@@ -121,8 +123,9 @@
     <p data-item="requirement"><strong>Requirement:</strong> <code>cargo xtask debug serve</code>
     reads the four workflow note refs (<code>test</code>, <code>doc</code>, <code>cr</code>,
     <code>dod</code>) live and serves one localhost HTML page that groups every note-carrying
-    commit under its epic and WU (ungrouped bucket for note-less-of-epic commits) and shows each
-    commit's four note bodies in full, reflecting the repo's notes at request time.</p>
+    commit under its epic and WU (an <strong>invalid</strong> bucket for notes lacking an
+    <code>epic</code>/<code>wu</code> field) and shows each commit's four note bodies in full,
+    reflecting the repo's notes at request time.</p>
     <p data-item="maps-to"><strong>Maps to:</strong> epic <span class="badge id">E-NV</span> —
     sole WU, carrying both workflow requirements; consistent with its
     <a href="#wu-summaries">summary block</a>.</p>
@@ -137,19 +140,23 @@
             <td>rollup + render, in the <code>debug</code> module</td>
             <td>given a synthetic set of (commit, ref, body) tuples: commits group under the right
             epic/WU from their <code>epic</code>/<code>wu</code> fields; a commit with none lands
-            in the ungrouped bucket; a ref absent for a commit renders the "none" marker not a
-            panic; the rendered HTML contains each note's raw body and the expected group headings.
-            Pure functions, no git, no socket.</td>
+            in the <strong>invalid</strong> bucket (not a valid workflow note); a ref absent for a
+            commit renders the "none" marker not a panic; the rendered HTML contains each note's raw
+            body and the expected group headings. Pure functions, no git, no socket.</td>
           </tr>
           <tr>
-            <td><span class="badge id">integration</span> (WU)</td>
-            <td>end-to-end over a real temp repo + real socket</td>
+            <td><span class="badge id">integration</span> (WU) — <strong>feature-gated, off by default</strong></td>
             <td>build a <code>tempfile</code> git repo, commit, attach notes on the four refs
             (reusing the harness the gate tests already use), start the server on an ephemeral
             port (<code>:0</code>), <code>GET /</code> over a <code>TcpStream</code>: response is
             200 HTML containing the committed notes' content grouped correctly; a repo with zero
             notes returns the empty-state page, not an error. Hermetic — temp repo, ephemeral port,
-            no network.</td>
+            no network. <strong>This is dev tooling, not a product function</strong>, so the test
+            does <em>not</em> run under a plain <code>cargo test</code>: it lives behind a
+            <code>debug-tests</code> feature via <code>[[test]] required-features</code> — the exact
+            pattern <code>dod_gate</code> already uses (<code>hook-tests</code> in
+            <code>xtask/Cargo.toml</code>). Run on demand with
+            <code>cargo test -p xtask --features debug-tests</code>.</td>
           </tr>
           <tr>
             <td><span class="badge id">e2e</span> (epic)</td>
@@ -190,23 +197,26 @@
       </ul>
     </div>
 
-    <h2 id="open-questions">Open questions</h2>
+    <h2 id="open-questions">Resolved / open questions</h2>
     <div data-item="open-questions">
       <ul>
-        <li><strong>HTTP listener — stdlib vs crate?</strong> Leaning
-        <code>std::net::TcpListener</code> with a hand-written single-route handler: one GET, one
-        page, localhost, one user — a framework is over-build. Risk is parsing the request line /
-        writing the response by hand; if it turns fiddly, fall back to <code>tiny_http</code>
-        (single small dep, blocking, no async runtime). Decide at implementation, record the pick
-        in the result. <span class="ponytail">ponytail: stdlib first; crate only if the raw socket
-        handling earns its keep.</span></li>
-        <li><strong>Commit ordering within a WU?</strong> Default to git's own order
-        (<code>git log</code> topological / date) for the commits in a group; the workflow's
-        note order (<code>test → cr → doc → dod</code>) is fixed per commit. Confirm the group
-        sort (newest epic first) reads right once there's real data on the page.</li>
-        <li><strong>Epics with no epic field on old notes?</strong> Some early notes may predate
-        consistent <code>epic</code>/<code>wu</code> fields — the ungrouped bucket covers them;
-        verify against the real 22/21/14/10 notes currently in the repo when rendering.</li>
+        <li><strong>HTTP listener — stdlib vs crate?</strong> <em>Resolved (reviewer: "anything is
+        fine as long as it works"):</em> start with <code>std::net::TcpListener</code> + a
+        hand-written single-route handler — one GET, one page, localhost, one user; free to swap to
+        <code>tiny_http</code> if the raw socket handling turns fiddly, since nothing else depends
+        on the choice. Record the pick in the result.
+        <span class="ponytail">ponytail: stdlib first; crate only if it earns its keep.</span></li>
+        <li><strong>Page layout — resolved via a separate skeleton mockup.</strong> Three candidate
+        layouts (collapsible tree · commit-rows-with-four-note-columns · vertical timeline) are
+        rendered with real note data in
+        <a href="2026-07-06-notes-view-skeletons.html">the skeleton doc</a> for the reviewer to
+        pick / comment on. The chosen one becomes this WU's render target; commit order within a
+        group follows git's own order, notes shown in workflow order
+        (<code>test → cr → doc → dod</code>) per commit.</li>
+        <li><strong>Notes with no epic/wu field.</strong> <em>Resolved (reviewer: "just mark them
+        as invalid"):</em> such notes go to an explicit <strong>invalid</strong> bucket on the page
+        — surfaced, marked invalid, never merged into a real WU or silently dropped. Verify against
+        the real 22/21/14/10 notes in the repo when rendering.</li>
       </ul>
     </div>
 
