@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4b4ac79f34851f0dfa8432">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Decisions: Roadmap</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Decisions — Roadmap</h1>
+      <p>Why the product roadmap is two pillars, and the epic sequence that delivers them.</p>
+      <div class="meta">v1 · 2026-07-06 · Trawler · <a href="decisions-index.html">index</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="dec-5"><span class="badge id">DEC-5</span> Product roadmap: two pillars — Proxyman-grade GUI and mitmproxy-grade functionality — delivered as thirteen epics in four waves</h2>
+    <table data-c="dec-5-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-06</td></tr>
+        <tr><th>Origin</th><td>Epic E-RMAP — owner-led roadmap session on competitive research (mitmproxy, Proxyman, Charles, HTTP Toolkit, Fiddler Everywhere, Requestly, Reqable, MS Dev Proxy); full research scratch archived at <code>docs/.archive/roadmap.html</code></td></tr>
+        <tr><th>Where</th><td>Future <code>epic/*</code> branches; each epic gets its own T3 plan per <a href="../work-planning.html">work-planning.html</a> when started</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-5-context">Context</h3>
+    <p>The capture core is complete (HTTP/1.1 + HTTPS MITM, capped body capture, SSE stream,
+    filtered read-only API, in-memory ring) and nothing product-shaped is planned beyond it.
+    The 2025–26 market read: table stakes everywhere are breakpoints, map local/remote,
+    rewrite, HAR, replay/composer, WebSocket display, session persistence. Four gaps are
+    real: <strong>no tool has a stable public control API</strong> (mitmproxy's is
+    deliberately internal; only MS Dev Proxy has one, M365-scoped) · <strong>LLM traffic
+    debugging is unserved</strong> in general proxies · <strong>OpenAPI-from-traffic demand
+    is proven</strong> (mitmproxy2swagger ≈9.5k stars) but nobody does it first-class ·
+    <strong>WebSocket is weak everywhere</strong>. Trawler's API-first core sits exactly on
+    the first gap.</p>
+
+    <h3 id="dec-5-choices">Choices</h3>
+    <table data-c="dec-5-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
+      <tbody>
+        <tr><td>Two pillars, not one direction</td><td>The GUI is the adoption gate (nobody evaluates a proxy via curl; Charles proves a complete feature set doesn't survive bad ergonomics) and functionality is the retention floor (mitmproxy is the benchmark). The API-first core fuses them: every GUI capability is a call on the public API, so the GUI never forks the feature surface.</td></tr>
+        <tr><td>UI is four epics (E-UISHELL → E-UIFOUND → E-UIINSPECT → E-UISETUP), not one</td><td>Owner decision. One "UI epic" is unboundable; four bounded epics each carry their own requirement and test plan. E-UIFOUND exists as its own epic so every later UI surface slots into a designed layout — accreting features without one is the Charles failure mode.</td></tr>
+        <tr><td>Minimal shell (E-UISHELL) ships before the foundation epic (E-UIFOUND)</td><td>Owner-confirmed order: visible traffic first. The shell's chrome is deliberately minimal and is migrated onto the foundation's layout as its first tenant — a small, accepted rework, priced in rather than accidental.</td></tr>
+        <tr><td>REST API + rules (E-RULE) instead of embedded scripting</td><td>mitmproxy's addon power without shipping a script runtime: anything that can drive HTTP can automate Trawler. Revisit (in-process WASM/JS hook) only if real rule usage proves insufficient.</td></tr>
+        <tr><td>HTTP/3/QUIC MITM and DNS/TCP/UDP proxying deferred</td><td>Large protocol investment with poor client CA support for QUIC; not what the two pillars need first. Revisit after the Wave 1–3 parity set lands.</td></tr>
+        <tr><td>Differentiators (E-LLM, E-MCP, E-OAS) last, not first</td><td>They lead the market but sit on capture/replay/persistence machinery from earlier waves — sequencing them first would build that machinery twice. E-LLM additionally requires deciding to tee-capture <code>text/event-stream</code> bodies, today a deliberate passthrough invariant.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-5-roadmap">The roadmap</h3>
+    <table data-c="dec-5-roadmap-table">
+      <thead><tr><th>Epic</th><th>Wave</th><th>Pillar</th><th>Requirement (one line)</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">E-UISHELL</span></td><td>1</td><td>GUI</td><td>Embedded single-binary web UI: live, filterable flow list over <code>GET /flows</code> + SSE, zero setup.</td></tr>
+        <tr><td><span class="badge id">E-H2</span></td><td>1</td><td>Function</td><td>HTTP/2 end-to-end (hudsucker <code>http2</code>): clients no longer silently downgraded; true version recorded per leg.</td></tr>
+        <tr><td><span class="badge id">E-UIFOUND</span></td><td>2</td><td>GUI</td><td>UI tech stack decided (as a DEC), codebase in cargo/xtask build, design system + base app layout; shell migrated onto it.</td></tr>
+        <tr><td><span class="badge id">E-UIINSPECT</span></td><td>2</td><td>GUI</td><td>Flow inspector: headers, timing, decoded bodies (JSON tree, image, form, hex; brotli/charset/XML decode fold in), copy-as-curl.</td></tr>
+        <tr><td><span class="badge id">E-UISETUP</span></td><td>2</td><td>GUI</td><td>Guided onboarding in the UI: CA trust per OS, proxy config snippets, live "interception works" check.</td></tr>
+        <tr><td><span class="badge id">E-EXPORT</span></td><td>2</td><td>Function</td><td>HAR export/import, <code>DELETE /flows</code>, pagination.</td></tr>
+        <tr><td><span class="badge id">E-REPLAY</span></td><td>3</td><td>Function</td><td>Replay any captured flow with overrides + compose arbitrary requests, via POST endpoints; results land as flows.</td></tr>
+        <tr><td><span class="badge id">E-WS</span></td><td>3</td><td>Function</td><td>WebSocket frame capture (hudsucker <code>WebSocketHandler</code>), frames on the API and SSE.</td></tr>
+        <tr><td><span class="badge id">E-PERSIST</span></td><td>3</td><td>Function</td><td>SQLite behind the <code>Store</code> boundary; named sessions survive restart.</td></tr>
+        <tr><td><span class="badge id">E-RULE</span></td><td>3</td><td>Function</td><td>REST-managed mock / map-local / rewrite rules; captured flow → rule in one call.</td></tr>
+        <tr><td><span class="badge id">E-LLM</span></td><td>4</td><td>Lead</td><td>LLM provider detection with token/cost fields and conversation-shaped views, including streamed responses.</td></tr>
+        <tr><td><span class="badge id">E-MCP</span></td><td>4</td><td>Lead</td><td>MCP server exposing the control API as tools for AI agents.</td></tr>
+        <tr><td><span class="badge id">E-OAS</span></td><td>4</td><td>Lead</td><td>Schema-merged OpenAPI 3 generated from filtered captured flows via one call.</td></tr>
+      </tbody>
+    </table>
+    <p>Waves are ordering, not commitments: each epic still gets its own T3 plan before code,
+    and every post-viewer epic ships its UI controls inside its own scope. Small items that
+    aren't epic-shaped (per-host bypass list, further decoders) fold into whichever epic
+    touches their seam first.</p>
+
+    <h3 id="dec-5-consequences">Consequences</h3>
+    <p>Next epic to start is <span class="badge id">E-UISHELL</span> (with E-H2 available as
+    an independent Wave 1 track). Changing the sequence or dropping/adding an epic is a new
+    decision: append DEC-n here or flip this record to superseded — never rewrite it. The
+    research substance behind the market claims lives only in the archived scratch doc; if a
+    claim needs re-verification, re-research rather than trusting the archive's age.</p>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
