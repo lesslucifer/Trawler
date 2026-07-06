@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4c030c9f34851f0dfa8607">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEBM: DoD gate back-merge blind spot</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-GATEBM — the DoD gate's back-merge blind spot</h1>
+      <p>The epic gate's seam walk only recognises a back-merge in one direction; a stale epic branch that back-merges an up-to-date <code>main</code> is falsely flagged as merging an ungated WU seam.</p>
+      <div class="meta">Draft v1 · 2026-07-07 · Trawler · T3 problems &amp; requirements</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="tldr">TL;DR</h2>
+    <div class="callout">
+      <strong>Fix target:</strong> <code>xtask/src/gate.rs</code>, the three-parent arm of <code>Gate::walk</code> (the epic-gate seam walk, ~line 285).
+      <br><br>
+      The back-merge skip at line 289 asks only <em>“is the merged-in tip already an ancestor of the mainline?”</em>. That catches an epic re-merging its own landed history, but <strong>not</strong> the reverse: an out-of-date epic branch merging a newer <code>main</code> into itself. In that case the merged-in tip is <code>main</code>'s tip, which is <em>not</em> an ancestor of the epic mainline, so the walk treats it as an ungated Working-Unit seam and demands <code>test/v2</code>/<code>cr/v2</code>/<code>doc/v1</code> notes on <code>main</code>'s merge commit — notes that legitimately never exist there.
+    </div>
+
+    <h2 id="discovery">How it surfaced</h2>
+    <p>Task: merge epic <code>epic/notes-view</code> (Working Units E-NV.W2 + E-NV.W3) into <code>main</code>. The branch had diverged: <code>main</code> already merged epic E-NV's W1 <em>and</em> a later epic (E-MAINLOCK) on top, while <code>epic/notes-view</code> branched off the earlier E-NV distillation commit and carried W2/W3.</p>
+    <p>Two independent problems chained together — <strong>only the first is E-GATEBM's scope</strong>; the second is context that forced the merge direction.</p>
+
+    <div class="cards">
+      <div class="card" data-c="prob-toolmismatch">
+        <span class="badge id">context</span>
+        <h3>Tooling/binary mismatch on the stale branch</h3>
+        <p>cargo-husky installed the newer <code>commit-msg</code> hook (from E-MAINLOCK-era code), which runs <code>cargo xtask verify-dod commit-msg</code>. The epic branch's <code>xtask</code> predates that subcommand, so every commit on the branch dies on the <code>_ =&gt; Err(USAGE)</code> arm with exit 1. <strong>Resolution:</strong> the epic branch must back-merge <code>main</code> to get coherent tooling (<code>commit-msg</code> support, <code>.mr-allowed</code>). This is expected and correct — it is <em>why</em> a back-merge is unavoidable, and it is what exposes E-GATEBM.</p>
+      </div>
+      <div class="card" data-c="prob-gatebm">
+        <span class="badge id">E-GATEBM</span>
+        <h3>The gate false-positive on the back-merge</h3>
+        <p>Once <code>main</code> is back-merged into the epic branch, the epic gate's walk (dry-run <code>verify-dod epic HEAD --target main</code>) reports:<br>
+        <code>7·walk·1·notes [working-unit &lt;tip&gt;] no test/v2 note on tip &lt;main-tip&gt;</code> (and cr/v2, doc/v1). The gate mistakes <code>main</code>'s already-gated epic-merge tip for an ungated WU seam.</p>
+      </div>
+    </div>
+
+    <h2 id="rootcause">Root cause</h2>
+    <p>The walk iterates <code>base..tip</code> with <code>rev-list --first-parent --parents</code>. For a merge line <code>[merge, mainline, wu_tip]</code>:</p>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TD
+    A["merge line: [merge, mainline, wu_tip]"] --> B{"is wu_tip an ancestor<br/>of mainline?"}
+    B -->|yes| C["skip — back-merge of<br/>landed history"]
+    B -->|no| D["gate as a WU seam:<br/>verify(Wu, wu_tip, mainline)"]
+    D --> E["FALSE POSITIVE when wu_tip = main's tip<br/>merged into a stale epic branch"]
+      </pre>
+      <div class="caption">gate.rs:285–292 — the skip is one-directional.</div>
+    </div>
+    <p>The current guard (verbatim):</p>
+    <pre style="background:var(--paper);border:1px solid var(--line);padding:12px;border-radius:6px;overflow:auto"><code>[merge, mainline, wu_tip] =&gt; {
+    // --first-parent ordering: parent one is the epic mainline, parent two the
+    // merged-in WU tip. A wu_tip already reachable from the mainline is a
+    // back-merge of landed history, not a WU seam - nothing new to gate.
+    if git(self.repo, &amp;["merge-base", "--is-ancestor", wu_tip, mainline]).is_ok() {
+        continue;
+    }
+    (*merge, self.verify(Level::Wu, wu_tip, mainline)?)
+}</code></pre>
+    <p>The check only covers the case where the <em>second parent</em> (merged-in tip) is old news. It has no symmetric handling for the case where the <em>first parent</em> (mainline) is the stale side and the merged-in tip is a newer, already-gated integration branch.</p>
+
+    <h2 id="what-a-backmerge-is">What legitimately distinguishes a back-merge</h2>
+    <div class="callout warn">
+      <strong>Design question the fix must answer:</strong> how does the gate tell “I merged an already-gated integration branch (main) into my epic — nothing new to gate” apart from “I merged a real, ungated WU seam”? A too-loose rule would let genuinely ungated work slip through the epic gate. The requirement below frames candidate discriminators; the implementing WU must pick one and defend it in its plan.
+    </div>
+    <table>
+      <thead><tr><th>Candidate discriminator</th><th>Idea</th><th>Risk</th></tr></thead>
+      <tbody>
+        <tr><td>Symmetric ancestry</td><td>Also skip when <code>mainline</code> is an ancestor of <code>wu_tip</code> (the merged-in tip already contains the mainline — i.e. it's an integration/back-merge, not net-new work branched off the mainline).</td><td>Must confirm this can't mask a real forward WU merge. A WU tip normally is <em>not</em> a descendant that contains the whole epic mainline, so this is likely safe — verify against the walk's invariants.</td></tr>
+        <tr><td>Target-ref identity</td><td>Skip a merge whose second parent is the gate <code>target</code> (or an ancestor of it) — i.e. the thing merged in is <code>main</code> itself.</td><td>Only covers merges <em>of the target</em>; misses back-merges of other already-gated branches. Narrow but explicit.</td></tr>
+        <tr><td>Receipt presence on the merged-in tip's history</td><td>Treat the second parent as gated if its own first-parent chain is already fully receipted.</td><td>More expensive; risks re-deriving the whole gate recursively.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="requirements">Requirements</h2>
+    <div class="cards">
+      <div class="card" data-c="req-r1">
+        <span class="badge id">R1</span>
+        <h3>Recognise the back-merge in both directions</h3>
+        <p>The epic-gate seam walk must NOT flag a merge as an ungated WU seam when the merge is a back-merge of already-gated history — regardless of which parent is the stale side. Concretely: back-merging an up-to-date <code>main</code> into a stale epic branch must walk clean.</p>
+      </div>
+      <div class="card" data-c="req-r2">
+        <span class="badge id">R2</span>
+        <h3>Preserve the genuine WU-seam gate</h3>
+        <p>A real forward merge of an ungated WU tip into its epic must STILL be gated exactly as today. The fix must not widen the skip into a hole. This is the load-bearing constraint — R1 is worthless if it weakens R2.</p>
+      </div>
+      <div class="card" data-c="req-r3">
+        <span class="badge id">R3</span>
+        <h3>Regression test both arms</h3>
+        <p>Add hermetic tests (feature-gated with the existing hook-test suites) covering: (a) back-merge of the target into a stale epic → walk clean; (b) forward merge of an ungated WU seam → still red. Both in the same test module as the existing walk/seam tests.</p>
+      </div>
+      <div class="card" data-c="req-r4">
+        <span class="badge id">R4</span>
+        <h3>Record the rationale</h3>
+        <p>The chosen discriminator is a load-bearing gate decision — capture the <em>why</em> in the existing workflow-gates decision record (<code>docs/decisions/workflow-gates.html</code>), alongside the sibling back-merge-guard rationale already noted there. One fact, one tier.</p>
+      </div>
+    </div>
+
+    <h2 id="out-of-scope">Out of scope</h2>
+    <ul>
+      <li><strong>Landing E-NV.W2/W3 on main.</strong> That is the original task, blocked on this fix. Once E-GATEBM lands, <code>epic/notes-view</code> can back-merge main and pass the epic gate. Sequence: E-GATEBM → back-merge main into <code>epic/notes-view</code> → epic gate → merge to main.</li>
+      <li><strong>The tooling/binary mismatch</strong> (the <code>commit-msg</code> USAGE failure). It self-resolves the moment a branch is current with main; no code change owed.</li>
+    </ul>
+
+    <h2 id="reproduce">Reproduction (for the implementing WU)</h2>
+    <ol>
+      <li>From a branch that predates a later <code>main</code> merge, back-merge main: <code>git merge main --no-ff --no-verify</code>.</li>
+      <li>Dry-run the epic gate: <code>cargo xtask verify-dod epic HEAD --target main</code>.</li>
+      <li>Observe <code>7·walk·1·notes [working-unit …] no test/v2 note on tip &lt;main-tip&gt;</code>. That line is the bug. After the fix it must be absent while the genuine-seam test stays red.</li>
+    </ol>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
