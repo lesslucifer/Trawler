@@ -296,11 +296,8 @@ impl Gate<'_> {
     }
 
     fn check_commit_trailer(&self, report: &mut Report, commit: &str, parent: &str) {
-        let range = format!("{parent}..{commit}");
-        let Ok(names) = git(self.repo, &["diff", "--name-only", "--no-renames", &range]) else {
-            return;
-        };
-        if !names.lines().any(is_doc) {
+        let Ok(names) = diff_names(self.repo, parent, commit) else { return };
+        if !names.iter().any(|p| is_doc(p)) {
             return;
         }
         let message = git(self.repo, &["log", "-1", "--format=%B", commit]).unwrap_or_default();

@@ -575,6 +575,30 @@ fn a_ui_wu_requires_an_mr_note() {
 }
 
 #[test]
+fn a_ui_file_renamed_out_of_ui_still_requires_an_mr_note() {
+    let repo = wu_with_change();
+    allow_file(&repo);
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.write("ui/widget.tsx", "export const Widget = () => null; // enough content\n");
+    repo.commit("ui file exists at the epic base");
+    repo.git(&["checkout", "-q", "-b", "wu/x/ui2", "epic/x"]);
+    repo.git(&["mv", "ui/widget.tsx", "notes.md"]);
+    let tip = repo.commit("move ui file out of ui/");
+    repo.note(
+        "test",
+        &tip,
+        &test_note("working-unit", "E9", Some("E9.W3"), "  integration: { count: 1 }\n"),
+    );
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/ui2", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"8·manual-review"),
+        "a rename out of ui/ must not bypass the UI manual-review requirement: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
 fn a_non_ui_wu_does_not_require_an_mr_note() {
     let repo = wu_with_change();
     let tip = repo.sha("wu/x/one");
