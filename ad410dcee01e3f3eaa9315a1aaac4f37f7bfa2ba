@@ -1,0 +1,8 @@
+schema: test/v2
+level: commit
+branch: main
+tests:
+  unit:
+    count: 1
+    covers: "config defaults test asserts the new ports 7420/7421 (plus round-trip of the rest of Config::default)"
+date: 2026-07-06
