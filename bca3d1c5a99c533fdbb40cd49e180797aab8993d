@@ -1,0 +1,10 @@
+schema: dod/v1
+level: working-unit
+epic: E-NV
+wu: E-NV.W1
+branch: HEAD
+base: 84944a4bcba08bc4521d9199f39e718569291463
+tip: bca3d1c5a99c533fdbb40cd49e180797aab8993d
+diff_sha256: 47b869aec1faf274990f9e87bcac9351898041cd9c2f8ccf5de3e2944047956b
+checks: [notes, manifest, review, review-base, diff-binding, doc-note]
+date: 2026-07-06
