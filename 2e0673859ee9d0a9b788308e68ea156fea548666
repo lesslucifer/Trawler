@@ -1,0 +1,7 @@
+schema: test/v2
+level: commit
+epic: E-NV
+wu: E-NV.W2
+tests:
+  unit: { count: 1, covers: "page carries flatten/seqCount/copy-ui + field-table script; JS flatten validated end-to-end in node against real note bodies" }
+  integration: { waived: "pure client-side render change to the debug viewer; the debug_serve e2e already exercises the serve path unchanged" }
