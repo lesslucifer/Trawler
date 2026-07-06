@@ -1,0 +1,13 @@
+schema: doc/v1
+branch: main
+changes:
+  - path: docs/core-architecture.html
+    tier: T1
+    action: updated
+    distills: "default ports 3000/3001 -> 7420/7421 in runtime-shape prose, diagram, ca.crt quirk and getting-started table"
+  - path: docs/core-technical-design.html
+    tier: T1
+    action: updated
+    distills: "default proxy port 3000 -> 7420 across proxy-mode discussion and per-OS setup table"
+t2_waived: "port value change only — T2 use-case contracts reference the ports symbolically (control API port), no contract shape changed"
+date: 2026-07-06
