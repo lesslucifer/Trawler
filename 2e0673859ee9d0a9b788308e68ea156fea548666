@@ -1,0 +1,5 @@
+schema: doc/v1
+epic: E-NV
+wu: E-NV.W2
+changes: []
+t2_waived: "code-only change to the dev-only debug viewer (xtask/src/debug.rs); no use-case or decision shifts — cargo xtask debug serve is already documented in docs/workflow.html from E-NV.W1"
