@@ -1,0 +1,11 @@
+schema: doc/v1
+epic: E-NV
+wu: E-NV.W3
+branch: wu/notes-view/search-paginate
+changes:
+  - path: docs/work/2026-07-06-nv-w3-search-paginate-plan.html
+    tier: T3
+    action: created
+    distills: "WU plan (governed wu-plan): requirement, mapping, expected result, per-level test plan; carries the reverted-first-attempt rationale and the server-side epic-unit design"
+t2_waived: "code-only WU on a dev-only viewer; no UC or decision changes. Distillation to T2 (if any) happens at E-NV epic close per the workflow, not per-WU"
+date: 2026-07-06
