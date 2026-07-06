@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-NV.W3 search-paginate -> epic/notes-view"
+epic: E-NV
+wu: E-NV.W3
+branch: wu/notes-view/search-paginate
+base: fc5b7dd2270c4f807dea51babd8291e841b758a0
+head: 65c3ff47f40766d9feae76404eaae431c641ed50
+diff_sha256: e65a5824cd1fbf027d74e3e0e6e3c846095f3c29e324c61eaee7be5a9d98cc3b
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 3, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-06
