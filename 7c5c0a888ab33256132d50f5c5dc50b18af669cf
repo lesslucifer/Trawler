@@ -1,0 +1,6 @@
+schema: test/v2
+level: epic
+epic: E-NMWF
+branch: epic/nmwf
+tests:
+  e2e: { count: 1, covers: "full manual-review flow: doc-commit trailer gate, epic/UI mr note, unlisted refused (tests/e2e_manual_review.rs)" }
