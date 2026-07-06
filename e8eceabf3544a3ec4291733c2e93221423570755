@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-H2.W1 enable-h2 -> epic/h2"
+epic: E-H2
+wu: E-H2.W1
+branch: wu/h2/enable-h2
+base: 38aacd7de0327effb67687650f6780b97011ec1b
+head: e8eceabf3544a3ec4291733c2e93221423570755
+diff_sha256: f656ef40672aa47aa0cfb5592ef45f3fe10daa7dabba38622ce4336326e37c59
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 8, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-06
