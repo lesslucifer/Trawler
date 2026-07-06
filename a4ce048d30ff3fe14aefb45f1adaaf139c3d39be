@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU t2-distill -> epic/roadmap"
+epic: E-RMAP
+wu: E-RMAP.W1
+branch: wu/roadmap/t2-distill
+base: 4937e4abf64fca89d6ad0dcb9a7aa4f6fd98b244
+head: a4ce048d30ff3fe14aefb45f1adaaf139c3d39be
+diff_sha256: 5163c4666eb26d52a9f93ef0b12fe69a50b9500d0a8e00344ea266b09d227177
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-06
