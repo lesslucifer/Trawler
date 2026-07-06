@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-H2
+wu: E-H2.W1
+branch: wu/h2/enable-h2
+tests:
+  unit: { count: 1, covers: "recorder version wire format HTTP/1.0 · HTTP/1.1 · HTTP/2.0" }
+  integration: { count: 2, covers: "upstream connector ALPN contract: h2 negotiated when offered, h1 kept against h1-only origin" }
+  e2e: { count: 4, covers: "h2 both legs, mixed legs both directions with body round-trip, request-response correlation under h2 multiplexing; h1 regression = existing e2e_capture suite unmodified" }
