@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-NMWF
+wu: E-NMWF.W3
+branch: wu/nmwf/distill
+tests:
+  unit: { count: 1, covers: "mr_chip renders tier + signer" }
+  integration: { count: 1, covers: "debug serve renders workflow notes incl mr (debug_serve suite)" }
