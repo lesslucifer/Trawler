@@ -106,6 +106,12 @@ pub fn message_authorised(repo: &Path, message: &str) -> bool {
 /// carry a `Reviewed-By` trailer naming a listed identity, else the commit is
 /// refused (exit 1).
 pub fn commit_msg_hook(repo: &Path, msg_file: &str) -> Result<(i32, String), String> {
+    // A merge authors no new content; its merged doc commits carry their own
+    // trailers, re-verified by the epic walk. Requiring one on the merge commit
+    // too would demand re-authorising already-signed history at every merge.
+    if git(repo, &["rev-parse", "--verify", "-q", "MERGE_HEAD"]).is_ok() {
+        return Ok((0, String::new()));
+    }
     let staged = git(repo, &["diff", "--cached", "--name-only", "--no-renames"])?;
     if !staged.lines().any(crate::notes::is_doc) {
         return Ok((0, String::new()));

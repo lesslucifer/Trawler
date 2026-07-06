@@ -150,6 +150,21 @@ fn commit_msg_hook_refuses_a_doc_commit_with_an_unlisted_trailer() {
 }
 
 #[test]
+fn commit_msg_hook_skips_merge_commits() {
+    let repo = Repo::new(ALLOWED);
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+    let head = repo.git(&["rev-parse", "HEAD"]);
+    let merge_head = repo.path.join(".git/MERGE_HEAD");
+    std::fs::create_dir_all(merge_head.parent().unwrap()).unwrap();
+    std::fs::write(&merge_head, format!("{head}\n")).unwrap();
+
+    let msg = write_msg(&repo, "Merge branch x\n");
+    let (code, _) = mr::commit_msg_hook(repo.p(), msg.to_str().unwrap()).unwrap();
+    assert_eq!(code, 0, "a merge commit needs no trailer of its own");
+}
+
+#[test]
 fn commit_msg_hook_sees_a_doc_renamed_out_of_docs() {
     let repo = Repo::new(ALLOWED);
     repo.write("docs/movable.html", "content that is long enough to be a similar rename\n");
