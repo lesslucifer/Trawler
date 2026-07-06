@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-UISHELL
+branch: epic/uishell
+changes:
+  - path: docs/core-architecture.html
+    tier: T1
+    action: updated
+    distills: "GET / row in the API-surface table — the embedded UI shell, a plain client of the existing endpoints"
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: added
+    distills: "web-ui.html index row (UC-3); file seeded from main's E-H2 version so this merge resolves to the union of rows"
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: added
+    distills: "UC-3: watch live, filterable traffic in the browser, zero setup — the epic's lasting behavior contract"
+t2_waived: null
+date: 2026-07-06
