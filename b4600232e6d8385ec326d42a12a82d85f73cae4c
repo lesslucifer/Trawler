@@ -1,0 +1,12 @@
+schema: cr/v2
+scope: "epic E-MAINLOCK -> main"
+epic: E-MAINLOCK
+branch: epic/mainlock
+base: 9418c8fa24b316098cee0bd357a2bb096dc3acb0
+head: b4600232e6d8385ec326d42a12a82d85f73cae4c
+diff_sha256: d34eddd080d4f7c49f9156ac81be0edd17ed665749570c4e5e2b615ea8bf97e6
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 6, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-06
