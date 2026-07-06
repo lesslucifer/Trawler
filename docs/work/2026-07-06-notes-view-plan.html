@@ -23,21 +23,24 @@
     <em>tested → reviewed → docs distilled → gate passed</em>. Today the only way to read that
     story is <code>git notes --ref=&lt;r&gt; show &lt;sha&gt;</code>, one commit and one ref at a
     time — there is no way to see a WU's four-note story side by side, or scan an epic's WUs in
-    one view. This epic gives devs a readable window onto the trail: a small local server
-    (<code>cargo xtask notes-serve</code>) that reads the notes live on every request and renders
+    one view. This epic gives devs a readable window onto the trail: a small local debug server
+    (<code>cargo xtask debug serve</code>) that reads the notes live on every request and renders
     the <span class="badge id">epic → WU → commit</span> tree with each commit's four notes laid
     out in full. The notes stay the single source of truth; the page is a disposable live render,
-    nothing committed, nothing to go stale.</p>
+    nothing committed, nothing to go stale. The command is deliberately a <code>debug</code> group,
+    not a notes-only name — the workflow-notes view is its first surface, and later debug features
+    (other repo/workflow state a dev wants to eyeball) attach as further <code>debug</code>
+    subcommands or page sections without a rename.</p>
 
     <h2 id="seams">Seams touched</h2>
     <table data-c="seams-table">
       <thead><tr><th>Seam</th><th>Today</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><code>xtask/src/lib.rs</code> <code>run()</code> dispatch</td><td>matches <code>verify-dod</code>, <code>verify-doc</code>, <code>dod list</code></td><td>add a <code>["notes-serve", rest @ ..]</code> arm → new <code>notes_view</code> module</td></tr>
+        <tr><td><code>xtask/src/lib.rs</code> <code>run()</code> dispatch</td><td>matches <code>verify-dod</code>, <code>verify-doc</code>, <code>dod list</code></td><td>add a <code>["debug", "serve", rest @ ..]</code> arm → new <code>debug</code> module (workflow-notes view is its first surface)</td></tr>
         <tr><td><code>xtask/src/notes.rs</code></td><td>parses <code>TestNote</code>/<code>CrNote</code>/<code>DocNote</code>/<code>DodReceipt</code> for the gate — some fields dropped</td><td>reuse the existing structs; the viewer shows the <em>raw</em> note body per ref, so no schema coupling — new fields render without a struct change. Structs used only for the epic/WU rollup keys that already exist on all four (<code>epic</code>, <code>wu</code>)</td></tr>
         <tr><td><code>xtask/src/git.rs</code></td><td><code>note(repo, ref, tip)</code>, <code>git(repo, args)</code></td><td>reuse as-is; list a ref with <code>git notes --ref=&lt;r&gt; list</code> (the exact pattern <code>dod_list</code> already uses)</td></tr>
         <tr><td><code>xtask/Cargo.toml</code></td><td><code>serde</code>, <code>serde_yaml</code>; no web dep</td><td>needs a minimal HTTP listener. Ladder: <code>std::net::TcpListener</code> + a hand-written one-route response is enough for a single-page, single-user, localhost dev tool — no framework. Decided in <a href="#open-questions">open questions</a>; if it proves fiddly, fall back to a tiny crate (<code>tiny_http</code>)</td></tr>
-        <tr><td><code>xtask/src/main.rs</code></td><td>prints <code>run()</code>'s message, exits</td><td>no change — <code>notes-serve</code> blocks inside <code>run()</code> serving until Ctrl-C, returns <code>(0, "")</code> on shutdown</td></tr>
+        <tr><td><code>xtask/src/main.rs</code></td><td>prints <code>run()</code>'s message, exits</td><td>no change — <code>debug serve</code> blocks inside <code>run()</code> serving until Ctrl-C, returns <code>(0, "")</code> on shutdown</td></tr>
       </tbody>
     </table>
     <p data-c="seams-note">Why xtask and not the product API: this is dev-workflow tooling, not a
@@ -66,7 +69,7 @@
     <div data-item="expected">
       <p>Observable after the epic:</p>
       <ul>
-        <li><code>cargo xtask notes-serve</code> prints a localhost URL (default
+        <li><code>cargo xtask debug serve</code> prints a localhost URL (default
         <code>http://127.0.0.1:3002</code>) and serves until Ctrl-C.</li>
         <li>Opening that URL shows every commit that carries any workflow note, grouped
         <span class="badge id">epic → WU → commit</span>, newest epic first; each commit shows its
@@ -97,10 +100,10 @@
       <p>Small epic, one WU — every gate still met explicitly (collapsed-epic rule in
       <a href="../work-planning.html">the work-planning standard</a>).</p>
       <div data-wu="E-NV.W1" data-c="wu-e-nv-w1">
-        <h3 id="wu1">E-NV.W1 — notes-serve: read the four refs live, render the epic→WU→commit story</h3>
+        <h3 id="wu1">E-NV.W1 — debug serve: read the four note refs live, render the epic→WU→commit story</h3>
         <ul>
-          <li data-item="wu-summary">Adds a <code>notes-serve</code> xtask subcommand: a
-          <code>notes_view</code> module that (1) collects all commits carrying any of the four
+          <li data-item="wu-summary">Adds a <code>debug serve</code> xtask subcommand: a
+          <code>debug</code> module that (1) collects all commits carrying any of the four
           notes, (2) rolls them up by <code>epic</code>/<code>wu</code>, (3) renders one HTML page
           with each commit's four raw note bodies, and (4) serves it over a localhost
           <code>TcpListener</code> on a configurable port. Rollup logic is pure and unit-tested;
@@ -115,7 +118,7 @@
     </div>
 
     <h2 id="wu-plan">WU plan — E-NV.W1</h2>
-    <p data-item="requirement"><strong>Requirement:</strong> <code>cargo xtask notes-serve</code>
+    <p data-item="requirement"><strong>Requirement:</strong> <code>cargo xtask debug serve</code>
     reads the four workflow note refs (<code>test</code>, <code>doc</code>, <code>cr</code>,
     <code>dod</code>) live and serves one localhost HTML page that groups every note-carrying
     commit under its epic and WU (ungrouped bucket for note-less-of-epic commits) and shows each
@@ -131,7 +134,7 @@
         <tbody>
           <tr>
             <td><span class="badge id">unit</span> (commit)</td>
-            <td>rollup + render, in <code>notes_view</code></td>
+            <td>rollup + render, in the <code>debug</code> module</td>
             <td>given a synthetic set of (commit, ref, body) tuples: commits group under the right
             epic/WU from their <code>epic</code>/<code>wu</code> fields; a commit with none lands
             in the ungrouped bucket; a ref absent for a commit renders the "none" marker not a
@@ -176,7 +179,7 @@
     <h2 id="distillation-plan">Distillation plan</h2>
     <div data-item="distillation-plan">
       <ul>
-        <li><strong>T1:</strong> add the <code>notes-serve</code> command to the tooling list in
+        <li><strong>T1:</strong> add the <code>debug serve</code> command to the tooling list in
         <a href="../workflow.html">the workflow doc</a> (it documents the gate and the notes as
         the registry) — one line, where the other xtask commands live. No shape change.</li>
         <li><strong>T2:</strong> none — internal tooling, no capture/inspect use-case and no new
