@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-H2 — HTTP/2 end-to-end</h1>
       <p>Collapsed epic + WU plan: enable HTTP/2 on both proxy legs and record the true protocol version per leg.</p>
-      <div class="meta">v1 · 2026-07-06 · Trawler · T3 · epic <span class="badge id">E-H2</span> (one WU: <span class="badge id">E-H2.W1</span>)</div>
+      <div class="meta">v2 · 2026-07-06 · Trawler · T3 · epic <span class="badge id">E-H2</span> (one WU: <span class="badge id">E-H2.W1</span>)</div>
     </div>
   </header>
   <main>
@@ -30,12 +30,19 @@
     <table data-c="seams-table">
       <thead><tr><th>Seam</th><th>Today</th><th>Change</th></tr></thead>
       <tbody>
-        <tr><td><code>Cargo.toml</code> hudsucker features</td><td><code>rcgen-ca, rustls-client</code></td><td>add <code>http2</code> (enables h2 on the client-facing MITM leg and hudsucker's internals)</td></tr>
+        <tr><td><code>Cargo.toml</code> hudsucker features</td><td><code>rcgen-ca, rustls-client</code></td><td>add <code>http2</code> — verified in hudsucker 0.24.1 source: the feature alone flips the MITM ALPN offer to <code>h2, http/1.1</code> (<code>rcgen_authority.rs</code>) and enables the hyper-util auto server's h2 path; no extra builder call needed</td></tr>
         <tr><td><code>Cargo.toml</code> hyper-rustls features</td><td><code>http1</code></td><td>add <code>http2</code> for our own upstream connector</td></tr>
         <tr><td><code>src/lib.rs</code> <code>upstream_connector</code></td><td><code>.enable_http1()</code> — ALPN offers only <code>http/1.1</code></td><td><code>.enable_all_versions()</code> — ALPN offers <code>h2, http/1.1</code>; upstream picks</td></tr>
-        <tr><td><code>src/recorder.rs</code> / <code>src/flow.rs</code></td><td><code>version</code> already recorded per request and per response from <code>http::Version</code></td><td>no code change expected — the fields become truthful: <code>request.version</code> = client→proxy leg, <code>response.version</code> = proxy→upstream leg</td></tr>
+        <tr><td><code>src/recorder.rs</code> / <code>src/flow.rs</code></td><td><code>version</code> already recorded per request and per response from <code>http::Version</code></td><td>no code change expected — the fields become truthful: <code>request.version</code> = client→proxy leg, <code>response.version</code> = proxy→upstream leg. Correlation under h2 multiplexing verified in hudsucker 0.24.1: the handler is cloned per request (<code>internal.rs</code>, <code>self.clone().proxy(req)</code>), so the per-exchange scratch pairs each response with its own request even with concurrent streams on one connection — pinned by e2e scenario 3</td></tr>
       </tbody>
     </table>
+    <p data-c="seams-note">Why the design doc's "ALPN-accept + HTTP/1.1 normalization, not true
+    end-to-end h2" claim is stale: hudsucker's <code>normalize_request</code> does mark every
+    forwarded request <code>HTTP/1.1</code>, but that field never forces the wire — hyper-util's
+    legacy client speaks whatever ALPN negotiated on the pooled upstream connection, and the
+    recorded <code>response.version</code> comes back from that actual connection. So end-to-end
+    h2 and truthful per-leg recording both hold; the e2e tests are the proof, and correcting the
+    stale T1 statements is part of <a href="#distillation-plan">distillation</a>.</p>
 
     <h2 id="use-cases">Use-case requirements</h2>
     <div data-item="use-cases">
@@ -149,9 +156,19 @@
         MITM TLS with ALPN h2 → local axum-server upstream with ALPN <code>h2, http/1.1</code>.
         Assert the exchange succeeds, body round-trips intact, and the flow on
         <code>GET /flows</code> shows <code>HTTP/2.0</code> on both legs.</li>
-        <li><strong>Mixed legs:</strong> same client → upstream restricted to
-        <code>http/1.1</code> ALPN. Assert <code>request.version = HTTP/2.0</code>,
-        <code>response.version = HTTP/1.1</code>.</li>
+        <li><strong>Mixed legs, both directions:</strong> h2 client → upstream restricted to
+        <code>http/1.1</code> ALPN: assert <code>request.version = HTTP/2.0</code>,
+        <code>response.version = HTTP/1.1</code>. And an <code>http1_only</code> client → h2
+        upstream: assert <code>request.version = HTTP/1.1</code>,
+        <code>response.version = HTTP/2.0</code>. The legs negotiate independently, and the
+        h1↔h2 adaptation must not corrupt traffic (echo body round-trip asserted both
+        ways).</li>
+        <li><strong>Concurrent streams, one connection:</strong> N concurrent requests with
+        distinct bodies from one h2 client (reqwest multiplexes them over a single MITM'd
+        connection). Assert N flows, each pairing its own request body with its own response,
+        all <code>HTTP/2.0</code> — pins the recorder's per-exchange request↔response
+        correlation under multiplexing, the one h2-specific regression risk in the capture
+        path.</li>
         <li><strong>h1 regression:</strong> the existing plain-HTTP and h1 HTTPS e2e capture
         tests stay green unmodified — proof of no regression for h1-only clients.</li>
       </ol>
@@ -164,36 +181,33 @@
         covering capture &amp; inspection) with the per-leg version contract; no new decision
         record expected — ALPN strategy (<code>enable_all_versions</code>, upstream picks) is
         recorded here and in the result report, not DEC-worthy.</li>
-        <li><strong>T1:</strong> <code>docs/core-architecture.html</code> only if review finds
-        the protocol-version invariant belongs there; no shape change anticipated.</li>
+        <li><strong>T1 corrections (mandatory — these statements become false when the epic
+        lands):</strong> <code>docs/core-technical-design.html</code> — the flow-model sketch
+        comment "hudsucker normalizes the upstream leg to HTTP/1.1" and the challenges-table
+        row calling the <code>http2</code> feature "<em>not</em> true end-to-end h2 … v1: stay
+        http/1.1-only"; <code>docs/core-architecture.html</code> — "true end-to-end HTTP/2"
+        leaves the future-work list. Factual corrections (code wins conflicts), no shape
+        change.</li>
         <li>This plan + the combined result report archived to <code>docs/.archive/</code> at
         epic close, per DoD-E.</li>
       </ul>
     </div>
 
     <h2 id="open-questions">Open questions</h2>
-    <table data-item="open-questions">
-      <thead><tr><th>Question</th><th>Proposed default</th></tr></thead>
-      <tbody>
-        <tr>
-          <td>Does the reqwest dev-dependency (<code>default-features = false</code>) need its
-          <code>http2</code> feature for the e2e client?</td>
-          <td>Yes — add <code>http2</code> to its feature list; dev-only, no runtime cost.</td>
-        </tr>
-        <tr>
-          <td>Does hudsucker's MITM endpoint offer h2 in ALPN automatically once the
-          <code>http2</code> feature is on, or does it need explicit opt-in?</td>
-          <td>Feature flag is expected to be sufficient (it gates
-          <code>hyper-util/http2</code> auto connection); verified by the e2e test — if not,
-          the WU grows the necessary builder call, scope unchanged.</td>
-        </tr>
-        <tr>
-          <td>ALPN preference order on the upstream leg?</td>
-          <td><code>enable_all_versions()</code> (offers <code>h2</code> first, upstream
-          decides) — matches what real clients send.</td>
-        </tr>
-      </tbody>
-    </table>
+    <div data-item="open-questions">
+      <p>None — v1's three questions were closed by source-level verification before code:</p>
+      <ul>
+        <li>reqwest dev-dependency: yes, it needs its <code>http2</code> feature for the e2e
+        client (it is <code>default-features = false</code> today); dev-only, no runtime
+        cost.</li>
+        <li>hudsucker MITM ALPN: the <code>http2</code> feature alone is sufficient — verified
+        in 0.24.1 source (<code>rcgen_authority.rs</code> offers <code>h2, http/1.1</code>;
+        <code>hyper-util/http2</code> enables the auto server's h2 path). No builder call
+        needed.</li>
+        <li>Upstream ALPN order: <code>enable_all_versions()</code> offers <code>h2</code>
+        first and the origin decides — matches what real clients send.</li>
+      </ul>
+    </div>
 
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
