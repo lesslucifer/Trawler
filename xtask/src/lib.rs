@@ -2,6 +2,7 @@ pub mod debug;
 pub mod doc;
 pub mod gate;
 pub mod git;
+pub mod mr;
 pub mod notes;
 
 use std::path::{Path, PathBuf};
@@ -18,6 +19,8 @@ usage:
   cargo xtask verify-dod hook <wu|epic>                       (tip = MERGE_HEAD, target = HEAD)
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
+  cargo xtask mr commit -m <msg> --as <email|username>       (doc commit: write the Reviewed-By trailer)
+  cargo xtask mr confirm <wu|epic> <tip> --as <email|username> (write the mr/v1 note on the tip)
   cargo xtask dod list [--epic <id>]
   cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";
 
@@ -30,6 +33,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
     match strs.as_slice() {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
+        ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
         ["debug", "serve", rest @ ..] => debug::serve(rest, repo),
         _ => Err(USAGE.to_string()),
