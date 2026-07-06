@@ -60,6 +60,23 @@ impl Env {
         assert!(self.git(dir, args), "git {args:?} failed");
     }
 
+    fn git_stderr(&self, dir: &Path, args: &[&str]) -> (bool, String) {
+        let out = git_cmd()
+            .args(args)
+            .current_dir(dir)
+            .env("HOME", &self.home)
+            .env("PATH", &self.fake_path)
+            .env("GIT_CONFIG_GLOBAL", "/dev/null")
+            .env("GIT_CONFIG_SYSTEM", "/dev/null")
+            .env("GIT_AUTHOR_NAME", "test")
+            .env("GIT_AUTHOR_EMAIL", "test@test.invalid")
+            .env("GIT_COMMITTER_NAME", "test")
+            .env("GIT_COMMITTER_EMAIL", "test@test.invalid")
+            .output()
+            .expect("failed to spawn git");
+        (out.status.success(), String::from_utf8_lossy(&out.stderr).into_owned())
+    }
+
     fn calls(&self) -> String {
         fs::read_to_string(&self.log).unwrap_or_default()
     }
@@ -165,6 +182,63 @@ fn pre_commit_gates_conflicted_merge_completion_on_epic() {
     env.git_ok(&repo, &["commit", "-q", "-m", "complete conflicted merge"]);
 
     assert!(env.calls().contains("verify-dod hook wu"), "got: {}", env.calls());
+}
+
+#[test]
+fn direct_commit_on_main_is_refused_with_branch_guidance() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-commit");
+
+    env.git_ok(&repo, &["checkout", "-q", "main"]);
+    fs::write(repo.join("b.txt"), "direct").expect("write file");
+    env.git_ok(&repo, &["add", "-A"]);
+    let (committed, stderr) = env.git_stderr(&repo, &["commit", "-q", "-m", "direct on main"]);
+
+    assert!(!committed, "direct commit on main must be refused");
+    assert!(stderr.contains("direct commits on main are not allowed"), "got: {stderr}");
+    assert!(stderr.contains("epic/<slug>"), "guidance must show the branch commands: {stderr}");
+    assert!(stderr.contains("wu/<epic-slug>/<slug>"), "got: {stderr}");
+    assert!(!env.calls().contains("fmt"), "refusal must happen before fmt/clippy run");
+}
+
+#[test]
+fn conflicted_merge_completion_on_main_still_commits_through_the_epic_gate() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-commit");
+
+    env.git_ok(&repo, &["checkout", "-q", "main"]);
+    let wu_tip = {
+        let out = git_cmd()
+            .args(["rev-parse", "wu/x/one"])
+            .current_dir(&repo)
+            .output()
+            .expect("rev-parse");
+        String::from_utf8_lossy(&out.stdout).trim().to_string()
+    };
+    fs::write(repo.join(".git/MERGE_HEAD"), format!("{wu_tip}\n")).expect("write MERGE_HEAD");
+    fs::write(repo.join("a.txt"), "resolved").expect("write file");
+    env.git_ok(&repo, &["add", "-A"]);
+    env.git_ok(&repo, &["commit", "-q", "-m", "complete conflicted merge on main"]);
+
+    assert!(env.calls().contains("verify-dod hook epic"), "got: {}", env.calls());
+}
+
+#[test]
+fn commits_on_non_main_branches_are_unaffected_by_the_main_guard() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-commit");
+
+    fs::write(repo.join("b.txt"), "wu work").expect("write file");
+    env.git_ok(&repo, &["add", "-A"]);
+    env.git_ok(&repo, &["commit", "-q", "-m", "commit on wu branch"]);
+
+    assert!(env.calls().contains("fmt"), "normal pre-commit checks must still run");
 }
 
 #[test]
