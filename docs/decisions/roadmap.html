@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions — Roadmap</h1>
       <p>Why the product roadmap is two pillars, and the epic sequence that delivers them.</p>
-      <div class="meta">v1 · 2026-07-06 · Trawler · <a href="decisions-index.html">index</a></div>
+      <div class="meta">v2 · 2026-07-06 · Trawler · <a href="decisions-index.html">index</a></div>
     </div>
   </header>
   <main>
@@ -71,6 +71,15 @@
     and every post-viewer epic ships its UI controls inside its own scope. Small items that
     aren't epic-shaped (per-host bypass list, further decoders) fold into whichever epic
     touches their seam first.</p>
+
+    <p data-c="process-epics"><strong>Process &amp; tooling epics</strong> sit outside these two
+    product pillars and are tracked with the workflow, not this product sequence — listed here only
+    so deferred work isn't lost. <span class="badge id">E-NMWF</span> (manual-review sign-off, in
+    progress on <code>epic/nmwf</code>) ships <em>identity-only</em> authorisation (username / email
+    in <code>.mr-allowed</code>); its unforgeable, hardware-backed cryptographic-signature variant is
+    deferred to a follow-up epic <span class="badge id">E-MRSIG</span>.
+    <span class="badge id">E-UIFOUND</span> additionally owns defining the UI asset path set that
+    manual review keys off (<code>is_ui</code>), once the UI stack is chosen.</p>
 
     <h3 id="dec-5-consequences">Consequences</h3>
     <p>Next epic to start is <span class="badge id">E-UISHELL</span> (with E-H2 available as

@@ -4,10 +4,10 @@ use std::net::{TcpListener, TcpStream};
 use std::path::Path;
 
 use crate::git::{git, note};
-use crate::notes::{CrNote, DocNote, DodReceipt, TestNote};
+use crate::notes::{CrNote, DocNote, DodReceipt, MrNote, TestNote};
 
 const DEFAULT_PORT: u16 = 48027;
-const NOTE_REFS: [&str; 4] = ["test", "cr", "doc", "dod"];
+const NOTE_REFS: [&str; 5] = ["test", "cr", "doc", "dod", "mr"];
 
 pub fn serve(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let port = port_flag(args).unwrap_or(DEFAULT_PORT);
@@ -149,6 +149,7 @@ fn chip(note_ref: &str, body: Option<&str>, key: &str) -> String {
         ("cr", Some(b)) => cr_chip(b),
         ("doc", Some(b)) => (doc_chip(b), ""),
         ("dod", Some(b)) => dod_chip(b),
+        ("mr", Some(b)) => mr_chip(b),
         (_, Some(_)) => (note_ref.to_string(), ""),
     };
     format!(r#"<span class="chip {cls}" data-note="{key}">{summary}</span>"#)
@@ -201,6 +202,13 @@ fn doc_chip(body: &str) -> String {
 fn dod_chip(body: &str) -> (String, &'static str) {
     let n = gate_check_count(body);
     (format!("dod ✓{n}"), "pass")
+}
+
+fn mr_chip(body: &str) -> (String, &'static str) {
+    match serde_yaml::from_str::<MrNote>(body) {
+        Ok(n) => (format!("mr {} {}", n.tier, n.signer), "pass"),
+        Err(_) => ("mr(?)".to_string(), "fail"),
+    }
 }
 
 fn gate_check_count(body: &str) -> usize {
@@ -315,7 +323,7 @@ dialog button.x {{ background: none; border: none; color: var(--muted); font-siz
 <body>
 <main>
 <h1>Workflow notes</h1>
-<p class="meta">Live from git notes (test · cr · doc · dod) · {url} · reload to refresh</p>
+<p class="meta">Live from git notes (test · cr · doc · dod · mr) · {url} · reload to refresh</p>
 {body}
 </main>
 <dialog id="note-modal">
@@ -402,6 +410,14 @@ mod tests {
     fn dod_chip_counts_gate_checks() {
         let (s, cls) = dod_chip("schema: dod/v1\nlevel: wu\nbase: a\ntip: b\ndiff_sha256: c\nchecks: [notes, manifest, review]");
         assert_eq!(s, "dod ✓3");
+        assert_eq!(cls, "pass");
+    }
+
+    #[test]
+    fn mr_chip_shows_tier_and_signer() {
+        let (s, cls) =
+            mr_chip("schema: mr/v1\nlevel: epic\ntip: b\ntier: email\nsigner: a@b.co\ndate: x");
+        assert_eq!(s, "mr email a@b.co");
         assert_eq!(cls, "pass");
     }
 

@@ -170,6 +170,35 @@ fn pre_commit_gates_conflicted_merge_completion_on_epic() {
 }
 
 #[test]
+fn commit_msg_hook_runs_the_mr_check_and_a_red_check_blocks_the_commit() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 1);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "commit-msg");
+
+    fs::write(repo.join("a.txt"), "edit").expect("write file");
+    env.git_ok(&repo, &["add", "-A"]);
+    let committed = env.git(&repo, &["commit", "-q", "-m", "some change"]);
+
+    assert!(!committed, "a red commit-msg check must block the commit");
+    assert!(env.calls().contains("verify-dod commit-msg"), "got: {}", env.calls());
+}
+
+#[test]
+fn commit_msg_hook_passes_the_message_file_and_a_green_check_lets_the_commit_land() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "commit-msg");
+
+    fs::write(repo.join("a.txt"), "edit").expect("write file");
+    env.git_ok(&repo, &["add", "-A"]);
+    env.git_ok(&repo, &["commit", "-q", "-m", "some change"]);
+
+    assert!(env.calls().contains("verify-dod commit-msg"), "got: {}", env.calls());
+}
+
+#[test]
 fn direct_commit_on_main_is_refused_with_branch_guidance() {
     let tmp = tempfile::tempdir().unwrap();
     let env = Env::new(tmp.path(), 0);

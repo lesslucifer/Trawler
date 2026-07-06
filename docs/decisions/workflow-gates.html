@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions — Workflow Gates</h1>
       <p>Why DoD evidence is shaped the way it is.</p>
-      <div class="meta">v3 · 2026-07-06 · Trawler · <a href="decisions-index.html">index</a></div>
+      <div class="meta">v4 · 2026-07-07 · Trawler · <a href="decisions-index.html">index</a></div>
     </div>
   </header>
   <main>
@@ -118,6 +118,42 @@
     (e.g. archiving a distilled doc) must happen on the epic branch before its merge — which the
     tracked-doc layout check (DEC-3) already forces. The commit-level rows of the DoD table now apply
     only to standalone commits on <code>epic/*</code> branches.</p>
+
+    <h2 id="dec-7"><span class="badge id">DEC-7</span> Manual review is a fifth note, required by path + level, with identity-only auth deferring the cryptographic form to E-MRSIG</h2>
+    <table data-c="dec-7-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-06</td></tr>
+        <tr><th>Origin</th><td>Epic E-NMWF (manual review) — user direction; plan archived at <code>docs/.archive/2026-07-06-manual-review-plan.html</code> (untracked)</td></tr>
+        <tr><th>Where</th><td><code>xtask/src/mr.rs</code> · <code>xtask/src/gate.rs · check_manual_review/check_commit_trailer</code> · <code>xtask/src/notes.rs · is_doc/is_ui</code> · <code>.cargo-husky/hooks/commit-msg</code> · <code>.mr-allowed</code> · <a href="../workflow.html#manual-review">workflow.html</a> · <a href="roadmap.html">roadmap</a> (E-MRSIG)</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-7-context">Context</h3>
+    <p>Human-facing surfaces must not land silently, yet every line is AI-written and merges are
+    unattended. A sign-off gate has to be as mechanical and un-agent-trustable as the rest of the DoD:
+    <em>whether</em> review is required cannot be an agent's judgment, and the record of <em>who</em> signed
+    must be verifiable. The strong version — a signature no agent can produce — needs its own design and is
+    deliberately split out; this epic builds the whole surrounding gate and leaves one swappable seam for it.</p>
+
+    <h3 id="dec-7-choices">Choices (each looks "fixable" — it isn't)</h3>
+    <table data-c="dec-7-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
+      <tbody>
+        <tr><td>Requirement is derived from diff paths + level, never a flag — docs⇒commit, UI⇒WU, epic⇒always</td><td>Anything an agent asserts about necessity is forgeable; a path predicate (<code>is_doc</code>/<code>is_ui</code>) is not. Same principle as the docs/infra exemption and the code-path definition (DEC-2).</td></tr>
+        <tr><td>Docs are gated at <em>commit</em> time via a <code>Reviewed-By</code> message trailer, not a note</td><td>Reviewing after the commit exists is too late — the point is to prevent the commit — and a git note cannot hang on a commit that does not exist yet. The trailer rides <em>in</em> the message; the <code>commit-msg</code> hook enforces it against the staged diff. The change hash needed for the future signature exists pre-commit as <code>git diff --cached</code> and recomputes as <code>parent..commit</code>, so the carrier is already the right shape for E-MRSIG.</td></tr>
+        <tr><td>Not waivable</td><td>A waivable human-sign-off is not a sign-off. Unlike a test layer (DEC-2's <code>waived</code>), "required" means a listed authoriser is recorded — nothing to skip.</td></tr>
+        <tr><td>The check runs before the docs/infra exemption</td><td>An always-required epic (or a docs-only one) must still carry its note even when exempt from test/cr/doc — exactly like the epic tracked-doc check (DEC-3). Path lists use <code>--no-renames</code> so a rename out of <code>docs/</code> or <code>ui/</code> can't mask the requirement.</td></tr>
+        <tr><td>Identity-only auth this epic; the crypto signature is E-MRSIG</td><td>An identity in <code>.mr-allowed</code> is agent-forgeable, so today's guarantee is a forced stop + an audit trail of who signed, <strong>not</strong> proof. This is stated wherever the mechanism is documented, never blurred. E-MRSIG swaps only the auth predicate (identity-match → signature-verify); the rules, carriers, hook, gate check and walk all stay. The seam is a single function — <code>mr::message_authorised</code> / <code>tip_authorised</code>.</td></tr>
+        <tr><td>The UI path set is provisional (<code>ui/</code>) until E-UIFOUND fixes it</td><td>The UI-WU rule needs a predicate now to be built and tested; the real asset paths are unknown until the UI stack is chosen. E-UIFOUND owns the final <code>is_ui</code> (recorded in the roadmap).</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-7-consequences">Consequences</h3>
+    <p>The gate now honestly enforces a human pause and records an accountable signer; it does <em>not</em>
+    yet prove the agent could not have signed — that is E-MRSIG's job and is called out at every doc touch
+    point. Until E-UIFOUND lands, the UI-WU rule matches only <code>ui/</code> paths, so no current WU
+    triggers it; epics and doc commits are live immediately. Adding a person to <code>.mr-allowed</code> is
+    itself a tracked, reviewable diff.</p>
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>

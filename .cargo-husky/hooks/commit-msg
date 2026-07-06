@@ -1,0 +1,8 @@
+#!/bin/sh
+# Manual-review gate at commit time: if the staged diff touches docs, the
+# message must carry a Reviewed-By trailer naming an identity in .mr-allowed.
+# Installed by cargo-husky.
+set -e
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+exec cargo xtask verify-dod commit-msg "$1"
