@@ -1,0 +1,10 @@
+schema: test/v2
+level: working-unit
+epic: E-RMAP
+wu: E-RMAP.W1
+branch: wu/roadmap/t2-distill
+tests:
+  unit:
+    waived: "docs-only WU — no code paths added or changed"
+  integration:
+    waived: "docs-only WU — no integration boundary touched"
