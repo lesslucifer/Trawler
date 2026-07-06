@@ -76,12 +76,13 @@ flowchart LR
     <pre data-c="type-reqres-code">RequestRec {
     method:  POST,
     uri:     "https://api.example.com/v1/upload",
-    version: HTTP_11,          // hudsucker normalizes the upstream leg to HTTP/1.1
+    version: HTTP_2,           // the version actually spoken on the client leg
     headers: { content-type: application/json, authorization: Bearer … },
     body:    BodyRec::Captured { bytes, size: 14 },
 }
 ResponseRec {
     status:  201,
+    version: HTTP_11,          // the version actually spoken on the upstream leg
     headers: { content-type: application/json },
     body:    BodyRec::NotCaptured { reason: TooLarge { actual: 15_728_640 } },
 }</pre>
@@ -111,7 +112,7 @@ ResponseRec {
   "started_at": "2026-07-03T12:34:56.789Z",
   "duration_ms": 84,
   "method": "POST", "uri": "https://api.example.com/v1/items", "status": 201,
-  "request_http_version": "HTTP/1.1", "response_http_version": "HTTP/1.1",
+  "request_http_version": "HTTP/2.0", "response_http_version": "HTTP/1.1",
   "request_body":  { "state": "captured",  "size": 14, "data_base64": "eyJuYW1lIjoiZm9vIn0=" },
   "response_body": { "state": "streaming", "content_type": "text/event-stream" }
 }</pre>
@@ -195,9 +196,9 @@ sequenceDiagram
       <li>Client sends <code>CONNECT host:443</code>; <code>handle_request</code> fires on the CONNECT — an inspect / short-circuit point.</li>
       <li><code>should_intercept</code> decides; if false, a raw <code>copy_bidirectional</code> TCP tunnel is opened with <em>no</em> visibility.</li>
       <li>If intercepting, the proxy replies <code>200 OK</code> and peeks 4 bytes — <code>0x16 0x03</code> marks a TLS ClientHello (literal <code>GET </code> marks plain HTTP re-sent through the tunnel).</li>
-      <li><code>gen_server_config(host:port)</code> returns a cached leaf <code>ServerConfig</code> or builds one signed by the CA; <code>TlsAcceptor</code> completes the <strong>client-leg</strong> TLS handshake (ALPN selects http/1.1).</li>
+      <li><code>gen_server_config(host:port)</code> returns a cached leaf <code>ServerConfig</code> or builds one signed by the CA; <code>TlsAcceptor</code> completes the <strong>client-leg</strong> TLS handshake (ALPN offers <code>h2, http/1.1</code>; the client picks).</li>
       <li>The first decrypted request arrives; <code>handle_request</code> fires with a fully-parsed <code>Request</code> before the upstream send.</li>
-      <li>The proxy drains the body, applies the cap, rebuilds the body, and <strong>lazily</strong> opens the <strong>upstream leg</strong> (TCP + TLS) — HTTP/1.1 only, because <code>normalize_request</code> unconditionally sets <code>HTTP_11</code>.</li>
+      <li>The proxy drains the body, applies the cap, rebuilds the body, and <strong>lazily</strong> opens the <strong>upstream leg</strong> (TCP + TLS) — ALPN offers <code>h2, http/1.1</code> and the origin picks; <code>normalize_request</code> marks the forwarded request <code>HTTP_11</code>, but that field never forces the wire — the pooled connection speaks whatever ALPN negotiated, and each leg's true version lands in the flow.</li>
       <li>Origin responds; the proxy drains and captures the response body the same way.</li>
       <li><code>handle_response</code> fires; the flow lands in the ring buffer and a <code>FlowEvent</code> is broadcast to SSE subscribers.</li>
       <li>The response is re-encrypted over the client leg and delivered.</li>
@@ -215,18 +216,18 @@ sequenceDiagram
     Note over P: gen_server_config, cache hit or build leaf
     C->>P: TLS ClientHello
     P->>C: ServerHello plus leaf cert
-    Note over C,P: client-leg TLS up, ALPN http/1.1
+    Note over C,P: client-leg TLS up, ALPN h2 or http/1.1, client picks
     C->>P: GET /v1/items decrypted
     Note over P: handle_request, drain and capture body
     P->>O: TLS handshake, lazy upstream leg
     O->>P: ServerHello
-    Note over P,O: upstream TLS up, HTTP/1.1 only
+    Note over P,O: upstream TLS up, ALPN h2 or http/1.1, origin picks
     P->>O: GET /v1/items
     O->>P: 200 OK plus body decrypted
     Note over P: handle_response, capture and broadcast FlowEvent
     P->>C: 200 OK plus body re-encrypted
       </pre>
-      <div class="caption">CONNECT + dual-TLS interception. The upstream leg opens lazily on the first tunneled request; hudsucker forces HTTP/1.1 upstream regardless of what the client negotiated.</div>
+      <div class="caption">CONNECT + dual-TLS interception. The upstream leg opens lazily on the first tunneled request; each leg negotiates its HTTP version independently via ALPN.</div>
     </div>
 
     <h2 id="cert-model">Certificate &amp; trust model</h2>
@@ -238,7 +239,7 @@ flowchart TD
     B -- yes --> E["Return cached ServerConfig"]
     B -- no --> C["Build leaf cert for hostname"]
     C --> D["Sign with CA key; subject key = CA key"]
-    D --> F["Build ServerConfig; ALPN http/1.1"]
+    D --> F["Build ServerConfig; ALPN h2, http/1.1"]
     F --> G["Store in moka cache 1000 / ~182d TTL"]
     G --> E
     E --> H["TlsAcceptor.accept client-leg TLS"]
@@ -363,8 +364,8 @@ flowchart TD
         </tr>
         <tr>
           <td>HTTP/2 end-to-end</td>
-          <td>hudsucker's <code>http2</code> feature is h2 ALPN-accept + HTTP/1.1 normalization, <em>not</em> true end-to-end h2. Without the feature (current), h2 is never advertised → clients use http/1.1. HPACK, priorities, and push are invisible. v1: stay http/1.1-only; don't advertise h2 interception.</td>
-          <td><span class="badge" style="color:var(--accent)">major</span></td>
+          <td>Solved by <span class="badge id">E-H2</span>: hudsucker's <code>http2</code> feature flips the MITM ALPN offer to <code>h2, http/1.1</code> and the upstream connector offers the same (<code>enable_all_versions</code>) — each leg negotiates independently and the flow records the true version per leg (<a href="use-cases/capture.html">UC-1 · UC-2</a>). h2 arrives via ALPN on TLS only (no h2c); HPACK, priorities and push stay invisible — the capture surface is the decoded exchange, not h2 framing.</td>
+          <td><span class="badge" style="color:var(--ok)">resolved</span></td>
         </tr>
         <tr>
           <td>HTTP/3 / QUIC</td>
