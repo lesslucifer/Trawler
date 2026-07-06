@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-NV
+wu: E-NV.W3
+base: fc5b7dd2270c4f807dea51babd8291e841b758a0
+tip: 2ac1872e28e5091ba96734a97c00970c782ab231
+diff_sha256: 012e36d56a4cdfd00749529fc51cf9dd23e9fe4689a9725929170af07069f7bf
+checks: [notes, manifest, review, review-base, diff-binding, doc-note]
+date: 2026-07-06
