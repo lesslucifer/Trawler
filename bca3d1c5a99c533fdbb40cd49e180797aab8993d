@@ -1,0 +1,11 @@
+schema: cr/v2
+scope: "WU E-NV.W1 debug-serve -> epic/notes-view"
+epic: E-NV
+wu: E-NV.W1
+base: 84944a4bcba08bc4521d9199f39e718569291463
+head: bca3d1c5a99c533fdbb40cd49e180797aab8993d
+diff_sha256: 47b869aec1faf274990f9e87bcac9351898041cd9c2f8ccf5de3e2944047956b
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 2, waived: 0 }
+verdict: PASS
+date: 2026-07-06
