@@ -150,6 +150,19 @@ fn commit_msg_hook_refuses_a_doc_commit_with_an_unlisted_trailer() {
 }
 
 #[test]
+fn commit_msg_hook_sees_a_doc_renamed_out_of_docs() {
+    let repo = Repo::new(ALLOWED);
+    repo.write("docs/movable.html", "content that is long enough to be a similar rename\n");
+    repo.write("src/keep.rs", "// keep\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "add doc"]);
+    repo.git(&["mv", "docs/movable.html", "src/moved.rs"]);
+    let msg = write_msg(&repo, "move doc out, no trailer\n");
+    let (code, _) = mr::commit_msg_hook(repo.p(), msg.to_str().unwrap()).unwrap();
+    assert_eq!(code, 1, "a rename out of docs/ must still require a trailer");
+}
+
+#[test]
 fn commit_with_unlisted_identity_is_refused() {
     let repo = Repo::new(ALLOWED);
     repo.write("docs/x.html", "x");

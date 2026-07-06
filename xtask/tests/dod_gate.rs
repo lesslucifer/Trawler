@@ -43,8 +43,6 @@ impl Repo {
         self.git(&["rev-parse", "HEAD"])
     }
 
-    // A doc commit must carry a valid Reviewed-By trailer or the epic walk's
-    // manual-review check flags it; fixtures with doc commits use this.
     fn commit_reviewed(&self, msg: &str) -> String {
         self.git(&["add", "-A"]);
         let body = format!("{msg}\n\nReviewed-By: email a@b.co\n");
@@ -602,6 +600,22 @@ fn epic_walk_flags_an_untrailered_doc_commit() {
     assert!(
         checks_of(&report).contains(&"8·manual-review"),
         "the walk must flag an untrailered doc commit: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn epic_walk_flags_a_doc_moved_out_of_docs_without_a_trailer() {
+    let (repo, _) = epic_with_merged_wu();
+    repo.git(&["mv", "docs/use-cases/api.html", "src/moved.rs"]);
+    repo.commit("move a doc out of docs/, no trailer");
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        checks_of(&report).contains(&"8·manual-review"),
+        "a rename out of docs/ must not bypass the trailer check: {}",
         format_report(&report)
     );
 }

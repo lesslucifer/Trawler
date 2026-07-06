@@ -112,8 +112,7 @@ impl Gate<'_> {
 
     fn load_notes(&self, report: &mut Report, names: &[String]) -> ParsedNotes {
         let tip = report.tip.clone();
-        let doc_needed =
-            report.level != Level::Commit || names.iter().any(|p| p.starts_with("docs/"));
+        let doc_needed = report.level != Level::Commit || names.iter().any(|p| is_doc(p));
         let test = self
             .parse_note::<TestNote>(report, &tip, "test", "test/v2", true, |n| n.schema.clone());
         let cr = if report.level == Level::Commit {
@@ -194,7 +193,7 @@ impl Gate<'_> {
     }
 
     fn check_docs(report: &mut Report, doc: Option<&DocNote>, names: &[String]) {
-        let doc_paths: Vec<&String> = names.iter().filter(|p| p.starts_with("docs/")).collect();
+        let doc_paths: Vec<&String> = names.iter().filter(|p| is_doc(p)).collect();
         if let Some(doc) = doc {
             let entries: BTreeMap<&str, &crate::notes::DocChange> =
                 doc.changes.iter().map(|c| (c.path.as_str(), c)).collect();
@@ -258,20 +257,17 @@ impl Gate<'_> {
     }
 
     fn check_manual_review(&self, report: &mut Report, names: &[String]) {
-        let required = match report.level {
-            Level::Epic => true,
-            Level::Wu => names.iter().any(|p| is_ui(p)),
-            Level::Commit => return,
+        let why = match report.level {
+            Level::Epic => "every epic merge requires manual review",
+            Level::Wu if names.iter().any(|p| is_ui(p)) => {
+                "this WU touches UI and requires manual review"
+            }
+            _ => return,
         };
-        if required && !crate::mr::tip_authorised(self.repo, &report.tip) {
-            let why = if report.level == Level::Epic {
-                "every epic merge requires manual review".to_string()
-            } else {
-                "this WU touches UI and requires manual review".to_string()
-            };
+        if !crate::mr::tip_authorised(self.repo, &report.tip) {
             report.failures.push(Failure::new(
                 "8·manual-review",
-                format!("{} - tip {} has no valid mr/v1 note", why, short(&report.tip)),
+                format!("{why} - tip {} has no valid mr/v1 note", short(&report.tip)),
                 crate::mr::NOT_AUTHORISED.to_string(),
             ));
         }
@@ -300,15 +296,15 @@ impl Gate<'_> {
     }
 
     fn check_commit_trailer(&self, report: &mut Report, commit: &str, parent: &str) {
-        let Ok(names) = diff_names(self.repo, parent, commit) else { return };
-        if !names.iter().any(|p| is_doc(p)) {
+        let range = format!("{parent}..{commit}");
+        let Ok(names) = git(self.repo, &["diff", "--name-only", "--no-renames", &range]) else {
+            return;
+        };
+        if !names.lines().any(is_doc) {
             return;
         }
         let message = git(self.repo, &["log", "-1", "--format=%B", commit]).unwrap_or_default();
-        let authorised = crate::mr::trailer_of(&message).is_some_and(|(_, id)| {
-            crate::mr::match_tier(&crate::mr::read_allowed(self.repo), &id).is_some()
-        });
-        if !authorised {
+        if !crate::mr::message_authorised(self.repo, &message) {
             report.failures.push(Failure::new(
                 "8·manual-review",
                 format!(

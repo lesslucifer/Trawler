@@ -163,9 +163,7 @@ pub fn is_doc(path: &str) -> bool {
     path.starts_with("docs/")
 }
 
-// Provisional UI path set: E-UIFOUND owns the real definition once the UI stack
-// is chosen (see docs/decisions/roadmap.html). Until then a `ui/` prefix lets the
-// UI-WU manual-review rule be exercised.
+// Provisional until E-UIFOUND fixes the real UI asset paths (see roadmap.html).
 pub fn is_ui(path: &str) -> bool {
     path.starts_with("ui/")
 }
