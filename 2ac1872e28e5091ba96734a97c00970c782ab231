@@ -1,0 +1,13 @@
+schema: doc/v1
+epic: E-NV
+wu: E-NV.W3
+changes:
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "debug serve viewer is now a searchable, paginated flat commit timeline (was epic→WU→commit grouping)"
+  - path: docs/work/e-nv-w3-plan.html
+    tier: T3
+    action: created
+    distills: "WU requirement + shape + test plan"
+t2_waived: "no T2 use-case governs the dev-only notes viewer; the one shape fact lives in T1 workflow.html"
