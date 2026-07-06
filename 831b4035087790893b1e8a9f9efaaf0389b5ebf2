@@ -1,0 +1,11 @@
+schema: test/v2
+level: epic
+epic: E-RMAP
+branch: epic/roadmap
+tests:
+  unit:
+    waived: "docs-only epic — no code paths added or changed"
+  integration:
+    waived: "docs-only epic — no integration boundary touched"
+  e2e:
+    waived: "docs-only epic — per docs/workflow.html docs-only diffs are exempt from test layers"
