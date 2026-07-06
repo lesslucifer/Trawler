@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-NMWF
 wu: E-NMWF.W1
-branch: wu/nmwf/authoriser
 base: 69923739042dc42c7cf0de9790edb876de040cf5
 tip: 82e521de795b79d0646fd0a1678b571ee3a81c74
 diff_sha256: 5825609aa2e861a7b31b9add23a070537584b35fb6c1463739d364926a2f2b4d
