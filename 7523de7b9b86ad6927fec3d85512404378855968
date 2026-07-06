@@ -1,0 +1,9 @@
+schema: dod/v1
+level: epic
+epic: E-NMWF
+branch: epic/nmwf
+base: 69923739042dc42c7cf0de9790edb876de040cf5
+tip: 7523de7b9b86ad6927fec3d85512404378855968
+diff_sha256: 0e1d1293a387fc5ab182f658a739ae5e56beaa10d34d6cd69b8dc8a167251013
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review, walk]
+date: 2026-07-07
