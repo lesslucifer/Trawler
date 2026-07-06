@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-NMWF
+wu: E-NMWF.W2
+branch: wu/nmwf/gates
+tests:
+  unit: { count: 3, covers: "is_doc/is_ui path predicates; commit_msg_hook doc-vs-non-doc + listed/unlisted trailer" }
+  integration: { count: 10, covers: "gate check 8 (epic always / UI WU / unlisted signer / walk untrailered doc commit); commit-msg installed-hook blocks/passes" }
