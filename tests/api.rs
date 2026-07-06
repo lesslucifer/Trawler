@@ -161,6 +161,37 @@ async fn stream_signals_lag_instead_of_silent_gap() {
 }
 
 #[tokio::test]
+async fn ui_shell_page_and_the_request_sequence_it_performs() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    let r = router_with(store.clone());
+
+    let (status, headers, body) = get(&r, "/").await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(headers["content-type"].to_str().unwrap().starts_with("text/html"));
+    let html = String::from_utf8(body).unwrap();
+    for wired in ["fetch('/flows?'", "new EventSource('/stream')"] {
+        assert!(html.contains(wired), "page must wire {wired}");
+    }
+
+    let req = Request::builder().uri("/stream").body(Body::empty()).unwrap();
+    let res = r.clone().oneshot(req).await.unwrap();
+    let mut stream = res.into_body().into_data_stream();
+
+    store.insert(FlowBuilder::new().uri("http://shop.example.com/cart").status(200).build());
+
+    assert_eq!(json(&r, "/flows?host=shop.example.com").await.1.as_array().unwrap().len(), 1);
+    assert_eq!(json(&r, "/flows?host=elsewhere").await.1.as_array().unwrap().len(), 0);
+
+    let frame = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .expect("no SSE frame before timeout")
+        .expect("stream ended")
+        .expect("frame error");
+    let text = String::from_utf8_lossy(&frame);
+    assert!(text.contains("event: request"), "the page's live-refetch trigger, got: {text}");
+}
+
+#[tokio::test]
 async fn stream_delivers_live_event() {
     let store = Arc::new(Store::new(1_000_000, 64));
     let r = router_with(store.clone());
