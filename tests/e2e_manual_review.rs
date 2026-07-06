@@ -103,15 +103,23 @@ impl Repo {
         use std::io::Write as _;
         let range = format!("{base}..{tip}");
         let diff = self.git_raw(&["diff", "--no-color", "--no-ext-diff", &range]).stdout;
-        let mut c = Command::new("shasum")
-            .args(["-a", "256"])
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .spawn()
-            .expect("shasum");
-        c.stdin.take().unwrap().write_all(&diff).unwrap();
-        let out = c.wait_with_output().unwrap().stdout;
-        String::from_utf8_lossy(&out).split_whitespace().next().unwrap().to_string()
+        // Match xtask's tool selection: shasum (macOS) or sha256sum (Linux).
+        for tool in [["shasum", "-a", "256"].as_slice(), ["sha256sum"].as_slice()] {
+            let Ok(mut c) = Command::new(tool[0])
+                .args(&tool[1..])
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::piped())
+                .spawn()
+            else {
+                continue;
+            };
+            c.stdin.take().unwrap().write_all(&diff).unwrap();
+            let out = c.wait_with_output().unwrap().stdout;
+            if let Some(hex) = String::from_utf8_lossy(&out).split_whitespace().next() {
+                return hex.to_string();
+            }
+        }
+        panic!("no sha256 tool (shasum or sha256sum) on PATH");
     }
 
     fn note(&self, note_ref: &str, tip: &str, body: &str) {
@@ -172,13 +180,7 @@ fn full_manual_review_flow() {
     repo.git(&["checkout", "-q", "epic/x"]);
     repo.git(&["merge", "--no-ff", "-q", "-m", "merge wu/x/one", "wu/x/one"]);
 
-    // (d) the epic gate is red without an mr/v1 note on the tip (always required).
-    let red = repo.xtask(&["verify-dod", "epic", "epic/x", "--target", "main"]);
-    let red_out = String::from_utf8_lossy(&red.stdout);
-    assert!(!red.status.success(), "epic without an mr note is red");
-    assert!(red_out.contains("8·manual-review"), "the red is the manual-review check: {red_out}");
-
-    // Bless the epic fully, then sign it — the gate goes green.
+    // Bless the epic tip fully — everything EXCEPT the mr note.
     let epic_tip = repo.sha("epic/x");
     let ebase = repo.sha("main");
     let ediff = repo.diff_sha(&ebase, &epic_tip);
@@ -189,6 +191,19 @@ fn full_manual_review_flow() {
     );
     repo.note("doc", &epic_tip, "schema: doc/v1\nepic: E9\nchanges: []\nt2_waived: \"n/a\"\n");
     repo.note("cr", &epic_tip, &format!("schema: cr/v2\nepic: E9\nbase: {ebase}\nhead: {epic_tip}\ndiff_sha256: {ediff}\nverdict: PASS\n"));
+
+    // (d) with every other note present, the epic is red for ONE reason: no mr note.
+    let red = repo.xtask(&["verify-dod", "epic", "epic/x", "--target", "main"]);
+    let red_out = String::from_utf8_lossy(&red.stdout);
+    assert!(!red.status.success(), "an otherwise-blessed epic without an mr note is red");
+    assert!(red_out.contains("8·manual-review"), "the red is the manual-review check: {red_out}");
+    assert_eq!(
+        red_out.matches("FAIL").count(),
+        1,
+        "manual review is the SOLE remaining failure: {red_out}"
+    );
+
+    // (e) signing the epic clears the last check — the gate goes green.
     let signed = repo.xtask(&["mr", "confirm", "epic", "epic/x", "--as", "a@b.co"]);
     assert!(signed.status.success(), "epic sign-off: {}", String::from_utf8_lossy(&signed.stderr));
 

@@ -295,10 +295,15 @@ impl Gate<'_> {
         }
     }
 
-    fn check_commit_trailer(&self, report: &mut Report, commit: &str, parent: &str) {
-        let Ok(names) = diff_names(self.repo, parent, commit) else { return };
+    fn check_commit_trailer(
+        &self,
+        report: &mut Report,
+        commit: &str,
+        parent: &str,
+    ) -> Result<(), String> {
+        let names = diff_names(self.repo, parent, commit)?;
         if !names.iter().any(|p| is_doc(p)) {
-            return;
+            return Ok(());
         }
         let message = git(self.repo, &["log", "-1", "--format=%B", commit]).unwrap_or_default();
         // A doc commit is authorised by an in-message Reviewed-By trailer or, for
@@ -316,6 +321,7 @@ impl Gate<'_> {
                 crate::mr::NOT_AUTHORISED.to_string(),
             ));
         }
+        Ok(())
     }
 
     fn walk(&self, report: &mut Report) -> Result<(), String> {
@@ -337,7 +343,7 @@ impl Gate<'_> {
                     if *commit == report.tip {
                         continue;
                     }
-                    self.check_commit_trailer(report, commit, first);
+                    self.check_commit_trailer(report, commit, first)?;
                     (*commit, self.verify(Level::Commit, commit, first)?)
                 }
                 [merge, _, _, _, ..] => {
