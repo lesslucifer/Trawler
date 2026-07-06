@@ -1,0 +1,12 @@
+schema: cr/v2
+scope: "Epic E-H2 -> main"
+epic: E-H2
+branch: epic/h2
+base: d1764ed1a8324567d951c418bbcfee8eaee5cb3f
+head: 5abceaaa4fa9155cdbd14faae2cad10bd62fd266
+diff_sha256: 1c5282ba99f376f5e98c8a0a79d6ef06aea2e4ba8aac6a57eb98ce21dea29ac9
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 10, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-06
