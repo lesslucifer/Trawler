@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-H2
 wu: E-H2.W1
-branch: wu/h2/enable-h2
 base: 38aacd7de0327effb67687650f6780b97011ec1b
 tip: e8eceabf3544a3ec4291733c2e93221423570755
 diff_sha256: f656ef40672aa47aa0cfb5592ef45f3fe10daa7dabba38622ce4336326e37c59
