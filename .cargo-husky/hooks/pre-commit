@@ -3,6 +3,22 @@
 set -e
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
+# main is merge-only: every change lands through a gated --no-ff merge.
+# Merge completions carry MERGE_HEAD and are gated below / by pre-merge-commit.
+if [ "$(git symbolic-ref --short -q HEAD || true)" = "main" ] \
+  && [ ! -f "$(git rev-parse --git-path MERGE_HEAD)" ]; then
+  cat >&2 <<'EOF'
+[pre-commit] REFUSED: direct commits on main are not allowed (docs/workflow.html)
+Start the work on a branch and land it through the merge gate:
+  epic:         git checkout -b epic/<slug> main
+  working unit: git checkout -b wu/<epic-slug>/<slug> epic/<slug>
+This applies to ALL changes, docs included - the merge gate exempts
+docs/infra-only diffs automatically, so branch + --no-ff merge is the
+whole ceremony.
+EOF
+  exit 1
+fi
+
 echo "[pre-commit] cargo fmt --check"
 cargo fmt --all -- --check
 

@@ -36,9 +36,13 @@
 
     <p data-c="collapse"><strong>Collapse rule</strong>: a small epic may be one WU, a small WU one
     commit — every gate is still met explicitly, with all notes written.
-    <strong>Direct-to-main rule</strong>: docs/infra-only changes may land without a gate; a standalone
-    <em>code</em> commit (outside any WU) carries a <code>test/v2</code> note, <code>level: commit</code>,
-    unit ≥ 1 or waived. Code paths are <code>src/</code>, <code>xtask/</code>, <code>tests/</code>.</p>
+    <strong>Main is merge-only</strong> (<a href="decisions/workflow-gates.html#dec-6">DEC-6</a>): the
+    pre-commit hook refuses every non-merge commit on <code>main</code> — all work, docs included,
+    starts on an <code>epic/*</code> or <code>wu/*</code> branch and lands through the merge gate
+    (docs/infra-only merges pass it ungated). Standalone commits exist only on <code>epic/*</code>
+    branches: a <em>code</em> commit there (outside any WU) carries a <code>test/v2</code> note,
+    <code>level: commit</code>, unit ≥ 1 or waived; the epic walk and the pre-push range check verify
+    them. Code paths are <code>src/</code>, <code>xtask/</code>, <code>tests/</code>.</p>
 
     <h2 id="lifecycle">Lifecycle</h2>
 
@@ -181,7 +185,7 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
     <table data-c="hooks-table">
       <thead><tr><th>Hook</th><th>Enforces</th></tr></thead>
       <tbody>
-        <tr><td><code>pre-commit</code></td><td><code>fmt</code> + <code>clippy -D warnings</code> · when completing a <em>conflicted</em> merge (MERGE_HEAD on disk — those never reach pre-merge-commit), runs the same merge gate</td></tr>
+        <tr><td><code>pre-commit</code></td><td>refuses non-merge commits on <code>main</code> with branch guidance (DEC-6) · <code>fmt</code> + <code>clippy -D warnings</code> · when completing a <em>conflicted</em> merge (MERGE_HEAD on disk — those never reach pre-merge-commit), runs the same merge gate</td></tr>
         <tr><td><code>pre-push</code></td><td>full suite · auto-pushes <code>refs/notes/*</code> · range-checks standalone commits on <code>main</code>/<code>epic/*</code> pushes</td></tr>
         <tr><td><code>pre-merge-commit</code></td><td>runs the gate on <code>MERGE_HEAD</code>: into <code>epic/*</code> ⇒ wu gate, into <code>main</code> ⇒ epic gate; docs/infra-only merges pass ungated; red refuses the merge</td></tr>
         <tr><td><code>post-checkout</code></td><td>heals <code>merge.ff = false</code> · worktree setup</td></tr>
