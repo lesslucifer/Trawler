@@ -1,0 +1,10 @@
+schema: cr/v2
+scope: "epic E-NV -> main"
+epic: E-NV
+base: 297a890c2610ac8435fb8e7deb551dd484d6ab61
+head: 69923739042dc42c7cf0de9790edb876de040cf5
+diff_sha256: 554858af5fbcfc4b8aaf7ab3c173694d3e70bbce9fe7197e37a42f66a90da0ff
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 2, waived: 0 }
+verdict: PASS
+date: 2026-07-06
