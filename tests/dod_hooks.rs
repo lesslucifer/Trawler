@@ -158,14 +158,9 @@ fn pre_commit_gates_conflicted_merge_completion_on_epic() {
     install_hook(&repo, "pre-commit");
 
     env.git_ok(&repo, &["checkout", "-q", "epic/x"]);
-    let wu_tip = {
-        let out = git_cmd()
-            .args(["rev-parse", "wu/x/one"])
-            .current_dir(&repo)
-            .output()
-            .expect("rev-parse");
-        String::from_utf8_lossy(&out.stdout).trim().to_string()
-    };
+    let wu_tip = String::from_utf8_lossy(&env.git_run(&repo, &["rev-parse", "wu/x/one"]).stdout)
+        .trim()
+        .to_string();
     fs::write(repo.join(".git/MERGE_HEAD"), format!("{wu_tip}\n")).expect("write MERGE_HEAD");
     fs::write(repo.join("a.txt"), "resolved").expect("write file");
     env.git_ok(&repo, &["add", "-A"]);
@@ -201,14 +196,9 @@ fn conflicted_merge_completion_on_main_still_commits_through_the_epic_gate() {
     install_hook(&repo, "pre-commit");
 
     env.git_ok(&repo, &["checkout", "-q", "main"]);
-    let wu_tip = {
-        let out = git_cmd()
-            .args(["rev-parse", "wu/x/one"])
-            .current_dir(&repo)
-            .output()
-            .expect("rev-parse");
-        String::from_utf8_lossy(&out.stdout).trim().to_string()
-    };
+    let wu_tip = String::from_utf8_lossy(&env.git_run(&repo, &["rev-parse", "wu/x/one"]).stdout)
+        .trim()
+        .to_string();
     fs::write(repo.join(".git/MERGE_HEAD"), format!("{wu_tip}\n")).expect("write MERGE_HEAD");
     fs::write(repo.join("a.txt"), "resolved").expect("write file");
     env.git_ok(&repo, &["add", "-A"]);
