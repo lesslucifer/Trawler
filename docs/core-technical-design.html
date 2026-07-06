@@ -16,7 +16,7 @@
   <main>
     <h2 id="context">Where we are today</h2>
     <div class="callout" data-c="context-callout">
-      <p>Today <code>src/main.rs</code> is a correct but minimal spine: a <a href="https://crates.io/crates/hudsucker">hudsucker</a> MITM proxy on <code>127.0.0.1:3000</code>, a persisted self-signed CA, and a <code>LogHandler</code> that logs request/response metadata via <code>tracing</code>. Bodies are never touched, nothing is stored, and there is no interface. This doc is the <strong>technical discussion of the core functions only</strong> — it is not a project plan, and it deliberately excludes replay, breakpoints, and WebSocket-frame features.</p>
+      <p>Today <code>src/main.rs</code> is a correct but minimal spine: a <a href="https://crates.io/crates/hudsucker">hudsucker</a> MITM proxy on <code>127.0.0.1:7420</code>, a persisted self-signed CA, and a <code>LogHandler</code> that logs request/response metadata via <code>tracing</code>. Bodies are never touched, nothing is stored, and there is no interface. This doc is the <strong>technical discussion of the core functions only</strong> — it is not a project plan, and it deliberately excludes replay, breakpoints, and WebSocket-frame features.</p>
     </div>
 
     <h2 id="decisions">Decisions locked for v1</h2>
@@ -167,7 +167,7 @@ sequenceDiagram
     <h2 id="sniffing">How interception works (sniffing the data)</h2>
     <p>Trawler is an <strong>explicit proxy</strong>: clients are configured to send their traffic to it. Two cases follow — <strong>plain HTTP</strong>, an unencrypted pass-through we can read directly, and <strong>HTTPS</strong>, which is decrypted via two TLS legs with a plaintext gap in the middle. A diagram for each is below.</p>
     <div class="callout" data-c="explicit-vs-transparent">
-      <p><strong>Explicit proxy vs. transparent (NAT) interception.</strong> An <em>explicit</em> proxy is one the client knows about and is configured to use: the app sends its requests — or a <code>CONNECT</code> for HTTPS — straight to <code>127.0.0.1:3000</code>. That is Trawler v1.</p>
+      <p><strong>Explicit proxy vs. transparent (NAT) interception.</strong> An <em>explicit</em> proxy is one the client knows about and is configured to use: the app sends its requests — or a <code>CONNECT</code> for HTTPS — straight to <code>127.0.0.1:7420</code>. That is Trawler v1.</p>
       <p><em>Transparent (NAT) interception</em> is the opposite: the client is <strong>not</strong> configured and has no idea a proxy exists. A router or firewall rule (macOS <code>pf</code>, Linux <code>iptables</code>/<code>nftables</code>) silently rewrites the packet's destination so it lands on the proxy instead of the real server — "NAT" because it rewrites network addresses in transit. Since there is no <code>CONNECT</code> line announcing the target, the proxy must infer the destination host from the TLS <strong>SNI</strong> field in the ClientHello. It catches apps that ignore proxy settings, but it needs root and OS-specific network plumbing — so it is out of scope for v1.</p>
     </div>
 
@@ -192,7 +192,7 @@ sequenceDiagram
     <h3 id="sniff-https">Case 2 — HTTPS via CONNECT</h3>
     <p>The encrypted case is the interesting one: <strong>two TLS legs</strong> — one to the client, one to the origin — with a <strong>plaintext HTTP gap</strong> in the middle, and that gap is where the handler observes decoded requests and responses. Step by step:</p>
     <ol data-c="sniffing-steps">
-      <li>Client is pointed at <code>127.0.0.1:3000</code> (system proxy settings or <code>HTTP_PROXY</code>/<code>HTTPS_PROXY</code>).</li>
+      <li>Client is pointed at <code>127.0.0.1:7420</code> (system proxy settings or <code>HTTP_PROXY</code>/<code>HTTPS_PROXY</code>).</li>
       <li>Client sends <code>CONNECT host:443</code>; <code>handle_request</code> fires on the CONNECT — an inspect / short-circuit point.</li>
       <li><code>should_intercept</code> decides; if false, a raw <code>copy_bidirectional</code> TCP tunnel is opened with <em>no</em> visibility.</li>
       <li>If intercepting, the proxy replies <code>200 OK</code> and peeks 4 bytes — <code>0x16 0x03</code> marks a TLS ClientHello (literal <code>GET </code> marks plain HTTP re-sent through the tunnel).</li>
@@ -255,19 +255,19 @@ flowchart TD
     </div>
 
     <h2 id="network">Network configuration &amp; CA trust</h2>
-    <p>Two independent problems: <strong>routing</strong> traffic to <code>127.0.0.1:3000</code>, and <strong>trusting</strong> the CA so leaf certs are accepted. Configure the proxy without trusting the CA → TLS errors; trust the CA without routing → no captured traffic. v1 supports <strong>explicit forward-proxy mode only</strong> (transparent/NAT interception is out of scope). ECH is a non-issue here: browsers suppress ECH under an explicit proxy, so the CONNECT line always carries the plaintext host.</p>
+    <p>Two independent problems: <strong>routing</strong> traffic to <code>127.0.0.1:7420</code>, and <strong>trusting</strong> the CA so leaf certs are accepted. Configure the proxy without trusting the CA → TLS errors; trust the CA without routing → no captured traffic. v1 supports <strong>explicit forward-proxy mode only</strong> (transparent/NAT interception is out of scope). ECH is a non-issue here: browsers suppress ECH under an explicit proxy, so the CONNECT line always carries the plaintext host.</p>
     <table data-c="network-table">
       <thead><tr><th>Platform</th><th>Route</th><th>Trust</th><th>Gotcha</th></tr></thead>
       <tbody>
         <tr>
           <td>macOS</td>
-          <td>Network &gt; Proxies (HTTP + HTTPS → 127.0.0.1:3000); also <code>HTTP_PROXY</code>/<code>HTTPS_PROXY</code> for CLI.</td>
+          <td>Network &gt; Proxies (HTTP + HTTPS → 127.0.0.1:7420); also <code>HTTP_PROXY</code>/<code>HTTPS_PROXY</code> for CLI.</td>
           <td><code>sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem</code> (one interactive admin prompt).</td>
           <td>Go bypasses the proxy for localhost destinations; Java needs JVM proxy flags + a <code>cacerts</code> import; Flutter desktop ignores the system keychain.</td>
         </tr>
         <tr>
           <td>Windows</td>
-          <td>Settings &gt; Proxy (manual, 127.0.0.1:3000) or system env vars.</td>
+          <td>Settings &gt; Proxy (manual, 127.0.0.1:7420) or system env vars.</td>
           <td>Per-user (no admin, browsers): <code>certutil -user -addstore Root trawler-ca.pem</code>. Machine-wide: elevated <code>certutil -addstore Root …</code>.</td>
           <td>EDR/AV may flag <code>certutil</code> root-store writes as a persistence technique; Firefox needs its own NSS import.</td>
         </tr>
@@ -279,13 +279,13 @@ flowchart TD
         </tr>
         <tr>
           <td>iOS</td>
-          <td>Wi-Fi &gt; Configure Proxy (manual, Mac's LAN IP:3000); per-network.</td>
-          <td>Open <code>http://&lt;ip&gt;:3000/ca.crt</code> in Safari to install the profile, <em>then</em> Settings &gt; General &gt; About &gt; Certificate Trust Settings → toggle full trust (mandatory, frequently missed).</td>
+          <td>Wi-Fi &gt; Configure Proxy (manual, Mac's LAN IP:7420); per-network.</td>
+          <td>Open <code>http://&lt;ip&gt;:7420/ca.crt</code> in Safari to install the profile, <em>then</em> Settings &gt; General &gt; About &gt; Certificate Trust Settings → toggle full trust (mandatory, frequently missed).</td>
           <td>iOS 18.0–18.1 had a bug hiding the trust toggle (fixed 18.2). Pinned apps never work.</td>
         </tr>
         <tr>
           <td>Android</td>
-          <td>Wi-Fi &gt; Modify network &gt; Proxy (manual, LAN IP:3000).</td>
+          <td>Wi-Fi &gt; Modify network &gt; Proxy (manual, LAN IP:7420).</td>
           <td>Owned/debug apps: <code>network_security_config.xml</code> with a <code>user</code> trust anchor. Rooted/emulator: Magisk Cert-Fixer or the ADB nsenter/Zygote bind-mount (Android 14+ APEX store).</td>
           <td>API 24+ apps reject user CAs by default → most Play Store apps are opaque. System-store install triggers Chrome CT errors. Best-effort only.</td>
         </tr>

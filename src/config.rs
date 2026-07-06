@@ -22,8 +22,8 @@ impl Default for Config {
     fn default() -> Self {
         let loopback = IpAddr::V4(Ipv4Addr::LOCALHOST);
         Self {
-            proxy_addr: SocketAddr::new(loopback, 3000),
-            api_addr: SocketAddr::new(loopback, 3001),
+            proxy_addr: SocketAddr::new(loopback, 7420),
+            api_addr: SocketAddr::new(loopback, 7421),
             ca_dir: PathBuf::from("ca"),
             body_cap: 10 * MEGABYTE,
             ring_max_bytes: 256 * MEGABYTE,
@@ -51,8 +51,8 @@ mod tests {
     #[test]
     fn defaults() {
         let c = Config::default();
-        assert_eq!(c.proxy_addr.port(), 3000);
-        assert_eq!(c.api_addr.port(), 3001);
+        assert_eq!(c.proxy_addr.port(), 7420);
+        assert_eq!(c.api_addr.port(), 7421);
         assert_eq!(c.body_cap, 10 * MEGABYTE);
         assert_eq!(c.ring_max_bytes, 256 * MEGABYTE);
         assert_eq!(c.broadcast_capacity, 1024);
