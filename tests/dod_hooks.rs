@@ -38,7 +38,7 @@ impl Env {
         Self { home, fake_path: format!("{}:{orig}", bin.display()), log }
     }
 
-    fn git(&self, dir: &Path, args: &[&str]) -> bool {
+    fn git_run(&self, dir: &Path, args: &[&str]) -> std::process::Output {
         git_cmd()
             .args(args)
             .current_dir(dir)
@@ -52,8 +52,10 @@ impl Env {
             .env("GIT_COMMITTER_EMAIL", "test@test.invalid")
             .output()
             .expect("failed to spawn git")
-            .status
-            .success()
+    }
+
+    fn git(&self, dir: &Path, args: &[&str]) -> bool {
+        self.git_run(dir, args).status.success()
     }
 
     fn git_ok(&self, dir: &Path, args: &[&str]) {
@@ -61,19 +63,7 @@ impl Env {
     }
 
     fn git_stderr(&self, dir: &Path, args: &[&str]) -> (bool, String) {
-        let out = git_cmd()
-            .args(args)
-            .current_dir(dir)
-            .env("HOME", &self.home)
-            .env("PATH", &self.fake_path)
-            .env("GIT_CONFIG_GLOBAL", "/dev/null")
-            .env("GIT_CONFIG_SYSTEM", "/dev/null")
-            .env("GIT_AUTHOR_NAME", "test")
-            .env("GIT_AUTHOR_EMAIL", "test@test.invalid")
-            .env("GIT_COMMITTER_NAME", "test")
-            .env("GIT_COMMITTER_EMAIL", "test@test.invalid")
-            .output()
-            .expect("failed to spawn git");
+        let out = self.git_run(dir, args);
         (out.status.success(), String::from_utf8_lossy(&out.stderr).into_owned())
     }
 
