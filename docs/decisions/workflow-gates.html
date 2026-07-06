@@ -82,8 +82,8 @@
     docs-only exemption, so even an exempt (docs-only) epic merge re-asserts hygiene — a stray doc
     cannot ride an ungated merge into <code>main</code>.</p>
 
-    <h2 id="dec-6"><span class="badge id">DEC-6</span> Manual review is a fifth note, required by path + level, with identity-only auth deferring the cryptographic form to E-MRSIG</h2>
-    <table data-c="dec-6-facts">
+    <h2 id="dec-7"><span class="badge id">DEC-7</span> Manual review is a fifth note, required by path + level, with identity-only auth deferring the cryptographic form to E-MRSIG</h2>
+    <table data-c="dec-7-facts">
       <tbody>
         <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-06</td></tr>
         <tr><th>Origin</th><td>Epic E-NMWF (manual review) — user direction; plan archived at <code>docs/.archive/2026-07-06-manual-review-plan.html</code> (untracked)</td></tr>
@@ -91,15 +91,15 @@
       </tbody>
     </table>
 
-    <h3 id="dec-6-context">Context</h3>
+    <h3 id="dec-7-context">Context</h3>
     <p>Human-facing surfaces must not land silently, yet every line is AI-written and merges are
     unattended. A sign-off gate has to be as mechanical and un-agent-trustable as the rest of the DoD:
     <em>whether</em> review is required cannot be an agent's judgment, and the record of <em>who</em> signed
     must be verifiable. The strong version — a signature no agent can produce — needs its own design and is
     deliberately split out; this epic builds the whole surrounding gate and leaves one swappable seam for it.</p>
 
-    <h3 id="dec-6-choices">Choices (each looks "fixable" — it isn't)</h3>
-    <table data-c="dec-6-choices-table">
+    <h3 id="dec-7-choices">Choices (each looks "fixable" — it isn't)</h3>
+    <table data-c="dec-7-choices-table">
       <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
       <tbody>
         <tr><td>Requirement is derived from diff paths + level, never a flag — docs⇒commit, UI⇒WU, epic⇒always</td><td>Anything an agent asserts about necessity is forgeable; a path predicate (<code>is_doc</code>/<code>is_ui</code>) is not. Same principle as the docs/infra exemption and the code-path definition (DEC-2).</td></tr>
@@ -111,7 +111,7 @@
       </tbody>
     </table>
 
-    <h3 id="dec-6-consequences">Consequences</h3>
+    <h3 id="dec-7-consequences">Consequences</h3>
     <p>The gate now honestly enforces a human pause and records an accountable signer; it does <em>not</em>
     yet prove the agent could not have signed — that is E-MRSIG's job and is called out at every doc touch
     point. Until E-UIFOUND lands, the UI-WU rule matches only <code>ui/</code> paths, so no current WU

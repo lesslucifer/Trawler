@@ -147,7 +147,7 @@ flowchart TD
       knows the user's identity, so it <em>can</em> produce it: the guarantee today is a forced stop + an
       audit trail of who signed, not cryptographic proof. A human reviews and confirms; only then is the
       trailer/note written. The unforgeable form is <span class="badge id">E-MRSIG</span>
-      (<a href="decisions/workflow-gates.html#dec-6">DEC-6</a> · <a href="decisions/roadmap.html">roadmap</a>).</p>
+      (<a href="decisions/workflow-gates.html#dec-7">DEC-7</a> · <a href="decisions/roadmap.html">roadmap</a>).</p>
     </div>
 
     <h2 id="evidence">Evidence — five notes, one tip</h2>
@@ -158,7 +158,7 @@ flowchart TD
         <tr><td><code>test/v2</code></td><td><code>refs/notes/test</code></td><td>what tests back this work (per-layer counts/waivers)</td><td><a href="testing-strategy.html">testing standard</a></td></tr>
         <tr><td><code>cr/v2</code></td><td><code>refs/notes/cr</code></td><td>an independent review judged exactly this diff: PASS/FAIL + <code>diff_sha256</code></td><td><code>.claude/skills/code-review/</code></td></tr>
         <tr><td><code>doc/v1</code></td><td><code>refs/notes/doc</code></td><td>every changed doc file accounted for; distillation lineage</td><td><a href="documentation-system.html">documentation system</a></td></tr>
-        <tr><td><code>mr/v1</code></td><td><code>refs/notes/mr</code></td><td>a listed human authorised this WU/epic tip: <code>tier</code> + <code>signer</code></td><td>this doc · <a href="decisions/workflow-gates.html">DEC-6</a></td></tr>
+        <tr><td><code>mr/v1</code></td><td><code>refs/notes/mr</code></td><td>a listed human authorised this WU/epic tip: <code>tier</code> + <code>signer</code></td><td>this doc · <a href="decisions/workflow-gates.html">DEC-7</a></td></tr>
         <tr><td><code>dod/v1</code></td><td><code>refs/notes/dod</code></td><td>the gate ran green here (receipt below)</td><td>this doc</td></tr>
       </tbody>
     </table>
