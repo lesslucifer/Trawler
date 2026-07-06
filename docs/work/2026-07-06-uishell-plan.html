@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4b54e59f34851f0dfa8465" data-artifact="epic-plan wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-UISHELL Epic Plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-UISHELL — Embedded Web UI Shell</h1>
+      <p>Epic plan (collapsed: one WU) — live, filterable flow list in the browser, served from the binary, zero setup.</p>
+      <div class="meta">v1 · 2026-07-06 · Trawler · T3 epic plan + WU plan · roadmap: <a href="../decisions/roadmap.html">DEC-5</a>, Wave 1, GUI pillar</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">
+      Trawler today is API-only: seeing captured traffic means <code>curl :3001/flows</code>.
+      E-UISHELL ships the first user-visible surface — open
+      <code>http://127.0.0.1:3001/</code> in a browser and watch flows appear live as traffic
+      passes the proxy, with a filter bar to narrow them. It is Wave 1 of the GUI pillar
+      (<a href="../decisions/roadmap.html">DEC-5</a>): visible traffic first, deliberately
+      <em>before</em> the UI foundation epic — the shell's minimal chrome is a priced-in
+      rework that migrates onto E-UIFOUND's layout as its first tenant. Everything rides on
+      the existing control API; the epic adds no new capture capability.
+    </p>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <div data-item="use-cases" data-c="use-cases-body">
+      <p>No <code>docs/use-cases/</code> topic exists yet; this epic introduces the first UC.
+      Contract-level behavior delivered:</p>
+      <table>
+        <tr><th>UC</th><th>Contract</th></tr>
+        <tr>
+          <td><span class="badge id">UC-UI1</span> Watch live traffic in the browser</td>
+          <td>With Trawler running, <code>GET /</code> on the control API port serves a
+          self-contained HTML page (no external app assets, no install/build step). The page
+          shows the captured flows (method, host, path, status, duration, size) and updates
+          live via the existing SSE stream as new traffic passes the proxy. A filter bar
+          narrows the list by host, method, status and free text — the same semantics as the
+          <code>GET /flows</code> query parameters, because the page delegates filtering to
+          them. Works against a fresh binary with zero configuration.</td>
+        </tr>
+      </table>
+      <p>Existing API contracts (<code>GET /flows</code>, <code>GET /stream</code>) are
+      consumed unchanged — no behavior change to them.</p>
+    </div>
+
+    <h2 id="expected">Expected result (epic = WU, collapsed)</h2>
+    <div data-item="expected" data-c="expected-body">
+      <p>Observable after the epic lands, checkable by anyone with the binary:</p>
+      <ul>
+        <li><code>cargo run</code>, then open <code>http://127.0.0.1:3001/</code> → an HTML
+        page renders titled as Trawler with an (initially empty) flow list and a filter bar.</li>
+        <li><code>curl -x http://127.0.0.1:3000 http://example.com/</code> → the flow appears
+        in the open page without a manual refresh (SSE-driven).</li>
+        <li>Typing <code>example.com</code> in the host filter shows the flow; a
+        non-matching filter hides it.</li>
+        <li><code>curl :3001/</code> returns <code>200 text/html</code>; the page is one
+        embedded asset — no file paths, no CDN dependency required for the list to function.</li>
+        <li>All pre-existing API routes behave exactly as before.</li>
+      </ul>
+    </div>
+
+    <h2 id="approach">Approach</h2>
+    <div class="diagram" data-c="shell-diagram">
+      <pre class="mermaid">
+flowchart LR
+  B["Browser — ui.html<br/>(vanilla JS, inline CSS)"]
+  A["axum :3001"]
+  S["Store (ring + bus)"]
+  P["Proxy :3000"]
+  B -- "GET / (include_str! page)" --> A
+  B -- "GET /flows?host=&amp;q=… on load + filter change" --> A
+  B -- "GET /stream (SSE) → debounced refetch" --> A
+  A --> S
+  P -- record --> S
+      </pre>
+      <div class="caption">One embedded page over the existing API. Filtering stays
+      server-side: the page refetches <code>/flows</code> with the current filter; SSE events
+      only trigger a debounced refetch, so no filter logic is duplicated in JS.</div>
+    </div>
+    <div class="callout" data-c="approach-callout">
+      Lazy by design: a single <code>ui.html</code> (vanilla JS + inline CSS) embedded with
+      <code>include_str!</code> and served by one new axum route. No npm, no bundler, no new
+      crate, no framework — E-UIFOUND owns the real UI stack decision; anything heavier built
+      now is rework guaranteed by DEC-5.
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-item="non-goals">
+      <li>Flow detail / inspector views, body rendering, copy-as-curl — <b>E-UIINSPECT</b>.</li>
+      <li>UI tech-stack decision, design system, app layout, UI build tooling — <b>E-UIFOUND</b>
+      (the shell migrates onto it later; its chrome is intentionally throwaway-minimal).</li>
+      <li>Onboarding, CA-trust guidance in the UI — <b>E-UISETUP</b>.</li>
+      <li>Pagination, delete/clear — <b>E-EXPORT</b>; persistence — <b>E-PERSIST</b>.</li>
+      <li>Authentication / remote access hardening — the UI binds where the API binds
+      (loopback by default), nothing more.</li>
+      <li>New API endpoints or changes to existing ones.</li>
+    </ul>
+
+    <h2 id="wu-summaries">WU summaries</h2>
+    <div data-item="wu-summaries">
+      <p>Small epic, one WU (collapse rule — every gate still met explicitly).</p>
+      <div data-wu="E-UISHELL.W1" data-c="wu-w1">
+        <table>
+          <tr><th>Builds</th><td data-item="wu-summary">The embedded UI shell: <code>ui.html</code>
+          (flow list table, filter bar, SSE-driven live updates via debounced refetch of
+          <code>/flows</code>) embedded with <code>include_str!</code> and served at
+          <code>GET /</code> on the control API router.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-UI1 — the whole epic requirement
+          (collapsed single-WU epic).</td></tr>
+          <tr><th>Expected</th><td data-item="wu-expected">The epic's expected result above,
+          verbatim — one WU delivers all of it.</td></tr>
+          <tr><th>Deps</th><td data-item="wu-deps">None — all consumed API surface
+          (<code>/flows</code> filters, <code>/stream</code>) already exists on main.</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h2 id="wu-plan">WU plan — E-UISHELL.W1 (collapsed into this doc)</h2>
+    <table data-c="wu-plan-table">
+      <tr><th>Requirement</th><td data-item="requirement"><code>GET /</code> on the control
+      API serves an embedded HTML page that lists captured flows live (SSE-driven) and
+      filters them by host, method, status and free text via the existing
+      <code>GET /flows</code> query parameters.</td></tr>
+      <tr><th>Maps to</th><td data-item="maps-to">E-UISHELL / UC-UI1 — consistent with the
+      W1 summary block above; sole WU of the epic.</td></tr>
+      <tr><th>Test plan</th><td data-item="test-plan">
+        <b>Unit</b> (DoD-C): route handler returns <code>200</code>,
+        <code>content-type: text/html</code>, body is the embedded asset; router still serves
+        all pre-existing routes (route-table regression).
+        <b>Integration</b> (DoD-W): against a running API server (in-process, ephemeral port,
+        existing <code>test-utils</code>) — <code>GET /</code> serves the page; the served
+        HTML references <code>/flows</code> and <code>/stream</code> (the page's data
+        contract); a recorded flow is returned by <code>/flows?host=…</code> and its SSE
+        event arrives on <code>/stream</code> — the exact request sequence the page performs,
+        asserted over plain HTTP.
+        <b>E2E</b> (DoD-E): see the epic e2e plan below (same doc, collapsed).
+        <b>Waiver</b>: browser-level DOM/JS assertions waived — reason: no browser/JS runtime
+        in the test stack; adopting one is an E-UIFOUND stack decision. The JS is kept
+        minimal glue over the HTTP contract that <em>is</em> asserted; manual browser check
+        performed and recorded in the WU result report.
+      </td></tr>
+    </table>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <p>One hermetic e2e (<code>tests/</code>, ephemeral ports, local origin server — per
+      the <a href="../testing-strategy.html">testing standard</a>) proving the full flow:</p>
+      <ol>
+        <li>Start the full app via <code>run(Config)</code> with ephemeral ports + a local
+        HTTP origin.</li>
+        <li>Send a request through the proxy at the origin.</li>
+        <li><code>GET /</code> → <code>200 text/html</code>, body contains the shell's
+        flow-list and filter markup and wires <code>/flows</code> + <code>/stream</code>.</li>
+        <li><code>GET /flows?host=&lt;origin-host&gt;</code> → the proxied flow;
+        a non-matching filter → empty list.</li>
+        <li>Open <code>/stream</code>, send a second proxied request → its SSE event
+        arrives.</li>
+      </ol>
+      <p>This covers the epic end to end at the HTTP layer. In-browser rendering is the
+      waived layer (reason above, judged at review); the compensating manual check is part
+      of the WU result evidence.</p>
+    </div>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <ul>
+        <li><b>T2 use-cases</b>: create <code>docs/use-cases/</code> with
+        <code>use-cases-index.html</code> and <code>web-ui.html</code> carrying UC-UI1 —
+        the epic's lasting behavior contract (first UC files in the repo).</li>
+        <li><b>T2 decisions</b>: none expected — "shell before foundation" is already
+        DEC-5; the embedding technique is implementation detail E-UIFOUND will revisit.</li>
+        <li><b>T1</b>: <code>docs/core-architecture.html</code> API-surface table gains the
+        <code>GET /</code> UI route row; no other shape change.</li>
+        <li>This plan + the result report archived to <code>docs/.archive/</code> with
+        lineage, per the epic gate.</li>
+      </ul>
+    </div>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions">
+      <table>
+        <tr><th>Question</th><th>Proposed default</th></tr>
+        <tr><td>Serve the UI from the API port or a separate one?</td>
+        <td>Same port/origin (<code>:3001</code>, <code>GET /</code>) — zero CORS, zero
+        config, one listener. A dedicated UI port is an E-UIFOUND question if ever.</td></tr>
+        <tr><td>SSE handling: client-side merge of events into the list, or refetch?</td>
+        <td>Debounced refetch of <code>/flows</code> with the current filter — the server
+        stays the single source of filter truth; no duplicated filter logic in JS.</td></tr>
+        <tr><td>Is HTTP-level e2e enough for a UI epic?</td>
+        <td>Yes for the shell: browser automation is stack tooling E-UIFOUND owns; waiver
+        recorded in <code>test/v2</code>, manual browser check in the WU result. Review
+        judges it.</td></tr>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
