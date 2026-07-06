@@ -6,6 +6,10 @@ changes:
   - path: docs/work/2026-07-06-nv-w3-search-paginate-plan.html
     tier: T3
     action: created
-    distills: "WU plan (governed wu-plan): requirement, mapping, expected result, per-level test plan; carries the reverted-first-attempt rationale and the server-side epic-unit design"
+    distills: "WU plan (governed wu-plan): requirement, mapping, expected result, per-level test plan; the reverted-first-attempt rationale and the server-side epic-unit design"
+  - path: docs/work/2026-07-06-nv-w3-search-paginate-result.html
+    tier: T3
+    action: created
+    distills: "WU result (governed wu-result): delivered outcome, review-fix deviations, evidence pointers, distillation-at-epic-close, no follow-ups"
 t2_waived: "code-only WU on a dev-only viewer; no UC or decision changes. Distillation to T2 (if any) happens at E-NV epic close per the workflow, not per-WU"
 date: 2026-07-06
