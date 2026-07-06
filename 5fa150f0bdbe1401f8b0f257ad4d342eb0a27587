@@ -1,0 +1,10 @@
+schema: dod/v1
+level: working-unit
+epic: E-NMWF
+wu: E-NMWF.W2
+branch: wu/nmwf/gates
+base: 16a6b2ec301b8b98527402b823a2bda71471caf5
+tip: 5fa150f0bdbe1401f8b0f257ad4d342eb0a27587
+diff_sha256: 29f8fd5e847015114c9694293466b46f5bdb4237751fbf46df203c27cf8a4d3c
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review]
+date: 2026-07-06
