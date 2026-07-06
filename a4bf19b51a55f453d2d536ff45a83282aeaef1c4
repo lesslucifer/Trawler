@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+epic: E-NMWF
+branch: epic/nmwf
+tests:
+  unit: { count: 1, covers: "the e2e test this commit adds (full manual-review flow)" }
