@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions — Workflow Gates</h1>
       <p>Why DoD evidence is shaped the way it is.</p>
-      <div class="meta">v3 · 2026-07-06 · Trawler · <a href="decisions-index.html">index</a></div>
+      <div class="meta">v4 · 2026-07-07 · Trawler · <a href="decisions-index.html">index</a></div>
     </div>
   </header>
   <main>
@@ -81,6 +81,43 @@
     until it is moved into a tier folder or archived. The layout check runs <em>before</em> the
     docs-only exemption, so even an exempt (docs-only) epic merge re-asserts hygiene — a stray doc
     cannot ride an ungated merge into <code>main</code>.</p>
+
+    <h2 id="dec-6"><span class="badge id">DEC-6</span> main is merge-only — the pre-commit hook refuses direct commits with branch guidance</h2>
+    <table data-c="dec-6-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-06</td></tr>
+        <tr><th>Origin</th><td>Epic E-MAINLOCK — user direction after auditing the direct-to-main path used by the port-change commit</td></tr>
+        <tr><th>Where</th><td><code>.cargo-husky/hooks/pre-commit</code> · <code>tests/dod_hooks.rs</code> · <a href="../workflow.html">workflow.html</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-6-context">Context</h3>
+    <p>The original workflow allowed standalone commits directly on <code>main</code>: docs/infra-only
+    ungated, code commits with a <code>test/v2 · level: commit</code> note checked by the pre-push
+    range walk. Audit showed that path never requires a code review (<code>check_review</code> is
+    skipped at commit level) and is never revisited — epic gates walk only their own branch range, so
+    main-side history stays behind every future merge-base. Unreviewed code could land on
+    <code>main</code> permanently, gated only by fmt/clippy/tests and a self-attested note.</p>
+
+    <h3 id="dec-6-choices">Choices</h3>
+    <table data-c="dec-6-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
+      <tbody>
+        <tr><td>Remove the path (refuse the commit) instead of patching it (requiring <code>cr/v2</code> at commit level)</td><td>One uniform rule for an AI committer beats a second evidence contract: any work ⇒ branch ⇒ gated merge. The refusal message teaches the correct move at the exact moment of the mistake.</td></tr>
+        <tr><td>The guard sits first in <code>pre-commit</code>, before fmt/clippy</td><td>The refusal must be instant and unambiguous — not buried after a minutes-long clippy run, and never masked by an earlier failure.</td></tr>
+        <tr><td>Docs-only commits are refused too</td><td>User decision: "any works". Carve-outs re-open judgment calls the rule exists to remove; the merge gate already exempts docs/infra-only diffs, so the added ceremony is one branch and one <code>--no-ff</code> merge.</td></tr>
+        <tr><td>Merge completions (MERGE_HEAD on disk) pass the guard</td><td>Conflicted merges into <code>main</code> complete through <code>pre-commit</code> — they are the gated path, not a bypass; the existing MERGE_HEAD block in the same hook runs the epic gate on them.</td></tr>
+        <tr><td>No pre-push backstop against <code>--no-verify</code> commits on main</td><td><code>--no-verify</code> defeats pre-push equally, so a backstop there adds no real enforcement (DEC-2 already accepts hooks-can-be-bypassed); the workflow forbids bypassing gates outright.</td></tr>
+        <tr><td><code>epic/*</code> branches keep allowing standalone commits</td><td>Plan docs, epic-level notes and small fixes legitimately land there, and the epic walk gates every one of them at merge time — the hole existed only where no later walk ever looks.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-6-consequences">Consequences</h3>
+    <p>Every change, including T0/CLAUDE.md edits and doc snapshot bookkeeping, now needs a branch
+    and a <code>--no-ff</code> merge. Post-epic cleanup that used to land directly on <code>main</code>
+    (e.g. archiving a distilled doc) must happen on the epic branch before its merge — which the
+    tracked-doc layout check (DEC-3) already forces. The commit-level rows of the DoD table now apply
+    only to standalone commits on <code>epic/*</code> branches.</p>
 
     <h2 id="dec-7"><span class="badge id">DEC-7</span> Manual review is a fifth note, required by path + level, with identity-only auth deferring the cryptographic form to E-MRSIG</h2>
     <table data-c="dec-7-facts">

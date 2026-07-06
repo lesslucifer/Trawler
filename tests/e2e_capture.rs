@@ -267,6 +267,45 @@ async fn https_mitm_decrypts_and_captures() {
 }
 
 #[tokio::test]
+async fn ui_shell_serves_live_filterable_flow_list() {
+    let h = Harness::setup(100).await;
+
+    h.proxy.get(h.origin_url("/ok")).send().await.unwrap();
+    h.wait_flow("/ok").await;
+
+    let page = h.api.get(format!("http://{}/", h.api_addr)).send().await.unwrap();
+    assert_eq!(page.status(), 200);
+    assert!(page.headers()["content-type"].to_str().unwrap().starts_with("text/html"));
+    let html = page.text().await.unwrap();
+    for wired in ["/flows", "/stream", "EventSource"] {
+        assert!(html.contains(wired), "shell page must wire {wired}");
+    }
+
+    let matching = h.api_json("/flows?host=127.0.0.1").await;
+    assert!(!matching.as_array().unwrap().is_empty(), "host filter must return the proxied flow");
+    let none = h.api_json("/flows?host=no-such-host").await;
+    assert!(none.as_array().unwrap().is_empty(), "non-matching host filter must return nothing");
+
+    let mut sse = h.api.get(format!("http://{}/stream", h.api_addr)).send().await.unwrap();
+    h.proxy.get(h.origin_url("/big")).send().await.unwrap();
+    let mut seen = String::new();
+    tokio::time::timeout(Duration::from_secs(4), async {
+        while let Some(chunk) = sse.chunk().await.unwrap() {
+            seen.push_str(&String::from_utf8_lossy(&chunk));
+            if seen.contains("event: request") && seen.contains("/big") {
+                return;
+            }
+        }
+        panic!("SSE stream ended without the /big event");
+    })
+    .await
+    .expect("no SSE event for the new flow before timeout");
+
+    // `sse` is still open on purpose: shutdown must not hang on a live SSE stream
+    h.shutdown().await;
+}
+
+#[tokio::test]
 async fn gzip_capture_raw_decode_on_view_and_ca_download() {
     let h = Harness::setup(100).await;
 

@@ -37,19 +37,19 @@ the binary (`src/main.rs`) is a thin launcher — any UI is just a client of the
 ### Run
 
 ```sh
-cargo run                         # proxy on :3000, control API on :3001
+cargo run                         # proxy on :7420, control API on :7421
 RUST_LOG=trawler=debug cargo run  # verbose
 ```
 
 Then point a client at the proxy and watch traffic land in the API:
 
 ```sh
-curl -x http://127.0.0.1:3000 http://example.com/     # proxy a request
-curl http://127.0.0.1:3001/flows                       # list captured flows
-curl -N http://127.0.0.1:3001/stream                   # live SSE of new flows
+curl -x http://127.0.0.1:7420 http://example.com/     # proxy a request
+curl http://127.0.0.1:7421/flows                       # list captured flows
+curl -N http://127.0.0.1:7421/stream                   # live SSE of new flows
 ```
 
-For HTTPS, download and trust the CA (`http://127.0.0.1:3001/ca.crt`) — see the
+For HTTPS, download and trust the CA (`http://127.0.0.1:7421/ca.crt`) — see the
 per-platform routing/trust table in the [Core Technical Design](docs/core-technical-design.html#network).
 
 ## Control API

@@ -58,10 +58,14 @@ pub struct RunningServer {
 }
 
 impl RunningServer {
-    /// Signal both servers to stop and wait for them to wind down.
+    /// Signal both servers to stop and wait for them to wind down. The proxy
+    /// drains gracefully; the API task is aborted after the signal because open
+    /// SSE `/stream` connections never complete, so a graceful wait on them
+    /// hangs shutdown forever (e.g. Ctrl-C with the UI shell open).
     pub async fn shutdown(self) {
         let _ = self.shutdown_tx.send(true);
         let _ = self.proxy_task.await;
+        self.api_task.abort();
         let _ = self.api_task.await;
     }
 }

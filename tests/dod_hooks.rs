@@ -38,7 +38,7 @@ impl Env {
         Self { home, fake_path: format!("{}:{orig}", bin.display()), log }
     }
 
-    fn git(&self, dir: &Path, args: &[&str]) -> bool {
+    fn git_run(&self, dir: &Path, args: &[&str]) -> std::process::Output {
         git_cmd()
             .args(args)
             .current_dir(dir)
@@ -52,12 +52,19 @@ impl Env {
             .env("GIT_COMMITTER_EMAIL", "test@test.invalid")
             .output()
             .expect("failed to spawn git")
-            .status
-            .success()
+    }
+
+    fn git(&self, dir: &Path, args: &[&str]) -> bool {
+        self.git_run(dir, args).status.success()
     }
 
     fn git_ok(&self, dir: &Path, args: &[&str]) {
         assert!(self.git(dir, args), "git {args:?} failed");
+    }
+
+    fn git_stderr(&self, dir: &Path, args: &[&str]) -> (bool, String) {
+        let out = self.git_run(dir, args);
+        (out.status.success(), String::from_utf8_lossy(&out.stderr).into_owned())
     }
 
     fn calls(&self) -> String {
@@ -151,14 +158,9 @@ fn pre_commit_gates_conflicted_merge_completion_on_epic() {
     install_hook(&repo, "pre-commit");
 
     env.git_ok(&repo, &["checkout", "-q", "epic/x"]);
-    let wu_tip = {
-        let out = git_cmd()
-            .args(["rev-parse", "wu/x/one"])
-            .current_dir(&repo)
-            .output()
-            .expect("rev-parse");
-        String::from_utf8_lossy(&out.stdout).trim().to_string()
-    };
+    let wu_tip = String::from_utf8_lossy(&env.git_run(&repo, &["rev-parse", "wu/x/one"]).stdout)
+        .trim()
+        .to_string();
     fs::write(repo.join(".git/MERGE_HEAD"), format!("{wu_tip}\n")).expect("write MERGE_HEAD");
     fs::write(repo.join("a.txt"), "resolved").expect("write file");
     env.git_ok(&repo, &["add", "-A"]);
@@ -194,6 +196,58 @@ fn commit_msg_hook_passes_the_message_file_and_a_green_check_lets_the_commit_lan
     env.git_ok(&repo, &["commit", "-q", "-m", "some change"]);
 
     assert!(env.calls().contains("verify-dod commit-msg"), "got: {}", env.calls());
+}
+
+#[test]
+fn direct_commit_on_main_is_refused_with_branch_guidance() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-commit");
+
+    env.git_ok(&repo, &["checkout", "-q", "main"]);
+    fs::write(repo.join("b.txt"), "direct").expect("write file");
+    env.git_ok(&repo, &["add", "-A"]);
+    let (committed, stderr) = env.git_stderr(&repo, &["commit", "-q", "-m", "direct on main"]);
+
+    assert!(!committed, "direct commit on main must be refused");
+    assert!(stderr.contains("direct commits on main are not allowed"), "got: {stderr}");
+    assert!(stderr.contains("epic/<slug>"), "guidance must show the branch commands: {stderr}");
+    assert!(stderr.contains("wu/<epic-slug>/<slug>"), "got: {stderr}");
+    assert!(!env.calls().contains("fmt"), "refusal must happen before fmt/clippy run");
+}
+
+#[test]
+fn conflicted_merge_completion_on_main_still_commits_through_the_epic_gate() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-commit");
+
+    env.git_ok(&repo, &["checkout", "-q", "main"]);
+    let wu_tip = String::from_utf8_lossy(&env.git_run(&repo, &["rev-parse", "wu/x/one"]).stdout)
+        .trim()
+        .to_string();
+    fs::write(repo.join(".git/MERGE_HEAD"), format!("{wu_tip}\n")).expect("write MERGE_HEAD");
+    fs::write(repo.join("a.txt"), "resolved").expect("write file");
+    env.git_ok(&repo, &["add", "-A"]);
+    env.git_ok(&repo, &["commit", "-q", "-m", "complete conflicted merge on main"]);
+
+    assert!(env.calls().contains("verify-dod hook epic"), "got: {}", env.calls());
+}
+
+#[test]
+fn commits_on_non_main_branches_are_unaffected_by_the_main_guard() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-commit");
+
+    fs::write(repo.join("b.txt"), "wu work").expect("write file");
+    env.git_ok(&repo, &["add", "-A"]);
+    env.git_ok(&repo, &["commit", "-q", "-m", "commit on wu branch"]);
+
+    assert!(env.calls().contains("fmt"), "normal pre-commit checks must still run");
 }
 
 #[test]

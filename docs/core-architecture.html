@@ -57,17 +57,17 @@ flowchart TD
     </table>
 
     <h2 id="runtime">Runtime wiring</h2>
-    <p>One <code>tokio</code> runtime hosts both servers. The <strong>proxy</strong> (hudsucker) listens on <code>127.0.0.1:3000</code>; the <strong>control API</strong> (axum) listens on <code>127.0.0.1:3001</code>. The <code>Recorder</code> is the only bridge between them, and it only ever <em>writes</em> to the store — it holds no reference to any interface.</p>
+    <p>One <code>tokio</code> runtime hosts both servers. The <strong>proxy</strong> (hudsucker) listens on <code>127.0.0.1:7420</code>; the <strong>control API</strong> (axum) listens on <code>127.0.0.1:7421</code>. The <code>Recorder</code> is the only bridge between them, and it only ever <em>writes</em> to the store — it holds no reference to any interface.</p>
     <div class="diagram" data-c="runtime-diagram">
       <pre class="mermaid">
 flowchart LR
-    client(["client apps"]) &lt;--&gt; hud["hudsucker MITM :3000"]
+    client(["client apps"]) &lt;--&gt; hud["hudsucker MITM :7420"]
     ca["CaMaterial → RcgenAuthority"] --> hud
     hud &lt;--&gt; rec["Recorder (HttpHandler)"]
     rec -- "insert / set_response" --> store[("Store: byte-weighted ring")]
     store -- "FlowEvent" --> bus{{"broadcast::Sender"}}
-    bus -- "BroadcastStream" --> sse["axum SSE /stream :3001"]
-    store -- "get / list" --> rest["axum REST :3001"]
+    bus -- "BroadcastStream" --> sse["axum SSE /stream :7421"]
+    store -- "get / list" --> rest["axum REST :7421"]
     sse --> ui["UI / curl"]
     rest --> ui
       </pre>
@@ -154,6 +154,7 @@ flowchart TD
     <table data-c="api-table">
       <thead><tr><th>Endpoint</th><th>Handler → returns</th></tr></thead>
       <tbody>
+        <tr><td><code>GET /</code></td><td><code>ui_page</code> → the embedded web UI shell (<code>api/ui.html</code> via <code>include_str!</code>) — a plain client of the endpoints below, no dedicated API surface</td></tr>
         <tr><td><code>GET /flows?host=&amp;method=&amp;status=&amp;content_type=&amp;q=</code></td><td><code>list_flows</code> → <code>[FlowSummary]</code></td></tr>
         <tr><td><code>GET /flows/{id}</code></td><td><code>get_flow</code> → <code>FlowView</code> (400 on bad id, 404 if missing)</td></tr>
         <tr><td><code>GET /flows/{id}/request/body?decode=1</code></td><td><code>request_body</code> → raw bytes, or decoded (204 if no bytes retained)</td></tr>
@@ -181,7 +182,7 @@ flowchart TD
       </div>
       <div class="card" data-c="dec-ports">
         <h3>/ca.crt on the API port</h3>
-        <p>Design text shows <code>:3000/ca.crt</code>. A forward-proxy port expects proxy-form requests, so a browser opening <code>:3000/ca.crt</code> is ambiguous. We serve every control endpoint — including <code>/ca.crt</code> — on <code>:3001</code>. Mobile devices just point at the API port.</p>
+        <p>Design text shows <code>:7420/ca.crt</code>. A forward-proxy port expects proxy-form requests, so a browser opening <code>:7420/ca.crt</code> is ambiguous. We serve every control endpoint — including <code>/ca.crt</code> — on <code>:7421</code>. Mobile devices just point at the API port.</p>
       </div>
       <div class="card" data-c="dec-correlate">
         <h3>Correlate via handler clone</h3>
@@ -211,10 +212,10 @@ flowchart TD
       <thead><tr><th>Step</th><th>Command / value</th></tr></thead>
       <tbody>
         <tr><td>Run</td><td><code>cargo run</code> (or <code>RUST_LOG=trawler=debug cargo run</code>)</td></tr>
-        <tr><td>Proxy</td><td><code>127.0.0.1:3000</code> — point clients / <code>HTTP(S)_PROXY</code> here</td></tr>
-        <tr><td>Control API</td><td><code>127.0.0.1:3001</code> — REST + SSE + <code>/ca.crt</code></td></tr>
-        <tr><td>Trust CA</td><td>fetch <code>http://127.0.0.1:3001/ca.crt</code>, install per the <a href="core-technical-design.html#network">platform table</a></td></tr>
-        <tr><td>Quick check</td><td><code>curl -x http://127.0.0.1:3000 http://example.com/</code> → appears in <code>GET /flows</code></td></tr>
+        <tr><td>Proxy</td><td><code>127.0.0.1:7420</code> — point clients / <code>HTTP(S)_PROXY</code> here</td></tr>
+        <tr><td>Control API</td><td><code>127.0.0.1:7421</code> — REST + SSE + <code>/ca.crt</code></td></tr>
+        <tr><td>Trust CA</td><td>fetch <code>http://127.0.0.1:7421/ca.crt</code>, install per the <a href="core-technical-design.html#network">platform table</a></td></tr>
+        <tr><td>Quick check</td><td><code>curl -x http://127.0.0.1:7420 http://example.com/</code> → appears in <code>GET /flows</code></td></tr>
       </tbody>
     </table>
 
