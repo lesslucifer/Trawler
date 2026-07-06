@@ -3,7 +3,9 @@ use std::path::Path;
 use std::process::Command;
 
 use crate::git::{diff_names, diff_sha256, git, note, write_note};
-use crate::notes::{is_code, is_expected_tracked_doc, tier_of, CrNote, DocNote, TestNote};
+use crate::notes::{
+    is_code, is_doc, is_expected_tracked_doc, is_ui, tier_of, CrNote, DocNote, TestNote,
+};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Level {
@@ -90,8 +92,9 @@ impl Gate<'_> {
         };
         if level == Level::Epic {
             self.check_tracked_docs(&mut report);
-            report.exempt = report.exempt && report.failures.is_empty();
         }
+        self.check_manual_review(&mut report, &names);
+        report.exempt = report.exempt && report.failures.is_empty();
         if !code_changed {
             return Ok(report);
         }
@@ -109,8 +112,7 @@ impl Gate<'_> {
 
     fn load_notes(&self, report: &mut Report, names: &[String]) -> ParsedNotes {
         let tip = report.tip.clone();
-        let doc_needed =
-            report.level != Level::Commit || names.iter().any(|p| p.starts_with("docs/"));
+        let doc_needed = report.level != Level::Commit || names.iter().any(|p| is_doc(p));
         let test = self
             .parse_note::<TestNote>(report, &tip, "test", "test/v2", true, |n| n.schema.clone());
         let cr = if report.level == Level::Commit {
@@ -191,7 +193,7 @@ impl Gate<'_> {
     }
 
     fn check_docs(report: &mut Report, doc: Option<&DocNote>, names: &[String]) {
-        let doc_paths: Vec<&String> = names.iter().filter(|p| p.starts_with("docs/")).collect();
+        let doc_paths: Vec<&String> = names.iter().filter(|p| is_doc(p)).collect();
         if let Some(doc) = doc {
             let entries: BTreeMap<&str, &crate::notes::DocChange> =
                 doc.changes.iter().map(|c| (c.path.as_str(), c)).collect();
@@ -254,6 +256,23 @@ impl Gate<'_> {
         }
     }
 
+    fn check_manual_review(&self, report: &mut Report, names: &[String]) {
+        let why = match report.level {
+            Level::Epic => "every epic merge requires manual review",
+            Level::Wu if names.iter().any(|p| is_ui(p)) => {
+                "this WU touches UI and requires manual review"
+            }
+            _ => return,
+        };
+        if !crate::mr::tip_authorised(self.repo, &report.tip) {
+            report.failures.push(Failure::new(
+                "8·manual-review",
+                format!("{why} - tip {} has no valid mr/v1 note", short(&report.tip)),
+                crate::mr::NOT_AUTHORISED.to_string(),
+            ));
+        }
+    }
+
     fn check_tracked_docs(&self, report: &mut Report) {
         let tracked = git(self.repo, &["ls-tree", "-r", "--name-only", &report.tip, "--", "docs"])
             .unwrap_or_default();
@@ -276,6 +295,25 @@ impl Gate<'_> {
         }
     }
 
+    fn check_commit_trailer(&self, report: &mut Report, commit: &str, parent: &str) {
+        let Ok(names) = diff_names(self.repo, parent, commit) else { return };
+        if !names.iter().any(|p| is_doc(p)) {
+            return;
+        }
+        let message = git(self.repo, &["log", "-1", "--format=%B", commit]).unwrap_or_default();
+        if !crate::mr::message_authorised(self.repo, &message) {
+            report.failures.push(Failure::new(
+                "8·manual-review",
+                format!(
+                    "doc commit {} has no valid {} manual-review trailer",
+                    short(commit),
+                    crate::mr::TRAILER_KEY
+                ),
+                crate::mr::NOT_AUTHORISED.to_string(),
+            ));
+        }
+    }
+
     fn walk(&self, report: &mut Report) -> Result<(), String> {
         let range = format!("{}..{}", report.base, report.tip);
         let lines = git(self.repo, &["rev-list", "--first-parent", "--parents", &range])?;
@@ -295,6 +333,7 @@ impl Gate<'_> {
                     if *commit == report.tip {
                         continue;
                     }
+                    self.check_commit_trailer(report, commit, first);
                     (*commit, self.verify(Level::Commit, commit, first)?)
                 }
                 [merge, _, _, _, ..] => {
@@ -342,8 +381,10 @@ impl Gate<'_> {
         line(format!("tip: {}", report.tip));
         line(format!("diff_sha256: {}", report.diff_sha256));
         let checks = match report.level {
-            Level::Epic => "[notes, manifest, review, review-base, diff-binding, doc-note, walk]",
-            _ => "[notes, manifest, review, review-base, diff-binding, doc-note]",
+            Level::Epic => {
+                "[notes, manifest, review, review-base, diff-binding, doc-note, manual-review, walk]"
+            }
+            _ => "[notes, manifest, review, review-base, diff-binding, doc-note, manual-review]",
         };
         line(format!("checks: {checks}"));
         line(format!("date: {}", today()));

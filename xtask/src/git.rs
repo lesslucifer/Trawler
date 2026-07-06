@@ -39,7 +39,10 @@ pub fn write_note(repo: &Path, note_ref: &str, tip: &str, body: &str) -> Result<
 
 pub fn diff_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
     let range = format!("{base}..{tip}");
-    Ok(git(repo, &["diff", "--name-only", &range])?.lines().map(str::to_string).collect())
+    Ok(git(repo, &["diff", "--name-only", "--no-renames", &range])?
+        .lines()
+        .map(str::to_string)
+        .collect())
 }
 
 pub fn diff_sha256(repo: &Path, base: &str, tip: &str) -> Result<String, String> {

@@ -101,6 +101,67 @@ fn commit_with_an_empty_message_is_refused() {
     assert!(out.contains("empty"));
 }
 
+fn write_msg(repo: &Repo, body: &str) -> std::path::PathBuf {
+    let f = repo.path.join("COMMIT_MSG");
+    std::fs::write(&f, body).unwrap();
+    f
+}
+
+#[test]
+fn commit_msg_hook_ignores_a_non_doc_commit() {
+    let repo = Repo::new(ALLOWED);
+    repo.write("src/lib.rs", "pub fn f() {}\n");
+    repo.git(&["add", "-A"]);
+    let msg = write_msg(&repo, "feat: no docs here\n");
+    let (code, _) = mr::commit_msg_hook(repo.p(), msg.to_str().unwrap()).unwrap();
+    assert_eq!(code, 0);
+}
+
+#[test]
+fn commit_msg_hook_refuses_a_doc_commit_without_a_trailer() {
+    let repo = Repo::new(ALLOWED);
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+    let msg = write_msg(&repo, "docs: change\n");
+    let (code, out) = mr::commit_msg_hook(repo.p(), msg.to_str().unwrap()).unwrap();
+    assert_eq!(code, 1);
+    assert!(out.contains("no valid Reviewed-By trailer"));
+    assert!(out.contains("MUST NOT self-authorise"));
+}
+
+#[test]
+fn commit_msg_hook_accepts_a_doc_commit_with_a_listed_trailer() {
+    let repo = Repo::new(ALLOWED);
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+    let msg = write_msg(&repo, "docs: change\n\nReviewed-By: email a@b.co\n");
+    let (code, _) = mr::commit_msg_hook(repo.p(), msg.to_str().unwrap()).unwrap();
+    assert_eq!(code, 0);
+}
+
+#[test]
+fn commit_msg_hook_refuses_a_doc_commit_with_an_unlisted_trailer() {
+    let repo = Repo::new(ALLOWED);
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+    let msg = write_msg(&repo, "docs: change\n\nReviewed-By: email ghost@x.co\n");
+    let (code, _) = mr::commit_msg_hook(repo.p(), msg.to_str().unwrap()).unwrap();
+    assert_eq!(code, 1);
+}
+
+#[test]
+fn commit_msg_hook_sees_a_doc_renamed_out_of_docs() {
+    let repo = Repo::new(ALLOWED);
+    repo.write("docs/movable.html", "content that is long enough to be a similar rename\n");
+    repo.write("src/keep.rs", "// keep\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "add doc"]);
+    repo.git(&["mv", "docs/movable.html", "src/moved.rs"]);
+    let msg = write_msg(&repo, "move doc out, no trailer\n");
+    let (code, _) = mr::commit_msg_hook(repo.p(), msg.to_str().unwrap()).unwrap();
+    assert_eq!(code, 1, "a rename out of docs/ must still require a trailer");
+}
+
 #[test]
 fn commit_with_unlisted_identity_is_refused() {
     let repo = Repo::new(ALLOWED);

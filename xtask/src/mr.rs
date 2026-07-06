@@ -95,6 +95,35 @@ pub fn tip_authorised(repo: &Path, tip: &str) -> bool {
     mr.schema == "mr/v1" && match_tier(&read_allowed(repo), &mr.signer).is_some()
 }
 
+/// Does `message` carry a `Reviewed-By` trailer naming a currently-listed
+/// identity? The single trailer-auth predicate for both the commit-msg hook and
+/// the epic walk. E-MRSIG hardens this one function.
+pub fn message_authorised(repo: &Path, message: &str) -> bool {
+    trailer_of(message).is_some_and(|(_, id)| match_tier(&read_allowed(repo), &id).is_some())
+}
+
+/// The `commit-msg` hook: if the staged diff touches docs, the message must
+/// carry a `Reviewed-By` trailer naming a listed identity, else the commit is
+/// refused (exit 1).
+pub fn commit_msg_hook(repo: &Path, msg_file: &str) -> Result<(i32, String), String> {
+    let staged = git(repo, &["diff", "--cached", "--name-only", "--no-renames"])?;
+    if !staged.lines().any(crate::notes::is_doc) {
+        return Ok((0, String::new()));
+    }
+    let message = std::fs::read_to_string(msg_file)
+        .map_err(|e| format!("cannot read commit message file {msg_file}: {e}"))?;
+    if message_authorised(repo, &message) {
+        Ok((0, String::new()))
+    } else {
+        Ok((
+            1,
+            format!(
+                "this commit touches docs with no valid {TRAILER_KEY} trailer\n{NOT_AUTHORISED}"
+            ),
+        ))
+    }
+}
+
 pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     match args {
         ["commit", rest @ ..] => {
