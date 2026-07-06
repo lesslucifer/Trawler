@@ -61,8 +61,8 @@
       <thead><tr><th>note</th><th>inline chip</th><th>shows</th></tr></thead>
       <tbody>
         <tr><td><code>test</code></td><td><span class="chip">test(1/5/w)</span></td><td>unit/integration/e2e — counts, <code>w</code>=waived, <code>–</code>=layer absent. Your idea, one glance at coverage across the three levels.</td></tr>
-        <tr><td><code>cr</code></td><td><span class="chip pass">cr:PASS ⚑3</span></td><td>the verdict (PASS/FAIL) — the one thing that matters — plus findings count as a flag. Colored green/red.</td></tr>
-        <tr><td><code>doc</code></td><td><span class="chip">doc(5 · T1×2 T2×2 T3×1)</span></td><td>how many docs changed + the tier breakdown — "what got touched" at a glance. <code>w</code> if <code>t2_waived</code> is set.</td></tr>
+        <tr><td><code>cr</code></td><td><span class="chip pass">cr ⚑3</span></td><td>verdict shown by <strong>color</strong> (green=PASS, red=FAIL) — no text; plus findings count as a flag.</td></tr>
+        <tr><td><code>doc</code></td><td><span class="chip">doc(5)</span></td><td>how many docs changed. Tier breakdown moved to the modal — keeps the chip short.</td></tr>
         <tr><td><code>dod</code></td><td><span class="chip pass">dod ✓6</span></td><td>the green receipt: a checkmark + how many gate checks passed. Its presence <em>is</em> the signal the WU is done.</td></tr>
         <tr><td colspan="2"><span class="chip none">cr —</span></td><td>a ref with no note on that commit: dashed, muted, not clickable.</td></tr>
       </tbody>
@@ -76,8 +76,8 @@
           <div class="row"><span class="sha">02aa956</span> Run the tracked-doc layout check…</div>
           <div class="row">
             <span class="chip" data-note="test-real">test(1/5/–)</span>
-            <span class="chip pass" data-note="cr-real">cr:PASS ⚑3</span>
-            <span class="chip" data-note="doc-real">doc(5 · T1×2 T2×2 T3×1)</span>
+            <span class="chip pass" data-note="cr-real">cr ⚑3</span>
+            <span class="chip" data-note="doc-real">doc(5)</span>
             <span class="chip pass" data-note="dod-real">dod ✓6</span>
           </div>
         </div>
@@ -241,7 +241,7 @@ diff_sha256: dd65d51…
 dimensions: [correctness, reuse, simplification, efficiency, altitude]
 findings: { found: 3, verified: 0, waived: 0 }
 verdict: PASS`],
-      'doc-real': ['doc · 02aa956', `schema: doc/v1
+      'doc-real': ['doc · 02aa956  (5 docs: T1×2 T2×2 T3×1)', `schema: doc/v1
 epic: E2 · wu: E2.W1
 changes:
   - docs/documentation-system.html   T1  updated
@@ -268,6 +268,7 @@ checks: [notes, manifest, review, review-base, diff-binding, doc-note]`],
       document.getElementById('note-modal-body').textContent = body;
       dlg.showModal();
     }));
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
   </script>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
