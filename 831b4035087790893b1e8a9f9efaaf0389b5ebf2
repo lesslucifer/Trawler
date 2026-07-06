@@ -1,0 +1,13 @@
+schema: doc/v1
+epic: E-RMAP
+branch: epic/roadmap
+changes:
+  - path: docs/decisions/roadmap.html
+    tier: T2
+    action: added
+    distills: "DEC-5: two-pillar roadmap (Proxyman-grade GUI, mitmproxy-grade functionality), thirteen epics in four waves"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "index row for DEC-5"
+t2_waived: null
