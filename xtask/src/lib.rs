@@ -144,7 +144,7 @@ fn range(repo: &Path, old: &str, new: &str) -> Result<(i32, String), String> {
 
 fn dod_list(args: &[&str], repo: &Path) -> (i32, String) {
     use std::fmt::Write as _;
-    let filter = target_value(args, "--epic");
+    let filter = flag_value(args, "--epic");
     let listing = git(repo, &["notes", "--ref=dod", "list"]).unwrap_or_default();
     let mut out = String::new();
     for line in listing.lines() {
@@ -175,10 +175,10 @@ fn dod_list(args: &[&str], repo: &Path) -> (i32, String) {
 }
 
 fn target_flag(rest: &[&str]) -> Option<String> {
-    target_value(rest, "--target")
+    flag_value(rest, "--target")
 }
 
-fn target_value(rest: &[&str], flag: &str) -> Option<String> {
+pub(crate) fn flag_value(rest: &[&str], flag: &str) -> Option<String> {
     rest.iter().position(|a| *a == flag).and_then(|i| rest.get(i + 1)).map(|s| (*s).to_string())
 }
 
@@ -193,7 +193,7 @@ fn infer_wu_target(tip: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{infer_wu_target, target_value};
+    use super::{flag_value, infer_wu_target};
 
     #[test]
     fn wu_branch_names_infer_their_epic() {
@@ -216,8 +216,8 @@ mod tests {
 
     #[test]
     fn flag_values_parse_positionally() {
-        assert_eq!(target_value(&["--target", "epic/x"], "--target").as_deref(), Some("epic/x"));
-        assert_eq!(target_value(&["--target"], "--target"), None);
-        assert_eq!(target_value(&[], "--target"), None);
+        assert_eq!(flag_value(&["--target", "epic/x"], "--target").as_deref(), Some("epic/x"));
+        assert_eq!(flag_value(&["--target"], "--target"), None);
+        assert_eq!(flag_value(&[], "--target"), None);
     }
 }

@@ -92,6 +92,16 @@ fn commit_appends_the_reviewed_by_trailer() {
 }
 
 #[test]
+fn commit_with_an_empty_message_is_refused() {
+    let repo = Repo::new(ALLOWED);
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+    let (code, out) = mr::run(&["commit", "-m", "   ", "--as", "vu"], repo.p()).unwrap();
+    assert_eq!(code, 1);
+    assert!(out.contains("empty"));
+}
+
+#[test]
 fn commit_with_unlisted_identity_is_refused() {
     let repo = Repo::new(ALLOWED);
     repo.write("docs/x.html", "x");

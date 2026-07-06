@@ -57,9 +57,10 @@ fn note_body(level: &str, tip: &str, tier: &str, signer: &str) -> String {
     )
 }
 
-/// `cargo xtask mr commit -m <msg> --as <id>` — verify the identity, print a
-/// commit message with the trailer appended so the commit-msg hook accepts it.
 fn mr_commit(repo: &Path, message: &str, identity: &str) -> Result<(i32, String), String> {
+    if message.trim().is_empty() {
+        return Ok((1, "the commit message (-m) is empty".to_string()));
+    }
     let Some(tier) = match_tier(&read_allowed(repo), identity) else {
         return Ok((1, format!("{identity} is not listed in .mr-allowed\n{NOT_AUTHORISED}")));
     };
@@ -68,8 +69,6 @@ fn mr_commit(repo: &Path, message: &str, identity: &str) -> Result<(i32, String)
     Ok((0, format!("committed with {TRAILER_KEY}: {tier} {identity}")))
 }
 
-/// `cargo xtask mr confirm <wu|epic> <tip> --as <id>` — verify the identity and
-/// write the `mr/v1` note on the tip.
 fn mr_confirm(
     repo: &Path,
     level: &str,
@@ -99,20 +98,16 @@ pub fn tip_authorised(repo: &Path, tip: &str) -> bool {
 pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     match args {
         ["commit", rest @ ..] => {
-            let message = flag(rest, "-m").ok_or(crate::USAGE.to_string())?;
-            let identity = flag(rest, "--as").ok_or(crate::USAGE.to_string())?;
+            let message = crate::flag_value(rest, "-m").ok_or(crate::USAGE.to_string())?;
+            let identity = crate::flag_value(rest, "--as").ok_or(crate::USAGE.to_string())?;
             mr_commit(repo, &message, &identity)
         }
         ["confirm", level, tip, rest @ ..] => {
-            let identity = flag(rest, "--as").ok_or(crate::USAGE.to_string())?;
+            let identity = crate::flag_value(rest, "--as").ok_or(crate::USAGE.to_string())?;
             mr_confirm(repo, level, tip, &identity)
         }
         _ => Err(crate::USAGE.to_string()),
     }
-}
-
-fn flag(args: &[&str], name: &str) -> Option<String> {
-    args.iter().position(|a| *a == name).and_then(|i| args.get(i + 1)).map(|s| (*s).to_string())
 }
 
 #[cfg(test)]
