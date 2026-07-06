@@ -159,6 +159,17 @@ pub fn is_code(path: &str) -> bool {
     path.starts_with("src/") || path.starts_with("xtask/") || path.starts_with("tests/")
 }
 
+pub fn is_doc(path: &str) -> bool {
+    path.starts_with("docs/")
+}
+
+// Provisional UI path set: E-UIFOUND owns the real definition once the UI stack
+// is chosen (see docs/decisions/roadmap.html). Until then a `ui/` prefix lets the
+// UI-WU manual-review rule be exercised.
+pub fn is_ui(path: &str) -> bool {
+    path.starts_with("ui/")
+}
+
 pub fn is_expected_tracked_doc(path: &str) -> bool {
     path.strip_prefix("docs/").is_some_and(|rest| {
         !rest.contains('/') || rest.starts_with("use-cases/") || rest.starts_with("decisions/")
@@ -167,7 +178,9 @@ pub fn is_expected_tracked_doc(path: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_code, is_expected_tracked_doc, tier_of, CrNote, DocNote, TestNote};
+    use super::{
+        is_code, is_doc, is_expected_tracked_doc, is_ui, tier_of, CrNote, DocNote, TestNote,
+    };
 
     #[test]
     fn parses_test_note_with_counts_waiver_and_identity() {
@@ -269,6 +282,15 @@ t2_waived: null
         assert!(is_code("tests/api.rs"));
         assert!(!is_code("docs/workflow.html"));
         assert!(!is_code("Cargo.toml"));
+
+        assert!(is_doc("docs/workflow.html"));
+        assert!(is_doc("docs/use-cases/capture.html"));
+        assert!(!is_doc("src/lib.rs"));
+        assert!(!is_doc("ui/app.tsx"));
+
+        assert!(is_ui("ui/app.tsx"));
+        assert!(!is_ui("src/lib.rs"));
+        assert!(!is_ui("docs/workflow.html"));
 
         assert!(is_expected_tracked_doc("docs/workflow.html"));
         assert!(is_expected_tracked_doc("docs/use-cases/capture.html"));

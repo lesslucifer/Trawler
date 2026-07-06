@@ -17,6 +17,7 @@ usage:
   cargo xtask verify-dod epic <tip-ref> [--target <ref>]      (target defaults to main)
   cargo xtask verify-dod commit <sha>
   cargo xtask verify-dod hook <wu|epic>                       (tip = MERGE_HEAD, target = HEAD)
+  cargo xtask verify-dod commit-msg <msg-file>                (commit-msg hook: docs need an mr trailer)
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
   cargo xtask mr commit -m <msg> --as <email|username>       (doc commit: write the Reviewed-By trailer)
@@ -58,6 +59,7 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
             Ok((i32::from(!report.green()), format_report(&report)))
         }
         ["hook", level] => hook(repo, level),
+        ["commit-msg", file] => mr::commit_msg_hook(repo, file),
         ["range", old, new] => range(repo, old, new),
         _ => Err(USAGE.to_string()),
     }

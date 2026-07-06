@@ -43,6 +43,15 @@ impl Repo {
         self.git(&["rev-parse", "HEAD"])
     }
 
+    // A doc commit must carry a valid Reviewed-By trailer or the epic walk's
+    // manual-review check flags it; fixtures with doc commits use this.
+    fn commit_reviewed(&self, msg: &str) -> String {
+        self.git(&["add", "-A"]);
+        let body = format!("{msg}\n\nReviewed-By: email a@b.co\n");
+        self.git(&["commit", "-q", "--cleanup=verbatim", "-m", &body]);
+        self.git(&["rev-parse", "HEAD"])
+    }
+
     fn note(&self, note_ref: &str, tip: &str, body: &str) {
         let ref_arg = format!("--ref={note_ref}");
         self.git(&["notes", &ref_arg, "add", "-f", "-m", body, tip]);
@@ -261,6 +270,16 @@ fn epic_with_merged_wu() -> (Repo, String) {
     (repo, wu_tip)
 }
 
+fn mr_note(level: &str, tip: &str) -> String {
+    format!(
+        "schema: mr/v1\nlevel: {level}\ntip: {tip}\ntier: email\nsigner: a@b.co\ndate: 2026-07-06\n"
+    )
+}
+
+fn allow_file(repo: &Repo) {
+    repo.write(".mr-allowed", "email: a@b.co\n");
+}
+
 fn bless_epic(repo: &Repo, changes: &str) {
     let tip = repo.sha("epic/x");
     let base = repo.sha("main");
@@ -272,6 +291,8 @@ fn bless_epic(repo: &Repo, changes: &str) {
     );
     repo.note("doc", &tip, &doc_note("E9", None, changes, None));
     repo.note("cr", &tip, &cr_note("E9", None, &base, &sha, "PASS"));
+    allow_file(repo);
+    repo.note("mr", &tip, &mr_note("epic", &tip));
 }
 
 #[test]
@@ -317,9 +338,11 @@ fn epic_gate_rejects_docs_in_unexpected_locations() {
 #[test]
 fn docs_only_epic_still_rejects_stray_tracked_work_docs() {
     let repo = Repo::new();
+    allow_file(&repo);
     repo.git(&["checkout", "-q", "-b", "epic/x"]);
     repo.write("docs/work/plan.html", "<html>plan</html>\n");
     repo.commit("docs-only epic leaves a work doc");
+    repo.note("mr", &repo.sha("epic/x"), &mr_note("epic", &repo.sha("epic/x")));
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
     assert!(!report.exempt, "a dirty docs tree must not be exempt");
@@ -327,17 +350,18 @@ fn docs_only_epic_still_rejects_stray_tracked_work_docs() {
 
     std::fs::remove_file(repo.path.join("docs/work/plan.html")).unwrap();
     repo.commit("archive the work doc out of git");
+    repo.note("mr", &repo.sha("epic/x"), &mr_note("epic", &repo.sha("epic/x")));
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(report.exempt, "a clean docs-only epic stays exempt");
+    assert!(report.exempt, "a clean docs-only epic with an mr note stays exempt");
 }
 
 #[test]
 fn work_doc_archived_out_of_git_passes_the_epic_gate() {
     let (repo, _) = epic_with_merged_wu();
     repo.write("docs/work/plan.html", "<html>plan</html>\n");
-    repo.commit("plan doc");
+    repo.commit_reviewed("plan doc");
     std::fs::remove_file(repo.path.join("docs/work/plan.html")).unwrap();
-    repo.commit("archive the plan out of git");
+    repo.commit_reviewed("archive the plan out of git");
     bless_epic(&repo, T2_ENTRY);
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
@@ -487,10 +511,97 @@ fn docs_only_wu_gate_is_exempt_and_writes_no_receipt() {
 fn docs_only_standalone_commit_is_exempt() {
     let (repo, _) = epic_with_merged_wu();
     repo.write("docs/use-cases/api.html", "<html>v2.5, interior</html>\n");
-    repo.commit("docs-only tweak, no manifest");
+    repo.commit_reviewed("docs-only tweak, no manifest");
     close_epic(&repo);
     bless_epic(&repo, T2_ENTRY);
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
+}
+
+#[test]
+fn every_epic_without_an_mr_note_fails_check_8() {
+    let (repo, _) = epic_with_merged_wu();
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+    repo.git(&["notes", "--ref=mr", "remove", &repo.sha("epic/x")]);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(checks_of(&report), vec!["8·manual-review"]);
+    assert!(format_report(&report).contains("MUST NOT self-authorise"));
+}
+
+#[test]
+fn epic_mr_note_with_an_unlisted_signer_fails_check_8() {
+    let (repo, _) = epic_with_merged_wu();
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+    repo.write(".mr-allowed", "email: someone-else@x.co\n");
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(checks_of(&report), vec!["8·manual-review"]);
+}
+
+fn ui_wu(repo: &Repo) -> String {
+    repo.git(&["checkout", "-q", "-b", "wu/x/ui", "epic/x"]);
+    repo.write("ui/app.tsx", "export const App = () => null;\n");
+    let tip = repo.commit("ui work unit");
+    repo.note(
+        "test",
+        &tip,
+        &test_note("working-unit", "E9", Some("E9.W2"), "  integration: { count: 1 }\n"),
+    );
+    tip
+}
+
+#[test]
+fn a_ui_wu_requires_an_mr_note() {
+    let repo = wu_with_change();
+    allow_file(&repo);
+    let tip = ui_wu(&repo);
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/ui", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"8·manual-review"),
+        "a UI WU must require manual review, got: {}",
+        format_report(&report)
+    );
+
+    repo.note("mr", &tip, &mr_note("working-unit", &tip));
+    let report = repo.gate().verify(Level::Wu, "wu/x/ui", "epic/x").unwrap();
+    assert!(
+        !checks_of(&report).contains(&"8·manual-review"),
+        "a listed mr note clears check 8: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn a_non_ui_wu_does_not_require_an_mr_note() {
+    let repo = wu_with_change();
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        !checks_of(&report).contains(&"8·manual-review"),
+        "a non-UI WU needs no manual review: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn epic_walk_flags_an_untrailered_doc_commit() {
+    let (repo, _) = epic_with_merged_wu();
+    repo.write("docs/use-cases/api.html", "<html>edited without a trailer</html>\n");
+    repo.commit("doc edit, no mr trailer");
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        checks_of(&report).contains(&"8·manual-review"),
+        "the walk must flag an untrailered doc commit: {}",
+        format_report(&report)
+    );
 }
