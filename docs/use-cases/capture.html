@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4b5d829f34851f0dfa8478">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Use Cases: Capture & Inspection</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Use Cases — Capture &amp; Inspection</h1>
+      <p>What a user can capture through the proxy and inspect on the control API, stated as observable contracts.</p>
+      <div class="meta">v1 · 2026-07-06 · Trawler · seeded by epic <span class="badge id">E-H2</span></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="uc-1">UC-1 — Intercept HTTPS without protocol distortion</h2>
+    <div data-c="uc-1-contract">
+      <p>A client pointed at the proxy (<code>http_proxy</code>/<code>https_proxy</code>, CA from
+      <code>GET /ca.crt</code> trusted) exchanges traffic with any origin exactly as it would
+      directly — bodies, headers and status intact — while every exchange is captured.</p>
+      <ul>
+        <li>Each TLS leg negotiates its HTTP version independently via ALPN: an h2-capable
+        client speaks HTTP/2 to the proxy even when the origin is HTTP/1.1-only, and vice
+        versa; an h1-only client keeps working unchanged.</li>
+        <li>The proxy offers <code>h2, http/1.1</code> on both legs and the peer picks — no
+        forced downgrade on either side, no protocol-version configuration surface.</li>
+        <li>Cleartext HTTP/2 (h2c) and HTTP/3 are out of scope; h2 arrives via ALPN on TLS
+        only.</li>
+      </ul>
+    </div>
+
+    <h2 id="uc-2">UC-2 — Inspect a flow's true protocol versions</h2>
+    <div data-c="uc-2-contract">
+      <p><code>GET /flows/{id}</code> reports, per flow, the HTTP version actually spoken on each
+      leg — never a normalized or assumed value:</p>
+      <table>
+        <thead><tr><th>Field</th><th>Leg</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><code>request_http_version</code></td><td>client → proxy</td><td><code>HTTP/2.0</code></td></tr>
+          <tr><td><code>response_http_version</code></td><td>proxy → origin</td><td><code>HTTP/1.1</code></td></tr>
+        </tbody>
+      </table>
+      <p>Mixed-version flows (h2 client with an h1-only origin, or the reverse) show the mismatch
+      honestly. Wire format is <code>HTTP/1.0</code> · <code>HTTP/1.1</code> ·
+      <code>HTTP/2.0</code>.</p>
+    </div>
+
+    <div class="callout" data-c="provenance">
+      <p>Both contracts are pinned by the <code>tests/e2e_h2.rs</code> scenarios (both-legs h2,
+      mixed legs in both directions, correlation under h2 multiplexing) and the h1 regression
+      suite in <code>tests/e2e_capture.rs</code>.</p>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
