@@ -1,0 +1,10 @@
+schema: dod/v1
+level: working-unit
+epic: E-NMWF
+wu: E-NMWF.W3
+branch: wu/nmwf/distill
+base: adf28cc4472db9251c8e2da154b22a7d8d3266e4
+tip: eb9e5ea8dc60046335ca4632ca79235b7e8660bc
+diff_sha256: a1be8e0975303f5ca63dce10645420417505080c0c88b9d902929f5796a663f2
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review]
+date: 2026-07-07
