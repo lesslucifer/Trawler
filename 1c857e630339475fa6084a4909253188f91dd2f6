@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-NV
+wu: E-NV.W2
+branch: wu/notes-view/chip-gates
+tests:
+  unit: { count: 15, covers: "rollup (wu/epic-tip/invalid); green-on-gate chips; recency sort of epics and WUs; epic-tip render; tag-tip markup; page carries flatten/splitFlow/seqCount/copy-ui and the field-table script" }
+  integration: { waived: "the viewer is a standalone debug xtask with no library seam; its contract is the rendered HTML pinned by page()-level unit assertions, and the JS flatten/splitFlow was validated end-to-end against the tips real comma-in-quote note bodies via the served page" }
+  e2e: { waived: "no product e2e level applies — debug serve is a dev-only inspection tool outside the proxy/API flows the e2e suite covers" }
