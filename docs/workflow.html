@@ -143,14 +143,11 @@ flowchart TD
     when its diff is exempt from test/cr/doc.</p>
 
     <div class="callout warn" data-c="mr-scope">
-      <p><strong>Identity-only, this epic (E-NMWF).</strong> Authorisation is an identity assertion — a name
-      listed in <code>.mr-allowed</code>. Because an agent knows the user's identity it <em>can</em> produce
-      it, so the guarantee today is a <strong>forced stop + an audit trail of who signed</strong>, not
-      cryptographic proof. <strong>The AI agent must never self-authorise</strong>: a human reviews and
-      confirms, and only then is the trailer/note written. The unforgeable, hardware-backed signature is a
-      separate follow-up epic (<span class="badge id">E-MRSIG</span>, see
-      <a href="decisions/roadmap.html">roadmap</a>) that replaces only the "is this identity listed?" check
-      with "does this signature verify?" — every other piece here stays as built.</p>
+      <p><strong>Identity-only, this epic (E-NMWF) — the AI agent must never self-authorise.</strong> An agent
+      knows the user's identity, so it <em>can</em> produce it: the guarantee today is a forced stop + an
+      audit trail of who signed, not cryptographic proof. A human reviews and confirms; only then is the
+      trailer/note written. The unforgeable form is <span class="badge id">E-MRSIG</span>
+      (<a href="decisions/workflow-gates.html#dec-6">DEC-6</a> · <a href="decisions/roadmap.html">roadmap</a>).</p>
     </div>
 
     <h2 id="evidence">Evidence — five notes, one tip</h2>
