@@ -1,0 +1,5 @@
+schema: doc/v1
+epic: E-NMWF
+wu: E-NMWF.W2
+changes: []
+t2_waived: "W2 wires the enforcement machinery only; workflow.html + decision record land in W3 distillation"
