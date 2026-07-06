@@ -26,7 +26,8 @@ pub fn serve(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
 fn handle(stream: &mut TcpStream, repo: &Path, url: &str) -> std::io::Result<()> {
     let mut line = String::new();
     BufReader::new(&*stream).read_line(&mut line)?;
-    // drain the rest of the request head so the client accepts our response
+    // ponytail: read the request line only; remaining headers are discarded on close.
+    // Every path renders the same page — a browser GET on localhost needs no routing.
     let body = render(repo, url);
     let head = format!(
         "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
@@ -119,6 +120,9 @@ fn rollup_key(commit: &Commit) -> Option<(String, String)> {
     None
 }
 
+// ponytail: independent epic/wu chains; safe while the four schemas' required-field
+// sets diverge (a body parses as exactly one type). Revisit if a new note schema
+// becomes a structural subset of another.
 fn epic_wu(body: &str) -> Option<(String, String)> {
     let epic: Option<String> = serde_yaml::from_str::<TestNote>(body)
         .ok()
