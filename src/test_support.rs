@@ -6,8 +6,40 @@ use std::io::Write;
 use bytes::Bytes;
 use flate2::write::{GzEncoder, ZlibEncoder};
 use flate2::Compression;
+use hudsucker::rustls::pki_types::PrivateKeyDer;
+use hudsucker::rustls::ServerConfig;
 
 use crate::flow::{BodyRec, Flow, Header, RequestRec, ResponseRec};
+
+/// Material for a hermetic `localhost` TLS origin: the CA PEM to trust and a
+/// rustls server config restricted to the given ALPN protocols, so tests can
+/// stand up h2-capable and h1-only upstreams from the same helper.
+pub fn tls_origin(alpn: &[&str]) -> (String, ServerConfig) {
+    use rcgen::{
+        BasicConstraints, CertificateParams, ExtendedKeyUsagePurpose, IsCa, Issuer, KeyPair,
+    };
+    crate::init_crypto();
+    let ca_key = KeyPair::generate().expect("ca key");
+    let mut ca_params = CertificateParams::new(Vec::new()).expect("ca params");
+    ca_params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
+    let ca_cert = ca_params.self_signed(&ca_key).expect("ca cert");
+    let ca_pem = ca_cert.pem();
+    let issuer = Issuer::new(ca_params, ca_key);
+
+    let leaf_key = KeyPair::generate().expect("leaf key");
+    let mut leaf_params =
+        CertificateParams::new(vec!["localhost".to_string()]).expect("leaf params");
+    leaf_params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
+    let leaf_cert = leaf_params.signed_by(&leaf_key, &issuer).expect("leaf cert");
+
+    let key = PrivateKeyDer::Pkcs8(leaf_key.serialize_der().into());
+    let mut config = ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(vec![leaf_cert.der().clone()], key)
+        .expect("server config");
+    config.alpn_protocols = alpn.iter().map(|p| p.as_bytes().to_vec()).collect();
+    (ca_pem, config)
+}
 
 pub fn header(name: &str, value: &str) -> Header {
     Header { name: name.to_string(), value: value.to_string() }

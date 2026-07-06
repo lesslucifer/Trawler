@@ -31,7 +31,7 @@ required-features = ["hook-tests"]
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
-hudsucker = { version = "0.24", features = ["rcgen-ca", "rustls-client"] }
+hudsucker = { version = "0.24", features = ["rcgen-ca", "rustls-client", "http2"] }
 rcgen = { version = "0.14", features = ["pem", "crypto"] }
 axum = "0.8"
 tokio-stream = { version = "0.1", features = ["sync"] }
@@ -46,7 +46,7 @@ flate2 = "1"
 time = { version = "0.3", features = ["formatting"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "aws-lc-rs"] }
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "http2", "aws-lc-rs"] }
 rustls-pemfile = "2"
 webpki-roots = "0.26"
 
@@ -56,7 +56,7 @@ cargo-husky = { version = "1", default-features = false, features = ["user-hooks
 proptest = "1"
 tempfile = "3"
 tower = { version = "0.5", features = ["util"] }
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2"] }
 axum-server = { version = "0.7", features = ["tls-rustls"] }
 
 [lints.rust]

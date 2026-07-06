@@ -135,7 +135,7 @@ fn upstream_connector(extra_root_pems: &[String]) -> HttpsConnector<HttpConnecto
         .expect("tls protocol versions")
         .with_root_certificates(roots)
         .with_no_client_auth();
-    HttpsConnectorBuilder::new().with_tls_config(tls).https_or_http().enable_http1().build()
+    HttpsConnectorBuilder::new().with_tls_config(tls).https_or_http().enable_all_versions().build()
 }
 
 /// Boot the engine and run until interrupted.
@@ -153,4 +153,44 @@ pub async fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {
 
 async fn shutdown_signal() {
     let _ = tokio::signal::ctrl_c().await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::upstream_connector;
+    use bytes::Bytes;
+    use http_body_util::Empty;
+    use hudsucker::hyper_util::client::legacy::Client;
+    use hudsucker::hyper_util::rt::TokioExecutor;
+
+    async fn version_negotiated_with_origin(alpn: &[&str]) -> http::Version {
+        let (ca_pem, server_config) = crate::test_support::tls_origin(alpn);
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+        let port = listener.local_addr().expect("addr").port();
+        let app = axum::Router::new().route("/", axum::routing::get(|| async { "ok" }));
+        let tls =
+            axum_server::tls_rustls::RustlsConfig::from_config(std::sync::Arc::new(server_config));
+        tokio::spawn(async move {
+            let _ =
+                axum_server::from_tcp_rustls(listener, tls).serve(app.into_make_service()).await;
+        });
+
+        let client = Client::builder(TokioExecutor::new())
+            .build::<_, Empty<Bytes>>(upstream_connector(&[ca_pem]));
+        let uri = format!("https://localhost:{port}/").parse().expect("uri");
+        client.get(uri).await.expect("request through connector").version()
+    }
+
+    #[tokio::test]
+    async fn upstream_connector_negotiates_h2_when_origin_offers_it() {
+        assert_eq!(
+            version_negotiated_with_origin(&["h2", "http/1.1"]).await,
+            http::Version::HTTP_2
+        );
+    }
+
+    #[tokio::test]
+    async fn upstream_connector_keeps_h1_against_h1_only_origin() {
+        assert_eq!(version_negotiated_with_origin(&["http/1.1"]).await, http::Version::HTTP_11);
+    }
 }

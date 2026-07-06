@@ -220,7 +220,7 @@ flowchart TD
 
     <h2 id="scope">What is intentionally not built (v1)</h2>
     <div class="callout" data-c="scope-callout">
-      <p>Out of scope by design, and where each will slot in: <strong>replay / breakpoints / request rewriting</strong> (new mutation endpoints + a handler hook), <strong>WebSocket-frame capture</strong> (hudsucker's <code>WebSocketHandler</code>), <strong>persistence — SQLite / HAR</strong> (behind the <code>Store</code> boundary), <strong>transparent / NAT interception</strong> (root + per-OS plumbing), and <strong>true end-to-end HTTP/2</strong> (hudsucker's <code>http2</code> feature). The current store and interface boundaries were chosen so none of these force a rewrite. See the design doc's <a href="core-technical-design.html#challenges">challenges table</a>.</p>
+      <p>Out of scope by design, and where each will slot in: <strong>replay / breakpoints / request rewriting</strong> (new mutation endpoints + a handler hook), <strong>WebSocket-frame capture</strong> (hudsucker's <code>WebSocketHandler</code>), <strong>persistence — SQLite / HAR</strong> (behind the <code>Store</code> boundary), and <strong>transparent / NAT interception</strong> (root + per-OS plumbing). The current store and interface boundaries were chosen so none of these force a rewrite. See the design doc's <a href="core-technical-design.html#challenges">challenges table</a>.</p>
     </div>
   </main>
   <script type="module">
