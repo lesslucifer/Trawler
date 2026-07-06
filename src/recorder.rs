@@ -32,6 +32,10 @@ impl Recorder {
     }
 }
 
+fn version_str(version: http::Version) -> String {
+    format!("{version:?}")
+}
+
 fn headers_to_vec(map: &HeaderMap) -> Vec<Header> {
     map.iter()
         .map(|(name, value)| Header {
@@ -58,7 +62,7 @@ impl HttpHandler for Recorder {
         let request = RequestRec {
             method: parts.method.as_str().to_owned(),
             uri: parts.uri.to_string(),
-            version: format!("{:?}", parts.version),
+            version: version_str(parts.version),
             headers: headers_to_vec(&parts.headers),
             body: body_rec,
         };
@@ -80,7 +84,7 @@ impl HttpHandler for Recorder {
 
         let response = ResponseRec {
             status: parts.status.as_u16(),
-            version: format!("{:?}", parts.version),
+            version: version_str(parts.version),
             headers: headers_to_vec(&parts.headers),
             body: body_rec,
         };
@@ -94,8 +98,15 @@ impl HttpHandler for Recorder {
 
 #[cfg(test)]
 mod tests {
-    use super::headers_to_vec;
-    use http::{HeaderMap, HeaderValue};
+    use super::{headers_to_vec, version_str};
+    use http::{HeaderMap, HeaderValue, Version};
+
+    #[test]
+    fn version_renders_api_wire_format() {
+        assert_eq!(version_str(Version::HTTP_11), "HTTP/1.1");
+        assert_eq!(version_str(Version::HTTP_2), "HTTP/2.0");
+        assert_eq!(version_str(Version::HTTP_10), "HTTP/1.0");
+    }
 
     #[test]
     fn maps_and_preserves_duplicates() {
