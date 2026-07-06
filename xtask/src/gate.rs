@@ -301,11 +301,15 @@ impl Gate<'_> {
             return;
         }
         let message = git(self.repo, &["log", "-1", "--format=%B", commit]).unwrap_or_default();
-        if !crate::mr::message_authorised(self.repo, &message) {
+        // A doc commit is authorised by an in-message Reviewed-By trailer or, for
+        // commits that predate the trailer mechanism, an mr/v1 note added to it.
+        if !crate::mr::message_authorised(self.repo, &message)
+            && !crate::mr::tip_authorised(self.repo, commit)
+        {
             report.failures.push(Failure::new(
                 "8·manual-review",
                 format!(
-                    "doc commit {} has no valid {} manual-review trailer",
+                    "doc commit {} has no valid {} trailer or mr/v1 note",
                     short(commit),
                     crate::mr::TRAILER_KEY
                 ),

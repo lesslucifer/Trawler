@@ -629,6 +629,30 @@ fn epic_walk_flags_an_untrailered_doc_commit() {
 }
 
 #[test]
+fn a_doc_commit_note_authorises_when_the_trailer_is_absent() {
+    let (repo, _) = epic_with_merged_wu();
+    repo.write("docs/use-cases/api.html", "<html>edited without a trailer</html>\n");
+    let doc_commit = repo.commit("doc edit, no mr trailer");
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        checks_of(&report).contains(&"8·manual-review"),
+        "untrailered doc commit is red before a note: {}",
+        format_report(&report)
+    );
+
+    repo.note("mr", &doc_commit, &mr_note("commit", &doc_commit));
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        !checks_of(&report).contains(&"8·manual-review"),
+        "an mr/v1 note on the doc commit authorises it: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
 fn epic_walk_flags_a_doc_moved_out_of_docs_without_a_trailer() {
     let (repo, _) = epic_with_merged_wu();
     repo.git(&["mv", "docs/use-cases/api.html", "src/moved.rs"]);
