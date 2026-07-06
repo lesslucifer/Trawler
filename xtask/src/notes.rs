@@ -115,6 +115,17 @@ impl DistilledTo {
 }
 
 #[derive(Deserialize)]
+pub struct MrNote {
+    pub schema: String,
+    pub level: String,
+    pub tip: String,
+    pub tier: String,
+    pub signer: String,
+    #[serde(default)]
+    pub date: Option<String>,
+}
+
+#[derive(Deserialize)]
 pub struct DodReceipt {
     pub schema: String,
     pub level: String,

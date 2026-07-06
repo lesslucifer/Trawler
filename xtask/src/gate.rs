@@ -421,7 +421,7 @@ fn check_identity(report: &mut Report, ids: &[Option<(Option<String>, Option<Str
     }
 }
 
-fn today() -> String {
+pub fn today() -> String {
     Command::new("date")
         .arg("+%Y-%m-%d")
         .output()

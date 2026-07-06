@@ -2,6 +2,7 @@ pub mod debug;
 pub mod doc;
 pub mod gate;
 pub mod git;
+pub mod mr;
 pub mod notes;
 
 use std::path::{Path, PathBuf};
@@ -18,6 +19,8 @@ usage:
   cargo xtask verify-dod hook <wu|epic>                       (tip = MERGE_HEAD, target = HEAD)
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
+  cargo xtask mr commit -m <msg> --as <email|username>       (doc commit: write the Reviewed-By trailer)
+  cargo xtask mr confirm <wu|epic> <tip> --as <email|username> (write the mr/v1 note on the tip)
   cargo xtask dod list [--epic <id>]
   cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";
 
@@ -30,6 +33,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
     match strs.as_slice() {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
+        ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
         ["debug", "serve", rest @ ..] => debug::serve(rest, repo),
         _ => Err(USAGE.to_string()),
@@ -140,7 +144,7 @@ fn range(repo: &Path, old: &str, new: &str) -> Result<(i32, String), String> {
 
 fn dod_list(args: &[&str], repo: &Path) -> (i32, String) {
     use std::fmt::Write as _;
-    let filter = target_value(args, "--epic");
+    let filter = flag_value(args, "--epic");
     let listing = git(repo, &["notes", "--ref=dod", "list"]).unwrap_or_default();
     let mut out = String::new();
     for line in listing.lines() {
@@ -171,10 +175,10 @@ fn dod_list(args: &[&str], repo: &Path) -> (i32, String) {
 }
 
 fn target_flag(rest: &[&str]) -> Option<String> {
-    target_value(rest, "--target")
+    flag_value(rest, "--target")
 }
 
-fn target_value(rest: &[&str], flag: &str) -> Option<String> {
+pub(crate) fn flag_value(rest: &[&str], flag: &str) -> Option<String> {
     rest.iter().position(|a| *a == flag).and_then(|i| rest.get(i + 1)).map(|s| (*s).to_string())
 }
 
@@ -189,7 +193,7 @@ fn infer_wu_target(tip: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{infer_wu_target, target_value};
+    use super::{flag_value, infer_wu_target};
 
     #[test]
     fn wu_branch_names_infer_their_epic() {
@@ -212,8 +216,8 @@ mod tests {
 
     #[test]
     fn flag_values_parse_positionally() {
-        assert_eq!(target_value(&["--target", "epic/x"], "--target").as_deref(), Some("epic/x"));
-        assert_eq!(target_value(&["--target"], "--target"), None);
-        assert_eq!(target_value(&[], "--target"), None);
+        assert_eq!(flag_value(&["--target", "epic/x"], "--target").as_deref(), Some("epic/x"));
+        assert_eq!(flag_value(&["--target"], "--target"), None);
+        assert_eq!(flag_value(&[], "--target"), None);
     }
 }
