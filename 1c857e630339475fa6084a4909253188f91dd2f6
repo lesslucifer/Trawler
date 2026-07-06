@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-NV.W2 (chip-gates) -> epic/notes-view"
+epic: E-NV
+wu: E-NV.W2
+branch: wu/notes-view/chip-gates
+base: 69923739042dc42c7cf0de9790edb876de040cf5
+head: 1c857e630339475fa6084a4909253188f91dd2f6
+diff_sha256: 19ae0d6bb61af26840b7c0bb42d0297e2a5dd73ee8588974e41c79518fe447bb
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 2, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-06
