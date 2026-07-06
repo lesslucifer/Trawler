@@ -1,0 +1,4 @@
+schema: test/v2
+level: commit
+tests:
+  unit: { waived: "docs-only distillation: T1 workflow.html command line + archive moves; no code changed" }
