@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-NMWF
+wu: E-NMWF.W1
+branch: wu/nmwf/authoriser
+tests:
+  unit: { count: 2, covers: "match_tier tier resolution, Reviewed-By trailer parse" }
+  integration: { count: 5, covers: "mr commit/confirm write trailer+note for listed ids, refuse unlisted" }
