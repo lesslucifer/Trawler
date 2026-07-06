@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-NV.W3 search-paginate -> epic/notes-view (result-doc commit adds only a T3 wu-result: docs-only, review-exempt; code diff unchanged from the reviewed tip)"
+epic: E-NV
+wu: E-NV.W3
+branch: wu/notes-view/search-paginate
+base: fc5b7dd2270c4f807dea51babd8291e841b758a0
+head: 03502bd851b2d0d9db1307ddccfd1b63b6f0df5b
+diff_sha256: 13725b0a5401661d0b2f9af696e8ae669ad939b3c34a0de4d83a7b345babe6e7
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 3, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-06
