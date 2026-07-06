@@ -1,0 +1,7 @@
+schema: test/v2
+level: commit
+epic: E-NV
+wu: E-NV.W2
+tests:
+  unit: { count: 8, covers: "green-on-gate for test/doc chips, recency sort of epics/WUs, epic-tip rollup, empty-doc default" }
+  integration: { waived: "pure render/rollup change; debug_serve e2e already exercises the serve path unchanged" }
