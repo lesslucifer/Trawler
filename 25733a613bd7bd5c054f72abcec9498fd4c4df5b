@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-GATEFAST
+wu: E-GATEFAST.W1
+branch: wu/gatefast/skeleton
+changes:
+  - path: docs/work/2026-07-07-gatefast-w1-skeleton-plan.html
+    tier: T3
+    action: created
+    distilled_to: "none: distilled at epic close per DEC-3"
+  - path: docs/work/2026-07-07-gatefast-w1-skeleton-result.html
+    tier: T3
+    action: created
+    distilled_to: "none: distilled at epic close per DEC-3"
+t2_waived: "process/tooling WU on the DoD gate and code-review authoring; no product use-case (UC-*) touched - epic truth distills to a new DEC at epic close"
