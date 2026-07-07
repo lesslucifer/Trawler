@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEFAST
+wu: E-GATEFAST.W1
+branch: wu/gatefast/skeleton
+tests:
+  integration: { count: 2, covers: "generated notes drive verify-dod checks 1 & 6 green with no accounting edits; a hand-added phantom doc path is caught" }
+  unit: { count: 4, covers: "note-skeleton builders and doc-skeleton checklist coverage" }
