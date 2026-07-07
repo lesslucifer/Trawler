@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions — Workflow Gates</h1>
       <p>Why DoD evidence is shaped the way it is.</p>
-      <div class="meta">v4 · 2026-07-07 · Trawler · <a href="decisions-index.html">index</a></div>
+      <div class="meta">v5 · 2026-07-07 · Trawler · <a href="decisions-index.html">index</a></div>
     </div>
   </header>
   <main>
@@ -154,6 +154,48 @@
     point. Until E-UIFOUND lands, the UI-WU rule matches only <code>ui/</code> paths, so no current WU
     triggers it; epics and doc commits are live immediately. Adding a person to <code>.mr-allowed</code> is
     itself a tracked, reviewable diff.</p>
+
+    <h2 id="dec-8"><span class="badge id">DEC-8</span> The epic walk skips history already on the gate target; a per-seam walk waiver on the <code>cr/v2</code> note is the only recorded override</h2>
+    <table data-c="dec-8-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-07</td></tr>
+        <tr><th>Origin</th><td>Epic E-GATEBM — the walk's three-parent arm mis-gated a back-merge of already-gated history, which already forced a blanket <code>--no-verify</code> onto <code>main</code> (E-NMWF landed at <code>8871d7b</code> with no receipt on the back-merged tip). Plan/discussion archived under <code>docs/.archive/</code> (untracked)</td></tr>
+        <tr><th>Where</th><td><code>xtask/src/gate.rs · is_landed_history/record_seam/tip_walk_waivers</code> · <code>xtask/src/notes.rs · CrNote.walk_waivers/walk_waiver_for</code> · <a href="../workflow.html#gate">workflow.html</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-8-context">Context</h3>
+    <p>The epic gate's seam walk (<a href="../workflow.html#gate">check 7</a>) is the one place that
+    re-inspects every first-parent seam, and it is the unbypassable backstop against a fail-open or
+    bypassed sub-gate — so it cannot be removed. But it answered only one classification question:
+    "is the merged-in parent already reachable from the epic mainline?" That misses the normal shape
+    of a stale epic that back-merges an advanced <code>main</code> — the two lineages have diverged, so
+    neither contains the other, yet the merged-in tip <em>is</em> already on <code>main</code> and was
+    gated by <code>main</code>'s own history. The walk mis-read that integration as a net-new, ungated
+    WU seam and turned the epic gate red on a legitimate merge.</p>
+
+    <h3 id="dec-8-choices">Choices (each looks "fixable" — it isn't)</h3>
+    <table data-c="dec-8-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
+      <tbody>
+        <tr><td>Discriminator #2: skip a seam when its merged-in parent is an ancestor of the gate <em>target</em> (<code>p2 ⊑ main</code>), kept alongside the existing <code>p2 ⊑ mainline</code> check</td><td>Content already on <code>main</code> was gated by <code>main</code>'s own history — there is nothing to re-gate. It is R2-safe <em>by construction</em>: a genuine forward WU seam always carries commits absent from <code>main</code>, so it can never be an ancestor of the target and the skip can never swallow it. The regression test freezes that property rather than hoping for it.</td></tr>
+        <tr><td>Rejected #1 (symmetric ancestry: also skip if <code>mainline ⊑ wu_tip</code>)</td><td>Verified against the real E-NMWF back-merge: the diverged lineages mean neither tip contains the other, so #1 does <em>not</em> fix the reported case. The intuition "a back-merge means one side contains the other" is false once both sides advance — the normal state of a stale epic.</td></tr>
+        <tr><td>Rejected: removing the walk</td><td>It is the only re-inspection of seams and the only backstop that a fast-forward or <code>--no-verify</code> can't defeat (DEC-2). Removing it trades a false positive for a permanent hole.</td></tr>
+        <tr><td>Deferred #3′ (gated-lineage: skip if the merged-in tip's own chain is fully receipted)</td><td>The fully-general answer — it also covers <em>unlanded</em> cross-epic siblings — but it re-derives the gate recursively and is costlier. No unlanded cross-epic integration has ever occurred; the standing rule is to <strong>serialize cross-epic dependencies through <code>main</code></strong> (land one, back-merge, build the next), which turns that case into a plain back-merge #2 already handles. Build #3′ only if live integrations ever become frequent enough that per-seam waivers turn noisy.</td></tr>
+        <tr><td>R5 waiver valve: a walk seam failure is suppressable only by a <code>walk_waivers: [{seam, why}]</code> entry on the epic tip's <code>cr/v2</code> note, per-seam, mandatory non-empty <code>why</code></td><td>#2 fixes the <em>known</em> misfire; the walk is subtle enough that the <em>next</em> one needs a surgical, recorded override — never the blanket <code>--no-verify</code>, which skips <em>every</em> gate and already defeated the gate once. The waiver waives exactly one named seam; every other seam and every non-walk check still runs.</td></tr>
+        <tr><td>The waiver rides <code>cr/v2</code> — not <code>test/v2</code>, not <code>dod/v1</code></td><td>A walk waiver is a <em>review judgment</em> ("I looked at this seam the walk can't classify and skipping its re-check is acceptable"), not test coverage (<code>test</code>) and not the gate's own green-only output (<code>dod</code>, which can't authorise its own pass — DEC-2). And <code>cr/v2</code> is diff-bound (<code>base</code> + <code>diff_sha256</code>): if <code>main</code> moves and the epic's effective diff changes, the review — and the waiver riding it — is forced to be re-validated, so a waiver can't silently outlive the diff it was judged against. An unjustified waiver is a review finding, the same trust model as every other <code>waived</code> (DEC-2).</td></tr>
+        <tr><td>Manual review (check 8) stays outside the waiver path</td><td>The <code>walk_waivers</code> valve suppresses walk-<em>classification</em> failures only; a doc commit's missing <code>Reviewed-By</code> trailer is a correctly-detected manual-review gap, and manual review is <strong>not waivable</strong> (DEC-7). Routing check 8 through the valve would make a human sign-off skippable — the opposite of its point.</td></tr>
+        <tr><td>Waivers key on the whole seam sha (prefix-tolerant), not per sub-check</td><td>The agent copies the abbreviated sha the walk prints straight into the waiver; per-<em>check</em> granularity is deferred unless it proves too coarse. One named seam, one waiver.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-8-consequences">Consequences</h3>
+    <p>A stale epic can back-merge <code>main</code> (or a landed sibling) and walk clean, so the
+    tooling/binary mismatch that forced the bypass self-resolves once a branch is current. The walk's
+    backstop value is intact — genuine ungated seams still turn it red — but its blast radius is defused:
+    a misfire is now a logged, per-seam door on the <code>cr/v2</code> note, not a blanket <code>--no-verify</code>
+    wall. The standing workflow rule "cross-epic dependencies serialize through <code>main</code>" is now
+    explicit; unlanded live integration has a recorded escape (the waiver) rather than needing #3′.</p>
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
