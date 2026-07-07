@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-GATEBM
 wu: E-GATEBM.W2
-branch: wu/gate-backmerge/waiver-valve
 base: 8b782ca92de6b5178282488ab3ea136fe82a12b4
 tip: d562ae62582c0ebd3cfe193e98e3f16184ade39c
 diff_sha256: b7d93b83bac44de4f645773b4d663ced55c2a9dc71dc8719353234dd70152714
