@@ -1,0 +1,14 @@
+schema: test/v2
+level: working-unit
+epic: E-MRSIG
+wu: E-MRSIG.W2
+branch: wu/mrsig/signing-ux
+tests:
+  unit:
+    count: 5
+    covers: ssh_sign roundtrip + tamper/missing-key reject; key_line/append_key_line idempotent; has_key_entry pubkey-only; signed_note_body parses as mr/v1 with base+sig intact; touch_hint names signer
+  integration:
+    count: 5
+    covers: setup writes key entry + gpg.format/user.signingkey (idempotent, preserves entries); confirm signs a note tip_authorised accepts; amend after signed confirm invalidates the sig; identity-only confirm keeps the plain-note path; key-identity mr commit produces a gpgsig commit_signed verifies + keeps the trailer
+  e2e:
+    waived: "full signed flow e2e is delivered by W3 (epic e2e over a hermetic temp repo with hooks); the physical-touch half is a deployment property, not machine-testable — proven crypto/producer half only"
