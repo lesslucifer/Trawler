@@ -54,6 +54,7 @@ pub struct Report {
     pub wu: Option<String>,
     pub exempt: bool,
     pub failures: Vec<Failure>,
+    pub waived: Vec<String>,
 }
 
 impl Report {
@@ -89,6 +90,7 @@ impl Gate<'_> {
             wu: None,
             exempt: !code_changed,
             failures: Vec::new(),
+            waived: Vec::new(),
         };
         if level == Level::Epic {
             self.check_tracked_docs(&mut report);
@@ -328,16 +330,53 @@ impl Gate<'_> {
         git(self.repo, &["merge-base", "--is-ancestor", commit, of]).is_ok()
     }
 
+    fn tip_walk_waivers(&self, tip: &str) -> Option<CrNote> {
+        note(self.repo, "cr", tip).and_then(|raw| serde_yaml::from_str::<CrNote>(&raw).ok())
+    }
+
+    // A walk seam either fails or, if the tip's cr/v2 note carries a matching
+    // walk_waivers entry, is recorded as a visible waiver instead. The waiver is
+    // per-seam (keyed by sha) and never touches the tip's own non-walk checks; a
+    // still-red seam's fix names the exact, on-the-record waiver edit and warns
+    // off --no-verify, which would skip every gate rather than this one seam.
+    fn record_seam(
+        &self,
+        report: &mut Report,
+        seam: &str,
+        failures: Vec<Failure>,
+        waivers: Option<&CrNote>,
+    ) {
+        if failures.is_empty() {
+            return;
+        }
+        if let Some(why) = waivers.and_then(|cr| cr.walk_waiver_for(seam)) {
+            report.waived.push(format!("7·walk seam {} waived: {why}", short(seam)));
+            return;
+        }
+        let hint = format!(
+            "or, if this walk seam is a misfire the walk can't classify, record it on the tip's \
+             cr/v2 note: git notes --ref=cr edit {} then add a walk_waivers entry \
+             {{ seam: {}, why: \"<why safe>\" }} - do NOT use --no-verify, which skips every gate",
+            short(&report.tip),
+            short(seam)
+        );
+        for mut f in failures {
+            f.fix = format!("{}; {hint}", f.fix);
+            report.failures.push(f);
+        }
+    }
+
     fn is_landed_history(&self, wu_tip: &str, mainline: &str, target: &str) -> bool {
         self.is_ancestor(wu_tip, mainline) || self.is_ancestor(wu_tip, target)
     }
 
     fn walk(&self, report: &mut Report, target: &str) -> Result<(), String> {
+        let waivers = self.tip_walk_waivers(&report.tip);
         let range = format!("{}..{}", report.base, report.tip);
         let lines = git(self.repo, &["rev-list", "--first-parent", "--parents", &range])?;
         for line in lines.lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();
-            let (seam, inner) = match parts.as_slice() {
+            let (seam, seam_failures) = match parts.as_slice() {
                 [merge, mainline, wu_tip] => {
                     // --first-parent ordering: parent one is the epic mainline, parent two the
                     // merged-in WU tip. Skip when wu_tip is already landed history rather than a
@@ -347,17 +386,44 @@ impl Gate<'_> {
                     if self.is_landed_history(wu_tip, mainline, target) {
                         continue;
                     }
-                    (*merge, self.verify(Level::Wu, wu_tip, mainline)?)
+                    let inner = self.verify(Level::Wu, wu_tip, mainline)?;
+                    let level = inner.level.as_note_level();
+                    let failures = inner
+                        .failures
+                        .into_iter()
+                        .map(|f| {
+                            Failure::new(
+                                &format!("7·walk·{}", f.check),
+                                format!("[{level} {}] {}", short(merge), f.what),
+                                f.fix,
+                            )
+                        })
+                        .collect();
+                    (*merge, failures)
                 }
                 [commit, first] => {
                     if *commit == report.tip {
                         continue;
                     }
                     self.check_commit_trailer(report, commit, first)?;
-                    (*commit, self.verify(Level::Commit, commit, first)?)
+                    let inner = self.verify(Level::Commit, commit, first)?;
+                    let level = inner.level.as_note_level();
+                    let failures = inner
+                        .failures
+                        .into_iter()
+                        .map(|f| {
+                            Failure::new(
+                                &format!("7·walk·{}", f.check),
+                                format!("[{level} {}] {}", short(commit), f.what),
+                                f.fix,
+                            )
+                        })
+                        .collect();
+                    (*commit, failures)
                 }
-                [merge, _, _, _, ..] => {
-                    report.failures.push(Failure::new(
+                [merge, _, _, _, ..] => (
+                    *merge,
+                    vec![Failure::new(
                         "7·walk",
                         format!(
                             "{} is an octopus merge - parents beyond the second were never gated",
@@ -365,18 +431,11 @@ impl Gate<'_> {
                         ),
                         "merge one WU per merge commit; rebuild this seam as sequential --no-ff merges"
                             .to_string(),
-                    ));
-                    continue;
-                }
+                    )],
+                ),
                 _ => continue,
             };
-            for f in inner.failures {
-                report.failures.push(Failure::new(
-                    &format!("7·walk·{}", f.check),
-                    format!("[{} {}] {}", inner.level.as_note_level(), short(seam), f.what),
-                    f.fix,
-                ));
-            }
+            self.record_seam(report, seam, seam_failures, waivers.as_ref());
         }
         Ok(())
     }
@@ -504,14 +563,19 @@ pub fn format_report(report: &Report) -> String {
             short(&report.tip)
         );
     }
+    let mut out = String::new();
+    for w in &report.waived {
+        let _ = writeln!(out, "WAIVE {w}");
+    }
     if report.green() {
-        return format!(
+        let _ = write!(
+            out,
             "verify-dod {} green on {}",
             report.level.as_note_level(),
             short(&report.tip)
         );
+        return out;
     }
-    let mut out = String::new();
     for f in &report.failures {
         let _ = writeln!(out, "FAIL  {:<24} {}", f.check, f.what);
         let _ = writeln!(out, "      fix -> {}", f.fix);
@@ -539,6 +603,7 @@ mod tests {
             wu: None,
             exempt: false,
             failures,
+            waived: Vec::new(),
         }
     }
 

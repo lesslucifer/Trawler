@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4c7d869f34851f0dfa8658" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEBM.W2 WU plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-GATEBM.W2 — walk-error waiver valve (R5)</h1>
+      <p>A recorded, per-seam escape hatch on the epic tip's <code>cr/v2</code> note that suppresses a single walk seam failure — a surgical override that isn't the blanket <code>--no-verify</code>.</p>
+      <div class="meta">v1 · 2026-07-07 · Trawler · T3 WU plan · <a href="2026-07-07-gatebm-plan.html">epic plan</a> · <a href="2026-07-07-gatebm-solution-discussion.html">solution discussion</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">The epic-gate walk must let a single seam failure be suppressed by a <code>walk_waivers: [{seam, why}]</code> entry on the epic tip's <code>cr/v2</code> note: when a failed seam's sha matches an entry with a non-empty <code>why</code>, the walk records <code>waived: &lt;why&gt;</code> for that seam instead of failing — every other seam and every non-walk check still runs — and the un-waived seam failure's <code>fix</code> line names the exact waiver command and warns against <code>--no-verify</code>.</p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">E-GATEBM · <strong>R5</strong> (surgical, recorded, reviewable walk-error suppression that isn't <code>--no-verify</code>), <strong>R4</strong> (the <code>cr/v2</code>-carrier rationale — a waiver is a review judgment and cr is diff-bound — recorded in the workflow-gates DEC at epic close).</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <ul>
+        <li><code>CrNote</code> (<a href="../../xtask/src/notes.rs">notes.rs</a>) gains an optional <code>walk_waivers</code> list of <code>{seam, why}</code>.</li>
+        <li>The walk loads the epic tip's <code>cr</code> note once and, for each seam failure, matches the seam sha against the waivers; a match with non-empty <code>why</code> turns the failure into a recorded <code>waived</code> line (visible in output) rather than a red failure.</li>
+        <li>A missing entry, or one with a blank <code>why</code>, does <strong>not</strong> waive — the seam stays red, and its <code>fix</code> line instructs the exact <code>git notes --ref=cr</code> waiver edit and explicitly warns off <code>--no-verify</code>.</li>
+        <li>The waiver keys on the whole seam sha (per-check granularity deferred); it applies only to walk failures, never to the tip's own non-walk checks.</li>
+      </ul>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <ul>
+        <li><strong>Unit</strong> (<code>notes.rs</code> <code>#[cfg(test)]</code>): <code>CrNote</code> parses a <code>walk_waivers</code> list and tolerates its absence; a helper resolving "is seam S waived?" returns true only for a matching sha with a non-empty <code>why</code>, false for a blank <code>why</code> or a non-match. Covers the code this commit adds.</li>
+        <li><strong>Integration</strong> (<a href="../../xtask/tests/dod_gate.rs">xtask/tests/dod_gate.rs</a>): on a real temp repo with a genuinely red walk seam — (a) adding a matching <code>walk_waivers</code> entry to the epic tip's <code>cr</code> note makes the epic gate green while the seam is reported <code>waived</code>; (b) a blank <code>why</code> leaves it red with the instructing <code>fix</code> message; (c) a non-walk check on the tip is unaffected by the waiver. No waivers intended at the test level.</li>
+      </ul>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
