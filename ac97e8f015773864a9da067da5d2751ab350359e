@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-BKLOG
 wu: E-BKLOG.W1
-branch: wu/backlog/kb
 base: 7bd2897ee998cbb3c8d9b5d0b94587b6769562f2
 tip: ac97e8f015773864a9da067da5d2751ab350359e
 diff_sha256: 5410b994c461eeaa5dda0544494e17dcc2d0ebf4a56e96799ebb00fd9e5e8ead
