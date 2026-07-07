@@ -20,8 +20,9 @@ usage:
   cargo xtask verify-dod commit-msg <msg-file>                (commit-msg hook: docs need an mr trailer)
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
-  cargo xtask mr commit -m <msg> --as <email|username>       (doc commit: write the Reviewed-By trailer)
-  cargo xtask mr confirm <wu|epic> <tip> --as <email|username> (write the mr/v1 note on the tip)
+  cargo xtask mr setup --as <id> [--key <path>]              (register a signing key + configure SSH signing)
+  cargo xtask mr commit -m <msg> --as <id>                   (doc commit: Reviewed-By trailer; signs if <id> is a key)
+  cargo xtask mr confirm <wu|epic> <tip> --as <id> [--target <ref>] (write the mr/v1 note; signs if <id> is a key)
   cargo xtask dod list [--epic <id>]
   cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";
 
@@ -184,7 +185,7 @@ pub(crate) fn flag_value(rest: &[&str], flag: &str) -> Option<String> {
     rest.iter().position(|a| *a == flag).and_then(|i| rest.get(i + 1)).map(|s| (*s).to_string())
 }
 
-fn infer_wu_target(tip: &str) -> Option<String> {
+pub(crate) fn infer_wu_target(tip: &str) -> Option<String> {
     let epic = tip.strip_prefix("wu/")?.split('/').next()?;
     if epic.is_empty() {
         None

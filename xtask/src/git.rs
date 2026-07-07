@@ -96,6 +96,29 @@ pub fn ssh_verify(
     child.wait().is_ok_and(|s| s.success())
 }
 
+/// Sign `data` in `namespace` with the SSH key at `key` (a private-key path or a
+/// hardware key handle). Returns the armored `SSH SIGNATURE` blob. For a hardware
+/// key this blocks on the physical touch — the step an AI agent cannot perform.
+pub fn ssh_sign(key: &str, namespace: &str, data: &[u8]) -> Result<String, String> {
+    let mut child = Command::new("ssh-keygen")
+        .args(["-Y", "sign", "-n", namespace, "-f"])
+        .arg(key)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("failed to run ssh-keygen -Y sign: {e}"))?;
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(data).map_err(|e| format!("failed to write signing payload: {e}"))?;
+    }
+    let out = child.wait_with_output().map_err(|e| format!("ssh-keygen -Y sign failed: {e}"))?;
+    if out.status.success() {
+        Ok(String::from_utf8_lossy(&out.stdout).to_string())
+    } else {
+        Err(format!("ssh-keygen -Y sign: {}", String::from_utf8_lossy(&out.stderr).trim_end()))
+    }
+}
+
 fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
     let tools: [&[&str]; 2] = [&["shasum", "-a", "256"], &["sha256sum"]];
     for tool in tools {
@@ -128,7 +151,29 @@ fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::sha256_hex;
+    use std::process::Command;
+
+    use super::{sha256_hex, ssh_sign, ssh_verify};
+
+    #[test]
+    fn ssh_sign_then_verify_roundtrips() {
+        let dir = tempfile::tempdir().unwrap();
+        let key = dir.path().join("id");
+        assert!(Command::new("ssh-keygen")
+            .args(["-q", "-t", "ed25519", "-N", "", "-C", "test", "-f"])
+            .arg(&key)
+            .status()
+            .unwrap()
+            .success());
+        let pubkey = std::fs::read_to_string(dir.path().join("id.pub")).unwrap().trim().to_string();
+        let signers = format!("vu {pubkey}\n");
+        let data = b"sha256-of-the-change";
+
+        let sig = ssh_sign(key.to_str().unwrap(), "trawler-mr", data).expect("signs");
+        assert!(ssh_verify("vu", &signers, "trawler-mr", data, &sig), "own signature verifies");
+        assert!(!ssh_verify("vu", &signers, "trawler-mr", b"other", &sig), "tampered data fails");
+        assert!(ssh_sign("/no/such/key", "trawler-mr", data).is_err(), "missing key errors");
+    }
 
     #[test]
     fn sha256_matches_known_vector() {
