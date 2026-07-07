@@ -1,0 +1,14 @@
+schema: test/v2
+level: working-unit
+epic: E-MRSIG
+wu: E-MRSIG.W4
+branch: wu/mrsig/agent-keys
+tests:
+  unit:
+    count: 1
+    covers: pub_path_for takes a .pub path as-is else appends .pub
+  integration:
+    count: 2
+    covers: mr setup with a .pub key (Secure Enclave / Touch ID, no private file) registers it + points user.signingkey at the .pub; mr confirm signs through a .pub user.signingkey to a note tip_authorised accepts (hermetic proxy for the agent, private half adjacent)
+  e2e:
+    waived: "the ssh-agent + physical Touch ID of a real Secure-Enclave key is a deployment property, not hermetically reproducible; the .pub signing-key code path (setup + confirm sign) IS tested with an on-disk key, and ssh-keygen -Y sign -f <pub> consulting the agent is proven external behaviour"
