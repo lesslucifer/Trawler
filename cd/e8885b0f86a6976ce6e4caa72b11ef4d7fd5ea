@@ -1,0 +1,14 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEFAST
+wu: E-GATEFAST.W2
+branch: wu/gatefast/incremental-gate0
+tests:
+  unit:
+    count: 3
+    what: "target/.gate0-green round-trip in xtask::gate0 (absent reads none; stored key round-trips and lives under target/; a different key is a miss)"
+  integration:
+    count: 5
+    what: "xtask/tests/gate0_cache.rs pins worktree_key invalidation: identical tree stable; tracked edit, whitespace edit, and a new untracked source file each change the key; a gitignored/cache/artifact file does not"
+  e2e:
+    waived: "epic-level e2e; E-GATEFAST.W2 is one WU. Wall-clock is non-deterministic so no timing assertion enters the hermetic suite (epic non-goal); the time-saved figure lives in the WU result. The full faster-loop e2e is the epic gate scope."
