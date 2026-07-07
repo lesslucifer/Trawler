@@ -337,7 +337,7 @@ fn resolve_key(key: Option<String>) -> Result<(String, String), String> {
         let home =
             std::env::var("HOME").map_err(|_| "HOME unset; pass --key <path>".to_string())?;
         let path = format!("{home}/.ssh/id_trawler_mrsig");
-        if !Path::new(&format!("{path}.pub")).exists() {
+        if !Path::new(&pub_path_for(&path)).exists() {
             generate_key(&path)?;
         }
         path

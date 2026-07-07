@@ -446,3 +446,29 @@ fn setup_accepts_a_public_key_path_for_a_secure_enclave_key() {
     assert!(allowed.contains(&format!("key: vuluu {pubkey}")), "{allowed}");
     assert_eq!(repo.git(&["config", "--get", "user.signingkey"]), pub_path.to_str().unwrap());
 }
+
+#[test]
+fn confirm_signs_when_user_signingkey_is_a_public_key_path() {
+    // user.signingkey set to a .pub (the Secure-Enclave shape) must still drive
+    // `ssh-keygen -Y sign -f <pub>` to a note W1 accepts. Hermetic proxy for the
+    // agent: the private half sits on disk next to the .pub (no agent/Touch ID
+    // to reproduce), so this exercises the .pub signing-key code path end to end.
+    let repo = Repo::new("email: a@b.co\n");
+    let pubkey = repo.keygen("se");
+    let pub_path = repo.p().join("se.pub");
+    mr::run(&["setup", "--as", "vuluu", "--key", pub_path.to_str().unwrap()], repo.p()).unwrap();
+    assert_eq!(repo.git(&["config", "--get", "user.signingkey"]), pub_path.to_str().unwrap());
+    assert!(pubkey.starts_with("ssh-ed25519"));
+
+    let base = repo.git(&["rev-parse", "HEAD"]);
+    repo.write("src/lib.rs", "pub fn f() {}\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "change"]);
+    let tip = repo.git(&["rev-parse", "HEAD"]);
+
+    let (code, out) =
+        mr::run(&["confirm", "wu", &tip, "--as", "vuluu", "--target", &base], repo.p()).unwrap();
+    assert_eq!(code, 0, "{out}");
+    assert!(repo.git(&["notes", "--ref=mr", "show", &tip]).contains("sig: |"));
+    assert!(mr::tip_authorised(repo.p(), &tip), "signed via a .pub signing key");
+}
