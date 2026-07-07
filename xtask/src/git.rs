@@ -60,7 +60,36 @@ pub fn diff_sha256(repo: &Path, base: &str, tip: &str) -> Result<String, String>
     sha256_hex(&diff.stdout)
 }
 
-fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
+// A content hash of everything a `cargo` build sees: HEAD, tracked changes
+// (staged or not), and untracked non-ignored files. git stash create looked
+// like the primitive for this but silently drops untracked files, so the parts
+// are hashed explicitly. Over-invalidates on a stray untracked file (safe
+// direction: a needless rebuild, never a false skip).
+// ponytail: untracked-but-not-ignored files invalidate the cache; tighten only
+// if scratch files in the tree prove to churn it noisily.
+pub fn worktree_key(repo: &Path) -> Result<String, String> {
+    let head = git(repo, &["rev-parse", "HEAD"])?;
+    let diff = cmd(repo)
+        .args(["diff", "HEAD", "--no-color", "--no-ext-diff"])
+        .output()
+        .map_err(|e| format!("failed to spawn git diff HEAD: {e}"))?;
+    if !diff.status.success() {
+        return Err(format!("git diff HEAD: {}", String::from_utf8_lossy(&diff.stderr).trim_end()));
+    }
+    let untracked = git(repo, &["ls-files", "--others", "--exclude-standard"])?;
+    let mut bytes = head.into_bytes();
+    bytes.extend_from_slice(&diff.stdout);
+    for path in untracked.lines() {
+        bytes.extend_from_slice(path.as_bytes());
+        bytes.push(0);
+        if let Ok(content) = std::fs::read(repo.join(path)) {
+            bytes.extend_from_slice(&content);
+        }
+    }
+    sha256_hex(&bytes)
+}
+
+pub(crate) fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
     let tools: [&[&str]; 2] = [&["shasum", "-a", "256"], &["sha256sum"]];
     for tool in tools {
         let Ok(mut child) = Command::new(tool[0])
