@@ -1,0 +1,38 @@
+schema: doc/v1
+epic: E-BKLOG
+branch: epic/backlog
+changes:
+  - path: docs/backlog/backlog-index.html
+    tier: T2
+    action: added
+    distills: "routing index for the new backlog KB (living roadmap + deferred work)"
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: added
+    distills: "roadmap relocated + reframed from DEC-5 into a living roadmap/backlog doc"
+  - path: docs/decisions/roadmap.html
+    tier: T2
+    action: deleted
+    distills: "relocated to docs/backlog/roadmap.html"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-5 row tombstoned -> relocated to backlog KB"
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "repoint roadmap link to backlog KB"
+  - path: docs/documentation-system.html
+    tier: T1
+    action: updated
+    distills: "third T2 KB (backlog) + its living/updated-in-place discipline"
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "repoint roadmap link to backlog KB"
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "repoint roadmap link + add backlog/ to check-6 tracked-doc locations"
+t2_waived: null
+date: 2026-07-07
