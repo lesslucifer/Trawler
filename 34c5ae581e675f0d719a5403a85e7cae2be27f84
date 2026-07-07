@@ -1,0 +1,15 @@
+schema: cr/v2
+scope: "epic E-BKLOG (epic/backlog) -> main"
+epic: E-BKLOG
+branch: epic/backlog
+base: 7bd2897ee998cbb3c8d9b5d0b94587b6769562f2
+head: 34c5ae581e675f0d719a5403a85e7cae2be27f84
+diff_sha256: 5410b994c461eeaa5dda0544494e17dcc2d0ebf4a56e96799ebb00fd9e5e8ead
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 8, verified: 1, waived: 0 }
+resolved:
+  - finding: "gate.rs:253 fix-hint omitted docs/backlog/ (nit)"
+    resolution: "fixed in the WU tip before merge; re-review clean"
+note: "epic tip is a --no-ff merge of E-BKLOG.W1; diff bytes identical to the reviewed WU tip (same diff_sha256), verdict carries over"
+verdict: PASS
+date: 2026-07-07
