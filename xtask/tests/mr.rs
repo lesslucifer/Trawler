@@ -426,3 +426,23 @@ fn mr_commit_signs_a_doc_commit_a_listed_key_verifies() {
     );
     assert!(mr::commit_signed(repo.p(), &tip), "the doc commit is natively SSH-signed");
 }
+
+#[test]
+fn setup_accepts_a_public_key_path_for_a_secure_enclave_key() {
+    // A Secure-Enclave / Touch-ID key (via an ssh-agent like Secretive) exposes
+    // only a public key on disk. Passing the .pub directly must register it and
+    // point user.signingkey at the .pub (the agent holds the private half) -
+    // not at a nonexistent <path>.pub.pub.
+    let repo = Repo::new("email: a@b.co\n");
+    let pubkey = repo.keygen("se");
+    std::fs::remove_file(repo.p().join("se")).unwrap();
+    let pub_path = repo.p().join("se.pub");
+
+    let (code, _) =
+        mr::run(&["setup", "--as", "vuluu", "--key", pub_path.to_str().unwrap()], repo.p())
+            .unwrap();
+    assert_eq!(code, 0);
+    let allowed = std::fs::read_to_string(repo.p().join(".mr-allowed")).unwrap();
+    assert!(allowed.contains(&format!("key: vuluu {pubkey}")), "{allowed}");
+    assert_eq!(repo.git(&["config", "--get", "user.signingkey"]), pub_path.to_str().unwrap());
+}
