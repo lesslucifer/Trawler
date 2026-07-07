@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-GATEFAST.W1 skeleton -> epic/gatefast"
+epic: E-GATEFAST
+wu: E-GATEFAST.W1
+branch: wu/gatefast/skeleton
+base: be340845142a3437db3d89f2d1ec130f0d75a050
+head: 25733a613bd7bd5c054f72abcec9498fd4c4df5b
+diff_sha256: 88297a25f65a1f96fe5f2e83be60cd145b9df9e140a2375d539229ac04680f04
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 8, verified: 2, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-07
