@@ -1,0 +1,21 @@
+schema: cr/v2
+scope: "WU E-BKLOG.W1 (wu/backlog/kb) -> epic/backlog"
+epic: E-BKLOG
+wu: E-BKLOG.W1
+branch: wu/backlog/kb
+base: 7bd2897ee998cbb3c8d9b5d0b94587b6769562f2
+head: ac97e8f015773864a9da067da5d2751ab350359e
+diff_sha256: 5410b994c461eeaa5dda0544494e17dcc2d0ebf4a56e96799ebb00fd9e5e8ead
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 8, verified: 1, waived: 0 }
+resolved:
+  - finding: "gate.rs:253 'no T2 doc updated' fix-hint omitted docs/backlog/ (nit)"
+    resolution: "fixed in this tip; both T2-location hints now list backlog/, re-review clean"
+refuted:
+  - "integration test lacks a tier:T1-on-backlog reject case — pre-existing generic branch, not introduced/worsened"
+  - "new test's block comment restates the name — carries non-obvious intent (third T2 KB, dual gate path); matches file comment density"
+  - "CLAUDE.md T0 tier map stale — out of diff scope; T0 is user-edited-only (owner action, diff already provided)"
+  - "tier_of else->T1 fallback fragility — pre-existing and intentional (flat docs/* are T1 by design)"
+  - "relocation lacks a superseding DEC record — reclassification not a decision reversal; why captured in T1"
+verdict: PASS
+date: 2026-07-07
