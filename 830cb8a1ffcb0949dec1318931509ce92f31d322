@@ -7,7 +7,8 @@ base: e1d8cd930d655b3245ece59856251fe5dc68a55f
 head: 830cb8a1ffcb0949dec1318931509ce92f31d322
 diff_sha256: 5c0f6ae78c3d83d8a4552cb0a80c1b8706d857909468090ee0b87275ce8e16e9
 dimensions: [correctness, reuse, simplification, efficiency, altitude]
-findings: { found: 6, verified: 2, waived: 0 }
+findings: { found: 6, verified: 0, waived: 0 }
+note: "round 1 raised 6 candidates: 4 verified false-positive; 2 real (a .pub sign-path coverage gap + a duplicated pub-path derivation) were fixed into this tip before the note was bound, so zero real findings remain on the reviewed diff"
 waivers: []
 verdict: PASS
 date: 2026-07-08
