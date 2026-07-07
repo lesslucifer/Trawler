@@ -1,0 +1,10 @@
+schema: dod/v1
+level: working-unit
+epic: E-GATEFAST
+wu: E-GATEFAST.W1
+branch: wu/gatefast/skeleton
+base: be340845142a3437db3d89f2d1ec130f0d75a050
+tip: b199dd7b4882b135a2f45158eefa6d22d4ff4f2e
+diff_sha256: 90fba97a7f2fea8e0cc6c9bb0218a72ae36d684464f86ee130bb927ccd224456
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review]
+date: 2026-07-07
