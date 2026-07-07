@@ -313,10 +313,23 @@ fn append_key_line(existing: &str, line: &str) -> String {
     format!("{existing}{sep}{line}\n")
 }
 
-/// Resolve the signing key: an explicit `--key <path>` (an existing FIDO2 handle,
-/// a Secure-Enclave agent key, or a test's software key), else generate a fresh
-/// FIDO2 `ed25519-sk` key at the default path (needs a security key + touch).
-/// Returns `(private-key-path, public-key-line)`.
+/// The public-key file for a `--key` value. A Secure-Enclave / Touch-ID key
+/// (via an ssh-agent, e.g. Secretive) has *only* a public key on disk, so a
+/// `.pub` path is taken as-is; a private-key stem gets `.pub` appended.
+fn pub_path_for(key: &str) -> String {
+    if key.ends_with(".pub") {
+        key.to_string()
+    } else {
+        format!("{key}.pub")
+    }
+}
+
+/// Resolve the signing key: an explicit `--key <path>` — a private-key stem
+/// (FIDO2 handle or software key), or a `.pub` for a Secure-Enclave / Touch-ID
+/// key whose private half lives in an ssh-agent — else generate a fresh FIDO2
+/// `ed25519-sk` key at the default path (needs a security key + touch). Returns
+/// `(signingkey-path, public-key-line)`; `ssh-keygen -Y sign -f <path>` and
+/// `git commit -S` both consult the agent when the path is a public key.
 fn resolve_key(key: Option<String>) -> Result<(String, String), String> {
     let key_path = if let Some(p) = key {
         p
@@ -324,12 +337,12 @@ fn resolve_key(key: Option<String>) -> Result<(String, String), String> {
         let home =
             std::env::var("HOME").map_err(|_| "HOME unset; pass --key <path>".to_string())?;
         let path = format!("{home}/.ssh/id_trawler_mrsig");
-        if !Path::new(&format!("{path}.pub")).exists() {
+        if !Path::new(&pub_path_for(&path)).exists() {
             generate_key(&path)?;
         }
         path
     };
-    let pub_path = format!("{key_path}.pub");
+    let pub_path = pub_path_for(&key_path);
     let pubkey = std::fs::read_to_string(&pub_path)
         .map_err(|e| format!("cannot read public key {pub_path}: {e}"))?
         .trim()
@@ -399,7 +412,7 @@ mod tests {
     use std::process::{Command, Stdio};
 
     use super::{
-        allowed_signers, append_key_line, has_key_entry, key_line, match_tier,
+        allowed_signers, append_key_line, has_key_entry, key_line, match_tier, pub_path_for,
         signature_authorised, signed_note_body, touch_hint, trailer_of, Allowed, NOTE_NAMESPACE,
     };
 
@@ -513,6 +526,12 @@ mod tests {
         );
         let once = append_key_line("email: a@b.co\n", &line);
         assert_eq!(append_key_line(&once, &line), once, "a present key is never duplicated");
+    }
+
+    #[test]
+    fn pub_path_takes_a_dot_pub_as_is_else_appends() {
+        assert_eq!(pub_path_for("/home/u/.ssh/id"), "/home/u/.ssh/id.pub");
+        assert_eq!(pub_path_for("/home/u/.ssh/se.pub"), "/home/u/.ssh/se.pub");
     }
 
     #[test]
