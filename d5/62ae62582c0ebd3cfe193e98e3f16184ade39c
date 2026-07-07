@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEBM
+wu: E-GATEBM.W2
+branch: wu/gate-backmerge/waiver-valve
+tests:
+  unit: { count: 1, covers: "walk_waiver_for: prefix match with reason waives; blank why / non-match do not; absent walk_waivers defaults empty" }
+  integration: { count: 3, covers: "matching waiver -> green + visible waived; blank why -> red + instructing fix; waiver leaves the tips own checks running" }
