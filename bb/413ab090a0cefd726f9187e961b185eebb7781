@@ -1,0 +1,7 @@
+schema: test/v2
+level: epic
+epic: E-GATEBM
+tests:
+  e2e: { count: 1, covers: "back-merge skip + R2 red + waiver green/red-on-blank composed in one epic-gate walk" }
+  integration: { count: 5, covers: "W1: back-merge clean, forward seam red; W2: waiver green, blank-why red, surgical (tip checks still run)" }
+  unit: { count: 3, covers: "is_landed_history skip/no-skip; walk_waiver_for match/blank/no-match; walk_waivers defaults empty" }
