@@ -1,0 +1,5 @@
+schema: test/v2
+level: commit
+epic: E-GATEBM
+tests:
+  unit: { count: 1, covers: "epic e2e: back-merge skip + R2 red + waiver green/red-on-blank, composed in one epic walk" }
