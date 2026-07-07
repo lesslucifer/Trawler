@@ -72,6 +72,30 @@ pub struct CrNote {
     pub base: String,
     pub diff_sha256: String,
     pub verdict: String,
+    #[serde(default)]
+    pub walk_waivers: Vec<WalkWaiver>,
+}
+
+#[derive(Deserialize)]
+pub struct WalkWaiver {
+    pub seam: String,
+    #[serde(default)]
+    pub why: String,
+}
+
+impl CrNote {
+    // A walk seam failure is waived only by an entry whose seam sha matches and
+    // whose why is a non-empty reason - mirroring the waived-with-reason rule
+    // used for test-layer waivers. Sha comparison is prefix-tolerant so a short
+    // sha in the note matches the full seam sha the walk holds, and vice-versa.
+    pub fn walk_waiver_for(&self, seam: &str) -> Option<&str> {
+        self.walk_waivers.iter().find_map(|w| {
+            let reason = w.why.trim();
+            let matches =
+                !w.seam.is_empty() && (seam.starts_with(&w.seam) || w.seam.starts_with(seam));
+            (matches && !reason.is_empty()).then_some(reason)
+        })
+    }
 }
 
 #[derive(Deserialize)]
@@ -233,6 +257,30 @@ date: 2026-07-05
         let note: CrNote = serde_yaml::from_str(yaml).expect("parses");
         assert_eq!(note.verdict, "PASS");
         assert_eq!(note.base, "aaaa");
+        assert!(note.walk_waivers.is_empty(), "absent walk_waivers defaults empty");
+    }
+
+    #[test]
+    fn walk_waiver_matches_only_a_named_seam_with_a_reason() {
+        let yaml = "\
+schema: cr/v2
+base: aaaa
+diff_sha256: cccc
+verdict: PASS
+walk_waivers:
+  - seam: deadbeefcafe1234
+    why: \"unlanded sibling epic integrated live; gated by its own epic gate\"
+  - seam: 0000badnoreason
+    why: \"  \"
+";
+        let note: CrNote = serde_yaml::from_str(yaml).expect("parses");
+        assert_eq!(
+            note.walk_waiver_for("deadbeefcafe1234deadbeef"),
+            Some("unlanded sibling epic integrated live; gated by its own epic gate"),
+            "a prefix match with a real reason waives"
+        );
+        assert_eq!(note.walk_waiver_for("0000badnoreason0000"), None, "blank why never waives");
+        assert_eq!(note.walk_waiver_for("feedface99887766"), None, "unmatched seam never waives");
     }
 
     #[test]

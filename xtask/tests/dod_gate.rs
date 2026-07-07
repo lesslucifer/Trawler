@@ -365,6 +365,92 @@ fn ungated_forward_wu_seam_still_walks_red() {
     );
 }
 
+// Rewrites the epic tip's cr/v2 note (already written by bless_epic) with a
+// walk_waivers block appended, preserving the diff-bound base/hash/verdict.
+fn cr_note_with_waivers(epic: &str, base: &str, sha: &str, waivers: &str) -> String {
+    format!("{}walk_waivers:\n{waivers}", cr_note(epic, None, base, sha, "PASS"))
+}
+
+// Builds an epic whose walk has one genuinely ungated forward WU seam, returns
+// (repo, that seam's merge-commit sha) so a test can waive exactly it.
+fn epic_with_one_red_seam() -> (Repo, String) {
+    let repo = wu_with_change();
+    repo.git(&["checkout", "-q", "-b", "wu/x/forward", "epic/x"]);
+    repo.write("src/forward.rs", "pub fn forward() {}\n");
+    repo.commit("forward WU work, never gated");
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "merge ungated forward wu", "wu/x/forward"]);
+    let seam = repo.sha("epic/x");
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+    (repo, seam)
+}
+
+// W2 / R5: a matching walk_waivers entry on the epic tip's cr/v2 note suppresses
+// exactly that seam's walk failure - the gate goes green and reports it waived,
+// while a blank why does not waive and the red output instructs the exact edit.
+#[test]
+fn walk_waiver_on_the_cr_note_suppresses_one_red_seam() {
+    let (repo, seam) = epic_with_one_red_seam();
+    let base = repo.sha("main");
+    let sha = diff_sha256(&repo.path, &base, &repo.sha("epic/x")).unwrap();
+
+    let entry = format!("  - seam: {seam}\n    why: \"waived: reviewed, safe to skip\"\n");
+    repo.note("cr", &repo.sha("epic/x"), &cr_note_with_waivers("E9", &base, &sha, &entry));
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        report.green(),
+        "a matching walk_waivers entry must make the gate green: {}",
+        format_report(&report)
+    );
+    assert!(
+        format_report(&report).contains("waived"),
+        "the waived seam must be visible in the output: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn walk_waiver_with_a_blank_why_does_not_suppress_the_seam() {
+    let (repo, seam) = epic_with_one_red_seam();
+    let base = repo.sha("main");
+    let sha = diff_sha256(&repo.path, &base, &repo.sha("epic/x")).unwrap();
+
+    let entry = format!("  - seam: {seam}\n    why: \"   \"\n");
+    repo.note("cr", &repo.sha("epic/x"), &cr_note_with_waivers("E9", &base, &sha, &entry));
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        checks_of(&report).iter().any(|c| c.starts_with("7·walk")),
+        "a blank why must not waive the seam: {}",
+        format_report(&report)
+    );
+    let text = format_report(&report);
+    assert!(text.contains("walk_waivers"), "the fix must instruct the waiver edit: {text}");
+    assert!(text.contains("--no-verify"), "the fix must warn off --no-verify: {text}");
+}
+
+// The waiver is surgical: it suppresses the named walk seam only, never the
+// tip's own non-walk checks. With the seam waived but the mr/v1 note removed,
+// the gate stays red on manual-review - the waiver cannot widen into a hole.
+#[test]
+fn walk_waiver_leaves_the_tips_own_checks_running() {
+    let (repo, seam) = epic_with_one_red_seam();
+    let base = repo.sha("main");
+    let sha = diff_sha256(&repo.path, &base, &repo.sha("epic/x")).unwrap();
+
+    let entry = format!("  - seam: {seam}\n    why: \"waived: reviewed, safe to skip\"\n");
+    repo.note("cr", &repo.sha("epic/x"), &cr_note_with_waivers("E9", &base, &sha, &entry));
+    repo.git(&["notes", "--ref=mr", "remove", &repo.sha("epic/x")]);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(
+        checks_of(&report),
+        vec!["8·manual-review"],
+        "the seam is waived but the tip's manual-review check still fires: {}",
+        format_report(&report)
+    );
+}
+
 #[test]
 fn epic_gate_rejects_tracked_work_docs() {
     let (repo, _) = epic_with_merged_wu();
