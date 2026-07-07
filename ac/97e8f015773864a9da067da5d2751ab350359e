@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-BKLOG
+wu: E-BKLOG.W1
+branch: wu/backlog/kb
+tests:
+  unit: { count: 1, covers: "notes.rs path_classification extended: tier_of=T2 and is_expected_tracked_doc=true for docs/backlog/" }
+  integration: { count: 1, covers: "dod_gate.rs epic_gate_accepts_a_tracked_backlog_kb_doc: a tracked docs/backlog/ T2 doc passes the epic gate" }
