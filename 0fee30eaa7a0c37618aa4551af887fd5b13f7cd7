@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-GATEFAST
 wu: E-GATEFAST.W2
-branch: wu/gatefast/incremental-gate0
 base: be340845142a3437db3d89f2d1ec130f0d75a050
 tip: 0fee30eaa7a0c37618aa4551af887fd5b13f7cd7
 diff_sha256: 825e0f169c5d1736e349777fb4889122d91d3e112aa2540dccdb905526b3a9bd
