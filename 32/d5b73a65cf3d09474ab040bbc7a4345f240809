@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEBM
+wu: E-GATEBM.W1
+branch: wu/gate-backmerge/reachability
+tests:
+  unit: { count: 1, covers: "is_landed_history: target-reachable seam skips, forward tip does not" }
+  integration: { count: 2, covers: "back-merge of advanced main walks clean; ungated forward WU seam still walks red" }
