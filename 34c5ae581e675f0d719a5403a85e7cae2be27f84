@@ -1,7 +1,6 @@
 schema: dod/v1
 level: epic
 epic: E-BKLOG
-branch: epic/backlog
 base: 7bd2897ee998cbb3c8d9b5d0b94587b6769562f2
 tip: 34c5ae581e675f0d719a5403a85e7cae2be27f84
 diff_sha256: 5410b994c461eeaa5dda0544494e17dcc2d0ebf4a56e96799ebb00fd9e5e8ead
