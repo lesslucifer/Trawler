@@ -1,0 +1,15 @@
+schema: doc/v1
+epic: E-GATEBM
+changes:
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "DEC-8: target-reachability discriminator + R5 walk waiver on cr/v2"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "index DEC-8 on the workflow-gates row"
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "check-7 skip note + walk-error waiver escape-hatch callout"
