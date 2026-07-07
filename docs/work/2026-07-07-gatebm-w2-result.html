@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4c824a9f34851f0dfa8665" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEBM.W2 WU result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-GATEBM.W2 — result: walk-error waiver valve (R5)</h1>
+      <p>The epic gate now suppresses a single walk seam failure via a recorded, per-seam entry on the tip's <code>cr/v2</code> note — not the blanket <code>--no-verify</code>.</p>
+      <div class="meta">v1 · 2026-07-07 · Trawler · T3 WU result · <a href="2026-07-07-gatebm-w2-plan.html">WU plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <p data-item="outcome"><strong>Delivered</strong> against the requirement. <code>CrNote</code> gained an optional <code>walk_waivers: [{seam, why}]</code> field and a <code>walk_waiver_for(seam)</code> resolver that matches by sha prefix and requires a non-empty <code>why</code>. The walk loads the tip's <code>cr</code> note once and routes every seam failure through <code>record_seam</code>: a match records a visible <code>WAIVE</code> line and drops the failure; otherwise the failure is pushed with its <code>fix</code> extended to name the exact <code>git notes --ref=cr</code> waiver edit and warn off <code>--no-verify</code>. <code>Report</code> gained a <code>waived</code> channel surfaced in <code>format_report</code>.</p>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">Two refinements beyond the literal plan, both in-spirit. (1) The valve was wired for <em>every</em> walk seam class — three-parent WU seams, standalone commits, and octopus merges — not only WU seams, since R5 explicitly insures against "any future topology the walk can't classify". (2) Seam matching is sha-prefix-tolerant (a short sha in the note matches the full seam sha and vice-versa), so an agent can copy the abbreviated sha the walk prints straight into the waiver.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <ul>
+        <li><strong>Code:</strong> <a href="../../xtask/src/notes.rs">xtask/src/notes.rs</a> (<code>walk_waivers</code>, <code>WalkWaiver</code>, <code>walk_waiver_for</code>) · <a href="../../xtask/src/gate.rs">xtask/src/gate.rs</a> (<code>tip_walk_waivers</code>, <code>record_seam</code>, <code>Report.waived</code>, <code>format_report</code> WAIVE lines). Tip <code>f06c13e</code>.</li>
+        <li><strong>Unit:</strong> <code>walk_waiver_matches_only_a_named_seam_with_a_reason</code> and the <code>walk_waivers</code>-defaults-empty assertion in notes.rs.</li>
+        <li><strong>Integration:</strong> <a href="../../xtask/tests/dod_gate.rs">xtask/tests/dod_gate.rs</a> — <code>walk_waiver_on_the_cr_note_suppresses_one_red_seam</code> (green + visible waived), <code>walk_waiver_with_a_blank_why_does_not_suppress_the_seam</code> (red + instructing message), <code>walk_waiver_leaves_the_tips_own_checks_running</code> (surgical: manual-review still fires).</li>
+        <li><strong>Notes on the tip:</strong> <code>test/v2</code>, <code>doc/v1</code>, <code>cr/v2</code> PASS.</li>
+      </ul>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">Nothing citable to T2 from this WU alone. The R5 carrier rationale (why <code>cr/v2</code>, not <code>test</code> or <code>dod</code>; the diff-binding property) distills to the new workflow-gates DEC at epic close, and the escape-hatch how-to is added to <a href="../workflow.html">workflow.html</a>'s merge-gate section — both per the epic distillation plan.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">None owed. Per-<em>check</em> waiver granularity remains deferred (waivers key on the whole seam sha) per the epic non-goals; refine only if it proves too coarse.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
