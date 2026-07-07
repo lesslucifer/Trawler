@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4c84bb9f34851f0dfa8673" data-artifact="epic-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEBM epic result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-GATEBM — epic result</h1>
+      <p>The DoD gate's seam walk now recognises back-merges of landed history and carries a recorded, per-seam waiver valve — so a walk misfire never again forces a blanket <code>--no-verify</code>.</p>
+      <div class="meta">v1 · 2026-07-07 · Trawler · T3 epic result · <a href="2026-07-07-gatebm-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <p data-item="outcome"><strong>Delivered</strong> against the epic intent and all three expected results. (1) A stale epic that back-merged an advanced <code>main</code> now walks clean — the spurious <code>7·walk·1·notes</code> line on the integration seam is gone. (2) A genuinely ungated forward WU seam still turns the walk red — the R2 guardrail holds, by construction (a forward seam is never an ancestor of the target). (3) A walk seam failure is suppressed by a <code>walk_waivers</code> entry on the tip's <code>cr/v2</code> note; without a non-empty <code>why</code> it stays red, and the red output names the exact waiver command and warns off <code>--no-verify</code>. No product use-case (no <code>UC-*</code>) touched — process/tooling epic on the workflow gate.</p>
+
+    <h2 id="wu-rollup">Per-WU rollup</h2>
+    <div data-item="wu-rollup">
+      <ul>
+        <li><strong>E-GATEBM.W1 — target-reachability discriminator</strong>: delivered. <code>is_landed_history</code> skips a seam whose merged-in parent is an ancestor of the epic mainline or the gate target; target threaded into <code>walk()</code>. Merged <code>--no-ff</code> with green DoD-W (test/cr/doc + receipt).</li>
+        <li><strong>E-GATEBM.W2 — walk-error waiver valve (R5)</strong>: delivered. <code>CrNote.walk_waivers</code> + <code>walk_waiver_for</code>; <code>record_seam</code> routes every seam failure through the waiver check and surfaces a visible <code>WAIVE</code> line; manual review stays unwaivable. Merged <code>--no-ff</code> with green DoD-W.</li>
+        <li><strong>Standalone (epic-level)</strong>: the epic e2e test commit, carrying its own <code>test/v2 · level: commit</code> note; the DEC-8 distillation commit and this result — docs, each with a <code>Reviewed-By</code> trailer.</li>
+      </ul>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">No scope deviations from the plan. Two in-spirit refinements, both recorded in the WU results: the waiver valve was wired for every walk seam class (not only three-parent WU seams) since R5 insures against any future unclassifiable topology; seam matching is sha-prefix-tolerant so the abbreviated sha the walk prints can be pasted straight into the waiver. One out-of-scope discovery in W1: the full test suite was momentarily red on entry from a stale <code>CARGO_MANIFEST_DIR</code> baked into a cached test binary from a deleted sibling worktree — a build-cache artifact cleared by recompile, not a code defect.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <ul>
+        <li><strong>E2E:</strong> <code>e2e_backmerge_then_r2_guardrail_then_waiver_valve</code> in <a href="../../xtask/tests/dod_gate.rs">xtask/tests/dod_gate.rs</a> — one epic-gate walk composing back-merge skip (W1) + ungated forward seam red (R2) + waiver green / blank-why red (W2).</li>
+        <li><strong>Reviews:</strong> both WUs gated with <code>cr/v2</code> PASS bound to their exact diffs (W1: 3 candidate findings, all refuted; W2: 9 candidates, all refuted — the important ones — short-prefix over-match, standalone-commit partial waiver, duplicated failure-mapping — verified false-positive, the manual-review exclusion confirmed correct by design). Epic-scope review vs <code>main</code> below.</li>
+        <li><strong>Landed work:</strong> discriminator + valve in <a href="../../xtask/src/gate.rs">xtask/src/gate.rs</a> and <a href="../../xtask/src/notes.rs">xtask/src/notes.rs</a>; WU seams recoverable from the epic first-parent chain, each with a green <code>dod/v1</code> receipt.</li>
+      </ul>
+    </div>
+
+    <h2 id="distillation">Distillation summary</h2>
+    <p data-item="distillation">Truth now lives in <a href="../decisions/workflow-gates.html#dec-8">DEC-8</a> (the target-reachability discriminator and its R2-safety-by-construction; the rejected #1 symmetric-ancestry and walk-removal alternatives; the deferred #3′ gated-lineage; the R5 waiver on <code>cr/v2</code> — why cr not test/dod, the diff-binding property, and the serialize-cross-epic-through-<code>main</code> rule) and in <a href="../workflow.html#gate">workflow.html</a> (check-7 skip note + the walk-error waiver escape-hatch callout); <a href="../decisions/decisions-index.html">the decisions index</a> lists DEC-8. This matches the plan's distillation plan exactly. The plan, solution discussion, problems &amp; requirements, and this result are <code>git rm</code>'d to <code>docs/.archive/</code> (DEC-3) before the epic merges to <code>main</code>.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">Two, both explicitly deferred, not owed: <strong>#3′ gated-lineage</strong> for unlanded cross-epic integration — build only if live integrations become frequent enough that per-seam waivers turn noisy (with R5 they now have a recorded escape). <strong>Per-check waiver granularity</strong> — waivers key on the whole seam sha; refine only if too coarse. Landing <strong>E-NV.W2/W3</strong> (the epic this unblocked) is downstream work, not part of E-GATEBM.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
