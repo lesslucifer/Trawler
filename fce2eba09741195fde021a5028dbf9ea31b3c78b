@@ -1,0 +1,5 @@
+schema: doc/v1
+epic: E-MRSIG
+wu: E-MRSIG.W1
+changes: []
+t2_waived: "code-only WU (verification core in xtask/); no product behaviour or shape change to distill — the E-MRSIG guarantee is distilled once at W3 when enforcement makes it real end-to-end (per the epic plan's distillation plan)"
