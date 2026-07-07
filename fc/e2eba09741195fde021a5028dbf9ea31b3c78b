@@ -1,0 +1,13 @@
+schema: test/v2
+level: working-unit
+epic: E-MRSIG
+wu: E-MRSIG.W1
+tests:
+  unit:
+    count: 5
+    covers: key-tier parse/listing, allowed_signers derivation, signature_authorised roundtrip + reject tampered/wrong-namespace/malformed/unlisted-key/identity-only
+  integration:
+    count: 8
+    covers: tip_authorised accepts signed note / rejects amended-diff, unlisted-key, unlisted-signer bare note; commit_signed accepts listed-key commit / rejects unsigned, unlisted-key
+  e2e:
+    waived: "full signed flow e2e is delivered by W3 (epic e2e over a hermetic temp repo); the physical-touch half is a deployment property, not machine-testable — proven crypto half only"
