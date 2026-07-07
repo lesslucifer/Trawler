@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEFAST
+wu: E-GATEFAST.W1
+branch: wu/gatefast/skeleton
+tests:
+  integration: { count: 4, covers: "skeleton -> fill judgment -> verify-dod checks 1 & 6 green for T2-doc, code-only diffs; phantom doc path caught" }
+  unit: { count: 4, covers: "test/doc note-skeleton builders; doc-skeleton checklist coverage for all four artifacts" }
