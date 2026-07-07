@@ -1,0 +1,20 @@
+schema: cr/v2
+scope: "WU E-GATEFAST.W2 -> epic/gatefast"
+epic: E-GATEFAST
+wu: E-GATEFAST.W2
+branch: wu/gatefast/incremental-gate0
+base: be340845142a3437db3d89f2d1ec130f0d75a050
+head: d1ed286108c0fd264c8e4f946f2565bac798ab1d
+diff_sha256: 083fda7e6fc8c4d060151f76012caf5bca0706aaec2b0e3b77aba54923cd74dc
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 7, verified: 2, waived: 0 }
+verified_findings:
+  - location: xtask/src/gate0.rs
+    claim: "private short() duplicates crate::gate::short (identical body, already pub)"
+    severity: nit
+  - location: xtask/src/git.rs
+    claim: "sha256_hex widened to pub(crate) but every caller is in git.rs; private suffices"
+    severity: nit
+refuted: 5
+verdict: FAIL
+date: 2026-07-07
