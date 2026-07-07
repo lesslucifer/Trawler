@@ -302,6 +302,69 @@ fn green_epic_walk_verifies_the_merged_wu() {
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
 }
 
+// Blesses the epic tip against the *merge-base* with main, not main's tip -
+// once main and the epic diverge, base = merge-base(main, epic) != sha("main").
+fn bless_epic_diverged(repo: &Repo, changes: &str) {
+    let tip = repo.sha("epic/x");
+    let base = repo.git(&["merge-base", "main", "epic/x"]);
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    repo.note(
+        "test",
+        &tip,
+        &test_note("epic", "E9", None, "  e2e: { count: 1, covers: \"full flow\" }\n"),
+    );
+    repo.note("doc", &tip, &doc_note("E9", None, changes, None));
+    repo.note("cr", &tip, &cr_note("E9", None, &base, &sha, "PASS"));
+    allow_file(repo);
+    repo.note("mr", &tip, &mr_note("epic", &tip));
+}
+
+// W1 / R1: a stale epic that back-merges an advanced main must walk clean. The
+// case is divergent - main gained commits the epic lacks and vice-versa - so
+// the existing `p2 ⊑ mainline` guard can't catch it; only target-reachability
+// (`p2 ⊑ main`) does.
+#[test]
+fn back_merge_of_advanced_main_walks_clean() {
+    let (repo, _) = epic_with_merged_wu();
+
+    repo.git(&["checkout", "-q", "main"]);
+    repo.write("src/mainlock.rs", "pub fn on_main() {}\n");
+    repo.commit("main advances after the epic forked");
+
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "back-merge main into epic", "main"]);
+    bless_epic_diverged(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        report.green(),
+        "a back-merge of landed history must not turn the walk red: {}",
+        format_report(&report)
+    );
+}
+
+// W1 / R2: the R2 guardrail - a genuinely ungated forward WU seam merged into
+// the epic still turns the walk red. The target-reachability skip must not
+// widen into a hole that swallows real seams.
+#[test]
+fn ungated_forward_wu_seam_still_walks_red() {
+    let repo = wu_with_change();
+    repo.git(&["checkout", "-q", "-b", "wu/x/forward", "epic/x"]);
+    repo.write("src/forward.rs", "pub fn forward() {}\n");
+    repo.commit("forward WU work, never gated");
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "merge ungated forward wu", "wu/x/forward"]);
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        checks_of(&report).iter().any(|c| c.starts_with("7·walk")),
+        "an ungated forward WU seam must turn the walk red: {}",
+        format_report(&report)
+    );
+}
+
 #[test]
 fn epic_gate_rejects_tracked_work_docs() {
     let (repo, _) = epic_with_merged_wu();

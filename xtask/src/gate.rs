@@ -105,7 +105,7 @@ impl Gate<'_> {
         }
         Self::check_docs(&mut report, parsed.doc.as_ref(), &names);
         if level == Level::Epic {
-            self.walk(&mut report)?;
+            self.walk(&mut report, target_ref)?;
         }
         Ok(report)
     }
@@ -324,7 +324,15 @@ impl Gate<'_> {
         Ok(())
     }
 
-    fn walk(&self, report: &mut Report) -> Result<(), String> {
+    fn is_ancestor(&self, commit: &str, of: &str) -> bool {
+        git(self.repo, &["merge-base", "--is-ancestor", commit, of]).is_ok()
+    }
+
+    fn is_landed_history(&self, wu_tip: &str, mainline: &str, target: &str) -> bool {
+        self.is_ancestor(wu_tip, mainline) || self.is_ancestor(wu_tip, target)
+    }
+
+    fn walk(&self, report: &mut Report, target: &str) -> Result<(), String> {
         let range = format!("{}..{}", report.base, report.tip);
         let lines = git(self.repo, &["rev-list", "--first-parent", "--parents", &range])?;
         for line in lines.lines() {
@@ -332,9 +340,11 @@ impl Gate<'_> {
             let (seam, inner) = match parts.as_slice() {
                 [merge, mainline, wu_tip] => {
                     // --first-parent ordering: parent one is the epic mainline, parent two the
-                    // merged-in WU tip. A wu_tip already reachable from the mainline is a
-                    // back-merge of landed history, not a WU seam - nothing new to gate.
-                    if git(self.repo, &["merge-base", "--is-ancestor", wu_tip, mainline]).is_ok() {
+                    // merged-in WU tip. Skip when wu_tip is already landed history rather than a
+                    // net-new seam: reachable from the mainline (this epic's own re-merge) or from
+                    // the gate target (a back-merge of main / a sibling already on main). A forward
+                    // seam always carries commits absent from the target, so this never gates it.
+                    if self.is_landed_history(wu_tip, mainline, target) {
                         continue;
                     }
                     (*merge, self.verify(Level::Wu, wu_tip, mainline)?)
@@ -516,7 +526,7 @@ pub fn format_report(report: &Report) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{format_report, short, Failure, Level, Report};
+    use super::{format_report, short, Failure, Gate, Level, Report};
 
     fn report(failures: Vec<Failure>) -> Report {
         Report {
@@ -564,5 +574,45 @@ mod tests {
     fn short_handles_small_ids() {
         assert_eq!(short("abc"), "abc");
         assert_eq!(short("0123456789abcdef"), "0123456789");
+    }
+
+    // The discriminator's whole point is the divergent case: main and the epic
+    // each advanced past their common base, so neither tip contains the other.
+    // A back-merged main tip is still landed history (⊑ target); a forward WU
+    // tip carrying epic-only work is not.
+    #[test]
+    fn is_landed_history_recognises_target_reachable_seams_only() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let repo = dir.path();
+        let g = |args: &[&str]| super::git(repo, args).unwrap();
+        let commit = |name: &str, msg: &str| {
+            std::fs::write(repo.join(name), msg).unwrap();
+            g(&["add", "-A"]);
+            g(&["commit", "-q", "-m", msg]);
+            g(&["rev-parse", "HEAD"])
+        };
+
+        g(&["init", "-q", "-b", "main"]);
+        g(&["config", "user.email", "t@t"]);
+        g(&["config", "user.name", "t"]);
+        g(&["config", "commit.gpgsign", "false"]);
+        commit("base", "base");
+        g(&["branch", "epic"]);
+
+        let main_tip = commit("m", "main advances past the fork");
+
+        g(&["checkout", "-q", "epic"]);
+        let epic_mainline = g(&["rev-parse", "HEAD"]);
+        let forward_tip = commit("e", "epic-only work, absent from main");
+
+        let gate = Gate { repo };
+        assert!(
+            gate.is_landed_history(&main_tip, &epic_mainline, "main"),
+            "a diverged main tip back-merged in is landed history (⊑ target)"
+        );
+        assert!(
+            !gate.is_landed_history(&forward_tip, &epic_mainline, "main"),
+            "a forward WU tip carrying epic-only work is a real seam, never landed history"
+        );
     }
 }
