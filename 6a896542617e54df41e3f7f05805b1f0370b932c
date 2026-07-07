@@ -1,0 +1,5 @@
+schema: doc/v1
+epic: E-MRSIG
+wu: E-MRSIG.W4
+changes: []
+t2_waived: "code-only follow-up (fixes --key .pub resolution for Secure-Enclave/Touch-ID keys in xtask/); no doc files in the diff. Distilled with the rest of E-MRSIG at W3, where the .mr-allowed key format + hardware setup paths (FIDO2 / Secure Enclave) are documented."
