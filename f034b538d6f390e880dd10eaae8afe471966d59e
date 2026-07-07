@@ -1,0 +1,10 @@
+schema: dod/v1
+level: working-unit
+epic: E-GATEBM
+wu: E-GATEBM.W1
+branch: wu/gate-backmerge/reachability
+base: 29e084c9a44f9f4a788c2b23e347ffb9e32b88fa
+tip: f034b538d6f390e880dd10eaae8afe471966d59e
+diff_sha256: 0450848cd697506c963be06e1d01f2fdbb1482bc278d2ae95f8a987eaaae7b1c
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review]
+date: 2026-07-07
