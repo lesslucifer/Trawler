@@ -1,7 +1,10 @@
 //! E-NMWF.W1 — the authoriser record & writer commands (`cargo xtask mr ...`).
+//! E-MRSIG.W1 — the key-backed signature-verify predicates.
 #![allow(clippy::unwrap_used)] // test code - panicking on setup failure is the assertion
 
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 
 use tempfile::TempDir;
 use xtask::mr;
@@ -38,6 +41,33 @@ impl Repo {
 
     fn p(&self) -> &Path {
         &self.path
+    }
+
+    /// Generate a software ed25519 key under the repo; return its public-key line.
+    fn keygen(&self, name: &str) -> String {
+        let key = self.path.join(name);
+        assert!(Command::new("ssh-keygen")
+            .args(["-q", "-t", "ed25519", "-N", "", "-C", name, "-f"])
+            .arg(&key)
+            .status()
+            .unwrap()
+            .success());
+        std::fs::read_to_string(self.path.join(format!("{name}.pub"))).unwrap().trim().to_string()
+    }
+
+    fn ssh_sign(&self, key_name: &str, namespace: &str, data: &[u8]) -> String {
+        let mut child = Command::new("ssh-keygen")
+            .args(["-Y", "sign", "-n", namespace, "-f"])
+            .arg(self.path.join(key_name))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        child.stdin.take().unwrap().write_all(data).unwrap();
+        let out = child.wait_with_output().unwrap();
+        assert!(out.status.success(), "ssh-keygen sign failed");
+        String::from_utf8(out.stdout).unwrap()
     }
 }
 
@@ -186,4 +216,108 @@ fn commit_with_unlisted_identity_is_refused() {
         mr::run(&["commit", "-m", "docs: change", "--as", "ghost"], repo.p()).unwrap();
     assert_eq!(code, 1);
     assert!(out.contains("not listed in .mr-allowed"));
+}
+
+// ── E-MRSIG.W1 — key-backed signature verification ──────────────────────────
+
+/// A repo with one code commit past `base`, plus a `key` entry for `signer`.
+/// Returns (base, tip, pubkey-line).
+fn repo_with_key(signer: &str) -> (Repo, String, String, String) {
+    let repo = Repo::new("email: a@b.co\n");
+    let pubkey = repo.keygen("id");
+    repo.write(".mr-allowed", &format!("email: a@b.co\nkey: {signer} {pubkey}\n"));
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "add key"]);
+    let base = repo.git(&["rev-parse", "HEAD"]);
+    repo.write("src/lib.rs", "pub fn f() {}\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "the change"]);
+    let tip = repo.git(&["rev-parse", "HEAD"]);
+    (repo, base, tip, pubkey)
+}
+
+fn write_signed_note(repo: &Repo, level: &str, base: &str, tip: &str, signer: &str, sig: &str) {
+    let body = format!(
+        "schema: mr/v1\nlevel: {level}\ntip: {tip}\nbase: {base}\ntier: key\nsigner: {signer}\nsig: |\n{}\n",
+        sig.lines().map(|l| format!("  {l}")).collect::<Vec<_>>().join("\n")
+    );
+    xtask::git::write_note(repo.p(), "mr", tip, &body).unwrap();
+}
+
+#[test]
+fn tip_authorised_accepts_a_correctly_signed_note() {
+    let (repo, base, tip, _) = repo_with_key("vu");
+    let hash = xtask::git::diff_sha256(repo.p(), &base, &tip).unwrap();
+    let sig = repo.ssh_sign("id", mr::NOTE_NAMESPACE, hash.as_bytes());
+    write_signed_note(&repo, "epic", &base, &tip, "vu", &sig);
+    assert!(mr::tip_authorised(repo.p(), &tip));
+}
+
+#[test]
+fn tip_authorised_rejects_a_note_whose_diff_changed() {
+    let (repo, base, tip, _) = repo_with_key("vu");
+    let hash = xtask::git::diff_sha256(repo.p(), &base, &tip).unwrap();
+    let sig = repo.ssh_sign("id", mr::NOTE_NAMESPACE, hash.as_bytes());
+    write_signed_note(&repo, "epic", &base, &tip, "vu", &sig);
+    // Amend the tip → the signed change-hash no longer matches.
+    repo.write("src/lib.rs", "pub fn f() { let _ = 1; }\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "--amend", "--no-edit"]);
+    let amended = repo.git(&["rev-parse", "HEAD"]);
+    write_signed_note(&repo, "epic", &base, &amended, "vu", &sig);
+    assert!(!mr::tip_authorised(repo.p(), &amended), "amend must invalidate the signature");
+}
+
+#[test]
+fn tip_authorised_rejects_a_signature_from_an_unlisted_key() {
+    let (repo, base, tip, _) = repo_with_key("vu");
+    repo.keygen("other");
+    let hash = xtask::git::diff_sha256(repo.p(), &base, &tip).unwrap();
+    let sig = repo.ssh_sign("other", mr::NOTE_NAMESPACE, hash.as_bytes());
+    write_signed_note(&repo, "epic", &base, &tip, "vu", &sig);
+    assert!(!mr::tip_authorised(repo.p(), &tip));
+}
+
+#[test]
+fn tip_authorised_rejects_a_bare_note_from_an_unlisted_signer() {
+    // No sig/base falls back to identity-match (E-NMWF coexistence); an unlisted
+    // signer still fails. A listed signer's bare note authorises — the key is an
+    // added option in W1, not yet a mandate (mandate lands with W3 enforcement).
+    let (repo, _base, tip, _) = repo_with_key("vu");
+    let body = "schema: mr/v1\nlevel: epic\ntip: x\ntier: email\nsigner: ghost@x.co\n";
+    xtask::git::write_note(repo.p(), "mr", &tip, body).unwrap();
+    assert!(!mr::tip_authorised(repo.p(), &tip));
+}
+
+#[test]
+fn commit_signed_accepts_a_commit_signed_by_a_listed_key() {
+    let repo = Repo::new("email: a@b.co\n");
+    let pubkey = repo.keygen("id");
+    repo.write(".mr-allowed", &format!("key: vu {pubkey}\n"));
+    repo.git(&["config", "gpg.format", "ssh"]);
+    repo.git(&["config", "user.signingkey", repo.p().join("id").to_str().unwrap()]);
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-S", "-m", "signed"]);
+    let tip = repo.git(&["rev-parse", "HEAD"]);
+    assert!(mr::commit_signed(repo.p(), &tip));
+}
+
+#[test]
+fn commit_signed_rejects_an_unsigned_commit() {
+    let (repo, _base, tip, _) = repo_with_key("vu");
+    assert!(!mr::commit_signed(repo.p(), &tip), "the tip commit was never signed");
+}
+
+#[test]
+fn commit_signed_rejects_a_commit_signed_by_an_unlisted_key() {
+    let repo = Repo::new("email: a@b.co\n");
+    repo.keygen("id");
+    let other = repo.keygen("other");
+    repo.write(".mr-allowed", &format!("key: vu {other}\n"));
+    repo.git(&["config", "gpg.format", "ssh"]);
+    repo.git(&["config", "user.signingkey", repo.p().join("id").to_str().unwrap()]);
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-S", "-m", "signed by id, listed is other"]);
+    let tip = repo.git(&["rev-parse", "HEAD"]);
+    assert!(!mr::commit_signed(repo.p(), &tip));
 }
