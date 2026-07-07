@@ -3,27 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trawler — Decisions: Roadmap</title>
+  <title>Trawler — Roadmap &amp; Backlog</title>
 </head>
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>Decisions — Roadmap</h1>
-      <p>Why the product roadmap is two pillars, and the epic sequence that delivers them.</p>
-      <div class="meta">v2 · 2026-07-06 · Trawler · <a href="decisions-index.html">index</a></div>
+      <h1>Roadmap &amp; Backlog</h1>
+      <p>The product roadmap — two pillars and the epic sequence that delivers them — plus the living backlog of deferred work carried across epics.</p>
+      <div class="meta">v4 · 2026-07-07 · Trawler · <a href="backlog-index.html">index</a></div>
     </div>
   </header>
   <main>
-    <h2 id="dec-5"><span class="badge id">DEC-5</span> Product roadmap: two pillars — Proxyman-grade GUI and mitmproxy-grade functionality — delivered as thirteen epics in four waves</h2>
-    <table data-c="dec-5-facts">
+    <h2 id="roadmap">Product roadmap: two pillars — Proxyman-grade GUI and mitmproxy-grade functionality — delivered as thirteen epics in four waves</h2>
+    <table data-c="rmap-facts">
       <tbody>
-        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-06</td></tr>
+        <tr><th>Status</th><td><span class="badge auto">living</span> · updated as epics land</td></tr>
         <tr><th>Origin</th><td>Epic E-RMAP — owner-led roadmap session on competitive research (mitmproxy, Proxyman, Charles, HTTP Toolkit, Fiddler Everywhere, Requestly, Reqable, MS Dev Proxy); full research scratch archived at <code>docs/.archive/roadmap.html</code></td></tr>
         <tr><th>Where</th><td>Future <code>epic/*</code> branches; each epic gets its own T3 plan per <a href="../work-planning.html">work-planning.html</a> when started</td></tr>
       </tbody>
     </table>
 
-    <h3 id="dec-5-context">Context</h3>
+    <h3 id="rmap-context">Context</h3>
     <p>The capture core is complete (HTTP/1.1 + HTTPS MITM, capped body capture, SSE stream,
     filtered read-only API, in-memory ring) and nothing product-shaped is planned beyond it.
     The 2025–26 market read: table stakes everywhere are breakpoints, map local/remote,
@@ -35,8 +35,8 @@
     <strong>WebSocket is weak everywhere</strong>. Trawler's API-first core sits exactly on
     the first gap.</p>
 
-    <h3 id="dec-5-choices">Choices</h3>
-    <table data-c="dec-5-choices-table">
+    <h3 id="rmap-choices">Choices</h3>
+    <table data-c="rmap-choices-table">
       <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
       <tbody>
         <tr><td>Two pillars, not one direction</td><td>The GUI is the adoption gate (nobody evaluates a proxy via curl; Charles proves a complete feature set doesn't survive bad ergonomics) and functionality is the retention floor (mitmproxy is the benchmark). The API-first core fuses them: every GUI capability is a call on the public API, so the GUI never forks the feature surface.</td></tr>
@@ -48,8 +48,8 @@
       </tbody>
     </table>
 
-    <h3 id="dec-5-roadmap">The roadmap</h3>
-    <table data-c="dec-5-roadmap-table">
+    <h3 id="rmap-roadmap">The roadmap</h3>
+    <table data-c="rmap-roadmap-table">
       <thead><tr><th>Epic</th><th>Wave</th><th>Pillar</th><th>Requirement (one line)</th></tr></thead>
       <tbody>
         <tr><td><span class="badge id">E-UISHELL</span></td><td>1</td><td>GUI</td><td>Embedded single-binary web UI: live, filterable flow list over <code>GET /flows</code> + SSE, zero setup.</td></tr>
@@ -68,23 +68,31 @@
       </tbody>
     </table>
     <p>Waves are ordering, not commitments: each epic still gets its own T3 plan before code,
-    and every post-viewer epic ships its UI controls inside its own scope. Small items that
-    aren't epic-shaped (per-host bypass list, further decoders) fold into whichever epic
-    touches their seam first.</p>
+    and every post-viewer epic ships its UI controls inside its own scope.</p>
 
-    <p data-c="process-epics"><strong>Process &amp; tooling epics</strong> sit outside these two
-    product pillars and are tracked with the workflow, not this product sequence — listed here only
-    so deferred work isn't lost. <span class="badge id">E-NMWF</span> (manual-review sign-off, in
-    progress on <code>epic/nmwf</code>) ships <em>identity-only</em> authorisation (username / email
-    in <code>.mr-allowed</code>); its unforgeable, hardware-backed cryptographic-signature variant is
-    deferred to a follow-up epic <span class="badge id">E-MRSIG</span>.
-    <span class="badge id">E-UIFOUND</span> additionally owns defining the UI asset path set that
-    manual review keys off (<code>is_ui</code>), once the UI stack is chosen.</p>
+    <h3 id="rmap-deferred">Deferred backlog</h3>
+    <p data-c="deferred-intro">Work we intend but have not scheduled — the <strong>living</strong>
+    home for anything punted. Like the sequence above, it is living — it mutates in place:
+    add a row when work is deferred, strike it when an epic absorbs it; it persists across epics
+    until empty. Process &amp; tooling items sit outside the two product pillars and are tracked with
+    the workflow, not this product sequence; full rationale for the product items is in the Choices
+    table above.</p>
+    <table data-c="rmap-deferred-table">
+      <thead><tr><th>Deferred</th><th>Why deferred · revisit when</th></tr></thead>
+      <tbody>
+        <tr><td>HTTP/3 · QUIC MITM; DNS / TCP / UDP proxying</td><td>Large protocol investment, poor client CA support for QUIC; revisit after the Wave 1–3 parity set lands.</td></tr>
+        <tr><td>Embedded scripting (in-process WASM / JS hook)</td><td>REST rules (<span class="badge id">E-RULE</span>) deliver addon power first; revisit only if real rule usage proves insufficient.</td></tr>
+        <tr><td><span class="badge id">E-MRSIG</span> — unforgeable, hardware-backed cryptographic manual-review signatures</td><td>Follow-up to <span class="badge id">E-NMWF</span> (manual-review sign-off, in progress on <code>epic/nmwf</code>), which ships <em>identity-only</em> auth (username / email in <code>.mr-allowed</code>).</td></tr>
+        <tr><td>UI asset path set for the manual-review <code>is_ui</code> check</td><td>Owned by <span class="badge id">E-UIFOUND</span>, defined once the UI stack is chosen.</td></tr>
+        <tr><td>Small non-epic items — per-host bypass list, further decoders</td><td>Fold into whichever epic touches their seam first.</td></tr>
+      </tbody>
+    </table>
 
-    <h3 id="dec-5-consequences">Consequences</h3>
+    <h3 id="rmap-consequences">Consequences</h3>
     <p>Next epic to start is <span class="badge id">E-UISHELL</span> (with E-H2 available as
-    an independent Wave 1 track). Changing the sequence or dropping/adding an epic is a new
-    decision: append DEC-n here or flip this record to superseded — never rewrite it. The
+    an independent Wave 1 track). This roadmap is living — updated in place as epics land; a
+    strategic reversal (dropping a pillar, resequencing a wave) is recorded as a
+    <a href="../decisions/decisions-index.html">decision</a> and then reflected here. The
     research substance behind the market claims lives only in the archived scratch doc; if a
     claim needs re-verification, re-research rather than trusting the archive's age.</p>
   </main>
