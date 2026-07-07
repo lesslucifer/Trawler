@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a4d24409f34851f0dfa884c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEFAST.W2 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-GATEFAST.W2 — result</h1>
+      <p>Incremental Gate 0 delivered: <code>cargo xtask gate0</code> skips <code>fmt</code>+<code>clippy</code>+<code>nextest</code> when the working tree is byte-identical to the last green run, keyed off a full working-tree hash cached in a local <code>target/</code> file.</p>
+      <div class="meta">Result v1 · 2026-07-08 · Trawler · T3 WU result · <a href="2026-07-07-gatefast-w2-plan.html">W2 plan</a> · <a href="2026-07-07-gatefast-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main data-artifact="wu-result">
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p>Delivered as planned. <code>cargo xtask gate0</code> ([xtask/src/gate0.rs](../../xtask/src/gate0.rs)) runs Gate 0 and skips it when the working tree is unchanged since the last proven-green state. The key ([xtask/src/git.rs · worktree_key](../../xtask/src/git.rs)) is <code>sha256(HEAD + git diff HEAD + untracked non-ignored contents)</code>; the cache is a single <code>target/.gate0-green</code> file holding that key. The code-review skill's Gate 0 (§2) now calls the subcommand.</p>
+      <p>The load-bearing invariant holds, verified live: a changed tip re-ran Gate 0 (its cache key moved), an unchanged tree skipped it, and a red run (a stray trailing newline) re-ran and refused to cache. A stale or hand-edited cache can never yield a skip on a differing tree, because the skip fires only when the recomputed key matches — DEC-2 recompute-don't-trust, applied to a cache instead of a receipt.</p>
+    </div>
+
+    <h2 id="time-saved">Measured time saved</h2>
+    <div data-c="time-saved">
+      <p>Per-skip saving, measured on this machine with <code>/usr/bin/time</code>:</p>
+      <ul>
+        <li><strong>Fully-warm baseline</strong> (incremental cargo already built): cold Gate 0 <strong>~1.97&nbsp;s</strong> vs a cached skip <strong>~0.03&nbsp;s</strong> → <strong>~1.9&nbsp;s saved</strong> per otherwise-redundant run.</li>
+        <li><strong>Cold-ish invocation</strong> (as seen in this WU's own review Gate 0, which had to compile after a branch switch): the full <code>fmt</code>+<code>clippy</code>+<code>nextest</code> pass took <strong>~15.5&nbsp;s</strong> of build+test; the same tree re-verified would be the ~0.03&nbsp;s skip. This is the realistic per-review-retry saving, matching the discussion's measured 7–35&nbsp;s incremental-cargo range (<a href="2026-07-07-gatefast-discussion.html#q3-build">discussion §Q3</a>).</li>
+      </ul>
+      <p><strong>Where it compounds:</strong> the discussion measured the cargo trio paid <strong>2–3× per gate-heavy epic</strong> on the same unchanged tree (main loop, then each code-review Gate 0, then red-gate retries). C1 collapses the duplicate runs toward one verify: on an epic with N redundant Gate-0 runs the saving is roughly <code>(N−1) × one-Gate-0</code>, i.e. tens of seconds to a few minutes of wall-clock per epic, entirely on the review fleet's critical path. No timing assertion enters the hermetic suite (wall-clock is non-deterministic — epic non-goal); this figure is the recorded before/after the close protocol requires.</p>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <ul data-item="deviations">
+      <li><strong>Storage: local <code>target/.gate0-green</code> file, not a git note</strong> — reverses the epic plan's "git note (decided)". A note is durable, origin-synced and tamper-evident (the DEC-2 evidence model); a Gate-0 skip is an ephemeral, machine-local build fact worthless elsewhere, and a pushed green note would let a machine skip a build it never ran. The file co-invalidates with <code>cargo clean</code> and never syncs. This also dissolved the plan's open "syncs to origin?" sub-question. Rationale specced up-front in the <a href="2026-07-07-gatefast-w2-plan.html#deviation">W2 plan</a>; the epic plan's C1 bullet, W2 card and open-questions list were updated to match (owner-reviewed, DEC-7 sign-off on that doc commit).</li>
+      <li><strong><code>git stash create</code> rejected as the key primitive</strong> — it silently drops untracked files (verified: adding an untracked <code>.rs</code> did not move its tree hash), which would be a false-skip hole. The key is built explicitly instead. Pinned by the <code>an_untracked_source_file_changes_the_key</code> regression test.</li>
+      <li><strong>Scope held to the code-review Gate 0</strong> — the pre-commit/pre-push hooks still call raw cargo; adopting <code>gate0</code> there is a later additive change with no code coupling (noted in the W2 plan). Kept the diff small and the correctness surface to one command.</li>
+    </ul>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <ul>
+        <li><strong>Integration</strong> — [xtask/tests/gate0_cache.rs](../../xtask/tests/gate0_cache.rs), 5 hermetic tests pinning the invalidation invariant on <code>worktree_key</code>: identical tree stable; tracked edit, whitespace-only edit, and a new untracked source file each change the key; a gitignored/cache/artifact file does not.</li>
+        <li><strong>Unit</strong> — 3 tests in [xtask/src/gate0.rs](../../xtask/src/gate0.rs): absent cache reads none, a stored key round-trips and lives under <code>target/</code>, a different key is a miss.</li>
+        <li><strong>Notes on tip <code>cde8885</code></strong>: <code>test/v2</code> (working-unit, unit 3 · integration 5 · e2e waived), <code>doc/v1</code> (both T3 work docs accounted, <code>t2_waived</code> — DEC distillation is at epic close), <code>cr/v2</code> <strong>PASS</strong> bound to <code>diff_sha256 2822989…</code>.</li>
+        <li><strong>Review</strong>: two sweeps, 7 candidates; 2 real nits fixed (reuse <code>gate::short</code>, narrow <code>sha256_hex</code>), the rest refuted by adversarial verifiers (unreadable-file false-skip, newline filenames, buffer-before-hash, nextest probe, RUSTFLAGS, test-helper dup, 4 taste-nits). The FAIL note on the pre-fix tip <code>d1ed286</code> records the loop.</li>
+      </ul>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <p>Per the epic distillation plan, the C1 truth distils to a <strong>new DEC in <a href="../decisions/workflow-gates.html">workflow-gates.html</a></strong> at <em>epic</em> close, not this WU: that gate speed is an agent-turn problem; the green-tip cache, its <code>target/</code>-file storage (and why not a git note), and its invalidation contract under DEC-2. <a href="../workflow.html">workflow.html</a> gains a note on the <code>gate0</code> skip in the land-a-change flow. The code-review [SKILL.md](../../.claude/skills/code-review/SKILL.md) is already updated in-place (infra markdown). This W2 plan + result and the epic plan's W2 edits archive to <code>docs/.archive/</code> (DEC-3) before the epic merges.</p>
+      <p><strong>This WU's T2 obligation is <code>t2_waived</code></strong>: it touched only T3 work docs and infra markdown; the decision-record distillation is the epic's job.</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <ul data-item="follow-ups">
+      <li>At epic close: write the DEC and the <code>workflow.html</code> note; archive the T3 docs.</li>
+      <li>Optional, out of scope: adopt <code>cargo xtask gate0</code> in the pre-commit/pre-push hooks so the main-loop build path also benefits from the skip (additive, no coupling).</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
