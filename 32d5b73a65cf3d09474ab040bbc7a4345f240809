@@ -1,0 +1,9 @@
+schema: doc/v1
+epic: E-GATEBM
+wu: E-GATEBM.W1
+changes:
+  - path: docs/work/2026-07-07-gatebm-w1-plan.html
+    tier: T3
+    action: added
+    distills: "WU plan for the target-reachability discriminator"
+t2_waived: "discriminator rationale distills to workflow-gates DEC at epic close per the epic distillation plan; this WU adds no standalone T2 contract"
