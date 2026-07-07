@@ -321,3 +321,108 @@ fn commit_signed_rejects_a_commit_signed_by_an_unlisted_key() {
     let tip = repo.git(&["rev-parse", "HEAD"]);
     assert!(!mr::commit_signed(repo.p(), &tip));
 }
+
+// ── E-MRSIG.W2 — setup + signing UX ──────────────────────────────────────────
+
+/// Run `mr setup --as <id> --key <path>` over a software key; return its pubkey.
+fn setup_with_software_key(repo: &Repo, identity: &str) -> String {
+    let pubkey = repo.keygen("id");
+    let key_path = repo.p().join("id");
+    let (code, _) =
+        mr::run(&["setup", "--as", identity, "--key", key_path.to_str().unwrap()], repo.p())
+            .unwrap();
+    assert_eq!(code, 0);
+    pubkey
+}
+
+#[test]
+fn setup_registers_the_key_and_configures_signing() {
+    let repo = Repo::new("email: a@b.co\n");
+    let pubkey = setup_with_software_key(&repo, "vu");
+
+    let allowed = std::fs::read_to_string(repo.p().join(".mr-allowed")).unwrap();
+    assert!(allowed.contains(&format!("key: vu {pubkey}")), "{allowed}");
+    assert!(allowed.contains("email: a@b.co"), "existing entries are preserved: {allowed}");
+    assert_eq!(repo.git(&["config", "--get", "gpg.format"]), "ssh");
+    assert_eq!(
+        repo.git(&["config", "--get", "user.signingkey"]),
+        repo.p().join("id").to_str().unwrap()
+    );
+
+    // Idempotent: re-running setup against the same key does not duplicate it.
+    let key_path = repo.p().join("id");
+    mr::run(&["setup", "--as", "vu", "--key", key_path.to_str().unwrap()], repo.p()).unwrap();
+    let again = std::fs::read_to_string(repo.p().join(".mr-allowed")).unwrap();
+    assert_eq!(again.matches("key: vu").count(), 1, "{again}");
+}
+
+#[test]
+fn confirm_signs_a_note_that_the_w1_predicate_accepts() {
+    let repo = Repo::new("email: a@b.co\n");
+    setup_with_software_key(&repo, "vu");
+    let base = repo.git(&["rev-parse", "HEAD"]);
+    repo.write("src/lib.rs", "pub fn f() {}\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "the change"]);
+    let tip = repo.git(&["rev-parse", "HEAD"]);
+
+    let (code, out) =
+        mr::run(&["confirm", "wu", &tip, "--as", "vu", "--target", &base], repo.p()).unwrap();
+    assert_eq!(code, 0, "{out}");
+
+    let body = repo.git(&["notes", "--ref=mr", "show", &tip]);
+    assert!(body.contains("tier: key"), "{body}");
+    assert!(body.contains("sig: |"), "the signature rides in the note: {body}");
+    assert!(mr::tip_authorised(repo.p(), &tip), "the signed note authorises the tip");
+}
+
+#[test]
+fn confirm_signature_breaks_when_the_tip_is_amended() {
+    let repo = Repo::new("email: a@b.co\n");
+    setup_with_software_key(&repo, "vu");
+    let base = repo.git(&["rev-parse", "HEAD"]);
+    repo.write("src/lib.rs", "pub fn f() {}\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "the change"]);
+    let tip = repo.git(&["rev-parse", "HEAD"]);
+    mr::run(&["confirm", "epic", &tip, "--as", "vu", "--target", &base], repo.p()).unwrap();
+    assert!(mr::tip_authorised(repo.p(), &tip));
+
+    repo.write("src/lib.rs", "pub fn f() { let _ = 1; }\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "--amend", "--no-edit"]);
+    let amended = repo.git(&["rev-parse", "HEAD"]);
+    let old_note = repo.git(&["notes", "--ref=mr", "show", &tip]);
+    xtask::git::write_note(repo.p(), "mr", &amended, &old_note).unwrap();
+    assert!(!mr::tip_authorised(repo.p(), &amended), "amending invalidates the signature");
+}
+
+#[test]
+fn confirm_falls_back_to_a_plain_note_for_an_identity_only_signer() {
+    let repo = Repo::new("email: a@b.co\nusername: vu\n");
+    // No key entry and no --target: the plain-note path (E-NMWF coexistence).
+    let (code, _) = mr::run(&["confirm", "epic", "HEAD", "--as", "vu"], repo.p()).unwrap();
+    assert_eq!(code, 0);
+    let body = repo.git(&["notes", "--ref=mr", "show", "HEAD"]);
+    assert!(body.contains("tier: username"), "{body}");
+    assert!(!body.contains("sig:"), "an identity-only note carries no signature: {body}");
+    assert!(mr::tip_authorised(repo.p(), "HEAD"));
+}
+
+#[test]
+fn mr_commit_signs_a_doc_commit_a_listed_key_verifies() {
+    let repo = Repo::new("email: a@b.co\n");
+    setup_with_software_key(&repo, "vu");
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+
+    let (code, out) = mr::run(&["commit", "-m", "docs: change", "--as", "vu"], repo.p()).unwrap();
+    assert_eq!(code, 0, "{out}");
+    let tip = repo.git(&["rev-parse", "HEAD"]);
+    assert_eq!(
+        mr::trailer_of(&repo.git(&["log", "-1", "--format=%B", &tip])),
+        Some(("key".into(), "vu".into())),
+        "the trailer still rides along for the commit-msg hook"
+    );
+    assert!(mr::commit_signed(repo.p(), &tip), "the doc commit is natively SSH-signed");
+}

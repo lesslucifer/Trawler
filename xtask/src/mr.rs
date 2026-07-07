@@ -1,6 +1,8 @@
 use std::path::Path;
+use std::process::Command;
 
-use crate::git::{diff_sha256, git, note, ssh_verify, write_note};
+use crate::gate::short;
+use crate::git::{diff_sha256, git, note, ssh_sign, ssh_verify, write_note};
 
 /// SSH-signature namespace for WU/epic note signatures (`ssh-keygen -Y -n`).
 /// Doc-commit signatures ride git's native `git` namespace instead.
@@ -104,16 +106,77 @@ fn note_body(level: &str, tip: &str, tier: &str, signer: &str) -> String {
     )
 }
 
+/// The `mr/v1` note for a `key`-backed signer: carries the signed `base` and the
+/// armored `SSH SIGNATURE` (a YAML block scalar) that [`tip_authorised`] verifies
+/// over `sha256(git diff base..tip)`. `sig` is last so the block scalar can't
+/// swallow a following key.
+fn signed_note_body(level: &str, tip: &str, base: &str, signer: &str, sig: &str) -> String {
+    let indented: String = sig.lines().map(|l| format!("  {l}")).collect::<Vec<_>>().join("\n");
+    format!(
+        "schema: mr/v1\nlevel: {level}\ntip: {tip}\nbase: {base}\ntier: key\nsigner: {signer}\ndate: {}\nsig: |\n{indented}\n",
+        crate::gate::today()
+    )
+}
+
+/// Does a `key` entry (one carrying a public key) list `identity`? Signing paths
+/// take the unforgeable route only for such an identity; an identity-only entry
+/// keeps the E-NMWF plain-note path (coexistence).
+fn has_key_entry(allowed: &[Allowed], identity: &str) -> bool {
+    allowed.iter().any(|a| a.identity() == identity && a.pubkey().is_some())
+}
+
+/// The SSH key `git commit -S` / `ssh-keygen -Y sign` sign with, from git config
+/// (`cargo xtask mr setup` writes it). Absent = setup was never run.
+fn signing_key(repo: &Path) -> Result<String, String> {
+    git(repo, &["config", "--get", "user.signingkey"]).map_err(|_| {
+        "no signing key configured - run `cargo xtask mr setup --as <id>` first".to_string()
+    })
+}
+
+/// The merge target whose merge-base with the tip is the signed range's `base` —
+/// the same base the gate diffs against, so the signature binds the gated change.
+fn resolve_target(
+    repo: &Path,
+    is_epic: bool,
+    tip_ref: &str,
+    flag: Option<String>,
+) -> Option<String> {
+    flag.or_else(|| is_epic.then(|| "main".to_string()))
+        .or_else(|| crate::infer_wu_target(tip_ref))
+        .or_else(|| {
+            crate::infer_wu_target(&git(repo, &["rev-parse", "--abbrev-ref", "HEAD"]).ok()?)
+        })
+}
+
+fn touch_hint(identity: &str) -> String {
+    format!("touch your security key / Touch ID to sign as {identity} now ...")
+}
+
+#[allow(clippy::print_stderr)]
+fn prompt_touch(identity: &str) {
+    eprintln!("{}", touch_hint(identity));
+}
+
 fn mr_commit(repo: &Path, message: &str, identity: &str) -> Result<(i32, String), String> {
     if message.trim().is_empty() {
         return Ok((1, "the commit message (-m) is empty".to_string()));
     }
-    let Some(tier) = match_tier(&read_allowed(repo), identity) else {
+    let allowed = read_allowed(repo);
+    let Some(tier) = match_tier(&allowed, identity) else {
         return Ok((1, format!("{identity} is not listed in .mr-allowed\n{NOT_AUTHORISED}")));
     };
     let body = format!("{}\n\n{TRAILER_KEY}: {tier} {identity}\n", message.trim_end());
-    git(repo, &["commit", "-m", &body, "--cleanup=verbatim"])?;
-    Ok((0, format!("committed with {TRAILER_KEY}: {tier} {identity}")))
+    // A `key` identity signs the commit natively (`gpgsig` header, verified at
+    // pre-push + walk); the trailer still rides along for the commit-msg hook,
+    // which fires *before* git signs and so can only presence-check the message.
+    if has_key_entry(&allowed, identity) {
+        prompt_touch(identity);
+        git(repo, &["commit", "-S", "-m", &body, "--cleanup=verbatim"])?;
+        Ok((0, format!("signed doc commit with {TRAILER_KEY}: {tier} {identity}")))
+    } else {
+        git(repo, &["commit", "-m", &body, "--cleanup=verbatim"])?;
+        Ok((0, format!("committed with {TRAILER_KEY}: {tier} {identity}")))
+    }
 }
 
 fn mr_confirm(
@@ -121,18 +184,35 @@ fn mr_confirm(
     level: &str,
     tip_ref: &str,
     identity: &str,
+    target: Option<String>,
 ) -> Result<(i32, String), String> {
     let level = match level {
         "wu" => "working-unit",
         "epic" => "epic",
         _ => return Err(crate::USAGE.to_string()),
     };
-    let Some(tier) = match_tier(&read_allowed(repo), identity) else {
+    let allowed = read_allowed(repo);
+    let Some(tier) = match_tier(&allowed, identity) else {
         return Ok((1, format!("{identity} is not listed in .mr-allowed\n{NOT_AUTHORISED}")));
     };
     let tip = git(repo, &["rev-parse", tip_ref])?;
-    write_note(repo, "mr", &tip, &note_body(level, &tip, &tier, identity))?;
-    Ok((0, format!("mr/v1 note written on {} ({tier} {identity})", crate::gate::short(&tip))))
+    if !has_key_entry(&allowed, identity) {
+        write_note(repo, "mr", &tip, &note_body(level, &tip, &tier, identity))?;
+        return Ok((0, format!("mr/v1 note written on {} ({tier} {identity})", short(&tip))));
+    }
+    let Some(target) = resolve_target(repo, level == "epic", tip_ref, target) else {
+        return Ok((
+            1,
+            "cannot infer the merge target; pass --target <epic-branch|main>".to_string(),
+        ));
+    };
+    let base = git(repo, &["merge-base", &target, &tip])?;
+    let hash = diff_sha256(repo, &base, &tip)?;
+    let key = signing_key(repo)?;
+    prompt_touch(identity);
+    let sig = ssh_sign(&key, NOTE_NAMESPACE, hash.as_bytes())?;
+    write_note(repo, "mr", &tip, &signed_note_body(level, &tip, &base, identity, &sig))?;
+    Ok((0, format!("mr/v1 signed note written on {} (key {identity})", short(&tip))))
 }
 
 /// Is there a valid `mr/v1` note on `tip` authorising it? A `key`-backed signer
@@ -218,8 +298,87 @@ pub fn commit_msg_hook(repo: &Path, msg_file: &str) -> Result<(i32, String), Str
     }
 }
 
+/// The `.mr-allowed` line registering `identity`'s public key.
+fn key_line(identity: &str, pubkey: &str) -> String {
+    format!("key: {identity} {pubkey}")
+}
+
+/// `existing` with `line` appended, idempotently — an already-present entry is
+/// left untouched so re-running setup never duplicates a key.
+fn append_key_line(existing: &str, line: &str) -> String {
+    if existing.lines().any(|l| l.trim() == line) {
+        return existing.to_string();
+    }
+    let sep = if existing.is_empty() || existing.ends_with('\n') { "" } else { "\n" };
+    format!("{existing}{sep}{line}\n")
+}
+
+/// Resolve the signing key: an explicit `--key <path>` (an existing FIDO2 handle,
+/// a Secure-Enclave agent key, or a test's software key), else generate a fresh
+/// FIDO2 `ed25519-sk` key at the default path (needs a security key + touch).
+/// Returns `(private-key-path, public-key-line)`.
+fn resolve_key(key: Option<String>) -> Result<(String, String), String> {
+    let key_path = if let Some(p) = key {
+        p
+    } else {
+        let home =
+            std::env::var("HOME").map_err(|_| "HOME unset; pass --key <path>".to_string())?;
+        let path = format!("{home}/.ssh/id_trawler_mrsig");
+        if !Path::new(&format!("{path}.pub")).exists() {
+            generate_key(&path)?;
+        }
+        path
+    };
+    let pub_path = format!("{key_path}.pub");
+    let pubkey = std::fs::read_to_string(&pub_path)
+        .map_err(|e| format!("cannot read public key {pub_path}: {e}"))?
+        .trim()
+        .to_string();
+    Ok((key_path, pubkey))
+}
+
+#[allow(clippy::print_stderr)]
+fn generate_key(path: &str) -> Result<(), String> {
+    eprintln!(
+        "generating a hardware-backed ed25519-sk key; touch your security key when it prompts ..."
+    );
+    let ok = Command::new("ssh-keygen")
+        .args(["-q", "-t", "ed25519-sk", "-N", "", "-C", "trawler-mr", "-f", path])
+        .status()
+        .map_err(|e| format!("failed to run ssh-keygen: {e}"))?
+        .success();
+    if ok {
+        Ok(())
+    } else {
+        Err("ssh-keygen -t ed25519-sk failed - attach a FIDO2 security key, or pass --key <path> \
+             for a Secure-Enclave / existing key"
+            .to_string())
+    }
+}
+
+fn mr_setup(repo: &Path, identity: &str, key: Option<String>) -> Result<(i32, String), String> {
+    let (key_path, pubkey) = resolve_key(key)?;
+    let allowed_path = repo.join(".mr-allowed");
+    let existing = std::fs::read_to_string(&allowed_path).unwrap_or_default();
+    let updated = append_key_line(&existing, &key_line(identity, &pubkey));
+    std::fs::write(&allowed_path, updated).map_err(|e| format!("cannot write .mr-allowed: {e}"))?;
+    git(repo, &["config", "gpg.format", "ssh"])?;
+    git(repo, &["config", "user.signingkey", &key_path])?;
+    Ok((
+        0,
+        format!(
+            "registered key for {identity} in .mr-allowed and configured SSH signing \
+             (user.signingkey={key_path}). Doc commits: cargo xtask mr commit --as {identity}"
+        ),
+    ))
+}
+
 pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     match args {
+        ["setup", rest @ ..] => {
+            let identity = crate::flag_value(rest, "--as").ok_or(crate::USAGE.to_string())?;
+            mr_setup(repo, &identity, crate::flag_value(rest, "--key"))
+        }
         ["commit", rest @ ..] => {
             let message = crate::flag_value(rest, "-m").ok_or(crate::USAGE.to_string())?;
             let identity = crate::flag_value(rest, "--as").ok_or(crate::USAGE.to_string())?;
@@ -227,7 +386,7 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         }
         ["confirm", level, tip, rest @ ..] => {
             let identity = crate::flag_value(rest, "--as").ok_or(crate::USAGE.to_string())?;
-            mr_confirm(repo, level, tip, &identity)
+            mr_confirm(repo, level, tip, &identity, crate::flag_value(rest, "--target"))
         }
         _ => Err(crate::USAGE.to_string()),
     }
@@ -240,7 +399,8 @@ mod tests {
     use std::process::{Command, Stdio};
 
     use super::{
-        allowed_signers, match_tier, signature_authorised, trailer_of, Allowed, NOTE_NAMESPACE,
+        allowed_signers, append_key_line, has_key_entry, key_line, match_tier,
+        signature_authorised, signed_note_body, touch_hint, trailer_of, Allowed, NOTE_NAMESPACE,
     };
 
     fn allowed() -> Vec<Allowed> {
@@ -336,6 +496,51 @@ mod tests {
             !signature_authorised(&identity_only, "vu", NOTE_NAMESPACE, data, &sig),
             "an identity-only entry has no key to verify against"
         );
+    }
+
+    #[test]
+    fn key_line_appends_idempotently() {
+        assert_eq!(key_line("vu", "ssh-ed25519 AAAA"), "key: vu ssh-ed25519 AAAA");
+        let line = key_line("vu", "ssh-ed25519 AAAA");
+        assert_eq!(append_key_line("", &line), "key: vu ssh-ed25519 AAAA\n");
+        assert_eq!(
+            append_key_line("email: a@b.co\n", &line),
+            "email: a@b.co\nkey: vu ssh-ed25519 AAAA\n"
+        );
+        assert_eq!(
+            append_key_line("email: a@b.co", &line),
+            "email: a@b.co\nkey: vu ssh-ed25519 AAAA\n"
+        );
+        let once = append_key_line("email: a@b.co\n", &line);
+        assert_eq!(append_key_line(&once, &line), once, "a present key is never duplicated");
+    }
+
+    #[test]
+    fn has_key_entry_only_for_a_pubkey_carrying_entry() {
+        let a = vec![
+            Allowed { tier: "email".into(), value: "vu".into() },
+            Allowed { tier: "key".into(), value: "bo ssh-ed25519 AAAAbo".into() },
+        ];
+        assert!(has_key_entry(&a, "bo"));
+        assert!(!has_key_entry(&a, "vu"), "an identity-only entry is not a key");
+        assert!(!has_key_entry(&a, "nobody"));
+    }
+
+    #[test]
+    fn signed_note_body_parses_as_mr_v1_with_the_sig_intact() {
+        let sig = "-----BEGIN SSH SIGNATURE-----\nAAAAdummyblob\n-----END SSH SIGNATURE-----\n";
+        let body = signed_note_body("epic", "tttt", "bbbb", "vu", sig);
+        let note: crate::notes::MrNote = serde_yaml::from_str(&body).expect("valid mr/v1 yaml");
+        assert_eq!(note.tier, "key");
+        assert_eq!(note.base.as_deref(), Some("bbbb"));
+        assert!(note.sig.as_deref().unwrap().contains("BEGIN SSH SIGNATURE"), "{body}");
+        assert!(note.sig.as_deref().unwrap().contains("AAAAdummyblob"), "{body}");
+    }
+
+    #[test]
+    fn touch_hint_names_the_signer() {
+        assert!(touch_hint("vu").contains("vu"));
+        assert!(touch_hint("vu").to_lowercase().contains("touch"));
     }
 
     #[test]
