@@ -1,0 +1,5 @@
+schema: doc/v1
+epic: E-MRSIG
+wu: E-MRSIG.W2
+changes: []
+t2_waived: "code-only WU (signing/setup UX in xtask/); no doc files in the diff. The E-MRSIG guarantee is distilled once at W3, when enforcement wiring makes it real end-to-end (per the epic plan). The W2 result doc is untracked T3 scratch in docs/work/, archived at epic close per DEC-3."
