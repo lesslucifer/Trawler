@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-GATEBM.W1 target-reachability discriminator -> epic/gate-backmerge"
+epic: E-GATEBM
+wu: E-GATEBM.W1
+branch: wu/gate-backmerge/reachability
+base: 29e084c9a44f9f4a788c2b23e347ffb9e32b88fa
+head: 32d5b73a65cf3d09474ab040bbc7a4345f240809
+diff_sha256: e27e5df145c881a38fba8f859a83dcedd6d7702c19f5e2950b6ba9efbda0b819
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-07
