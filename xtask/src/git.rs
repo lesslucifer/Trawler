@@ -60,6 +60,42 @@ pub fn diff_sha256(repo: &Path, base: &str, tip: &str) -> Result<String, String>
     sha256_hex(&diff.stdout)
 }
 
+/// Verify an SSH `SIGNATURE` blob over `data` in `namespace`, against an
+/// `allowed_signers` file whose lines are `<principal> <ssh-pubkey>`. Returns
+/// true only if `ssh-keygen -Y verify` accepts it for `principal`. Offline: no
+/// device, no network — just the public keys and the data.
+pub fn ssh_verify(
+    principal: &str,
+    allowed_signers: &str,
+    namespace: &str,
+    data: &[u8],
+    sig: &str,
+) -> bool {
+    let Ok(dir) = tempfile::tempdir() else { return false };
+    let signers = dir.path().join("allowed_signers");
+    let sig_file = dir.path().join("data.sig");
+    if std::fs::write(&signers, allowed_signers).is_err() || std::fs::write(&sig_file, sig).is_err()
+    {
+        return false;
+    }
+    let Ok(mut child) = Command::new("ssh-keygen")
+        .args(["-Y", "verify", "-f"])
+        .arg(&signers)
+        .args(["-I", principal, "-n", namespace, "-s"])
+        .arg(&sig_file)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    else {
+        return false;
+    };
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(data);
+    }
+    child.wait().is_ok_and(|s| s.success())
+}
+
 fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
     let tools: [&[&str]; 2] = [&["shasum", "-a", "256"], &["sha256sum"]];
     for tool in tools {

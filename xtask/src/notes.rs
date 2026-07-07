@@ -145,6 +145,12 @@ pub struct MrNote {
     pub tip: String,
     pub tier: String,
     pub signer: String,
+    /// The `base` of the signed range; present with `sig` for `key`-backed notes.
+    #[serde(default)]
+    pub base: Option<String>,
+    /// The SSH `SIGNATURE` blob over `sha256(git diff base..tip)`, `key` entries only.
+    #[serde(default)]
+    pub sig: Option<String>,
     #[serde(default)]
     pub date: Option<String>,
 }

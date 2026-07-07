@@ -1,6 +1,10 @@
 use std::path::Path;
 
-use crate::git::{git, note, write_note};
+use crate::git::{diff_sha256, git, note, ssh_verify, write_note};
+
+/// SSH-signature namespace for WU/epic note signatures (`ssh-keygen -Y -n`).
+/// Doc-commit signatures ride git's native `git` namespace instead.
+pub const NOTE_NAMESPACE: &str = "trawler-mr";
 
 pub const TRAILER_KEY: &str = "Reviewed-By";
 
@@ -11,11 +15,54 @@ A HUMAN must review this and confirm. The AI agent MUST NOT self-authorise.
                cargo xtask mr confirm <wu|epic> <tip> --as <email|username>  # WU / epic
              The identity must be listed in .mr-allowed.";
 
-/// A `<tier>: <value>` line from `.mr-allowed`. Only `email`/`username` this epic;
-/// E-MRSIG adds `key`.
+/// A `<tier>: <value>` line from `.mr-allowed`. `email`/`username` values are a
+/// bare identity; a `key` value is `<identity> <ssh-pubkey>` — an unforgeable
+/// entry E-MRSIG authorises by verifying a signature, not by matching a string.
 pub struct Allowed {
     pub tier: String,
     pub value: String,
+}
+
+impl Allowed {
+    /// The identity this entry authorises: the whole value for identity tiers,
+    /// or the first field (`<identity>`) of a `key` entry.
+    pub fn identity(&self) -> &str {
+        if self.tier == "key" {
+            self.value.split_whitespace().next().unwrap_or("")
+        } else {
+            &self.value
+        }
+    }
+
+    /// The `<ssh-pubkey>` half of a `key` entry, if this is one.
+    fn pubkey(&self) -> Option<&str> {
+        (self.tier == "key")
+            .then(|| self.value.split_once(char::is_whitespace))?
+            .map(|(_, k)| k.trim())
+    }
+}
+
+/// An `allowed_signers` file body for `ssh-keygen -Y verify`: one
+/// `<identity> <ssh-pubkey>` line per `key` entry that names `identity`.
+fn allowed_signers(allowed: &[Allowed], identity: &str) -> String {
+    allowed
+        .iter()
+        .filter(|a| a.identity() == identity)
+        .filter_map(|a| a.pubkey().map(|k| format!("{identity} {k}\n")))
+        .collect()
+}
+
+/// Does `sig` verify over `data` in `namespace` as `identity`, against a `key`
+/// entry listed for `identity`? The unforgeable half of the auth check.
+fn signature_authorised(
+    allowed: &[Allowed],
+    identity: &str,
+    namespace: &str,
+    data: &[u8],
+    sig: &str,
+) -> bool {
+    let signers = allowed_signers(allowed, identity);
+    !signers.is_empty() && ssh_verify(identity, &signers, namespace, data, sig)
 }
 
 pub fn read_allowed(repo: &Path) -> Vec<Allowed> {
@@ -35,7 +82,7 @@ pub fn read_allowed(repo: &Path) -> Vec<Allowed> {
 /// The tier whose value equals `identity`, if any. This is the whole auth check
 /// this epic — E-MRSIG replaces it with a signature verify.
 pub fn match_tier(allowed: &[Allowed], identity: &str) -> Option<String> {
-    allowed.iter().find(|a| a.value == identity).map(|a| a.tier.clone())
+    allowed.iter().find(|a| a.identity() == identity).map(|a| a.tier.clone())
 }
 
 /// Parse a `Reviewed-By: <tier> <value>` trailer out of a commit message body.
@@ -88,18 +135,59 @@ fn mr_confirm(
     Ok((0, format!("mr/v1 note written on {} ({tier} {identity})", crate::gate::short(&tip))))
 }
 
-/// Is there a valid `mr/v1` note on `tip` with a currently-listed signer?
+/// Is there a valid `mr/v1` note on `tip` authorising it? A `key`-backed signer
+/// authorises only when the note's `sig` verifies over the recomputed
+/// `base..tip` change-hash; an identity-only signer authorises by being listed.
 pub fn tip_authorised(repo: &Path, tip: &str) -> bool {
     let Some(raw) = note(repo, "mr", tip) else { return false };
     let Ok(mr) = serde_yaml::from_str::<crate::notes::MrNote>(&raw) else { return false };
-    mr.schema == "mr/v1" && match_tier(&read_allowed(repo), &mr.signer).is_some()
+    if mr.schema != "mr/v1" {
+        return false;
+    }
+    let allowed = read_allowed(repo);
+    if let (Some(base), Some(sig)) = (&mr.base, &mr.sig) {
+        let Ok(hash) = diff_sha256(repo, base, tip) else { return false };
+        return signature_authorised(&allowed, &mr.signer, NOTE_NAMESPACE, hash.as_bytes(), sig);
+    }
+    match_tier(&allowed, &mr.signer).is_some()
 }
 
 /// Does `message` carry a `Reviewed-By` trailer naming a currently-listed
 /// identity? The single trailer-auth predicate for both the commit-msg hook and
-/// the epic walk. E-MRSIG hardens this one function.
+/// the epic walk. Doc-commit *signatures* verify separately (see [`commit_signed`]).
 pub fn message_authorised(repo: &Path, message: &str) -> bool {
     trailer_of(message).is_some_and(|(_, id)| match_tier(&read_allowed(repo), &id).is_some())
+}
+
+/// Is `commit` signed (git-native SSH `gpgsig`) by a listed `key` entry? Uses
+/// `git verify-commit` against an `allowed_signers` derived from `.mr-allowed`.
+/// The auth check for doc commits — unforgeable, offline, no device.
+pub fn commit_signed(repo: &Path, commit: &str) -> bool {
+    let allowed = read_allowed(repo);
+    let signers: String = allowed
+        .iter()
+        .filter_map(|a| a.pubkey().map(|k| format!("{} {k}\n", a.identity())))
+        .collect();
+    if signers.is_empty() {
+        return false;
+    }
+    let Ok(dir) = tempfile::tempdir() else { return false };
+    let signers_path = dir.path().join("allowed_signers");
+    if std::fs::write(&signers_path, &signers).is_err() {
+        return false;
+    }
+    git(
+        repo,
+        &[
+            "-c",
+            "gpg.format=ssh",
+            "-c",
+            &format!("gpg.ssh.allowedSignersFile={}", signers_path.display()),
+            "verify-commit",
+            commit,
+        ],
+    )
+    .is_ok()
 }
 
 /// The `commit-msg` hook: if the staged diff touches docs, the message must
@@ -147,7 +235,13 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{match_tier, trailer_of, Allowed};
+    use std::io::Write as _;
+    use std::path::Path;
+    use std::process::{Command, Stdio};
+
+    use super::{
+        allowed_signers, match_tier, signature_authorised, trailer_of, Allowed, NOTE_NAMESPACE,
+    };
 
     fn allowed() -> Vec<Allowed> {
         vec![
@@ -156,11 +250,92 @@ mod tests {
         ]
     }
 
+    /// A software ed25519 key in `dir`; returns (public-key-line, sign-fn).
+    fn keygen(dir: &Path) -> (String, impl Fn(&str, &[u8]) -> String + '_) {
+        let key = dir.join("id");
+        assert!(Command::new("ssh-keygen")
+            .args(["-q", "-t", "ed25519", "-N", "", "-C", "test", "-f"])
+            .arg(&key)
+            .status()
+            .unwrap()
+            .success());
+        let pubkey = std::fs::read_to_string(dir.join("id.pub")).unwrap().trim().to_string();
+        let sign = move |namespace: &str, data: &[u8]| {
+            let mut child = Command::new("ssh-keygen")
+                .args(["-Y", "sign", "-n", namespace, "-f"])
+                .arg(&key)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .spawn()
+                .unwrap();
+            child.stdin.take().unwrap().write_all(data).unwrap();
+            let out = child.wait_with_output().unwrap();
+            assert!(out.status.success());
+            String::from_utf8(out.stdout).unwrap()
+        };
+        (pubkey, sign)
+    }
+
     #[test]
     fn matches_a_listed_identity_to_its_tier() {
         assert_eq!(match_tier(&allowed(), "a@b.co").as_deref(), Some("email"));
         assert_eq!(match_tier(&allowed(), "vu").as_deref(), Some("username"));
         assert_eq!(match_tier(&allowed(), "someone@else.co"), None);
+    }
+
+    #[test]
+    fn a_key_entry_is_listed_by_its_identity() {
+        let a = vec![Allowed { tier: "key".into(), value: "vu ssh-ed25519 AAAAdummy".into() }];
+        assert_eq!(match_tier(&a, "vu").as_deref(), Some("key"));
+        assert_eq!(match_tier(&a, "ssh-ed25519"), None, "the pubkey is not an identity");
+    }
+
+    #[test]
+    fn allowed_signers_renders_only_matching_key_entries() {
+        let a = vec![
+            Allowed { tier: "email".into(), value: "vu".into() },
+            Allowed { tier: "key".into(), value: "vu ssh-ed25519 AAAAvu".into() },
+            Allowed { tier: "key".into(), value: "bo ssh-ed25519 AAAAbo".into() },
+        ];
+        assert_eq!(allowed_signers(&a, "vu"), "vu ssh-ed25519 AAAAvu\n");
+        assert_eq!(allowed_signers(&a, "nobody"), "");
+    }
+
+    #[test]
+    fn signature_roundtrips_and_rejects_tampering() {
+        let dir = tempfile::tempdir().unwrap();
+        let (pubkey, sign) = keygen(dir.path());
+        let listed = vec![Allowed { tier: "key".into(), value: format!("vu {pubkey}") }];
+        let data = b"sha256-of-the-change";
+        let sig = sign(NOTE_NAMESPACE, data);
+
+        assert!(signature_authorised(&listed, "vu", NOTE_NAMESPACE, data, &sig), "valid sig");
+        assert!(
+            !signature_authorised(&listed, "vu", NOTE_NAMESPACE, b"other data", &sig),
+            "tampered data"
+        );
+        assert!(
+            !signature_authorised(&listed, "vu", "wrong-namespace", data, &sig),
+            "wrong namespace"
+        );
+        assert!(
+            !signature_authorised(&listed, "vu", NOTE_NAMESPACE, data, "not a sig blob"),
+            "malformed blob"
+        );
+
+        let (other_pub, _) = keygen(tempfile::tempdir().unwrap().path());
+        let unlisted = vec![Allowed { tier: "key".into(), value: format!("vu {other_pub}") }];
+        assert!(
+            !signature_authorised(&unlisted, "vu", NOTE_NAMESPACE, data, &sig),
+            "signed by a key not listed for vu"
+        );
+
+        let identity_only = allowed();
+        assert!(
+            !signature_authorised(&identity_only, "vu", NOTE_NAMESPACE, data, &sig),
+            "an identity-only entry has no key to verify against"
+        );
     }
 
     #[test]
