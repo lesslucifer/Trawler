@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-GATEFAST.W2 -> epic/gatefast"
+epic: E-GATEFAST
+wu: E-GATEFAST.W2
+branch: wu/gatefast/incremental-gate0
+base: be340845142a3437db3d89f2d1ec130f0d75a050
+head: cde8885b0f86a6976ce6e4caa72b11ef4d7fd5ea
+diff_sha256: 282298948501966c4101ff541715b9977a1be1359975069f5975259bcb01f2e6
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 7, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-08
