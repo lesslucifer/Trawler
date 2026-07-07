@@ -172,7 +172,10 @@ pub fn tier_of(path: &str) -> Option<&'static str> {
     }
     if path.starts_with("docs/work/") {
         Some("T3")
-    } else if path.starts_with("docs/use-cases/") || path.starts_with("docs/decisions/") {
+    } else if path.starts_with("docs/use-cases/")
+        || path.starts_with("docs/decisions/")
+        || path.starts_with("docs/backlog/")
+    {
         Some("T2")
     } else {
         Some("T1")
@@ -187,14 +190,17 @@ pub fn is_doc(path: &str) -> bool {
     path.starts_with("docs/")
 }
 
-// Provisional until E-UIFOUND fixes the real UI asset paths (see roadmap.html).
+// Provisional until E-UIFOUND fixes the real UI asset paths (see docs/backlog/roadmap.html).
 pub fn is_ui(path: &str) -> bool {
     path.starts_with("ui/")
 }
 
 pub fn is_expected_tracked_doc(path: &str) -> bool {
     path.strip_prefix("docs/").is_some_and(|rest| {
-        !rest.contains('/') || rest.starts_with("use-cases/") || rest.starts_with("decisions/")
+        !rest.contains('/')
+            || rest.starts_with("use-cases/")
+            || rest.starts_with("decisions/")
+            || rest.starts_with("backlog/")
     })
 }
 
@@ -320,6 +326,7 @@ t2_waived: null
         assert_eq!(tier_of("docs/workflow.html"), Some("T1"));
         assert_eq!(tier_of("docs/use-cases/capture.html"), Some("T2"));
         assert_eq!(tier_of("docs/decisions/event-bus.html"), Some("T2"));
+        assert_eq!(tier_of("docs/backlog/roadmap.html"), Some("T2"));
         assert_eq!(tier_of("docs/work/plan.html"), Some("T3"));
         assert_eq!(tier_of("src/lib.rs"), None);
 
@@ -341,6 +348,7 @@ t2_waived: null
         assert!(is_expected_tracked_doc("docs/workflow.html"));
         assert!(is_expected_tracked_doc("docs/use-cases/capture.html"));
         assert!(is_expected_tracked_doc("docs/decisions/decisions-index.html"));
+        assert!(is_expected_tracked_doc("docs/backlog/roadmap.html"));
         assert!(!is_expected_tracked_doc("docs/work/plan.html"));
         assert!(!is_expected_tracked_doc("docs/work/archive/plan.html"));
         assert!(!is_expected_tracked_doc("docs/.archive/plan.html"));

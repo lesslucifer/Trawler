@@ -542,6 +542,27 @@ fn epic_gate_rejects_docs_in_unexpected_locations() {
     assert!(format_report(&report).contains("expected doc locations"));
 }
 
+// docs/backlog/ is the third T2 KB (living roadmap + deferred work): a tracked
+// file there must pass both the epic tracked-doc layout check and the doc-note
+// tier derivation (T2), exactly like use-cases/ and decisions/.
+#[test]
+fn epic_gate_accepts_a_tracked_backlog_kb_doc() {
+    let (repo, _) = epic_with_merged_wu();
+    repo.write("docs/backlog/roadmap.html", "<html>roadmap</html>\n");
+    repo.commit("relocate roadmap into the backlog kb");
+    let entry = format!(
+        "{T2_ENTRY}  - path: docs/backlog/roadmap.html\n    tier: T2\n    action: added\n    distills: \"roadmap relocated to the living backlog kb\"\n"
+    );
+    bless_epic(&repo, &entry);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        report.green(),
+        "docs/backlog/ is an expected tracked T2 location: {}",
+        format_report(&report)
+    );
+}
+
 #[test]
 fn docs_only_epic_still_rejects_stray_tracked_work_docs() {
     let repo = Repo::new();

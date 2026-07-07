@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Documentation System</h1>
       <p>Five tiers so every AI session reads current truth — information synthesizes UP, is read DOWN, and is never duplicated down.</p>
-      <div class="meta">Draft v5 · 2026-07-05 · Trawler · T1 process doc</div>
+      <div class="meta">Draft v6 · 2026-07-07 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -33,7 +33,7 @@
 flowchart TB
     T0["<b>T0 · CLAUDE.md</b><br/>fixed rules + tier map<br/><i>manual edits only</i>"]
     T1["<b>T1 · Permanent spine</b><br/>docs/*.html<br/><i>changes only when the shape changes</i>"]
-    T2["<b>T2 · Indexed knowledge bases</b><br/>docs/use-cases/ (what) · docs/decisions/ (why)<br/><i>topical files behind an index</i>"]
+    T2["<b>T2 · Indexed knowledge bases</b><br/>docs/use-cases/ (what) · docs/decisions/ (why) · docs/backlog/ (what's next)<br/><i>topical files behind an index</i>"]
     T3["<b>T3 · Working docs</b><br/>docs/work/<br/><i>short-lived, per task</i>"]
     T4["<b>T4 · Source code</b><br/>src/…<br/><i>the source of truth</i>"]
     T0 -->|read| T1 -->|read| T2 -->|read| T3 -->|read| T4
@@ -62,10 +62,10 @@ flowchart TB
         </tr>
         <tr>
           <td><span class="badge id">T2</span></td>
-          <td><code>docs/use-cases/</code> · <code>docs/decisions/</code></td>
-          <td>“What must it do?” · “Why is it this way?”</td>
-          <td>Behavior contracts (use-cases) · context, choice, consequences (decisions)</td>
-          <td>Implementation detail; restating one KB in the other</td>
+          <td><code>docs/use-cases/</code> · <code>docs/decisions/</code> · <code>docs/backlog/</code></td>
+          <td>“What must it do?” · “Why is it this way?” · “What's next?”</td>
+          <td>Behavior contracts (use-cases) · context, choice, consequences (decisions) · roadmap + deferred work (backlog)</td>
+          <td>Implementation detail; restating one KB in another</td>
         </tr>
         <tr>
           <td><span class="badge id">T3</span></td>
@@ -140,6 +140,15 @@ flowchart TB
       here first to learn whether the oddity is load-bearing.
     </p>
 
+    <h3 id="t2-backlog">backlog/ — roadmap &amp; deferred work (what's next)</h3>
+    <p>
+      The forward-looking KB: the product roadmap (epics in waves) and the living Deferred backlog of
+      work intended but not yet scheduled. Unlike the other two KBs it is <strong>living</strong> —
+      records track not-yet-done work and mutate in place: a row is added when work is deferred, struck
+      when an epic absorbs it, persisting across epics until empty. A strategic reversal (dropping a
+      pillar, resequencing a wave) is still a <code>decisions/</code> record; the roadmap then reflects it.
+    </p>
+
     <h2 id="t3">T3 · Working docs</h2>
     <p>
       The scratch space where a task thinks, named <code>docs/work/YYYY-MM-DD-&lt;slug&gt;.html</code>.
@@ -176,8 +185,8 @@ stateDiagram-v2
     exactly one entry per doc file in the gated diff. <code>cargo xtask verify-dod</code> cross-checks
     it against <code>git diff --name-only</code> — no missing entries, no phantom entries, tiers derived
     from paths — and hard-fails an epic that keeps unexpected docs tracked: at an epic tip the only
-    tracked paths under <code>docs/</code> are flat T1 files, <code>use-cases/</code> and
-    <code>decisions/</code>; anything under <code>docs/work/</code> must be archived out of git first.
+    tracked paths under <code>docs/</code> are flat T1 files, <code>use-cases/</code>,
+    <code>decisions/</code> and <code>backlog/</code>; anything under <code>docs/work/</code> must be archived out of git first.
     Standalone commits need it only when they touch <code>docs/</code>.</p>
     <pre data-c="doc-note-yaml">schema: doc/v1
 epic: E-CAP                       # identity block, same as every note schema
@@ -185,7 +194,7 @@ wu: E-CAP.W2                      # working-unit level only
 branch: wu/capture/pagination
 changes:                          # exactly one entry per docs/ path in the gated diff
   - path: docs/use-cases/control-api.html
-    tier: T2                      # derived from the path — T1 docs/*, T2 use-cases|decisions, T3 work/
+    tier: T2                      # derived from the path — T1 docs/*, T2 use-cases|decisions|backlog, T3 work/
     action: updated               # added | updated | archived | deleted
     distills: "UC-API-7 pagination contract — requirement + edge cases learned in the WU"
   - path: docs/work/2026-07-05-epic-capture-plan.html
@@ -219,7 +228,7 @@ date: 2026-07-05</pre>
       <tbody>
         <tr><td><code>CLAUDE.md</code></td><td>T0</td><td>Rules + tier map</td></tr>
         <tr><td><code>docs/*.html</code></td><td>T1</td><td>Architecture + process standards, flat</td></tr>
-        <tr><td><code>docs/use-cases/</code> · <code>docs/decisions/</code></td><td>T2</td><td>One index + topic files each</td></tr>
+        <tr><td><code>docs/use-cases/</code> · <code>docs/decisions/</code> · <code>docs/backlog/</code></td><td>T2</td><td>One index + topic files each</td></tr>
         <tr><td><code>docs/work/</code></td><td>T3</td><td>Working docs — in-flight only; empty in git at every epic gate</td></tr>
         <tr><td><code>docs/.archive/</code></td><td>T3</td><td>Archived work docs — gitignored, never tracked</td></tr>
         <tr><td><code>src/…</code></td><td>T4</td><td>The truth</td></tr>
