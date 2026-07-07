@@ -1,0 +1,8 @@
+schema: test/v2
+level: epic
+epic: E-BKLOG
+branch: epic/backlog
+tests:
+  unit: { count: 1, covers: "notes.rs path_classification: tier_of=T2 + is_expected_tracked_doc=true for docs/backlog/" }
+  integration: { count: 1, covers: "dod_gate.rs epic_gate_accepts_a_tracked_backlog_kb_doc: tracked docs/backlog/ T2 doc passes the epic gate" }
+  e2e: { waived: "workflow-tooling + docs change; no product runtime flow exists to exercise. The DoD gate's own end-to-end behaviour over a real git repo IS the dod_gate.rs integration suite." }
