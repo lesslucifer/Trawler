@@ -1,7 +1,6 @@
 schema: dod/v1
 level: epic
 epic: E-GATEBM
-branch: epic/gate-backmerge
 base: 8871d7bbdefa68f3bc4aaaabd40425a60acdb0a8
 tip: bb413ab090a0cefd726f9187e961b185eebb7781
 diff_sha256: 8e4e038bd2149ffd53a05c461c7f1f6eca7df5b294ade5a8e193e48b40deef2a
