@@ -1,0 +1,13 @@
+schema: doc/v1
+epic: E-GATEBM
+wu: E-GATEBM.W2
+changes:
+  - path: docs/work/2026-07-07-gatebm-w2-plan.html
+    tier: T3
+    action: added
+    distills: "WU plan for the walk-error waiver valve"
+  - path: docs/work/2026-07-07-gatebm-w2-result.html
+    tier: T3
+    action: added
+    distills: "WU result report"
+t2_waived: "R5 carrier rationale distills to workflow-gates DEC + workflow.html at epic close per the epic distillation plan; this WU adds no standalone T2 contract"
