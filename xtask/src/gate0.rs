@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use crate::gate::short;
 use crate::git::worktree_key;
 
 // A local, per-checkout build shortcut - deliberately NOT a git note. Gate 0
@@ -70,10 +71,6 @@ pub fn gate0(repo: &Path) -> Result<(i32, String), String> {
     } else {
         Ok((1, "gate0 red - fmt/clippy/tests failed; not cached".to_string()))
     }
-}
-
-fn short(key: &str) -> &str {
-    key.get(..10).unwrap_or(key)
 }
 
 #[cfg(test)]

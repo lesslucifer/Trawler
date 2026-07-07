@@ -89,7 +89,7 @@ pub fn worktree_key(repo: &Path) -> Result<String, String> {
     sha256_hex(&bytes)
 }
 
-pub(crate) fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
+fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
     let tools: [&[&str]; 2] = [&["shasum", "-a", "256"], &["sha256sum"]];
     for tool in tools {
         let Ok(mut child) = Command::new(tool[0])
