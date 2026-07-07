@@ -451,6 +451,66 @@ fn walk_waiver_leaves_the_tips_own_checks_running() {
     );
 }
 
+// E-GATEBM epic e2e: the whole flow through one epic walk. A stale epic carries
+// a gated WU seam, back-merges an advanced main, AND carries a genuinely ungated
+// forward WU seam. Step 1 (W1): the back-merge integration seam walks clean.
+// Step 2 (R2): the ungated forward seam turns the walk red. Step 3 (W2): a
+// walk_waivers entry on the tip's cr note waives exactly that seam -> green;
+// blanking its why -> red again with the instructing fix. One test, both WUs.
+#[test]
+fn e2e_backmerge_then_r2_guardrail_then_waiver_valve() {
+    let (repo, _) = epic_with_merged_wu();
+
+    repo.git(&["checkout", "-q", "main"]);
+    repo.write("src/mainlock.rs", "pub fn on_main() {}\n");
+    repo.commit("main advances after the epic forked");
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "back-merge advanced main into epic", "main"]);
+
+    repo.git(&["checkout", "-q", "-b", "wu/x/forward", "epic/x"]);
+    repo.write("src/forward.rs", "pub fn forward() {}\n");
+    repo.commit("forward WU work, never gated");
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "merge ungated forward wu", "wu/x/forward"]);
+    let forward_seam = repo.sha("epic/x");
+    bless_epic_diverged(&repo, T2_ENTRY);
+
+    // Steps 1 + 2: the back-merge seam is skipped (W1); only the ungated forward
+    // seam is red (R2). Exactly one walk failure, on that seam.
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    let walk_failures: Vec<&str> =
+        checks_of(&report).into_iter().filter(|c| c.starts_with("7·walk")).collect();
+    assert!(
+        !walk_failures.is_empty() && report.failures.iter().all(|f| f.check.starts_with("7·walk")),
+        "the back-merge must walk clean while the ungated forward seam stays red: {}",
+        format_report(&report)
+    );
+
+    // Step 3a (W2): waive that seam on the tip's cr note -> the epic gate is green.
+    let base = repo.git(&["merge-base", "main", "epic/x"]);
+    let sha = diff_sha256(&repo.path, &base, &repo.sha("epic/x")).unwrap();
+    let entry = format!(
+        "  - seam: {forward_seam}\n    why: \"live-integrated, gated on its own branch\"\n"
+    );
+    repo.note("cr", &repo.sha("epic/x"), &cr_note_with_waivers("E9", &base, &sha, &entry));
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        report.green() && format_report(&report).contains("waived"),
+        "waiving the forward seam must make the epic gate green with a visible waived line: {}",
+        format_report(&report)
+    );
+
+    // Step 3b: blank the why -> the seam is red again, with the instructing fix.
+    let entry = format!("  - seam: {forward_seam}\n    why: \"\"\n");
+    repo.note("cr", &repo.sha("epic/x"), &cr_note_with_waivers("E9", &base, &sha, &entry));
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    let text = format_report(&report);
+    assert!(
+        checks_of(&report).iter().any(|c| c.starts_with("7·walk")) && text.contains("--no-verify"),
+        "a blank why must leave the seam red with the instructing fix: {text}"
+    );
+}
+
 #[test]
 fn epic_gate_rejects_tracked_work_docs() {
     let (repo, _) = epic_with_merged_wu();
