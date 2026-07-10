@@ -133,6 +133,13 @@ fn signing_key(repo: &Path) -> Result<String, String> {
     })
 }
 
+/// The program for `-Y sign` calls: `gpg.ssh.program` when configured (the
+/// bundled Secure-Enclave signer), stock `ssh-keygen` otherwise — the same
+/// lookup git itself makes for `commit -S`.
+fn signer_program(repo: &Path) -> String {
+    git(repo, &["config", "--get", "gpg.ssh.program"]).unwrap_or_else(|_| "ssh-keygen".to_string())
+}
+
 /// The merge target whose merge-base with the tip is the signed range's `base` —
 /// the same base the gate diffs against, so the signature binds the gated change.
 fn resolve_target(
@@ -210,7 +217,7 @@ fn mr_confirm(
     let hash = diff_sha256(repo, &base, &tip)?;
     let key = signing_key(repo)?;
     prompt_touch(identity);
-    let sig = ssh_sign(&key, NOTE_NAMESPACE, hash.as_bytes())?;
+    let sig = ssh_sign(&signer_program(repo), &key, NOTE_NAMESPACE, hash.as_bytes())?;
     write_note(repo, "mr", &tip, &signed_note_body(level, &tip, &base, identity, &sig))?;
     Ok((0, format!("mr/v1 signed note written on {} (key {identity})", short(&tip))))
 }
@@ -324,23 +331,87 @@ fn pub_path_for(key: &str) -> String {
     }
 }
 
+const SE_KEY_HEADER: &str = "trawler-se-v1";
+const SE_SIGN_SOURCE: &str = include_str!("se_sign.swift");
+
+/// A private-key file written by the bundled Secure-Enclave signer: header
+/// line, then the `CryptoKit` blob only this machine's Enclave can use.
+fn is_se_key(path: &str) -> bool {
+    std::fs::read_to_string(path).is_ok_and(|s| s.lines().next() == Some(SE_KEY_HEADER))
+}
+
+/// Compile the bundled Secure-Enclave signer (`se_sign.swift`) with the system
+/// `swiftc`, caching binary + source under `~/.config/trawler`; recompiles only
+/// when the embedded source changed.
+fn build_se_helper(home: &str) -> Result<std::path::PathBuf, String> {
+    let dir = Path::new(home).join(".config").join("trawler");
+    let src = dir.join("se-sign.swift");
+    let bin = dir.join("se-sign");
+    if bin.exists() && std::fs::read_to_string(&src).ok().as_deref() == Some(SE_SIGN_SOURCE) {
+        return Ok(bin);
+    }
+    std::fs::create_dir_all(&dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
+    std::fs::write(&src, SE_SIGN_SOURCE)
+        .map_err(|e| format!("cannot write {}: {e}", src.display()))?;
+    let out = Command::new("swiftc")
+        .arg("-O")
+        .arg(&src)
+        .arg("-o")
+        .arg(&bin)
+        .output()
+        .map_err(|e| format!("swiftc unavailable: {e}"))?;
+    if out.status.success() {
+        Ok(bin)
+    } else {
+        Err(format!("swiftc failed: {}", String::from_utf8_lossy(&out.stderr).trim_end()))
+    }
+}
+
+/// Mint (or reuse) a Touch-ID-gated Secure-Enclave key for `identity` — the
+/// zero-install macOS path. Fails cleanly off-macOS, without `swiftc`, or on
+/// Enclave-less hardware; the caller falls back to FIDO2.
+fn provision_se_key(home: &str, identity: &str) -> Result<String, String> {
+    if !cfg!(target_os = "macos") {
+        return Err("Secure Enclave signing is macOS-only".to_string());
+    }
+    let helper = build_se_helper(home)?;
+    let stem = format!("{home}/.ssh/id_trawler_se_{identity}");
+    if !Path::new(&stem).exists() {
+        let out = Command::new(&helper)
+            .args(["keygen", &stem])
+            .output()
+            .map_err(|e| format!("cannot run the Secure-Enclave signer: {e}"))?;
+        if !out.status.success() {
+            return Err(format!(
+                "Secure Enclave keygen failed: {}",
+                String::from_utf8_lossy(&out.stderr).trim_end()
+            ));
+        }
+    }
+    Ok(stem)
+}
+
 /// Resolve the signing key. `--key <path>` is used verbatim (a private-key stem,
-/// or a `.pub` for an agent-backed key such as a Secure-Enclave key exposed by an
-/// ssh-agent). Otherwise a FIDO2 `ed25519-sk` key is generated at the default
-/// path (needs a security key + touch). Returns `(signingkey-path, pubkey)`.
-///
-/// macOS Touch ID is *not* auto-provisioned: `sc_auth` can mint a Secure-Enclave
-/// key but macOS ships no OpenSSH bridge for it (the launchd agent doesn't
-/// surface CTK keys and `ssh-keychain.dylib` reports no slots), so such a key
-/// cannot sign via `ssh-keygen -Y sign`. Touch ID therefore needs an ssh-agent
-/// that bridges the Enclave (e.g. Secretive): create the key there and pass its
-/// public key via `--key`.
-fn resolve_key(key: Option<String>) -> Result<(String, String), String> {
+/// a `.pub` for an agent-backed key, or a Secure-Enclave blob from an earlier
+/// setup). Otherwise, on a Secure-Enclave Mac a Touch-ID key is provisioned
+/// natively via the bundled signer — the Enclave→OpenSSH bridge stock macOS
+/// lacks (`sc_auth` keys are unreachable by `ssh-keygen -Y sign`; see
+/// `se_sign.swift`). Failing that, a FIDO2 `ed25519-sk` key is generated at the
+/// default path (needs a security key + touch). Returns `(signingkey, pubkey)`.
+#[allow(clippy::print_stderr)]
+fn resolve_key(identity: &str, key: Option<String>) -> Result<(String, String), String> {
     if let Some(key_path) = key {
         let pubkey = read_pubkey(&pub_path_for(&key_path))?;
         return Ok((key_path, pubkey));
     }
     let home = std::env::var("HOME").map_err(|_| "HOME unset; pass --key <path>".to_string())?;
+    match provision_se_key(&home, identity) {
+        Ok(stem) => {
+            let pubkey = read_pubkey(&pub_path_for(&stem))?;
+            return Ok((stem, pubkey));
+        }
+        Err(reason) => eprintln!("no Secure-Enclave path ({reason}); trying FIDO2 ..."),
+    }
     let stem = format!("{home}/.ssh/id_trawler_mrsig");
     if !Path::new(&pub_path_for(&stem)).exists() {
         generate_key(&stem)?;
@@ -376,18 +447,27 @@ fn generate_key(path: &str) -> Result<(), String> {
 }
 
 fn mr_setup(repo: &Path, identity: &str, key: Option<String>) -> Result<(i32, String), String> {
-    let (key_path, pubkey) = resolve_key(key)?;
+    let (key_path, pubkey) = resolve_key(identity, key)?;
     let allowed_path = repo.join(".mr-allowed");
     let existing = std::fs::read_to_string(&allowed_path).unwrap_or_default();
     let updated = append_key_line(&existing, &key_line(identity, &pubkey));
     std::fs::write(&allowed_path, updated).map_err(|e| format!("cannot write .mr-allowed: {e}"))?;
     git(repo, &["config", "gpg.format", "ssh"])?;
     git(repo, &["config", "user.signingkey", &key_path])?;
+    let mut touch_note = "";
+    if is_se_key(&key_path) {
+        let home =
+            std::env::var("HOME").map_err(|_| "HOME unset; cannot locate signer".to_string())?;
+        let helper = build_se_helper(&home)?;
+        git(repo, &["config", "gpg.ssh.program", &helper.display().to_string()])?;
+        touch_note = " Every signature will prompt Touch ID (Secure Enclave, this machine only).";
+    }
     Ok((
         0,
         format!(
             "registered key for {identity} in .mr-allowed and configured SSH signing \
-             (user.signingkey={key_path}). Doc commits: cargo xtask mr commit --as {identity}"
+             (user.signingkey={key_path}). Doc commits: cargo xtask mr commit --as \
+             {identity}{touch_note}"
         ),
     ))
 }
@@ -418,8 +498,9 @@ mod tests {
     use std::process::{Command, Stdio};
 
     use super::{
-        allowed_signers, append_key_line, has_key_entry, key_line, match_tier, pub_path_for,
-        signature_authorised, signed_note_body, touch_hint, trailer_of, Allowed, NOTE_NAMESPACE,
+        allowed_signers, append_key_line, has_key_entry, is_se_key, key_line, match_tier,
+        pub_path_for, signature_authorised, signed_note_body, signer_program, touch_hint,
+        trailer_of, Allowed, NOTE_NAMESPACE, SE_KEY_HEADER,
     };
 
     fn allowed() -> Vec<Allowed> {
@@ -515,6 +596,27 @@ mod tests {
             !signature_authorised(&identity_only, "vu", NOTE_NAMESPACE, data, &sig),
             "an identity-only entry has no key to verify against"
         );
+    }
+
+    #[test]
+    fn se_key_detection_matches_only_the_blob_header() {
+        let dir = tempfile::tempdir().unwrap();
+        let se = dir.path().join("se");
+        std::fs::write(&se, format!("{SE_KEY_HEADER}\nQUFBQQ==\n")).unwrap();
+        assert!(is_se_key(se.to_str().unwrap()));
+
+        let software = dir.path().join("id");
+        std::fs::write(&software, "-----BEGIN OPENSSH PRIVATE KEY-----\n").unwrap();
+        assert!(!is_se_key(software.to_str().unwrap()));
+        assert!(!is_se_key(dir.path().join("missing").to_str().unwrap()));
+    }
+
+    #[test]
+    fn signer_program_reads_gpg_ssh_program_config() {
+        let dir = tempfile::tempdir().unwrap();
+        crate::git::git(dir.path(), &["init", "-q"]).unwrap();
+        crate::git::git(dir.path(), &["config", "gpg.ssh.program", "/opt/se-sign"]).unwrap();
+        assert_eq!(signer_program(dir.path()), "/opt/se-sign");
     }
 
     #[test]
