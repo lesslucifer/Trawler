@@ -340,13 +340,14 @@ fn resolve_key(key: Option<String>, identity: &str) -> Result<(String, String), 
     }
     let home = std::env::var("HOME").map_err(|_| "HOME unset; pass --key <path>".to_string())?;
     if secure_enclave_available() {
+        // Always derive from the live sc_auth listing (idempotent: an existing
+        // labelled identity is reused without a Touch ID prompt) - so the .pub is
+        // never stale relative to the Enclave, and a deleted identity re-provisions.
+        let pubkey = secure_enclave_pubkey(&se_label(identity))?;
         let pub_path = format!("{home}/.ssh/id_trawler_mrsig_se.pub");
-        if !Path::new(&pub_path).exists() {
-            let pubkey = secure_enclave_pubkey(&se_label(identity))?;
-            std::fs::write(&pub_path, format!("{pubkey}\n"))
-                .map_err(|e| format!("cannot write {pub_path}: {e}"))?;
-        }
-        return Ok((pub_path.clone(), read_pubkey(&pub_path)?));
+        std::fs::write(&pub_path, format!("{pubkey}\n"))
+            .map_err(|e| format!("cannot write {pub_path}: {e}"))?;
+        return Ok((pub_path, pubkey));
     }
     let stem = format!("{home}/.ssh/id_trawler_mrsig");
     if !Path::new(&pub_path_for(&stem)).exists() {
@@ -367,33 +368,27 @@ fn se_label(identity: &str) -> String {
     format!("trawler-mrsig-{identity}")
 }
 
-/// Can this machine mint a Secure-Enclave key? macOS ships `sc_auth`; a
-/// successful `list-ctk-identities` confirms the CryptoTokenKit path is live.
+/// Can this machine mint a Secure-Enclave key? Presence of macOS's `sc_auth` is
+/// the signal; `secure_enclave_pubkey` surfaces any CTK failure (with a `--key`
+/// hint) rather than a probe spawning `sc_auth` a second, redundant time.
 fn secure_enclave_available() -> bool {
     Path::new(SC_AUTH).exists()
-        && Command::new(SC_AUTH)
-            .args(["list-ctk-identities", "-t", "ssh"])
-            .output()
-            .is_ok_and(|o| o.status.success())
 }
 
-/// The `<type> <base64>` SSH public key for a CTK identity in an
-/// `sc_auth list-ctk-identities -t ssh` listing. The base64 of an nistp256 key
-/// always begins `AAAA…`, so an `ecdsa-sha2-nistp256`/`AAAA…` token pair pins
-/// the real key regardless of the surrounding column layout.
+/// The `<type> <base64>` SSH public key for the CTK identity named `label` in an
+/// `sc_auth list-ctk-identities -t ssh` listing. Matches only the line carrying
+/// `label` (one row per identity) - never any other identity - then pins the key
+/// by the `ecdsa-sha2-nistp256`/`AAAA…` token pair (an nistp256 pubkey base64
+/// always begins `AAAA`), which is robust to the surrounding column layout.
+/// Fail-closed: no match returns None, so a stranger's key is never registered.
 fn ctk_pubkey(listing: &str, label: &str) -> Option<String> {
-    let scan = |line: &str| -> Option<String> {
+    listing.lines().filter(|l| l.contains(label)).find_map(|line| {
         let toks: Vec<&str> = line.split_whitespace().collect();
         toks.windows(2).find_map(|w| {
             (w[0].starts_with("ecdsa-sha2-") && w[1].starts_with("AAAA"))
                 .then(|| format!("{} {}", w[0], w[1]))
         })
-    };
-    listing
-        .lines()
-        .find(|l| l.contains(label))
-        .and_then(scan)
-        .or_else(|| listing.lines().find_map(scan))
+    })
 }
 
 /// Provision (or reuse) a Touch-ID-gated Secure-Enclave key labelled `label` and
@@ -622,7 +617,11 @@ ecdsa-sha2-nistp256 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTZ00abc bio
             ctk_pubkey(listing, "trawler-mrsig-vuluu").as_deref(),
             Some("ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTZ00abc")
         );
-        assert_eq!(ctk_pubkey(listing, "no-such-label").is_some(), true, "falls back to any key");
+        assert_eq!(
+            ctk_pubkey(listing, "no-such-label"),
+            None,
+            "fail-closed: an unmatched label never returns a stranger's key"
+        );
         let header_only = "Key Type Public Key Hash Prot Label\n";
         assert_eq!(ctk_pubkey(header_only, "x"), None, "no key present");
     }
