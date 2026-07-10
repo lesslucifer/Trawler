@@ -344,7 +344,9 @@ fn resolve_key(key: Option<String>, identity: &str) -> Result<(String, String), 
         // labelled identity is reused without a Touch ID prompt) - so the .pub is
         // never stale relative to the Enclave, and a deleted identity re-provisions.
         let pubkey = secure_enclave_pubkey(&se_label(identity))?;
-        let pub_path = format!("{home}/.ssh/id_trawler_mrsig_se.pub");
+        // Per-identity path: two identities (across repos sharing $HOME) must not
+        // clobber each other's materialised .pub that their user.signingkey points at.
+        let pub_path = format!("{home}/.ssh/id_trawler_mrsig_se_{identity}.pub");
         std::fs::write(&pub_path, format!("{pubkey}\n"))
             .map_err(|e| format!("cannot write {pub_path}: {e}"))?;
         return Ok((pub_path, pubkey));
