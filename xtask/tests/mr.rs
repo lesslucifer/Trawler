@@ -472,3 +472,71 @@ fn confirm_signs_when_user_signingkey_is_a_public_key_path() {
     assert!(repo.git(&["notes", "--ref=mr", "show", &tip]).contains("sig: |"));
     assert!(mr::tip_authorised(repo.p(), &tip), "signed via a .pub signing key");
 }
+
+// ── E-MRSIG e2e — the full signed manual-review flow ─────────────────────────
+
+/// End-to-end over one temp repo: `mr setup` registers a key + signing config →
+/// a doc commit signed via `mr commit` verifies → a WU/epic note signed via
+/// `mr confirm` authorises → tamper (amend) breaks the signature → an unsigned
+/// commit / unlisted signer is rejected. Uses a software key: the hardware-touch
+/// half (FIDO2 / Secure-Enclave Touch ID) is a deployment property not
+/// reproducible in a hermetic run — this proves the crypto half end to end.
+#[test]
+fn e2e_signed_manual_review_flow_with_a_software_key() {
+    let repo = Repo::new("email: a@b.co\n");
+
+    // 1. setup: register the key + configure SSH signing in one step.
+    let pubkey = repo.keygen("id");
+    let key_path = repo.p().join("id");
+    let (code, _) =
+        mr::run(&["setup", "--as", "vuluu", "--key", key_path.to_str().unwrap()], repo.p())
+            .unwrap();
+    assert_eq!(code, 0);
+    let allowed = std::fs::read_to_string(repo.p().join(".mr-allowed")).unwrap();
+    assert!(allowed.contains(&format!("key: vuluu {pubkey}")), "{allowed}");
+    assert_eq!(repo.git(&["config", "--get", "gpg.format"]), "ssh");
+    assert_eq!(repo.git(&["config", "--get", "user.signingkey"]), key_path.to_str().unwrap());
+
+    // 2. a doc commit signed via `mr commit` verifies; an unsigned one does not.
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+    let (code, out) = mr::run(&["commit", "-m", "docs: x", "--as", "vuluu"], repo.p()).unwrap();
+    assert_eq!(code, 0, "{out}");
+    let doc_tip = repo.git(&["rev-parse", "HEAD"]);
+    assert!(mr::commit_signed(repo.p(), &doc_tip), "the signed doc commit verifies");
+    assert_eq!(
+        mr::trailer_of(&repo.git(&["log", "-1", "--format=%B", &doc_tip])),
+        Some(("key".into(), "vuluu".into())),
+        "the trailer rides along for the commit-msg hook"
+    );
+
+    // 3. a WU/epic tip confirmed via `mr confirm` authorises over the signed range.
+    let base = repo.git(&["rev-parse", "HEAD"]);
+    repo.write("src/lib.rs", "pub fn f() {}\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "the change"]);
+    let tip = repo.git(&["rev-parse", "HEAD"]);
+    let (code, out) =
+        mr::run(&["confirm", "epic", &tip, "--as", "vuluu", "--target", &base], repo.p()).unwrap();
+    assert_eq!(code, 0, "{out}");
+    assert!(mr::tip_authorised(repo.p(), &tip), "the signed note authorises the tip");
+
+    // 4. tamper-evidence: amending the tip breaks the signed change-hash.
+    repo.write("src/lib.rs", "pub fn f() { let _ = 1; }\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "--amend", "--no-edit"]);
+    let amended = repo.git(&["rev-parse", "HEAD"]);
+    let note = repo.git(&["notes", "--ref=mr", "show", &tip]);
+    xtask::git::write_note(repo.p(), "mr", &amended, &note).unwrap();
+    assert!(!mr::tip_authorised(repo.p(), &amended), "amend invalidates the signature");
+
+    // 5. negatives: an unsigned commit and a bare note from an unlisted signer fail.
+    let root = repo.git(&["rev-list", "--max-parents=0", "HEAD"]);
+    assert!(!mr::commit_signed(repo.p(), &root), "the unsigned init commit is not signed");
+    let bare = "schema: mr/v1\nlevel: epic\ntip: x\ntier: email\nsigner: ghost@x.co\n";
+    xtask::git::write_note(repo.p(), "mr", &root, bare).unwrap();
+    assert!(
+        !mr::tip_authorised(repo.p(), &root),
+        "an unlisted signer's bare note never authorises"
+    );
+}
