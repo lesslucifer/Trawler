@@ -1,0 +1,14 @@
+schema: cr/v2
+scope: "WU E-MRSIG.W5 enclave-setup -> epic/mrsig"
+epic: E-MRSIG
+wu: E-MRSIG.W5
+branch: wu/mrsig/enclave-setup
+base: 7d3135ad665ae147f59ae90f49c800c003f146c7
+head: ba876f3ae989d2e6f4f118283ac46103e4578290
+diff_sha256: a6d96cd559ede87cc32bbe550f19c51c9adfc4d04b44232c4a591e77f5e34289
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 0, waived: 0 }
+note: "3 review rounds. Real findings, all FIXED into this tip before binding: (1) ctk_pubkey all-lines fallback could register an unrelated CTK key -> label-strict fail-closed; (2) substring label match (trawler-mrsig-vu ~ vuluu) -> exact whitespace-token match; (3) shared .pub path clobbered across identities -> per-identity path. Remaining candidates verified false-positive/nit; final pass CLEAN."
+waivers: []
+verdict: PASS
+date: 2026-07-10
