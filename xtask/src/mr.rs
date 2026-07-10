@@ -376,14 +376,18 @@ fn secure_enclave_available() -> bool {
 }
 
 /// The `<type> <base64>` SSH public key for the CTK identity named `label` in an
-/// `sc_auth list-ctk-identities -t ssh` listing. Matches only the line carrying
-/// `label` (one row per identity) - never any other identity - then pins the key
-/// by the `ecdsa-sha2-nistp256`/`AAAA…` token pair (an nistp256 pubkey base64
-/// always begins `AAAA`), which is robust to the surrounding column layout.
-/// Fail-closed: no match returns None, so a stranger's key is never registered.
+/// `sc_auth list-ctk-identities -t ssh` listing. Matches only a row whose Label
+/// column equals `label` as a whole token - not a substring, so `trawler-mrsig-vu`
+/// never matches `trawler-mrsig-vuluu` - then pins the key by the
+/// `ecdsa-sha2-nistp256`/`AAAA…` token pair (an nistp256 pubkey base64 always
+/// begins `AAAA`), robust to the column layout. Fail-closed: no match returns
+/// None, so a stranger's key is never registered.
 fn ctk_pubkey(listing: &str, label: &str) -> Option<String> {
-    listing.lines().filter(|l| l.contains(label)).find_map(|line| {
+    listing.lines().find_map(|line| {
         let toks: Vec<&str> = line.split_whitespace().collect();
+        if !toks.iter().any(|t| *t == label) {
+            return None;
+        }
         toks.windows(2).find_map(|w| {
             (w[0].starts_with("ecdsa-sha2-") && w[1].starts_with("AAAA"))
                 .then(|| format!("{} {}", w[0], w[1]))
@@ -621,6 +625,11 @@ ecdsa-sha2-nistp256 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTZ00abc bio
             ctk_pubkey(listing, "no-such-label"),
             None,
             "fail-closed: an unmatched label never returns a stranger's key"
+        );
+        assert_eq!(
+            ctk_pubkey(listing, "trawler-mrsig-vu"),
+            None,
+            "a label that is a substring of the row's label is not a match"
         );
         let header_only = "Key Type Public Key Hash Prot Label\n";
         assert_eq!(ctk_pubkey(header_only, "x"), None, "no key present");
