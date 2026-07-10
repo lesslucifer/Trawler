@@ -1,0 +1,13 @@
+schema: test/v2
+level: working-unit
+epic: E-MRSIG
+wu: E-MRSIG.W5
+branch: wu/mrsig/enclave-setup
+tests:
+  unit:
+    count: 2
+    covers: ctk_pubkey extracts the ssh key from an sc_auth listing by the ecdsa/AAAA token pair (column-agnostic) + falls back / returns None on a header-only listing; se_label is per-identity
+  integration:
+    waived: "the Secure-Enclave path shells to sc_auth create-ctk-identity + a physical Touch ID - a deployment property not hermetically reproducible (no sc_auth/Enclave/biometric in a temp repo). The parser is unit-tested; the setup registration + git-config mechanics this path feeds are covered by the existing --key integration tests (setup_registers_the_key_and_configures_signing, setup_accepts_a_public_key_path_for_a_secure_enclave_key, confirm_signs_when_user_signingkey_is_a_public_key_path)"
+  e2e:
+    waived: "full signed flow e2e is delivered by W3; the Enclave + Touch ID half is a deployment property, not machine-testable"
