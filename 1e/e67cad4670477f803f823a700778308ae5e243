@@ -1,0 +1,12 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEFAST
+wu: E-GATEFAST.W3
+branch: wu/gatefast/model-ab
+tests:
+  unit:
+    waived: "no code in the diff - infra markdown (.claude/skills/code-review/SKILL.md) and T3 work docs only"
+  integration:
+    waived: "C6 is validated by its recorded A/B artifact, not a suite assertion (epic plan e2e section; W3 plan test plan): a model-choice decision, not a behaviour. The artifact is the A/B tables in the W3 result report."
+  e2e:
+    waived: "epic-level e2e; wall-clock is non-deterministic so no timing assertion enters the hermetic suite (epic non-goal). The measured figures live in the W3 result report per the close protocol."
