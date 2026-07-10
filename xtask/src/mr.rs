@@ -324,30 +324,111 @@ fn pub_path_for(key: &str) -> String {
     }
 }
 
-/// Resolve the signing key: an explicit `--key <path>` — a private-key stem
-/// (FIDO2 handle or software key), or a `.pub` for a Secure-Enclave / Touch-ID
-/// key whose private half lives in an ssh-agent — else generate a fresh FIDO2
-/// `ed25519-sk` key at the default path (needs a security key + touch). Returns
-/// `(signingkey-path, public-key-line)`; `ssh-keygen -Y sign -f <path>` and
-/// `git commit -S` both consult the agent when the path is a public key.
-fn resolve_key(key: Option<String>) -> Result<(String, String), String> {
-    let key_path = if let Some(p) = key {
-        p
-    } else {
-        let home =
-            std::env::var("HOME").map_err(|_| "HOME unset; pass --key <path>".to_string())?;
-        let path = format!("{home}/.ssh/id_trawler_mrsig");
-        if !Path::new(&pub_path_for(&path)).exists() {
-            generate_key(&path)?;
+/// Resolve the signing key. An explicit `--key <path>` is used verbatim (a
+/// private-key stem, or a `.pub` for an agent-backed key). Otherwise a key is
+/// provisioned at the default path: on macOS a **Secure-Enclave / Touch-ID** key
+/// via `sc_auth` (the seamless native path — one command, one fingerprint),
+/// falling back to a FIDO2 `ed25519-sk` key elsewhere. Returns
+/// `(signingkey-path, public-key-line)`; for an Enclave / FIDO2 key the
+/// signingkey is a `.pub` and `ssh-keygen -Y sign -f <pub>` / `git commit -S`
+/// sign through the agent (each signature prompts Touch ID / a touch).
+fn resolve_key(key: Option<String>, identity: &str) -> Result<(String, String), String> {
+    if let Some(key_path) = key {
+        let pub_path = pub_path_for(&key_path);
+        let pubkey = read_pubkey(&pub_path)?;
+        return Ok((key_path, pubkey));
+    }
+    let home = std::env::var("HOME").map_err(|_| "HOME unset; pass --key <path>".to_string())?;
+    if secure_enclave_available() {
+        let pub_path = format!("{home}/.ssh/id_trawler_mrsig_se.pub");
+        if !Path::new(&pub_path).exists() {
+            let pubkey = secure_enclave_pubkey(&se_label(identity))?;
+            std::fs::write(&pub_path, format!("{pubkey}\n"))
+                .map_err(|e| format!("cannot write {pub_path}: {e}"))?;
         }
-        path
+        return Ok((pub_path.clone(), read_pubkey(&pub_path)?));
+    }
+    let stem = format!("{home}/.ssh/id_trawler_mrsig");
+    if !Path::new(&pub_path_for(&stem)).exists() {
+        generate_key(&stem)?;
+    }
+    Ok((stem.clone(), read_pubkey(&pub_path_for(&stem))?))
+}
+
+fn read_pubkey(pub_path: &str) -> Result<String, String> {
+    std::fs::read_to_string(pub_path)
+        .map_err(|e| format!("cannot read public key {pub_path}: {e}"))
+        .map(|s| s.trim().to_string())
+}
+
+const SC_AUTH: &str = "/usr/sbin/sc_auth";
+
+fn se_label(identity: &str) -> String {
+    format!("trawler-mrsig-{identity}")
+}
+
+/// Can this machine mint a Secure-Enclave key? macOS ships `sc_auth`; a
+/// successful `list-ctk-identities` confirms the CryptoTokenKit path is live.
+fn secure_enclave_available() -> bool {
+    Path::new(SC_AUTH).exists()
+        && Command::new(SC_AUTH)
+            .args(["list-ctk-identities", "-t", "ssh"])
+            .output()
+            .is_ok_and(|o| o.status.success())
+}
+
+/// The `<type> <base64>` SSH public key for a CTK identity in an
+/// `sc_auth list-ctk-identities -t ssh` listing. The base64 of an nistp256 key
+/// always begins `AAAA…`, so an `ecdsa-sha2-nistp256`/`AAAA…` token pair pins
+/// the real key regardless of the surrounding column layout.
+fn ctk_pubkey(listing: &str, label: &str) -> Option<String> {
+    let scan = |line: &str| -> Option<String> {
+        let toks: Vec<&str> = line.split_whitespace().collect();
+        toks.windows(2).find_map(|w| {
+            (w[0].starts_with("ecdsa-sha2-") && w[1].starts_with("AAAA"))
+                .then(|| format!("{} {}", w[0], w[1]))
+        })
     };
-    let pub_path = pub_path_for(&key_path);
-    let pubkey = std::fs::read_to_string(&pub_path)
-        .map_err(|e| format!("cannot read public key {pub_path}: {e}"))?
-        .trim()
-        .to_string();
-    Ok((key_path, pubkey))
+    listing
+        .lines()
+        .find(|l| l.contains(label))
+        .and_then(scan)
+        .or_else(|| listing.lines().find_map(scan))
+}
+
+/// Provision (or reuse) a Touch-ID-gated Secure-Enclave key labelled `label` and
+/// return its SSH public key. `-k p-256-ne` = non-exportable P-256 (private half
+/// born inside and never leaving the Enclave); `-t bio` = Touch ID required for
+/// every signature. Creation prompts Touch ID once.
+#[allow(clippy::print_stderr)]
+fn secure_enclave_pubkey(label: &str) -> Result<String, String> {
+    let list = || -> Result<String, String> {
+        let out = Command::new(SC_AUTH)
+            .args(["list-ctk-identities", "-t", "ssh"])
+            .output()
+            .map_err(|e| format!("failed to run sc_auth: {e}"))?;
+        Ok(String::from_utf8_lossy(&out.stdout).to_string())
+    };
+    if let Some(pk) = ctk_pubkey(&list()?, label) {
+        return Ok(pk);
+    }
+    eprintln!("creating a Secure-Enclave signing key for {label} - approve with Touch ID ...");
+    let created = Command::new(SC_AUTH)
+        .args(["create-ctk-identity", "-l", label, "-k", "p-256-ne", "-t", "bio"])
+        .status()
+        .map_err(|e| format!("failed to run sc_auth create-ctk-identity: {e}"))?;
+    if !created.success() {
+        return Err("sc_auth create-ctk-identity failed (Touch ID cancelled or unavailable); \
+                    pass --key <path> to register a key another way"
+            .to_string());
+    }
+    let listing = list()?;
+    ctk_pubkey(&listing, label).ok_or_else(|| {
+        format!(
+            "created the Secure-Enclave key but could not read its SSH public key from:\n{listing}\n\
+             run `sc_auth list-ctk-identities -t ssh` and pass the key via --key"
+        )
+    })
 }
 
 #[allow(clippy::print_stderr)]
@@ -370,7 +451,7 @@ fn generate_key(path: &str) -> Result<(), String> {
 }
 
 fn mr_setup(repo: &Path, identity: &str, key: Option<String>) -> Result<(i32, String), String> {
-    let (key_path, pubkey) = resolve_key(key)?;
+    let (key_path, pubkey) = resolve_key(key, identity)?;
     let allowed_path = repo.join(".mr-allowed");
     let existing = std::fs::read_to_string(&allowed_path).unwrap_or_default();
     let updated = append_key_line(&existing, &key_line(identity, &pubkey));
@@ -412,8 +493,9 @@ mod tests {
     use std::process::{Command, Stdio};
 
     use super::{
-        allowed_signers, append_key_line, has_key_entry, key_line, match_tier, pub_path_for,
-        signature_authorised, signed_note_body, touch_hint, trailer_of, Allowed, NOTE_NAMESPACE,
+        allowed_signers, append_key_line, ctk_pubkey, has_key_entry, key_line, match_tier,
+        pub_path_for, se_label, signature_authorised, signed_note_body, touch_hint, trailer_of,
+        Allowed, NOTE_NAMESPACE,
     };
 
     fn allowed() -> Vec<Allowed> {
@@ -526,6 +608,28 @@ mod tests {
         );
         let once = append_key_line("email: a@b.co\n", &line);
         assert_eq!(append_key_line(&once, &line), once, "a present key is never duplicated");
+    }
+
+    #[test]
+    fn ctk_pubkey_extracts_the_ssh_key_from_an_sc_auth_listing() {
+        // The "Key Type" column also reads ecdsa-sha2-nistp256; the real key is
+        // the ecdsa/AAAA... token pair (an nistp256 pubkey base64 begins AAAA).
+        let listing = "\
+Key Type Public Key Hash Prot Label Common Name Email Address Valid To Valid
+ecdsa-sha2-nistp256 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTZ00abc bio trawler-mrsig-vuluu CN - - yes
+";
+        assert_eq!(
+            ctk_pubkey(listing, "trawler-mrsig-vuluu").as_deref(),
+            Some("ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTZ00abc")
+        );
+        assert_eq!(ctk_pubkey(listing, "no-such-label").is_some(), true, "falls back to any key");
+        let header_only = "Key Type Public Key Hash Prot Label\n";
+        assert_eq!(ctk_pubkey(header_only, "x"), None, "no key present");
+    }
+
+    #[test]
+    fn se_label_is_per_identity() {
+        assert_eq!(se_label("vuluu"), "trawler-mrsig-vuluu");
     }
 
     #[test]
