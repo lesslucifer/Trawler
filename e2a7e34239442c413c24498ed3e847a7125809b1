@@ -1,0 +1,5 @@
+schema: doc/v1
+epic: E-MRSIG
+wu: E-MRSIG.W5
+changes: []
+t2_waived: "code-only (native Secure-Enclave provisioning in mr setup, xtask/); no doc files in the diff. Distilled with the rest of E-MRSIG at W3, where the .mr-allowed key format + the FIDO2 / Secure-Enclave (sc_auth Touch ID) setup paths are documented."
