@@ -1,0 +1,13 @@
+schema: test/v2
+level: working-unit
+epic: E-MRSIG
+wu: E-MRSIG.W5
+branch: wu/mrsig/enclave-setup
+tests:
+  unit:
+    count: 2
+    covers: ctk_pubkey matches the label as an exact whitespace token (trawler-mrsig-vu != trawler-mrsig-vuluu), fail-closed (unmatched / header-only -> None), pins the key by the ecdsa/AAAA pair; se_label is per-identity
+  integration:
+    waived: "the Secure-Enclave path shells to sc_auth create-ctk-identity + a physical Touch ID - a deployment property not hermetically reproducible. The parser is unit-tested; the setup registration + git-config + .pub signing-key mechanics are covered by the existing --key integration tests (setup_registers..., setup_accepts_a_public_key..., confirm_signs_when_user_signingkey_is_a_public_key_path)"
+  e2e:
+    waived: "full signed flow e2e is delivered by W3; the Enclave + Touch ID half is a deployment property, not machine-testable"
