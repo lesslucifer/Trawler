@@ -497,7 +497,7 @@ fn e2e_signed_manual_review_flow_with_a_software_key() {
     assert_eq!(repo.git(&["config", "--get", "gpg.format"]), "ssh");
     assert_eq!(repo.git(&["config", "--get", "user.signingkey"]), key_path.to_str().unwrap());
 
-    // 2. a doc commit signed via `mr commit` verifies; an unsigned one does not.
+    // 2. a doc commit signed via `mr commit` verifies (the unsigned negative is step 5).
     repo.write("docs/x.html", "x");
     repo.git(&["add", "-A"]);
     let (code, out) = mr::run(&["commit", "-m", "docs: x", "--as", "vuluu"], repo.p()).unwrap();
