@@ -1,0 +1,14 @@
+schema: cr/v2
+scope: "WU E-MRSIG.W6 e2e-flow -> epic/mrsig"
+epic: E-MRSIG
+wu: E-MRSIG.W6
+branch: wu/mrsig/e2e-flow
+base: b9390b561f519513274985a91c906795b5946f4a
+head: 5cfbb77ba43bd56751505c787873a2e856d1e60c
+diff_sha256: 0e8fdd34c8c098a22403d8c8c6deddff7816df1243e928ed71aacf45e5a5c9d4
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 4, verified: 0, waived: 0 }
+note: "2 findings fixed into this tip (step-2 comment overstatement; test/v2 unit count made honest at 0 - the WU removes 2 unit tests, adds 0). 2 nits ('e2e steps mirror existing integration tests') are false-positive: docs/testing-strategy.html mandates Epic->e2e as a distinct additive level that composes (never substitutes) the bounded-contract integration tests, and the full-flow e2e was explicitly requested - the composition over shared repo state is the value."
+waivers: []
+verdict: PASS
+date: 2026-07-10
