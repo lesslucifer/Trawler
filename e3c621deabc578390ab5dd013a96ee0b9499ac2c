@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-MRSIG
+wu: E-MRSIG.W7
+base: 5150be236dfa94537c62fb4fe4817b77f9aa00e6
+tip: e3c621deabc578390ab5dd013a96ee0b9499ac2c
+diff_sha256: ad20970af9ec67ab6f1b0dc397ce5a3207e89b01369dbb77fb2c17c6a79475e1
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review]
+date: 2026-07-10
