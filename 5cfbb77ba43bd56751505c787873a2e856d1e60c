@@ -1,0 +1,5 @@
+schema: doc/v1
+epic: E-MRSIG
+wu: E-MRSIG.W6
+changes: []
+t2_waived: "code + test only (adds the signed-flow e2e; removes the non-functional native Secure-Enclave provisioning from mr setup); no doc files in the diff. Distilled with the rest of E-MRSIG at W3 - native macOS Touch-ID SSH signing needs an Enclave->ssh-agent bridge (Secretive), reached via --key, not auto-provisioned."
