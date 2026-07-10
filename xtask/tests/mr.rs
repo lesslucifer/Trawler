@@ -473,6 +473,89 @@ fn confirm_signs_when_user_signingkey_is_a_public_key_path() {
     assert!(mr::tip_authorised(repo.p(), &tip), "signed via a .pub signing key");
 }
 
+// ── E-MRSIG.W7 — native Secure-Enclave signer ────────────────────────────────
+
+/// Compile the bundled Secure-Enclave signer from its embedded source. `None`
+/// skips the test where `swiftc` is absent (non-mac CI); a failed compile of
+/// present source is a real failure. The Enclave paths themselves (keygen +
+/// Touch-ID sign) need hardware + a human and stay a deployment waiver; these
+/// tests prove the helper builds and its ssh-keygen passthrough delegates
+/// correctly for every non-Enclave key.
+fn compiled_se_helper(dir: &Path) -> Option<PathBuf> {
+    let src = dir.join("se-sign.swift");
+    let bin = dir.join("se-sign");
+    std::fs::write(&src, include_str!("../src/se_sign.swift")).unwrap();
+    let out = Command::new("swiftc").arg("-O").arg(&src).arg("-o").arg(&bin).output().ok()?;
+    assert!(out.status.success(), "swiftc failed: {}", String::from_utf8_lossy(&out.stderr));
+    Some(bin)
+}
+
+#[test]
+fn se_helper_passes_software_keys_through_to_ssh_keygen() {
+    let tools = TempDir::new().unwrap();
+    let Some(helper) = compiled_se_helper(tools.path()) else { return };
+    let repo = Repo::new("email: a@b.co\n");
+    let pubkey = repo.keygen("id");
+
+    let mut child = Command::new(&helper)
+        .args(["-Y", "sign", "-n", "trawler-mr", "-f"])
+        .arg(repo.p().join("id"))
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    child.stdin.take().unwrap().write_all(b"payload").unwrap();
+    let out = child.wait_with_output().unwrap();
+    assert!(out.status.success(), "helper sign failed");
+    let sig = String::from_utf8(out.stdout).unwrap();
+    assert!(sig.starts_with("-----BEGIN SSH SIGNATURE-----"), "{sig}");
+    let signers = format!("vu {pubkey}\n");
+    assert!(
+        xtask::git::ssh_verify("vu", &signers, "trawler-mr", b"payload", &sig),
+        "a passthrough signature verifies with stock ssh-keygen"
+    );
+}
+
+#[test]
+fn se_helper_signs_and_verifies_git_commits_via_gpg_ssh_program() {
+    let tools = TempDir::new().unwrap();
+    let Some(helper) = compiled_se_helper(tools.path()) else { return };
+    let repo = Repo::new("email: a@b.co\n");
+    setup_with_software_key(&repo, "vu");
+    repo.git(&["config", "gpg.ssh.program", helper.to_str().unwrap()]);
+
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+    let (code, out) = mr::run(&["commit", "-m", "docs: change", "--as", "vu"], repo.p()).unwrap();
+    assert_eq!(code, 0, "{out}");
+    let tip = repo.git(&["rev-parse", "HEAD"]);
+    assert!(
+        mr::commit_signed(repo.p(), &tip),
+        "git signs and verifies through the helper (gpg.ssh.program both ways)"
+    );
+}
+
+#[test]
+fn confirm_signs_through_the_configured_signer_program() {
+    let tools = TempDir::new().unwrap();
+    let Some(helper) = compiled_se_helper(tools.path()) else { return };
+    let repo = Repo::new("email: a@b.co\n");
+    setup_with_software_key(&repo, "vu");
+    repo.git(&["config", "gpg.ssh.program", helper.to_str().unwrap()]);
+
+    let base = repo.git(&["rev-parse", "HEAD"]);
+    repo.write("src/lib.rs", "pub fn f() {}\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "the change"]);
+    let tip = repo.git(&["rev-parse", "HEAD"]);
+
+    let (code, out) =
+        mr::run(&["confirm", "wu", &tip, "--as", "vu", "--target", &base], repo.p()).unwrap();
+    assert_eq!(code, 0, "{out}");
+    assert!(mr::tip_authorised(repo.p(), &tip), "the note signed via the helper authorises");
+}
+
 // ── E-MRSIG e2e — the full signed manual-review flow ─────────────────────────
 
 /// End-to-end over one temp repo: `mr setup` registers a key + signing config →
@@ -533,8 +616,8 @@ fn e2e_signed_manual_review_flow_with_a_software_key() {
     // 5. negatives: an unsigned commit and a bare note from an unlisted signer fail.
     let root = repo.git(&["rev-list", "--max-parents=0", "HEAD"]);
     assert!(!mr::commit_signed(repo.p(), &root), "the unsigned init commit is not signed");
-    let bare = "schema: mr/v1\nlevel: epic\ntip: x\ntier: email\nsigner: ghost@x.co\n";
-    xtask::git::write_note(repo.p(), "mr", &root, bare).unwrap();
+    let forged = "schema: mr/v1\nlevel: epic\ntip: x\ntier: email\nsigner: ghost@x.co\n";
+    xtask::git::write_note(repo.p(), "mr", &root, forged).unwrap();
     assert!(
         !mr::tip_authorised(repo.p(), &root),
         "an unlisted signer's bare note never authorises"

@@ -97,25 +97,27 @@ pub fn ssh_verify(
 }
 
 /// Sign `data` in `namespace` with the SSH key at `key` (a private-key path or a
-/// hardware key handle). Returns the armored `SSH SIGNATURE` blob. For a hardware
-/// key this blocks on the physical touch — the step an AI agent cannot perform.
-pub fn ssh_sign(key: &str, namespace: &str, data: &[u8]) -> Result<String, String> {
-    let mut child = Command::new("ssh-keygen")
+/// hardware key handle), running `program` — `ssh-keygen`, or a `gpg.ssh.program`
+/// stand-in such as the bundled Secure-Enclave signer. Returns the armored
+/// `SSH SIGNATURE` blob. For a hardware key this blocks on the physical touch —
+/// the step an AI agent cannot perform.
+pub fn ssh_sign(program: &str, key: &str, namespace: &str, data: &[u8]) -> Result<String, String> {
+    let mut child = Command::new(program)
         .args(["-Y", "sign", "-n", namespace, "-f"])
         .arg(key)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| format!("failed to run ssh-keygen -Y sign: {e}"))?;
+        .map_err(|e| format!("failed to run {program} -Y sign: {e}"))?;
     if let Some(mut stdin) = child.stdin.take() {
         stdin.write_all(data).map_err(|e| format!("failed to write signing payload: {e}"))?;
     }
-    let out = child.wait_with_output().map_err(|e| format!("ssh-keygen -Y sign failed: {e}"))?;
+    let out = child.wait_with_output().map_err(|e| format!("{program} -Y sign failed: {e}"))?;
     if out.status.success() {
         Ok(String::from_utf8_lossy(&out.stdout).to_string())
     } else {
-        Err(format!("ssh-keygen -Y sign: {}", String::from_utf8_lossy(&out.stderr).trim_end()))
+        Err(format!("{program} -Y sign: {}", String::from_utf8_lossy(&out.stderr).trim_end()))
     }
 }
 
@@ -169,10 +171,26 @@ mod tests {
         let signers = format!("vu {pubkey}\n");
         let data = b"sha256-of-the-change";
 
-        let sig = ssh_sign(key.to_str().unwrap(), "trawler-mr", data).expect("signs");
+        let sig = ssh_sign("ssh-keygen", key.to_str().unwrap(), "trawler-mr", data).expect("signs");
         assert!(ssh_verify("vu", &signers, "trawler-mr", data, &sig), "own signature verifies");
         assert!(!ssh_verify("vu", &signers, "trawler-mr", b"other", &sig), "tampered data fails");
-        assert!(ssh_sign("/no/such/key", "trawler-mr", data).is_err(), "missing key errors");
+        assert!(
+            ssh_sign("ssh-keygen", "/no/such/key", "trawler-mr", data).is_err(),
+            "missing key errors"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn ssh_sign_runs_the_given_signer_program() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = tempfile::tempdir().unwrap();
+        let stub = dir.path().join("stub-signer");
+        std::fs::write(&stub, "#!/bin/sh\ncat > /dev/null\nprintf '%s ' \"$@\"\n").unwrap();
+        std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let out = ssh_sign(stub.to_str().unwrap(), "/some/key", "ns", b"payload").expect("runs");
+        assert_eq!(out.trim_end(), "-Y sign -n ns -f /some/key");
     }
 
     #[test]
