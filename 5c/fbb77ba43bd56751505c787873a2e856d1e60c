@@ -1,0 +1,15 @@
+schema: test/v2
+level: working-unit
+epic: E-MRSIG
+wu: E-MRSIG.W6
+branch: wu/mrsig/e2e-flow
+tests:
+  unit:
+    count: 0
+    covers: "this WU adds no unit test - it removes 2 (ctk_pubkey, se_label) with the dead sc_auth path; the surviving signing helpers stay unit-tested from earlier WUs. Not the required layer at WU level"
+  integration:
+    count: 7
+    covers: setup registers key + gpg.format/user.signingkey (incl. a .pub path); confirm signs a note tip_authorised accepts (also via a .pub signingkey); amend invalidates; identity-only fallback; mr commit signs a doc commit commit_signed verifies
+  e2e:
+    count: 1
+    covers: "e2e_signed_manual_review_flow_with_a_software_key - one temp repo: setup -> signed doc commit verifies -> signed epic note authorises -> amend breaks the signature -> unsigned commit + unlisted-signer bare note rejected. Software key is the hermetic proxy; the hardware-touch (FIDO2 / Secure-Enclave Touch ID) half is a deployment property not machine-testable"
