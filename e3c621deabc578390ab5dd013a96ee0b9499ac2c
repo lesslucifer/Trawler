@@ -1,0 +1,5 @@
+schema: doc/v1
+epic: E-MRSIG
+wu: E-MRSIG.W7
+changes: []
+t2_waived: "code + test only; the T3 work docs were updated in place (mrsig-plan.html W7 entry, mrsig-touchid.html resolution - untracked scratch). T1/T2 distillation lands with the epic at W3 and must record: stock macOS ships no Enclave->OpenSSH bridge, so Trawler bundles its own (se_sign.swift, installed as gpg.ssh.program); verification stays stock ssh-keygen/git."
