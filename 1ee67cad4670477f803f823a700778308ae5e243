@@ -1,0 +1,11 @@
+schema: doc/v1
+epic: E-GATEFAST
+wu: E-GATEFAST.W3
+changes:
+  - path: docs/work/2026-07-10-gatefast-w3-plan.html
+    tier: T3
+    action: added
+  - path: docs/work/2026-07-10-gatefast-w3-result.html
+    tier: T3
+    action: added
+t2_waived: "T3 work docs only; the C6 truth (per-role model selection + the A/B-measured finder/verifier asymmetry) distils to the workflow-gates DEC at epic close per the epic distillation plan. code-review/SKILL.md is infra markdown, not a docs/ tier."
