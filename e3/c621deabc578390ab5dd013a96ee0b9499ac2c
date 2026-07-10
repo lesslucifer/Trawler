@@ -1,0 +1,16 @@
+schema: test/v2
+level: working-unit
+epic: E-MRSIG
+wu: E-MRSIG.W7
+branch: wu/mrsig/se-signer
+tests:
+  unit:
+    count: 3
+    covers: ssh_sign runs the configured signer program (stub signer, args asserted); is_se_key matches only the trawler-se-v1 blob header; signer_program reads gpg.ssh.program from repo config
+  integration:
+    count: 3
+    covers: "the bundled se_sign.swift compiles from its embedded source (test skips without swiftc) and delegates non-Enclave work to ssh-keygen: a piped -Y sign over a software key verifies via ssh-keygen -Y verify; git commit -S and git verify-commit both route through the helper as gpg.ssh.program (commit_signed green); mr confirm signs through the configured signer and tip_authorised accepts the note"
+  e2e:
+    count: 1
+    covers: "W6 e2e_signed_manual_review_flow_with_a_software_key unchanged and green over the new signer dispatch"
+waived: "the Enclave half (SE keygen + Touch-ID-gated signing + SSHSIG emission) needs SE hardware and a physical touch - not hermetic. Manually proven on this machine 2026-07-10: silent keygen, Touch ID prompt blocking ~2.3s per signature, SSHSIG accepted by ssh-keygen -Y verify, gpgsig accepted by git verify-commit"
