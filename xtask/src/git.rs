@@ -16,7 +16,17 @@ fn cmd(repo: &Path) -> Command {
 }
 
 pub fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
-    let out = cmd(repo)
+    git_env(repo, args, &[])
+}
+
+/// [`git`] with extra environment variables on the spawned process — how a
+/// sign reason reaches a `gpg.ssh.program` signer through `git commit -S`.
+pub fn git_env(repo: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<String, String> {
+    let mut command = cmd(repo);
+    for (key, value) in env {
+        command.env(key, value);
+    }
+    let out = command
         .args(args)
         .output()
         .map_err(|e| format!("failed to spawn git {}: {e}", args.join(" ")))?;
@@ -100,9 +110,20 @@ pub fn ssh_verify(
 /// hardware key handle), running `program` — `ssh-keygen`, or a `gpg.ssh.program`
 /// stand-in such as the bundled Secure-Enclave signer. Returns the armored
 /// `SSH SIGNATURE` blob. For a hardware key this blocks on the physical touch —
-/// the step an AI agent cannot perform.
-pub fn ssh_sign(program: &str, key: &str, namespace: &str, data: &[u8]) -> Result<String, String> {
-    let mut child = Command::new(program)
+/// the step an AI agent cannot perform. `reason` rides to the signer as
+/// `TRAWLER_SIGN_REASON`, naming the authorised action on the auth sheet.
+pub fn ssh_sign(
+    program: &str,
+    key: &str,
+    namespace: &str,
+    data: &[u8],
+    reason: Option<&str>,
+) -> Result<String, String> {
+    let mut command = Command::new(program);
+    if let Some(reason) = reason {
+        command.env("TRAWLER_SIGN_REASON", reason);
+    }
+    let mut child = command
         .args(["-Y", "sign", "-n", namespace, "-f"])
         .arg(key)
         .stdin(Stdio::piped())
@@ -171,11 +192,12 @@ mod tests {
         let signers = format!("vu {pubkey}\n");
         let data = b"sha256-of-the-change";
 
-        let sig = ssh_sign("ssh-keygen", key.to_str().unwrap(), "trawler-mr", data).expect("signs");
+        let sig =
+            ssh_sign("ssh-keygen", key.to_str().unwrap(), "trawler-mr", data, None).expect("signs");
         assert!(ssh_verify("vu", &signers, "trawler-mr", data, &sig), "own signature verifies");
         assert!(!ssh_verify("vu", &signers, "trawler-mr", b"other", &sig), "tampered data fails");
         assert!(
-            ssh_sign("ssh-keygen", "/no/such/key", "trawler-mr", data).is_err(),
+            ssh_sign("ssh-keygen", "/no/such/key", "trawler-mr", data, None).is_err(),
             "missing key errors"
         );
     }
@@ -189,8 +211,27 @@ mod tests {
         std::fs::write(&stub, "#!/bin/sh\ncat > /dev/null\nprintf '%s ' \"$@\"\n").unwrap();
         std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
 
-        let out = ssh_sign(stub.to_str().unwrap(), "/some/key", "ns", b"payload").expect("runs");
+        let out =
+            ssh_sign(stub.to_str().unwrap(), "/some/key", "ns", b"payload", None).expect("runs");
         assert_eq!(out.trim_end(), "-Y sign -n ns -f /some/key");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn ssh_sign_hands_the_reason_to_the_signer_environment() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = tempfile::tempdir().unwrap();
+        let stub = dir.path().join("stub-signer");
+        std::fs::write(&stub, "#!/bin/sh\ncat > /dev/null\nprintf '%s' \"$TRAWLER_SIGN_REASON\"\n")
+            .unwrap();
+        std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let reason = "approve the merge of wu/x/y into epic/x (tip abc1234) as vu";
+        let out = ssh_sign(stub.to_str().unwrap(), "/some/key", "ns", b"payload", Some(reason))
+            .expect("runs");
+        assert_eq!(out, reason);
+        let unset = ssh_sign(stub.to_str().unwrap(), "/some/key", "ns", b"payload", None).unwrap();
+        assert_eq!(unset, "", "no reason means no variable, so the signer falls back");
     }
 
     #[test]

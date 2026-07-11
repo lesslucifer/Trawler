@@ -155,13 +155,28 @@ fn resolve_target(
         })
 }
 
-fn touch_hint(identity: &str) -> String {
-    format!("touch your security key / Touch ID to sign as {identity} now ...")
+/// The auth-sheet / terminal line naming what a doc-commit signature approves.
+fn commit_reason(message: &str, branch: &str, identity: &str) -> String {
+    let title = message.lines().next().unwrap_or("").trim();
+    format!("commit \"{title}\" on {branch} as {identity}")
+}
+
+/// The auth-sheet / terminal line naming what a confirm signature approves.
+fn confirm_reason(tip_ref: &str, target: &str, tip: &str, identity: &str) -> String {
+    format!("approve the merge of {tip_ref} into {target} (tip {}) as {identity}", short(tip))
+}
+
+fn current_branch(repo: &Path) -> String {
+    git(repo, &["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_else(|_| "HEAD".to_string())
+}
+
+fn touch_hint(identity: &str, reason: &str) -> String {
+    format!("about to {reason}\ntouch your security key / Touch ID to sign as {identity} now ...")
 }
 
 #[allow(clippy::print_stderr)]
-fn prompt_touch(identity: &str) {
-    eprintln!("{}", touch_hint(identity));
+fn prompt_touch(identity: &str, reason: &str) {
+    eprintln!("{}", touch_hint(identity, reason));
 }
 
 fn mr_commit(repo: &Path, message: &str, identity: &str) -> Result<(i32, String), String> {
@@ -177,8 +192,13 @@ fn mr_commit(repo: &Path, message: &str, identity: &str) -> Result<(i32, String)
     // pre-push + walk); the trailer still rides along for the commit-msg hook,
     // which fires *before* git signs and so can only presence-check the message.
     if has_key_entry(&allowed, identity) {
-        prompt_touch(identity);
-        git(repo, &["commit", "-S", "-m", &body, "--cleanup=verbatim"])?;
+        let reason = commit_reason(message, &current_branch(repo), identity);
+        prompt_touch(identity, &reason);
+        crate::git::git_env(
+            repo,
+            &["commit", "-S", "-m", &body, "--cleanup=verbatim"],
+            &[("TRAWLER_SIGN_REASON", &reason)],
+        )?;
         Ok((0, format!("signed doc commit with {TRAILER_KEY}: {tier} {identity}")))
     } else {
         git(repo, &["commit", "-m", &body, "--cleanup=verbatim"])?;
@@ -216,8 +236,10 @@ fn mr_confirm(
     let base = git(repo, &["merge-base", &target, &tip])?;
     let hash = diff_sha256(repo, &base, &tip)?;
     let key = signing_key(repo)?;
-    prompt_touch(identity);
-    let sig = ssh_sign(&signer_program(repo), &key, NOTE_NAMESPACE, hash.as_bytes())?;
+    let reason = confirm_reason(tip_ref, &target, &tip, identity);
+    prompt_touch(identity, &reason);
+    let sig =
+        ssh_sign(&signer_program(repo), &key, NOTE_NAMESPACE, hash.as_bytes(), Some(&reason))?;
     write_note(repo, "mr", &tip, &signed_note_body(level, &tip, &base, identity, &sig))?;
     Ok((0, format!("mr/v1 signed note written on {} (key {identity})", short(&tip))))
 }
@@ -332,7 +354,7 @@ fn pub_path_for(key: &str) -> String {
 }
 
 const SE_KEY_HEADER: &str = "trawler-se-v1";
-const SE_SIGN_SOURCE: &str = include_str!("se_sign.swift");
+const SE_SIGN_SOURCE: &str = include_str!("trawler_signer.swift");
 
 /// A private-key file written by the bundled Secure-Enclave signer: header
 /// line, then the `CryptoKit` blob only this machine's Enclave can use.
@@ -340,13 +362,14 @@ fn is_se_key(path: &str) -> bool {
     std::fs::read_to_string(path).is_ok_and(|s| s.lines().next() == Some(SE_KEY_HEADER))
 }
 
-/// Compile the bundled Secure-Enclave signer (`se_sign.swift`) with the system
-/// `swiftc`, caching binary + source under `~/.config/trawler`; recompiles only
-/// when the embedded source changed.
+/// Compile the bundled Secure-Enclave signer (`trawler_signer.swift`) with the
+/// system `swiftc`, caching binary + source under `~/.config/trawler`;
+/// recompiles only when the embedded source changed. The binary is named
+/// `trawler-signer` because the macOS auth sheet shows the executable name.
 fn build_se_helper(home: &str) -> Result<std::path::PathBuf, String> {
     let dir = Path::new(home).join(".config").join("trawler");
-    let src = dir.join("se-sign.swift");
-    let bin = dir.join("se-sign");
+    let src = dir.join("trawler-signer.swift");
+    let bin = dir.join("trawler-signer");
     if bin.exists() && std::fs::read_to_string(&src).ok().as_deref() == Some(SE_SIGN_SOURCE) {
         return Ok(bin);
     }
@@ -499,7 +522,7 @@ mod tests {
 
     use super::{
         allowed_signers, append_key_line, has_key_entry, is_se_key, key_line, match_tier,
-        pub_path_for, signature_authorised, signed_note_body, signer_program, touch_hint,
+        pub_path_for, short, signature_authorised, signed_note_body, signer_program, touch_hint,
         trailer_of, Allowed, NOTE_NAMESPACE, SE_KEY_HEADER,
     };
 
@@ -665,9 +688,30 @@ mod tests {
     }
 
     #[test]
-    fn touch_hint_names_the_signer() {
-        assert!(touch_hint("vu").contains("vu"));
-        assert!(touch_hint("vu").to_lowercase().contains("touch"));
+    fn touch_hint_names_the_signer_and_the_action() {
+        let hint = touch_hint("vu", "approve the merge of wu/x/y into epic/x (tip abc1234) as vu");
+        assert!(hint.contains("vu"));
+        assert!(hint.to_lowercase().contains("touch"));
+        assert!(hint.contains("approve the merge of wu/x/y into epic/x"));
+    }
+
+    #[test]
+    fn commit_reason_names_the_title_branch_and_signer() {
+        let reason = super::commit_reason("docs: x\n\nlong body\n", "epic/mrsig", "vuluu");
+        assert_eq!(reason, "commit \"docs: x\" on epic/mrsig as vuluu");
+    }
+
+    #[test]
+    fn confirm_reason_names_both_branches_and_the_tip() {
+        let tip = "0a77604aaaaaaaaa";
+        let reason = super::confirm_reason("wu/mrsig/ux", "epic/mrsig", tip, "vuluu");
+        assert_eq!(
+            reason,
+            format!(
+                "approve the merge of wu/mrsig/ux into epic/mrsig (tip {}) as vuluu",
+                short(tip)
+            )
+        );
     }
 
     #[test]

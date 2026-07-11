@@ -482,9 +482,9 @@ fn confirm_signs_when_user_signingkey_is_a_public_key_path() {
 /// tests prove the helper builds and its ssh-keygen passthrough delegates
 /// correctly for every non-Enclave key.
 fn compiled_se_helper(dir: &Path) -> Option<PathBuf> {
-    let src = dir.join("se-sign.swift");
-    let bin = dir.join("se-sign");
-    std::fs::write(&src, include_str!("../src/se_sign.swift")).unwrap();
+    let src = dir.join("trawler-signer.swift");
+    let bin = dir.join("trawler-signer");
+    std::fs::write(&src, include_str!("../src/trawler_signer.swift")).unwrap();
     let out = Command::new("swiftc").arg("-O").arg(&src).arg("-o").arg(&bin).output().ok()?;
     assert!(out.status.success(), "swiftc failed: {}", String::from_utf8_lossy(&out.stderr));
     Some(bin)
