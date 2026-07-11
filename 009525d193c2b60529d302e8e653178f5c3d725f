@@ -9,20 +9,4 @@ changes:
     tier: T2
     action: updated
     distills: "index DEC-9 on the workflow-gates row"
-  - path: docs/work/2026-07-07-gatefast-discussion.html
-    tier: T3
-    action: archived
-    distilled_to: "docs/decisions/workflow-gates.html DEC-9"
-  - path: docs/work/2026-07-07-gatefast-plan.html
-    tier: T3
-    action: archived
-    distilled_to: "docs/decisions/workflow-gates.html DEC-9"
-  - path: docs/work/2026-07-07-gatefast-w2-plan.html
-    tier: T3
-    action: archived
-    distilled_to: "docs/decisions/workflow-gates.html DEC-9"
-  - path: docs/work/2026-07-08-gatefast-w2-result.html
-    tier: T3
-    action: archived
-    distilled_to: "docs/decisions/workflow-gates.html DEC-9"
-t1_note: "code-review/SKILL.md Gate-0 change (W2) is infra markdown, not a docs/ tier; distilled fact lives in DEC-9."
+note: "The T3 gatefast work docs (plan, discussion, W2 plan/result) were added and archived within this epic, so they net out of the base..tip diff (DEC-3: lineage evidence lives at the seam that touched them, not re-hung on the epic note). code-review/SKILL.md Gate-0 change (W2) is infra markdown, not a docs/ tier; its fact distils to DEC-9."
