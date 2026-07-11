@@ -1,0 +1,11 @@
+schema: cr/v2
+scope: "epic E-GATEFAST -> main"
+epic: E-GATEFAST
+base: 7bd2897ee998cbb3c8d9b5d0b94587b6769562f2
+head: 009525d193c2b60529d302e8e653178f5c3d725f
+diff_sha256: 98148b1fa8cb9f1cba665ff4e357104eafdec3610544eb6176ed33e33c386ea7
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-11
