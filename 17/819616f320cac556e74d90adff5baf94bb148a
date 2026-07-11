@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-MRSIG
+wu: E-MRSIG.W9
+branch: wu/mrsig/check-levels
+tests:
+  unit: { count: 3, covers: "is_rule_bearing classification (T0/T1 in, T2/T3/code/.mr-allowed out); signed_payload binds change-hash + report-hash; signed_note_body round-trips report fields" }
+  integration: { count: 12, covers: "gate: mr always at WU tips; note without report / stale hash / untracked report / epic note without report all red at check 8; walk never re-judges WU or doc-commit manual review; docs-only WU needs mr then stays exempt; range ignores untrailered T2/T3, rejects untrailered CLAUDE.md and unsigned key-backed T1; mr: confirm records report path+sha256 via flag/inference/prompt; forged report_sha256 fails signature verify" }
+  e2e: { count: 2, covers: "mr e2e extended: T2/T3 pass the hook unsigned, T0 refused, confirm attests the report, forged attested hash and amend both break authorisation; root e2e_manual_review updated to the same rules. Hardware-presence (real Touch ID sheet) remains the standing deployment waiver from W6 - crypto proven with software keys" }
