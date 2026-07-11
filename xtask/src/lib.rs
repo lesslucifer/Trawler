@@ -23,7 +23,7 @@ usage:
   cargo xtask verify-doc <path> [<path>...]
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
-  cargo xtask mr confirm [wu|epic] [<tip>] [--as <id>] [--target <ref>] (mr/v1 note; level/tip inferred, signs if key)
+  cargo xtask mr confirm [wu|epic] [<tip>] [--as <id>] [--target <ref>] [--report <path>] (mr/v1 note attesting the result report; level/tip/report inferred, signs if key)
   cargo xtask dod list [--epic <id>]
   cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";
 

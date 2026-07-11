@@ -73,10 +73,19 @@ impl Repo {
 
 const ALLOWED: &str = "email: a@b.co\nusername: vu\n";
 
+/// Write a result report the confirm can attest; returns its repo-relative path.
+fn result_report(repo: &Repo) -> &'static str {
+    repo.write("docs/work/w-result.html", "<html>result</html>\n");
+    "docs/work/w-result.html"
+}
+
 #[test]
-fn confirm_writes_a_well_formed_note_for_a_listed_identity() {
+fn confirm_writes_a_well_formed_note_attesting_the_report() {
     let repo = Repo::new(ALLOWED);
-    let (code, _) = mr::run(&["confirm", "epic", "HEAD", "--as", "a@b.co"], repo.p()).unwrap();
+    let report = result_report(&repo);
+    let (code, _) =
+        mr::run(&["confirm", "epic", "HEAD", "--as", "a@b.co", "--report", report], repo.p())
+            .unwrap();
     assert_eq!(code, 0);
 
     let body = repo.git(&["notes", "--ref=mr", "show", "HEAD"]);
@@ -84,13 +93,17 @@ fn confirm_writes_a_well_formed_note_for_a_listed_identity() {
     assert!(body.contains("level: epic"), "{body}");
     assert!(body.contains("tier: email"), "{body}");
     assert!(body.contains("signer: a@b.co"), "{body}");
+    assert!(body.contains(&format!("report: {report}")), "{body}");
+    assert!(body.contains("report_sha256: "), "{body}");
     assert!(mr::tip_authorised(repo.p(), "HEAD"));
 }
 
 #[test]
 fn confirm_maps_wu_level_and_records_the_username_tier() {
     let repo = Repo::new(ALLOWED);
-    let (code, _) = mr::run(&["confirm", "wu", "HEAD", "--as", "vu"], repo.p()).unwrap();
+    let report = result_report(&repo);
+    let (code, _) =
+        mr::run(&["confirm", "wu", "HEAD", "--as", "vu", "--report", report], repo.p()).unwrap();
     assert_eq!(code, 0);
     let body = repo.git(&["notes", "--ref=mr", "show", "HEAD"]);
     assert!(body.contains("level: working-unit"), "{body}");
@@ -289,6 +302,61 @@ fn tip_authorised_rejects_a_bare_note_from_an_unlisted_signer() {
     assert!(!mr::tip_authorised(repo.p(), &tip));
 }
 
+/// A signed note whose payload covers change-hash + report-hash (DEC-10).
+#[allow(clippy::too_many_arguments)]
+fn write_attested_signed_note(
+    repo: &Repo,
+    level: &str,
+    base: &str,
+    tip: &str,
+    signer: &str,
+    report: &str,
+    rsha: &str,
+    sig: &str,
+) {
+    let body = format!(
+        "schema: mr/v1\nlevel: {level}\ntip: {tip}\nbase: {base}\ntier: key\nsigner: {signer}\nreport: {report}\nreport_sha256: {rsha}\nsig: |\n{}\n",
+        sig.lines().map(|l| format!("  {l}")).collect::<Vec<_>>().join("\n")
+    );
+    xtask::git::write_note(repo.p(), "mr", tip, &body).unwrap();
+}
+
+#[test]
+fn tip_authorised_requires_the_signature_to_cover_the_report_hash() {
+    let (repo, base, tip, _) = repo_with_key("vu");
+    let hash = xtask::git::diff_sha256(repo.p(), &base, &tip).unwrap();
+    let rsha = "aaaa1111";
+    let payload = format!("{hash}\n{rsha}");
+    let sig = repo.ssh_sign("id", mr::NOTE_NAMESPACE, payload.as_bytes());
+
+    write_attested_signed_note(
+        &repo,
+        "epic",
+        &base,
+        &tip,
+        "vu",
+        "docs/.archive/r.html",
+        rsha,
+        &sig,
+    );
+    assert!(mr::tip_authorised(repo.p(), &tip), "signature over change+report verifies");
+
+    write_attested_signed_note(
+        &repo,
+        "epic",
+        &base,
+        &tip,
+        "vu",
+        "docs/.archive/r.html",
+        "forged",
+        &sig,
+    );
+    assert!(
+        !mr::tip_authorised(repo.p(), &tip),
+        "forging the note's report_sha256 must invalidate the signature"
+    );
+}
+
 #[test]
 fn commit_signed_accepts_a_commit_signed_by_a_listed_key() {
     let repo = Repo::new("email: a@b.co\n");
@@ -378,13 +446,18 @@ fn confirm_signs_a_note_that_the_w1_predicate_accepts() {
     repo.git(&["commit", "-q", "-m", "the change"]);
     let tip = repo.git(&["rev-parse", "HEAD"]);
 
-    let (code, out) =
-        mr::run(&["confirm", "wu", &tip, "--as", "vu", "--target", &base], repo.p()).unwrap();
+    let report = result_report(&repo);
+    let (code, out) = mr::run(
+        &["confirm", "wu", &tip, "--as", "vu", "--target", &base, "--report", report],
+        repo.p(),
+    )
+    .unwrap();
     assert_eq!(code, 0, "{out}");
 
     let body = repo.git(&["notes", "--ref=mr", "show", &tip]);
     assert!(body.contains("tier: key"), "{body}");
     assert!(body.contains("sig: |"), "the signature rides in the note: {body}");
+    assert!(body.contains(&format!("report: {report}")), "{body}");
     assert!(mr::tip_authorised(repo.p(), &tip), "the signed note authorises the tip");
 }
 
@@ -397,7 +470,12 @@ fn confirm_signature_breaks_when_the_tip_is_amended() {
     repo.git(&["add", "-A"]);
     repo.git(&["commit", "-q", "-m", "the change"]);
     let tip = repo.git(&["rev-parse", "HEAD"]);
-    mr::run(&["confirm", "epic", &tip, "--as", "vu", "--target", &base], repo.p()).unwrap();
+    let report = result_report(&repo);
+    mr::run(
+        &["confirm", "epic", &tip, "--as", "vu", "--target", &base, "--report", report],
+        repo.p(),
+    )
+    .unwrap();
     assert!(mr::tip_authorised(repo.p(), &tip));
 
     repo.write("src/lib.rs", "pub fn f() { let _ = 1; }\n");
@@ -412,8 +490,10 @@ fn confirm_signature_breaks_when_the_tip_is_amended() {
 #[test]
 fn confirm_falls_back_to_a_plain_note_for_an_identity_only_signer() {
     let repo = Repo::new("email: a@b.co\nusername: vu\n");
+    let report = result_report(&repo);
     // No key entry and no --target: the plain-note path (E-NMWF coexistence).
-    let (code, _) = mr::run(&["confirm", "epic", "HEAD", "--as", "vu"], repo.p()).unwrap();
+    let (code, _) =
+        mr::run(&["confirm", "epic", "HEAD", "--as", "vu", "--report", report], repo.p()).unwrap();
     assert_eq!(code, 0);
     let body = repo.git(&["notes", "--ref=mr", "show", "HEAD"]);
     assert!(body.contains("tier: username"), "{body}");
@@ -478,8 +558,12 @@ fn confirm_signs_when_user_signingkey_is_a_public_key_path() {
     repo.git(&["commit", "-q", "-m", "change"]);
     let tip = repo.git(&["rev-parse", "HEAD"]);
 
-    let (code, out) =
-        mr::run(&["confirm", "wu", &tip, "--as", "vuluu", "--target", &base], repo.p()).unwrap();
+    let report = result_report(&repo);
+    let (code, out) = mr::run(
+        &["confirm", "wu", &tip, "--as", "vuluu", "--target", &base, "--report", report],
+        repo.p(),
+    )
+    .unwrap();
     assert_eq!(code, 0, "{out}");
     assert!(repo.git(&["notes", "--ref=mr", "show", &tip]).contains("sig: |"));
     assert!(mr::tip_authorised(repo.p(), &tip), "signed via a .pub signing key");
@@ -562,8 +646,12 @@ fn confirm_signs_through_the_configured_signer_program() {
     repo.git(&["commit", "-q", "-m", "the change"]);
     let tip = repo.git(&["rev-parse", "HEAD"]);
 
-    let (code, out) =
-        mr::run(&["confirm", "wu", &tip, "--as", "vu", "--target", &base], repo.p()).unwrap();
+    let report = result_report(&repo);
+    let (code, out) = mr::run(
+        &["confirm", "wu", &tip, "--as", "vu", "--target", &base, "--report", report],
+        repo.p(),
+    )
+    .unwrap();
     assert_eq!(code, 0, "{out}");
     assert!(mr::tip_authorised(repo.p(), &tip), "the note signed via the helper authorises");
 }
@@ -664,33 +752,43 @@ fn commit_wizard_asks_for_a_missing_message() {
 }
 
 #[test]
-fn confirm_wizard_infers_level_tip_and_target_from_the_branch() {
+fn confirm_wizard_infers_level_tip_target_and_report_from_the_branch() {
     let repo = Repo::new("email: a@b.co\n");
     setup_with_software_key(&repo, "vu");
     repo.git(&["branch", "epic/x"]);
     repo.git(&["checkout", "-q", "-b", "wu/x/y"]);
     repo.write("src/lib.rs", "pub fn f() {}\n");
+    repo.write("docs/work/y-result.html", "<html>wu result</html>\n");
     repo.git(&["add", "-A"]);
-    repo.git(&["commit", "-q", "-m", "the change"]);
+    repo.git(&["commit", "-q", "-m", "the change + its result report"]);
 
-    // No level, no tip, no --target: wu from the branch name, HEAD, epic/x.
+    // No level, no tip, no --target, no --report: wu from the branch name, HEAD,
+    // epic/x, and the single tracked docs/work/*-result.html.
     let (code, out) =
         mr::run_with_input(&["confirm", "--as", "vu"], repo.p(), &mut answers("")).unwrap();
     assert_eq!(code, 0, "{out}");
     let body = repo.git(&["notes", "--ref=mr", "show", "HEAD"]);
     assert!(body.contains("level: working-unit"), "{body}");
+    assert!(body.contains("report: docs/work/y-result.html"), "{body}");
     assert!(body.contains("sig: |"), "{body}");
     assert!(mr::tip_authorised(repo.p(), "HEAD"));
 }
 
 #[test]
-fn confirm_wizard_asks_for_the_level_when_the_branch_matches_no_regex() {
+fn confirm_wizard_asks_for_the_level_and_the_report_when_neither_infers() {
     let repo = Repo::new("username: vu\n");
-    // Identity-only signer on `main`: level comes from the piped answer.
-    let (code, out) =
-        mr::run_with_input(&["confirm", "--as", "vu"], repo.p(), &mut answers("epic\n")).unwrap();
+    repo.write("docs/work/z-result.html", "<html>result</html>\n");
+    // Identity-only signer on `main`: level and report come from piped answers.
+    let (code, out) = mr::run_with_input(
+        &["confirm", "--as", "vu"],
+        repo.p(),
+        &mut answers("epic\ndocs/work/z-result.html\n"),
+    )
+    .unwrap();
     assert_eq!(code, 0, "{out}");
-    assert!(repo.git(&["notes", "--ref=mr", "show", "HEAD"]).contains("level: epic"));
+    let body = repo.git(&["notes", "--ref=mr", "show", "HEAD"]);
+    assert!(body.contains("level: epic"), "{body}");
+    assert!(body.contains("report: docs/work/z-result.html"), "{body}");
 }
 
 #[test]
@@ -703,11 +801,14 @@ fn wizard_eof_is_a_usage_error_naming_the_missing_input() {
 // ── E-MRSIG e2e — the full signed manual-review flow ─────────────────────────
 
 /// End-to-end over one temp repo: `mr setup` registers a key + signing config →
-/// a doc commit signed via `mr commit` verifies → a WU/epic note signed via
-/// `mr confirm` authorises → tamper (amend) breaks the signature → an unsigned
-/// commit / unlisted signer is rejected. Uses a software key: the hardware-touch
-/// half (FIDO2 / Secure-Enclave Touch ID) is a deployment property not
-/// reproducible in a hermetic run — this proves the crypto half end to end.
+/// a rule-bearing (T1) doc commit signed via `mr commit` verifies while T2/T3
+/// doc commits pass the hook unsigned and CLAUDE.md (T0) is refused (DEC-10) →
+/// a WU/epic note signed via `mr confirm` attests the result report → tamper
+/// (amend, or forging the attested report hash) breaks the signature → an
+/// unsigned commit / unlisted signer is rejected. Uses a software key: the
+/// hardware-touch half (FIDO2 / Secure-Enclave Touch ID) is a deployment
+/// property not reproducible in a hermetic run — this proves the crypto half
+/// end to end.
 #[test]
 fn e2e_signed_manual_review_flow_with_a_software_key() {
     let repo = Repo::new("email: a@b.co\n");
@@ -737,16 +838,63 @@ fn e2e_signed_manual_review_flow_with_a_software_key() {
         "the trailer rides along for the commit-msg hook"
     );
 
-    // 3. a WU/epic tip confirmed via `mr confirm` authorises over the signed range.
+    // 2b. the DEC-10 narrowing at the commit-msg hook: T2/T3 doc commits pass
+    // unsigned; a CLAUDE.md (T0) commit is refused without a trailer.
+    repo.write("docs/work/scratch.html", "<html>t3</html>\n");
+    repo.write("docs/use-cases/uc.html", "<html>t2</html>\n");
+    repo.git(&["add", "-A"]);
+    let msg = repo.path.join("MSG");
+    std::fs::write(&msg, "t2+t3 docs, no trailer\n").unwrap();
+    let (code, _) = mr::commit_msg_hook(repo.p(), msg.to_str().unwrap()).unwrap();
+    assert_eq!(code, 0, "T2/T3 doc commits need no commit-time signature");
+    repo.git(&["commit", "-q", "-m", "t2+t3 docs, no trailer"]);
+    repo.write("CLAUDE.md", "# rules\n");
+    repo.git(&["add", "-A"]);
+    std::fs::write(&msg, "t0 edit, no trailer\n").unwrap();
+    let (code, out) = mr::commit_msg_hook(repo.p(), msg.to_str().unwrap()).unwrap();
+    assert_eq!(code, 1, "a T0 commit without a trailer is refused: {out}");
+    repo.git(&["reset", "-q", "--hard", "HEAD"]);
+
+    // 3. a WU/epic tip confirmed via `mr confirm` attests the result report and
+    // authorises over the signed range.
     let base = repo.git(&["rev-parse", "HEAD"]);
     repo.write("src/lib.rs", "pub fn f() {}\n");
+    repo.write("docs/work/e2e-result.html", "<html>epic result</html>\n");
     repo.git(&["add", "-A"]);
-    repo.git(&["commit", "-q", "-m", "the change"]);
+    repo.git(&["commit", "-q", "-m", "the change + result report"]);
     let tip = repo.git(&["rev-parse", "HEAD"]);
-    let (code, out) =
-        mr::run(&["confirm", "epic", &tip, "--as", "vuluu", "--target", &base], repo.p()).unwrap();
+    let (code, out) = mr::run(
+        &[
+            "confirm",
+            "epic",
+            &tip,
+            "--as",
+            "vuluu",
+            "--target",
+            &base,
+            "--report",
+            "docs/work/e2e-result.html",
+        ],
+        repo.p(),
+    )
+    .unwrap();
     assert_eq!(code, 0, "{out}");
+    let note_body = repo.git(&["notes", "--ref=mr", "show", &tip]);
+    assert!(note_body.contains("report: docs/work/e2e-result.html"), "{note_body}");
     assert!(mr::tip_authorised(repo.p(), &tip), "the signed note authorises the tip");
+
+    // 3b. forging the attested report hash in the note breaks the signature.
+    let forged_report = note_body.replace(
+        &note_body.lines().find(|l| l.starts_with("report_sha256:")).unwrap().to_string(),
+        "report_sha256: forged",
+    );
+    xtask::git::write_note(repo.p(), "mr", &tip, &forged_report).unwrap();
+    assert!(
+        !mr::tip_authorised(repo.p(), &tip),
+        "a forged report_sha256 must invalidate the signature"
+    );
+    xtask::git::write_note(repo.p(), "mr", &tip, &note_body).unwrap();
+    assert!(mr::tip_authorised(repo.p(), &tip), "restoring the note restores authorisation");
 
     // 4. tamper-evidence: amending the tip breaks the signed change-hash.
     repo.write("src/lib.rs", "pub fn f() { let _ = 1; }\n");

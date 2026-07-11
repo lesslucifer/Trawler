@@ -97,26 +97,95 @@ pub fn trailer_of(message: &str) -> Option<(String, String)> {
         .filter_map(|rest| rest.trim_start().strip_prefix(':'))
         .filter_map(|rest| rest.trim().split_once(char::is_whitespace))
         .map(|(tier, value)| (tier.trim().to_string(), value.trim().to_string()))
-        .last()
+        .next_back()
 }
 
-fn note_body(level: &str, tip: &str, tier: &str, signer: &str) -> String {
+fn note_body(
+    level: &str,
+    tip: &str,
+    tier: &str,
+    signer: &str,
+    report: &str,
+    report_sha: &str,
+) -> String {
     format!(
-        "schema: mr/v1\nlevel: {level}\ntip: {tip}\ntier: {tier}\nsigner: {signer}\ndate: {}\n",
+        "schema: mr/v1\nlevel: {level}\ntip: {tip}\ntier: {tier}\nsigner: {signer}\nreport: {report}\nreport_sha256: {report_sha}\ndate: {}\n",
         crate::gate::today()
     )
+}
+
+/// What a `key` entry signs for a WU/epic tip: the `base..tip` change-hash,
+/// plus the attested result report's sha256 on its own line — tampering with
+/// either the change or the report claim invalidates the signature (DEC-10).
+fn signed_payload(change_hash: &str, report_sha: &str) -> String {
+    format!("{change_hash}\n{report_sha}")
 }
 
 /// The `mr/v1` note for a `key`-backed signer: carries the signed `base` and the
 /// armored `SSH SIGNATURE` (a YAML block scalar) that [`tip_authorised`] verifies
-/// over `sha256(git diff base..tip)`. `sig` is last so the block scalar can't
-/// swallow a following key.
-fn signed_note_body(level: &str, tip: &str, base: &str, signer: &str, sig: &str) -> String {
+/// over the [`signed_payload`]. `sig` is last so the block scalar can't swallow
+/// a following key.
+fn signed_note_body(
+    level: &str,
+    tip: &str,
+    base: &str,
+    signer: &str,
+    report: &str,
+    report_sha: &str,
+    sig: &str,
+) -> String {
     let indented: String = sig.lines().map(|l| format!("  {l}")).collect::<Vec<_>>().join("\n");
     format!(
-        "schema: mr/v1\nlevel: {level}\ntip: {tip}\nbase: {base}\ntier: key\nsigner: {signer}\ndate: {}\nsig: |\n{indented}\n",
+        "schema: mr/v1\nlevel: {level}\ntip: {tip}\nbase: {base}\ntier: key\nsigner: {signer}\nreport: {report}\nreport_sha256: {report_sha}\ndate: {}\nsig: |\n{indented}\n",
         crate::gate::today()
     )
+}
+
+/// The result report this confirm attests (sign-what-you-read): `--report`,
+/// else the single `*-result.html` candidate — tracked `docs/work/` at the tip
+/// for a WU; the local `docs/.archive/` for an epic, where DEC-3 has already
+/// moved it — else asked.
+fn resolve_report(
+    repo: &Path,
+    level: &str,
+    tip: &str,
+    flag: Option<String>,
+    input: &mut dyn std::io::BufRead,
+) -> Result<String, String> {
+    if let Some(path) = flag {
+        return Ok(path);
+    }
+    let candidates: Vec<String> = if level == "epic" {
+        std::fs::read_dir(repo.join("docs/.archive"))
+            .map(|entries| {
+                entries
+                    .filter_map(Result::ok)
+                    .filter_map(|e| e.file_name().to_str().map(|n| format!("docs/.archive/{n}")))
+                    .filter(|n| n.strip_suffix("-result.html").is_some())
+                    .collect()
+            })
+            .unwrap_or_default()
+    } else {
+        git(repo, &["ls-tree", "-r", "--name-only", tip, "--", "docs/work/"])
+            .unwrap_or_default()
+            .lines()
+            .filter(|n| n.strip_suffix("-result.html").is_some())
+            .map(str::to_string)
+            .collect()
+    };
+    match candidates.as_slice() {
+        [only] => Ok(only.clone()),
+        _ => wizard::ask(input, "result report path (the doc this sign-off attests)"),
+    }
+}
+
+/// sha256 of the report's exact bytes: the blob at the tip when tracked there,
+/// else the working-tree / archive file.
+fn report_sha(repo: &Path, tip: &str, path: &str) -> Result<String, String> {
+    let bytes = crate::git::show_bytes(repo, tip, path).or_else(|_| {
+        std::fs::read(repo.join(path)).map_err(|e| format!("cannot read {path}: {e}"))
+    })?;
+    crate::git::sha256_hex(&bytes)
 }
 
 /// Does a `key` entry (one carrying a public key) list `identity`? Signing paths
@@ -271,6 +340,7 @@ fn mr_confirm(
     tip_ref: Option<&str>,
     identity: Option<String>,
     target: Option<String>,
+    report_flag: Option<String>,
     input: &mut dyn std::io::BufRead,
 ) -> Result<(i32, String), String> {
     let branch = current_branch(repo);
@@ -297,8 +367,10 @@ fn mr_confirm(
         return Ok((1, format!("{identity} is not listed in .mr-allowed\n{NOT_AUTHORISED}")));
     };
     let tip = git(repo, &["rev-parse", tip_ref])?;
+    let report = resolve_report(repo, &level_word, &tip, report_flag, input)?;
+    let rsha = report_sha(repo, &tip, &report)?;
     if !has_key_entry(&allowed, identity) {
-        write_note(repo, "mr", &tip, &note_body(level, &tip, &tier, identity))?;
+        write_note(repo, "mr", &tip, &note_body(level, &tip, &tier, identity, &report, &rsha))?;
         return Ok((0, format!("mr/v1 note written on {} ({tier} {identity})", short(&tip))));
     }
     let target = match resolve_target(repo, level == "epic", tip_ref, target) {
@@ -311,10 +383,19 @@ fn mr_confirm(
     let named_tip = if tip_ref == "HEAD" { branch } else { tip_ref.to_string() };
     let reason = confirm_reason(&named_tip, &target, &tip, identity);
     prompt_touch(identity, &reason);
+    let payload = signed_payload(&hash, &rsha);
     let sig =
-        ssh_sign(&signer_program(repo), &key, NOTE_NAMESPACE, hash.as_bytes(), Some(&reason))?;
-    write_note(repo, "mr", &tip, &signed_note_body(level, &tip, &base, identity, &sig))?;
-    Ok((0, format!("mr/v1 signed note written on {} (key {identity})", short(&tip))))
+        ssh_sign(&signer_program(repo), &key, NOTE_NAMESPACE, payload.as_bytes(), Some(&reason))?;
+    write_note(
+        repo,
+        "mr",
+        &tip,
+        &signed_note_body(level, &tip, &base, identity, &report, &rsha, &sig),
+    )?;
+    Ok((
+        0,
+        format!("mr/v1 signed note written on {} (key {identity}, attests {report})", short(&tip)),
+    ))
 }
 
 /// Is there a valid `mr/v1` note on `tip` authorising it? A `key`-backed signer
@@ -329,7 +410,11 @@ pub fn tip_authorised(repo: &Path, tip: &str) -> bool {
     let allowed = read_allowed(repo);
     if let (Some(base), Some(sig)) = (&mr.base, &mr.sig) {
         let Ok(hash) = diff_sha256(repo, base, tip) else { return false };
-        return signature_authorised(&allowed, &mr.signer, NOTE_NAMESPACE, hash.as_bytes(), sig);
+        let payload = match &mr.report_sha256 {
+            Some(rsha) => signed_payload(&hash, rsha),
+            None => hash,
+        };
+        return signature_authorised(&allowed, &mr.signer, NOTE_NAMESPACE, payload.as_bytes(), sig);
     }
     match_tier(&allowed, &mr.signer).is_some()
 }
@@ -390,7 +475,7 @@ pub fn commit_msg_hook(repo: &Path, msg_file: &str) -> Result<(i32, String), Str
         return Ok((0, String::new()));
     }
     let staged = git(repo, &["diff", "--cached", "--name-only", "--no-renames"])?;
-    if !staged.lines().any(crate::notes::is_doc) {
+    if !staged.lines().any(crate::notes::is_rule_bearing) {
         return Ok((0, String::new()));
     }
     let message = std::fs::read_to_string(msg_file)
@@ -401,7 +486,7 @@ pub fn commit_msg_hook(repo: &Path, msg_file: &str) -> Result<(i32, String), Str
         Ok((
             1,
             format!(
-                "this commit touches docs with no valid {TRAILER_KEY} trailer\n{NOT_AUTHORISED}"
+                "this commit touches rule-bearing docs (T0 CLAUDE.md / T1 docs/) with no valid {TRAILER_KEY} trailer\n{NOT_AUTHORISED}"
             ),
         ))
     }
@@ -778,6 +863,7 @@ pub fn run_with_input(
                 tip,
                 crate::flag_value(rest, "--as"),
                 crate::flag_value(rest, "--target"),
+                crate::flag_value(rest, "--report"),
                 input,
             )
         }
@@ -948,14 +1034,30 @@ mod tests {
     }
 
     #[test]
-    fn signed_note_body_parses_as_mr_v1_with_the_sig_intact() {
+    fn signed_note_body_parses_as_mr_v1_with_the_sig_and_report_intact() {
         let sig = "-----BEGIN SSH SIGNATURE-----\nAAAAdummyblob\n-----END SSH SIGNATURE-----\n";
-        let body = signed_note_body("epic", "tttt", "bbbb", "vu", sig);
+        let body = signed_note_body(
+            "epic",
+            "tttt",
+            "bbbb",
+            "vu",
+            "docs/.archive/x-result.html",
+            "rrrr",
+            sig,
+        );
         let note: crate::notes::MrNote = serde_yaml::from_str(&body).expect("valid mr/v1 yaml");
         assert_eq!(note.tier, "key");
         assert_eq!(note.base.as_deref(), Some("bbbb"));
+        assert_eq!(note.report.as_deref(), Some("docs/.archive/x-result.html"));
+        assert_eq!(note.report_sha256.as_deref(), Some("rrrr"));
         assert!(note.sig.as_deref().unwrap().contains("BEGIN SSH SIGNATURE"), "{body}");
         assert!(note.sig.as_deref().unwrap().contains("AAAAdummyblob"), "{body}");
+    }
+
+    #[test]
+    fn signed_payload_binds_the_change_and_the_report() {
+        assert_eq!(super::signed_payload("cafe", "rrrr"), "cafe\nrrrr");
+        assert_ne!(super::signed_payload("cafe", "rrrr"), super::signed_payload("cafe", "xxxx"));
     }
 
     #[test]

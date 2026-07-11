@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions — Workflow Gates</h1>
       <p>Why DoD evidence is shaped the way it is.</p>
-      <div class="meta">v6 · 2026-07-11 · Trawler · <a href="decisions-index.html">index</a></div>
+      <div class="meta">v7 · 2026-07-11 · Trawler · <a href="decisions-index.html">index</a></div>
     </div>
   </header>
   <main>
@@ -154,7 +154,9 @@
     <code>key</code>-backed identities through exactly the seam named here (<a href="#dec-9">DEC-9</a>);
     identity-only entries keep this DEC's audit-trail-not-proof guarantee. Until E-UIFOUND lands, the UI-WU
     rule matches only <code>ui/</code> paths, so no current WU triggers it; epics and doc commits are live
-    immediately. Adding a person to <code>.mr-allowed</code> is itself a tracked, reviewable diff.</p>
+    immediately. <s>Adding a person to <code>.mr-allowed</code> is itself a tracked, reviewable diff.</s>
+    <em>(Superseded by <a href="#dec-10">DEC-10</a>: the list is a gitignored local trust store, and the
+    UI-path WU rule is replaced by mr-always.)</em></p>
 
     <h2 id="dec-8"><span class="badge id">DEC-8</span> The epic walk skips history already on the gate target; a per-seam walk waiver on the <code>cr/v2</code> note is the only recorded override</h2>
     <table data-c="dec-8-facts">
@@ -219,7 +221,7 @@
       <tbody>
         <tr><td>SSH signatures (<code>ssh-keygen -Y</code> / git's <code>gpg.format=ssh</code>), not GPG or sigstore</td><td>Verification is fully offline with tools already present (git ≥ 2.34, OpenSSH ≥ 8.0); no keyserver, no network trust root. The key type is whatever <code>.mr-allowed</code> lists — FIDO2 <code>sk-</code> keys and Secure-Enclave ECDSA verify identically stock.</td></tr>
         <tr><td>Doc commits sign git-natively (<code>gpgsig</code> header), verified at pre-push — not at <code>commit-msg</code></td><td>Forced by hook timing: git signs <em>after</em> <code>commit-msg</code> runs, so that hook can only presence-check the trailer. An armored SSH signature (~232 chars) in the message body was rejected — the signature rides the commit object header and the message stays clean. The full check lives in one function (<code>check_commit_trailer</code>), shared by the pre-push range check and <code>verify-dod commit</code>.</td></tr>
-        <tr><td>Enforcement is boundary-only: the epic walk never re-judges doc commits (user decision, W3 review)</td><td>A commit is immutable but <code>.mr-allowed</code> is mutable — retroactive re-verification would redden legitimately authorised history the moment a key rotates or a tier is delisted, blocking every future epic merge with nothing amendable (rewriting a gated branch orphans its notes). So authorisation is judged once, at the boundary, while the commit and the key list are contemporaries: <code>commit-msg</code> (presence) and the pre-push range check / <code>verify-dod commit</code> (full check incl. <code>gpgsig</code>). Accepted trade-off, same shape as DEC-6: a <code>--no-verify</code> push is never re-checked — the workflow forbids bypassing hooks outright, and the walk still gates every seam, note and manifest.</td></tr>
+        <tr><td>Enforcement is boundary-only: the epic walk never re-judges doc commits (user decision, W3 review)</td><td>A commit is immutable but <code>.mr-allowed</code> is mutable — retroactive re-verification would redden legitimately authorised history the moment a key rotates or a tier is delisted, blocking every future epic merge with nothing amendable (rewriting a gated branch orphans its notes). So authorisation is judged once, at the boundary, while the commit and the key list are contemporaries: <code>commit-msg</code> (presence) and the pre-push range check / <code>verify-dod commit</code> (full check incl. <code>gpgsig</code>). Accepted trade-off, same shape as DEC-6: a <code>--no-verify</code> push is never re-checked — the workflow forbids bypassing hooks outright, and the walk still gates every seam, note and manifest. <em>(<a href="#dec-10">DEC-10</a> extends the same boundary-only rule to WU tips' <code>mr/v1</code> notes at walk seams.)</em></td></tr>
         <tr><td>WU/epic tips carry the signature in the <code>mr/v1</code> note (<code>base</code> + <code>sig</code> over the <code>base..tip</code> change-hash), verified at gate check 8</td><td>A merge tip needs authorising before the merge exists, so nothing git-native can carry it; the note already rode the tip (DEC-7). Signing the recomputed change-hash makes it tamper-evident: amend/rebase changes the hash and the signature stops verifying.</td></tr>
         <tr><td>The guarantee is per-entry: <code>key</code> entries must verify; <code>email</code>/<code>username</code> entries stay listed-authorised</td><td>Coexistence is a migration convenience the user accepted knowingly — an identity-only entry remains agent-forgeable the moment it is listed, so unforgeability holds only for an all-<code>key</code> allow-list. A trailer claiming a weaker tier for a <code>key</code>-backed identity does not dodge the signature requirement (<code>trailer_key_backed</code> matches by identity, not claimed tier).</td></tr>
         <tr><td>On a Secure-Enclave Mac, <code>mr setup</code> compiles and installs the bundled <code>trawler-signer</code> (CryptoKit) as <code>gpg.ssh.program</code></td><td>The "no extra apps" requirement: <code>sc_auth</code> cannot produce SSHSIG, and Secretive is an extra app. Rebuilding its core (Enclave key + SSHSIG emission, per-signature Touch ID) is ~200 lines of Swift compiled with the system <code>swiftc</code>; both signing call sites are ours, so no ssh-agent is needed. <code>TRAWLER_SIGN_REASON</code> names the authorised action on the Touch ID sheet so the human knows what they are approving. Verification stays stock <code>ssh-keygen -Y verify</code>.</td></tr>
@@ -231,12 +233,58 @@
     self-authorise a doc commit at the push boundary or a WU/epic tip at check 8, and amending a confirmed
     tip goes red at the next gate. With the identity tiers since delisted from <code>.mr-allowed</code>
     (all-<code>key</code> allow-list, the steady state this DEC's coexistence caveat anticipated), every doc
-    commit now requires a Touch ID at commit/push time.
+    commit required a Touch ID at commit/push time — a per-commit cost <a href="#dec-10">DEC-10</a> has
+    since rebalanced: the commit gate now covers only rule-bearing files (T0 <code>CLAUDE.md</code> / flat
+    T1 <code>docs/</code>), T2/T3 doc commits pass unsigned, and the human signature moved to the WU/epic
+    boundary where it attests the result report; <code>.mr-allowed</code> itself became a gitignored local
+    trust store.
     The rules, carriers, hook and check numbering of DEC-7 are unchanged — only the auth predicate deepened.
     The rule applies forward; pre-existing history is not re-signed. Hardware presence (the Touch ID prompt)
     is a deployment property: hermetic tests prove the crypto half with software keys, and the e2e
     (<code>e2e_signed_manual_review_flow_with_a_software_key</code>) drives setup → signed doc commit →
     signed confirm → tamper → rejection.</p>
+
+    <h2 id="dec-10"><span class="badge id">DEC-10</span> Human authority moves to the boundaries: WU/epic mr always attests a result report; commit signatures narrow to rule-bearing files (T0/T1); <code>.mr-allowed</code> leaves git</h2>
+    <table data-c="dec-10-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-11 · enforced by E-MRSIG.W9 in the same WU that decided it (manager direction at the result-report review: implement with tests, don't defer)</td></tr>
+        <tr><th>Origin</th><td>Epic E-MRSIG.W9 — manager-directed brainstorm at epic close (<code>docs/work/2026-07-11-mrsig-w9-check-levels-brainstorm.html</code>, T3, archived with the epic); manager comment rounds decided the open points and pulled the enforcement into the WU</td></tr>
+        <tr><th>Where</th><td><code>xtask/src/notes.rs · is_rule_bearing</code> (replaces <code>is_ui</code>) · <code>xtask/src/gate.rs · check_manual_review/check_attested_report/check_commit_trailer</code> (check 8) + the walk's check-8 filter (check 7) · <code>xtask/src/mr.rs · resolve_report/report_sha/signed_payload/commit_msg_hook</code> · <code>xtask/src/notes.rs · MrNote.report/report_sha256</code> · <code>.gitignore</code> (<code>.mr-allowed</code>) · <a href="../workflow.html">workflow.html</a> · <a href="../work-planning.html">work-planning.html</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-10-context">Context</h3>
+    <p>The all-<code>key</code> allow-list (DEC-9's steady state) made <em>every</em> <code>docs/</code>-touching
+    commit cost a Touch ID — including T3 scratch — while a WU merge needs no human at all unless it touches UI,
+    and the result reports the work-planning standard demands are invisible to the gate ("relation to the DoD
+    gates: none mechanically"). The epic result report can't even be tracked at gate time: check 6 (DEC-3)
+    refuses tracked <code>docs/work/</code> files at the epic tip and T3 archival precedes the merge. Human
+    attention was being spent where nothing meaningful is read and missing where something is.</p>
+
+    <h3 id="dec-10-choices">Choices (each looks "fixable" — it isn't)</h3>
+    <table data-c="dec-10-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
+      <tbody>
+        <tr><td><code>mr/v1</code> becomes <strong>always</strong> required at WU tips, like epic tips; the UI-only path derivation is dropped</td><td>The WU merge is the first boundary where a human has a readable deliverable (the wu-result report). Supersedes DEC-7's UI⇒WU path rule; the <code>is_ui</code> predicate is no longer needed for manual review (E-UIFOUND's ownership of it lapses unless another check adopts it). Stays not-waivable — a waivable sign-off is not a sign-off (DEC-7).</td></tr>
+        <tr><td><strong>Sign-what-you-read</strong>: <code>mr confirm</code> names the level's result report, records its path + sha256 in the <code>mr/v1</code> note, and the key-backed signature covers the <code>base..tip</code> change-hash <em>plus the report hash</em>; check 8 verifies both</td><td>This is what makes "mr always" worth its touch — otherwise the WU mr is a blind tap. For the epic it is the only shape that survives archival: the proof is the hash, not the file's git status, so DEC-3's tracked-layout rule keeps holding while the archive copy re-hashes offline forever. Chosen over lineage-only (proves a note <em>claims</em> a report) and over tracking the report on <code>main</code> (T3 on main rots by definition; rejected).</td></tr>
+        <tr><td>Commit-level signatures narrow to <strong>rule-bearing files</strong>: T0 (<code>CLAUDE.md</code>) and T1 (flat <code>docs/*.html</code>); T2/T3 doc commits go unsigned</td><td>T0/T1 configure the workflow the agent runs under — an unsigned edit there lets an agent weaken its own gates, and post-hoc review of a rule change is too late (DEC-7's commit-time argument, kept). T2/T3 are agent-synthesized records whose substance the WU/epic reviews judge, and with WU mr always, every one now passes a human boundary. Also plugs a real gap: <code>CLAUDE.md</code> sits at the repo root and today's <code>docs/</code>-keyed rule never covered it. <code>decisions/</code> stays unsigned: enforcement lives in T1 + gate code, a reworded DEC changes nothing a hook refuses.</td></tr>
+        <tr><td><code>.mr-allowed</code> is <strong>gitignored</strong> — a local trust store provisioned by <code>mr setup</code>, never committed (manager decision)</td><td>Signature verification is a local-machine concern: hooks and gates all run on the machine holding the list, so versioning it adds no enforcement — and the tracked file was itself an unsigned seam (neither code path nor <code>docs/</code>: an agent could append a key it controls through an ordinary infra commit and self-sign for the rest of the epic). Local-file tampering remains possible but is the same trust boundary as editing a hook — forbidden by the workflow, accepted shape per DEC-2/DEC-6. Supersedes DEC-7's consequence "adding a person to <code>.mr-allowed</code> is itself a tracked, reviewable diff".</td></tr>
+        <tr><td>T1 flips in the same change as the enforcement, never earlier</td><td>T1 states what the hooks enforce <em>now</em> — a T1 claiming the new rule while the old hook still refused unsigned T2/T3 doc commits would steer agents into refused commits (code wins conflicts — the documentation system's own rule). Held: docs and code landed together in W9.</td></tr>
+        <tr><td>The epic walk never re-judges a WU tip's <code>mr/v1</code> — manual review is <strong>boundary-only at seams</strong>, enforced by the WU merge hook when the seam is made</td><td>Same argument as DEC-9's doc-commit rule, made acute by the gitignored list: <code>mr/v1</code> verifies against the mutable, <em>local</em> <code>.mr-allowed</code>, so a walk re-judgment would redden authorised history after key rotation — and on any fresh clone, where the list is empty. It also grandfathers pre-DEC-10 WUs (W1–W8 carry no mr notes). The epic tip's own check 8 always runs.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-10-consequences">Consequences</h3>
+    <p>T2/T3 doc commits cost no Touch ID; every WU merge costs exactly one, attached to a result report
+    the human read (the signed payload is <code>change-hash\nreport-sha256</code>); epic touches are
+    unchanged in count but attest the epic report's bytes; <code>CLAUDE.md</code> gains the commit-time
+    signature it never had. A fresh clone verifies no signatures until <code>mr setup</code> recreates the
+    local list — by design, like hooks needing installation. The result reports the work-planning standard
+    demands stop being gate-invisible: existence and exact content are part of check 8. The
+    <code>is_ui</code> predicate is deleted — nothing derives from UI paths any more; if a future check
+    needs one, E-UIFOUND still owns the path set. The rule applies forward: pre-DEC-10 seams walk clean
+    (boundary-only), and E-MRSIG's own epic confirm is the first production
+    <code>mr confirm --report</code>.</p>
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>

@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Work Planning &amp; Result Reports</h1>
       <p>What the planning phase of an epic or WU must output, what the result report after the work must contain — minimum-content checklists verified by a script the agent harness triggers at authoring time. Never fixed templates, never git hooks.</p>
-      <div class="meta">v1 · 2026-07-05 · Trawler · T1 process doc</div>
+      <div class="meta">v2 · 2026-07-11 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -177,12 +177,17 @@ flowchart LR
 
     <h2 id="gates">Relation to the DoD gates</h2>
 
-    <p data-c="gates-relation">None mechanically — no git hook, no gate change, no note schema.
-    The lifecycle duties (plan before work, WU result at WU close, epic result at epic close) are
-    stated here, kept honest at authoring time by the harness hooks, and judged like every other
-    judgment: <a href="workflow.html">the reviews</a> read the plan and result docs as inputs.
+    <p data-c="gates-relation">Quality is checked at authoring time (the harness hooks above);
+    <strong>existence and exact content are checked at the gate</strong>
+    (<a href="decisions/workflow-gates.html#dec-10">DEC-10</a>): every WU/epic tip's
+    <code>mr/v1</code> note must name the level's result report — path + sha256, recorded by
+    <code>mr confirm</code> from the bytes the human read, covered by the key-backed signature —
+    and <a href="workflow.html#gate">gate check 8</a> refuses a tip whose note names none; a WU
+    report is re-hashed against the tracked file at the tip, an epic report (archived per DEC-3)
+    survives as the signed hash. Substance stays judgment:
+    <a href="workflow.html">the reviews</a> read the plan and result docs as inputs.
     A docs-only WU or epic is exempt from test evidence, never from its plan and result docs —
-    those exist precisely when code doesn't.</p>
+    those exist precisely when code doesn't, and the gate now proves it.</p>
 
   </main>
   <script type="module">

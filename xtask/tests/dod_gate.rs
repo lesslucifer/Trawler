@@ -23,6 +23,7 @@ impl Repo {
         repo.git(&["config", "commit.gpgsign", "false"]);
         repo.write("src/lib.rs", "pub fn base() {}\n");
         repo.write("docs/use-cases/api.html", "<html>v1</html>\n");
+        repo.write("docs/standard.html", "<html>t1 standard</html>\n");
         repo.commit("init");
         repo
     }
@@ -109,14 +110,28 @@ fn doc_note(epic: &str, wu: Option<&str>, changes: &str, t2_waived: Option<&str>
 
 const T2_ENTRY: &str = "  - path: docs/use-cases/api.html\n    tier: T2\n    action: updated\n    distills: \"api contract change\"\n";
 
+const WU_RESULT: &str = "docs/work/one-result.html";
+const WU_CHANGES: &str = "  - path: docs/use-cases/api.html\n    tier: T2\n    action: updated\n    distills: \"api contract change\"\n  - path: docs/work/one-result.html\n    tier: T3\n    action: added\n    distills: \"wu result report\"\n";
+
 fn wu_with_change() -> Repo {
     let repo = Repo::new();
     repo.git(&["branch", "epic/x"]);
     repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
     repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\n");
     repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
     repo.commit("wu change");
     repo
+}
+
+/// An mr/v1 note attesting the WU result report tracked at `tip` — real path,
+/// real sha256, the shape `mr confirm` writes (sign-what-you-read, DEC-10).
+fn wu_mr_note(repo: &Repo, tip: &str) -> String {
+    let bytes = xtask::git::show_bytes(&repo.path, tip, WU_RESULT).unwrap();
+    let sha = xtask::git::sha256_hex(&bytes).unwrap();
+    format!(
+        "schema: mr/v1\nlevel: working-unit\ntip: {tip}\ntier: email\nsigner: a@b.co\nreport: {WU_RESULT}\nreport_sha256: {sha}\ndate: 2026-07-06\n"
+    )
 }
 
 fn bless_wu(repo: &Repo, tip: &str) {
@@ -132,8 +147,10 @@ fn bless_wu(repo: &Repo, tip: &str) {
             "  integration: { count: 1, covers: \"api contract\" }\n",
         ),
     );
-    repo.note("doc", tip, &doc_note("E9", Some("E9.W1"), T2_ENTRY, None));
+    repo.note("doc", tip, &doc_note("E9", Some("E9.W1"), WU_CHANGES, None));
     repo.note("cr", tip, &cr_note("E9", Some("E9.W1"), &base, &sha, "PASS"));
+    allow_file(repo);
+    repo.note("mr", tip, &wu_mr_note(repo, tip));
 }
 
 fn checks_of(report: &xtask::gate::Report) -> Vec<&str> {
@@ -251,7 +268,7 @@ fn identity_omitted_in_one_note_while_siblings_carry_it_fails_check_1() {
     let repo = wu_with_change();
     let tip = repo.sha("wu/x/one");
     bless_wu(&repo, &tip);
-    repo.note("doc", &tip, &format!("schema: doc/v1\nchanges:\n{T2_ENTRY}"));
+    repo.note("doc", &tip, &format!("schema: doc/v1\nchanges:\n{WU_CHANGES}"));
 
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
     assert_eq!(checks_of(&report), vec!["1·notes"]);
@@ -266,7 +283,8 @@ fn doc_note_must_account_for_every_changed_doc_file() {
     repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), "  []\n", Some("pure refactor")));
 
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
-    assert_eq!(checks_of(&report), vec!["6·doc-note"]);
+    assert!(!report.failures.is_empty());
+    assert!(checks_of(&report).iter().all(|c| *c == "6·doc-note"), "{}", format_report(&report));
     assert!(format_report(&report).contains("docs/use-cases/api.html"));
 }
 
@@ -276,12 +294,16 @@ fn epic_with_merged_wu() -> (Repo, String) {
     bless_wu(&repo, &wu_tip);
     repo.git(&["checkout", "-q", "epic/x"]);
     repo.git(&["merge", "--no-ff", "-q", "-m", "merge wu/x/one", "wu/x/one"]);
+    // T3 archival before the epic gate (DEC-3): the WU result leaves git; its
+    // add + delete net out of the epic diff, so no doc-note entry is owed.
+    std::fs::remove_file(repo.path.join(WU_RESULT)).unwrap();
+    repo.commit("archive the wu result out of git");
     (repo, wu_tip)
 }
 
 fn mr_note(level: &str, tip: &str) -> String {
     format!(
-        "schema: mr/v1\nlevel: {level}\ntip: {tip}\ntier: email\nsigner: a@b.co\ndate: 2026-07-06\n"
+        "schema: mr/v1\nlevel: {level}\ntip: {tip}\ntier: email\nsigner: a@b.co\nreport: docs/.archive/e9-result.html\nreport_sha256: 0e9cafe\ndate: 2026-07-06\n"
     )
 }
 
@@ -598,9 +620,9 @@ fn docs_only_epic_still_rejects_stray_tracked_work_docs() {
 fn work_doc_archived_out_of_git_passes_the_epic_gate() {
     let (repo, _) = epic_with_merged_wu();
     repo.write("docs/work/plan.html", "<html>plan</html>\n");
-    repo.commit_reviewed("plan doc");
+    repo.commit("plan doc - t3 needs no trailer");
     std::fs::remove_file(repo.path.join("docs/work/plan.html")).unwrap();
-    repo.commit_reviewed("archive the plan out of git");
+    repo.commit("archive the plan out of git");
     bless_epic(&repo, T2_ENTRY);
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
@@ -616,11 +638,12 @@ fn archived_doc_note_entry_requires_distillation_lineage() {
     repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
     repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\n");
     repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
     std::fs::remove_file(repo.path.join("docs/work/plan.html")).unwrap();
     let tip = repo.commit("wu change archives the plan");
     bless_wu(&repo, &tip);
     let bare =
-        format!("{T2_ENTRY}  - path: docs/work/plan.html\n    tier: T3\n    action: archived\n");
+        format!("{WU_CHANGES}  - path: docs/work/plan.html\n    tier: T3\n    action: archived\n");
     repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &bare, None));
 
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
@@ -628,7 +651,7 @@ fn archived_doc_note_entry_requires_distillation_lineage() {
     assert!(format_report(&report).contains("lineage"));
 
     let with_lineage = format!(
-        "{T2_ENTRY}  - path: docs/work/plan.html\n    tier: T3\n    action: archived\n    distilled_to: [docs/use-cases/api.html]\n"
+        "{WU_CHANGES}  - path: docs/work/plan.html\n    tier: T3\n    action: archived\n    distilled_to: [docs/use-cases/api.html]\n"
     );
     repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &with_lineage, None));
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
@@ -730,16 +753,25 @@ fn docs_only_wu_seam_is_exempt_in_the_epic_walk() {
 }
 
 #[test]
-fn docs_only_wu_gate_is_exempt_and_writes_no_receipt() {
+fn docs_only_wu_gate_requires_mr_then_is_exempt_without_a_receipt() {
     let repo = wu_with_change();
     docs_only_wu(&repo);
+    allow_file(&repo);
 
+    // Manual review is always required at a WU tip, docs-only or not — it runs
+    // before the exemption, like the epic rule (DEC-10).
     let args: Vec<String> =
         ["verify-dod", "wu", "wu/x/docs"].iter().map(|s| (*s).to_string()).collect();
     let (code, message) = xtask::run(&args, &repo.path).unwrap();
+    assert_eq!(code, 1, "a docs-only WU still needs its mr note: {message}");
+    assert!(message.contains("8·manual-review"), "got: {message}");
+
+    repo.write(WU_RESULT, "<html>docs-only wu result</html>\n");
+    let tip = repo.commit("wu result report");
+    repo.note("mr", &tip, &wu_mr_note(&repo, &tip));
+    let (code, message) = xtask::run(&args, &repo.path).unwrap();
     assert_eq!(code, 0, "got: {message}");
     assert!(message.contains("exempt"), "got: {message}");
-    let tip = repo.sha("wu/x/docs");
     assert!(
         xtask::git::git(&repo.path, &["notes", "--ref=dod", "show", &tip]).is_err(),
         "no receipt may be written for an exempt tip"
@@ -750,7 +782,7 @@ fn docs_only_wu_gate_is_exempt_and_writes_no_receipt() {
 fn docs_only_standalone_commit_is_exempt() {
     let (repo, _) = epic_with_merged_wu();
     repo.write("docs/use-cases/api.html", "<html>v2.5, interior</html>\n");
-    repo.commit_reviewed("docs-only tweak, no manifest");
+    repo.commit("docs-only t2 tweak, no manifest, no trailer");
     close_epic(&repo);
     bless_epic(&repo, T2_ENTRY);
 
@@ -781,74 +813,121 @@ fn epic_mr_note_with_an_unlisted_signer_fails_check_8() {
     assert_eq!(checks_of(&report), vec!["8·manual-review"]);
 }
 
-fn ui_wu(repo: &Repo) -> String {
-    repo.git(&["checkout", "-q", "-b", "wu/x/ui", "epic/x"]);
-    repo.write("ui/app.tsx", "export const App = () => null;\n");
-    let tip = repo.commit("ui work unit");
-    repo.note(
-        "test",
-        &tip,
-        &test_note("working-unit", "E9", Some("E9.W2"), "  integration: { count: 1 }\n"),
-    );
-    tip
-}
-
 #[test]
-fn a_ui_wu_requires_an_mr_note() {
-    let repo = wu_with_change();
-    allow_file(&repo);
-    let tip = ui_wu(&repo);
-
-    let report = repo.gate().verify(Level::Wu, "wu/x/ui", "epic/x").unwrap();
-    assert!(
-        checks_of(&report).contains(&"8·manual-review"),
-        "a UI WU must require manual review, got: {}",
-        format_report(&report)
-    );
-
-    repo.note("mr", &tip, &mr_note("working-unit", &tip));
-    let report = repo.gate().verify(Level::Wu, "wu/x/ui", "epic/x").unwrap();
-    assert!(
-        !checks_of(&report).contains(&"8·manual-review"),
-        "a listed mr note clears check 8: {}",
-        format_report(&report)
-    );
-}
-
-#[test]
-fn a_ui_file_renamed_out_of_ui_still_requires_an_mr_note() {
-    let repo = wu_with_change();
-    allow_file(&repo);
-    repo.git(&["checkout", "-q", "epic/x"]);
-    repo.write("ui/widget.tsx", "export const Widget = () => null; // enough content\n");
-    repo.commit("ui file exists at the epic base");
-    repo.git(&["checkout", "-q", "-b", "wu/x/ui2", "epic/x"]);
-    repo.git(&["mv", "ui/widget.tsx", "notes.md"]);
-    let tip = repo.commit("move ui file out of ui/");
-    repo.note(
-        "test",
-        &tip,
-        &test_note("working-unit", "E9", Some("E9.W3"), "  integration: { count: 1 }\n"),
-    );
-
-    let report = repo.gate().verify(Level::Wu, "wu/x/ui2", "epic/x").unwrap();
-    assert!(
-        checks_of(&report).contains(&"8·manual-review"),
-        "a rename out of ui/ must not bypass the UI manual-review requirement: {}",
-        format_report(&report)
-    );
-}
-
-#[test]
-fn a_non_ui_wu_does_not_require_an_mr_note() {
+fn every_wu_requires_an_mr_note() {
     let repo = wu_with_change();
     let tip = repo.sha("wu/x/one");
     bless_wu(&repo, &tip);
+    repo.git(&["notes", "--ref=mr", "remove", &tip]);
 
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["8·manual-review"]);
     assert!(
-        !checks_of(&report).contains(&"8·manual-review"),
-        "a non-UI WU needs no manual review: {}",
+        format_report(&report).contains("every working-unit merge requires manual review"),
+        "{}",
+        format_report(&report)
+    );
+
+    repo.note("mr", &tip, &wu_mr_note(&repo, &tip));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        report.green(),
+        "a listed mr note attesting the report clears check 8: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn a_wu_mr_note_without_a_report_fails_check_8() {
+    let repo = wu_with_change();
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    repo.note(
+        "mr",
+        &tip,
+        &format!("schema: mr/v1\nlevel: working-unit\ntip: {tip}\ntier: email\nsigner: a@b.co\n"),
+    );
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["8·manual-review"]);
+    assert!(
+        format_report(&report).contains("names no result report"),
+        "{}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn a_wu_mr_note_whose_report_hash_differs_fails_check_8() {
+    let repo = wu_with_change();
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    repo.note(
+        "mr",
+        &tip,
+        &format!("schema: mr/v1\nlevel: working-unit\ntip: {tip}\ntier: email\nsigner: a@b.co\nreport: {WU_RESULT}\nreport_sha256: 0000tampered\n"),
+    );
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["8·manual-review"]);
+    assert!(format_report(&report).contains("differs"), "{}", format_report(&report));
+}
+
+#[test]
+fn a_wu_mr_note_naming_an_untracked_report_fails_check_8() {
+    let repo = wu_with_change();
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    repo.note(
+        "mr",
+        &tip,
+        &format!("schema: mr/v1\nlevel: working-unit\ntip: {tip}\ntier: email\nsigner: a@b.co\nreport: docs/work/ghost-result.html\nreport_sha256: 0000\n"),
+    );
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["8·manual-review"]);
+    assert!(
+        format_report(&report).contains("not tracked at the tip"),
+        "{}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn an_epic_mr_note_without_a_report_fails_check_8() {
+    let (repo, _) = epic_with_merged_wu();
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+    let tip = repo.sha("epic/x");
+    repo.note(
+        "mr",
+        &tip,
+        &format!("schema: mr/v1\nlevel: epic\ntip: {tip}\ntier: email\nsigner: a@b.co\n"),
+    );
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(checks_of(&report), vec!["8·manual-review"]);
+    assert!(
+        format_report(&report).contains("names no result report"),
+        "{}",
+        format_report(&report)
+    );
+}
+
+// Same boundary-only rule as doc commits (DEC-9, extended by DEC-10): mr/v1
+// verifies against the mutable, local .mr-allowed, so the walk never re-judges
+// merged WU tips — the WU merge hook gated the seam when it was made.
+#[test]
+fn epic_walk_never_rejudges_wu_manual_review() {
+    let (repo, wu_tip) = epic_with_merged_wu();
+    repo.git(&["notes", "--ref=mr", "remove", &wu_tip]);
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        report.green(),
+        "a historical WU seam without an mr note must walk clean: {}",
         format_report(&report)
     );
 }
@@ -856,8 +935,8 @@ fn a_non_ui_wu_does_not_require_an_mr_note() {
 #[test]
 fn epic_walk_never_rejudges_doc_commits() {
     let (repo, _) = epic_with_merged_wu();
-    repo.write("docs/use-cases/api.html", "<html>edited without a trailer</html>\n");
-    repo.commit("doc edit, no mr trailer - authorisation is boundary-only");
+    repo.write("docs/standard.html", "<html>rule-bearing edit without a trailer</html>\n");
+    repo.commit("t1 doc edit, no mr trailer - authorisation is boundary-only");
     close_epic(&repo);
     bless_epic(&repo, T2_ENTRY);
 
@@ -874,8 +953,8 @@ fn a_doc_commit_note_authorises_at_the_pre_push_seam_when_the_trailer_is_absent(
     let repo = Repo::new();
     allow_file(&repo);
     let old = repo.sha("HEAD");
-    repo.write("docs/use-cases/api.html", "<html>edited without a trailer</html>\n");
-    let doc_commit = repo.commit("doc edit, no mr trailer");
+    repo.write("docs/standard.html", "<html>edited without a trailer</html>\n");
+    let doc_commit = repo.commit("t1 doc edit, no mr trailer");
 
     let (code, out) = range_run(&repo, &old, &doc_commit);
     assert_eq!(code, 1, "untrailered doc commit is red before a note: {out}");
@@ -896,7 +975,7 @@ fn range_rejects_an_unsigned_doc_commit_from_a_key_backed_identity() {
     let pubkey = repo.keygen();
     repo.write(".mr-allowed", &format!("email: a@b.co\nkey: vu {pubkey}\n"));
     let old = repo.sha("HEAD");
-    repo.write("docs/use-cases/api.html", "<html>forged key trailer, no signature</html>\n");
+    repo.write("docs/standard.html", "<html>forged key trailer, no signature</html>\n");
     repo.git(&["add", "-A"]);
     repo.git(&["commit", "-q", "--cleanup=verbatim", "-m", "doc edit\n\nReviewed-By: key vu\n"]);
     let new = repo.sha("HEAD");
@@ -917,7 +996,7 @@ fn range_accepts_a_signed_doc_commit_from_a_key_backed_identity() {
     repo.git(&["config", "gpg.format", "ssh"]);
     repo.git(&["config", "user.signingkey", repo.path.join("signer").to_str().unwrap()]);
     let old = repo.sha("HEAD");
-    repo.write("docs/use-cases/api.html", "<html>signed doc edit</html>\n");
+    repo.write("docs/standard.html", "<html>signed doc edit</html>\n");
     repo.git(&["add", "-A"]);
     repo.git(&[
         "commit",
@@ -938,8 +1017,8 @@ fn range_rejects_an_unauthorised_doc_commit_at_the_pre_push_seam() {
     let repo = Repo::new();
     allow_file(&repo);
     let old = repo.sha("HEAD");
-    repo.write("docs/use-cases/api.html", "<html>unauthorised edit</html>\n");
-    let new = repo.commit("doc edit, no trailer");
+    repo.write("docs/standard.html", "<html>unauthorised edit</html>\n");
+    let new = repo.commit("t1 doc edit, no trailer");
 
     let (code, out) = range_run(&repo, &old, &new);
     assert_eq!(code, 1, "{out}");
@@ -951,8 +1030,8 @@ fn range_accepts_a_listed_identity_trailered_doc_commit() {
     let repo = Repo::new();
     allow_file(&repo);
     let old = repo.sha("HEAD");
-    repo.write("docs/use-cases/api.html", "<html>reviewed edit</html>\n");
-    let new = repo.commit_reviewed("doc edit");
+    repo.write("docs/standard.html", "<html>reviewed edit</html>\n");
+    let new = repo.commit_reviewed("t1 doc edit");
 
     let (code, out) = range_run(&repo, &old, &new);
     assert_eq!(code, 0, "{out}");
@@ -963,10 +1042,43 @@ fn range_flags_a_doc_moved_out_of_docs_without_a_trailer() {
     let repo = Repo::new();
     allow_file(&repo);
     let old = repo.sha("HEAD");
-    repo.git(&["mv", "docs/use-cases/api.html", "notes.md"]);
-    let new = repo.commit("move a doc out of docs/, no trailer");
+    repo.git(&["mv", "docs/standard.html", "notes.md"]);
+    let new = repo.commit("move a t1 doc out of docs/, no trailer");
 
     let (code, out) = range_run(&repo, &old, &new);
     assert_eq!(code, 1, "a rename out of docs/ must not bypass the trailer check: {out}");
     assert!(out.contains("8·manual-review"), "{out}");
+}
+
+// The DEC-10 narrowing: T2/T3 doc commits carry no trailer — their human
+// coverage moved to the WU/epic boundary mr — while T0 gains the commit gate.
+#[test]
+fn range_ignores_untrailered_t2_and_t3_doc_commits() {
+    let repo = Repo::new();
+    allow_file(&repo);
+    let old = repo.sha("HEAD");
+    repo.write("docs/use-cases/api.html", "<html>t2 edit, no trailer</html>\n");
+    repo.write("docs/work/scratch.html", "<html>t3 scratch, no trailer</html>\n");
+    let new = repo.commit("t2 + t3 doc edits without a trailer");
+
+    let (code, out) = range_run(&repo, &old, &new);
+    assert_eq!(code, 0, "T2/T3 doc commits need no commit-time signature: {out}");
+}
+
+#[test]
+fn range_rejects_an_untrailered_claude_md_commit() {
+    let repo = Repo::new();
+    allow_file(&repo);
+    let old = repo.sha("HEAD");
+    repo.write("CLAUDE.md", "# project rules\n");
+    let new = repo.commit("t0 edit, no trailer");
+
+    let (code, out) = range_run(&repo, &old, &new);
+    assert_eq!(code, 1, "CLAUDE.md is rule-bearing (T0) and needs a trailer: {out}");
+    assert!(out.contains("8·manual-review"), "{out}");
+
+    repo.write("CLAUDE.md", "# project rules, reviewed\n");
+    let trailered = repo.commit_reviewed("t0 edit");
+    let (code, out) = range_run(&repo, &new, &trailered);
+    assert_eq!(code, 0, "a listed trailer authorises the T0 edit: {out}");
 }

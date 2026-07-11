@@ -142,7 +142,22 @@ pub fn ssh_sign(
     }
 }
 
-fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
+/// The blob bytes of `path` at `rev`, exact — no trailing-whitespace trim, so a
+/// hash over them matches a hash over the working-tree file byte for byte.
+pub fn show_bytes(repo: &Path, rev: &str, path: &str) -> Result<Vec<u8>, String> {
+    let spec = format!("{rev}:{path}");
+    let out = cmd(repo)
+        .args(["show", &spec])
+        .output()
+        .map_err(|e| format!("failed to spawn git show: {e}"))?;
+    if out.status.success() {
+        Ok(out.stdout)
+    } else {
+        Err(format!("git show {spec}: {}", String::from_utf8_lossy(&out.stderr).trim_end()))
+    }
+}
+
+pub fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
     let tools: [&[&str]; 2] = [&["shasum", "-a", "256"], &["sha256sum"]];
     for tool in tools {
         let Ok(mut child) = Command::new(tool[0])
