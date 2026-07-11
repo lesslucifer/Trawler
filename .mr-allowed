@@ -1,6 +1,1 @@
-# Identities allowed to sign off manual review (E-NMWF).
-# One `<tier>: <value>` per line; blank lines and #-comments ignored.
-# E-MRSIG later adds a `key:` tier (a public key) for unforgeable signatures.
-email:    vu.luu@workforceoptimizer.com
-username: vuluu
 key: vuluu ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBIVMX46RSeH3+w1RmgUJzGkT7TRyW2qLTcGU+4VO6akxBAJMscCut5uRsF92+TeElw4MvL3G8xlVHiYQNdslP4Y= trawler-se
