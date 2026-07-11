@@ -3,6 +3,7 @@ use std::process::Command;
 
 use crate::gate::short;
 use crate::git::{diff_sha256, git, note, ssh_sign, ssh_verify, write_note};
+use crate::wizard;
 
 /// SSH-signature namespace for WU/epic note signatures (`ssh-keygen -Y -n`).
 /// Doc-commit signatures ride git's native `git` namespace instead.
@@ -155,20 +156,93 @@ fn resolve_target(
         })
 }
 
-fn touch_hint(identity: &str) -> String {
-    format!("touch your security key / Touch ID to sign as {identity} now ...")
+/// The auth-sheet / terminal line naming what a doc-commit signature approves.
+fn commit_reason(message: &str, branch: &str, identity: &str) -> String {
+    let title = message.lines().next().unwrap_or("").trim();
+    format!("commit \"{title}\" on {branch} as {identity}")
+}
+
+/// The auth-sheet / terminal line naming what a confirm signature approves.
+fn confirm_reason(tip_ref: &str, target: &str, tip: &str, identity: &str) -> String {
+    format!("approve the merge of {tip_ref} into {target} (tip {}) as {identity}", short(tip))
+}
+
+fn current_branch(repo: &Path) -> String {
+    git(repo, &["rev-parse", "--abbrev-ref", "HEAD"]).unwrap_or_else(|_| "HEAD".to_string())
+}
+
+fn touch_hint(identity: &str, reason: &str) -> String {
+    format!("about to {reason}\ntouch your security key / Touch ID to sign as {identity} now ...")
 }
 
 #[allow(clippy::print_stderr)]
-fn prompt_touch(identity: &str) {
-    eprintln!("{}", touch_hint(identity));
+fn prompt_touch(identity: &str, reason: &str) {
+    eprintln!("{}", touch_hint(identity, reason));
 }
 
-fn mr_commit(repo: &Path, message: &str, identity: &str) -> Result<(i32, String), String> {
+/// The branch-name → level regex of the confirm wizard: `wu/…` → wu,
+/// `epic/…` → epic, anything else asks the user.
+fn infer_level(branch: &str) -> Option<&'static str> {
+    if branch.starts_with("wu/") {
+        Some("wu")
+    } else if branch.starts_with("epic/") {
+        Some("epic")
+    } else {
+        None
+    }
+}
+
+/// The identity picker: the distinct identities already in `.mr-allowed`, never
+/// typed blind. A single listed identity is taken as-is.
+fn pick_identity(allowed: &[Allowed], input: &mut dyn std::io::BufRead) -> Result<String, String> {
+    let mut identities: Vec<&str> = Vec::new();
+    for entry in allowed {
+        if !identities.contains(&entry.identity()) {
+            identities.push(entry.identity());
+        }
+    }
+    match identities.as_slice() {
+        [] => {
+            Err("no identities listed in .mr-allowed - run `cargo xtask mr setup` first"
+                .to_string())
+        }
+        [only] => Ok((*only).to_string()),
+        _ => {
+            let options: Vec<wizard::MenuOption> = identities
+                .iter()
+                .map(|id| wizard::MenuOption {
+                    id: (*id).to_string(),
+                    label: (*id).to_string(),
+                    note: String::new(),
+                    unavailable: None,
+                })
+                .collect();
+            let pick = wizard::choose(input, "sign as which identity?", &options)?;
+            Ok(identities[pick].to_string())
+        }
+    }
+}
+
+fn mr_commit(
+    repo: &Path,
+    message: Option<String>,
+    identity: Option<String>,
+    input: &mut dyn std::io::BufRead,
+) -> Result<(i32, String), String> {
+    let message = match message {
+        Some(m) => m,
+        None => wizard::ask(input, "commit message")?,
+    };
+    let message = message.as_str();
     if message.trim().is_empty() {
         return Ok((1, "the commit message (-m) is empty".to_string()));
     }
     let allowed = read_allowed(repo);
+    let identity = match identity {
+        Some(id) => id,
+        None => pick_identity(&allowed, input)?,
+    };
+    let identity = identity.as_str();
     let Some(tier) = match_tier(&allowed, identity) else {
         return Ok((1, format!("{identity} is not listed in .mr-allowed\n{NOT_AUTHORISED}")));
     };
@@ -177,8 +251,13 @@ fn mr_commit(repo: &Path, message: &str, identity: &str) -> Result<(i32, String)
     // pre-push + walk); the trailer still rides along for the commit-msg hook,
     // which fires *before* git signs and so can only presence-check the message.
     if has_key_entry(&allowed, identity) {
-        prompt_touch(identity);
-        git(repo, &["commit", "-S", "-m", &body, "--cleanup=verbatim"])?;
+        let reason = commit_reason(message, &current_branch(repo), identity);
+        prompt_touch(identity, &reason);
+        crate::git::git_env(
+            repo,
+            &["commit", "-S", "-m", &body, "--cleanup=verbatim"],
+            &[("TRAWLER_SIGN_REASON", &reason)],
+        )?;
         Ok((0, format!("signed doc commit with {TRAILER_KEY}: {tier} {identity}")))
     } else {
         git(repo, &["commit", "-m", &body, "--cleanup=verbatim"])?;
@@ -188,17 +267,32 @@ fn mr_commit(repo: &Path, message: &str, identity: &str) -> Result<(i32, String)
 
 fn mr_confirm(
     repo: &Path,
-    level: &str,
-    tip_ref: &str,
-    identity: &str,
+    level: Option<&str>,
+    tip_ref: Option<&str>,
+    identity: Option<String>,
     target: Option<String>,
+    input: &mut dyn std::io::BufRead,
 ) -> Result<(i32, String), String> {
-    let level = match level {
+    let branch = current_branch(repo);
+    let level_word = match level {
+        Some(l) => l.to_string(),
+        None => match infer_level(&branch) {
+            Some(inferred) => inferred.to_string(),
+            None => wizard::ask(input, "level (wu or epic)")?,
+        },
+    };
+    let level = match level_word.as_str() {
         "wu" => "working-unit",
         "epic" => "epic",
         _ => return Err(crate::USAGE.to_string()),
     };
+    let tip_ref = tip_ref.unwrap_or("HEAD");
     let allowed = read_allowed(repo);
+    let identity = match identity {
+        Some(id) => id,
+        None => pick_identity(&allowed, input)?,
+    };
+    let identity = identity.as_str();
     let Some(tier) = match_tier(&allowed, identity) else {
         return Ok((1, format!("{identity} is not listed in .mr-allowed\n{NOT_AUTHORISED}")));
     };
@@ -207,17 +301,18 @@ fn mr_confirm(
         write_note(repo, "mr", &tip, &note_body(level, &tip, &tier, identity))?;
         return Ok((0, format!("mr/v1 note written on {} ({tier} {identity})", short(&tip))));
     }
-    let Some(target) = resolve_target(repo, level == "epic", tip_ref, target) else {
-        return Ok((
-            1,
-            "cannot infer the merge target; pass --target <epic-branch|main>".to_string(),
-        ));
+    let target = match resolve_target(repo, level == "epic", tip_ref, target) {
+        Some(t) => t,
+        None => wizard::ask(input, "merge target branch (e.g. epic/<slug> or main)")?,
     };
     let base = git(repo, &["merge-base", &target, &tip])?;
     let hash = diff_sha256(repo, &base, &tip)?;
     let key = signing_key(repo)?;
-    prompt_touch(identity);
-    let sig = ssh_sign(&signer_program(repo), &key, NOTE_NAMESPACE, hash.as_bytes())?;
+    let named_tip = if tip_ref == "HEAD" { branch } else { tip_ref.to_string() };
+    let reason = confirm_reason(&named_tip, &target, &tip, identity);
+    prompt_touch(identity, &reason);
+    let sig =
+        ssh_sign(&signer_program(repo), &key, NOTE_NAMESPACE, hash.as_bytes(), Some(&reason))?;
     write_note(repo, "mr", &tip, &signed_note_body(level, &tip, &base, identity, &sig))?;
     Ok((0, format!("mr/v1 signed note written on {} (key {identity})", short(&tip))))
 }
@@ -332,7 +427,7 @@ fn pub_path_for(key: &str) -> String {
 }
 
 const SE_KEY_HEADER: &str = "trawler-se-v1";
-const SE_SIGN_SOURCE: &str = include_str!("se_sign.swift");
+const SE_SIGN_SOURCE: &str = include_str!("trawler_signer.swift");
 
 /// A private-key file written by the bundled Secure-Enclave signer: header
 /// line, then the `CryptoKit` blob only this machine's Enclave can use.
@@ -340,13 +435,14 @@ fn is_se_key(path: &str) -> bool {
     std::fs::read_to_string(path).is_ok_and(|s| s.lines().next() == Some(SE_KEY_HEADER))
 }
 
-/// Compile the bundled Secure-Enclave signer (`se_sign.swift`) with the system
-/// `swiftc`, caching binary + source under `~/.config/trawler`; recompiles only
-/// when the embedded source changed.
+/// Compile the bundled Secure-Enclave signer (`trawler_signer.swift`) with the
+/// system `swiftc`, caching binary + source under `~/.config/trawler`;
+/// recompiles only when the embedded source changed. The binary is named
+/// `trawler-signer` because the macOS auth sheet shows the executable name.
 fn build_se_helper(home: &str) -> Result<std::path::PathBuf, String> {
     let dir = Path::new(home).join(".config").join("trawler");
-    let src = dir.join("se-sign.swift");
-    let bin = dir.join("se-sign");
+    let src = dir.join("trawler-signer.swift");
+    let bin = dir.join("trawler-signer");
     if bin.exists() && std::fs::read_to_string(&src).ok().as_deref() == Some(SE_SIGN_SOURCE) {
         return Ok(bin);
     }
@@ -391,32 +487,76 @@ fn provision_se_key(home: &str, identity: &str) -> Result<String, String> {
     Ok(stem)
 }
 
-/// Resolve the signing key. `--key <path>` is used verbatim (a private-key stem,
-/// a `.pub` for an agent-backed key, or a Secure-Enclave blob from an earlier
-/// setup). Otherwise, on a Secure-Enclave Mac a Touch-ID key is provisioned
-/// natively via the bundled signer — the Enclave→OpenSSH bridge stock macOS
-/// lacks (`sc_auth` keys are unreachable by `ssh-keygen -Y sign`; see
-/// `se_sign.swift`). Failing that, a FIDO2 `ed25519-sk` key is generated at the
-/// default path (needs a security key + touch). Returns `(signingkey, pubkey)`.
-#[allow(clippy::print_stderr)]
-fn resolve_key(identity: &str, key: Option<String>) -> Result<(String, String), String> {
-    if let Some(key_path) = key {
-        let pubkey = read_pubkey(&pub_path_for(&key_path))?;
-        return Ok((key_path, pubkey));
+/// Can the Secure-Enclave method work here? `Ok(biometry?)` from a
+/// `trawler-signer check` run — the definitive answer only `CryptoKit` can give —
+/// or `Err(one-line reason)` when unreachable (off-macOS, no `swiftc`, no
+/// Enclave). Probed cheapest-first, before any menu is shown.
+fn se_capability(home: &str) -> Result<bool, String> {
+    if !cfg!(target_os = "macos") {
+        return Err("Secure Enclave signing is macOS-only".to_string());
     }
-    let home = std::env::var("HOME").map_err(|_| "HOME unset; pass --key <path>".to_string())?;
-    match provision_se_key(&home, identity) {
-        Ok(stem) => {
-            let pubkey = read_pubkey(&pub_path_for(&stem))?;
-            return Ok((stem, pubkey));
+    let helper = build_se_helper(home)?;
+    let out = Command::new(&helper)
+        .arg("check")
+        .output()
+        .map_err(|e| format!("cannot run trawler-signer check: {e}"))?;
+    parse_se_check(&String::from_utf8_lossy(&out.stdout))
+}
+
+/// `enclave=yes|no biometry=yes|no` → `Ok(biometry)` when an Enclave exists.
+fn parse_se_check(report: &str) -> Result<bool, String> {
+    if !report.contains("enclave=yes") {
+        return Err("no Secure Enclave on this hardware".to_string());
+    }
+    Ok(report.contains("biometry=yes"))
+}
+
+/// The setup menu, built from the probe: the Secure-Enclave row is labelled by
+/// what its `.userPresence` gate will actually ask (Touch ID, or the login
+/// password on a biometry-less Mac) and greyed with its reason when unreachable.
+fn setup_methods(se: &Result<bool, String>) -> Vec<wizard::MenuOption> {
+    let (se_label, se_note) = match se {
+        Ok(true) | Err(_) => {
+            ("Touch ID (Secure Enclave)", "each signature asks for Touch ID on this Mac")
         }
-        Err(reason) => eprintln!("no Secure-Enclave path ({reason}); trying FIDO2 ..."),
-    }
-    let stem = format!("{home}/.ssh/id_trawler_mrsig");
-    if !Path::new(&pub_path_for(&stem)).exists() {
-        generate_key(&stem)?;
-    }
-    Ok((stem.clone(), read_pubkey(&pub_path_for(&stem))?))
+        Ok(false) => (
+            "System password (Secure Enclave)",
+            "each signature asks for your login password (no biometry here)",
+        ),
+    };
+    vec![
+        wizard::MenuOption {
+            id: "touch-id".to_string(),
+            label: se_label.to_string(),
+            note: se_note.to_string(),
+            unavailable: se.as_ref().err().cloned(),
+        },
+        wizard::MenuOption {
+            id: "fido2".to_string(),
+            label: "FIDO2 security key".to_string(),
+            note: "each signature asks for a touch on the key (needs one plugged in now)"
+                .to_string(),
+            unavailable: None,
+        },
+        wizard::MenuOption {
+            id: "software".to_string(),
+            label: "new software key".to_string(),
+            note: "asks for its passphrase if you set one; possession-only otherwise".to_string(),
+            unavailable: None,
+        },
+        wizard::MenuOption {
+            id: "existing".to_string(),
+            label: "existing key (path)".to_string(),
+            note: "whatever that key itself asks (agent, passphrase, or nothing)".to_string(),
+            unavailable: None,
+        },
+        wizard::MenuOption {
+            id: "identity".to_string(),
+            label: "identity only (no key)".to_string(),
+            note: "nothing - a string match, the weakest tier".to_string(),
+            unavailable: None,
+        },
+    ]
 }
 
 fn read_pubkey(pub_path: &str) -> Result<String, String> {
@@ -446,46 +586,193 @@ fn generate_key(path: &str) -> Result<(), String> {
     }
 }
 
-fn mr_setup(repo: &Path, identity: &str, key: Option<String>) -> Result<(i32, String), String> {
-    let (key_path, pubkey) = resolve_key(identity, key)?;
-    let allowed_path = repo.join(".mr-allowed");
-    let existing = std::fs::read_to_string(&allowed_path).unwrap_or_default();
-    let updated = append_key_line(&existing, &key_line(identity, &pubkey));
-    std::fs::write(&allowed_path, updated).map_err(|e| format!("cannot write .mr-allowed: {e}"))?;
+#[allow(clippy::print_stderr)]
+fn generate_software_key(stem: &str, with_passphrase: bool) -> Result<(), String> {
+    if let Some(parent) = Path::new(stem).parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
+    }
+    let mut command = Command::new("ssh-keygen");
+    command.args(["-q", "-t", "ed25519", "-C", "trawler-mr", "-f", stem]);
+    if with_passphrase {
+        eprintln!("choose the passphrase in ssh-keygen's own prompt (asked per signature) ...");
+    } else {
+        command.args(["-N", ""]);
+    }
+    let ok = command.status().map_err(|e| format!("failed to run ssh-keygen: {e}"))?.success();
+    if ok {
+        Ok(())
+    } else {
+        Err(format!("ssh-keygen failed to generate the software key at {stem}"))
+    }
+}
+
+/// Register a signing key: append its `.mr-allowed` entry (never overwrite) and
+/// make it the active signer (`user.signingkey` — the last setup wins, earlier
+/// keys stay verifiable). A Secure-Enclave blob also installs the bundled
+/// signer as `gpg.ssh.program`.
+fn register_key(
+    repo: &Path,
+    identity: &str,
+    key_path: &str,
+    pubkey: &str,
+) -> Result<(i32, String), String> {
+    append_allowed_line(repo, &key_line(identity, pubkey))?;
     git(repo, &["config", "gpg.format", "ssh"])?;
-    git(repo, &["config", "user.signingkey", &key_path])?;
-    let mut touch_note = "";
-    if is_se_key(&key_path) {
+    git(repo, &["config", "user.signingkey", key_path])?;
+    let asks = if is_se_key(key_path) {
         let home =
             std::env::var("HOME").map_err(|_| "HOME unset; cannot locate signer".to_string())?;
         let helper = build_se_helper(&home)?;
         git(repo, &["config", "gpg.ssh.program", &helper.display().to_string()])?;
-        touch_note = " Every signature will prompt Touch ID (Secure Enclave, this machine only).";
+        "Touch ID / your login password (Secure Enclave, this machine only)"
+    } else if pubkey.starts_with("sk-") {
+        "a touch on the plugged-in security key"
+    } else {
+        "the key's passphrase if it has one; nothing otherwise (possession-only)"
+    };
+    Ok((0, setup_summary(repo, identity, asks)))
+}
+
+/// The closing setup output (P4): what was registered, what each signature will
+/// ask for, which `.mr-allowed` entries this identity now holds, and which key
+/// is the active signer.
+fn setup_summary(repo: &Path, identity: &str, asks: &str) -> String {
+    let entries: Vec<String> = read_allowed(repo)
+        .iter()
+        .filter(|a| a.identity() == identity)
+        .map(|a| a.tier.clone())
+        .collect();
+    let active = git(repo, &["config", "--get", "user.signingkey"])
+        .unwrap_or_else(|_| "none (identity-only)".to_string());
+    format!(
+        "registered {identity} in .mr-allowed (entries: {})\n\
+         each signature asks for: {asks}\n\
+         active signer (user.signingkey): {active}\n\
+         doc commits: cargo xtask mr commit --as {identity}",
+        entries.join(", ")
+    )
+}
+
+fn append_allowed_line(repo: &Path, line: &str) -> Result<(), String> {
+    let allowed_path = repo.join(".mr-allowed");
+    let existing = std::fs::read_to_string(&allowed_path).unwrap_or_default();
+    std::fs::write(&allowed_path, append_key_line(&existing, line))
+        .map_err(|e| format!("cannot write .mr-allowed: {e}"))
+}
+
+fn mr_setup(
+    repo: &Path,
+    identity: Option<String>,
+    key: Option<String>,
+    input: &mut dyn std::io::BufRead,
+) -> Result<(i32, String), String> {
+    let identity = match identity {
+        Some(id) => id,
+        None => wizard::ask(input, "identity (email or username)")?,
+    };
+    if let Some(key_path) = key {
+        let pubkey = read_pubkey(&pub_path_for(&key_path))?;
+        return register_key(repo, &identity, &key_path, &pubkey);
     }
-    Ok((
-        0,
-        format!(
-            "registered key for {identity} in .mr-allowed and configured SSH signing \
-             (user.signingkey={key_path}). Doc commits: cargo xtask mr commit --as \
-             {identity}{touch_note}"
-        ),
-    ))
+    let home = std::env::var("HOME").map_err(|_| "HOME unset; pass --key <path>".to_string())?;
+    setup_wizard(repo, &identity, &home, &se_capability(&home), input)
+}
+
+/// The capability-probed setup menu. `se` is injected so hermetic tests drive
+/// the full wizard without real hardware or `$HOME`; `mr_setup` passes the
+/// live probe.
+pub fn setup_wizard(
+    repo: &Path,
+    identity: &str,
+    home: &str,
+    se: &Result<bool, String>,
+    input: &mut dyn std::io::BufRead,
+) -> Result<(i32, String), String> {
+    let methods = setup_methods(se);
+    let pick = wizard::choose(input, "how should your signatures be authorised?", &methods)?;
+    match methods[pick].id.as_str() {
+        "touch-id" => {
+            let stem = provision_se_key(home, identity)?;
+            register_key(repo, identity, &stem, &read_pubkey(&pub_path_for(&stem))?)
+        }
+        "fido2" => {
+            let stem = format!("{home}/.ssh/id_trawler_mrsig");
+            if !Path::new(&pub_path_for(&stem)).exists() {
+                generate_key(&stem)?;
+            }
+            register_key(repo, identity, &stem, &read_pubkey(&pub_path_for(&stem))?)
+        }
+        "software" => {
+            let stem = format!("{home}/.ssh/id_trawler_{identity}");
+            if !Path::new(&pub_path_for(&stem)).exists() {
+                let with_passphrase =
+                    wizard::confirm(input, "protect it with a passphrase? (skippable)")?;
+                generate_software_key(&stem, with_passphrase)?;
+            }
+            register_key(repo, identity, &stem, &read_pubkey(&pub_path_for(&stem))?)
+        }
+        "existing" => {
+            let path = wizard::ask(input, "path to the key (.pub or private-key stem)")?;
+            register_key(repo, identity, &path, &read_pubkey(&pub_path_for(&path))?)
+        }
+        _ => {
+            let tier = if identity.contains('@') { "email" } else { "username" };
+            append_allowed_line(repo, &format!("{tier}: {identity}"))?;
+            Ok((0, setup_summary(repo, identity, "nothing - a string match, the weakest tier")))
+        }
+    }
+}
+
+/// Positional (non-flag) arguments; every `-…` token consumes the value after it.
+fn split_positionals<'a>(rest: &[&'a str]) -> Vec<&'a str> {
+    let mut positionals = Vec::new();
+    let mut i = 0;
+    while i < rest.len() {
+        if rest[i].starts_with('-') {
+            i += 2;
+        } else {
+            positionals.push(rest[i]);
+            i += 1;
+        }
+    }
+    positionals
 }
 
 pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
+    run_with_input(args, repo, &mut std::io::stdin().lock())
+}
+
+/// [`run`] with the wizard's answers read from `input` — a provided argument
+/// skips its prompt, a missing one is asked. Integration tests drive this with
+/// piped answers.
+pub fn run_with_input(
+    args: &[&str],
+    repo: &Path,
+    input: &mut dyn std::io::BufRead,
+) -> Result<(i32, String), String> {
     match args {
         ["setup", rest @ ..] => {
-            let identity = crate::flag_value(rest, "--as").ok_or(crate::USAGE.to_string())?;
-            mr_setup(repo, &identity, crate::flag_value(rest, "--key"))
+            mr_setup(repo, crate::flag_value(rest, "--as"), crate::flag_value(rest, "--key"), input)
         }
         ["commit", rest @ ..] => {
-            let message = crate::flag_value(rest, "-m").ok_or(crate::USAGE.to_string())?;
-            let identity = crate::flag_value(rest, "--as").ok_or(crate::USAGE.to_string())?;
-            mr_commit(repo, &message, &identity)
+            mr_commit(repo, crate::flag_value(rest, "-m"), crate::flag_value(rest, "--as"), input)
         }
-        ["confirm", level, tip, rest @ ..] => {
-            let identity = crate::flag_value(rest, "--as").ok_or(crate::USAGE.to_string())?;
-            mr_confirm(repo, level, tip, &identity, crate::flag_value(rest, "--target"))
+        ["confirm", rest @ ..] => {
+            let (level, tip) = match split_positionals(rest).as_slice() {
+                [] => (None, None),
+                [level] => (Some(*level), None),
+                [level, tip] => (Some(*level), Some(*tip)),
+                _ => return Err(crate::USAGE.to_string()),
+            };
+            mr_confirm(
+                repo,
+                level,
+                tip,
+                crate::flag_value(rest, "--as"),
+                crate::flag_value(rest, "--target"),
+                input,
+            )
         }
         _ => Err(crate::USAGE.to_string()),
     }
@@ -499,7 +786,7 @@ mod tests {
 
     use super::{
         allowed_signers, append_key_line, has_key_entry, is_se_key, key_line, match_tier,
-        pub_path_for, signature_authorised, signed_note_body, signer_program, touch_hint,
+        pub_path_for, short, signature_authorised, signed_note_body, signer_program, touch_hint,
         trailer_of, Allowed, NOTE_NAMESPACE, SE_KEY_HEADER,
     };
 
@@ -665,9 +952,86 @@ mod tests {
     }
 
     #[test]
-    fn touch_hint_names_the_signer() {
-        assert!(touch_hint("vu").contains("vu"));
-        assert!(touch_hint("vu").to_lowercase().contains("touch"));
+    fn touch_hint_names_the_signer_and_the_action() {
+        let hint = touch_hint("vu", "approve the merge of wu/x/y into epic/x (tip abc1234) as vu");
+        assert!(hint.contains("vu"));
+        assert!(hint.to_lowercase().contains("touch"));
+        assert!(hint.contains("approve the merge of wu/x/y into epic/x"));
+    }
+
+    #[test]
+    fn commit_reason_names_the_title_branch_and_signer() {
+        let reason = super::commit_reason("docs: x\n\nlong body\n", "epic/mrsig", "vuluu");
+        assert_eq!(reason, "commit \"docs: x\" on epic/mrsig as vuluu");
+    }
+
+    #[test]
+    fn confirm_reason_names_both_branches_and_the_tip() {
+        let tip = "0a77604aaaaaaaaa";
+        let reason = super::confirm_reason("wu/mrsig/ux", "epic/mrsig", tip, "vuluu");
+        assert_eq!(
+            reason,
+            format!(
+                "approve the merge of wu/mrsig/ux into epic/mrsig (tip {}) as vuluu",
+                short(tip)
+            )
+        );
+    }
+
+    #[test]
+    fn level_is_inferred_from_the_branch_name_by_a_fixed_regex() {
+        assert_eq!(super::infer_level("wu/mrsig/ux"), Some("wu"));
+        assert_eq!(super::infer_level("epic/mrsig"), Some("epic"));
+        assert_eq!(super::infer_level("main"), None);
+        assert_eq!(super::infer_level("feature/wu"), None);
+        assert_eq!(super::infer_level("HEAD"), None, "detached HEAD asks the user");
+    }
+
+    #[test]
+    fn se_check_reports_parse_to_biometry_or_a_reason() {
+        assert_eq!(super::parse_se_check("enclave=yes biometry=yes\n"), Ok(true));
+        assert_eq!(super::parse_se_check("enclave=yes biometry=no\n"), Ok(false));
+        assert!(super::parse_se_check("enclave=no biometry=no\n").is_err());
+        assert!(super::parse_se_check("garbage").is_err());
+    }
+
+    #[test]
+    fn setup_menu_labels_follow_the_capability_probe() {
+        let touch_id = super::setup_methods(&Ok(true));
+        assert_eq!(touch_id[0].label, "Touch ID (Secure Enclave)");
+        assert!(touch_id[0].unavailable.is_none());
+
+        let password = super::setup_methods(&Ok(false));
+        assert_eq!(password[0].label, "System password (Secure Enclave)");
+        assert!(password[0].note.contains("login password"));
+
+        let absent = super::setup_methods(&Err("no swiftc".to_string()));
+        assert_eq!(absent[0].unavailable.as_deref(), Some("no swiftc"));
+
+        for methods in [&touch_id, &password, &absent] {
+            assert_eq!(methods.len(), 5);
+            assert!(
+                methods[1..].iter().all(|m| m.unavailable.is_none()),
+                "only the Enclave row is capability-gated"
+            );
+        }
+    }
+
+    #[test]
+    fn positionals_split_off_flag_value_pairs() {
+        assert_eq!(
+            super::split_positionals(&["wu", "HEAD", "--as", "vu", "--target", "main"]),
+            vec!["wu", "HEAD"]
+        );
+        assert_eq!(super::split_positionals(&["--as", "vu"]), Vec::<&str>::new());
+        assert_eq!(super::split_positionals(&["epic"]), vec!["epic"]);
+    }
+
+    #[test]
+    fn allowed_entries_accumulate_across_methods() {
+        let after_key = append_key_line("username: vu\n", &key_line("vu", "ssh-ed25519 AAAA"));
+        let after_email = append_key_line(&after_key, "email: vu@x.co");
+        assert_eq!(after_email, "username: vu\nkey: vu ssh-ed25519 AAAA\nemail: vu@x.co\n");
     }
 
     #[test]

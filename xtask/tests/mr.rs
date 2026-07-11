@@ -482,9 +482,9 @@ fn confirm_signs_when_user_signingkey_is_a_public_key_path() {
 /// tests prove the helper builds and its ssh-keygen passthrough delegates
 /// correctly for every non-Enclave key.
 fn compiled_se_helper(dir: &Path) -> Option<PathBuf> {
-    let src = dir.join("se-sign.swift");
-    let bin = dir.join("se-sign");
-    std::fs::write(&src, include_str!("../src/se_sign.swift")).unwrap();
+    let src = dir.join("trawler-signer.swift");
+    let bin = dir.join("trawler-signer");
+    std::fs::write(&src, include_str!("../src/trawler_signer.swift")).unwrap();
     let out = Command::new("swiftc").arg("-O").arg(&src).arg("-o").arg(&bin).output().ok()?;
     assert!(out.status.success(), "swiftc failed: {}", String::from_utf8_lossy(&out.stderr));
     Some(bin)
@@ -554,6 +554,138 @@ fn confirm_signs_through_the_configured_signer_program() {
         mr::run(&["confirm", "wu", &tip, "--as", "vu", "--target", &base], repo.p()).unwrap();
     assert_eq!(code, 0, "{out}");
     assert!(mr::tip_authorised(repo.p(), &tip), "the note signed via the helper authorises");
+}
+
+// ── E-MRSIG.W8 — the mr wizard ───────────────────────────────────────────────
+
+fn answers(text: &str) -> std::io::Cursor<Vec<u8>> {
+    std::io::Cursor::new(text.as_bytes().to_vec())
+}
+
+#[test]
+fn setup_wizard_runs_the_software_key_path_with_piped_answers() {
+    let repo = Repo::new("email: a@b.co\n");
+    let se_absent = Err("no Secure Enclave on this hardware".to_string());
+    // Answers: method = software key, passphrase step skipped.
+    let mut input = answers("software\n\n");
+    let (code, out) =
+        mr::setup_wizard(repo.p(), "vu", repo.p().to_str().unwrap(), &se_absent, &mut input)
+            .unwrap();
+    assert_eq!(code, 0, "{out}");
+
+    let allowed = std::fs::read_to_string(repo.p().join(".mr-allowed")).unwrap();
+    assert!(allowed.contains("key: vu ssh-ed25519"), "{allowed}");
+    assert!(allowed.contains("email: a@b.co"), "adds, never overwrites: {allowed}");
+    assert_eq!(repo.git(&["config", "--get", "gpg.format"]), "ssh");
+    let signingkey = repo.git(&["config", "--get", "user.signingkey"]);
+    assert!(signingkey.ends_with("/.ssh/id_trawler_vu"), "{signingkey}");
+    assert!(out.contains("registered vu in .mr-allowed"), "{out}");
+    assert!(out.contains("each signature asks for:"), "{out}");
+    assert!(out.contains(&signingkey), "the summary names the active signer: {out}");
+}
+
+#[test]
+fn setup_wizard_identity_only_adds_an_entry_without_signing_config() {
+    let repo = Repo::new("");
+    let se_absent = Err("no Secure Enclave on this hardware".to_string());
+    let (code, out) = mr::setup_wizard(
+        repo.p(),
+        "bo@x.co",
+        repo.p().to_str().unwrap(),
+        &se_absent,
+        &mut answers("identity\n"),
+    )
+    .unwrap();
+    assert_eq!(code, 0, "{out}");
+    let allowed = std::fs::read_to_string(repo.p().join(".mr-allowed")).unwrap();
+    assert_eq!(allowed, "email: bo@x.co\n", "'@' means the email tier");
+    assert!(
+        xtask::git::git(repo.p(), &["config", "--get", "user.signingkey"]).is_err(),
+        "identity-only configures no signer"
+    );
+    assert!(out.contains("weakest"), "{out}");
+}
+
+#[test]
+fn setup_wizard_refuses_an_unavailable_method_then_accepts_a_listed_one() {
+    let repo = Repo::new("");
+    let se_absent = Err("Secure Enclave signing is macOS-only".to_string());
+    // "touch-id" is greyed out: the wizard re-asks, then accepts "identity".
+    let (code, _) = mr::setup_wizard(
+        repo.p(),
+        "vu",
+        repo.p().to_str().unwrap(),
+        &se_absent,
+        &mut answers("touch-id\nidentity\n"),
+    )
+    .unwrap();
+    assert_eq!(code, 0);
+    let allowed = std::fs::read_to_string(repo.p().join(".mr-allowed")).unwrap();
+    assert_eq!(allowed, "username: vu\n");
+}
+
+#[test]
+fn commit_wizard_picks_the_identity_from_mr_allowed() {
+    let repo = Repo::new("email: a@b.co\nusername: vu\n");
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+
+    let mut input = answers("vu\n");
+    let (code, out) =
+        mr::run_with_input(&["commit", "-m", "docs: change"], repo.p(), &mut input).unwrap();
+    assert_eq!(code, 0, "{out}");
+    let body = repo.git(&["log", "-1", "--format=%B"]);
+    assert_eq!(mr::trailer_of(&body), Some(("username".into(), "vu".into())));
+}
+
+#[test]
+fn commit_wizard_asks_for_a_missing_message() {
+    let repo = Repo::new("username: vu\n");
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+
+    // Message prompted; the single listed identity is taken without a prompt.
+    let mut input = answers("docs: asked for\n");
+    let (code, out) = mr::run_with_input(&["commit"], repo.p(), &mut input).unwrap();
+    assert_eq!(code, 0, "{out}");
+    assert!(repo.git(&["log", "-1", "--format=%B"]).starts_with("docs: asked for"));
+}
+
+#[test]
+fn confirm_wizard_infers_level_tip_and_target_from_the_branch() {
+    let repo = Repo::new("email: a@b.co\n");
+    setup_with_software_key(&repo, "vu");
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/y"]);
+    repo.write("src/lib.rs", "pub fn f() {}\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "the change"]);
+
+    // No level, no tip, no --target: wu from the branch name, HEAD, epic/x.
+    let (code, out) =
+        mr::run_with_input(&["confirm", "--as", "vu"], repo.p(), &mut answers("")).unwrap();
+    assert_eq!(code, 0, "{out}");
+    let body = repo.git(&["notes", "--ref=mr", "show", "HEAD"]);
+    assert!(body.contains("level: working-unit"), "{body}");
+    assert!(body.contains("sig: |"), "{body}");
+    assert!(mr::tip_authorised(repo.p(), "HEAD"));
+}
+
+#[test]
+fn confirm_wizard_asks_for_the_level_when_the_branch_matches_no_regex() {
+    let repo = Repo::new("username: vu\n");
+    // Identity-only signer on `main`: level comes from the piped answer.
+    let (code, out) =
+        mr::run_with_input(&["confirm", "--as", "vu"], repo.p(), &mut answers("epic\n")).unwrap();
+    assert_eq!(code, 0, "{out}");
+    assert!(repo.git(&["notes", "--ref=mr", "show", "HEAD"]).contains("level: epic"));
+}
+
+#[test]
+fn wizard_eof_is_a_usage_error_naming_the_missing_input() {
+    let repo = Repo::new("username: vu\n");
+    let err = mr::run_with_input(&["setup"], repo.p(), &mut answers("")).unwrap_err();
+    assert!(err.contains("missing input: identity"), "{err}");
 }
 
 // ── E-MRSIG e2e — the full signed manual-review flow ─────────────────────────

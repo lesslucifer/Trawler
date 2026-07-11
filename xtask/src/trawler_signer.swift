@@ -17,7 +17,7 @@ let keyBlobHeader = "trawler-se-v1"
 let keyType = "ecdsa-sha2-nistp256"
 
 func die(_ msg: String) -> Never {
-    FileHandle.standardError.write(Data(("se-sign: " + msg + "\n").utf8))
+    FileHandle.standardError.write(Data(("trawler-signer: " + msg + "\n").utf8))
     exit(1)
 }
 
@@ -77,7 +77,9 @@ func loadKey(_ blobFile: String, _ content: String) -> SecureEnclave.P256.Signin
         let blob = Data(base64Encoded: String(lines[1]))
     else { die("malformed key blob at \(blobFile)") }
     let ctx = LAContext()
-    ctx.localizedReason = "sign for Trawler manual review"
+    ctx.localizedReason =
+        ProcessInfo.processInfo.environment["TRAWLER_SIGN_REASON"]
+        ?? "sign for Trawler manual review"
     do {
         return try SecureEnclave.P256.Signing.PrivateKey(
             dataRepresentation: blob, authenticationContext: ctx)
@@ -111,8 +113,15 @@ func sign(namespace: String, key: SecureEnclave.P256.Signing.PrivateKey, message
 
 let args = Array(CommandLine.arguments.dropFirst())
 if args.first == "keygen" {
-    guard args.count == 2 else { die("usage: se-sign keygen <stem>") }
+    guard args.count == 2 else { die("usage: trawler-signer keygen <stem>") }
     keygen(stem: args[1])
+    exit(0)
+}
+if args.first == "check" {
+    let enclave = SecureEnclave.isAvailable
+    let biometry = LAContext().canEvaluatePolicy(
+        .deviceOwnerAuthenticationWithBiometrics, error: nil)
+    print("enclave=\(enclave ? "yes" : "no") biometry=\(biometry ? "yes" : "no")")
     exit(0)
 }
 
