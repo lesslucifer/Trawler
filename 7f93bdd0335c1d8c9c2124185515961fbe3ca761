@@ -1,0 +1,14 @@
+schema: cr/v2
+scope: "WU E-GATEFAST.W6 -> epic/gatefast"
+epic: E-GATEFAST
+wu: E-GATEFAST.W6
+branch: wu/gatefast/ctx-pack
+base: ac05752f9534e75b99b11090057221c5cb1f546b
+head: 7f93bdd0335c1d8c9c2124185515961fbe3ca761
+diff_sha256: c0f4f6dfc1ba62ee5198a1518f845f6d91afb7ab77398f9c247879cc10daee88
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 6, verified: 0, waived: 0 }
+refuted: 6
+note: "2 of 6 candidates were byte-identical to refutations from the prior FAIL run on cd636b8 (passages unchanged between tips); their refutations carried forward, 4 freshly verified false-positive"
+verdict: PASS
+date: 2026-07-11
