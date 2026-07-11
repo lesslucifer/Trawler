@@ -1,0 +1,20 @@
+schema: doc/v1
+epic: E-MRSIG
+wu: E-MRSIG.W3
+changes:
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "manual-review section: key tier, per-level signature (gpgsig for doc commits verified at pre-push + walk, note-carried sig over base..tip for WU/epic at check 8), mr setup/trawler-signer flow, per-entry coexistence callout; check 7/8 + hooks rows updated"
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "new DEC-9 (SSH-signature auth: carriers, hook-timing rationale, per-entry guarantee, trawler-signer); DEC-7 consequence line closed against DEC-9"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "workflow-gates row now lists DEC-9; identity-only-pending-E-MRSIG wording replaced"
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: updated
+    distills: "E-MRSIG deferred row struck as shipped, pointing at DEC-9"
