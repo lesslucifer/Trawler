@@ -1,0 +1,12 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEFAST
+wu: E-GATEFAST.W6
+branch: wu/gatefast/ctx-pack
+tests:
+  unit:
+    waived: "docs-only diff (T3 result report; SKILL.md untouched - mechanism not adopted per the pre-registered A/B rule); no code added or changed"
+  integration:
+    waived: "same diff; the WU bounded contract is the recorded A/B artifact (per-finder durations, candidate sets, U1/U2 recall) in the result report, per the W6-W8 plan test plan"
+  e2e:
+    waived: "epic-level e2e; wall-clock is non-deterministic so no timing assertion enters the hermetic suite (epic non-goal)"
