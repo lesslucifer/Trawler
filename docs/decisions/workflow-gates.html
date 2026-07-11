@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions — Workflow Gates</h1>
       <p>Why DoD evidence is shaped the way it is.</p>
-      <div class="meta">v5 · 2026-07-07 · Trawler · <a href="decisions-index.html">index</a></div>
+      <div class="meta">v6 · 2026-07-11 · Trawler · <a href="decisions-index.html">index</a></div>
     </div>
   </header>
   <main>
@@ -149,11 +149,12 @@
     </table>
 
     <h3 id="dec-7-consequences">Consequences</h3>
-    <p>The gate now honestly enforces a human pause and records an accountable signer; it does <em>not</em>
-    yet prove the agent could not have signed — that is E-MRSIG's job and is called out at every doc touch
-    point. Until E-UIFOUND lands, the UI-WU rule matches only <code>ui/</code> paths, so no current WU
-    triggers it; epics and doc commits are live immediately. Adding a person to <code>.mr-allowed</code> is
-    itself a tracked, reviewable diff.</p>
+    <p>The gate now honestly enforces a human pause and records an accountable signer. The cryptographic
+    form this DEC deferred has since landed: E-MRSIG swapped the auth predicate to signature-verify for
+    <code>key</code>-backed identities through exactly the seam named here (<a href="#dec-9">DEC-9</a>);
+    identity-only entries keep this DEC's audit-trail-not-proof guarantee. Until E-UIFOUND lands, the UI-WU
+    rule matches only <code>ui/</code> paths, so no current WU triggers it; epics and doc commits are live
+    immediately. Adding a person to <code>.mr-allowed</code> is itself a tracked, reviewable diff.</p>
 
     <h2 id="dec-8"><span class="badge id">DEC-8</span> The epic walk skips history already on the gate target; a per-seam walk waiver on the <code>cr/v2</code> note is the only recorded override</h2>
     <table data-c="dec-8-facts">
@@ -196,6 +197,42 @@
     a misfire is now a logged, per-seam door on the <code>cr/v2</code> note, not a blanket <code>--no-verify</code>
     wall. The standing workflow rule "cross-epic dependencies serialize through <code>main</code>" is now
     explicit; unlanded live integration has a recorded escape (the waiver) rather than needing #3′.</p>
+
+    <h2 id="dec-9"><span class="badge id">DEC-9</span> Manual-review auth is an SSH signature verified against a <code>key</code> entry — native <code>gpgsig</code> for doc commits, note-carried for WU/epic tips</h2>
+    <table data-c="dec-9-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-11</td></tr>
+        <tr><th>Origin</th><td>Epic E-MRSIG — the cryptographic form DEC-7 deferred; plan archived at <code>docs/.archive/</code> (untracked)</td></tr>
+        <tr><th>Where</th><td><code>xtask/src/mr.rs · signature_authorised/commit_signed/trailer_key_backed</code> · <code>xtask/src/gate.rs · check_manual_review/check_commit_trailer</code> · <code>xtask/src/lib.rs · range</code> · <code>xtask/src/trawler_signer.swift</code> · <code>.mr-allowed</code> · <a href="../workflow.html#manual-review">workflow.html</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-9-context">Context</h3>
+    <p>DEC-7's identity-only auth is agent-forgeable by design — the agent knows the user's identity and can
+    emit it. Unforgeability requires the sign-off to be something only the human's hardware can produce: a
+    signature over the exact change, made with a private key the agent can neither read nor operate, verified
+    offline against a public key listed in the repo.</p>
+
+    <h3 id="dec-9-choices">Choices (each looks "fixable" — it isn't)</h3>
+    <table data-c="dec-9-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
+      <tbody>
+        <tr><td>SSH signatures (<code>ssh-keygen -Y</code> / git's <code>gpg.format=ssh</code>), not GPG or sigstore</td><td>Verification is fully offline with tools already present (git ≥ 2.34, OpenSSH ≥ 8.0); no keyserver, no network trust root. The key type is whatever <code>.mr-allowed</code> lists — FIDO2 <code>sk-</code> keys and Secure-Enclave ECDSA verify identically stock.</td></tr>
+        <tr><td>Doc commits sign git-natively (<code>gpgsig</code> header), verified at pre-push + the epic walk — not at <code>commit-msg</code></td><td>Forced by hook timing: git signs <em>after</em> <code>commit-msg</code> runs, so that hook can only presence-check the trailer. An armored SSH signature (~232 chars) in the message body was rejected — the signature rides the commit object header and the message stays clean. Both later enforcement points route through one function (<code>check_commit_trailer</code>), which the pre-push range check and the walk share.</td></tr>
+        <tr><td>WU/epic tips carry the signature in the <code>mr/v1</code> note (<code>base</code> + <code>sig</code> over the <code>base..tip</code> change-hash), verified at gate check 8</td><td>A merge tip needs authorising before the merge exists, so nothing git-native can carry it; the note already rode the tip (DEC-7). Signing the recomputed change-hash makes it tamper-evident: amend/rebase changes the hash and the signature stops verifying.</td></tr>
+        <tr><td>The guarantee is per-entry: <code>key</code> entries must verify; <code>email</code>/<code>username</code> entries stay listed-authorised</td><td>Coexistence is a migration convenience the user accepted knowingly — an identity-only entry remains agent-forgeable the moment it is listed, so unforgeability holds only for an all-<code>key</code> allow-list. A trailer claiming a weaker tier for a <code>key</code>-backed identity does not dodge the signature requirement (<code>trailer_key_backed</code> matches by identity, not claimed tier).</td></tr>
+        <tr><td>On a Secure-Enclave Mac, <code>mr setup</code> compiles and installs the bundled <code>trawler-signer</code> (CryptoKit) as <code>gpg.ssh.program</code></td><td>The "no extra apps" requirement: <code>sc_auth</code> cannot produce SSHSIG, and Secretive is an extra app. Rebuilding its core (Enclave key + SSHSIG emission, per-signature Touch ID) is ~200 lines of Swift compiled with the system <code>swiftc</code>; both signing call sites are ours, so no ssh-agent is needed. <code>TRAWLER_SIGN_REASON</code> names the authorised action on the Touch ID sheet so the human knows what they are approving. Verification stays stock <code>ssh-keygen -Y verify</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-9-consequences">Consequences</h3>
+    <p>For <code>key</code>-backed identities the sign-off is now proof, not audit trail: the agent cannot
+    self-authorise a doc commit or a WU/epic tip, and amending a confirmed tip goes red at the next gate.
+    The rules, carriers, hook and check numbering of DEC-7 are unchanged — only the auth predicate deepened.
+    The rule applies forward; pre-existing history is not re-signed. Hardware presence (the Touch ID prompt)
+    is a deployment property: hermetic tests prove the crypto half with software keys, and the e2e
+    (<code>e2e_signed_manual_review_flow_with_a_software_key</code>) drives setup → signed doc commit →
+    signed confirm → tamper → rejection.</p>
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>

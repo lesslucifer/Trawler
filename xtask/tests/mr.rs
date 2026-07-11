@@ -309,6 +309,18 @@ fn commit_signed_rejects_an_unsigned_commit() {
 }
 
 #[test]
+fn trailer_key_backed_only_for_identities_with_a_key_entry() {
+    let repo = Repo::new("email: a@b.co\nkey: vu ssh-ed25519 AAAA t\n");
+    assert!(mr::trailer_key_backed(repo.p(), "m\n\nReviewed-By: key vu\n"));
+    assert!(
+        mr::trailer_key_backed(repo.p(), "m\n\nReviewed-By: username vu\n"),
+        "a weaker claimed tier must not dodge the signature requirement"
+    );
+    assert!(!mr::trailer_key_backed(repo.p(), "m\n\nReviewed-By: email a@b.co\n"));
+    assert!(!mr::trailer_key_backed(repo.p(), "no trailer at all"));
+}
+
+#[test]
 fn commit_signed_rejects_a_commit_signed_by_an_unlisted_key() {
     let repo = Repo::new("email: a@b.co\n");
     repo.keygen("id");

@@ -297,7 +297,7 @@ impl Gate<'_> {
         }
     }
 
-    fn check_commit_trailer(
+    pub(crate) fn check_commit_trailer(
         &self,
         report: &mut Report,
         commit: &str,
@@ -308,15 +308,18 @@ impl Gate<'_> {
             return Ok(());
         }
         let message = git(self.repo, &["log", "-1", "--format=%B", commit]).unwrap_or_default();
-        // A doc commit is authorised by an in-message Reviewed-By trailer or, for
-        // commits that predate the trailer mechanism, an mr/v1 note added to it.
-        if !crate::mr::message_authorised(self.repo, &message)
-            && !crate::mr::tip_authorised(self.repo, commit)
-        {
+        // A doc commit is authorised by an in-message Reviewed-By trailer — which a
+        // key-backed identity must seal with a verifying gpgsig — or, for commits
+        // that predate the trailer mechanism, an mr/v1 note added to it.
+        let trailer_ok = crate::mr::message_authorised(self.repo, &message)
+            && (!crate::mr::trailer_key_backed(self.repo, &message)
+                || crate::mr::commit_signed(self.repo, commit));
+        if !trailer_ok && !crate::mr::tip_authorised(self.repo, commit) {
+            report.exempt = false;
             report.failures.push(Failure::new(
                 "8·manual-review",
                 format!(
-                    "doc commit {} has no valid {} trailer or mr/v1 note",
+                    "doc commit {} has no valid {} trailer (a key-backed identity must also sign the commit) or mr/v1 note",
                     short(commit),
                     crate::mr::TRAILER_KEY
                 ),

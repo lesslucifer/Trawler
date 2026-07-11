@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Workflow Standard</h1>
       <p>How work is planned, gated and merged: epic → working unit → commit, one hook-enforced DoD gate per level, completeness proven from git notes — never from an agent's word.</p>
-      <div class="meta">v6 · 2026-07-07 · Trawler · T1 process doc</div>
+      <div class="meta">v7 · 2026-07-11 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -141,17 +141,32 @@ flowchart TD
     message: <code>cargo xtask mr commit -m "&lt;msg&gt;" --as &lt;id&gt;</code> appends a
     <code>Reviewed-By: &lt;tier&gt; &lt;id&gt;</code> trailer and the <code>commit-msg</code> hook refuses any
     docs-touching commit that lacks one. WU/epic tips carry the record as a note:
-    <code>cargo xtask mr confirm &lt;wu|epic&gt; &lt;tip&gt; --as &lt;id&gt;</code>. Both check the identity
-    against <code>.mr-allowed</code> (tiers <code>email</code>/<code>username</code>). The check runs
+    <code>cargo xtask mr confirm</code> (a wizard — args pre-answer its prompts, level/tip/target are
+    inferred from the branch). Both check the identity against <code>.mr-allowed</code>
+    (tiers <code>email</code>/<code>username</code>/<code>key</code>). The check runs
     <em>independently of the docs/infra exemption</em> — an always-required epic still needs its note even
     when its diff is exempt from test/cr/doc.</p>
 
+    <p data-c="mr-signature">A <code>key</code> entry (<code>key: &lt;identity&gt; &lt;ssh-pubkey&gt;</code>)
+    makes the sign-off <strong>unforgeable</strong> (<span class="badge id">E-MRSIG</span> ·
+    <a href="decisions/workflow-gates.html#dec-9">DEC-9</a>): authorisation then requires an SSH signature
+    only the human's hardware can produce, verified offline against the listed public key. What is signed per
+    level: a <strong>doc commit</strong> is git-native SSH-signed (<code>gpgsig</code> header — the message
+    stays clean; verified via <code>git verify-commit</code> at pre-push and the epic walk, because the
+    <code>commit-msg</code> hook runs before git signs); a <strong>WU/epic tip</strong>'s <code>mr/v1</code>
+    note carries a signature over the recomputed <code>base..tip</code> change-hash (verified at gate
+    check 8), so amending or rebasing a confirmed tip breaks it. <code>cargo xtask mr setup</code> is the
+    one-command wizard: it probes what the machine offers (on a Secure-Enclave Mac it compiles and installs
+    the bundled <code>trawler-signer</code>, whose Touch ID sheet names the authorised action via
+    <code>TRAWLER_SIGN_REASON</code>), accumulates the chosen methods in <code>.mr-allowed</code>, and points
+    <code>user.signingkey</code> at the single active key.</p>
+
     <div class="callout warn" data-c="mr-scope">
-      <p><strong>Identity-only, this epic (E-NMWF) — the AI agent must never self-authorise.</strong> An agent
-      knows the user's identity, so it <em>can</em> produce it: the guarantee today is a forced stop + an
-      audit trail of who signed, not cryptographic proof. A human reviews and confirms; only then is the
-      trailer/note written. The unforgeable form is <span class="badge id">E-MRSIG</span>
-      (<a href="decisions/workflow-gates.html#dec-7">DEC-7</a> · <a href="backlog/roadmap.html">roadmap</a>).</p>
+      <p><strong>The guarantee is per-entry.</strong> Identity-only tiers (<code>email</code>/<code>username</code>)
+      remain listed-authorised — and agent-forgeable — as a migration convenience; a <code>key</code>-backed
+      identity must sign, and claiming a weaker tier in the trailer does not dodge that. Unforgeability holds
+      only for a <code>.mr-allowed</code> whose entries are all <code>key</code> lines
+      (<a href="decisions/workflow-gates.html#dec-9">DEC-9</a>).</p>
     </div>
 
     <h2 id="evidence">Evidence — five notes, one tip</h2>
@@ -162,7 +177,7 @@ flowchart TD
         <tr><td><code>test/v2</code></td><td><code>refs/notes/test</code></td><td>what tests back this work (per-layer counts/waivers)</td><td><a href="testing-strategy.html">testing standard</a></td></tr>
         <tr><td><code>cr/v2</code></td><td><code>refs/notes/cr</code></td><td>an independent review judged exactly this diff: PASS/FAIL + <code>diff_sha256</code></td><td><code>.claude/skills/code-review/</code></td></tr>
         <tr><td><code>doc/v1</code></td><td><code>refs/notes/doc</code></td><td>every changed doc file accounted for; distillation lineage</td><td><a href="documentation-system.html">documentation system</a></td></tr>
-        <tr><td><code>mr/v1</code></td><td><code>refs/notes/mr</code></td><td>a listed human authorised this WU/epic tip: <code>tier</code> + <code>signer</code></td><td>this doc · <a href="decisions/workflow-gates.html">DEC-7</a></td></tr>
+        <tr><td><code>mr/v1</code></td><td><code>refs/notes/mr</code></td><td>a listed human authorised this WU/epic tip: <code>tier</code> + <code>signer</code>, plus <code>base</code> + <code>sig</code> (a signature over the <code>base..tip</code> change-hash) when the signer is <code>key</code>-backed</td><td>this doc · <a href="decisions/workflow-gates.html">DEC-7</a>/<a href="decisions/workflow-gates.html#dec-9">DEC-9</a></td></tr>
         <tr><td><code>dod/v1</code></td><td><code>refs/notes/dod</code></td><td>the gate ran green here (receipt below)</td><td>this doc</td></tr>
       </tbody>
     </table>
@@ -209,8 +224,8 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
         <tr><td>4</td><td>Review <code>base</code> equals the current merge-base — stale reviews rejected</td></tr>
         <tr><td>5</td><td><code>diff_sha256</code> equals the gated diff recomputed now, byte-identical</td></tr>
         <tr><td>6</td><td><code>doc/v1</code> matches <code>git diff --name-only</code> exactly (no missing/phantom entries, tiers correct); code change ⇒ T2 entry or <code>t2_waived</code>; epic ⇒ only expected doc locations tracked at the tip (flat <code>docs/*</code>, <code>use-cases/</code>, <code>decisions/</code>, <code>backlog/</code> — nothing under <code>docs/work/</code>; archived docs live untracked in <code>docs/.archive/</code>); <code>archived</code> entries carry <code>distilled_to</code></td></tr>
-        <tr><td>7</td><td><em>Epic:</em> first-parent walk — each merge's <code>^2</code> re-verified as a WU, each non-merge commit checked as standalone (docs-only exempt from test/cr/doc, but a doc commit's <code>Reviewed-By</code> trailer is re-verified; the tip itself is covered by the epic gate). A seam whose merged-in parent is already reachable from the epic mainline <em>or</em> from the gate target is skipped — a back-merge of landed history (<code>main</code> or a sibling already on <code>main</code>) is not a net-new seam (<a href="decisions/workflow-gates.html#dec-8">DEC-8</a>); a genuine forward seam always carries work absent from the target, so the skip can't swallow it. Octopus merges are refused, by the walk and by the hook: one WU per merge. A misfire is overridable per-seam via the walk-error waiver below — never by <code>--no-verify</code></td></tr>
-        <tr><td>8</td><td><em>Manual review</em> (path-derived, not waivable): an epic tip always, and a UI-touching WU tip, needs a valid <code>mr/v1</code> note whose <code>signer</code> is listed in <code>.mr-allowed</code>. Runs before the exemption, like the epic tracked-doc check. Absent/unlisted ⇒ red, with an instruction to get human confirmation — the agent must not self-authorise</td></tr>
+        <tr><td>7</td><td><em>Epic:</em> first-parent walk — each merge's <code>^2</code> re-verified as a WU, each non-merge commit checked as standalone (docs-only exempt from test/cr/doc, but a doc commit's <code>Reviewed-By</code> trailer is re-verified — including its <code>gpgsig</code> when the identity is <code>key</code>-backed; the tip itself is covered by the epic gate). A seam whose merged-in parent is already reachable from the epic mainline <em>or</em> from the gate target is skipped — a back-merge of landed history (<code>main</code> or a sibling already on <code>main</code>) is not a net-new seam (<a href="decisions/workflow-gates.html#dec-8">DEC-8</a>); a genuine forward seam always carries work absent from the target, so the skip can't swallow it. Octopus merges are refused, by the walk and by the hook: one WU per merge. A misfire is overridable per-seam via the walk-error waiver below — never by <code>--no-verify</code></td></tr>
+        <tr><td>8</td><td><em>Manual review</em> (path-derived, not waivable): an epic tip always, and a UI-touching WU tip, needs a valid <code>mr/v1</code> note whose <code>signer</code> is listed in <code>.mr-allowed</code> — and whose <code>sig</code> verifies over the recomputed <code>base..tip</code> change-hash when the note carries one (a <code>key</code>-backed signer). Runs before the exemption, like the epic tracked-doc check. Absent/unlisted/failed-verify ⇒ red, with an instruction to get human confirmation — the agent must not self-authorise</td></tr>
       </tbody>
     </table>
 
@@ -227,8 +242,8 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
       <thead><tr><th>Hook</th><th>Enforces</th></tr></thead>
       <tbody>
         <tr><td><code>pre-commit</code></td><td>refuses non-merge commits on <code>main</code> with branch guidance (DEC-6) · <code>fmt</code> + <code>clippy -D warnings</code> · when completing a <em>conflicted</em> merge (MERGE_HEAD on disk — those never reach pre-merge-commit), runs the same merge gate</td></tr>
-        <tr><td><code>commit-msg</code></td><td>if the staged diff touches <code>docs/</code>, refuses the commit unless the message carries a <code>Reviewed-By</code> trailer naming a listed authoriser (manual review at commit level); merge commits are skipped — their merged doc commits carry their own trailers, re-verified by the walk</td></tr>
-        <tr><td><code>pre-push</code></td><td>full suite · auto-pushes <code>refs/notes/*</code> · range-checks standalone commits on <code>main</code>/<code>epic/*</code> pushes</td></tr>
+        <tr><td><code>commit-msg</code></td><td>if the staged diff touches <code>docs/</code>, refuses the commit unless the message carries a <code>Reviewed-By</code> trailer naming a listed authoriser (manual review at commit level — a presence check only: the hook runs before git signs, so a <code>key</code>-backed signature is verified later, at pre-push and the walk); merge commits are skipped — their merged doc commits carry their own trailers, re-verified by the walk</td></tr>
+        <tr><td><code>pre-push</code></td><td>full suite · auto-pushes <code>refs/notes/*</code> · range-checks standalone commits on <code>main</code>/<code>epic/*</code> pushes, incl. each doc commit's authorisation (trailer listed; <code>gpgsig</code> verifies for a <code>key</code>-backed identity)</td></tr>
         <tr><td><code>pre-merge-commit</code></td><td>runs the gate on <code>MERGE_HEAD</code>: into <code>epic/*</code> ⇒ wu gate, into <code>main</code> ⇒ epic gate; docs/infra-only merges pass ungated; red refuses the merge</td></tr>
         <tr><td><code>post-checkout</code></td><td>heals <code>merge.ff = false</code> · worktree setup</td></tr>
       </tbody>

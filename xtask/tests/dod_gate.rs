@@ -62,6 +62,17 @@ impl Repo {
     fn gate(&self) -> Gate<'_> {
         Gate { repo: &self.path }
     }
+
+    fn keygen(&self) -> String {
+        let key = self.path.join("signer");
+        assert!(std::process::Command::new("ssh-keygen")
+            .args(["-q", "-t", "ed25519", "-N", "", "-f"])
+            .arg(&key)
+            .status()
+            .unwrap()
+            .success());
+        std::fs::read_to_string(self.path.join("signer.pub")).unwrap().trim().to_string()
+    }
 }
 
 fn identity(epic: &str, wu: Option<&str>) -> String {
@@ -880,6 +891,82 @@ fn a_doc_commit_note_authorises_when_the_trailer_is_absent() {
         "an mr/v1 note on the doc commit authorises it: {}",
         format_report(&report)
     );
+}
+
+#[test]
+fn epic_walk_rejects_an_unsigned_doc_commit_from_a_key_backed_identity() {
+    let (repo, _) = epic_with_merged_wu();
+    let pubkey = repo.keygen();
+    repo.write("docs/use-cases/api.html", "<html>forged key trailer, no signature</html>\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "--cleanup=verbatim", "-m", "doc edit\n\nReviewed-By: key vu\n"]);
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+    repo.write(".mr-allowed", &format!("email: a@b.co\nkey: vu {pubkey}\n"));
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        checks_of(&report).contains(&"8·manual-review"),
+        "a key-backed trailer without a verifying gpgsig must not authorise: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn epic_walk_accepts_a_signed_doc_commit_from_a_key_backed_identity() {
+    let (repo, _) = epic_with_merged_wu();
+    let pubkey = repo.keygen();
+    repo.git(&["config", "gpg.format", "ssh"]);
+    repo.git(&["config", "user.signingkey", repo.path.join("signer").to_str().unwrap()]);
+    repo.write("docs/use-cases/api.html", "<html>signed doc edit</html>\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&[
+        "commit",
+        "-q",
+        "-S",
+        "--cleanup=verbatim",
+        "-m",
+        "doc edit\n\nReviewed-By: key vu\n",
+    ]);
+    close_epic(&repo);
+    bless_epic(&repo, T2_ENTRY);
+    repo.write(".mr-allowed", &format!("email: a@b.co\nkey: vu {pubkey}\n"));
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        !checks_of(&report).contains(&"8·manual-review"),
+        "a doc commit signed by the listed key authorises: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn range_rejects_an_unauthorised_doc_commit_at_the_pre_push_seam() {
+    let repo = Repo::new();
+    allow_file(&repo);
+    let old = repo.sha("HEAD");
+    repo.write("docs/use-cases/api.html", "<html>unauthorised edit</html>\n");
+    let new = repo.commit("doc edit, no trailer");
+
+    let args: Vec<String> =
+        ["verify-dod", "range", old.as_str(), new.as_str()].map(String::from).into();
+    let (code, out) = xtask::run(&args, &repo.path).unwrap();
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("8·manual-review"), "{out}");
+}
+
+#[test]
+fn range_accepts_a_listed_identity_trailered_doc_commit() {
+    let repo = Repo::new();
+    allow_file(&repo);
+    let old = repo.sha("HEAD");
+    repo.write("docs/use-cases/api.html", "<html>reviewed edit</html>\n");
+    let new = repo.commit_reviewed("doc edit");
+
+    let args: Vec<String> =
+        ["verify-dod", "range", old.as_str(), new.as_str()].map(String::from).into();
+    let (code, out) = xtask::run(&args, &repo.path).unwrap();
+    assert_eq!(code, 0, "{out}");
 }
 
 #[test]

@@ -341,6 +341,13 @@ pub fn message_authorised(repo: &Path, message: &str) -> bool {
     trailer_of(message).is_some_and(|(_, id)| match_tier(&read_allowed(repo), &id).is_some())
 }
 
+/// Does `message`'s trailer name a `key`-backed identity? Such a doc commit
+/// must also carry a verifying `gpgsig` (see [`commit_signed`]); identity-only
+/// entries stay listed-authorised — the per-entry coexistence caveat.
+pub fn trailer_key_backed(repo: &Path, message: &str) -> bool {
+    trailer_of(message).is_some_and(|(_, id)| has_key_entry(&read_allowed(repo), &id))
+}
+
 /// Is `commit` signed (git-native SSH `gpgsig`) by a listed `key` entry? Uses
 /// `git verify-commit` against an `allowed_signers` derived from `.mr-allowed`.
 /// The auth check for doc commits — unforgeable, offline, no device.

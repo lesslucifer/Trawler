@@ -57,7 +57,10 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         }
         ["commit", sha] => {
             let parent = format!("{sha}^");
-            let report = Gate { repo }.verify(Level::Commit, sha, &parent)?;
+            let gate = Gate { repo };
+            let mut report = gate.verify(Level::Commit, sha, &parent)?;
+            let (tip, base) = (report.tip.clone(), report.base.clone());
+            gate.check_commit_trailer(&mut report, &tip, &base)?;
             Ok((i32::from(!report.green()), format_report(&report)))
         }
         ["hook", level] => hook(repo, level),
@@ -132,7 +135,8 @@ fn range(repo: &Path, old: &str, new: &str) -> Result<(i32, String), String> {
     for line in lines.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
         if let [commit, first] = parts.as_slice() {
-            let report = gate.verify(Level::Commit, commit, first)?;
+            let mut report = gate.verify(Level::Commit, commit, first)?;
+            gate.check_commit_trailer(&mut report, commit, first)?;
             if !report.green() {
                 let _ = writeln!(out, "standalone commit {}:", gate::short(commit));
                 let _ = writeln!(out, "{}", format_report(&report));
