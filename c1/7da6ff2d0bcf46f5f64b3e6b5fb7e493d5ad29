@@ -1,0 +1,16 @@
+schema: test/v2
+level: working-unit
+epic: E-MRSIG
+wu: E-MRSIG.W8
+branch: wu/mrsig/ux
+tests:
+  unit:
+    count: 13
+    covers: "TRAWLER_SIGN_REASON composition (commit_reason/confirm_reason name the action + branches) and its delivery to the signer environment (stub signer); touch hint names signer + action; branch-name -> level inference regex; se check report parsing; setup-menu construction from a fake capability set (Touch ID vs System password labels, greyed reason preserved, only the Enclave row gated); positional/flag argument splitting; multi-method accumulation in .mr-allowed; wizard input parsing (ask/confirm/choose by number or name, unavailable rejected, EOF names the missing input)"
+  integration:
+    count: 8
+    covers: "full setup wizard with piped answers in a temp repo (software-key path, passphrase skipped: entry appended never overwritten, config written, summary names entries + active signer); identity-only method adds an email/username line with no signing config; an unavailable method is refused and re-asked; commit wizard picks the identity from .mr-allowed and asks for a missing message; confirm wizard infers level from the wu/ branch, tip HEAD, target epic/x and the signed note authorises; confirm asks for the level when no regex matches; EOF is a usage error naming the missing input. Args-only paths byte-compatible: all pre-existing mr tests unchanged and green; the se_helper trio compiles the renamed trawler-signer source and delegates as gpg.ssh.program"
+  e2e:
+    count: 1
+    covers: "W6 e2e_signed_manual_review_flow_with_a_software_key unchanged and green through the wizardised entry points"
+waived: "the Enclave half stays the deployment waiver: a real trawler-signer check probe, the Touch ID / login-password sheet, and TRAWLER_SIGN_REASON rendering on that sheet need SE hardware + a human; tests inject the probe result through the setup_wizard seam and prove everything up to it"
