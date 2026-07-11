@@ -1,0 +1,12 @@
+schema: doc/v1
+epic: E-MRSIG
+branch: epic/mrsig
+changes:
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "doc-commit authorisation is boundary-only: check 7 no longer re-verifies trailers, DoD-C row points at the pre-push range check, commit-msg/hook rows updated"
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "DEC-9 gains the boundary-only decision row (immutable commits vs mutable key list, accepted --no-verify trade-off) and the all-key consequences; DEC-8 check-8 row cross-notes the supersession"
