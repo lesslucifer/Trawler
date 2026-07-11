@@ -1,0 +1,24 @@
+schema: doc/v1
+epic: E-MRSIG
+branch: epic/mrsig
+changes:
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "signature flow (DEC-9) + DEC-10 rules: mr always at WU/epic attesting result reports, rule-bearing T0/T1 commit gate, local .mr-allowed, boundary-only walk"
+  - path: docs/work-planning.html
+    tier: T1
+    action: updated
+    distills: "gates-relation: result-report existence + exact bytes mechanical at check 8 (DEC-10)"
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "DEC-9 (SSH-signature auth) + DEC-10 (authority rebalance) recorded; DEC-7 consequences superseded lines struck"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-9 + DEC-10 routed"
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: updated
+    distills: "E-MRSIG struck as shipped (DEC-9); is_ui row struck as moot (DEC-10)"
