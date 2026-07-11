@@ -1,5 +1,6 @@
 [workspace]
 members = ["xtask"]
+exclude = ["ui/src-tauri"]
 
 [package]
 name = "trawler"
