@@ -1,0 +1,17 @@
+schema: mr/v1
+level: working-unit
+tip: 4f53097587825c755d7f4e6aa673fa083eef2f76
+base: e00a206f7a45f4ae8d8890844b5475d65187703a
+tier: key
+signer: vuluu
+report: docs/work/uifound-w1-result.html
+report_sha256: 00a22e1acf3d43fa112bb067010a00c13003dcb6cc53f14aeb1abb12b6e0eace
+date: 2026-07-12
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+  EEhUxfjpFJ4ff7DVGaBQnMaRPtNHJbaotNwZT7hU7pqTEEAkyxwK63m5GwX3b5N4SXDgy8
+  vcbzGVUeJhA12yU/hgAAAAp0cmF3bGVyLW1yAAAAAAAAAAZzaGE1MTIAAABkAAAAE2VjZH
+  NhLXNoYTItbmlzdHAyNTYAAABJAAAAIQCOUuobN0/Ib/WbzlYpSnCiTpITu8LmDkZs9ERU
+  rrmn7wAAACBpOlALtaiHaVzwJNJrBK/WQFdrtd/4hUdJWaIhQx31jA==
+  -----END SSH SIGNATURE-----
