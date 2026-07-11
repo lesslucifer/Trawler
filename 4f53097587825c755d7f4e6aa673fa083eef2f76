@@ -1,0 +1,12 @@
+schema: doc/v1
+epic: E-UIFOUND
+changes:
+  - path: docs/work/uifound-w1-plan.html
+    tier: T3
+    action: added
+    distills: "W1 WU plan — the scaffold + xtask ui build-integration requirement, its expected results, and the unit/integration test plan"
+  - path: docs/work/uifound-w1-result.html
+    tier: T3
+    action: added
+    distills: "W1 WU result — outcome, deviations, test evidence, and follow-ups against the W1 plan"
+t2_waived: "W1 is infrastructure (project scaffold + xtask build task) with no user-facing contract; it distills no T2 fact of its own. The epic T2/T1 targets (DEC-11 native stack, UC-4, core-architecture, testing-strategy) land with W2 and the epic gate, per the E-UIFOUND distillation plan. These two T3 work docs archive to docs/.archive/ at the epic gate."
