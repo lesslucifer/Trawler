@@ -43,67 +43,56 @@ graph LR
       <div class="caption">The native app becomes another <em>client</em> of the same control API — the invariant the topology choice must protect.</div>
     </div>
 
-    <h2 id="q1">Q1 · GUI framework</h2>
-    <p data-c="q1-intro">App needs: a live-updating filterable flow list (thousands of rows, streaming), inspector panels (headers, JSON trees, hex, images), macOS-primary but cross-platform, single-binary. Research covered the full 2026 landscape; below are only the <strong>realistic, non-webview</strong> contenders. <span class="badge warn">disqualified</span> <strong>Tauri</strong> and <strong>Dioxus-desktop</strong> are webview-based (WKWebView/WebView2) — they render HTML/CSS, i.e. browser-based, which the Owner ruled out. <strong>xilem</strong> (alpha, no table widget), <strong>Dioxus-native/Blitz</strong> (pre-alpha), and <strong>gtk-rs</strong> (non-native macOS look, LGPL) are also out for this app.</p>
+    <h2 id="q1">Q1 · GUI framework <span class="badge warn">re-scoped to RN-like</span></h2>
+    <p class="callout warn" data-c="q1-comment"><strong>Owner comment:</strong> <em>"I want a react-native-like GUI lib, try again."</em> Re-scoped: the app must give the <strong>React-Native developer model</strong> — a declarative component tree (JSX/RSX), hooks-style reactive state, flexbox layout — while still rendering <strong>natively</strong> (no webview). That rules out my earlier picks: egui is immediate-mode, Iced is Elm, Slint is a DSL — none are React-like. It also re-opens the Dioxus family, which is the most React-like Rust option. The realistic RN-like-and-native contenders are below.</p>
+
+    <p class="callout warn" data-c="q1-tension"><strong>One tension only the Owner can settle:</strong> the direction so far was <em>"native app, built in Rust."</em> "React-Native-like" + "truly native (not webview)" + "production-ready" don't all hold in one Rust library today. So there are two readings:<br/>
+      <strong>(a) Rust-first</strong> — accept a young Rust framework (Freya) that has the RN ergonomics + native Skia render now, at pre-1.0 / solo-maintainer risk.<br/>
+      <strong>(b) RN-first</strong> — use <em>literal</em> React Native for desktop (<code>react-native-macos</code>, JS/TS), which is production-proven and truly native, but the frontend is no longer Rust. The core stays Rust; the UI talks to it over HTTP.<br/>
+      Which constraint wins — <strong>"in Rust"</strong> or <strong>"react-native"</strong>?</p>
 
     <table data-c="q1-options">
-      <thead><tr><th>Framework</th><th>Model / render</th><th>Big-list story</th><th>macOS look</th><th>Binary</th><th>License</th><th>Biggest risk</th></tr></thead>
+      <thead><tr><th>Option</th><th>Lang</th><th>Model</th><th>Render (native?)</th><th>Virtualized list</th><th>Maturity</th><th>Biggest risk</th></tr></thead>
       <tbody>
         <tr>
-          <td><strong>egui / eframe</strong> 0.35<br/><span class="badge auto">my pick</span></td>
-          <td>Immediate-mode, GPU (wgpu/glow)</td>
-          <td><strong>Built-in</strong> — <code>TableBuilder</code> row virtualization, millions of rows (Rerun.io streaming use case)</td>
-          <td>Custom, consistent — <em>not</em> native aesthetics</td>
-          <td>~5 MB (smallest)</td>
-          <td>MIT/Apache</td>
-          <td>Not native-looking; no built-in tree view; manual styling</td>
+          <td><strong>Freya</strong> 0.3.4<br/><span class="badge auto">Rust-first pick</span></td>
+          <td>Rust</td>
+          <td>RSX + hooks (<code>use_state</code>, <code>spawn</code>) — genuinely RN-like</td>
+          <td><strong>Yes</strong> — Skia GPU, no webview</td>
+          <td><strong><code>VirtualScrollView</code> built-in</strong></td>
+          <td>0.3 stable; 0.4 in RC. MIT. tokio-native</td>
+          <td>Solo maintainer, mid-rewrite to 0.4, no production showcase; no tree/hex widget (build from primitives); no native menu bar</td>
         </tr>
         <tr>
-          <td><strong>Iced</strong> 0.14</td>
-          <td>Retained, Elm-arch, GPU (wgpu)</td>
-          <td><code>table</code> widget (0.14) + 3rd-party <code>iced_table2</code> (200K rows); not first-class</td>
-          <td>Custom; "more native feel than egui" per community</td>
-          <td>~11 MB</td>
-          <td>MIT</td>
-          <td><strong>Accessibility gap open 4+ yrs</strong>; IME broken; pre-1.0 churn; more boilerplate</td>
+          <td><strong>react-native-macos</strong> 0.81<br/><span class="badge auto">RN-first pick</span></td>
+          <td>JS/TS</td>
+          <td>Literal React — JSX, hooks, Context, Suspense</td>
+          <td><strong>Yes</strong> — renders to AppKit controls, no webview</td>
+          <td><strong>FlatList / FlashList</strong> (cell-recycling, proven at scale)</td>
+          <td><strong>Production</strong> — Microsoft ships Xbox/Office/Win11 UI; Meta-backed</td>
+          <td>Frontend is JS/TS, not Rust (two languages); out-of-tree, lags core RN ~1 minor; Expo/EAS don't target macOS (local builds)</td>
         </tr>
         <tr>
-          <td><strong>Slint</strong> 1.17</td>
-          <td>Declarative DSL, GPU (Skia/sw), optional Qt style</td>
-          <td><code>ListView</code> virtualized by design; <code>StandardTableView</code></td>
-          <td>Native-looking <em>with</em> Qt style backend</td>
-          <td>~5–15 MB</td>
-          <td><strong>GPL-3</strong> or paid commercial</td>
-          <td>License cost if closed-source; own DSL to learn; no tree view; Qt dep for native look</td>
-        </tr>
-        <tr>
-          <td>gpui + gpui-component<br/><span class="badge warn">high risk</span></td>
-          <td>GPU (Metal/wgpu), Zed's framework</td>
-          <td><strong>Best</strong> — 200K+ row virtualized tables, 60+ components (Longbridge Pro)</td>
-          <td><strong>Excellent</strong> (macOS-first)</td>
-          <td>~12 MB</td>
-          <td>Apache</td>
-          <td><strong>Zed paused community work May 2026</strong>; pre-1.0, breaking changes; git-dep only</td>
-        </tr>
-        <tr>
-          <td>Freya 0.3<br/><span class="badge warn">not yet</span></td>
-          <td>Skia + Dioxus vdom (not webview)</td>
-          <td><code>VirtualScrollView</code> built-in</td>
-          <td>Custom Skia</td>
-          <td>~large (Skia)</td>
-          <td>MIT</td>
-          <td>Recently rewritten; small community (2.8k); no table/tree/hex; pre-1.0</td>
+          <td>Dioxus + <code>dioxus-native</code>/Blitz<br/><span class="badge warn">too early</span></td>
+          <td>Rust</td>
+          <td>RSX + hooks — <em>the</em> most React-like Rust framework</td>
+          <td>Yes — Vello/WGPU, no webview (the <em>native</em> renderer; <code>dioxus-desktop</code> is webview and out)</td>
+          <td><strong>None</strong> — no VirtualList component yet</td>
+          <td>0.8-alpha; team says "don't build apps on Blitz yet"</td>
+          <td>Pre-alpha, no virtualization (fatal for the flow list), no production use — revisit ~2027</td>
         </tr>
       </tbody>
     </table>
+    <p data-c="q1-alsoran"><span class="badge warn">out</span> Webview toolkits (<strong>Tauri</strong>, <strong>dioxus-desktop</strong>, <strong>dioxus-web</strong>) render HTML in a browser engine — ruled out. Web-only Rust frameworks (<strong>Leptos</strong>, <strong>Sycamore</strong>) compile to WASM/browser — out. SwiftUI-bridge crates (<strong>nuit</strong>, <strong>rui</strong>, <strong>WaterUI</strong>) aren't RN-like and are experimental / macOS-only.</p>
 
-    <p class="callout" data-c="q1-reco"><strong>Why egui is the default:</strong> the app is a real-time data inspector — immediate-mode maps directly onto "repaint when a new flow arrives over SSE," with no retained-state sync. It's the only realistic pick with <em>built-in</em> virtualized tables for the thousands-of-rows flow list (the exact Rerun.io workload), the smallest binary, and a permissive license with zero cost. The ceiling is aesthetics (not native chrome) and a hand-built tree view — acceptable for a devtool. <strong>Choose Iced</strong> if you want a cleaner retained architecture and can accept the accessibility gap; <strong>Slint</strong> if native polish is worth the DSL and the license question; <strong>gpui</strong> only if you'll accept living on an unmaintained-for-community pre-1.0 framework for its superior components.</p>
+    <p class="callout" data-c="q1-reco"><strong>My read:</strong> if <em>"in Rust"</em> is the hard constraint → <strong>Freya 0.3.4</strong>: it's the only Rust lib with RSX+hooks, a native Skia renderer, and a built-in <code>VirtualScrollView</code> for the streaming flow list — but treat it as a calculated bet (do a 5K-row spike first, plan to build the tree/hex panels yourself, track the 0.4 rewrite). If <em>"react-native"</em> is the hard constraint and production-readiness matters more than a single-language stack → <strong>react-native-macos</strong>: it's literally React, truly native (AppKit), and <code>FlashList</code> solves the thousands-of-streaming-rows problem that no Rust-native lib has proven yet — at the cost of a JS/TS frontend over the Rust core. <strong>Dioxus-native</strong> is the ideal on paper but pre-alpha with no list virtualization — not buildable today. This is the one call I need from you before planning.</p>
 
-    <h2 id="q2">Q2 · Embedding / topology (the "how do we embed" question)</h2>
-    <p data-c="q2-intro">This is the tech the Owner asked me to research and compare. The native app has to get flows + live events from the core. Three topologies, scored against the one invariant that matters here — <strong>does the GUI stay a pure client of the public API, or does it reach behind it and fork the feature surface?</strong></p>
+    <h2 id="q2">Q2 · Embedding / topology <span class="badge auto">DECIDED · out-of-process</span></h2>
+    <p class="callout" data-c="q2-decision"><strong>Owner decision:</strong> <em>"go with opt 2"</em> → <strong>Topology 2, out-of-process</strong>. The native app is a separate binary that drives <code>127.0.0.1:7421</code> (REST + SSE), exactly like a browser or curl would. This keeps API-first fidelity fully intact (the GUI can only do what the public API exposes) and lets the core run headless for CI/scripting/remote-tunnel use. It also fits the RN-first reading of Q1 cleanly: a JS/TS <code>react-native-macos</code> frontend is <em>necessarily</em> out-of-process. The comparison that led here is kept below for the record.</p>
+    <p data-c="q2-intro">The native app has to get flows + live events from the core. Three topologies, scored against the one invariant that matters here — <strong>does the GUI stay a pure client of the public API, or does it reach behind it and fork the feature surface?</strong></p>
 
     <table data-c="q2-options">
-      <thead><tr><th>Dimension</th><th>1 · In-process (direct)</th><th>2 · Out-of-process (HTTP)</th><th>3 · Hybrid <span class="badge auto">my pick</span></th></tr></thead>
+      <thead><tr><th>Dimension</th><th>1 · In-process (direct)</th><th>2 · Out-of-process (HTTP) <span class="badge auto">chosen</span></th><th>3 · Hybrid</th></tr></thead>
       <tbody>
         <tr><th>How</th><td>GUI compiled in; reads <code>Arc&lt;Store&gt;</code> + <code>broadcast::Receiver</code> directly, no HTTP hop</td><td>Separate binary; drives <code>127.0.0.1:7421</code> REST+SSE like the web UI / curl</td><td>One binary; starts <code>trawler::run()</code> in-process but GUI <em>still</em> talks to it over loopback <code>:7421</code></td></tr>
         <tr><th>API-first fidelity</th><td><span class="badge warn">VIOLATED</span> — imports internal types; two feature surfaces emerge</td><td><span class="badge auto">FULL</span> — GUI can only do what the API exposes</td><td><span class="badge auto">FULL</span> — same as 2; no <code>Store</code> ref leaks into GUI</td></tr>
@@ -120,52 +109,45 @@ graph LR
 
     <div class="diagram" data-c="q2-diagram">
       <pre class="mermaid">
-graph TB
-  subgraph oneproc["one binary (Hybrid)"]
-    direction LR
-    G["egui GUI<br/>SSE client + REST"] -->|loopback :7421| API["axum control API"]
-    API --> ST[(store)]
-    RT["trawler::run() on tokio<br/>(spawned at startup)"] --- API
+graph LR
+  subgraph guiproc["native app process"]
+    G["GUI (Freya / react-native-macos)<br/>SSE client + REST"]
   end
-  G -. "--headless skips GUI" .-> RT
+  subgraph coreproc["trawler-core process"]
+    API["axum control API :7421"] --> ST[(store)]
+  end
+  G ==>|"loopback :7421 (REST + SSE)"| API
       </pre>
-      <div class="caption">Hybrid: the GUI is compiled in but stays behind the same public API — no <code>Store</code> reference crosses into GUI code.</div>
+      <div class="caption">Out-of-process (chosen): two processes, the GUI is a pure client of the public API — the API-first invariant holds by construction. Core stays runnable headless.</div>
     </div>
 
-    <h3 id="q2-crates">Supporting crates (for whichever topology uses HTTP)</h3>
+    <h3 id="q2-crates">Supporting pieces — SSE client</h3>
+    <p data-c="q2-crates-intro">How the GUI consumes <code>GET /stream</code> depends on the Q1 frontend:</p>
     <table data-c="q2-crates-table">
-      <thead><tr><th>Need</th><th>Crate</th><th>2026 status</th></tr></thead>
+      <thead><tr><th>Frontend</th><th>SSE client</th><th>2026 status</th></tr></thead>
       <tbody>
-        <tr><td>SSE client (consume <code>/stream</code>)</td><td><strong><code>eventsource-client</code> 0.17.5</strong></td><td>Actively maintained (Jun 2026), hyper v1, built-in reconnect w/ backoff, LaunchDarkly, 301k dl/mo — <strong>use this</strong></td></tr>
-        <tr><td>SSE client (alt)</td><td><code>reqwest-eventsource</code> 0.6</td><td>Stale — last release Mar 2024; avoid for new work</td></tr>
-        <tr><td>tokio ↔ GUI bridge</td><td>stdlib channels</td><td>egui: tokio on a worker thread → <code>mpsc</code> → drained in <code>update()</code> + <code>request_repaint()</code>. Iced: <code>Task::run</code> over a <code>Stream</code>. Slint: <code>invoke_from_event_loop</code>. No extra dep.</td></tr>
+        <tr><td><strong>Freya</strong> (Rust)</td><td><code>eventsource-client</code> 0.17.5</td><td>Actively maintained (Jun 2026), hyper v1, built-in reconnect w/ backoff, LaunchDarkly. Runs in a <code>spawn</code>'d task → channel → Freya signal/state. <em>(avoid <code>reqwest-eventsource</code> 0.6 — stale since Mar 2024.)</em></td></tr>
+        <tr><td><strong>react-native-macos</strong> (JS/TS)</td><td>native <code>EventSource</code></td><td>Built into the JS runtime — <code>new EventSource('http://127.0.0.1:7421/stream')</code>. Zero dep, zero FFI; REST via <code>fetch</code>.</td></tr>
       </tbody>
     </table>
 
-    <h2 id="shell-fate">The web shell's fate</h2>
-    <p data-c="shell-fate-body">E-UISHELL shipped the vanilla-JS web UI at <code>GET /</code>, and the roadmap priced in "migrated onto the foundation's layout as its first tenant." With a native pivot the honest options are:</p>
-    <div class="cards" data-c="shell-fate-cards">
-      <div class="card"><h3>A · Keep the web shell, add native alongside</h3><p>Both are clients of the same API. Web UI stays the zero-install / remote-access surface; native becomes the primary desktop experience. Nothing thrown away. <span class="badge auto">recommended</span></p></div>
-      <div class="card"><h3>B · Retire the web shell</h3><p>Native replaces it; drop <code>GET /</code> and <code>ui.html</code>. Simpler surface, but loses the zero-setup browser view (and UC-3 needs rewriting).</p></div>
-    </div>
-    <p class="callout" data-c="shell-fate-note">The "shell migrated onto the foundation" clause in the requirement was written for a web foundation. Under a native pivot it either becomes <em>"native app built on the foundation layout"</em> (the web shell staying as-is, option A) or <em>"web shell retired"</em> (option B). This is a smaller call than Q1/Q2 but the plan needs it pinned. I lean A — keeping a browser view costs nothing and preserves the zero-install adoption path E-UISHELL was built for.</p>
+    <h2 id="shell-fate">The web shell's fate <span class="badge auto">DECIDED · keep for now, drop later</span></h2>
+    <p class="callout" data-c="shell-fate-note"><strong>Owner decision:</strong> <em>"keep it for now, we'll drop when the new UI is ready."</em> The E-UISHELL web UI (<code>GET /</code>, <code>ui.html</code>) stays untouched through this epic — both surfaces are clients of the same API, so there's no conflict. E-UIFOUND does <strong>not</strong> migrate or retire it; the native app is built alongside. Retiring the web shell (drop <code>GET /</code> + <code>ui.html</code>, rewrite UC-3) becomes a <em>later</em> step, triggered once the native UI reaches parity — tracked as a follow-up, not in this epic's scope.</p>
 
-    <h2 id="scope">What the epic becomes (once decided)</h2>
-    <p data-c="scope-body">With Q1 + Q2 answered, E-UIFOUND's plan writes itself into these Working Units (illustrative — finalized in the T3 plan after the Owner picks):</p>
+    <h2 id="scope">What the epic becomes (once Q1 is picked)</h2>
+    <p data-c="scope-body">Q2 (out-of-process) and the shell (keep for now) are settled. With Q1 answered, E-UIFOUND's plan writes into these Working Units (illustrative — finalized in the T3 plan):</p>
     <ul data-c="scope-list">
-      <li><strong>The DEC</strong> — record the stack + topology choice as a T2 decision; update the roadmap's E-UIFOUND row and "browser-based" framing; note the reversal.</li>
-      <li><strong>Build integration</strong> — the GUI crate in the cargo workspace; <code>xtask</code> builds/runs it; single-binary output with <code>--headless</code>.</li>
-      <li><strong>Design system</strong> — tokens (the existing <code>ui.html</code> palette is a starting point: <code>--bg #181b22</code>, <code>--accent #5ab0f7</code>, etc.) + base components in the chosen framework.</li>
-      <li><strong>Base app layout</strong> — the shell that later epics (E-UIINSPECT inspector, E-UISETUP onboarding) slot into; the live flow list is its first tenant.</li>
-      <li><strong>Shell resolution</strong> — per <a href="#shell-fate">option A or B</a>.</li>
+      <li><strong>The DEC</strong> — record the framework choice + out-of-process topology as a T2 decision; update the roadmap's E-UIFOUND row and its "browser-based" / single-binary framing; note the reversal.</li>
+      <li><strong>Project + build integration</strong> — the GUI project set up (a Rust crate in the workspace <em>if Freya</em>; a JS/TS <code>react-native-macos</code> project <em>if RN</em>); <code>xtask</code> builds/runs it and the core together.</li>
+      <li><strong>Design system</strong> — tokens seeded from the existing <code>ui.html</code> palette (<code>--bg #181b22</code>, <code>--accent #5ab0f7</code>, etc.) + base components in the chosen framework.</li>
+      <li><strong>Base app layout</strong> — the shell later epics (E-UIINSPECT inspector, E-UISETUP onboarding) slot into; the live flow list (over <code>/flows</code> + <code>/stream</code>) is its first tenant.</li>
     </ul>
+    <p class="callout" data-c="scope-spike">If the pick is <strong>Freya</strong>, WU-1 should be a <strong>spike</strong>: 5K streaming rows through <code>VirtualScrollView</code> to confirm perf before the design system is built on it.</p>
 
     <h2 id="ask">What I need from you</h2>
-    <p class="callout" data-c="ask-body">Three picks and I'll write the epic plan + the DEC:<br/>
-      <strong>Q1 framework</strong> → egui <span class="badge auto">(recommended)</span> / Iced / Slint / gpui.<br/>
-      <strong>Q2 topology</strong> → Hybrid <span class="badge auto">(recommended)</span> / out-of-process / in-process.<br/>
-      <strong>Shell fate</strong> → keep both (A) <span class="badge auto">(recommended)</span> / retire web (B).<br/>
-      Comment inline on any row, or just tell me the three.</p>
+    <p class="callout" data-c="ask-body">Just <strong>one</strong> pick left — the rest is decided:<br/>
+      <strong>Q1 framework</strong> → <strong>Freya</strong> (Rust-first: RN ergonomics, native, young/risky) &nbsp;•&nbsp; <strong>react-native-macos</strong> (RN-first: literal React, production-proven, JS/TS frontend).<br/>
+      The deciding question: does <em>"in Rust"</em> win, or does <em>"react-native"</em> win? Comment on the <a href="#q1">Q1 tension</a> or just name one, and I'll write the epic plan + the DEC.</p>
   </main>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
