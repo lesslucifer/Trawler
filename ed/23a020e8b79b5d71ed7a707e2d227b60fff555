@@ -1,0 +1,10 @@
+schema: test/v2
+level: commit
+epic: E-MRSIG
+branch: epic/mrsig
+tests:
+  unit:
+    waived: "removes one walk call; the boundary-only contract is frozen at integration level (epic_walk_never_rejudges_doc_commits + 6 range-seam tests)"
+  integration:
+    count: 7
+    covers: "epic walk raises no 8-manual-review for an untrailered doc commit in history; the pre-push range seam rejects unsigned key-backed / unauthorised / doc-moved-out commits and accepts signed key-backed, identity-trailered and mr-note-fallback ones"
