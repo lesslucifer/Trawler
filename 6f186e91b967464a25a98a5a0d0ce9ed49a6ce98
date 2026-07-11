@@ -1,0 +1,20 @@
+schema: cr/v2
+scope: "WU E-GATEFAST.W8 -> epic/gatefast"
+epic: E-GATEFAST
+wu: E-GATEFAST.W8
+branch: wu/gatefast/stream-verify
+base: ac05752f9534e75b99b11090057221c5cb1f546b
+head: 6f186e91b967464a25a98a5a0d0ce9ed49a6ce98
+diff_sha256: 21cfa0a997055dc1e8a207d11b9a40789b7a0594b6c142b8caf90d8770ca1aeb
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 6, verified: 2, waived: 0 }
+verified_findings:
+  - location: docs/work/2026-07-11-gatefast-w8-result.html (deviations)
+    claim: "'six agents across three A/Bs' is arithmetically inconsistent; W6(2)+W7(4)+W8(2)=8"
+    severity: nit
+  - location: docs/work/2026-07-11-gatefast-w8-result.html:21
+    claim: "callout div ends with </p> with no opening <p> (13 openers vs 14 closers)"
+    severity: nit
+refuted: 1
+verdict: FAIL
+date: 2026-07-11
