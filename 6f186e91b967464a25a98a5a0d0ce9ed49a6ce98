@@ -1,0 +1,8 @@
+schema: doc/v1
+epic: E-GATEFAST
+wu: E-GATEFAST.W8
+changes:
+  - path: docs/work/2026-07-11-gatefast-w8-result.html
+    tier: T3
+    action: added
+t2_waived: "T3 result only; durable findings (verifier verdicts on borderline claims flip at a measured 2/8 rate between identical fresh passes, so exact-set replay gates over section 4 are unsatisfiable in expectation and future gates must be variance-aware; streaming's tail floor equals the last finder's own verify cost, structurally small when correctness is both last and slowest-to-verify) distill into the epic gate-speed decision record at epic close per the epic distillation plan. The WU plan is the W8 card in docs/work/2026-07-11-gatefast-w6-w8-plan.html (lives on wu/gatefast/cr-speed-v2 until W5 merges)."
