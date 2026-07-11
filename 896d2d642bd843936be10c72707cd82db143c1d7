@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU ux -> epic/mrsig"
+epic: E-MRSIG
+wu: E-MRSIG.W8
+branch: wu/mrsig/ux
+base: 0a776045b2fb3a6859a9cc17b1e053a70a1c4cf0
+head: 896d2d642bd843936be10c72707cd82db143c1d7
+diff_sha256: 269779b6afaffb8e2ab5a0b60f3b7682994655b23a8ffab2bff210a7684441c6
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 8, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-11
