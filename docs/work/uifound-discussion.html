@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a5251549f34851f0dfa8aca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-UIFOUND Discussion: Native UI Stack</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-UIFOUND — Native UI Stack (Discussion)</h1>
+      <p>The foundation epic pivots to a <strong>native Rust desktop app</strong>. This doc lays out the fork, the researched options, and the two decisions the Owner must make before planning.</p>
+      <div class="meta">Draft v1 · 2026-07-11 · Trawler · T3 discussion · <a href="../backlog/roadmap.html">roadmap</a> · <a href="../decisions/decisions-index.html">decisions</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="tldr">TL;DR — what this doc decides</h2>
+    <p data-c="tldr-body">E-UIFOUND's requirement is <em>"UI tech stack decided (as a DEC), codebase in cargo/xtask build, design system + base app layout; shell migrated onto it."</em> The Owner has set a new direction: the UI is a <strong>native app built in Rust, not browser-based</strong>. That reverses the roadmap's embedded-web-UI assumption, so it needs a recorded decision — this doc is the pre-decision discussion. Two choices come out of it, both the Owner's to make:</p>
+    <div class="cards" data-c="tldr-cards">
+      <div class="card"><h3>Q1 · GUI framework</h3><p>Which Rust native GUI toolkit the foundation adopts. Top realistic picks: <strong>egui</strong>, <strong>Iced</strong>, <strong>Slint</strong>. Webview toolkits (Tauri, Dioxus-desktop) are disqualified by "not browser-based".</p></div>
+      <div class="card"><h3>Q2 · Embedding / topology</h3><p>How the native app relates to the existing API-first core: <strong>in-process</strong>, <strong>out-of-process over the local HTTP API</strong>, or <strong>hybrid</strong> (one binary, still routed through the loopback API). This is the "how do we embed it" question.</p></div>
+    </div>
+    <p class="callout" data-c="tldr-recommend"><strong>My recommendation, up front:</strong> <strong>egui/eframe</strong> for Q1 (fastest path, built-in virtualized tables for thousands of streaming rows, permissive license, single binary) and <strong>Hybrid (Topology 3)</strong> for Q2 (keeps the API-first invariant intact <em>and</em> ships one binary). Everything below is the evidence. Pick from the option tables and I'll write the epic plan + the DEC.</p>
+
+    <h2 id="pivot">The pivot — and why it needs a decision</h2>
+    <p data-c="pivot-body">The roadmap frames every UI epic around the API-first web UI: <em>"every GUI capability is a call on the public API, so the GUI never forks the feature surface,"</em> and E-UISHELL already shipped an <strong>embedded single-binary web UI</strong> (vanilla JS at <code>GET /</code>, served via <code>include_str!</code>). E-UIFOUND was scoped to migrate that shell onto a designed layout. Going native instead of web is a <strong>strategic reversal of a pillar's delivery mechanism</strong>. The roadmap explicitly says such reversals are <em>"recorded as a decision and then reflected here"</em> — so this discussion feeds a DEC, and the roadmap's E-UIFOUND row + the "browser-based" framing get updated when it lands.</p>
+    <p class="callout warn" data-c="pivot-conflict"><strong>What the pivot must resolve:</strong> the API-first invariant is a core design decision (<code>core-technical-design.html</code>: "trawler-core is UI-agnostic… any UI is a client"). A native app can honour it or break it depending on <em>how it embeds</em> — which is exactly why Q2 (topology) matters as much as Q1 (framework). The existing web shell doesn't disappear for free either: see <a href="#shell-fate">the shell's fate</a>.</p>
+
+    <div class="diagram" data-c="pivot-diagram">
+      <pre class="mermaid">
+graph LR
+  subgraph core["trawler-core (unchanged)"]
+    P[proxy :7420]
+    A["control API :7421<br/>REST + SSE + /ca.crt"]
+    S[(store: ring + bus)]
+    P --> S --> A
+  end
+  W["web shell (E-UISHELL)<br/>vanilla JS @ GET /"] -. today .-> A
+  N["native app (E-UIFOUND)<br/>egui / Iced / Slint"] ==> A
+  classDef new fill:#1e3a2f,stroke:#4cc38a;
+  class N new;
+      </pre>
+      <div class="caption">The native app becomes another <em>client</em> of the same control API — the invariant the topology choice must protect.</div>
+    </div>
+
+    <h2 id="q1">Q1 · GUI framework</h2>
+    <p data-c="q1-intro">App needs: a live-updating filterable flow list (thousands of rows, streaming), inspector panels (headers, JSON trees, hex, images), macOS-primary but cross-platform, single-binary. Research covered the full 2026 landscape; below are only the <strong>realistic, non-webview</strong> contenders. <span class="badge warn">disqualified</span> <strong>Tauri</strong> and <strong>Dioxus-desktop</strong> are webview-based (WKWebView/WebView2) — they render HTML/CSS, i.e. browser-based, which the Owner ruled out. <strong>xilem</strong> (alpha, no table widget), <strong>Dioxus-native/Blitz</strong> (pre-alpha), and <strong>gtk-rs</strong> (non-native macOS look, LGPL) are also out for this app.</p>
+
+    <table data-c="q1-options">
+      <thead><tr><th>Framework</th><th>Model / render</th><th>Big-list story</th><th>macOS look</th><th>Binary</th><th>License</th><th>Biggest risk</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>egui / eframe</strong> 0.35<br/><span class="badge auto">my pick</span></td>
+          <td>Immediate-mode, GPU (wgpu/glow)</td>
+          <td><strong>Built-in</strong> — <code>TableBuilder</code> row virtualization, millions of rows (Rerun.io streaming use case)</td>
+          <td>Custom, consistent — <em>not</em> native aesthetics</td>
+          <td>~5 MB (smallest)</td>
+          <td>MIT/Apache</td>
+          <td>Not native-looking; no built-in tree view; manual styling</td>
+        </tr>
+        <tr>
+          <td><strong>Iced</strong> 0.14</td>
+          <td>Retained, Elm-arch, GPU (wgpu)</td>
+          <td><code>table</code> widget (0.14) + 3rd-party <code>iced_table2</code> (200K rows); not first-class</td>
+          <td>Custom; "more native feel than egui" per community</td>
+          <td>~11 MB</td>
+          <td>MIT</td>
+          <td><strong>Accessibility gap open 4+ yrs</strong>; IME broken; pre-1.0 churn; more boilerplate</td>
+        </tr>
+        <tr>
+          <td><strong>Slint</strong> 1.17</td>
+          <td>Declarative DSL, GPU (Skia/sw), optional Qt style</td>
+          <td><code>ListView</code> virtualized by design; <code>StandardTableView</code></td>
+          <td>Native-looking <em>with</em> Qt style backend</td>
+          <td>~5–15 MB</td>
+          <td><strong>GPL-3</strong> or paid commercial</td>
+          <td>License cost if closed-source; own DSL to learn; no tree view; Qt dep for native look</td>
+        </tr>
+        <tr>
+          <td>gpui + gpui-component<br/><span class="badge warn">high risk</span></td>
+          <td>GPU (Metal/wgpu), Zed's framework</td>
+          <td><strong>Best</strong> — 200K+ row virtualized tables, 60+ components (Longbridge Pro)</td>
+          <td><strong>Excellent</strong> (macOS-first)</td>
+          <td>~12 MB</td>
+          <td>Apache</td>
+          <td><strong>Zed paused community work May 2026</strong>; pre-1.0, breaking changes; git-dep only</td>
+        </tr>
+        <tr>
+          <td>Freya 0.3<br/><span class="badge warn">not yet</span></td>
+          <td>Skia + Dioxus vdom (not webview)</td>
+          <td><code>VirtualScrollView</code> built-in</td>
+          <td>Custom Skia</td>
+          <td>~large (Skia)</td>
+          <td>MIT</td>
+          <td>Recently rewritten; small community (2.8k); no table/tree/hex; pre-1.0</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="callout" data-c="q1-reco"><strong>Why egui is the default:</strong> the app is a real-time data inspector — immediate-mode maps directly onto "repaint when a new flow arrives over SSE," with no retained-state sync. It's the only realistic pick with <em>built-in</em> virtualized tables for the thousands-of-rows flow list (the exact Rerun.io workload), the smallest binary, and a permissive license with zero cost. The ceiling is aesthetics (not native chrome) and a hand-built tree view — acceptable for a devtool. <strong>Choose Iced</strong> if you want a cleaner retained architecture and can accept the accessibility gap; <strong>Slint</strong> if native polish is worth the DSL and the license question; <strong>gpui</strong> only if you'll accept living on an unmaintained-for-community pre-1.0 framework for its superior components.</p>
+
+    <h2 id="q2">Q2 · Embedding / topology (the "how do we embed" question)</h2>
+    <p data-c="q2-intro">This is the tech the Owner asked me to research and compare. The native app has to get flows + live events from the core. Three topologies, scored against the one invariant that matters here — <strong>does the GUI stay a pure client of the public API, or does it reach behind it and fork the feature surface?</strong></p>
+
+    <table data-c="q2-options">
+      <thead><tr><th>Dimension</th><th>1 · In-process (direct)</th><th>2 · Out-of-process (HTTP)</th><th>3 · Hybrid <span class="badge auto">my pick</span></th></tr></thead>
+      <tbody>
+        <tr><th>How</th><td>GUI compiled in; reads <code>Arc&lt;Store&gt;</code> + <code>broadcast::Receiver</code> directly, no HTTP hop</td><td>Separate binary; drives <code>127.0.0.1:7421</code> REST+SSE like the web UI / curl</td><td>One binary; starts <code>trawler::run()</code> in-process but GUI <em>still</em> talks to it over loopback <code>:7421</code></td></tr>
+        <tr><th>API-first fidelity</th><td><span class="badge warn">VIOLATED</span> — imports internal types; two feature surfaces emerge</td><td><span class="badge auto">FULL</span> — GUI can only do what the API exposes</td><td><span class="badge auto">FULL</span> — same as 2; no <code>Store</code> ref leaks into GUI</td></tr>
+        <tr><th>Single binary</th><td>Yes</td><td>No — two binaries, must ship together</td><td><strong>Yes</strong></td></tr>
+        <tr><th>Streaming path</th><td>Direct <code>broadcast::Receiver</code>, zero overhead</td><td>SSE over TCP + reconnect logic; ~0.5 ms loopback</td><td>SSE over loopback (same as 2), server end same process</td></tr>
+        <tr><th>Lifecycle</th><td>One process, simplest</td><td>Spawn/kill child, port coordination</td><td>One process; ~20 lines startup sequencing (wait for API ready)</td></tr>
+        <tr><th>Testability</th><td>Poor — GUI couples to internals; no contract</td><td>Best — testable vs real/mock API server</td><td>Good — GUI decoupled; one startup seam to test</td></tr>
+        <tr><th>Headless core</th><td>No — GUI drags in at compile time</td><td>Yes</td><td>Yes — <code>--headless</code> flag skips GUI</td></tr>
+        <tr><th>Matches design doc</th><td><strong>No</strong> (breaks the stated invariant)</td><td>Yes</td><td>Yes</td></tr>
+      </tbody>
+    </table>
+
+    <p class="callout" data-c="q2-reco"><strong>Why Hybrid:</strong> it's the only option that keeps API-first fidelity <em>and</em> ships a single binary. The cost over out-of-process is ~20 lines of "wait for <code>:7421</code> to bind before the GUI opens its SSE stream"; the cost over in-process is one loopback TCP hop, imperceptible at UI refresh rates. This is the standard pattern for Charles / Proxyman / Wireshark (one app bundle, internal API). <strong>Deviate to Topology 2</strong> only if the core must run on a remote host (SSH-tunnel use case) or you want independently-versioned GUI and core. <strong>Avoid Topology 1</strong> — it permanently breaks the invariant the design makes a first-class decision, for a performance win we don't need.</p>
+
+    <div class="diagram" data-c="q2-diagram">
+      <pre class="mermaid">
+graph TB
+  subgraph oneproc["one binary (Hybrid)"]
+    direction LR
+    G["egui GUI<br/>SSE client + REST"] -->|loopback :7421| API["axum control API"]
+    API --> ST[(store)]
+    RT["trawler::run() on tokio<br/>(spawned at startup)"] --- API
+  end
+  G -. "--headless skips GUI" .-> RT
+      </pre>
+      <div class="caption">Hybrid: the GUI is compiled in but stays behind the same public API — no <code>Store</code> reference crosses into GUI code.</div>
+    </div>
+
+    <h3 id="q2-crates">Supporting crates (for whichever topology uses HTTP)</h3>
+    <table data-c="q2-crates-table">
+      <thead><tr><th>Need</th><th>Crate</th><th>2026 status</th></tr></thead>
+      <tbody>
+        <tr><td>SSE client (consume <code>/stream</code>)</td><td><strong><code>eventsource-client</code> 0.17.5</strong></td><td>Actively maintained (Jun 2026), hyper v1, built-in reconnect w/ backoff, LaunchDarkly, 301k dl/mo — <strong>use this</strong></td></tr>
+        <tr><td>SSE client (alt)</td><td><code>reqwest-eventsource</code> 0.6</td><td>Stale — last release Mar 2024; avoid for new work</td></tr>
+        <tr><td>tokio ↔ GUI bridge</td><td>stdlib channels</td><td>egui: tokio on a worker thread → <code>mpsc</code> → drained in <code>update()</code> + <code>request_repaint()</code>. Iced: <code>Task::run</code> over a <code>Stream</code>. Slint: <code>invoke_from_event_loop</code>. No extra dep.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="shell-fate">The web shell's fate</h2>
+    <p data-c="shell-fate-body">E-UISHELL shipped the vanilla-JS web UI at <code>GET /</code>, and the roadmap priced in "migrated onto the foundation's layout as its first tenant." With a native pivot the honest options are:</p>
+    <div class="cards" data-c="shell-fate-cards">
+      <div class="card"><h3>A · Keep the web shell, add native alongside</h3><p>Both are clients of the same API. Web UI stays the zero-install / remote-access surface; native becomes the primary desktop experience. Nothing thrown away. <span class="badge auto">recommended</span></p></div>
+      <div class="card"><h3>B · Retire the web shell</h3><p>Native replaces it; drop <code>GET /</code> and <code>ui.html</code>. Simpler surface, but loses the zero-setup browser view (and UC-3 needs rewriting).</p></div>
+    </div>
+    <p class="callout" data-c="shell-fate-note">The "shell migrated onto the foundation" clause in the requirement was written for a web foundation. Under a native pivot it either becomes <em>"native app built on the foundation layout"</em> (the web shell staying as-is, option A) or <em>"web shell retired"</em> (option B). This is a smaller call than Q1/Q2 but the plan needs it pinned. I lean A — keeping a browser view costs nothing and preserves the zero-install adoption path E-UISHELL was built for.</p>
+
+    <h2 id="scope">What the epic becomes (once decided)</h2>
+    <p data-c="scope-body">With Q1 + Q2 answered, E-UIFOUND's plan writes itself into these Working Units (illustrative — finalized in the T3 plan after the Owner picks):</p>
+    <ul data-c="scope-list">
+      <li><strong>The DEC</strong> — record the stack + topology choice as a T2 decision; update the roadmap's E-UIFOUND row and "browser-based" framing; note the reversal.</li>
+      <li><strong>Build integration</strong> — the GUI crate in the cargo workspace; <code>xtask</code> builds/runs it; single-binary output with <code>--headless</code>.</li>
+      <li><strong>Design system</strong> — tokens (the existing <code>ui.html</code> palette is a starting point: <code>--bg #181b22</code>, <code>--accent #5ab0f7</code>, etc.) + base components in the chosen framework.</li>
+      <li><strong>Base app layout</strong> — the shell that later epics (E-UIINSPECT inspector, E-UISETUP onboarding) slot into; the live flow list is its first tenant.</li>
+      <li><strong>Shell resolution</strong> — per <a href="#shell-fate">option A or B</a>.</li>
+    </ul>
+
+    <h2 id="ask">What I need from you</h2>
+    <p class="callout" data-c="ask-body">Three picks and I'll write the epic plan + the DEC:<br/>
+      <strong>Q1 framework</strong> → egui <span class="badge auto">(recommended)</span> / Iced / Slint / gpui.<br/>
+      <strong>Q2 topology</strong> → Hybrid <span class="badge auto">(recommended)</span> / out-of-process / in-process.<br/>
+      <strong>Shell fate</strong> → keep both (A) <span class="badge auto">(recommended)</span> / retire web (B).<br/>
+      Comment inline on any row, or just tell me the three.</p>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
