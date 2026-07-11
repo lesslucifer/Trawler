@@ -14,17 +14,19 @@
     </div>
   </header>
   <main>
-    <h2 id="tldr">TL;DR — what this doc decides</h2>
-    <p data-c="tldr-body">E-UIFOUND's requirement is <em>"UI tech stack decided (as a DEC), codebase in cargo/xtask build, design system + base app layout; shell migrated onto it."</em> The Owner has set a new direction: the UI is a <strong>native app built in Rust, not browser-based</strong>. That reverses the roadmap's embedded-web-UI assumption, so it needs a recorded decision — this doc is the pre-decision discussion. Two choices come out of it, both the Owner's to make:</p>
+    <h2 id="tldr">TL;DR — all decided</h2>
+    <p data-c="tldr-body">E-UIFOUND's requirement is <em>"UI tech stack decided (as a DEC), codebase in the build, design system + base app layout; shell migrated onto it."</em> After a round of exploration and Owner comments, the choices are settled:</p>
     <div class="cards" data-c="tldr-cards">
-      <div class="card"><h3>Q1 · GUI framework</h3><p>Which Rust native GUI toolkit the foundation adopts. Top realistic picks: <strong>egui</strong>, <strong>Iced</strong>, <strong>Slint</strong>. Webview toolkits (Tauri, Dioxus-desktop) are disqualified by "not browser-based".</p></div>
-      <div class="card"><h3>Q2 · Embedding / topology</h3><p>How the native app relates to the existing API-first core: <strong>in-process</strong>, <strong>out-of-process over the local HTTP API</strong>, or <strong>hybrid</strong> (one binary, still routed through the loopback API). This is the "how do we embed it" question.</p></div>
+      <div class="card"><h3>Stack <span class="badge auto">decided</span></h3><p><strong>Tauri 2 + Vite + TypeScript + React + Tailwind</strong>, mirroring the sibling <a href="#strata">Strata</a> app. <a href="#q1">details →</a></p></div>
+      <div class="card"><h3>Topology <span class="badge auto">decided</span></h3><p><strong>Out-of-process</strong>: the React UI talks to the core over <code>127.0.0.1:7421</code> (REST + SSE); Tauri Rust side stays a thin shell. <a href="#q2">details →</a></p></div>
+      <div class="card"><h3>Web shell <span class="badge auto">decided</span></h3><p><strong>Keep for now</strong>, drop when the new UI reaches parity. <a href="#shell-fate">details →</a></p></div>
+      <div class="card"><h3>Design <span class="badge auto">decided</span></h3><p>Seed the design system from <strong>Warp's DESIGN.md</strong>. <a href="#design">details →</a></p></div>
     </div>
-    <p class="callout" data-c="tldr-recommend"><strong>My recommendation, up front:</strong> <strong>egui/eframe</strong> for Q1 (fastest path, built-in virtualized tables for thousands of streaming rows, permissive license, single binary) and <strong>Hybrid (Topology 3)</strong> for Q2 (keeps the API-first invariant intact <em>and</em> ships one binary). Everything below is the evidence. Pick from the option tables and I'll write the epic plan + the DEC.</p>
+    <p class="callout" data-c="tldr-recommend"><strong>Next step:</strong> this discussion is done — no open questions. It feeds the T3 epic plan + the DEC. The exploration that got here (framework comparison, topology scoring) is kept below for the record and in the doc snapshots.</p>
 
-    <h2 id="pivot">The pivot — and why it needs a decision</h2>
-    <p data-c="pivot-body">The roadmap frames every UI epic around the API-first web UI: <em>"every GUI capability is a call on the public API, so the GUI never forks the feature surface,"</em> and E-UISHELL already shipped an <strong>embedded single-binary web UI</strong> (vanilla JS at <code>GET /</code>, served via <code>include_str!</code>). E-UIFOUND was scoped to migrate that shell onto a designed layout. Going native instead of web is a <strong>strategic reversal of a pillar's delivery mechanism</strong>. The roadmap explicitly says such reversals are <em>"recorded as a decision and then reflected here"</em> — so this discussion feeds a DEC, and the roadmap's E-UIFOUND row + the "browser-based" framing get updated when it lands.</p>
-    <p class="callout warn" data-c="pivot-conflict"><strong>What the pivot must resolve:</strong> the API-first invariant is a core design decision (<code>core-technical-design.html</code>: "trawler-core is UI-agnostic… any UI is a client"). A native app can honour it or break it depending on <em>how it embeds</em> — which is exactly why Q2 (topology) matters as much as Q1 (framework). The existing web shell doesn't disappear for free either: see <a href="#shell-fate">the shell's fate</a>.</p>
+    <h2 id="pivot">The pivot — why this needs a recorded decision</h2>
+    <p data-c="pivot-body">The roadmap frames every UI epic around the API-first <strong>web</strong> UI, and E-UISHELL already shipped an embedded web shell (vanilla JS at <code>GET /</code>). The Owner's direction moved the primary UI to a <strong>standalone Tauri desktop app</strong>. That's a <strong>strategic reversal of a pillar's delivery mechanism</strong>, which the roadmap says must be <em>"recorded as a decision and then reflected here"</em> — so this feeds a DEC, and the roadmap's E-UIFOUND row + its "browser-based" / single-binary framing get updated when it lands. (Tauri does render UI in the OS webview, so "not a bundled browser" is the honest framing, not "not browser-based" — noted in <a href="#q1">Q1</a>.)</p>
+    <p class="callout" data-c="pivot-conflict"><strong>The invariant that survives the pivot:</strong> the core stays UI-agnostic (<code>core-technical-design.html</code>: "any UI is a client"). The <a href="#q2">out-of-process topology</a> keeps that true by construction — the React UI is a pure API client, the Tauri process holds no core logic. The existing web shell stays as a second client (<a href="#shell-fate">shell's fate</a>).</p>
 
     <div class="diagram" data-c="pivot-diagram">
       <pre class="mermaid">
@@ -35,60 +37,34 @@ graph LR
     S[(store: ring + bus)]
     P --> S --> A
   end
-  W["web shell (E-UISHELL)<br/>vanilla JS @ GET /"] -. today .-> A
-  N["native app (E-UIFOUND)<br/>egui / Iced / Slint"] ==> A
+  W["web shell (E-UISHELL)<br/>vanilla JS @ GET /"] -. keep .-> A
+  N["Tauri app (E-UIFOUND)<br/>React + TS in webview"] ==> A
   classDef new fill:#1e3a2f,stroke:#4cc38a;
   class N new;
       </pre>
-      <div class="caption">The native app becomes another <em>client</em> of the same control API — the invariant the topology choice must protect.</div>
+      <div class="caption">Both UIs are <em>clients</em> of the same control API — the invariant the out-of-process topology protects.</div>
     </div>
 
-    <h2 id="q1">Q1 · GUI framework <span class="badge warn">re-scoped to RN-like</span></h2>
-    <p class="callout warn" data-c="q1-comment"><strong>Owner comment:</strong> <em>"I want a react-native-like GUI lib, try again."</em> Re-scoped: the app must give the <strong>React-Native developer model</strong> — a declarative component tree (JSX/RSX), hooks-style reactive state, flexbox layout — while still rendering <strong>natively</strong> (no webview). That rules out my earlier picks: egui is immediate-mode, Iced is Elm, Slint is a DSL — none are React-like. It also re-opens the Dioxus family, which is the most React-like Rust option. The realistic RN-like-and-native contenders are below.</p>
+    <h2 id="q1">Q1 · UI stack <span class="badge auto">DECIDED · Tauri + Vite + TypeScript + React</span></h2>
+    <p class="callout" data-c="q1-decision"><strong>Owner decision:</strong> <em>"use tauri + vite + typescript + check the same UI techstack in the ../Strata."</em> The stack is <strong>Tauri 2 + Vite + TypeScript + React + Tailwind</strong>, mirroring the sibling <a href="#strata">Strata</a> project so the two share one house stack. This supersedes the earlier framework exploration (Freya / react-native-macos / egui) and the "not browser-based" framing: Tauri renders the UI in the <strong>OS-native webview</strong> (WKWebView on macOS, WebView2 on Windows, WebKitGTK on Linux) — not a bundled Chromium, and the app ships as a real native window/binary. The prior option tables are struck; they're kept in history via the doc snapshots.</p>
 
-    <p class="callout warn" data-c="q1-tension"><strong>One tension only the Owner can settle:</strong> the direction so far was <em>"native app, built in Rust."</em> "React-Native-like" + "truly native (not webview)" + "production-ready" don't all hold in one Rust library today. So there are two readings:<br/>
-      <strong>(a) Rust-first</strong> — accept a young Rust framework (Freya) that has the RN ergonomics + native Skia render now, at pre-1.0 / solo-maintainer risk.<br/>
-      <strong>(b) RN-first</strong> — use <em>literal</em> React Native for desktop (<code>react-native-macos</code>, JS/TS), which is production-proven and truly native, but the frontend is no longer Rust. The core stays Rust; the UI talks to it over HTTP.<br/>
-      Which constraint wins — <strong>"in Rust"</strong> or <strong>"react-native"</strong>?</p>
-
-    <table data-c="q1-options">
-      <thead><tr><th>Option</th><th>Lang</th><th>Model</th><th>Render (native?)</th><th>Virtualized list</th><th>Maturity</th><th>Biggest risk</th></tr></thead>
+    <h3 id="q1-stack">Frontend tech stack (aligned to Strata)</h3>
+    <table data-c="q1-stack-table">
+      <thead><tr><th>Layer</th><th>Choice</th><th>Version (Strata)</th><th>Role in Trawler</th></tr></thead>
       <tbody>
-        <tr>
-          <td><strong>Freya</strong> 0.3.4<br/><span class="badge auto">Rust-first pick</span></td>
-          <td>Rust</td>
-          <td>RSX + hooks (<code>use_state</code>, <code>spawn</code>) — genuinely RN-like</td>
-          <td><strong>Yes</strong> — Skia GPU, no webview</td>
-          <td><strong><code>VirtualScrollView</code> built-in</strong></td>
-          <td>0.3 stable; 0.4 in RC. MIT. tokio-native</td>
-          <td>Solo maintainer, mid-rewrite to 0.4, no production showcase; no tree/hex widget (build from primitives); no native menu bar</td>
-        </tr>
-        <tr>
-          <td><strong>react-native-macos</strong> 0.81<br/><span class="badge auto">RN-first pick</span></td>
-          <td>JS/TS</td>
-          <td>Literal React — JSX, hooks, Context, Suspense</td>
-          <td><strong>Yes</strong> — renders to AppKit controls, no webview</td>
-          <td><strong>FlatList / FlashList</strong> (cell-recycling, proven at scale)</td>
-          <td><strong>Production</strong> — Microsoft ships Xbox/Office/Win11 UI; Meta-backed</td>
-          <td>Frontend is JS/TS, not Rust (two languages); out-of-tree, lags core RN ~1 minor; Expo/EAS don't target macOS (local builds)</td>
-        </tr>
-        <tr>
-          <td>Dioxus + <code>dioxus-native</code>/Blitz<br/><span class="badge warn">too early</span></td>
-          <td>Rust</td>
-          <td>RSX + hooks — <em>the</em> most React-like Rust framework</td>
-          <td>Yes — Vello/WGPU, no webview (the <em>native</em> renderer; <code>dioxus-desktop</code> is webview and out)</td>
-          <td><strong>None</strong> — no VirtualList component yet</td>
-          <td>0.8-alpha; team says "don't build apps on Blitz yet"</td>
-          <td>Pre-alpha, no virtualization (fatal for the flow list), no production use — revisit ~2027</td>
-        </tr>
+        <tr><td>Shell / packaging</td><td><strong>Tauri 2</strong></td><td><code>tauri</code> 2.1 · <code>@tauri-apps/api</code> ^2.1</td><td>Native window + binary; ships the built web assets. Rust side stays <em>thin</em> (see note).</td></tr>
+        <tr><td>Build / dev server</td><td><strong>Vite 5</strong></td><td>^5.4 · <code>@vitejs/plugin-react</code> ^4.3</td><td>HMR dev server (port 1420) + production bundle to <code>dist/</code>.</td></tr>
+        <tr><td>Language</td><td><strong>TypeScript 5.6</strong></td><td>~5.6, <code>strict</code>, <code>react-jsx</code></td><td>Typed FE; flow/response models typed off the API schema.</td></tr>
+        <tr><td>UI framework</td><td><strong>React 18</strong></td><td><code>react</code>/<code>react-dom</code> ^18.3</td><td>Component tree, hooks — the RN-like ergonomics originally asked for.</td></tr>
+        <tr><td>Styling</td><td><strong>Tailwind 3</strong> + PostCSS</td><td>^3.4 · autoprefixer ^10.4</td><td>Utility CSS; design tokens (below) go in the Tailwind theme.</td></tr>
+        <tr><td>Package manager</td><td><strong>pnpm</strong></td><td>pnpm-lock.yaml</td><td>Same as Strata.</td></tr>
+        <tr><td>List virtualization</td><td><strong>TanStack Virtual</strong> <span class="badge warn">to add</span></td><td>not in Strata</td><td>Strata's treemap needs no long list; Trawler's flow list does. <code>@tanstack/react-virtual</code> for thousands of streaming rows.</td></tr>
       </tbody>
     </table>
-    <p data-c="q1-alsoran"><span class="badge warn">out</span> Webview toolkits (<strong>Tauri</strong>, <strong>dioxus-desktop</strong>, <strong>dioxus-web</strong>) render HTML in a browser engine — ruled out. Web-only Rust frameworks (<strong>Leptos</strong>, <strong>Sycamore</strong>) compile to WASM/browser — out. SwiftUI-bridge crates (<strong>nuit</strong>, <strong>rui</strong>, <strong>WaterUI</strong>) aren't RN-like and are experimental / macOS-only.</p>
-
-    <p class="callout" data-c="q1-reco"><strong>My read:</strong> if <em>"in Rust"</em> is the hard constraint → <strong>Freya 0.3.4</strong>: it's the only Rust lib with RSX+hooks, a native Skia renderer, and a built-in <code>VirtualScrollView</code> for the streaming flow list — but treat it as a calculated bet (do a 5K-row spike first, plan to build the tree/hex panels yourself, track the 0.4 rewrite). If <em>"react-native"</em> is the hard constraint and production-readiness matters more than a single-language stack → <strong>react-native-macos</strong>: it's literally React, truly native (AppKit), and <code>FlashList</code> solves the thousands-of-streaming-rows problem that no Rust-native lib has proven yet — at the cost of a JS/TS frontend over the Rust core. <strong>Dioxus-native</strong> is the ideal on paper but pre-alpha with no list virtualization — not buildable today. This is the one call I need from you before planning.</p>
+    <p class="callout warn" data-c="q1-thin-shell"><strong>Key difference from Strata:</strong> Strata puts its logic <em>in</em> <code>src-tauri/</code> and calls it via Tauri commands. Trawler must <strong>not</strong> — its core already exists as a standalone API, and Q2 is <strong>out-of-process</strong>. So the Tauri Rust side stays a thin window shell; the React frontend talks to <code>127.0.0.1:7421</code> over <code>fetch</code> + <code>EventSource</code>, exactly as the web shell does. This keeps the API-first invariant: no core logic leaks into the Tauri process. (The thin-shell Tauri process could optionally spawn/supervise the core binary — a lifecycle detail for the plan.)</p>
 
     <h2 id="q2">Q2 · Embedding / topology <span class="badge auto">DECIDED · out-of-process</span></h2>
-    <p class="callout" data-c="q2-decision"><strong>Owner decision:</strong> <em>"go with opt 2"</em> → <strong>Topology 2, out-of-process</strong>. The native app is a separate binary that drives <code>127.0.0.1:7421</code> (REST + SSE), exactly like a browser or curl would. This keeps API-first fidelity fully intact (the GUI can only do what the public API exposes) and lets the core run headless for CI/scripting/remote-tunnel use. It also fits the RN-first reading of Q1 cleanly: a JS/TS <code>react-native-macos</code> frontend is <em>necessarily</em> out-of-process. The comparison that led here is kept below for the record.</p>
+    <p class="callout" data-c="q2-decision"><strong>Owner decision:</strong> <em>"go with opt 2"</em> → <strong>Topology 2, out-of-process</strong>. The React frontend (in the thin Tauri shell) drives <code>127.0.0.1:7421</code> (REST + SSE) via <code>fetch</code> + <code>EventSource</code>, exactly like a browser or curl would. This keeps API-first fidelity fully intact (the UI can only do what the public API exposes) and lets the core run headless for CI/scripting/remote-tunnel use. It fits the Tauri choice cleanly: the Tauri Rust process stays a window shell and holds no core logic. The comparison that led here is kept below for the record.</p>
     <p data-c="q2-intro">The native app has to get flows + live events from the core. Three topologies, scored against the one invariant that matters here — <strong>does the GUI stay a pure client of the public API, or does it reach behind it and fork the feature surface?</strong></p>
 
     <table data-c="q2-options">
@@ -110,44 +86,73 @@ graph LR
     <div class="diagram" data-c="q2-diagram">
       <pre class="mermaid">
 graph LR
-  subgraph guiproc["native app process"]
-    G["GUI (Freya / react-native-macos)<br/>SSE client + REST"]
+  subgraph guiproc["Tauri app process"]
+    R["React UI (webview)<br/>fetch + EventSource"]
+    TS["Tauri Rust shell<br/>(thin — window only)"]
+    R -.- TS
   end
   subgraph coreproc["trawler-core process"]
     API["axum control API :7421"] --> ST[(store)]
   end
-  G ==>|"loopback :7421 (REST + SSE)"| API
+  R ==>|"loopback :7421 (REST + SSE)"| API
       </pre>
       <div class="caption">Out-of-process (chosen): two processes, the GUI is a pure client of the public API — the API-first invariant holds by construction. Core stays runnable headless.</div>
     </div>
 
-    <h3 id="q2-crates">Supporting pieces — SSE client</h3>
-    <p data-c="q2-crates-intro">How the GUI consumes <code>GET /stream</code> depends on the Q1 frontend:</p>
+    <h3 id="q2-crates">Supporting pieces — how the React UI reaches the API</h3>
+    <p data-c="q2-crates-intro">With Tauri, the frontend is a webview, so the data path uses the same web primitives the existing shell already uses — no extra crates, no Tauri command bridge:</p>
     <table data-c="q2-crates-table">
       <thead><tr><th>Frontend</th><th>SSE client</th><th>2026 status</th></tr></thead>
       <tbody>
-        <tr><td><strong>Freya</strong> (Rust)</td><td><code>eventsource-client</code> 0.17.5</td><td>Actively maintained (Jun 2026), hyper v1, built-in reconnect w/ backoff, LaunchDarkly. Runs in a <code>spawn</code>'d task → channel → Freya signal/state. <em>(avoid <code>reqwest-eventsource</code> 0.6 — stale since Mar 2024.)</em></td></tr>
-        <tr><td><strong>react-native-macos</strong> (JS/TS)</td><td>native <code>EventSource</code></td><td>Built into the JS runtime — <code>new EventSource('http://127.0.0.1:7421/stream')</code>. Zero dep, zero FFI; REST via <code>fetch</code>.</td></tr>
+        <tr><td>Live events (<code>/stream</code>)</td><td>native <code>EventSource</code></td><td>Built into the webview runtime — <code>new EventSource('http://127.0.0.1:7421/stream')</code>, with <code>request</code>/<code>response</code>/<code>lagged</code> listeners. Zero dep, auto-reconnect. Same pattern the existing web shell already uses.</td></tr>
+        <tr><td>REST (<code>/flows</code>, …)</td><td>native <code>fetch</code></td><td>Standard <code>fetch</code> to <code>127.0.0.1:7421</code>. No Tauri command bridge — the Tauri Rust process is not in the data path.</td></tr>
       </tbody>
     </table>
 
     <h2 id="shell-fate">The web shell's fate <span class="badge auto">DECIDED · keep for now, drop later</span></h2>
     <p class="callout" data-c="shell-fate-note"><strong>Owner decision:</strong> <em>"keep it for now, we'll drop when the new UI is ready."</em> The E-UISHELL web UI (<code>GET /</code>, <code>ui.html</code>) stays untouched through this epic — both surfaces are clients of the same API, so there's no conflict. E-UIFOUND does <strong>not</strong> migrate or retire it; the native app is built alongside. Retiring the web shell (drop <code>GET /</code> + <code>ui.html</code>, rewrite UC-3) becomes a <em>later</em> step, triggered once the native UI reaches parity — tracked as a follow-up, not in this epic's scope.</p>
 
-    <h2 id="scope">What the epic becomes (once Q1 is picked)</h2>
-    <p data-c="scope-body">Q2 (out-of-process) and the shell (keep for now) are settled. With Q1 answered, E-UIFOUND's plan writes into these Working Units (illustrative — finalized in the T3 plan):</p>
-    <ul data-c="scope-list">
-      <li><strong>The DEC</strong> — record the framework choice + out-of-process topology as a T2 decision; update the roadmap's E-UIFOUND row and its "browser-based" / single-binary framing; note the reversal.</li>
-      <li><strong>Project + build integration</strong> — the GUI project set up (a Rust crate in the workspace <em>if Freya</em>; a JS/TS <code>react-native-macos</code> project <em>if RN</em>); <code>xtask</code> builds/runs it and the core together.</li>
-      <li><strong>Design system</strong> — tokens seeded from the existing <code>ui.html</code> palette (<code>--bg #181b22</code>, <code>--accent #5ab0f7</code>, etc.) + base components in the chosen framework.</li>
-      <li><strong>Base app layout</strong> — the shell later epics (E-UIINSPECT inspector, E-UISETUP onboarding) slot into; the live flow list (over <code>/flows</code> + <code>/stream</code>) is its first tenant.</li>
-    </ul>
-    <p class="callout" data-c="scope-spike">If the pick is <strong>Freya</strong>, WU-1 should be a <strong>spike</strong>: 5K streaming rows through <code>VirtualScrollView</code> to confirm perf before the design system is built on it.</p>
+    <h2 id="strata">Strata — the sibling stack we mirror</h2>
+    <p data-c="strata-body">The Owner pointed at <code>../Strata</code> (a native disk-usage analyzer) as the reference. Inspected — its stack, which Trawler's UI adopts:</p>
+    <table data-c="strata-table">
+      <thead><tr><th>Aspect</th><th>Strata</th><th>Trawler adopts?</th></tr></thead>
+      <tbody>
+        <tr><td>Stack</td><td>Tauri 2.1 · Vite 5.4 · TS 5.6 · React 18.3 · Tailwind 3.4 · pnpm</td><td><span class="badge auto">yes, verbatim</span></td></tr>
+        <tr><td>Layout</td><td><code>src/</code> React app · <code>src-tauri/</code> Rust · <code>dist/</code> bundle · <code>vite.config.ts</code> (port 1420)</td><td><span class="badge auto">yes</span> — same shape</td></tr>
+        <tr><td>Release profile</td><td><code>lto</code>, <code>panic="abort"</code>, <code>strip</code>, <code>opt-level=3</code></td><td><span class="badge auto">yes</span></td></tr>
+        <tr><td>Where the logic lives</td><td><strong>In <code>src-tauri/</code></strong>, called via Tauri commands + <code>tauri-plugin-dialog</code></td><td><span class="badge warn">NO — diverge</span> — Trawler's logic is the separate core API; Tauri side stays thin (see <a href="#q1-thin-shell">thin-shell note</a>)</td></tr>
+        <tr><td>Long-list virtualization</td><td>none (treemap, not a list)</td><td><span class="badge warn">add</span> — <code>@tanstack/react-virtual</code></td></tr>
+      </tbody>
+    </table>
 
-    <h2 id="ask">What I need from you</h2>
-    <p class="callout" data-c="ask-body">Just <strong>one</strong> pick left — the rest is decided:<br/>
-      <strong>Q1 framework</strong> → <strong>Freya</strong> (Rust-first: RN ergonomics, native, young/risky) &nbsp;•&nbsp; <strong>react-native-macos</strong> (RN-first: literal React, production-proven, JS/TS frontend).<br/>
-      The deciding question: does <em>"in Rust"</em> win, or does <em>"react-native"</em> win? Comment on the <a href="#q1">Q1 tension</a> or just name one, and I'll write the epic plan + the DEC.</p>
+    <h2 id="design">Design system source <span class="badge auto">Warp DESIGN.md</span></h2>
+    <p class="callout" data-c="design-decision"><strong>Owner input:</strong> seed the design system from <a href="https://raw.githubusercontent.com/VoltAgent/awesome-design-md/refs/heads/main/design-md/warp/DESIGN.md">Warp's DESIGN.md</a>. Fetched and distilled below — the epic's design-system WU builds the Tailwind theme from these tokens (replacing the ad-hoc <code>ui.html</code> palette as the source of truth).</p>
+    <table data-c="design-tokens">
+      <thead><tr><th>Token</th><th>Value</th><th>Use</th></tr></thead>
+      <tbody>
+        <tr><td>Canvas (bg)</td><td><code>#2b2622</code></td><td>Warm-dark page background — browner than black; the identity</td></tr>
+        <tr><td>Canvas soft</td><td><code>#383330</code></td><td>Card / panel fills, chrome</td></tr>
+        <tr><td>Hairline</td><td><code>#3f3a36</code></td><td>1px borders & dividers (elevation via contrast, not shadows)</td></tr>
+        <tr><td>Ink / Primary</td><td><code>#f7f5f0</code></td><td>Off-white — default text AND brand tone (no chromatic accent)</td></tr>
+        <tr><td>Body strong / body / mute</td><td><code>#dad2c1</code> · <code>#c9c0ad</code> · <code>#aea69c</code></td><td>Secondary text tiers</td></tr>
+        <tr><td>Type</td><td>Inter (UI) · DM Mono (code/flows) · Instrument Serif (rare italic)</td><td>Strict role separation</td></tr>
+        <tr><td>Spacing</td><td>4px base — 2·4·8·16·24·32·48·64·96</td><td>Card interior 24px; button 8×16</td></tr>
+        <tr><td>Radius</td><td>3px button · 4px card · 6px large · full for icons</td><td>Tight geometry, never generous pills</td></tr>
+      </tbody>
+    </table>
+    <p class="callout warn" data-c="design-note"><strong>Tension to flag:</strong> Warp's palette is <em>warm-dark + off-white, zero chromatic accent</em>; the current <code>ui.html</code> uses a cool-dark blue-accent scheme (<code>--bg #181b22</code>, <code>--accent #5ab0f7</code>, green/red status). Adopting Warp means status colors (2xx ok / 4xx-5xx error) need a deliberate exception to the "no chromatic accent" rule — a debugging proxy genuinely needs to distinguish success/error at a glance. The design-system WU resolves how far to follow Warp vs. keep functional status color. I'll default to <em>Warp for chrome/typography, keep functional status colors</em> unless you say otherwise.</p>
+
+    <h2 id="scope">What the epic becomes</h2>
+    <p data-c="scope-body">All choices are settled — stack (Tauri+Vite+TS+React+Tailwind), topology (out-of-process), shell (keep for now), design source (Warp). E-UIFOUND's plan writes into these Working Units (finalized in the T3 plan):</p>
+    <ul data-c="scope-list">
+      <li><strong>The DEC</strong> — record the Tauri stack + out-of-process topology as a T2 decision; update the roadmap's E-UIFOUND row and its "browser-based" / single-binary framing; note the reversal.</li>
+      <li><strong>Project + build integration</strong> — scaffold the Tauri+Vite+React+TS project (mirroring Strata's layout) alongside the core; <code>xtask</code> builds/runs the UI and the core together; thin <code>src-tauri</code> shell.</li>
+      <li><strong>Design system</strong> — Warp tokens → Tailwind theme + base components; resolve the status-color exception.</li>
+      <li><strong>Base app layout</strong> — the shell later epics (E-UIINSPECT inspector, E-UISETUP onboarding) slot into; the live flow list (over <code>/flows</code> + <code>/stream</code>, virtualized) is its first tenant, ported from the web shell's logic.</li>
+    </ul>
+
+    <h2 id="ask">Status</h2>
+    <p class="callout" data-c="ask-body">Everything's decided — no open questions. Next step is mine: write the <strong>T3 epic plan</strong> (the Working Units above with requirement sentences + test plans) and the <strong>DEC</strong>. One thing I'll default unless you object: <a href="#design-note">Warp chrome/type + keep functional status colors</a> for the flow list. Say the word and I'll write the plan.</p>
   </main>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
