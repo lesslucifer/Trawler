@@ -9,6 +9,10 @@
 # Archived docs stay out of git (their content history remains in git)
 /docs/.archive/
 
+# Local manual-review trust store — provisioned by `cargo xtask mr setup`,
+# never committed (DEC-10): signature verification is a local-machine concern
+/.mr-allowed
+
 # Environment / editor
 .env
 .env.local

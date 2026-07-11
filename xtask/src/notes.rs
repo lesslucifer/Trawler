@@ -148,9 +148,17 @@ pub struct MrNote {
     /// The `base` of the signed range; present with `sig` for `key`-backed notes.
     #[serde(default)]
     pub base: Option<String>,
-    /// The SSH `SIGNATURE` blob over `sha256(git diff base..tip)`, `key` entries only.
+    /// The SSH `SIGNATURE` blob over the change-hash payload (`sha256(git diff
+    /// base..tip)`, plus `report_sha256` on its own line when a report is named),
+    /// `key` entries only.
     #[serde(default)]
     pub sig: Option<String>,
+    /// The result report this sign-off attests (WU/epic levels): path + sha256
+    /// of the exact bytes the human read.
+    #[serde(default)]
+    pub report: Option<String>,
+    #[serde(default)]
+    pub report_sha256: Option<String>,
     #[serde(default)]
     pub date: Option<String>,
 }
@@ -196,9 +204,10 @@ pub fn is_doc(path: &str) -> bool {
     path.starts_with("docs/")
 }
 
-// Provisional until E-UIFOUND fixes the real UI asset paths (see docs/backlog/roadmap.html).
-pub fn is_ui(path: &str) -> bool {
-    path.starts_with("ui/")
+// Rule-bearing files configure the workflow itself, so their commits need a
+// human signature at commit time (DEC-10): T0 (CLAUDE.md) and T1 (flat docs/).
+pub fn is_rule_bearing(path: &str) -> bool {
+    path == "CLAUDE.md" || tier_of(path) == Some("T1")
 }
 
 pub fn is_expected_tracked_doc(path: &str) -> bool {
@@ -213,7 +222,8 @@ pub fn is_expected_tracked_doc(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        is_code, is_doc, is_expected_tracked_doc, is_ui, tier_of, CrNote, DocNote, TestNote,
+        is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DocNote,
+        TestNote,
     };
 
     #[test]
@@ -347,9 +357,14 @@ t2_waived: null
         assert!(!is_doc("src/lib.rs"));
         assert!(!is_doc("ui/app.tsx"));
 
-        assert!(is_ui("ui/app.tsx"));
-        assert!(!is_ui("src/lib.rs"));
-        assert!(!is_ui("docs/workflow.html"));
+        assert!(is_rule_bearing("CLAUDE.md"), "T0 is rule-bearing");
+        assert!(is_rule_bearing("docs/workflow.html"), "flat T1 is rule-bearing");
+        assert!(!is_rule_bearing("docs/use-cases/capture.html"), "T2 is not");
+        assert!(!is_rule_bearing("docs/decisions/event-bus.html"), "T2 is not");
+        assert!(!is_rule_bearing("docs/backlog/roadmap.html"), "T2 is not");
+        assert!(!is_rule_bearing("docs/work/plan.html"), "T3 is not");
+        assert!(!is_rule_bearing("src/lib.rs"));
+        assert!(!is_rule_bearing(".mr-allowed"), "local trust config, never committed");
 
         assert!(is_expected_tracked_doc("docs/workflow.html"));
         assert!(is_expected_tracked_doc("docs/use-cases/capture.html"));

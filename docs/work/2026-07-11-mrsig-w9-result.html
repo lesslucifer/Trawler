@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a5222089f34851f0dfa8a3a" data-artifact="wu-result">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-MRSIG.W9 Result Report</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-MRSIG.W9 — Result Report</h1>
+      <p>The check-level rebalance: decided as DEC-10 and enforced in the same WU — mr always at WU/epic attesting the result report, commit signatures narrowed to T0/T1, .mr-allowed local-only.</p>
+      <div class="meta">T3 wu-result · v2 · 2026-07-11 · <span class="badge id">E-MRSIG.W9</span> · branch <code>wu/mrsig/check-levels</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <p data-item="outcome">Delivered, with scope widened mid-WU by your comment ("it doesn't make
+    sense to waive all tests… implement with coverage"): W9 now ships the <strong>enforcement</strong>,
+    not just the decision. Live on the branch: the <code>commit-msg</code> hook and the pre-push range
+    check demand a <code>Reviewed-By</code> trailer only for <strong>rule-bearing files</strong> —
+    T0 <code>CLAUDE.md</code> (previously uncovered) and flat T1 <code>docs/*.html</code> — while T2/T3
+    doc commits pass unsigned; <strong>every WU and epic tip</strong> needs an <code>mr/v1</code> note
+    whose <code>report</code>/<code>report_sha256</code> attest the level's result report
+    (<strong>sign-what-you-read</strong>: the key-backed signature covers
+    <code>change-hash\nreport-sha256</code>, a WU report is re-hashed against the tracked file at the
+    tip, an archived epic report survives as the signed hash); <code>.mr-allowed</code> is gitignored
+    and untracked — a local trust store provisioned by <code>mr setup</code>. DEC-10 records all of it
+    as accepted + enforced; T1 flipped in the same diff as the hooks it describes.</p>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">Four, on the record: (1) asked for as "W4" — that id was consumed by the
+    Secure-Enclave pubkey WU, so this is W9; (2) no summary block in the epic plan — it was archived at
+    W3; this plan doc + DEC-10 stand in; (3) the WU was first framed docs-only with enforcement
+    deferred to a follow-up epic (E-CHKLVL) — your comment reversed that; the roadmap row was removed
+    again and the enforcement landed here; (4) discovered during implementation: making WU mr
+    retroactively checkable would have reddened W1–W8's noteless seams at every epic walk (and
+    everything on a fresh clone, since the key list is now local) — so <strong>the walk never re-judges
+    a WU tip's manual review</strong>; it is boundary-only at seams, enforced by the WU merge hook,
+    same shape as DEC-9's doc-commit rule. Recorded as a DEC-10 choice and frozen as a test.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <p data-item="evidence">Code: <code>xtask/src/notes.rs</code> (<code>is_rule_bearing</code> replaces
+    <code>is_ui</code>; <code>MrNote.report/report_sha256</code>) · <code>xtask/src/gate.rs</code>
+    (check 8 always at WU, <code>check_attested_report</code>, walk check-8 filter, trailer check on
+    rule-bearing paths) · <code>xtask/src/mr.rs</code> (<code>resolve_report</code> with
+    flag/inference/prompt, <code>report_sha</code>, <code>signed_payload</code>, narrowed
+    <code>commit_msg_hook</code>) · <code>xtask/src/git.rs</code> (<code>show_bytes</code>, public
+    <code>sha256_hex</code>) · <code>.gitignore</code> + <code>git rm --cached .mr-allowed</code>.
+    Tests, all green with <code>--features hook-tests</code>: <strong>71 unit · 47 dod_gate · 40 mr ·
+    11 dod_hooks · 1 root e2e</strong> — 12 new/replacing integration tests (per-rule negatives:
+    missing note, missing report, stale hash, untracked report, epic note without report, walk
+    grandfathering, T2/T3 untrailered pass, T0 refusal, forged <code>report_sha256</code>), the mr
+    e2e extended (T0/T2/T3 hook behaviour, report attestation, forged-hash tamper), the root
+    <code>e2e_manual_review</code> flow updated, the three UI-derivation tests deleted with the
+    predicate. fmt + clippy clean (one pre-existing warn-level pedantic lint in
+    <code>pub_path_for</code>, untouched).</p>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T1: <code>workflow.html</code> v8 (levels/DoD/mr-rules tables, checks
+    7/8, hooks table, evidence schema, sign-what-you-read paragraph) and
+    <code>work-planning.html</code> v2 (gates-relation now names the mechanical check) — flipped in the
+    same diff as the enforcement. T2: DEC-10 in <code>workflow-gates.html</code> (accepted + enforced,
+    the walk-boundary choice added), index updated, roadmap: E-CHKLVL row removed, <code>is_ui</code>
+    row struck as moot. T3: the brainstorm + this pair archive with the epic per DEC-3.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups">Two, both small: (1) the pre-existing DEC-9 caveat stands —
+    <code>commit_signed</code> verifies against all listed keys, fix before a second signer is ever
+    listed; (2) this WU's own merge is the first live run of the new rules: it needs your
+    <code>cargo xtask mr confirm wu --report docs/work/2026-07-11-mrsig-w9-result.html</code> (one
+    Touch ID) after the code review lands its notes — the dogfood moment the brainstorm predicted.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

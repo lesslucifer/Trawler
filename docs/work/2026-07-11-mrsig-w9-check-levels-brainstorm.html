@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a521d579f34851f0dfa8a25">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-MRSIG.W9 Check-Levels Brainstorm</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-MRSIG.W9 — Check-Levels Brainstorm</h1>
+      <p>Rebalancing where human sign-off lives: mr always at WU and epic tips, result reports made gate-provable, commit-level signing narrowed to rule-bearing files (T0/T1).</p>
+      <div class="meta">T3 brainstorm (ungoverned — not a plan/result artifact) · 2026-07-11 · <span class="badge id">E-MRSIG.W9</span> · branch <code>wu/mrsig/check-levels</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="driver">The driver</h2>
+
+    <p data-c="driver-text">Since <code>.mr-allowed</code> went all-<code>key</code> (<code>d434d6d</code>),
+    <strong>every</strong> <code>docs/</code>-touching commit costs a Touch ID — including T3 scratch like
+    this very doc, which the agent cannot commit without you. Meanwhile the sign-offs that carry real
+    meaning (a human read what a WU actually delivered) are only demanded for UI paths. The proposal is
+    one coherent move, not three: <strong>shift human authority up to the WU/epic boundaries, where a
+    result report gives the human something worth reading — and narrow the per-commit signature down to
+    the files that configure the rules themselves.</strong></p>
+
+    <h2 id="overview">The move, per level</h2>
+
+    <table data-c="overview-table">
+      <thead><tr><th>Level</th><th>Today</th><th>Proposed</th><th>Delta</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Commit</strong></td><td><code>Reviewed-By</code> trailer + gpgsig for <em>any</em> <code>docs/</code> touch; <code>CLAUDE.md</code> (T0, repo root) not covered at all</td><td>signature only when the commit touches <strong>rule-bearing files</strong>: T0 (<code>CLAUDE.md</code>) or T1 (flat <code>docs/*.html</code>) — T2/T3 doc commits go unsigned</td><td>narrower <em>and</em> plugs the T0 gap</td></tr>
+        <tr><td><strong>Working Unit</strong></td><td><code>mr/v1</code> UI-only; result report demanded by <a href="../work-planning.html">the work-planning standard</a> at authoring time, invisible to the gate</td><td><code>mr/v1</code> <strong>always</strong> (not waivable) + result report existence <strong>gate-checked</strong></td><td>one Touch ID per WU merge</td></tr>
+        <tr><td><strong>Epic</strong></td><td><code>mr/v1</code> already always (check 8); result report demanded by the standard, but T3 archival means the gate can't see it</td><td>unchanged mr + result report made <strong>provable at the gate</strong> despite archival</td><td>evidence, not extra touches</td></tr>
+      </tbody>
+    </table>
+
+    <div class="diagram" data-c="authority-diagram">
+      <pre class="mermaid">
+flowchart TD
+  C["commit<br/>agent autonomous — hooks enforce DoD-C<br/>🔑 sign ONLY if diff touches CLAUDE.md / docs/*.html (T0/T1)"]
+  C --> W["WU merge into epic<br/>🔑 mr/v1 ALWAYS — human reads the wu-result report,<br/>Touch ID signs base..tip (+ report hash)"]
+  W --> E["epic merge into main<br/>🔑 mr/v1 always (as today) — human reads the epic-result report,<br/>Touch ID signs base..tip (+ report hash); report then archived"]
+      </pre>
+      <div class="caption">Human sign points after the change: rule-bearing files at commit time, everything else at the boundaries — each boundary signature attesting a result report the human actually read.</div>
+    </div>
+
+    <h2 id="commit">Commit level — sign T0/T1 only</h2>
+
+    <p data-c="commit-rationale"><strong>Why these paths:</strong> T0 and T1 are the files that
+    <em>configure the workflow the agent runs under</em> — CLAUDE.md steers every session, and
+    <code>docs/workflow.html</code> / <code>testing-strategy.html</code> / <code>documentation-system.html</code>
+    / <code>work-planning.html</code> define what the gates demand. An unsigned edit there lets an agent
+    weaken its own gates. T2/T3 are agent-synthesized records: their quality is already judged by the
+    WU/epic reviews that read them, and — with the WU change below — every one of them now passes a human
+    mr boundary anyway. Docs stay gated <em>at commit time</em> for T0/T1 exactly as DEC-9 argued
+    (post-hoc review of a rule change is too late); T2/T3 lose the commit gate because they gain a
+    boundary one.</p>
+
+    <div class="callout" data-c="mr-allowed-gap">
+      <p><strong>Decided (manager comment): <code>.mr-allowed</code> leaves git — gitignored, local-only.</strong>
+      The signature check is a local-machine concern (hooks and gates all run locally), so the key list is
+      local trust config like the hooks themselves, not versioned content. This dissolves the gap found
+      here (an agent adding its own key to the <em>tracked</em> list rode ordinary infra commits): a local
+      file edit is the same trust boundary as editing a hook — the workflow forbids it, DEC-2/DEC-6 already
+      accept that shape. Supersedes DEC-7's "adding a person to <code>.mr-allowed</code> is itself a
+      tracked, reviewable diff". Consequence: a fresh clone verifies nothing until <code>mr setup</code>
+      recreates the list; tests are unaffected (temp repos build their own).</p>
+    </div>
+
+    <table data-c="commit-pathset">
+      <thead><tr><th>Path</th><th>Tier</th><th>Signed?</th></tr></thead>
+      <tbody>
+        <tr><td><code>CLAUDE.md</code></td><td>T0</td><td><strong>yes</strong> — new coverage</td></tr>
+        <tr><td><code>docs/*.html</code> (flat only)</td><td>T1</td><td><strong>yes</strong> — as today</td></tr>
+        <tr><td><code>.mr-allowed</code></td><td>local trust config</td><td>n/a — gitignored, never committed (decision above)</td></tr>
+        <tr><td><code>docs/use-cases/ · decisions/ · backlog/</code></td><td>T2</td><td>no — judged at WU/epic review, human at every boundary mr</td></tr>
+        <tr><td><code>docs/work/</code></td><td>T3</td><td>no — scratch; the friction this proposal removes</td></tr>
+      </tbody>
+    </table>
+
+    <p data-c="commit-open"><strong>Open questions</strong> (proposed defaults in bold):
+    ① <code>decisions/</code> — DEC records justify enforcement; should they stay signed?
+    <strong>No</strong>: enforcement lives in T1 + gate code, a reworded DEC changes nothing a hook
+    refuses, and every DEC edit passes a boundary mr. ② <code>.githooks/</code>, <code>xtask/src/gate.rs</code>,
+    <code>.claude/settings.json</code>+<code>hooks/</code> are equally rule-bearing but are <em>code</em> —
+    covered by DoD-C tests, review, and the boundary mrs. Extend the signed set to them too?
+    <strong>Not yet</strong> — start with the three rows above; widen if review ever catches an attempt.</p>
+
+    <h2 id="wu">WU level — mr always, result report gate-checked</h2>
+
+    <p data-c="wu-mr"><strong>mr always:</strong> drop the UI-only path derivation; a WU tip needs a
+    listed <code>mr/v1</code> note, not waivable, exactly like an epic tip today — check 8's level
+    predicate changes, the mr-rules-table row changes, nothing else. Like the epic rule, it runs
+    independently of the docs/infra exemption: a docs-only WU still ends with a human. The trade is
+    honest: today you touch Touch ID once per doc <em>commit</em>; after, once per <em>WU</em> — fewer
+    touches, each one attached to a readable deliverable.</p>
+
+    <p data-c="wu-report"><strong>Result report:</strong> the standard already demands a
+    <code>wu-result</code> doc before the merge, harness-verified at authoring time — but
+    <a href="../work-planning.html#gates">"Relation to the DoD gates: none mechanically"</a>. At the WU
+    gate the report is unproblematic to check: T3 archival happens at <em>epic</em> close, so the
+    <code>docs/work/…-result.html</code> file is legitimately tracked at the WU tip. Options:</p>
+
+    <table data-c="wu-report-options">
+      <thead><tr><th></th><th>Mechanism</th><th>Assessment</th></tr></thead>
+      <tbody>
+        <tr><td>a</td><td><code>doc/v1</code> gains a <code>result_report: &lt;path&gt;</code> field; gate check 6 verifies the file is tracked at the tip, <code>data-artifact</code> includes <code>wu-result</code>, <code>verify-doc</code> green</td><td>cheap, purely mechanical, proves existence only</td></tr>
+        <tr><td>b</td><td><code>mr confirm</code> becomes <strong>sign-what-you-read</strong>: the wizard names the report, records its path + sha256 in <code>mr/v1</code>, and the Touch ID signature covers change-hash <em>+ report hash</em>; check 8 verifies both</td><td>couples the two proposals — the mr <em>means</em> "a human read this WU's result"; tamper-evident on the report bytes</td></tr>
+        <tr><td>c</td><td>status quo: harness hooks + review judgment</td><td>what we have; the gate proves nothing</td></tr>
+      </tbody>
+    </table>
+
+    <p data-c="wu-report-rec"><strong>Decided: b, with a's file check folded in.</strong> b is what
+    makes "mr always" worth its touch — otherwise the WU mr is a blind tap.</p>
+
+    <h2 id="epic">Epic level — the report-vs-distillation tension</h2>
+
+    <p data-c="epic-tension">The tension the ask names: DoD-E demands the epic result report, but gate
+    check 6 refuses anything <em>tracked</em> under <code>docs/work/</code> at the epic tip, and T3
+    archival moves every work doc to untracked <code>docs/.archive/</code> before the merge. So at the
+    exact moment the epic gate runs, the report cannot be in git — today it exists only as a working-tree
+    file (see <code>mrsig-w3-result.html</code>, sitting untracked right now) and the gate can't prove it
+    ever existed. Options:</p>
+
+    <table data-c="epic-report-options">
+      <thead><tr><th></th><th>Mechanism</th><th>Assessment</th></tr></thead>
+      <tbody>
+        <tr><td>a</td><td>lineage proof: epic-tip <code>doc/v1</code> must carry an <code>archived</code> entry declaring the <code>epic-result</code> artifact with <code>distilled_to</code>; check 6 extension</td><td>mechanical but weak — proves a note <em>claims</em> a report; the file lives outside git</td></tr>
+        <tr><td>b</td><td><strong>sign-what-you-read</strong>, same as WU option b: <code>mr confirm epic</code> names the report, <code>mr/v1</code> records path + sha256, the Touch ID signature covers change-hash + report hash; the archive copy re-hashes offline forever</td><td>strongest — the human attests the exact bytes read, and archival can't erase the proof because the proof is the hash, not the file's git status</td></tr>
+        <tr><td>c</td><td>track the epic result on <code>main</code> (carve a one-file exception into check 6)</td><td>rejected — T3 on <code>main</code> rots by definition; T2 is the distilled truth (documentation-system)</td></tr>
+      </tbody>
+    </table>
+
+    <p data-c="epic-rec"><strong>Decided (manager comment): b (a comes along free — the hash has to point
+    at an archive path, which is the lineage).</strong> Epic mr count is unchanged; only its meaning upgrades from
+    "authorised this tip" to "read the result report and authorised this tip", with
+    <code>TRAWLER_SIGN_REASON</code> naming it on the Touch ID sheet.</p>
+
+    <h2 id="net">Net effect on human touches</h2>
+
+    <table data-c="net-table">
+      <thead><tr><th>Event</th><th>Today (all-key list)</th><th>Proposed</th></tr></thead>
+      <tbody>
+        <tr><td>T3/T2 doc commit</td><td>1 Touch ID each</td><td>0</td></tr>
+        <tr><td>T0/T1 commit</td><td>1 (T1 only; T0: <strong>none</strong>)</td><td>1 — coverage widened to CLAUDE.md</td></tr>
+        <tr><td>WU merge</td><td>0 (unless UI)</td><td>1, attesting the wu-result report</td></tr>
+        <tr><td>Epic merge</td><td>1</td><td>1, attesting the epic-result report</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="impl">Where this lands</h2>
+
+    <p data-c="impl-scope"><strong>Landed in W9 itself</strong> (manager direction at the result-report
+    review: implement with tests, don't defer to a follow-up epic). The enforcement, its unit +
+    integration coverage and the updated e2e shipped in this WU together with the T1 flip —
+    <code>workflow.html</code> / <code>work-planning.html</code> changed in the same diff as the hooks
+    they describe, honouring "T1 states what the hooks enforce now" without ever letting the two drift.
+    One design point surfaced during implementation: <strong>the epic walk never re-judges a WU tip's
+    <code>mr/v1</code></strong> — manual review is boundary-only at seams (the WU merge hook gates the
+    seam when it is made), or W1–W8's noteless historical seams would have reddened every future E-MRSIG
+    gate, and any fresh clone (empty local <code>.mr-allowed</code>) would redden everything; recorded as
+    a DEC-10 choice, same shape as DEC-9's doc-commit rule. Full seam list and test evidence:
+    <a href="2026-07-11-mrsig-w9-result.html">the W9 result report</a> and
+    <a href="../decisions/workflow-gates.html#dec-10">DEC-10</a>.</p>
+
+    <div class="callout" data-c="live-demo">
+      <p><strong>Live demonstration of the friction:</strong> this T3 brainstorm cannot be committed
+      without your Touch ID under today's rules. It sits uncommitted on
+      <code>wu/mrsig/check-levels</code> until you either <code>cargo xtask mr commit</code> it — or we
+      agree the commit rule above should make exactly this case signature-free.</p>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

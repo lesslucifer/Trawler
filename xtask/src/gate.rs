@@ -4,7 +4,7 @@ use std::process::Command;
 
 use crate::git::{diff_names, diff_sha256, git, note, write_note};
 use crate::notes::{
-    is_code, is_doc, is_expected_tracked_doc, is_ui, tier_of, CrNote, DocNote, TestNote,
+    is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DocNote, TestNote,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -95,7 +95,7 @@ impl Gate<'_> {
         if level == Level::Epic {
             self.check_tracked_docs(&mut report);
         }
-        self.check_manual_review(&mut report, &names);
+        self.check_manual_review(&mut report);
         report.exempt = report.exempt && report.failures.is_empty();
         if !code_changed {
             return Ok(report);
@@ -258,13 +258,11 @@ impl Gate<'_> {
         }
     }
 
-    fn check_manual_review(&self, report: &mut Report, names: &[String]) {
+    fn check_manual_review(&self, report: &mut Report) {
         let why = match report.level {
             Level::Epic => "every epic merge requires manual review",
-            Level::Wu if names.iter().any(|p| is_ui(p)) => {
-                "this WU touches UI and requires manual review"
-            }
-            _ => return,
+            Level::Wu => "every working-unit merge requires manual review",
+            Level::Commit => return,
         };
         if !crate::mr::tip_authorised(self.repo, &report.tip) {
             report.failures.push(Failure::new(
@@ -272,6 +270,47 @@ impl Gate<'_> {
                 format!("{why} - tip {} has no valid mr/v1 note", short(&report.tip)),
                 crate::mr::NOT_AUTHORISED.to_string(),
             ));
+            return;
+        }
+        self.check_attested_report(report);
+    }
+
+    // Sign-what-you-read (DEC-10): the mr/v1 note must name the level's result
+    // report; at WU level the named bytes must be tracked at the tip,
+    // hash-identical. An epic report is archived out of git by gate time
+    // (DEC-3), so there its hash is attested by the note's signature alone.
+    fn check_attested_report(&self, report: &mut Report) {
+        let Some(mr) = note(self.repo, "mr", &report.tip)
+            .and_then(|raw| serde_yaml::from_str::<crate::notes::MrNote>(&raw).ok())
+        else {
+            return;
+        };
+        let (Some(path), Some(sha)) = (&mr.report, &mr.report_sha256) else {
+            report.failures.push(Failure::new(
+                "8·manual-review",
+                format!("the mr/v1 note on {} names no result report", short(&report.tip)),
+                "re-run `cargo xtask mr confirm` with --report <the level's result report>"
+                    .to_string(),
+            ));
+            return;
+        };
+        if report.level != Level::Wu {
+            return;
+        }
+        match crate::git::show_bytes(self.repo, &report.tip, path) {
+            Ok(bytes) if crate::git::sha256_hex(&bytes).ok().as_deref() == Some(sha.as_str()) => {}
+            Ok(_) => report.failures.push(Failure::new(
+                "8·manual-review",
+                format!("{path} at the tip differs from the bytes the mr/v1 note attests"),
+                "re-run `cargo xtask mr confirm` against the tip's actual result report"
+                    .to_string(),
+            )),
+            Err(_) => report.failures.push(Failure::new(
+                "8·manual-review",
+                format!("{path} (the attested result report) is not tracked at the tip"),
+                "commit the WU result report on the branch, then re-run `cargo xtask mr confirm`"
+                    .to_string(),
+            )),
         }
     }
 
@@ -304,7 +343,7 @@ impl Gate<'_> {
         parent: &str,
     ) -> Result<(), String> {
         let names = diff_names(self.repo, parent, commit)?;
-        if !names.iter().any(|p| is_doc(p)) {
+        if !names.iter().any(|p| is_rule_bearing(p)) {
             return Ok(());
         }
         let message = git(self.repo, &["log", "-1", "--format=%B", commit]).unwrap_or_default();
@@ -319,7 +358,7 @@ impl Gate<'_> {
             report.failures.push(Failure::new(
                 "8·manual-review",
                 format!(
-                    "doc commit {} has no valid {} trailer (a key-backed identity must also sign the commit) or mr/v1 note",
+                    "rule-bearing doc commit {} (T0 CLAUDE.md / T1 docs) has no valid {} trailer (a key-backed identity must also sign the commit) or mr/v1 note",
                     short(commit),
                     crate::mr::TRAILER_KEY
                 ),
@@ -343,7 +382,6 @@ impl Gate<'_> {
     // still-red seam's fix names the exact, on-the-record waiver edit and warns
     // off --no-verify, which would skip every gate rather than this one seam.
     fn record_seam(
-        &self,
         report: &mut Report,
         seam: &str,
         failures: Vec<Failure>,
@@ -391,9 +429,16 @@ impl Gate<'_> {
                     }
                     let inner = self.verify(Level::Wu, wu_tip, mainline)?;
                     let level = inner.level.as_note_level();
+                    // Manual review is boundary-only at seams too (DEC-9/DEC-10):
+                    // mr/v1 verifies against the mutable, local .mr-allowed, so
+                    // re-judging immutable WU tips would redden authorised history
+                    // after key rotation or on a fresh clone. The WU merge hook
+                    // gated the seam when it was made; the epic tip's own check 8
+                    // still runs.
                     let failures = inner
                         .failures
                         .into_iter()
+                        .filter(|f| f.check != "8·manual-review")
                         .map(|f| {
                             Failure::new(
                                 &format!("7·walk·{}", f.check),
@@ -440,7 +485,7 @@ impl Gate<'_> {
                 ),
                 _ => continue,
             };
-            self.record_seam(report, seam, seam_failures, waivers.as_ref());
+            Self::record_seam(report, seam, seam_failures, waivers.as_ref());
         }
         Ok(())
     }
