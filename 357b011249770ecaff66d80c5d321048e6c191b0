@@ -1,0 +1,9 @@
+schema: dod/v1
+level: epic
+epic: E-MRSIG
+branch: epic/mrsig
+base: 1ee2f3094ccfadbcf35e558b43bbe1ff90725b0e
+tip: 357b011249770ecaff66d80c5d321048e6c191b0
+diff_sha256: 4d455d1c91722f32b12940449b2676bd52619ccdbb4755d04d3357fee6c82f1b
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review, walk]
+date: 2026-07-11
