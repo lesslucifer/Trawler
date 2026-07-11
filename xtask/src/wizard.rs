@@ -40,11 +40,18 @@ pub fn choose(
     options: &[MenuOption],
 ) -> Result<usize, String> {
     eprintln!("{title}");
-    for (i, option) in options.iter().enumerate() {
+    let mut number = 0;
+    for option in options {
         match (&option.unavailable, option.note.is_empty()) {
             (Some(reason), _) => eprintln!("  -  {} (unavailable: {reason})", option.label),
-            (None, true) => eprintln!("  {}) {}", i + 1, option.label),
-            (None, false) => eprintln!("  {}) {} - {}", i + 1, option.label, option.note),
+            (None, true) => {
+                number += 1;
+                eprintln!("  {number}) {}", option.label);
+            }
+            (None, false) => {
+                number += 1;
+                eprintln!("  {number}) {} - {}", option.label, option.note);
+            }
         }
     }
     loop {
@@ -56,14 +63,19 @@ pub fn choose(
     }
 }
 
-/// A menu answer — the 1-based number or the option id — for available options.
+/// A menu answer — the option id, or the 1-based number shown next to it.
+/// Numbers count available options only, matching the display, so a greyed
+/// entry never shifts or swallows a pick.
 pub fn parse_choice(answer: &str, options: &[MenuOption]) -> Option<usize> {
-    let index = answer
-        .parse::<usize>()
-        .ok()
-        .and_then(|n| n.checked_sub(1))
-        .filter(|i| *i < options.len())
-        .or_else(|| options.iter().position(|o| o.id == answer))?;
+    if let Ok(n) = answer.parse::<usize>() {
+        return options
+            .iter()
+            .enumerate()
+            .filter(|(_, o)| o.unavailable.is_none())
+            .nth(n.checked_sub(1)?)
+            .map(|(i, _)| i);
+    }
+    let index = options.iter().position(|o| o.id == answer)?;
     options[index].unavailable.is_none().then_some(index)
 }
 
@@ -112,11 +124,20 @@ mod tests {
         let opts = options();
         assert_eq!(parse_choice("1", &opts), Some(0));
         assert_eq!(parse_choice("software", &opts), Some(1));
-        assert_eq!(parse_choice("3", &opts), None, "unavailable is not selectable");
-        assert_eq!(parse_choice("fido2", &opts), None);
+        assert_eq!(parse_choice("3", &opts), None, "only available options are numbered");
+        assert_eq!(parse_choice("fido2", &opts), None, "unavailable id is not selectable");
         assert_eq!(parse_choice("0", &opts), None);
-        assert_eq!(parse_choice("4", &opts), None);
         assert_eq!(parse_choice("nonsense", &opts), None);
+    }
+
+    #[test]
+    fn numbers_count_available_options_so_a_leading_greyed_entry_never_shifts_a_pick() {
+        let mut opts = options();
+        opts.rotate_right(1);
+        assert!(opts[0].unavailable.is_some(), "fido2 now heads the list");
+        assert_eq!(parse_choice("1", &opts), Some(1), "1 is the first *available* option");
+        assert_eq!(parse_choice("2", &opts), Some(2));
+        assert_eq!(parse_choice("3", &opts), None);
     }
 
     #[test]

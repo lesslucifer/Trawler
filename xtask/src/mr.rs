@@ -273,9 +273,10 @@ fn mr_confirm(
     target: Option<String>,
     input: &mut dyn std::io::BufRead,
 ) -> Result<(i32, String), String> {
+    let branch = current_branch(repo);
     let level_word = match level {
         Some(l) => l.to_string(),
-        None => match infer_level(&current_branch(repo)) {
+        None => match infer_level(&branch) {
             Some(inferred) => inferred.to_string(),
             None => wizard::ask(input, "level (wu or epic)")?,
         },
@@ -307,7 +308,7 @@ fn mr_confirm(
     let base = git(repo, &["merge-base", &target, &tip])?;
     let hash = diff_sha256(repo, &base, &tip)?;
     let key = signing_key(repo)?;
-    let named_tip = if tip_ref == "HEAD" { current_branch(repo) } else { tip_ref.to_string() };
+    let named_tip = if tip_ref == "HEAD" { branch } else { tip_ref.to_string() };
     let reason = confirm_reason(&named_tip, &target, &tip, identity);
     prompt_touch(identity, &reason);
     let sig =
