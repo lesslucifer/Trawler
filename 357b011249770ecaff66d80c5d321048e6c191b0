@@ -1,0 +1,14 @@
+schema: cr/v2
+scope: "epic E-MRSIG -> main"
+epic: E-MRSIG
+branch: epic/mrsig
+base: 1ee2f3094ccfadbcf35e558b43bbe1ff90725b0e
+head: 357b011249770ecaff66d80c5d321048e6c191b0
+diff_sha256: 4d455d1c91722f32b12940449b2676bd52619ccdbb4755d04d3357fee6c82f1b
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 12, verified: 1, waived: 1 }
+waivers:
+  - finding: "FIDO2 setup uses a fixed key stem (~/.ssh/id_trawler_mrsig) - a second identity choosing FIDO2 on the same machine would silently inherit the first identity's public key"
+    reason: "unreachable in the shipped steady state: .mr-allowed holds a single key entry (all-key list, DEC-9/DEC-10); recorded in the epic result report follow-ups under the same 'before a second signer is ever listed' gate as the commit_signed all-keys caveat accepted at the W3 review - both fix together when a second signer is added"
+verdict: PASS
+date: 2026-07-11
