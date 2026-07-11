@@ -1,0 +1,6 @@
+schema: test/v2
+level: epic
+epic: E-MRSIG
+branch: epic/mrsig
+tests:
+  e2e: { count: 2, covers: "e2e_signed_manual_review_flow_with_a_software_key: setup -> signed T1 doc commit (T2/T3 pass the hook unsigned, T0 refused) -> confirm attesting the result report -> amend + forged-report tampers rejected -> unsigned/unlisted negatives; root full_manual_review_flow drives hook + gate through the real xtask binary. Hardware presence (real Touch ID sheet per signature) is the standing deployment waiver from W6: crypto proven with software keys, the Touch ID path proven manually in W7/W8 and in production use on this branch (W9 commit + confirm signatures)" }
