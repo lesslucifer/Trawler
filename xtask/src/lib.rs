@@ -1,6 +1,7 @@
 pub mod debug;
 pub mod doc;
 pub mod gate;
+pub mod gate0;
 pub mod git;
 pub mod mr;
 pub mod notes;
@@ -20,6 +21,7 @@ usage:
   cargo xtask verify-dod commit-msg <msg-file>                (commit-msg hook: docs need an mr trailer)
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
+  cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
   cargo xtask mr commit -m <msg> --as <email|username>       (doc commit: write the Reviewed-By trailer)
   cargo xtask mr confirm <wu|epic> <tip> --as <email|username> (write the mr/v1 note on the tip)
   cargo xtask dod list [--epic <id>]
@@ -34,6 +36,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
     match strs.as_slice() {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
+        ["gate0"] => gate0::gate0(repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
         ["debug", "serve", rest @ ..] => debug::serve(rest, repo),

@@ -27,12 +27,14 @@ sequences the run.
 
 ## 2 · Gate 0 — abort if red
 
-Run in order; any failure ⇒ stop, report it to the caller, spawn no agents,
-write no evidence:
-
-1. `cargo fmt --all -- --check`
-2. `cargo clippy --all-targets --all-features -- -D warnings`
-3. `cargo nextest run --all` (fallback `cargo test --all`)
+Run `cargo xtask gate0`. It runs `fmt --check` + `clippy -D warnings` +
+`nextest run --all` (fallback `cargo test --all`) and **skips them when the
+working tree is byte-identical to the last green run** (cached under
+`target/.gate0-green`, a local per-checkout file — never a git note, never
+synced). Any tree change — code, test, or whitespace — invalidates the cache
+and re-runs the full trio, so a skip can never vouch for a tree it did not
+verify. A non-zero exit ⇒ stop, report it to the caller, spawn no agents, write
+no evidence.
 
 ## 3 · Find — five isolated finders, in parallel
 
