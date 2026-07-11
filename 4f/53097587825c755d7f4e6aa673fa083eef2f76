@@ -1,0 +1,13 @@
+schema: test/v2
+level: working-unit
+epic: E-UIFOUND
+wu: E-UIFOUND.W1
+tests:
+  e2e:
+    waived: "W1 is infrastructure (project scaffold + build task) with no user-facing contract; the epic e2e (UC-4, WebDriver-driven Tauri window) lands with W2 per the epic plan. The scaffold is proven by the WU-seam integration test (real pnpm build emits ui/dist/index.html) and the Tauri shell compiling."
+  integration:
+    count: 2
+    what: "xtask/tests/ui.rs: (1) core_workspace_excludes_the_ui_crate — cargo metadata for the core workspace does NOT list trawler-ui (the GUI-free isolation invariant, always runs); (2) xtask_ui_build_emits_a_bundle — the real cargo xtask ui build runs the pnpm pipeline end to end and emits ui/dist/index.html (gated behind TRAWLER_UI_BUILD_TEST=1, verified passing)."
+  unit:
+    count: 2
+    what: "xtask::ui::tests::unknown_ui_subcommand_is_usage_error — the ui subcommand rejects an unknown arg with the usage error; ui/src/App.test.tsx (Vitest + Testing Library) — the React root mounts and renders the placeholder view."
