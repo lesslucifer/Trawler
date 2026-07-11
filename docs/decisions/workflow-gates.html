@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions — Workflow Gates</h1>
       <p>Why DoD evidence is shaped the way it is.</p>
-      <div class="meta">v5 · 2026-07-07 · Trawler · <a href="decisions-index.html">index</a></div>
+      <div class="meta">v6 · 2026-07-11 · Trawler · <a href="decisions-index.html">index</a></div>
     </div>
   </header>
   <main>
@@ -196,6 +196,44 @@
     a misfire is now a logged, per-seam door on the <code>cr/v2</code> note, not a blanket <code>--no-verify</code>
     wall. The standing workflow rule "cross-epic dependencies serialize through <code>main</code>" is now
     explicit; unlanded live integration has a recorded escape (the waiver) rather than needing #3′.</p>
+
+    <h2 id="dec-9"><span class="badge id">DEC-9</span> Gate speed is bought by caching under DEC-2, never by relaxing it — incremental Gate 0 is the one cut that survived measurement</h2>
+    <table data-c="dec-9-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-11</td></tr>
+        <tr><th>Origin</th><td>Epic E-GATEFAST — six candidates measured, one adopted (owner verdict at epic close); plan, discussion and WU/A-B reports archived under <code>docs/.archive/</code> (untracked)</td></tr>
+        <tr><th>Where</th><td><code>xtask/src/gate0.rs</code> · <code>xtask/src/git.rs · worktree_key</code> · code-review skill §Gate 0 (infra markdown)</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-9-context">Context</h3>
+    <p>Landing a change measured 45–106 min of active agent time per gate-heavy epic, and the
+    transcripts located it: main-loop generation 32–56%, the code-review fleet a stable ~25% re-run
+    from scratch on every delta — while <code>verify-dod</code> itself is &lt;0.5%. Every speed
+    candidate is therefore a caching/scoping problem under DEC-2's recompute-don't-trust invariant:
+    a cache that reports green for a tree it did not verify is worse than a slow gate.</p>
+
+    <h3 id="dec-9-choices">Choices (every rejection is a measured A/B, not a hunch)</h3>
+    <table data-c="dec-9-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away / do not retry without new leverage</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Adopted:</strong> Gate 0 (fmt+clippy+tests) skips when the working tree is byte-identical to the last green run — key = full worktree hash (HEAD + <code>git diff HEAD</code> + untracked non-ignored contents), cached in a local <code>target/.gate0-green</code> file</td><td>The cache stores the key it vouches for, never a bare verdict, so a skip fires only when the recomputed key matches — DEC-2 applied to a cache. A file under <code>target/</code>, deliberately not a git note: the fact is ephemeral and per-checkout, <code>cargo clean</code> co-invalidates it, and it never syncs (another machine has not run this build). Recovers the cargo bucket previously paid 2–3× per review.</td></tr>
+        <tr><td>Rejected: note/doc skeleton generation (W1, C4)</td><td>A/B (n=3/arm): on a capable model the hand-authored arm passed the gate first try, so the round-trip saving never reproduced — ~31% fewer tokens but ~1.9× wall-clock in print-only form. The win is contingent on weaker models or harder diffs; not adopted.</td></tr>
+        <tr><td>Rejected: faster review model (W3, C6)</td><td>A/B on a labeled diff: Sonnet finders 2/2 known-real, ~25% faster — but Sonnet verifiers flipped 3/9 verdicts vs ground truth (a spurious PASS→FAIL), and the verify phase had no wall-clock headroom (47s vs 50s). Verifier quality is the binding constraint; owner closed the epic without adopting the switch for either role.</td></tr>
+        <tr><td>Rejected: context-pack for finders (W6)</td><td>A known-real finding escaped and the critical path grew +63%. Failed on both axes.</td></tr>
+        <tr><td>Rejected: sharded correctness finder (W7)</td><td>Parity and recall held but the critical path grew +11% — restructuring cost exceeded the parallelism it bought.</td></tr>
+        <tr><td>Rejected: streamed verifiers (W8)</td><td>Verifier verdict variance breaks the exact-set-equivalence check the pipeline depends on, and the tail is floored by the last finder's own verify cost — streaming cannot beat that floor.</td></tr>
+        <tr><td>Never started: scoped re-verify + right-sized finders (W4, C2/C3/C5)</td><td>Epic closed first. The "provably-safe delta" definition — the piece that would let a trailing docs-only fix skip the full sweep — remains open; it is the epic's one unexplored lever and was always flagged as its highest-care call (too-loose reopens the R2 hole).</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-9-consequences">Consequences</h3>
+    <p>Gate 0 is paid once per green tree instead of 2–3×; any tree change — code, test, whitespace,
+    a new untracked source file — re-runs the full trio, pinned by regression tests. The review
+    fleet's critical path is empirically floored by the slowest finder plus Opus verification: three
+    independent restructurings (pack, shard, stream) all lost their A/Bs against that floor, so do
+    not retry them without changing the floor itself (a faster <em>trustworthy</em> verifier, or
+    W4's safe-delta scoping).</p>
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
