@@ -1,0 +1,8 @@
+schema: doc/v1
+epic: E-GATEFAST
+wu: E-GATEFAST.W7
+changes:
+  - path: docs/work/2026-07-11-gatefast-w7-result.html
+    tier: T3
+    action: added
+t2_waived: "T3 result only; durable finding (correctness-finder wall-clock is intrinsic reasoning, invariant to context supply (W6) and file-scope narrowing (W7); file-sharding adds agents without splitting workload on single-feature diffs) distills into the epic gate-speed decision record at epic close per the epic distillation plan. The WU plan is the W7 card in docs/work/2026-07-11-gatefast-w6-w8-plan.html (lives on wu/gatefast/cr-speed-v2 until W5 merges)."
