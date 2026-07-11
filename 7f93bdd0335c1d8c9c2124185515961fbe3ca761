@@ -1,0 +1,8 @@
+schema: doc/v1
+epic: E-GATEFAST
+wu: E-GATEFAST.W6
+changes:
+  - path: docs/work/2026-07-11-gatefast-w6-result.html
+    tier: T3
+    action: added
+t2_waived: "T3 result only; durable findings (pack-anchoring recall harm; correctness finder is reasoning-dominated; prompt-embedding shared context is orchestrator-generation-bound) distill into the epic gate-speed decision record at epic close per the epic distillation plan. The WU plan is the W6 card in docs/work/2026-07-11-gatefast-w6-w8-plan.html (lives on wu/gatefast/cr-speed-v2 until W5 merges)."
