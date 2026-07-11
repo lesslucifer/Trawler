@@ -5,6 +5,7 @@ pub mod gate0;
 pub mod git;
 pub mod mr;
 pub mod notes;
+pub mod ui;
 pub mod wizard;
 
 use std::path::{Path, PathBuf};
@@ -27,6 +28,8 @@ usage:
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
   cargo xtask mr confirm [wu|epic] [<tip>] [--as <id>] [--target <ref>] [--report <path>] (mr/v1 note attesting the result report; level/tip/report inferred, signs if key)
   cargo xtask dod list [--epic <id>]
+  cargo xtask ui build                                        (pnpm install + build → ui/dist/)
+  cargo xtask ui dev                                          (pnpm install + launch the Tauri window)
   cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";
 
 pub fn repo_root() -> Result<PathBuf, String> {
@@ -41,6 +44,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["gate0"] => gate0::gate0(repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
+        ["ui", rest @ ..] => ui::run(rest, repo),
         ["debug", "serve", rest @ ..] => debug::serve(rest, repo),
         _ => Err(USAGE.to_string()),
     }
