@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-GATEFAST.W8 -> epic/gatefast"
+epic: E-GATEFAST
+wu: E-GATEFAST.W8
+branch: wu/gatefast/stream-verify
+base: ac05752f9534e75b99b11090057221c5cb1f546b
+head: b718200e58275fc4e758f73315b47fd169faac01
+diff_sha256: f702f53aa79c781efa6d4012236c3ce70e711651522f8216f5d2341c578befa8
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 5, verified: 0, waived: 0 }
+refuted: 4
+verdict: PASS
+date: 2026-07-11
