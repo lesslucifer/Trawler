@@ -1,0 +1,12 @@
+schema: test/v2
+level: epic
+epic: E-GATEFAST
+tests:
+  e2e:
+    waived: "E-GATEFAST landed one code WU (W2, incremental Gate 0). Its behaviour — skip on byte-identical tree, re-run on any change — is a build-cache shortcut with no product surface and non-deterministic wall-clock, so it carries no hermetic e2e (epic non-goal, per the plan). The other five candidates were measured-and-rejected A/Bs that landed no code. The R2 invariant (a stale/absent receipt still turns the gate red) is unchanged by this epic and is covered by the standing dod_gate/dod_hooks suites."
+  integration:
+    count: 5
+    what: "xtask/tests/gate0_cache.rs: worktree_key invalidation contract — identical tree stable; tracked edit, whitespace edit, and a new untracked source file each change the key; a gitignored artifact does not (the load-bearing invariant: a stale green can never yield a skip)."
+  unit:
+    count: 3
+    what: "xtask::gate0 cache round-trip — absent cache reads none; a stored key round-trips and lives under target/; a different key is a miss."
