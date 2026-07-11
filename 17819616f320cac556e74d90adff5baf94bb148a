@@ -1,0 +1,37 @@
+schema: doc/v1
+epic: E-MRSIG
+wu: E-MRSIG.W9
+branch: wu/mrsig/check-levels
+changes:
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "DEC-10 rules: mr always at WU/epic attesting result reports, commit signatures on rule-bearing T0/T1 only, local .mr-allowed, boundary-only walk"
+  - path: docs/work-planning.html
+    tier: T1
+    action: updated
+    distills: "gates-relation: result-report existence + exact bytes now mechanical at check 8"
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "DEC-10 recorded accepted+enforced; DEC-9/DEC-7 consequences cross-referenced to DEC-10"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-10 routed"
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: updated
+    distills: "is_ui row struck as moot per DEC-10"
+  - path: docs/work/2026-07-11-mrsig-w9-check-levels-brainstorm.html
+    tier: T3
+    action: added
+    distills: "W9 brainstorm - decisions resolved inline, distilled to DEC-10"
+  - path: docs/work/2026-07-11-mrsig-w9-plan.html
+    tier: T3
+    action: added
+    distills: "W9 plan (wu-plan artifact)"
+  - path: docs/work/2026-07-11-mrsig-w9-result.html
+    tier: T3
+    action: added
+    distills: "W9 result report (wu-result artifact) - the file this WUs mr confirm attests"
