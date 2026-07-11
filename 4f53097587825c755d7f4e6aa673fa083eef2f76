@@ -1,0 +1,10 @@
+schema: dod/v1
+level: working-unit
+epic: E-UIFOUND
+wu: E-UIFOUND.W1
+branch: wu/uifound/scaffold
+base: e00a206f7a45f4ae8d8890844b5475d65187703a
+tip: 4f53097587825c755d7f4e6aa673fa083eef2f76
+diff_sha256: bf95520e79ee38be70d3a7eb06d423451da91d166cf34ca42c500f374ddeace9
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review]
+date: 2026-07-12
