@@ -1,0 +1,17 @@
+schema: cr/v2
+scope: "WU E-GATEFAST.W6 -> epic/gatefast"
+epic: E-GATEFAST
+wu: E-GATEFAST.W6
+branch: wu/gatefast/ctx-pack
+base: ac05752f9534e75b99b11090057221c5cb1f546b
+head: cd636b860d1e0cbf9b4407b4c194e7d44deaeb0a
+diff_sha256: 10b1dd7a693f42f9243023841ca995776c379c2955f31e160f9239bdcf594504
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 1, waived: 0 }
+verified_findings:
+  - location: docs/work/2026-07-11-gatefast-w6-result.html
+    claim: "prose says 'four finders got faster' but the duration table shows three (altitude +6% is slower)"
+    severity: important
+refuted: 8
+verdict: FAIL
+date: 2026-07-11
