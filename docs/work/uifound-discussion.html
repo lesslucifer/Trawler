@@ -142,17 +142,62 @@ graph LR
     </table>
     <p class="callout warn" data-c="design-note"><strong>Tension to flag:</strong> Warp's palette is <em>warm-dark + off-white, zero chromatic accent</em>; the current <code>ui.html</code> uses a cool-dark blue-accent scheme (<code>--bg #181b22</code>, <code>--accent #5ab0f7</code>, green/red status). Adopting Warp means status colors (2xx ok / 4xx-5xx error) need a deliberate exception to the "no chromatic accent" rule — a debugging proxy genuinely needs to distinguish success/error at a glance. The design-system WU resolves how far to follow Warp vs. keep functional status color. I'll default to <em>Warp for chrome/typography, keep functional status colors</em> unless you say otherwise.</p>
 
+    <h2 id="layout">Project layout</h2>
+    <p data-c="layout-body">The UI is a <strong>separate front-end project</strong> living alongside the Rust core, not inside <code>src/</code>. The Rust workspace is untouched; a new top-level <code>ui/</code> holds the Tauri + React + TS app (mirroring Strata's internal shape). The Tauri <code>src-tauri/</code> under it is a thin window shell — no core logic.</p>
+    <div class="diagram" data-c="layout-tree">
+      <pre class="mermaid">
+graph TD
+  root["Trawler/"]
+  root --> cargo["Cargo.toml · Cargo.lock<br/>(workspace: core + xtask)"]
+  root --> src["src/ — Rust core<br/>(lib.rs, api/, store, recorder, ca …) · UNCHANGED"]
+  root --> tests["tests/ — Rust integ/e2e · UNCHANGED"]
+  root --> xtask["xtask/ — build tasks<br/>(gains a ui build/run task)"]
+  root --> ui["ui/ — NEW front-end project"]
+  ui --> uipkg["package.json · pnpm-lock.yaml · vite.config.ts · tsconfig.json · tailwind.config.js"]
+  ui --> uisrc["src/ — React + TS<br/>(App.tsx, components/, api client, tokens)"]
+  ui --> uitauri["src-tauri/ — thin Tauri shell<br/>(Cargo.toml, tauri.conf.json, main.rs — window only)"]
+  ui --> uidist["dist/ — Vite build output (git-ignored)"]
+  classDef new fill:#1e3a2f,stroke:#4cc38a;
+  classDef same fill:#2b2622,stroke:#3f3a36;
+  class ui,uipkg,uisrc,uitauri,uidist new;
+  class src,tests same;
+      </pre>
+      <div class="caption">New: <code>ui/</code> and its subtree. Untouched: the Rust core (<code>src/</code>, <code>tests/</code>). The Tauri <code>src-tauri/</code> is a separate small crate — deliberately NOT a member of the core workspace, so a headless <code>cargo build</code> of the proxy never pulls in the GUI toolchain.</div>
+    </div>
+    <table data-c="layout-table">
+      <thead><tr><th>Path</th><th>What</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><code>src/</code>, <code>tests/</code>, <code>Cargo.toml</code></td><td>Rust core + its tests + workspace</td><td><span class="badge auto">unchanged</span></td></tr>
+        <tr><td><code>ui/src/</code></td><td>React app — <code>App.tsx</code>, <code>components/</code>, a typed API client (<code>fetch</code>/<code>EventSource</code> → <code>:7421</code>), design tokens</td><td><span class="badge warn">new</span></td></tr>
+        <tr><td><code>ui/src-tauri/</code></td><td>Thin Tauri shell: window config + <code>main.rs</code>; optionally spawns/supervises the core binary</td><td><span class="badge warn">new</span></td></tr>
+        <tr><td><code>ui/{package.json,vite.config.ts,tailwind.config.js,…}</code></td><td>FE build config, mirrored from Strata</td><td><span class="badge warn">new</span></td></tr>
+        <tr><td><code>xtask/</code></td><td>Gains a <code>ui</code> task (<code>pnpm i</code>/<code>dev</code>/<code>build</code>, launch UI + core together)</td><td><span class="badge warn">extended</span></td></tr>
+      </tbody>
+    </table>
+    <p class="callout warn" data-c="layout-note"><strong>One thing to pin in the plan:</strong> whether the Tauri <code>src-tauri</code> crate joins the Cargo workspace or stays standalone. Recommendation: <strong>standalone</strong> (its own lockfile), so <code>cargo build</code>/<code>cargo test</code> of the core stays GUI-free and fast, and the headless story is unaffected. The <code>xtask ui</code> task drives it explicitly.</p>
+
+    <h2 id="distill">Distillation targets <span class="badge auto">where this decision propagates</span></h2>
+    <p class="callout" data-c="distill-body"><strong>Owner note:</strong> <em>"not just the decision — the key techstack should be distilled to architecture &amp; to T0 as well."</em> Right — a DEC alone isn't enough; the stack is a shape-level fact that belongs in the permanent tiers. The epic's distillation step updates:</p>
+    <table data-c="distill-table">
+      <thead><tr><th>Tier</th><th>Doc</th><th>What changes</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">T2</span></td><td><code>docs/decisions/</code> (new DEC) + index</td><td>The full rationale: Tauri stack, out-of-process, mirror-Strata, Warp design, the reversal from web-primary.</td></tr>
+        <tr><td><span class="badge id">T1</span></td><td><code>docs/core-architecture.html</code></td><td>Add the UI as a first-class client surface: the <code>ui/</code> layout, "React/Tauri app, out-of-process client of <code>:7421</code>, core stays headless-capable." One fact, linked to the DEC for the why.</td></tr>
+        <tr><td><span class="badge id">T0</span></td><td><code>CLAUDE.md</code> — <strong>Stack</strong> + <strong>Layout</strong> lines</td><td>Stack line gains the UI stack (Tauri 2 · Vite · TS · React · Tailwind, pnpm); Layout line notes <code>ui/</code> (front-end project) + the <code>xtask ui</code> command. <span class="badge warn">T0 is Owner-edited only</span> — I'll <em>propose</em> the exact diff for your approval, not edit it myself.</td></tr>
+      </tbody>
+    </table>
+
     <h2 id="scope">What the epic becomes</h2>
-    <p data-c="scope-body">All choices are settled — stack (Tauri+Vite+TS+React+Tailwind), topology (out-of-process), shell (keep for now), design source (Warp). E-UIFOUND's plan writes into these Working Units (finalized in the T3 plan):</p>
+    <p data-c="scope-body">All choices settled — stack (Tauri+Vite+TS+React+Tailwind), topology (out-of-process), shell (keep for now), design (Warp), <a href="#layout">layout</a> (<code>ui/</code> alongside the core). E-UIFOUND's plan writes into these Working Units (finalized in the T3 plan):</p>
     <ul data-c="scope-list">
-      <li><strong>The DEC</strong> — record the Tauri stack + out-of-process topology as a T2 decision; update the roadmap's E-UIFOUND row and its "browser-based" / single-binary framing; note the reversal.</li>
-      <li><strong>Project + build integration</strong> — scaffold the Tauri+Vite+React+TS project (mirroring Strata's layout) alongside the core; <code>xtask</code> builds/runs the UI and the core together; thin <code>src-tauri</code> shell.</li>
-      <li><strong>Design system</strong> — Warp tokens → Tailwind theme + base components; resolve the status-color exception.</li>
+      <li><strong>The DEC + distillation</strong> — record the decision as a T2 DEC; propagate the stack to <a href="#distill">T1 architecture and propose the T0 <code>CLAUDE.md</code> edit</a>; update the roadmap's E-UIFOUND row + "browser-based" framing.</li>
+      <li><strong>Project + build integration</strong> — scaffold <code>ui/</code> (Tauri+Vite+React+TS, mirroring Strata); <code>xtask ui</code> builds/runs UI + core together; thin <code>src-tauri</code>, standalone crate.</li>
+      <li><strong>Design system</strong> — Warp tokens → Tailwind theme + base components; Warp chrome/type, keep functional status colors.</li>
       <li><strong>Base app layout</strong> — the shell later epics (E-UIINSPECT inspector, E-UISETUP onboarding) slot into; the live flow list (over <code>/flows</code> + <code>/stream</code>, virtualized) is its first tenant, ported from the web shell's logic.</li>
     </ul>
 
     <h2 id="ask">Status</h2>
-    <p class="callout" data-c="ask-body">Everything's decided — no open questions. Next step is mine: write the <strong>T3 epic plan</strong> (the Working Units above with requirement sentences + test plans) and the <strong>DEC</strong>. One thing I'll default unless you object: <a href="#design-note">Warp chrome/type + keep functional status colors</a> for the flow list. Say the word and I'll write the plan.</p>
+    <p class="callout" data-c="ask-body">Everything's decided — no open questions. Next step is mine: write the <strong>T3 epic plan</strong> (the Working Units above with requirement sentences + test plans) and the <strong>DEC</strong>, then at distillation propose the T0 <code>CLAUDE.md</code> edit for your approval. Say the word and I'll write the plan.</p>
   </main>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
