@@ -1,0 +1,12 @@
+schema: cr/v2
+scope: "WU w3-enforcement -> epic/mrsig"
+epic: E-MRSIG
+wu: E-MRSIG.W3
+branch: wu/mrsig/w3-enforcement
+base: e62fc1dfd263e326ee9d3f4d5f497b536f53f931
+head: 673f51bde13f6053f85e1e816ff3157e4e8f47b8
+diff_sha256: 3bfe2b98e22f12b6b557f57a70aadd915ea181202cd7a8047618ecb95788f2f1
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 0, waived: 0 }
+verdict: PASS
+date: 2026-07-11
