@@ -9,7 +9,7 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-UIFOUND — Native UI Foundation</h1>
-      <p>Epic plan (3 WUs) — decide + establish the native desktop UI stack, build integration, design system, and base app layout, with the live flow list as its first tenant.</p>
+      <p>Epic plan (2 WUs) — decide + establish the native desktop UI stack, build integration, design system, and base app layout, with the live flow list as its first tenant.</p>
       <div class="meta">v1 · 2026-07-12 · Trawler · T3 epic plan · discussion: <a href="uifound-discussion.html">uifound-discussion.html</a> · roadmap: E-UIFOUND, Wave 2, GUI pillar</div>
     </div>
   </header>
@@ -33,7 +33,8 @@
     <div data-item="use-cases" data-c="use-cases-body">
       <p>Most of the epic is foundation (stack, build, design system, layout) with no user-facing contract.
       The one lasting behavior it delivers — its demoable first tenant — is a new use case, the native
-      counterpart to the web shell's <a href="../use-cases/web-ui.html">UC-3</a>:</p>
+      counterpart to the web shell's <a href="../use-cases/web-ui.html">UC-3</a>, added by
+      <strong>extending <code>web-ui.html</code></strong> (both are UI surfaces over the same API):</p>
       <table>
         <tr><th>UC</th><th>Contract</th></tr>
         <tr>
@@ -74,24 +75,23 @@ flowchart LR
   subgraph ui["ui/ (new front-end project)"]
     direction TB
     W1["W1 · scaffold + build<br/>Tauri+Vite+React+TS, xtask ui"]
-    W2["W2 · design system<br/>Warp tokens → Tailwind + components"]
-    W3["W3 · base layout + flow list<br/>typed API client, first tenant"]
-    W1 --> W2 --> W3
+    W2["W2 · design system + layout + flow list<br/>Warp tokens → Tailwind, typed API client, first tenant"]
+    W1 --> W2
   end
-  W3 -- "fetch /flows · EventSource /stream" --> API["control API :7421<br/>(unchanged)"]
+  W2 -- "fetch /flows · EventSource /stream" --> API["control API :7421<br/>(unchanged)"]
   API --> S["Store (ring + bus)"]
   P["Proxy :7420"] -- record --> S
       </pre>
-      <div class="caption">Three WUs build up the <code>ui/</code> project in sequence on one layout. All data
-      access is the React frontend calling the existing API over loopback — the Tauri Rust side stays a thin
-      window shell (no core logic), preserving the API-first invariant.</div>
+      <div class="caption">Two WUs build up the <code>ui/</code> project: W1 the empty scaffold, W2 the styled
+      layout + flow list on it. All data access is the React frontend calling the existing API over loopback —
+      the Tauri Rust side stays a thin window shell (no core logic), preserving the API-first invariant.</div>
     </div>
     <div class="callout" data-c="approach-callout">
       Mirror Strata's proven stack rather than re-deriving it; add only <code>@tanstack/react-virtual</code>
       for the long streaming flow list (Strata has no such list). The flow-list logic is <em>ported</em> from
       the web shell (<code>src/api/ui.html</code>) — same server-side filtering, same debounced SSE refetch —
-      not reinvented. This epic also establishes the front-end test stack (Vitest + Playwright), discharging
-      the browser-assertion waiver E-UISHELL deferred to E-UIFOUND.
+      not reinvented. This epic also establishes the front-end test stack (Vitest for unit/integration +
+      WebDriver-driven Tauri e2e), discharging the browser-assertion waiver E-UISHELL deferred to E-UIFOUND.
     </div>
 
     <h2 id="non-goals">Non-goals</h2>
@@ -110,8 +110,10 @@ flowchart LR
 
     <h2 id="wu-summaries">WU summaries</h2>
     <div data-item="wu-summaries" data-c="wu-summaries-body">
-      <p>Three WUs — three bounded contracts (build · design system · layout+flow-list), each landing on the
-      same <code>ui/</code> project in sequence, each with its own integration test at its seam.</p>
+      <p>Two WUs — two bounded contracts (build · styled-layout-with-flow-list), landing on the same
+      <code>ui/</code> project in sequence, each with its own integration test at its seam. The design system,
+      base layout, and flow list are one WU (W2): a design system is only demoable through a layout, and both
+      land together on the flow list, so they share one seam rather than a gate between coupled work.</p>
 
       <div data-wu="E-UIFOUND.W1" data-c="wu-w1">
         <h3>W1 · Project scaffold &amp; build integration</h3>
@@ -121,7 +123,7 @@ flowchart LR
           to <code>ui/dist/</code> and launches a native window via <code>cargo xtask ui</code>, with
           <code>ui/src-tauri</code> a <em>standalone</em> crate outside the core Cargo workspace so a headless
           <code>cargo build</code>/<code>cargo test</code> of the proxy stays GUI-free. Establishes the
-          front-end test runner (Vitest). App boots to a placeholder view (real content is W3).</td></tr>
+          front-end test runner (Vitest). App boots to a placeholder view (real content is W2).</td></tr>
           <tr><th>Maps to</th><td data-item="wu-maps-to">Epic requirement "codebase in the build" + the
           <a href="uifound-discussion.html#layout">project layout</a> and <a href="uifound-discussion.html#q1-thin-shell">thin-shell</a> decisions. No UC (infrastructure).</td></tr>
           <tr><th>Expected</th><td data-item="wu-expected"><code>cargo xtask ui build</code> → a bundle in
@@ -138,49 +140,34 @@ flowchart LR
       </div>
 
       <div data-wu="E-UIFOUND.W2" data-c="wu-w2">
-        <h3>W2 · Design system</h3>
+        <h3>W2 · Design system + base layout + live flow list (first tenant)</h3>
         <table>
-          <tr><th>Builds</th><td data-item="wu-summary"><strong>Requirement:</strong> Warp's design tokens
-          (warm-dark canvas <code>#2b2622</code>, off-white ink <code>#f7f5f0</code>, hairline borders,
-          Inter/DM&nbsp;Mono/Instrument&nbsp;Serif type, 4px spacing scale, tight 3–4px radii) encoded as the
-          <strong>Tailwind theme</strong> plus a small <strong>base component kit</strong> (the primitives the
-          layout needs — surface/card, text tiers, input, badge/status chip), with functional 2xx/4xx/5xx
-          <strong>status colors retained</strong> as the one deliberate exception to Warp's no-accent rule.</td></tr>
-          <tr><th>Maps to</th><td data-item="wu-maps-to">Epic requirement "design system"; the
-          <a href="uifound-discussion.html#design">Warp design</a> + status-color decisions. Horizontal
-          contract reused by E-UIINSPECT / E-UISETUP. No UC.</td></tr>
-          <tr><th>Expected</th><td data-item="wu-expected">Tailwind config carries the Warp tokens; components
-          render with them.
-          <b>Test — unit</b> (commit): the status-color mapping (2xx→ok, 4xx/5xx→warn, pending→muted) is a pure
-          function, unit-tested at boundaries; each base component renders (Vitest + Testing Library).
-          <b>Test — integration</b> (WU seam): a composed sample view asserts the resolved theme tokens are
-          applied (class/computed-style checks) — the design system's contract is "these tokens, these
-          components," verified as a unit of rendered output.</td></tr>
-          <tr><th>Deps</th><td data-item="wu-deps">W1 (the project + test runner must exist to build/test
-          components).</td></tr>
-        </table>
-      </div>
-
-      <div data-wu="E-UIFOUND.W3" data-c="wu-w3">
-        <h3>W3 · Base app layout + live flow list (first tenant)</h3>
-        <table>
-          <tr><th>Builds</th><td data-item="wu-summary"><strong>Requirement:</strong> a base app layout (named
-          regions later UI epics slot into — header/filter bar, main content, a reserved detail region) hosts a
-          <strong>live, filterable flow list</strong> ported from the web shell's logic, built on a
-          <strong>typed API client</strong> that reads <code>GET /flows</code> and subscribes to
-          <code>GET /stream</code> (SSE) on <code>127.0.0.1:7421</code>, virtualized with
-          <code>@tanstack/react-virtual</code>. This is the epic's demoable tenant (UC-4).</td></tr>
-          <tr><th>Maps to</th><td data-item="wu-maps-to">Epic requirement "base app layout; shell migrated onto
-          it" + <span class="badge id">UC-4</span>. Consumes W1 (project) + W2 (design system).</td></tr>
+          <tr><th>Builds</th><td data-item="wu-summary"><strong>Requirement:</strong> the Warp design system
+          (tokens — warm-dark canvas <code>#2b2622</code>, off-white ink <code>#f7f5f0</code>, hairline borders,
+          Inter/DM&nbsp;Mono/Instrument&nbsp;Serif type, 4px spacing, tight 3–4px radii — as the Tailwind theme,
+          plus a base component kit, keeping functional 2xx/4xx/5xx <strong>status colors</strong>) rendered as
+          a <strong>base app layout</strong> (named regions later UI epics slot into — header/filter bar, main
+          content, a reserved detail region) that hosts a <strong>live, filterable flow list</strong> ported
+          from the web shell's logic, on a <strong>typed API client</strong> reading <code>GET /flows</code> and
+          subscribing to <code>GET /stream</code> (SSE) at a <strong>configurable</strong> API base URL,
+          virtualized with <code>@tanstack/react-virtual</code>. The epic's demoable tenant.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">Epic requirement "design system + base app layout;
+          shell migrated onto it" + <span class="badge id">UC-4</span>; the
+          <a href="uifound-discussion.html#design">Warp design</a> + status-color decisions. The design system
+          is a horizontal contract E-UIINSPECT / E-UISETUP reuse. Consumes W1.</td></tr>
           <tr><th>Expected</th><td data-item="wu-expected">The app window shows the Warp-styled layout with the
-          live flow list; a proxied request appears without refresh; the filter narrows it.
-          <b>Test — unit</b> (commit): the API client parses <code>/flows</code> JSON into typed flow models;
-          filter state → correct query params; the flow-list row renders from a fixture.
-          <b>Test — integration</b> (WU seam): the flow list mounted against a mock API (or a real ephemeral
-          core) renders a flow, hides it under a non-matching filter, and appends a new row on an injected SSE
-          event — the exact request sequence UC-4 performs.
+          live flow list; a proxied request appears without refresh; the filter narrows it; status color
+          distinguishes 2xx/4xx/5xx.
+          <b>Test — unit</b> (commit): the status-color mapping (2xx→ok, 4xx/5xx→warn, pending→muted) as a pure
+          function at boundaries; base components render with theme tokens; the API client parses
+          <code>/flows</code> JSON into typed models; filter state → correct query params; a flow-list row
+          renders from a fixture (Vitest + Testing Library).
+          <b>Test — integration</b> (WU seam): the layout + flow list mounted against a mock API (or a real
+          ephemeral core) renders a flow, applies the design tokens, hides the flow under a non-matching filter,
+          and appends a row on an injected SSE event — the exact request sequence UC-4 performs.
           <b>Test — e2e</b> (epic): see the <a href="#e2e-plan">e2e plan</a>.</td></tr>
-          <tr><th>Deps</th><td data-item="wu-deps">W1 + W2. Last WU; carries the epic's e2e.</td></tr>
+          <tr><th>Deps</th><td data-item="wu-deps">W1 (project + test runner). Last WU; carries the epic's
+          e2e.</td></tr>
         </table>
       </div>
     </div>
@@ -189,23 +176,25 @@ flowchart LR
     <div data-item="e2e-plan" data-c="e2e-body">
       <p>One hermetic epic e2e proving UC-4 end to end (per the
       <a href="../testing-strategy.html">testing standard</a> — ephemeral ports, local origin, no public
-      network). <strong>Harness:</strong> Playwright drives the built front-end (Vite <code>preview</code>)
-      pointed at a real ephemeral core started via <code>run(Config)</code> with a local HTTP origin:</p>
+      network). <strong>Harness:</strong> <strong>WebDriver drives the real Tauri window</strong> against a
+      real ephemeral core started via <code>run(Config)</code> with a local HTTP origin:</p>
       <ol>
         <li>Start the full core (<code>run(Config)</code>) on ephemeral proxy + API ports with a local origin
-        server; serve the built UI via <code>vite preview</code>, configured to reach the ephemeral API port.</li>
-        <li>Open the app; assert the base layout + (empty) flow list + filter bar render.</li>
+        server; launch the built Tauri app configured to reach the ephemeral API port.</li>
+        <li>Open the window; assert the base layout + (empty) flow list + filter bar render.</li>
         <li>Send a request through the proxy to the origin → the flow row appears in the list live (SSE), with
         method/host/path/status.</li>
         <li>Type the origin host in the filter → the flow stays; a non-matching filter → the list empties.</li>
         <li>Send a second proxied request → its row appears without a manual refresh.</li>
       </ol>
-      <p class="callout"><strong>Why Playwright-against-preview, not the Tauri window:</strong> the flow-list
-      contract is fully exercised by the real React app + real API in a browser context; driving the actual
-      Tauri window (<code>tauri-driver</code>/WebDriver) adds a heavy platform harness for no extra coverage of
-      UC-4. W1 carries a boot-smoke check that the Tauri shell loads the UI; <code>tauri-driver</code> is the
-      recorded escalation if window-level behavior ever needs a gate. This choice discharges the E-UISHELL
-      browser-assertion waiver.</p>
+      <p class="callout warn"><strong>macOS harness caveat (verified):</strong> raw <code>tauri-driver</code>
+      supports <strong>Linux + Windows only</strong> — macOS has no WKWebView WebDriver. Since macOS is the
+      primary target, the e2e uses the <strong>WebdriverIO <code>@wdio/tauri-service</code> with its embedded
+      WebDriver provider</strong>, which <em>does</em> support macOS (the service wraps the same underlying
+      mechanism; raw <code>tauri-driver</code> stays the Linux/Windows path). Driving the real window is the
+      Owner's call over a lighter browser-only harness; it also discharges the E-UISHELL browser-assertion
+      waiver in full. The unit + integration layers (Vitest, no window) remain the fast inner loop; the
+      WebDriver e2e is the one slow end-to-end gate.</p>
     </div>
 
     <h2 id="distillation-plan">Distillation plan</h2>
@@ -215,13 +204,14 @@ flowchart LR
         TS + React + Tailwind, mirror Strata), out-of-process topology, Warp design system, and the reversal
         from web-primary; add the row to <code>docs/decisions/decisions-index.html</code>.</li>
         <li><b>T2 use-cases</b>: add <span class="badge id">UC-4</span> (watch live traffic in the native app)
-        as a new <code>docs/use-cases/native-app.html</code> + an index row; UC-3 (web) stays.</li>
+        by <strong>extending <code>docs/use-cases/web-ui.html</code></strong> (both UI surfaces, one doc) + an
+        index touch; UC-3 (web) stays.</li>
         <li><b>T1 architecture</b>: <code>docs/core-architecture.html</code> gains the native app as a
         first-class out-of-process API client + the <code>ui/</code> layout — one fact, linked to DEC-11 for
         the why.</li>
         <li><b>T1 testing</b>: <code>docs/testing-strategy.html</code> notes the front-end test stack (Vitest
-        unit/integration, Playwright e2e); the Epic→e2e / WU→integration / commit→unit mapping is unchanged;
-        record the E-UISHELL waiver as discharged.</li>
+        unit/integration, WebDriver-driven Tauri e2e via <code>@wdio/tauri-service</code>); the Epic→e2e /
+        WU→integration / commit→unit mapping is unchanged; record the E-UISHELL waiver as discharged.</li>
         <li><b>T0</b>: <code>CLAUDE.md</code> Stack + Layout lines gain the UI stack and the <code>ui/</code>
         project + <code>xtask ui</code> command. <b>Owner-edited only</b> — propose the exact diff for approval,
         do not self-edit.</li>
@@ -232,26 +222,29 @@ flowchart LR
       </ul>
     </div>
 
-    <h2 id="open-questions">Open questions</h2>
+    <h2 id="open-questions">Open questions — all resolved (Owner)</h2>
     <div data-item="open-questions" data-c="open-q">
+      <p>All five were answered on the plan; recorded here as the decisions the WUs implement:</p>
       <table>
-        <tr><th>Question</th><th>Proposed default</th></tr>
-        <tr><td>E2e harness: Playwright against <code>vite preview</code>, or drive the real Tauri window via
-        <code>tauri-driver</code>?</td>
-        <td>Playwright + preview against a real ephemeral core — full UC-4 coverage without the WebDriver
-        platform harness. <code>tauri-driver</code> is the escalation if window behavior needs a gate. Review
-        judges.</td></tr>
-        <tr><td>New UC doc (<code>native-app.html</code>) vs extending <code>web-ui.html</code>?</td>
-        <td>New doc — the native app is a distinct surface; UC-3 stays the web contract.</td></tr>
+        <tr><th>Question</th><th>Decision</th></tr>
+        <tr><td>E2e harness: browser-only, or drive the real Tauri window?</td>
+        <td><span class="badge auto">decided</span> <strong>Drive the real Tauri window via WebDriver.</strong>
+        Raw <code>tauri-driver</code> is Linux/Windows-only, so macOS uses the <code>@wdio/tauri-service</code>
+        embedded provider (see <a href="#e2e-plan">e2e plan</a>). Fuller coverage; discharges the waiver.</td></tr>
+        <tr><td>New UC doc vs extending <code>web-ui.html</code>?</td>
+        <td><span class="badge auto">decided</span> <strong>Extend <code>web-ui.html</code></strong> with UC-4 —
+        both UI surfaces live in one doc. UC-3 stays.</td></tr>
         <tr><td>Does the Tauri app spawn/supervise the core, or assume it's running?</td>
-        <td>Assume running this epic; <code>xtask ui dev</code> starts both for development. Auto-spawn/supervise
-        is deferred (E-UISETUP-adjacent), noted as a non-goal.</td></tr>
-        <tr><td>Do W2 and W3 collapse (design system only demoable via a layout)?</td>
-        <td>Keep separate — the design system is a horizontal contract later epics reuse, with its own test; W2
-        and W3 land in sequence on the same layout. Collapse only if the component surface proves trivial.</td></tr>
+        <td><span class="badge auto">decided</span> <strong>Assume running</strong> this epic;
+        <code>xtask ui dev</code> starts both for development. Auto-spawn/supervise deferred (non-goal).</td></tr>
+        <tr><td>Do the design system + layout + flow list collapse into one WU?</td>
+        <td><span class="badge auto">decided</span> <strong>Yes — collapsed into W2.</strong> A design system is
+        only demoable through a layout and both land on the flow list; one seam, not a gate between coupled
+        work. Epic is now 2 WUs.</td></tr>
         <tr><td>Where does the API base URL / port come from in the front end?</td>
-        <td>Config injected at dev/preview time (the ephemeral API port in tests; the default <code>:7421</code>
-        in dev). No hardcoded port in component code — the API client takes a base URL.</td></tr>
+        <td><span class="badge auto">decided</span> <strong>Configurable, including at release.</strong> The API
+        client takes a base URL — never a hardcoded port in component code. Dev/preview/tests inject the port
+        (ephemeral in tests, <code>:7421</code> default in dev); the released app exposes it as configuration.</td></tr>
       </table>
     </div>
   </main>
