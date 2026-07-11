@@ -1,0 +1,16 @@
+schema: test/v2
+level: working-unit
+epic: E-MRSIG
+wu: E-MRSIG.W3
+branch: wu/mrsig/w3-enforcement
+tests:
+  unit:
+    count: 1
+    covers: "trailer_key_backed: true for a trailer naming an identity with a key entry regardless of the claimed tier (a weaker tier cannot dodge the signature), false for identity-only entries and for no trailer"
+  integration:
+    count: 4
+    covers: "epic walk rejects a doc commit whose key-backed Reviewed-By trailer has no verifying gpgsig and accepts one signed by the listed software key; verify-dod range (the seam the unchanged pre-push hook calls) exits 1 with 8-manual-review for an unauthorised doc commit and 0 for a listed identity-trailered one"
+  e2e:
+    count: 1
+    covers: "W6 e2e_signed_manual_review_flow_with_a_software_key unchanged and green: setup -> signed doc commit verifies -> signed confirm authorises -> amend invalidates -> unsigned/unlisted rejected; the enforcement wiring it feeds is exercised by the walk/range integration tests above"
+waived: "hardware presence (Touch ID sheet) stays the standing deployment waiver - software keys prove the crypto half hermetically"
