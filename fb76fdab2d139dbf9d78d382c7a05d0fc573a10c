@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-GATEFAST.W7 -> epic/gatefast"
+epic: E-GATEFAST
+wu: E-GATEFAST.W7
+branch: wu/gatefast/shard-correctness
+base: ac05752f9534e75b99b11090057221c5cb1f546b
+head: fb76fdab2d139dbf9d78d382c7a05d0fc573a10c
+diff_sha256: 2418e7d09cb6c3519bb2b0cdccff5ae590fe14e79a9c778397c32c5cb1db27db
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-11
