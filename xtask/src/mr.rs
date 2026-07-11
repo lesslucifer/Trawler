@@ -248,7 +248,7 @@ fn mr_commit(
     };
     let body = format!("{}\n\n{TRAILER_KEY}: {tier} {identity}\n", message.trim_end());
     // A `key` identity signs the commit natively (`gpgsig` header, verified at
-    // pre-push + walk); the trailer still rides along for the commit-msg hook,
+    // pre-push); the trailer still rides along for the commit-msg hook,
     // which fires *before* git signs and so can only presence-check the message.
     if has_key_entry(&allowed, identity) {
         let reason = commit_reason(message, &current_branch(repo), identity);

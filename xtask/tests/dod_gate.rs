@@ -854,70 +854,69 @@ fn a_non_ui_wu_does_not_require_an_mr_note() {
 }
 
 #[test]
-fn epic_walk_flags_an_untrailered_doc_commit() {
+fn epic_walk_never_rejudges_doc_commits() {
     let (repo, _) = epic_with_merged_wu();
     repo.write("docs/use-cases/api.html", "<html>edited without a trailer</html>\n");
-    repo.commit("doc edit, no mr trailer");
+    repo.commit("doc edit, no mr trailer - authorisation is boundary-only");
     close_epic(&repo);
     bless_epic(&repo, T2_ENTRY);
 
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(
-        checks_of(&report).contains(&"8·manual-review"),
-        "the walk must flag an untrailered doc commit: {}",
-        format_report(&report)
-    );
-}
-
-#[test]
-fn a_doc_commit_note_authorises_when_the_trailer_is_absent() {
-    let (repo, _) = epic_with_merged_wu();
-    repo.write("docs/use-cases/api.html", "<html>edited without a trailer</html>\n");
-    let doc_commit = repo.commit("doc edit, no mr trailer");
-    close_epic(&repo);
-    bless_epic(&repo, T2_ENTRY);
-
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(
-        checks_of(&report).contains(&"8·manual-review"),
-        "untrailered doc commit is red before a note: {}",
-        format_report(&report)
-    );
-
-    repo.note("mr", &doc_commit, &mr_note("commit", &doc_commit));
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
     assert!(
         !checks_of(&report).contains(&"8·manual-review"),
-        "an mr/v1 note on the doc commit authorises it: {}",
+        "the walk must not re-judge immutable history against the mutable key list: {}",
         format_report(&report)
     );
 }
 
 #[test]
-fn epic_walk_rejects_an_unsigned_doc_commit_from_a_key_backed_identity() {
-    let (repo, _) = epic_with_merged_wu();
+fn a_doc_commit_note_authorises_at_the_pre_push_seam_when_the_trailer_is_absent() {
+    let repo = Repo::new();
+    allow_file(&repo);
+    let old = repo.sha("HEAD");
+    repo.write("docs/use-cases/api.html", "<html>edited without a trailer</html>\n");
+    let doc_commit = repo.commit("doc edit, no mr trailer");
+
+    let (code, out) = range_run(&repo, &old, &doc_commit);
+    assert_eq!(code, 1, "untrailered doc commit is red before a note: {out}");
+
+    repo.note("mr", &doc_commit, &mr_note("commit", &doc_commit));
+    let (code, out) = range_run(&repo, &old, &doc_commit);
+    assert_eq!(code, 0, "an mr/v1 note on the doc commit authorises it: {out}");
+}
+
+fn range_run(repo: &Repo, old: &str, new: &str) -> (i32, String) {
+    let args: Vec<String> = ["verify-dod", "range", old, new].map(String::from).into();
+    xtask::run(&args, &repo.path).unwrap()
+}
+
+#[test]
+fn range_rejects_an_unsigned_doc_commit_from_a_key_backed_identity() {
+    let repo = Repo::new();
     let pubkey = repo.keygen();
+    repo.write(".mr-allowed", &format!("email: a@b.co\nkey: vu {pubkey}\n"));
+    let old = repo.sha("HEAD");
     repo.write("docs/use-cases/api.html", "<html>forged key trailer, no signature</html>\n");
     repo.git(&["add", "-A"]);
     repo.git(&["commit", "-q", "--cleanup=verbatim", "-m", "doc edit\n\nReviewed-By: key vu\n"]);
-    close_epic(&repo);
-    bless_epic(&repo, T2_ENTRY);
-    repo.write(".mr-allowed", &format!("email: a@b.co\nkey: vu {pubkey}\n"));
+    let new = repo.sha("HEAD");
 
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(
-        checks_of(&report).contains(&"8·manual-review"),
-        "a key-backed trailer without a verifying gpgsig must not authorise: {}",
-        format_report(&report)
+    let (code, out) = range_run(&repo, &old, &new);
+    assert_eq!(
+        code, 1,
+        "a key-backed trailer without a verifying gpgsig must not authorise: {out}"
     );
+    assert!(out.contains("8·manual-review"), "{out}");
 }
 
 #[test]
-fn epic_walk_accepts_a_signed_doc_commit_from_a_key_backed_identity() {
-    let (repo, _) = epic_with_merged_wu();
+fn range_accepts_a_signed_doc_commit_from_a_key_backed_identity() {
+    let repo = Repo::new();
     let pubkey = repo.keygen();
+    repo.write(".mr-allowed", &format!("email: a@b.co\nkey: vu {pubkey}\n"));
     repo.git(&["config", "gpg.format", "ssh"]);
     repo.git(&["config", "user.signingkey", repo.path.join("signer").to_str().unwrap()]);
+    let old = repo.sha("HEAD");
     repo.write("docs/use-cases/api.html", "<html>signed doc edit</html>\n");
     repo.git(&["add", "-A"]);
     repo.git(&[
@@ -928,16 +927,10 @@ fn epic_walk_accepts_a_signed_doc_commit_from_a_key_backed_identity() {
         "-m",
         "doc edit\n\nReviewed-By: key vu\n",
     ]);
-    close_epic(&repo);
-    bless_epic(&repo, T2_ENTRY);
-    repo.write(".mr-allowed", &format!("email: a@b.co\nkey: vu {pubkey}\n"));
+    let new = repo.sha("HEAD");
 
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(
-        !checks_of(&report).contains(&"8·manual-review"),
-        "a doc commit signed by the listed key authorises: {}",
-        format_report(&report)
-    );
+    let (code, out) = range_run(&repo, &old, &new);
+    assert_eq!(code, 0, "a doc commit signed by the listed key authorises: {out}");
 }
 
 #[test]
@@ -948,9 +941,7 @@ fn range_rejects_an_unauthorised_doc_commit_at_the_pre_push_seam() {
     repo.write("docs/use-cases/api.html", "<html>unauthorised edit</html>\n");
     let new = repo.commit("doc edit, no trailer");
 
-    let args: Vec<String> =
-        ["verify-dod", "range", old.as_str(), new.as_str()].map(String::from).into();
-    let (code, out) = xtask::run(&args, &repo.path).unwrap();
+    let (code, out) = range_run(&repo, &old, &new);
     assert_eq!(code, 1, "{out}");
     assert!(out.contains("8·manual-review"), "{out}");
 }
@@ -963,24 +954,19 @@ fn range_accepts_a_listed_identity_trailered_doc_commit() {
     repo.write("docs/use-cases/api.html", "<html>reviewed edit</html>\n");
     let new = repo.commit_reviewed("doc edit");
 
-    let args: Vec<String> =
-        ["verify-dod", "range", old.as_str(), new.as_str()].map(String::from).into();
-    let (code, out) = xtask::run(&args, &repo.path).unwrap();
+    let (code, out) = range_run(&repo, &old, &new);
     assert_eq!(code, 0, "{out}");
 }
 
 #[test]
-fn epic_walk_flags_a_doc_moved_out_of_docs_without_a_trailer() {
-    let (repo, _) = epic_with_merged_wu();
-    repo.git(&["mv", "docs/use-cases/api.html", "src/moved.rs"]);
-    repo.commit("move a doc out of docs/, no trailer");
-    close_epic(&repo);
-    bless_epic(&repo, T2_ENTRY);
+fn range_flags_a_doc_moved_out_of_docs_without_a_trailer() {
+    let repo = Repo::new();
+    allow_file(&repo);
+    let old = repo.sha("HEAD");
+    repo.git(&["mv", "docs/use-cases/api.html", "notes.md"]);
+    let new = repo.commit("move a doc out of docs/, no trailer");
 
-    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
-    assert!(
-        checks_of(&report).contains(&"8·manual-review"),
-        "a rename out of docs/ must not bypass the trailer check: {}",
-        format_report(&report)
-    );
+    let (code, out) = range_run(&repo, &old, &new);
+    assert_eq!(code, 1, "a rename out of docs/ must not bypass the trailer check: {out}");
+    assert!(out.contains("8·manual-review"), "{out}");
 }

@@ -408,7 +408,9 @@ impl Gate<'_> {
                     if *commit == report.tip {
                         continue;
                     }
-                    self.check_commit_trailer(report, commit, first)?;
+                    // Doc-commit authorisation is boundary-only (commit-msg + pre-push
+                    // range): the walk never re-judges immutable history against the
+                    // mutable key list, or key rotation would redden authorised commits.
                     let inner = self.verify(Level::Commit, commit, first)?;
                     let level = inner.level.as_note_level();
                     let failures = inner
