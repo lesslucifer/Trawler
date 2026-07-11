@@ -5,6 +5,7 @@ pub mod gate0;
 pub mod git;
 pub mod mr;
 pub mod notes;
+pub mod wizard;
 
 use std::path::{Path, PathBuf};
 
@@ -22,8 +23,9 @@ usage:
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
-  cargo xtask mr commit -m <msg> --as <email|username>       (doc commit: write the Reviewed-By trailer)
-  cargo xtask mr confirm <wu|epic> <tip> --as <email|username> (write the mr/v1 note on the tip)
+  cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
+  cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
+  cargo xtask mr confirm [wu|epic] [<tip>] [--as <id>] [--target <ref>] [--report <path>] (mr/v1 note attesting the result report; level/tip/report inferred, signs if key)
   cargo xtask dod list [--epic <id>]
   cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";
 
@@ -58,7 +60,10 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         }
         ["commit", sha] => {
             let parent = format!("{sha}^");
-            let report = Gate { repo }.verify(Level::Commit, sha, &parent)?;
+            let gate = Gate { repo };
+            let mut report = gate.verify(Level::Commit, sha, &parent)?;
+            let (tip, base) = (report.tip.clone(), report.base.clone());
+            gate.check_commit_trailer(&mut report, &tip, &base)?;
             Ok((i32::from(!report.green()), format_report(&report)))
         }
         ["hook", level] => hook(repo, level),
@@ -133,7 +138,8 @@ fn range(repo: &Path, old: &str, new: &str) -> Result<(i32, String), String> {
     for line in lines.lines() {
         let parts: Vec<&str> = line.split_whitespace().collect();
         if let [commit, first] = parts.as_slice() {
-            let report = gate.verify(Level::Commit, commit, first)?;
+            let mut report = gate.verify(Level::Commit, commit, first)?;
+            gate.check_commit_trailer(&mut report, commit, first)?;
             if !report.green() {
                 let _ = writeln!(out, "standalone commit {}:", gate::short(commit));
                 let _ = writeln!(out, "{}", format_report(&report));
@@ -187,7 +193,7 @@ pub(crate) fn flag_value(rest: &[&str], flag: &str) -> Option<String> {
     rest.iter().position(|a| *a == flag).and_then(|i| rest.get(i + 1)).map(|s| (*s).to_string())
 }
 
-fn infer_wu_target(tip: &str) -> Option<String> {
+pub(crate) fn infer_wu_target(tip: &str) -> Option<String> {
     let epic = tip.strip_prefix("wu/")?.split('/').next()?;
     if epic.is_empty() {
         None

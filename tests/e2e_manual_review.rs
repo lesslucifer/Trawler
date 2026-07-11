@@ -1,10 +1,10 @@
 //! E-NMWF epic e2e — the full manual-review flow over a hermetic temp repo,
 //! driven through the real `xtask` binary and real git (no shims).
 //!
-//! Covers the three rules end to end: a doc commit needs a listed
-//! `Reviewed-By` trailer at commit time; an epic tip always needs a listed
-//! `mr/v1` note; a UI-touching WU needs one; the epic walk re-verifies each
-//! doc commit's trailer (or an after-the-fact note); unlisted identities fail.
+//! Covers the rules end to end (DEC-7/DEC-9/DEC-10): a rule-bearing doc commit
+//! (T0 CLAUDE.md / T1 flat docs/) needs a listed `Reviewed-By` trailer at
+//! commit time while T2/T3 doc commits pass unsigned; an epic tip always needs
+//! a listed `mr/v1` note attesting its result report; unlisted identities fail.
 #![cfg(all(unix, feature = "hook-tests"))]
 #![allow(clippy::unwrap_used)] // test code - panicking on setup failure is the assertion
 
@@ -132,11 +132,17 @@ fn full_manual_review_flow() {
     let repo = Repo::new();
     repo.install_commit_msg_hook();
 
-    // (a) a plain doc commit with no trailer is refused by the commit-msg hook.
+    // (a) a rule-bearing (T1) doc commit with no trailer is refused by the
+    // commit-msg hook — while a T2 doc commit passes unsigned (DEC-10).
     repo.write("docs/use-cases/api.html", "<html>v2 edit</html>\n");
     repo.git(&["add", "-A"]);
-    let refused = repo.git_raw(&["commit", "-q", "-m", "docs: edit without trailer"]);
-    assert!(!refused.status.success(), "doc commit without a trailer must be refused");
+    let t2_ok = repo.git_raw(&["commit", "-q", "-m", "docs: t2 edit, no trailer"]);
+    assert!(t2_ok.status.success(), "a T2 doc commit needs no trailer");
+
+    repo.write("docs/standard.html", "<html>t1 standard</html>\n");
+    repo.git(&["add", "-A"]);
+    let refused = repo.git_raw(&["commit", "-q", "-m", "docs: t1 edit without trailer"]);
+    assert!(!refused.status.success(), "a T1 doc commit without a trailer must be refused");
     assert!(
         String::from_utf8_lossy(&refused.stderr).contains("self-authorise")
             || String::from_utf8_lossy(&refused.stdout).contains("self-authorise"),
@@ -203,8 +209,19 @@ fn full_manual_review_flow() {
         "manual review is the SOLE remaining failure: {red_out}"
     );
 
-    // (e) signing the epic clears the last check — the gate goes green.
-    let signed = repo.xtask(&["mr", "confirm", "epic", "epic/x", "--as", "a@b.co"]);
+    // (e) signing the epic — attesting its (archived) result report — clears
+    // the last check and the gate goes green.
+    repo.write("docs/.archive/e9-result.html", "<html>epic result</html>\n");
+    let signed = repo.xtask(&[
+        "mr",
+        "confirm",
+        "epic",
+        "epic/x",
+        "--as",
+        "a@b.co",
+        "--report",
+        "docs/.archive/e9-result.html",
+    ]);
     assert!(signed.status.success(), "epic sign-off: {}", String::from_utf8_lossy(&signed.stderr));
 
     let green = repo.xtask(&["verify-dod", "epic", "epic/x", "--target", "main"]);

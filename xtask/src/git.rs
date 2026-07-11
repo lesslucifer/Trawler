@@ -16,7 +16,17 @@ fn cmd(repo: &Path) -> Command {
 }
 
 pub fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
-    let out = cmd(repo)
+    git_env(repo, args, &[])
+}
+
+/// [`git`] with extra environment variables on the spawned process — how a
+/// sign reason reaches a `gpg.ssh.program` signer through `git commit -S`.
+pub fn git_env(repo: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<String, String> {
+    let mut command = cmd(repo);
+    for (key, value) in env {
+        command.env(key, value);
+    }
+    let out = command
         .args(args)
         .output()
         .map_err(|e| format!("failed to spawn git {}: {e}", args.join(" ")))?;
@@ -89,7 +99,94 @@ pub fn worktree_key(repo: &Path) -> Result<String, String> {
     sha256_hex(&bytes)
 }
 
-fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
+/// Verify an SSH `SIGNATURE` blob over `data` in `namespace`, against an
+/// `allowed_signers` file whose lines are `<principal> <ssh-pubkey>`. Returns
+/// true only if `ssh-keygen -Y verify` accepts it for `principal`. Offline: no
+/// device, no network — just the public keys and the data.
+pub fn ssh_verify(
+    principal: &str,
+    allowed_signers: &str,
+    namespace: &str,
+    data: &[u8],
+    sig: &str,
+) -> bool {
+    let Ok(dir) = tempfile::tempdir() else { return false };
+    let signers = dir.path().join("allowed_signers");
+    let sig_file = dir.path().join("data.sig");
+    if std::fs::write(&signers, allowed_signers).is_err() || std::fs::write(&sig_file, sig).is_err()
+    {
+        return false;
+    }
+    let Ok(mut child) = Command::new("ssh-keygen")
+        .args(["-Y", "verify", "-f"])
+        .arg(&signers)
+        .args(["-I", principal, "-n", namespace, "-s"])
+        .arg(&sig_file)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    else {
+        return false;
+    };
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(data);
+    }
+    child.wait().is_ok_and(|s| s.success())
+}
+
+/// Sign `data` in `namespace` with the SSH key at `key` (a private-key path or a
+/// hardware key handle), running `program` — `ssh-keygen`, or a `gpg.ssh.program`
+/// stand-in such as the bundled Secure-Enclave signer. Returns the armored
+/// `SSH SIGNATURE` blob. For a hardware key this blocks on the physical touch —
+/// the step an AI agent cannot perform. `reason` rides to the signer as
+/// `TRAWLER_SIGN_REASON`, naming the authorised action on the auth sheet.
+pub fn ssh_sign(
+    program: &str,
+    key: &str,
+    namespace: &str,
+    data: &[u8],
+    reason: Option<&str>,
+) -> Result<String, String> {
+    let mut command = Command::new(program);
+    if let Some(reason) = reason {
+        command.env("TRAWLER_SIGN_REASON", reason);
+    }
+    let mut child = command
+        .args(["-Y", "sign", "-n", namespace, "-f"])
+        .arg(key)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("failed to run {program} -Y sign: {e}"))?;
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(data).map_err(|e| format!("failed to write signing payload: {e}"))?;
+    }
+    let out = child.wait_with_output().map_err(|e| format!("{program} -Y sign failed: {e}"))?;
+    if out.status.success() {
+        Ok(String::from_utf8_lossy(&out.stdout).to_string())
+    } else {
+        Err(format!("{program} -Y sign: {}", String::from_utf8_lossy(&out.stderr).trim_end()))
+    }
+}
+
+/// The blob bytes of `path` at `rev`, exact — no trailing-whitespace trim, so a
+/// hash over them matches a hash over the working-tree file byte for byte.
+pub fn show_bytes(repo: &Path, rev: &str, path: &str) -> Result<Vec<u8>, String> {
+    let spec = format!("{rev}:{path}");
+    let out = cmd(repo)
+        .args(["show", &spec])
+        .output()
+        .map_err(|e| format!("failed to spawn git show: {e}"))?;
+    if out.status.success() {
+        Ok(out.stdout)
+    } else {
+        Err(format!("git show {spec}: {}", String::from_utf8_lossy(&out.stderr).trim_end()))
+    }
+}
+
+pub fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
     let tools: [&[&str]; 2] = [&["shasum", "-a", "256"], &["sha256sum"]];
     for tool in tools {
         let Ok(mut child) = Command::new(tool[0])
@@ -121,7 +218,65 @@ fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::sha256_hex;
+    use std::process::Command;
+
+    use super::{sha256_hex, ssh_sign, ssh_verify};
+
+    #[test]
+    fn ssh_sign_then_verify_roundtrips() {
+        let dir = tempfile::tempdir().unwrap();
+        let key = dir.path().join("id");
+        assert!(Command::new("ssh-keygen")
+            .args(["-q", "-t", "ed25519", "-N", "", "-C", "test", "-f"])
+            .arg(&key)
+            .status()
+            .unwrap()
+            .success());
+        let pubkey = std::fs::read_to_string(dir.path().join("id.pub")).unwrap().trim().to_string();
+        let signers = format!("vu {pubkey}\n");
+        let data = b"sha256-of-the-change";
+
+        let sig =
+            ssh_sign("ssh-keygen", key.to_str().unwrap(), "trawler-mr", data, None).expect("signs");
+        assert!(ssh_verify("vu", &signers, "trawler-mr", data, &sig), "own signature verifies");
+        assert!(!ssh_verify("vu", &signers, "trawler-mr", b"other", &sig), "tampered data fails");
+        assert!(
+            ssh_sign("ssh-keygen", "/no/such/key", "trawler-mr", data, None).is_err(),
+            "missing key errors"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn ssh_sign_runs_the_given_signer_program() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = tempfile::tempdir().unwrap();
+        let stub = dir.path().join("stub-signer");
+        std::fs::write(&stub, "#!/bin/sh\ncat > /dev/null\nprintf '%s ' \"$@\"\n").unwrap();
+        std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let out =
+            ssh_sign(stub.to_str().unwrap(), "/some/key", "ns", b"payload", None).expect("runs");
+        assert_eq!(out.trim_end(), "-Y sign -n ns -f /some/key");
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn ssh_sign_hands_the_reason_to_the_signer_environment() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let dir = tempfile::tempdir().unwrap();
+        let stub = dir.path().join("stub-signer");
+        std::fs::write(&stub, "#!/bin/sh\ncat > /dev/null\nprintf '%s' \"$TRAWLER_SIGN_REASON\"\n")
+            .unwrap();
+        std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let reason = "approve the merge of wu/x/y into epic/x (tip abc1234) as vu";
+        let out = ssh_sign(stub.to_str().unwrap(), "/some/key", "ns", b"payload", Some(reason))
+            .expect("runs");
+        assert_eq!(out, reason);
+        let unset = ssh_sign(stub.to_str().unwrap(), "/some/key", "ns", b"payload", None).unwrap();
+        assert_eq!(unset, "", "no reason means no variable, so the signer falls back");
+    }
 
     #[test]
     fn sha256_matches_known_vector() {

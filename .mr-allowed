@@ -1,5 +1,0 @@
-# Identities allowed to sign off manual review (E-NMWF).
-# One `<tier>: <value>` per line; blank lines and #-comments ignored.
-# E-MRSIG later adds a `key:` tier (a public key) for unforgeable signatures.
-email:    vu.luu@workforceoptimizer.com
-username: vuluu
