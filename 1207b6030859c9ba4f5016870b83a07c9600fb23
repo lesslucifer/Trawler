@@ -1,0 +1,12 @@
+schema: cr/v2
+scope: "epic E-UIFOUND -> main"
+epic: E-UIFOUND
+branch: epic/uifound
+base: d42b0bcdc19b1143518ad12e336fbd293d318afb
+head: 1207b6030859c9ba4f5016870b83a07c9600fb23
+diff_sha256: 6e9b72a9290df090a59c0c9328fe7fb767d99e9d14ce2f2bb122640f1164d9a5
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 10, verified: 2, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-12
