@@ -3,17 +3,22 @@
 Trawler — native MITM HTTP(S) debugging proxy, API-first core.
 
 **Stack**: Rust 2021 · tokio · hudsucker 0.24 (MITM proxy, `:7420`) · axum 0.8
-(control API: REST + SSE + `/ca.crt`, `:7421`) · rcgen 0.14 (CA). Lints:
-clippy pedantic, `unsafe_code` forbidden (see `Cargo.toml`).
+(control API: REST + SSE + `/ca.crt`, `:7421`) · rcgen 0.14 (CA). Native UI:
+Tauri 2 + Vite + TypeScript + React + Tailwind in `ui/` (out-of-process API
+client; mirrors Strata). Lints: clippy pedantic, `unsafe_code` forbidden
+(see `Cargo.toml`).
 
 **Layout**: lib crate `src/lib.rs` (`run(Config)` composition root) + thin bin
 `src/main.rs`. Modules: `config` · `flow` (domain model) · `event` · `capture`
 · `store` (ring + bus) · `recorder` (proxy handler) · `ca` · `api/` (routes,
 views, decode). Integration/e2e tests in `tests/` (`test-utils` feature =
-shared test support). Generated CA in `ca/`, git-ignored.
+shared test support). Native app in `ui/` (`ui/src-tauri` a standalone crate
+outside the core workspace — headless `cargo build`/`test` stays GUI-free).
+Generated CA in `ca/`, git-ignored.
 
 **Commands**: `cargo run` (`RUST_LOG=trawler=debug` for logs) · `cargo test` ·
-`cargo clippy`. Quick check: `curl -x http://127.0.0.1:7420 http://example.com/`
+`cargo clippy` · `cargo xtask ui build|dev|e2e` (front-end bundle · Tauri
+window · WebDriver e2e). Quick check: `curl -x http://127.0.0.1:7420 http://example.com/`
 → `curl http://127.0.0.1:7421/flows`.
 
 Architecture & invariants: `docs/core-architecture.html` · rationale:
@@ -74,7 +79,8 @@ Standalone code commits outside a WU carry `test/v2` with `level: commit`.
 never default into `docs/` (SUPER CRITICAL). T1 = permanent AND shape-level; any
 plan/spec/test-plan/backlog fails that and is T3 (`docs/work/`), never T1.**
 
-Spec: `docs/documentation-system.html`. **T0** this file (user-edited only) ·
+Spec: `docs/documentation-system.html`. **T0** this file (edited only on
+explicit request — never silently or as a side effect) ·
 **T1** `docs/*.html` architecture + process · **T2** `docs/use-cases/` (what) &
 `docs/decisions/` (why), read index-first · **T3** `docs/work/` scratch, distill
 then archive · **T4** `src/` — the truth. One fact per tier (else link); code

@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Core Architecture</h1>
       <p>How the codebase is actually built: the crate shape, the modules and the types they own, the request/response lifecycle through the code, the concurrency model, and where each decision from the <a href="core-technical-design.html">Core Technical Design</a> landed in source.</p>
-      <div class="meta">Draft v1 · 2026-07-04 · Trawler</div>
+      <div class="meta">v2 · 2026-07-12 · Trawler</div>
     </div>
   </header>
   <main>
@@ -154,7 +154,7 @@ flowchart TD
     <table data-c="api-table">
       <thead><tr><th>Endpoint</th><th>Handler → returns</th></tr></thead>
       <tbody>
-        <tr><td><code>GET /</code></td><td><code>ui_page</code> → the embedded web UI shell (<code>api/ui.html</code> via <code>include_str!</code>) — a plain client of the endpoints below, no dedicated API surface</td></tr>
+        <tr><td><code>GET /</code></td><td><code>ui_page</code> → the embedded web UI shell (<code>api/ui.html</code> via <code>include_str!</code>) — a plain client of the endpoints below, no dedicated API surface. The <a href="#ui">native desktop app (<code>ui/</code>)</a> is a second such client, out of process (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</td></tr>
         <tr><td><code>GET /flows?host=&amp;method=&amp;status=&amp;content_type=&amp;q=</code></td><td><code>list_flows</code> → <code>[FlowSummary]</code></td></tr>
         <tr><td><code>GET /flows/{id}</code></td><td><code>get_flow</code> → <code>FlowView</code> (400 on bad id, 404 if missing)</td></tr>
         <tr><td><code>GET /flows/{id}/request/body?decode=1</code></td><td><code>request_body</code> → raw bytes, or decoded (204 if no bytes retained)</td></tr>
@@ -163,8 +163,55 @@ flowchart TD
         <tr><td><code>GET /ca.crt</code></td><td><code>ca_cert</code> → the root CA PEM (<code>application/x-x509-ca-cert</code>)</td></tr>
       </tbody>
     </table>
+    <div class="callout" data-c="cors-callout">
+      <p><strong>Every response carries an open CORS grant</strong> (<code>Access-Control-Allow-Origin: *</code>, with <code>OPTIONS</code> preflights short-circuiting to 204), a one-line axum middleware in <code>api/mod.rs</code>. The native app's webview is a cross-origin client, so without it its <code>fetch</code>/<code>EventSource</code> are blocked. Safe because the API is read-only and bound to <code>127.0.0.1</code> — everything it exposes is already <code>curl</code>-reachable, so <code>*</code> adds no exposure the bind address does not (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</p>
+    </div>
     <div class="callout" data-c="decode-callout">
       <p><strong>Decoding stays view-side.</strong> Capture stores raw bytes faithfully. <code>?decode=1</code> runs <code>api/decode.rs</code> lazily: reverse <code>content-encoding</code> (<code>gzip</code>/<code>deflate</code> today via <code>flate2</code>), then pretty-print if the content type is JSON. Brotli, charset transcoding, and XML/form pretty-printing are the obvious next extensions — all isolated in that one module. Unknown encodings pass through untouched rather than failing.</p>
+    </div>
+
+    <h2 id="ui">Native UI app (<code>ui/</code>)</h2>
+    <p>A second client of the control API, in its own out-of-process project — the core does not compile, link, or know about it (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>). The stack mirrors the sibling Strata app: <strong>Tauri 2</strong> (native window) hosting a <strong>Vite + TypeScript + React</strong> front end styled with <strong>Tailwind</strong> (Warp tokens). Everything it shows is a REST read or an SSE subscription against <code>127.0.0.1:7421</code>; it reaches no core internal.</p>
+    <div class="diagram" data-c="ui-layers-diagram">
+      <pre class="mermaid">
+flowchart TD
+    subgraph shell["ui/src-tauri — thin Rust shell (~8 lines)"]
+      tauri["tauri::Builder::default().run()"]
+    end
+    subgraph web["ui/src — React app (in the webview)"]
+      main["main.tsx — mount &lt;App/&gt;"]
+      app["App.tsx — compose Layout + filter bar + FlowList"]
+      hook["useFlows.ts — feed: filter state + debounced refetch"]
+      client["api.ts — TrawlerApi (typed REST + SSE client)"]
+      pure["flow.ts — statusTone / toRow (pure projections)"]
+      main --> app --> hook --> client
+      app --> pure
+    end
+    tauri -->|"loads bundled index.html"| main
+    client -->|"fetch /flows · EventSource /stream"| api["control API :7421 (unchanged)"]
+      </pre>
+      <div class="caption">The Tauri shell is a window with no logic; all behaviour lives in the webview's React app, and all data crosses the same loopback API the web shell and <code>curl</code> use. The one Rust↔JS boundary is "load the bundle" — there are no Tauri commands.</div>
+    </div>
+    <table data-c="ui-module-table">
+      <thead><tr><th>File</th><th>Owns</th><th>Key items</th></tr></thead>
+      <tbody>
+        <tr><td><code>src-tauri/src/lib.rs</code>, <code>main.rs</code></td><td>The native window shell</td><td><code>run()</code> — <code>tauri::Builder::default().run(...)</code>; two WebDriver plugins added only under the <code>e2e</code> Cargo feature. No <code>trawler</code> dependency, no commands.</td></tr>
+        <tr><td><code>src/api.ts</code></td><td>The typed control-API client</td><td><code>TrawlerApi</code> (<code>listFlows</code>, <code>stream</code>), <code>FlowSummary</code>/<code>Filter</code> types, <code>filterParams</code>, <code>createApi</code>, <code>defaultBaseUrl</code>. The <strong>only</strong> place that touches URLs or the wire.</td></tr>
+        <tr><td><code>src/useFlows.ts</code></td><td>The live flow feed (a React hook)</td><td><code>useFlows(api)</code> → <code>{ filter, flows, live, update }</code>. Server-side filtering + a 150 ms debounced refetch on filter change and on any SSE event — the web shell's logic, ported.</td></tr>
+        <tr><td><code>src/flow.ts</code></td><td>Pure view projections</td><td><code>statusTone</code> (2xx→ok, 4xx/5xx→warn, else muted), <code>toRow</code> (splits the URI into host/path, formats time/duration/status). No React, no I/O — the unit-tested boundary.</td></tr>
+        <tr><td><code>src/Layout.tsx</code></td><td>The base app layout</td><td>Named regions later UI epics slot into: a header/filter bar, the main content, and a reserved <code>detail</code> aside (E-UIINSPECT's inspector).</td></tr>
+        <tr><td><code>src/FlowList.tsx</code></td><td>The virtualized flow table</td><td>Fixed-height rows via <code>@tanstack/react-virtual</code> (renders only the viewport + overscan); an empty-state prompt when there are no flows.</td></tr>
+        <tr><td><code>src/App.tsx</code>, <code>components.tsx</code></td><td>Composition + the base component kit</td><td><code>App</code> wires <code>useFlows</code> into <code>Layout</code>/<code>FlowList</code>; <code>Field</code>/<code>StatusPill</code>/<code>LiveDot</code> are the themed primitives later epics reuse.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="ui-flow-callout">
+      <p><strong>Data flow — server-authoritative, replace-not-append.</strong> <code>useFlows</code> holds the current filter and calls <code>api.listFlows(filter)</code>, which hits <code>GET /flows?…</code> with the <em>same query params the web shell uses</em> — the API owns the filter semantics, the front end never filters client-side. Every SSE lifecycle event (<code>request</code>/<code>response</code>/<code>evicted</code>/<code>lagged</code>) triggers the <strong>same</strong> debounced refetch, and the result <em>replaces</em> the list. So the rendered set is always exactly what a fresh <code>GET /flows</code> returns for the filter — no client-side merge, no unbounded growth, and eviction on the core side is reflected for free. The <code>LiveDot</code> tracks the real <code>EventSource</code> connection (<code>onopen</code>→live, <code>onerror</code>→not), not fetch success.</p>
+    </div>
+    <div class="callout" data-c="ui-baseurl-callout">
+      <p><strong>Configurable API base URL, resolved per call.</strong> <code>defaultBaseUrl()</code> picks, most-specific-first: a runtime <code>window.__TRAWLER_API__</code>, then a <code>sessionStorage</code> value (both survive without a rebuild — the released app's configuration hook and how the e2e injects an ephemeral port), then the build-time <code>VITE_TRAWLER_API</code>, then the <code>:7421</code> dev default. <code>createApi</code> resolves it inside each request rather than capturing it, so an injection after mount takes effect on the next fetch. Component code never sees a port.</p>
+    </div>
+    <div class="callout" data-c="ui-build-callout">
+      <p><strong>Build &amp; e2e topology.</strong> <code>cargo xtask ui build|dev|e2e</code> drives the front end: <code>build</code> runs the pnpm install+build to <code>ui/dist/</code>; <code>dev</code> launches the Tauri window against a running core; <code>e2e</code> builds an e2e-flavoured app and drives the <em>real</em> WebKit window via WebdriverIO's <code>@wdio/tauri-service</code>. The WebDriver plugins are gated behind an <code>e2e</code> Cargo feature and a <code>VITE_E2E</code> flag so release builds tree-shake them out. The e2e's ephemeral core + local origin run in a standalone launcher crate under <code>ui/e2e/harness/</code> (its own <code>Cargo.toml</code>, calling <code>trawler::serve(Config)</code> — the programmatic entry that returns a <code>RunningServer</code> with the bound ephemeral addrs and a deterministic shutdown, rather than <code>run(Config)</code>'s boot-until-interrupted) — outside the core workspace, so a headless <code>cargo build</code>/<code>test</code> of the proxy never pulls the GUI toolchain.</p>
     </div>
 
     <h2 id="ca">Certificate authority</h2>
