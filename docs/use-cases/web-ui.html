@@ -8,9 +8,11 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>Use Cases — Web UI</h1>
-      <p>What a user can do in the browser against a running Trawler, stated as observable contracts.</p>
-      <div class="meta">v1 · 2026-07-06 · Trawler · seeded by epic <span class="badge id">E-UISHELL</span></div>
+      <h1>Use Cases — UI surfaces</h1>
+      <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
+      surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4).</p>
+      <div class="meta">v2 · 2026-07-12 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      UC-4 by <span class="badge id">E-UIFOUND</span></div>
     </div>
   </header>
   <main>
@@ -39,10 +41,40 @@
       <p>Pinned by <code>ui_shell_serves_live_filterable_flow_list</code> in
       <code>tests/e2e_capture.rs</code> (page served, filter narrows, SSE event arrives,
       clean shutdown with the stream open) and the shell contract tests in
-      <code>tests/api.rs</code>. In-browser rendering is covered by a recorded manual check
-      (browser-level automation arrives with the E-UIFOUND stack decision). The shell's
-      minimal chrome is deliberate: it migrates onto the E-UIFOUND layout as its first tenant
-      (<a href="../backlog/roadmap.html">roadmap</a>).</p>
+      <code>tests/api.rs</code>. In-browser rendering is covered by a recorded manual check.
+      The shell's minimal chrome is deliberate; the native app (UC-4) is the designed surface.</p>
+    </div>
+
+    <h2 id="uc-4">UC-4 — Watch live traffic in the native app</h2>
+    <div data-c="uc-4-contract">
+      <p>With Trawler running, launching the native desktop app (<span class="badge id">E-UIFOUND</span>,
+      Tauri + React) shows the captured flows (method, host, path, status, duration) in the Warp-styled
+      base layout and updates live as new traffic passes the proxy, via the existing
+      <code>GET /stream</code> SSE stream.</p>
+      <ul>
+        <li>A filter bar narrows the list by host, method, status and free text — the same
+        <code>GET /flows</code> query-parameter semantics as UC-3, because the app delegates filtering
+        to the API rather than reimplementing it. Status color distinguishes 2xx / 4xx / 5xx at a glance.</li>
+        <li>The app is a pure <em>cross-origin</em> client of <code>127.0.0.1:7421</code> — it reaches no
+        core internals; everything it shows is equally reachable with <code>curl</code>. Because the
+        webview origin differs from the API's, every API response carries an open CORS grant
+        (<a href="../decisions/dec-12-native-ui-stack.html">DEC-12</a>); without it the webview's
+        <code>fetch</code>/<code>EventSource</code> would be blocked.</li>
+        <li>The API base URL is configurable (never a hardcoded port in component code): a runtime value
+        wins over a build-time env, which wins over the <code>:7421</code> dev default — the released app
+        exposes it as configuration.</li>
+      </ul>
+    </div>
+
+    <div class="callout" data-c="uc-4-provenance">
+      <p>Pinned by the epic e2e (<code>ui/e2e/specs/flows.spec.ts</code>, <code>cargo xtask ui e2e</code>):
+      WebdriverIO drives the real WebKit window against an ephemeral <code>run(Config)</code> core — empty
+      layout renders, a proxied request appears live, the filter narrows and restores, a second request
+      appends without refresh. Unit + integration layers (Vitest + Testing Library) cover the status-color
+      mapping, the typed client, filter→params, and the layout+list against a mock API. Existing API
+      contracts (<code>GET /flows</code>, <code>GET /stream</code>) are consumed unchanged; the CORS grant
+      is the one API-response addition. UC-3 (web shell) stays valid — both surfaces are clients of the
+      same API.</p>
     </div>
 
   </main>

@@ -154,7 +154,7 @@ flowchart TD
     <table data-c="api-table">
       <thead><tr><th>Endpoint</th><th>Handler → returns</th></tr></thead>
       <tbody>
-        <tr><td><code>GET /</code></td><td><code>ui_page</code> → the embedded web UI shell (<code>api/ui.html</code> via <code>include_str!</code>) — a plain client of the endpoints below, no dedicated API surface</td></tr>
+        <tr><td><code>GET /</code></td><td><code>ui_page</code> → the embedded web UI shell (<code>api/ui.html</code> via <code>include_str!</code>) — a plain client of the endpoints below, no dedicated API surface. The native desktop app (<code>ui/</code>) is a second such client, out of process (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</td></tr>
         <tr><td><code>GET /flows?host=&amp;method=&amp;status=&amp;content_type=&amp;q=</code></td><td><code>list_flows</code> → <code>[FlowSummary]</code></td></tr>
         <tr><td><code>GET /flows/{id}</code></td><td><code>get_flow</code> → <code>FlowView</code> (400 on bad id, 404 if missing)</td></tr>
         <tr><td><code>GET /flows/{id}/request/body?decode=1</code></td><td><code>request_body</code> → raw bytes, or decoded (204 if no bytes retained)</td></tr>
@@ -163,6 +163,9 @@ flowchart TD
         <tr><td><code>GET /ca.crt</code></td><td><code>ca_cert</code> → the root CA PEM (<code>application/x-x509-ca-cert</code>)</td></tr>
       </tbody>
     </table>
+    <div class="callout" data-c="cors-callout">
+      <p><strong>Every response carries an open CORS grant</strong> (<code>Access-Control-Allow-Origin: *</code>, with <code>OPTIONS</code> preflights short-circuiting to 204), a one-line axum middleware in <code>api/mod.rs</code>. The native app's webview is a cross-origin client, so without it its <code>fetch</code>/<code>EventSource</code> are blocked. Safe because the API is read-only and bound to <code>127.0.0.1</code> — everything it exposes is already <code>curl</code>-reachable, so <code>*</code> adds no exposure the bind address does not (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</p>
+    </div>
     <div class="callout" data-c="decode-callout">
       <p><strong>Decoding stays view-side.</strong> Capture stores raw bytes faithfully. <code>?decode=1</code> runs <code>api/decode.rs</code> lazily: reverse <code>content-encoding</code> (<code>gzip</code>/<code>deflate</code> today via <code>flate2</code>), then pretty-print if the content type is JSON. Brotli, charset transcoding, and XML/form pretty-printing are the obvious next extensions — all isolated in that one module. Unknown encodings pass through untouched rather than failing.</p>
     </div>

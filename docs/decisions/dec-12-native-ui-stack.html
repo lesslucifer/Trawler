@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a5306eb9f34851f0dfa8b87">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Decisions: Native UI Stack</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Decisions — Native UI Stack</h1>
+      <p>Why Trawler's primary UI is a native desktop app that is an out-of-process client of the control
+      API — the stack, the topology, the design system, and the reversal from web-primary.</p>
+      <div class="meta">v1 · 2026-07-12 · Trawler · <a href="decisions-index.html">index</a> · seeded by
+      <span class="badge id">E-UIFOUND</span></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="dec-12"><span class="badge id">DEC-12</span> The primary UI is a native desktop app, an
+    out-of-process client of the control API</h2>
+    <div data-c="dec-12-body">
+      <table>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-07-12 · Owner</td></tr>
+        <tr><th>Supersedes</th><td>The roadmap's web-primary / single-binary framing — a strategic
+          reversal (see below).</td></tr>
+      </table>
+
+      <h3 id="decision">Decision</h3>
+      <ul>
+        <li><b>Stack</b>: Tauri 2 + Vite + TypeScript + React + Tailwind, mirroring the sibling Strata app
+        rather than re-deriving it. Add <code>@tanstack/react-virtual</code> for the long streaming flow
+        list. The front end lives in <code>ui/</code> alongside the core.</li>
+        <li><b>Topology — out of process</b>: the app is a pure client of the existing control API
+        (<code>127.0.0.1:7421</code>, REST + SSE). The Tauri Rust side (<code>ui/src-tauri</code>) is a thin
+        window shell — no core logic, no capture, no new API. This preserves the API-first invariant:
+        everything the app shows is equally reachable with <code>curl</code>. The core workspace excludes
+        <code>ui/src-tauri</code> so a headless <code>cargo build</code>/<code>test</code> stays GUI-free.</li>
+        <li><b>Design system — Warp</b>: seeded from Warp's DESIGN.md. Warm-dark canvas
+        <code>#2b2622</code>, off-white ink <code>#f7f5f0</code>, hairline borders, Inter / DM&nbsp;Mono /
+        Instrument&nbsp;Serif, 4px spacing, tight 3–4px radii — as the Tailwind theme plus a base component
+        kit. Warp is "zero chromatic accent"; the one deliberate exception is <b>functional status color</b>
+        (2xx→ok green, 4xx·5xx→warn red), because a debugging proxy must tell success from error at a glance.</li>
+        <li><b>CORS grant on the control API</b> (consequence, Owner-approved): the native webview is a
+        <em>cross-origin</em> client, so its <code>fetch</code>/<code>EventSource</code> are blocked unless
+        every API response carries <code>Access-Control-Allow-Origin: *</code> (and <code>OPTIONS</code>
+        preflights short-circuit). The grant is safe because the API is a read-only loopback inspection
+        surface bound to <code>127.0.0.1</code> — <code>*</code> adds no exposure the bind address does not
+        already imply. This is the one API-response change the epic makes; the plan had listed API changes
+        as a non-goal, so it is recorded here explicitly.</li>
+        <li><b>API base URL is configurable</b>, never a hardcoded port in component code: a runtime value
+        (<code>window.__TRAWLER_API__</code> / <code>sessionStorage</code>) wins over the build-time
+        <code>VITE_TRAWLER_API</code>, which wins over the <code>:7421</code> dev default. The released app
+        exposes it as configuration; tests inject an ephemeral port.</li>
+        <li><b>The web shell is kept</b> alongside as a second client of the same API, to be retired later
+        at native-UI parity — not this epic.</li>
+      </ul>
+
+      <h3 id="reversal">The reversal</h3>
+      <p>The roadmap framed the UI as browser-primary (the <span class="badge id">E-UISHELL</span> web
+      shell) inside a single binary. DEC-12 makes the <em>native app</em> the primary, designed surface and
+      the foundation later UI epics (E-UIINSPECT inspector, E-UISETUP onboarding) build on. The core stays a
+      single binary; the app is a separate out-of-process client, so the API-first architecture is
+      strengthened, not diluted. The living roadmap records the reversal.</p>
+
+      <h3 id="numbering">A note on the ID</h3>
+      <p>The E-UIFOUND plan drafted this as "DEC-11", but that ID was consumed by the gate-speed decision at
+      the E-MRSIG renumbering (see <a href="workflow-gates.html">workflow-gates</a>). Git is the registry, so
+      this decision takes the next free ID, <b>DEC-12</b>.</p>
+    </div>
+
+    <div class="callout" data-c="dec-12-links">
+      <p>Realized by <span class="badge id">E-UIFOUND</span> (W1 scaffold + build integration, W2 design
+      system + layout + flow list). Contract: <a href="../use-cases/web-ui.html#uc-4">UC-4</a>.
+      Architecture: <a href="../core-architecture.html">core-architecture</a>. Test stack:
+      <a href="../testing-strategy.html">testing-strategy</a>.</p>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
