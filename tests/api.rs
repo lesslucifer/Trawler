@@ -212,3 +212,23 @@ async fn stream_delivers_live_event() {
     assert!(text.contains("event: request"), "got: {text}");
     assert!(text.contains("http://live/"), "got: {text}");
 }
+
+// The native app is a cross-origin client of the API, so listings, the stream,
+// and a preflight all carry the open CORS grant — without it the webview's
+// fetch/EventSource are blocked and UC-4 never populates. Headers only for
+// /stream: its body never ends, so draining it would hang.
+#[tokio::test]
+async fn cross_origin_grant_rides_every_response() {
+    let r = router_with(Arc::new(Store::new(1_000_000, 64)));
+
+    for uri in ["/flows", "/stream"] {
+        let req = Request::builder().uri(uri).body(Body::empty()).unwrap();
+        let res = r.clone().oneshot(req).await.unwrap();
+        assert_eq!(res.headers()["access-control-allow-origin"], "*", "no grant on {uri}");
+    }
+
+    let preflight = Request::builder().method("OPTIONS").uri("/flows").body(Body::empty()).unwrap();
+    let res = r.oneshot(preflight).await.unwrap();
+    assert_eq!(res.status(), StatusCode::NO_CONTENT);
+    assert_eq!(res.headers()["access-control-allow-origin"], "*");
+}
