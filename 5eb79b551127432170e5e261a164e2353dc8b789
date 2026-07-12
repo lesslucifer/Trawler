@@ -1,0 +1,17 @@
+schema: mr/v1
+level: epic
+tip: 5eb79b551127432170e5e261a164e2353dc8b789
+base: d42b0bcdc19b1143518ad12e336fbd293d318afb
+tier: key
+signer: vuluu
+report: docs/.archive/2026-07-12-uifound-epic-result.html
+report_sha256: 30f248f3fe6e6fb0a19112fef683164f0f81961b93fd3399564f1430db949ba4
+date: 2026-07-12
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+  EEhUxfjpFJ4ff7DVGaBQnMaRPtNHJbaotNwZT7hU7pqTEEAkyxwK63m5GwX3b5N4SXDgy8
+  vcbzGVUeJhA12yU/hgAAAAp0cmF3bGVyLW1yAAAAAAAAAAZzaGE1MTIAAABkAAAAE2VjZH
+  NhLXNoYTItbmlzdHAyNTYAAABJAAAAIQCliW+V7IWUxM2bSvX5qZv4dX5mGGvwKESVgepF
+  3QHgcgAAACA5RJovls8ZxkT6SHmYz7aVjozuDBnCxttQGRQk8pgJ4w==
+  -----END SSH SIGNATURE-----
