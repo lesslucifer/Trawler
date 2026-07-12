@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Roadmap &amp; Backlog</h1>
       <p>The product roadmap — two pillars and the epic sequence that delivers them — plus the living backlog of deferred work carried across epics.</p>
-      <div class="meta">v4 · 2026-07-07 · Trawler · <a href="backlog-index.html">index</a></div>
+      <div class="meta">v5 · 2026-07-12 · Trawler · <a href="backlog-index.html">index</a></div>
     </div>
   </header>
   <main>
@@ -42,6 +42,7 @@
         <tr><td>Two pillars, not one direction</td><td>The GUI is the adoption gate (nobody evaluates a proxy via curl; Charles proves a complete feature set doesn't survive bad ergonomics) and functionality is the retention floor (mitmproxy is the benchmark). The API-first core fuses them: every GUI capability is a call on the public API, so the GUI never forks the feature surface.</td></tr>
         <tr><td>UI is four epics (E-UISHELL → E-UIFOUND → E-UIINSPECT → E-UISETUP), not one</td><td>Owner decision. One "UI epic" is unboundable; four bounded epics each carry their own requirement and test plan. E-UIFOUND exists as its own epic so every later UI surface slots into a designed layout — accreting features without one is the Charles failure mode.</td></tr>
         <tr><td>Minimal shell (E-UISHELL) ships before the foundation epic (E-UIFOUND)</td><td>Owner-confirmed order: visible traffic first. The shell's chrome is deliberately minimal and is migrated onto the foundation's layout as its first tenant — a small, accepted rework, priced in rather than accidental.</td></tr>
+        <tr><td><strong>Native desktop app is the primary UI, not a web page</strong> <span class="badge id">reversal · DEC-12</span></td><td>E-UIFOUND reversed the web-primary framing this roadmap opened with. The primary surface is a native Tauri desktop app (Vite + TS + React + Tailwind, mirroring Strata), an out-of-process client of the control API; the embedded web shell is kept as a second client, to be retired later at native-UI parity. The API-first invariant is unchanged — the app reaches no core internals, only <code>127.0.0.1:7421</code>. Recorded as <a href="../decisions/dec-12-native-ui-stack.html">DEC-12</a>; E-UIINSPECT / E-UISETUP build on this stack.</td></tr>
         <tr><td>REST API + rules (E-RULE) instead of embedded scripting</td><td>mitmproxy's addon power without shipping a script runtime: anything that can drive HTTP can automate Trawler. Revisit (in-process WASM/JS hook) only if real rule usage proves insufficient.</td></tr>
         <tr><td>HTTP/3/QUIC MITM and DNS/TCP/UDP proxying deferred</td><td>Large protocol investment with poor client CA support for QUIC; not what the two pillars need first. Revisit after the Wave 1–3 parity set lands.</td></tr>
         <tr><td>Differentiators (E-LLM, E-MCP, E-OAS) last, not first</td><td>They lead the market but sit on capture/replay/persistence machinery from earlier waves — sequencing them first would build that machinery twice. E-LLM additionally requires deciding to tee-capture <code>text/event-stream</code> bodies, today a deliberate passthrough invariant.</td></tr>
@@ -89,8 +90,12 @@
     </table>
 
     <h3 id="rmap-consequences">Consequences</h3>
-    <p>Next epic to start is <span class="badge id">E-UISHELL</span> (with E-H2 available as
-    an independent Wave 1 track). This roadmap is living — updated in place as epics land; a
+    <p>Landed so far: <span class="badge id">E-UISHELL</span> and <span class="badge id">E-H2</span>
+    (Wave 1) and <span class="badge id">E-UIFOUND</span> (Wave 2, native UI foundation — see the
+    DEC-12 reversal above). Next epic to start is <span class="badge id">E-UIINSPECT</span> (the flow
+    inspector, building on E-UIFOUND's base layout), with <span class="badge id">E-EXPORT</span>
+    available as an independent Wave 2 Function track. This roadmap is living — updated in place as
+    epics land; a
     strategic reversal (dropping a pillar, resequencing a wave) is recorded as a
     <a href="../decisions/decisions-index.html">decision</a> and then reflected here. The
     research substance behind the market claims lives only in the archived scratch doc; if a
