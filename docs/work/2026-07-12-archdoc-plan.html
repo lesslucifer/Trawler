@@ -47,45 +47,91 @@
         <li><code>docs/architecture.html</code> exists as the T1 architecture doc; the old
           <code>docs/core-architecture.html</code> is deleted (new file, not a <code>git mv</code> —
           Owner decision).</li>
-        <li>The new doc is <strong>shape-only</strong> and materially shorter: it keeps the crate/module
-          map, runtime wiring, concurrency model, the request/response lifecycle, the cross-module
-          invariants, and the two-client (API-first) boundary — and <em>nothing</em> that merely
-          restates <code>src/</code>, a use-case, or the design doc.</li>
-        <li>Every dropped-detail need is served by a link down a tier, not by silence: the doc links to
-          <a href="../core-technical-design.html">core-technical-design.html</a> for rationale, to the
-          use-cases for behavior contracts, and to <code>src/ · symbol</code> for mechanics.</li>
-        <li>No inbound link is left dangling: every reference to <code>core-architecture.html</code>
-          anywhere in <code>docs/</code> (and the T0 <code>CLAUDE.md</code> pointer, if any) resolves to
-          <code>architecture.html</code>.</li>
+        <li>The new doc is <strong>shape-only and generic</strong>: it describes the folder layout and
+          file-name conventions, the runtime wiring, the request/response lifecycle, and the two-client
+          (API-first) boundary — <em>without naming today's specific files</em> in prose or diagrams, so
+          it survives the project growing. No per-type shapes, no endpoint table, no eviction algorithm,
+          no cert API, no dependency version list, no "not built" scope.</li>
+        <li>It carries the <strong>two new consolidation sections</strong>: a single
+          <em>Technical decisions</em> list (one short line per load-bearing choice, linking to its
+          <code>DEC-*</code>/<code>src/</code>) and a concise <em>Tech stack</em> table
+          (library → purpose, no versions).</li>
+        <li>The <strong>build/run section covers the whole project</strong> — backend run, front-end
+          build/dev, test, and debug scripts — not just <code>cargo run</code>.</li>
+        <li>Every dropped-detail need is served by a link down a tier, not by silence:
+          <a href="../core-technical-design.html">core-technical-design.html</a> for rationale, the
+          use-cases for behavior contracts, <code>src/</code>/<code>ui/</code> for mechanics.</li>
+        <li>No inbound link is left dangling: <strong>every</strong> reference to
+          <code>core-architecture.html</code> across the whole project — <code>docs/</code>,
+          <code>README.md</code>, the code-review rubric, and the T0 <code>CLAUDE.md</code> pointer —
+          resolves to <code>architecture.html</code>.</li>
         <li>The doc passes the htmldoc conventions (dark mode, Mermaid dark theme, stable ids,
           <code>data-htmldoc-id</code>, single <code>htmldoc.js</code> tag) and the documentation-system
-          T1 rules (no copied code, no work estimates).</li>
+          T1 rules (no copied code, no work estimates). No doc-version tag needed (Owner).</li>
       </ul>
     </div>
 
-    <h2 id="keep-cut">The review — what stays, what goes, and where it goes instead</h2>
-    <p>This is the substance of the rework. Current <code>core-architecture.html</code> sections judged
-    against the T1 altitude rule (shape-level + permanent, one fact per tier):</p>
+    <h2 id="direction">Direction (from the Owner comment round)</h2>
+    <div class="callout" data-c="direction-callout">
+      <p>The rework is more aggressive than "trim", and it must be <strong>evolution-proof</strong>, not a
+      photograph of the current early-stage tree:</p>
+      <ul>
+        <li><strong>Generic layout, no specific files.</strong> Diagrams and the layout map describe the
+          <em>folder structure and file-name conventions</em> (e.g. "one module per domain concept under
+          <code>src/</code>", "React app under <code>ui/src/</code>"), never today's exact file list
+          (<code>config.rs</code>, <code>App.tsx</code>, …). It stays true as the project grows.</li>
+        <li><strong>Cut hard.</strong> Every specific technical decision, per-type shape, per-endpoint
+          contract, eviction algorithm, cert API, dep inventory, and the "not built" scope comes
+          <em>out</em> of the body.</li>
+        <li><strong>Consolidate what's cut.</strong> The dropped technical decisions are gathered into
+          <em>one</em> section — a short line each, not a card grid, not a re-explanation.</li>
+        <li><strong>Add a tech-stack table.</strong> One concise table: library → what it's used for.</li>
+        <li><strong>Build/run covers the whole project</strong> — backend + front-end + test + debug
+          scripts, not just <code>cargo run</code>.</li>
+      </ul>
+    </div>
+
+    <h2 id="keep-cut">The review — the new section set for architecture.html</h2>
+    <p>Current <code>core-architecture.html</code> sections judged against the T1 altitude rule and the
+    direction above. The reworked doc is a small, generic spine plus two consolidation sections.</p>
     <table data-c="keep-cut-table">
       <thead><tr><th>Current section</th><th>Verdict</th><th>Why / where it goes</th></tr></thead>
       <tbody>
-        <tr><td><code>overview</code> "What this is"</td><td><strong>Keep, trim</strong></td><td>The one-paragraph "API-first core, inspect-only" framing is shape. Drop the completeness prose that overlaps the design doc.</td></tr>
-        <tr><td><code>verified-callout</code> smoke badges</td><td><strong>Cut</strong></td><td>Point-in-time test status, not shape. Belongs in a result report / the test suite, never a permanent T1 doc.</td></tr>
-        <tr><td><code>crate-shape</code> + module graph + module table</td><td><strong>Keep</strong></td><td>The core of a T1 architecture doc: the module map and what each owns. Trim the "Key items" column to symbol names (no signatures) — link to <code>src/</code>.</td></tr>
-        <tr><td><code>runtime</code> wiring + concurrency callout</td><td><strong>Keep</strong></td><td>Two servers, one runtime, Recorder as the only bridge, Store-owns-the-bus, std-mutex rationale, no-global-cap — all cross-module invariants. Core keep.</td></tr>
-        <tr><td><code>lifecycle</code> sequence + CONNECT guard</td><td><strong>Keep, condense</strong></td><td>Per-exchange handler-clone correlation and the CONNECT guard are load-bearing invariants a reader must know. Keep the diagram; fold the two callouts into tight notes.</td></tr>
-        <tr><td><code>types</code> table (per-type shapes)</td><td><strong>Cut → link</strong></td><td>Field-level shapes are <code>src/flow.rs</code>'s job and rot with it. Replace with one sentence naming the domain module + a link; the "why each type" is already in the design doc's <code>types</code>.</td></tr>
-        <tr><td><code>store</code> eviction diagram + FlowFilter prose</td><td><strong>Keep the invariant, cut the mechanics</strong></td><td>"Eviction weights by body bytes, not flow count" is the one hard invariant — keep it, one small diagram. The step-by-step algorithm and filter field list are <code>src/store.rs</code>.</td></tr>
-        <tr><td><code>capture</code> two callouts</td><td><strong>Keep the streaming invariant, trim</strong></td><td>"Buffer-then-forward, never buffer <code>text/event-stream</code>" is a real invariant. Cut the exact drain calls (code) — keep the rule + link.</td></tr>
-        <tr><td><code>api</code> endpoint table + CORS + decode callouts</td><td><strong>Cut → link</strong></td><td>The endpoint list is the API contract — it lives in the use-cases (control-api) and the router source. Keep one line: "inspect-only REST + SSE + <code>/ca.crt</code> on :7421, open CORS because loopback + read-only (DEC-12)"; link the rest.</td></tr>
-        <tr><td><code>ui</code> section: layers diagram + per-file table + 3 callouts</td><td><strong>Keep the boundary, cut the file inventory</strong></td><td>The shape fact is "second client, out-of-process, loopback API only, no core dependency (DEC-12)" plus the one Rust↔JS boundary — keep that + the layers diagram. The per-file table and data-flow/base-url/build callouts are <code>ui/</code>'s own detail and DEC-12; link down.</td></tr>
-        <tr><td><code>ca</code> section + rcgen-0.14 API callout</td><td><strong>Cut → link</strong></td><td>The rcgen/hudsucker API shapes and the leaf-cert quirks are the design doc's <code>cert-model</code>. Keep one line: "<code>ca.rs</code> mints a CA, feeds hudsucker's authority, serves <code>/ca.crt</code>"; link.</td></tr>
-        <tr><td><code>decisions</code> cards (impl decisions)</td><td><strong>Cut → link</strong></td><td>These are decision records by another name; the real ones live in <code>docs/decisions/</code>. Where a card states a still-live invariant it's already covered by the kept sections above.</td></tr>
-        <tr><td><code>deps</code> dependency inventory</td><td><strong>Cut</strong></td><td><code>Cargo.toml</code> is the truth and it rots the instant a version bumps. Not shape.</td></tr>
-        <tr><td><code>run</code> build &amp; run table</td><td><strong>Cut → T0/link</strong></td><td>Commands + ports already live in <code>CLAUDE.md</code> (T0) and the design doc. Not architecture.</td></tr>
-        <tr><td><code>scope</code> "not built (v1)"</td><td><strong>Cut → link</strong></td><td>Roadmap/scope is the design doc's <code>challenges</code> and the backlog KB. Keep at most one sentence: "extension seams are chosen so the out-of-scope items don't force a rewrite — see the design doc."</td></tr>
+        <tr><td><code>overview</code> "What this is"</td><td><strong>Keep, trim</strong></td><td>One paragraph: API-first core, inspect-only proxy, any interface is a client. Shape framing only.</td></tr>
+        <tr><td><code>verified-callout</code> smoke badges</td><td><strong>Cut</strong></td><td>Point-in-time test status, not shape.</td></tr>
+        <tr><td><code>crate-shape</code> + module graph + module table</td><td><strong>Keep, make generic</strong></td><td>Keep the lib-crate + thin-bin shape and the "one module per domain concept, composition root in <code>lib.rs</code>" convention. The diagram shows <em>the folder/role layout</em>, not a hardcoded file list. Drop the "Key items" symbol column.</td></tr>
+        <tr><td><code>runtime</code> wiring</td><td><strong>Keep</strong></td><td>Two servers on one runtime, the recorder as the only write-bridge into the store, store-owns-the-bus, API is a pure subscriber. The load-bearing shape of how data moves.</td></tr>
+        <tr><td><code>runtime</code> concurrency callout</td><td><strong>Cut → decisions section</strong></td><td>std-mutex / no-global-cap is a specific technical decision — one line in the consolidated decisions section, not a body callout.</td></tr>
+        <tr><td><code>lifecycle</code> sequence + CONNECT guard</td><td><strong>Keep, condense</strong></td><td>Per-exchange correlation + the CONNECT guard are shape a reader must grasp. Keep one generic sequence diagram; the CONNECT-guard specifics drop to a one-liner in the decisions section.</td></tr>
+        <tr><td><code>types</code> table (per-type shapes)</td><td><strong>Cut completely</strong></td><td>Field-level shapes are <code>src/</code>'s job; rot with it. Not even a link stub — the domain lives in the source and the design doc.</td></tr>
+        <tr><td><code>store</code> eviction diagram + FlowFilter prose</td><td><strong>Cut</strong></td><td>Algorithm-level. The one-line "byte-weighted eviction" fact goes to the decisions section if it survives as a decision; the mechanics are <code>src/</code>.</td></tr>
+        <tr><td><code>capture</code> two callouts</td><td><strong>Cut</strong></td><td>Buffer-then-forward / never-buffer-streaming are specific decisions → one line each in the decisions section.</td></tr>
+        <tr><td><code>api</code> endpoint table + CORS + decode callouts</td><td><strong>Cut</strong></td><td>Endpoint list = the API contract (use-cases + router source). CORS/decode are specific decisions → decisions section. Body keeps at most "inspect-only REST + SSE on the API port".</td></tr>
+        <tr><td><code>ui</code> section: layers diagram + per-file table + 3 callouts</td><td><strong>Keep the boundary, make generic</strong></td><td>Keep the shape: a second, out-of-process client that talks only the loopback API, no core dependency. Diagram shows the generic layout (<code>ui/</code> shell + webview app), <em>not</em> today's file list. The per-file table and the data-flow/base-url/build callouts are cut; anything decision-worthy goes to the decisions section.</td></tr>
+        <tr><td><code>ca</code> section + rcgen-0.14 API callout</td><td><strong>Cut</strong></td><td>Cert API shapes + quirks are the design doc's <code>cert-model</code>. If "CA mints per-host leaves on CONNECT" matters as shape, it's one line in runtime/decisions.</td></tr>
+        <tr><td><code>decisions</code> cards (impl decisions)</td><td><strong>Drop the card grid → fold into the consolidated section</strong></td><td>No card grid. Each still-live decision becomes one short line in the single decisions section (below); dead ones go.</td></tr>
+        <tr><td><code>deps</code> dependency inventory</td><td><strong>Cut → replaced by the tech-stack table</strong></td><td>The rot-prone version list goes; a concise <em>library → purpose</em> table replaces it (no versions — those live in <code>Cargo.toml</code>/<code>package.json</code>).</td></tr>
+        <tr><td><code>run</code> build &amp; run table</td><td><strong>Keep, expand</strong></td><td>Cover the whole project: backend run, front-end build/dev, test, and debug scripts — not just <code>cargo run</code>. Commands by role, not exhaustive flags.</td></tr>
+        <tr><td><code>scope</code> "not built (v1)"</td><td><strong>Cut completely</strong></td><td>Roadmap/scope belongs to the backlog KB and the design doc, and dates fast.</td></tr>
       </tbody>
     </table>
+
+    <h2 id="new-sections">The two new consolidation sections</h2>
+    <div class="callout" data-c="new-sections-callout">
+      <p><strong>1 · Technical decisions (consolidated).</strong> One section gathering every specific
+      decision pulled out of the body — <em>one short, direct line each</em>, no card grid, no
+      re-explanation. Candidates from the current doc: std-mutex over async lock · no global body-cap
+      (per-request judged) · per-exchange handler-clone correlation · CONNECT-line guard · store owns the
+      event bus · byte-weighted ring eviction · buffer-then-forward capture · never buffer
+      <code>text/event-stream</code> · compact SSE payloads (no base64 bodies) · open CORS on loopback,
+      read-only · decode stays view-side · <code>/ca.crt</code> on the API port · library + thin binary.
+      Each line links to its <code>DEC-*</code> or <code>src/</code> where deeper "why" lives; the section
+      is a shape-level index of load-bearing choices, not their justification.</p>
+      <p><strong>2 · Tech stack.</strong> One concise table, <em>library → purpose</em> (no versions):
+      the proxy engine, the control-API framework, the CA/cert library, the async runtime, and the
+      front-end stack (native shell, bundler, framework, styling). Short, direct, replaces the old
+      dependency inventory.</p>
+    </div>
 
     <h2 id="non-goals">Non-goals</h2>
     <div data-item="non-goals">
@@ -109,10 +155,12 @@
     <div data-item="wu-summaries">
       <div data-wu="E-ARCHDOC.W1">
         <h3>E-ARCHDOC.W1 — write architecture.html, delete core-architecture.html, fix inbound links</h3>
-        <p data-item="wu-summary"><strong>Builds:</strong> a new lean, shape-only
-        <code>docs/architecture.html</code> per the keep/cut table; deletes
-        <code>docs/core-architecture.html</code>; repoints every inbound link (in <code>docs/</code> and
-        the T0 pointer, if any) to the new file.</p>
+        <p data-item="wu-summary"><strong>Builds:</strong> a new lean, generic, shape-only
+        <code>docs/architecture.html</code> per the keep/cut table — including the consolidated
+        <em>Technical decisions</em> section and the <em>Tech stack</em> table; deletes
+        <code>docs/core-architecture.html</code>; repoints every inbound link across the whole project
+        (<code>docs/</code>, <code>README.md</code>, the code-review rubric, the T0 pointer) to the new
+        file.</p>
         <p data-item="wu-maps-to"><strong>Maps to:</strong> the epic intent — the whole epic is this one
         WU. No <code>UC-*</code> (docs/process epic).</p>
         <p data-item="wu-expected"><strong>Expected:</strong> exactly the epic "Expected result" above —
@@ -175,32 +223,33 @@
         <li><strong>T1 — <code>docs/core-architecture.html</code> (deleted):</strong> its still-live shape
           facts are carried into the new file; its detail is dropped in favor of down-links (design doc,
           use-cases, <code>src/</code>).</li>
-        <li><strong>T1/T2 link fixes:</strong> any doc referencing <code>core-architecture.html</code>
-          repointed to <code>architecture.html</code> — mechanical, not new knowledge.</li>
-        <li><strong>T0 <code>CLAUDE.md</code>:</strong> the architecture-doc pointer updated
-          <em>only if</em> it names <code>core-architecture.html</code> — and only on the Owner's explicit
-          OK, as its own signed commit (T0 edit rule). Surfaced in chat if needed, never slipped in.</li>
+        <li><strong>Whole-project link fixes:</strong> the five inbound references
+          (<code>README.md</code>, <code>.claude/skills/code-review/rubric.md</code>,
+          <code>docs/decisions/dec-12-native-ui-stack.html</code>,
+          <code>docs/decisions/event-bus.html</code>, and the T0 pointer) repointed to
+          <code>architecture.html</code> — mechanical, not new knowledge.</li>
+        <li><strong>T0 <code>CLAUDE.md</code>:</strong> the architecture-doc pointer swapped to the new
+          filename, as its own signed commit (T0 edit rule) — Owner authorised it this round.</li>
         <li><strong>T3 — this plan:</strong> distilled into the above, then archived to
           <code>docs/.archive/</code> at epic close.</li>
         <li><strong>No T2 change:</strong> no use-case or decision record is created or edited.</li>
       </ul>
     </div>
 
-    <h2 id="open-questions">Open questions</h2>
+    <h2 id="open-questions">Open questions — all resolved by the Owner</h2>
     <div data-item="open-questions">
+      <p>The comment round settled every open question; recorded here as decisions, none left open:</p>
       <ul>
-        <li><strong>Does <code>CLAUDE.md</code> (T0) reference the old filename?</strong> Default:
-          grep for it; if present, updating a bare doc path is a mechanical link fix, but T0 is edited
-          only on explicit request — surface the one-line change and get the Owner's OK before committing
-          it. If absent, no T0 change at all.</li>
-        <li><strong>Keep the "implementation decisions &amp; deviations" cards at all?</strong> Default:
-          drop them — each is either a real <code>DEC-*</code> that belongs in <code>docs/decisions/</code>
-          or a live invariant already covered by a kept section. If review finds one that is neither, fold
-          that single fact into the nearest kept section rather than resurrecting the card grid.</li>
-        <li><strong>Doc version tag on the new file.</strong> Default: start the new
-          <code>architecture.html</code> at <code>v1</code> (new file, new identity), not continuing
-          <code>core-architecture.html</code>'s v2 — it is a fresh doc with its own
-          <code>data-htmldoc-id</code>.</li>
+        <li><strong>Old-filename references — resolved: replace across the whole project.</strong>
+          <code>core-architecture.html</code> is referenced in <code>CLAUDE.md</code> (T0),
+          <code>README.md</code>, <code>.claude/skills/code-review/rubric.md</code>, and two decision
+          docs (<code>dec-12-native-ui-stack.html</code>, <code>event-bus.html</code>). All get repointed
+          to <code>architecture.html</code>. The T0 edit is a bare-path swap made as its own signed
+          commit under the T0 edit rule — Owner has authorised it in this round.</li>
+        <li><strong>Impl-decision cards — resolved: drop.</strong> No card grid. Live decisions fold into
+          the single consolidated <em>Technical decisions</em> section (one line each); dead ones go.</li>
+        <li><strong>Doc version tag — resolved: none needed.</strong> The new file gets no
+          <code>vN</code> tag in its meta line.</li>
       </ul>
     </div>
 
