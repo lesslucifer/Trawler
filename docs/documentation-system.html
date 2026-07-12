@@ -31,13 +31,13 @@
     <div class="diagram" data-c="tier-flow">
       <pre class="mermaid">
 flowchart TB
-    T0["<b>T0 · CLAUDE.md</b><br/>fixed rules + tier map<br/><i>manual edits only</i>"]
+    T0["<b>T0 · CLAUDE.md</b><br/>fixed rules + tier map<br/><i>only on explicit request</i>"]
     T1["<b>T1 · Permanent spine</b><br/>docs/*.html<br/><i>changes only when the shape changes</i>"]
     T2["<b>T2 · Indexed knowledge bases</b><br/>docs/use-cases/ (what) · docs/decisions/ (why) · docs/backlog/ (what's next)<br/><i>topical files behind an index</i>"]
     T3["<b>T3 · Working docs</b><br/>docs/work/<br/><i>short-lived, per task</i>"]
     T4["<b>T4 · Source code</b><br/>src/…<br/><i>the source of truth</i>"]
     T0 -->|read| T1 -->|read| T2 -->|read| T3 -->|read| T4
-    T4 -.->|distill| T3 -.->|synthesize| T2 -.->|shape changes only| T1 -.->|propose to user| T0
+    T4 -.->|distill| T3 -.->|synthesize| T2 -.->|shape changes only| T1 -.->|explicit request only| T0
       </pre>
       <div class="caption">Solid: what a session reads, top-down. Dashed: how knowledge synthesizes upward after work completes.</div>
     </div>
@@ -84,8 +84,9 @@ flowchart TB
       </tbody>
     </table>
     <p data-c="tier-notes">
-      Tiers are ordered by stability: T0 changes only by the user's hand (an agent proposes a diff
-      in chat and stops), T4 changes every commit. T1 is deliberately hard to grow — a page must be
+      Tiers are ordered by stability: T0 changes only on an explicit request to edit it — never
+      silently or as a side effect of other work, and always as a signed, reviewable commit (an
+      agent may make the edit once asked, not slip it in unasked) — T4 changes every commit. T1 is deliberately hard to grow — a page must be
       permanent <em>and</em> shape-level, else it belongs in T2. T4 is never hand-documented; docs
       reference it by path and symbol (<code>src/capture.rs · CaptureSession</code>), never by
       generated API pages or mirrored descriptions.
@@ -175,7 +176,7 @@ stateDiagram-v2
         <tr><td>Non-obvious choice made or reversed?</td><td>New <code>decisions/</code> record</td></tr>
         <tr><td>Component map or invariant changed?</td><td><code>architecture.html</code></td></tr>
         <tr><td>Repeating process emerged or changed?</td><td>Relevant T1 process doc</td></tr>
-        <tr><td>T0 rule should change?</td><td>Propose to the user in chat — never edit CLAUDE.md</td></tr>
+        <tr><td>T0 rule should change?</td><td>Surface it in chat and wait for an explicit request — never edit CLAUDE.md silently or as a side effect; once asked, make the edit as its own signed commit</td></tr>
       </tbody>
     </table>
 
