@@ -12,7 +12,7 @@ because no line here predicted it.
 | **Reuse** | Does this reimplement something the codebase already has? | Hand-rolled logic where a helper exists — `tests/common/` builders, existing utilities. | Inventing new abstractions to force sharing. |
 | **Simplification** | Is there a materially simpler equivalent? | Needless indirection, dead branches, generality with exactly one caller. | Code golf; cleverness that hurts readability. |
 | **Efficiency** | Does the hot path pay avoidable costs? | Buffering a streamed body, per-request allocations and copies, unbounded channels or maps. | Micro-optimization outside hot paths. |
-| **Altitude** | Is the logic at the right layer? | Protocol logic leaking into the control API; capture policy inside transport code — boundaries per `docs/core-architecture.html`. | Re-architecting the system. |
+| **Altitude** | Is the logic at the right layer? | Protocol logic leaking into the control API; capture policy inside transport code — boundaries per `docs/architecture.html`. | Re-architecting the system. |
 
 ## Principles
 

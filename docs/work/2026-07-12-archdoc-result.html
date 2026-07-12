@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a5328ab9f34851f0dfa8c65">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ARCHDOC result: architecture.html rework</title>
+</head>
+<body data-artifact="epic-result wu-result" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ARCHDOC — result</h1>
+      <p>The bloated <code>core-architecture.html</code> was replaced by a lean, generic, shape-only
+      <code>architecture.html</code>, and every inbound reference across the project was repointed.
+      One-WU epic; this doc is both the WU result and the epic result.</p>
+      <div class="meta">Result v1 · 2026-07-12 · Trawler · T3 · one-WU epic (epic-result + wu-result)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Delivered as planned.</strong> Against the epic intent and the WU requirement:</p>
+      <ul>
+        <li><code>docs/architecture.html</code> now exists as the T1 architecture spine — lean, generic,
+          shape-only. <code>docs/core-architecture.html</code> is deleted (new file, not a
+          <code>git mv</code>, per the Owner decision).</li>
+        <li>The doc describes <strong>folder layout and file-name conventions</strong>, not today's
+          specific files, in both prose and diagrams — it survives the project growing. Sections: What
+          this is · Layout &amp; conventions · Runtime wiring · Request/response lifecycle · Client/core
+          boundary · <strong>Technical decisions</strong> (14 one-liners) · <strong>Tech stack</strong>
+          (library → purpose table) · Build/run/test/debug.</li>
+        <li>Everything cut — per-type shapes, endpoint table, eviction algorithm, cert API, dependency
+          version list, "not built" scope, the impl-decision card grid — is either dropped or reachable
+          via a link down a tier (design doc, use-cases, <code>src/</code>/<code>ui/</code>).</li>
+        <li>Build/run covers the whole project: backend run, front-end build/dev, backend + UI tests, and
+          debug/gate tooling — not just <code>cargo run</code>.</li>
+        <li>Every inbound reference to the old filename across the whole project now resolves to
+          <code>architecture.html</code>: <code>CLAUDE.md</code> (T0), <code>README.md</code>,
+          <code>.claude/skills/code-review/rubric.md</code>, and the two decision docs
+          (<code>dec-12-native-ui-stack.html</code>, <code>event-bus.html</code>).</li>
+      </ul>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <p><strong>One, from a mid-flight Owner comment:</strong> the plan's Tech stack table was
+      <em>library → purpose</em> with library names described abstractly ("MITM proxy engine"). The Owner
+      asked for the library names directly, so the delivered table adds a <strong>Library</strong> column
+      naming the actual crates/packages (<code>tokio</code>, <code>hudsucker</code>, <code>rcgen</code>,
+      <code>axum</code>, <code>serde</code>, <code>http-body-util</code>/<code>flate2</code>/<code>base64</code>,
+      <code>tracing</code>, <code>Tauri</code>, <code>React</code>/<code>Vite</code>/<code>TypeScript</code>,
+      <code>Tailwind</code>, <code>cargo test</code>/<code>Vitest</code>/<code>WebdriverIO</code>). Versions
+      still stay in the manifests, so the rot-avoidance intent holds. No other deviation from the plan.</p>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <ul>
+        <li><strong>New doc:</strong> <code>docs/architecture.html</code> (added).</li>
+        <li><strong>Deleted:</strong> <code>docs/core-architecture.html</code>.</li>
+        <li><strong>Link fixes:</strong> <code>CLAUDE.md</code>, <code>README.md</code>,
+          <code>.claude/skills/code-review/rubric.md</code>,
+          <code>docs/decisions/dec-12-native-ui-stack.html</code>,
+          <code>docs/decisions/event-bus.html</code>.</li>
+        <li><strong>Rule-bearing sign-off:</strong> two key-backed (Touch ID) signed commits —
+          <code>Reviewed-By: key vuluu</code> on the T1 <code>architecture.html</code> commit and on the
+          separate T0 <code>CLAUDE.md</code> commit.</li>
+        <li><strong>Zero dangling links:</strong> a repo-wide grep for <code>core-architecture.html</code>
+          returns hits only in the gitignored <code>docs/.archive/</code> (history) — no live reference
+          remains.</li>
+        <li><strong>Mechanical:</strong> <code>cargo xtask verify-doc</code> green on the plan and result
+          docs; the DoD gate ran at each merge seam.</li>
+      </ul>
+    </div>
+
+    <h2 id="wu-rollup">Per-WU rollup</h2>
+    <div data-item="wu-rollup">
+      <p><strong>E-ARCHDOC.W1 — delivered.</strong> The single WU carried the whole epic: wrote
+      <code>architecture.html</code>, deleted <code>core-architecture.html</code>, repointed all five
+      inbound references. No unplanned work; no additional WUs.</p>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <p>This <em>was</em> a distillation epic — the deliverable is a T1 doc.</p>
+      <ul>
+        <li><strong>T1 — <code>docs/architecture.html</code>:</strong> the reworked shape-only
+          architecture spine (the whole deliverable).</li>
+        <li><strong>T1 — <code>docs/core-architecture.html</code>:</strong> deleted; still-live shape
+          facts carried into the new file, detail dropped in favor of down-links.</li>
+        <li><strong>T0 / T1 / T2 link fixes:</strong> five references repointed — mechanical, no new
+          knowledge.</li>
+        <li><strong>No T2 behavior change:</strong> no use-case or decision record added or edited beyond
+          the two link fixes.</li>
+        <li><strong>T3:</strong> the plan (<code>2026-07-12-archdoc-plan.html</code>) and this result are
+          distilled into the above and archived to <code>docs/.archive/</code> at epic close, leaving
+          <code>docs/work/</code> empty in git at the epic tip.</li>
+      </ul>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <p><strong>None.</strong> No debt, no spawned epics/WUs. The reworked doc is the target the
+      documentation-system distillation checklist already points at ("Component map or invariant changed?
+      → <code>architecture.html</code>"), so future architecture distillation lands here directly.</p>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

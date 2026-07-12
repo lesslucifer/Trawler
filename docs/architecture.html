@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a53259d9f34851f0dfa8c38">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Architecture</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Architecture</h1>
+      <p>The shape of the system: its layout and conventions, how a request moves through it, the client/core boundary, the load-bearing decisions, and the stack. The <em>why</em> behind each choice lives in <a href="core-technical-design.html">Core Technical Design</a>; the exact mechanics live in the source.</p>
+      <div class="meta">Trawler · T1 architecture spine</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="overview">What this is</h2>
+    <div class="callout" data-c="overview-callout">
+      <p>Trawler is an <strong>API-first, inspect-only MITM debugging proxy</strong>. A single process runs two servers: a <strong>capture proxy</strong> that intercepts HTTP(S) traffic, and a <strong>control API</strong> that exposes the captured flows over REST + SSE. Any interface — a native app, a browser, <code>curl</code> — is a <em>client</em> of that API, never a compile-time part of the core.</p>
+    </div>
+
+    <h2 id="layout">Layout &amp; conventions</h2>
+    <p>The core is a <strong>library crate</strong> with a thin binary launcher; the native UI is a separate out-of-process project. Everything is organised by role, one concern per module.</p>
+    <div class="diagram" data-c="layout-diagram">
+      <pre class="mermaid">
+flowchart TD
+    subgraph core["core workspace — the library crate + its launcher"]
+      bin["thin binary — installs logging, calls the composition root"]
+      lib["composition root — wires config + CA + store + proxy + API, owns lifecycle"]
+      mods["domain &amp; capability modules<br/><i>one file per concept: config · domain model · events · capture · store · proxy handler · CA</i>"]
+      api["control-API package<br/><i>router · route handlers · read-only view projections · body decoding</i>"]
+      tests["integration &amp; e2e tests<br/><i>one file per bounded contract / full flow</i>"]
+      bin --> lib --> mods
+      lib --> api
+    end
+    subgraph tooling["dev tooling"]
+      xtask["xtask crate — build/dev/e2e drivers, the DoD gate, doc &amp; notes tooling"]
+    end
+    subgraph ui["ui/ — native app, its own project outside the core workspace"]
+      shell["thin native shell (Tauri) — a window, no logic"]
+      web["webview app — framework front end + a typed API client + pure view helpers"]
+      e2etop["e2e harness + specs — drives the real window"]
+      shell --> web
+    end
+    ui -. "loopback REST + SSE only" .-> api
+      </pre>
+      <div class="caption">Roles and folder structure, not a file list. The rule is one module per concept under the core, a role-named package for the control API, and the UI as a wholly separate project that reaches the core only across the network. New concepts get new modules; the shape holds.</div>
+    </div>
+    <table data-c="layout-table">
+      <thead><tr><th>Area</th><th>Role</th><th>Convention</th></tr></thead>
+      <tbody>
+        <tr><td>Core library</td><td>All capture + storage + serving logic</td><td>Library crate so the core is embeddable and unit-testable without a process; the binary is a launcher only.</td></tr>
+        <tr><td>Composition root</td><td>Wires the parts, owns start/stop</td><td>One place builds the graph and runs the lifecycle; everything below it is decoupled and independently testable.</td></tr>
+        <tr><td>Domain / capability modules</td><td>The model and each capability</td><td>One file per concept (configuration, the flow domain model, lifecycle events, body capture, the store, the proxy handler, the CA). Add a concept → add a module.</td></tr>
+        <tr><td>Control-API package</td><td>The REST + SSE surface</td><td>Router + handlers kept apart from read-only view projections and from body decoding, so the wire shape, the transport, and the transforms each have one home.</td></tr>
+        <tr><td>Tests</td><td>Contract + full-flow coverage</td><td>Integration and e2e tests live outside the library, one file per bounded contract or end-to-end flow (per the <a href="testing-strategy.html">testing standard</a>).</td></tr>
+        <tr><td>Dev tooling (<code>xtask</code>)</td><td>Build/test/gate automation</td><td>A cargo-invoked task crate: front-end build/dev/e2e drivers, the DoD gate, and the doc/notes machinery.</td></tr>
+        <tr><td>Native UI (<code>ui/</code>)</td><td>A desktop client of the API</td><td>Its own project outside the core workspace, so a headless build/test of the proxy never pulls the GUI toolchain (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="runtime">Runtime wiring</h2>
+    <p>One async runtime hosts both servers on loopback: the <strong>capture proxy</strong> on one port, the <strong>control API</strong> on another. The proxy handler is the only bridge between them, and it only ever <em>writes</em> — it holds no reference to any client.</p>
+    <div class="diagram" data-c="runtime-diagram">
+      <pre class="mermaid">
+flowchart LR
+    client(["client apps"]) &lt;--&gt; proxy["capture proxy (MITM)"]
+    ca["CA material"] --> proxy
+    proxy -- "record request / response" --> store[("Store")]
+    store -- "lifecycle event" --> bus{{"broadcast bus"}}
+    bus -- "subscribe" --> sse["control API — SSE stream"]
+    store -- "read / query" --> rest["control API — REST"]
+    sse --> clients["UI · browser · curl"]
+    rest --> clients
+      </pre>
+      <div class="caption">The capture path knows nothing about clients. The <strong>Store</strong> is the single source of truth: it owns the broadcast bus and emits a lifecycle event on every write and eviction. The control API is purely a subscriber and reader — it never mutates capture state.</div>
+    </div>
+
+    <h2 id="lifecycle">Request / response lifecycle</h2>
+    <p>The proxy handles each exchange in two halves — request in, response back — and correlates them per exchange, with no external request-id map. Capture is <strong>buffer-then-forward</strong>: a body is drained to be recorded, then rebuilt and forwarded, so a capture decision can never break the connection.</p>
+    <div class="diagram" data-c="lifecycle-diagram">
+      <pre class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant P as Proxy handler
+    participant S as Store
+    participant B as Broadcast bus
+    participant A as Control API
+    C-&gt;&gt;P: request
+    Note over P: skip the tunnel-setup line itself
+    P-&gt;&gt;P: record request, remember this exchange
+    P-&gt;&gt;S: insert flow (request only)
+    S-&gt;&gt;B: request-captured event
+    P-&gt;&gt;C: forward request upstream
+    C-&gt;&gt;P: response
+    P-&gt;&gt;S: attach response + timing to the same flow
+    S-&gt;&gt;B: response-captured event
+    B--&gt;&gt;A: SSE subscribers receive events live
+    A--&gt;&gt;C: clients fetch flow detail on demand
+      </pre>
+      <div class="caption">One flow is emitted the moment the request is seen, then completed when its response arrives. Live events are compact notifications; clients pull full detail (headers, bodies) from the REST surface when they want it.</div>
+    </div>
+
+    <h2 id="boundary">The client / core boundary</h2>
+    <div class="callout" data-c="boundary-callout">
+      <p>Every interface is a <strong>client of the running control API</strong>, decoupled from the core across loopback. The web shell served by the API, the native desktop app, and <code>curl</code> are all the same kind of thing: they issue REST reads and subscribe to the SSE stream. The core neither compiles, links, nor knows about any of them. This is the single most important invariant — it keeps capture independent of presentation and lets interfaces evolve, or multiply, without touching the proxy (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</p>
+    </div>
+
+    <h2 id="decisions">Technical decisions</h2>
+    <p>The load-bearing choices in the code, one line each. Each is reversible behind the store / client boundaries; the rationale lives in the linked record or the source.</p>
+    <table data-c="decisions-table">
+      <thead><tr><th>Decision</th><th>What &amp; why (short)</th></tr></thead>
+      <tbody>
+        <tr><td>Library + thin binary</td><td>Core is a real library; the binary just launches it — embeddable, testable without a process.</td></tr>
+        <tr><td>Store owns the event bus</td><td>Events are emitted where state is mutated, so one place defines what "captured / evicted" means.</td></tr>
+        <tr><td>Per-exchange correlation</td><td>Request↔response is matched with per-exchange handler state, not a shared request-id map.</td></tr>
+        <tr><td>Tunnel-setup guard</td><td>The proxy skips the CONNECT line itself, so HTTPS setup never records a bogus flow. See <a href="core-technical-design.html#cert-model">design</a>.</td></tr>
+        <tr><td>Byte-weighted eviction</td><td>The in-memory ring evicts by retained body bytes, not flow count, so memory — not row count — is the bound.</td></tr>
+        <tr><td>Per-request body cap, no global budget</td><td>Each body is judged on its own size; no shared counter, so parallel traffic never contends.</td></tr>
+        <tr><td>Buffer-then-forward capture</td><td>Bodies are drained to record, then rebuilt to forward — capture can't break the connection.</td></tr>
+        <tr><td>Never buffer streaming bodies</td><td>Event-stream responses are recorded as "streaming" and forwarded untouched — buffering them would hang forever.</td></tr>
+        <tr><td>Synchronous store lock</td><td>Ring operations are pure/synchronous, so a plain mutex keeps locking off the async machinery — no actor ceremony.</td></tr>
+        <tr><td>Compact live events</td><td>SSE carries lifecycle notifications (ids, method/uri/status, body <em>state</em>), not encoded bodies; clients fetch detail on demand.</td></tr>
+        <tr><td>View-side decoding</td><td>Capture stores raw bytes faithfully; decoding (content-encoding, pretty-print) is an opt-in read transform, isolated in one place.</td></tr>
+        <tr><td>Control endpoints on the API port</td><td>Everything a client needs — including the CA certificate download — is served off the API port, not the forward-proxy port.</td></tr>
+        <tr><td>Open CORS on loopback</td><td>Read-only API bound to loopback carries an open CORS grant so an out-of-process webview client can reach it; adds no exposure beyond the bind address (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</td></tr>
+        <tr><td>UI out of process</td><td>The native app is a separate project and a network client only, so a headless core build stays GUI-free (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="stack">Tech stack</h2>
+    <table data-c="stack-table">
+      <thead><tr><th>Layer</th><th>Library</th><th>Used for</th></tr></thead>
+      <tbody>
+        <tr><td>Async runtime</td><td><code>tokio</code> · <code>tokio-stream</code></td><td>Hosts both servers and all I/O concurrency in one process; adapts the broadcast bus into the SSE stream.</td></tr>
+        <tr><td>MITM proxy engine</td><td><code>hudsucker</code></td><td>Terminates and intercepts HTTP(S), minting per-host leaf certs on the fly.</td></tr>
+        <tr><td>CA / certificates</td><td><code>rcgen</code></td><td>Generates and persists the root CA that signs those leaf certs.</td></tr>
+        <tr><td>Web framework</td><td><code>axum</code></td><td>The control API: REST routes, the SSE stream, and the CA-cert endpoint.</td></tr>
+        <tr><td>Serialization</td><td><code>serde</code> · <code>serde_json</code></td><td>Projects flows to JSON for the REST + SSE surface.</td></tr>
+        <tr><td>Body / decode utilities</td><td><code>http-body-util</code> · <code>flate2</code> · <code>base64</code></td><td>Draining bodies and reversing content-encoding for the decode view.</td></tr>
+        <tr><td>Logging</td><td><code>tracing</code> · <code>tracing-subscriber</code></td><td>Structured, level-filtered diagnostics.</td></tr>
+        <tr><td>Native shell</td><td><code>Tauri</code></td><td>Hosts the desktop app's window (a shell only, no business logic).</td></tr>
+        <tr><td>Front-end framework + bundler</td><td><code>React</code> · <code>Vite</code> · <code>TypeScript</code></td><td>Builds the webview UI that renders the live flow list from the API.</td></tr>
+        <tr><td>Styling</td><td><code>Tailwind CSS</code></td><td>The UI design system / theming.</td></tr>
+        <tr><td>Test runners</td><td><code>cargo test</code> · <code>Vitest</code> · <code>WebdriverIO</code></td><td>Unit/integration/e2e for the core; unit/component for the UI; a WebDriver stack that drives the real native window end to end.</td></tr>
+      </tbody>
+    </table>
+    <p class="muted">Library names are named here because a tech-stack table is where they belong; their <em>versions</em> stay the truth in <code>Cargo.toml</code> and <code>ui/package.json</code> — not restated here so they can't rot.</p>
+
+    <h2 id="run">Build, run, test, debug</h2>
+    <p>All commands are cargo tasks or the <code>xtask</code> driver, so the whole project — backend, front end, tests — is driven from one place.</p>
+    <table data-c="run-table">
+      <thead><tr><th>Goal</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td>Run the core</td><td><code>cargo run</code> — starts both the proxy and the control API on their loopback ports (raise verbosity via the log env var).</td></tr>
+        <tr><td>Trust the CA</td><td>Fetch the CA certificate from the control API's cert endpoint and install it per the <a href="core-technical-design.html#network">platform table</a>.</td></tr>
+        <tr><td>Quick check</td><td>Send a request through the proxy, then read it back from the flows endpoint of the control API.</td></tr>
+        <tr><td>Backend tests</td><td><code>cargo test</code> — unit + integration + e2e for the core (hermetic: ephemeral ports, local origins).</td></tr>
+        <tr><td>Lint</td><td><code>cargo clippy</code> — pedantic, warnings-as-errors, <code>unsafe</code> forbidden.</td></tr>
+        <tr><td>Front-end build / dev</td><td><code>cargo xtask ui build</code> bundles the webview; <code>cargo xtask ui dev</code> launches the native window against a running core.</td></tr>
+        <tr><td>UI e2e</td><td><code>cargo xtask ui e2e</code> — drives the real native window via WebDriver against an ephemeral core + local origin.</td></tr>
+        <tr><td>Gate &amp; debug tooling</td><td>The <code>xtask</code> crate also runs the DoD gate and a live browser view of the evidence trail (see the <a href="workflow.html">workflow standard</a>).</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
