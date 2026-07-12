@@ -1,7 +1,6 @@
 schema: dod/v1
 level: epic
 epic: E-UIFOUND
-branch: HEAD
 base: d42b0bcdc19b1143518ad12e336fbd293d318afb
 tip: 5eb79b551127432170e5e261a164e2353dc8b789
 diff_sha256: 470c4ce73ddd3cb4e57f4ff8f6aeab4733150748c27ec840b20cdfe9397a5628
