@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-UIFOUND
+branch: epic/uifound
+changes:
+  - path: docs/decisions/dec-12-native-ui-stack.html
+    tier: T2
+    action: added
+    distills: "DEC-12 — native desktop app as the primary UI and out-of-process API client; Tauri+Vite+TS+React+Tailwind mirroring Strata; Warp design system with functional status color the one accent exception; open CORS grant on the read-only loopback API; configurable API base URL; web shell kept; reverses the web-primary framing"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-12 row routed into the decisions index"
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "UC-4 (watch live traffic in the native app) added alongside UC-3 — cross-origin native client, same GET /flows filtering + GET /stream SSE, functional status color, configurable base URL, CORS grant; doc retitled to UI surfaces"
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: updated
+    distills: "UC-4 row added to the use-cases index"
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: updated
+    distills: "web-primary -> native-primary reversal recorded as a Choices row (DEC-12); E-UIFOUND marked landed and the Consequences 'next epic' pointer advanced to E-UIINSPECT"
+  - path: docs/core-architecture.html
+    tier: T1
+    action: updated
+    distills: "native desktop app recorded as a second out-of-process API client (GET / row) and the open CORS grant on every API response documented as a callout, both linked to DEC-12"
+  - path: docs/testing-strategy.html
+    tier: T1
+    action: updated
+    distills: "front-end test stack added (Vitest+RTL unit/integration, @wdio/tauri-service WebDriver e2e); ui/ obeys the same Epic/WU/commit charter; E-UISHELL browser-assertion waiver recorded as discharged"
+t2_waived: null
