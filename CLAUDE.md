@@ -21,7 +21,7 @@ Generated CA in `ca/`, git-ignored.
 window · WebDriver e2e). Quick check: `curl -x http://127.0.0.1:7420 http://example.com/`
 → `curl http://127.0.0.1:7421/flows`.
 
-Architecture & invariants: `docs/core-architecture.html` · rationale:
+Architecture & invariants: `docs/architecture.html` · rationale:
 `docs/core-technical-design.html`.
 
 ## AI-first (IMPORTANT — direction for ALL work)
