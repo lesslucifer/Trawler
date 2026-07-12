@@ -26,11 +26,11 @@ export function useFlows(api: TrawlerApi) {
 
   useEffect(() => {
     debouncedRefresh();
+    return () => clearTimeout(timer.current);
   }, [filter, debouncedRefresh]);
 
   useEffect(() => {
-    setLive(true);
-    const close = api.stream(debouncedRefresh);
+    const close = api.stream({ onEvent: debouncedRefresh, onLive: setLive });
     return () => {
       setLive(false);
       close();

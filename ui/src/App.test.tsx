@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { afterEach, beforeAll, vi } from "vitest";
 import App from "./App";
-import type { Filter, FlowSummary, TrawlerApi } from "./api";
+import type { Filter, FlowSummary, StreamHandlers, TrawlerApi } from "./api";
 
 // jsdom reports 0 layout, so react-virtual would render no rows. Give the scroll
 // container a real height/width so the virtualizer materializes rows.
@@ -27,9 +27,11 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
 }
 
 // Mock API: `store` is the current server-side result; a filter with host !== ""
-// narrows it (mirroring GET /flows). `fire()` triggers a captured SSE listener.
+// narrows it (mirroring GET /flows). `fire()` triggers a captured SSE listener;
+// `setLive(b)` drives the connection-state callback the real EventSource wires.
 function mockApi(store: () => FlowSummary[]) {
   let onEvent = () => {};
+  let onLive: (live: boolean) => void = () => {};
   const api: TrawlerApi = {
     listFlows: vi.fn(async (filter: Filter) => {
       const rows = store();
@@ -38,12 +40,17 @@ function mockApi(store: () => FlowSummary[]) {
       }
       return rows;
     }),
-    stream: vi.fn((cb: () => void) => {
-      onEvent = cb;
+    stream: vi.fn((handlers: StreamHandlers) => {
+      onEvent = handlers.onEvent;
+      onLive = handlers.onLive ?? (() => {});
       return () => {};
     }),
   };
-  return { api, fire: () => act(() => onEvent()) };
+  return {
+    api,
+    fire: () => act(() => onEvent()),
+    setLive: (live: boolean) => act(() => onLive(live)),
+  };
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -70,4 +77,15 @@ test("a non-matching host filter empties the list; SSE appends a new row", async
   rows = [...rows, flow({ id: "f2", uri: "http://example.com/second", status: 404 })];
   fire();
   await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
+});
+
+test("the live dot reflects the real stream connection state", async () => {
+  const { api, setLive } = mockApi(() => []);
+  render(<App api={api} />);
+  // Starts disconnected until the stream opens — not eagerly green.
+  expect(screen.getByTestId("live").className).toMatch(/bg-warn/);
+  setLive(true);
+  await waitFor(() => expect(screen.getByTestId("live").className).toMatch(/bg-ok/));
+  setLive(false);
+  await waitFor(() => expect(screen.getByTestId("live").className).toMatch(/bg-warn/));
 });

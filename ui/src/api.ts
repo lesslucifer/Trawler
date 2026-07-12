@@ -50,9 +50,14 @@ export function defaultBaseUrl(): string {
   return import.meta.env.VITE_TRAWLER_API ?? "http://127.0.0.1:7421";
 }
 
+export interface StreamHandlers {
+  onEvent: () => void;
+  onLive?: (live: boolean) => void;
+}
+
 export interface TrawlerApi {
   listFlows(filter: Filter): Promise<FlowSummary[]>;
-  stream(onEvent: () => void): () => void;
+  stream(handlers: StreamHandlers): () => void;
 }
 
 export function createApi(baseUrl?: string): TrawlerApi {
@@ -65,11 +70,13 @@ export function createApi(baseUrl?: string): TrawlerApi {
       if (!res.ok) throw new Error(`GET /flows failed: ${res.status}`);
       return (await res.json()) as FlowSummary[];
     },
-    stream(onEvent) {
+    stream({ onEvent, onLive }) {
       const source = new EventSource(`${base()}/stream`);
       for (const name of ["request", "response", "evicted", "lagged"]) {
         source.addEventListener(name, onEvent);
       }
+      source.onopen = () => onLive?.(true);
+      source.onerror = () => onLive?.(false);
       return () => source.close();
     },
   };
