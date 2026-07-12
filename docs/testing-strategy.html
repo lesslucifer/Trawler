@@ -135,8 +135,13 @@ flowchart TD
         <tr><td><code>tempfile</code></td><td>Isolated temp dirs for filesystem tests.</td><td>integration · e2e</td></tr>
         <tr><td><code>proptest</code> · <code>insta</code></td><td>Property tests · snapshot tests.</td><td>unit · integration</td></tr>
         <tr><td><code>cargo-nextest</code> · <code>cargo-llvm-cov</code> · <code>cargo-mutants</code> <span class="badge">CI</span></td><td>Runner · coverage gate · mutation gate.</td><td>all</td></tr>
+        <tr><td><code>Vitest</code> + <code>Testing Library</code> + <code>jsdom</code></td><td>Front-end (<code>ui/</code>) unit + integration: pure functions, the typed API client, and components/layout against a mock API.</td><td>unit · integration</td></tr>
+        <tr><td><code>@wdio/tauri-service</code> (embedded WebDriver)</td><td>Drives the real Tauri window against an ephemeral <code>run(Config)</code> core (<code>cargo xtask ui e2e</code>). macOS-primary, since raw <code>tauri-driver</code> is Linux/Windows-only.</td><td>e2e</td></tr>
       </tbody>
     </table>
+    <div class="callout" data-c="frontend-test-stack">
+      <p><strong>Front-end tests obey the same charter.</strong> The <code>ui/</code> project (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>) maps onto the three levels unchanged: Vitest units per commit, a Vitest+RTL integration test per WU seam (layout+list against a mock API), and one WebDriver-driven Tauri e2e per UI epic (the real window against a real ephemeral core). E-UIFOUND's e2e <strong>discharges the browser-assertion waiver</strong> E-UISHELL deferred: in-browser rendering is now asserted by driving an actual WebKit window, not a recorded manual check.</p>
+    </div>
 
     <h2 id="layout">Repository layout</h2>
     <div class="diagram" data-c="layout-diagram">
