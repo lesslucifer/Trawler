@@ -22,7 +22,7 @@ scriptable control API.
 ## Architecture
 
 - **[Core Technical Design](docs/core-technical-design.html)** — the *why*: capture model, body-cap rule, TLS interception, CA/trust, and the hard limits.
-- **[Core Architecture](docs/core-architecture.html)** — the *how*: crate shape, modules, the request/response lifecycle in code, and the concurrency model.
+- **[Architecture](docs/architecture.html)** — the *how*: layout & conventions, runtime wiring, the request/response lifecycle, the client/core boundary, and the load-bearing decisions.
 
 The proxy handler is a dumb producer; a central store owns the canonical flows; every
 interface is a subscriber over a broadcast bus. The core is a library (`src/lib.rs`);
