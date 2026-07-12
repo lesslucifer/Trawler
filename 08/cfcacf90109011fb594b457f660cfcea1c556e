@@ -1,0 +1,14 @@
+schema: test/v2
+level: working-unit
+epic: E-UIFOUND
+wu: E-UIFOUND.W2
+tests:
+  e2e:
+    count: 4
+    what: "ui/e2e/specs/flows.spec.ts via cargo xtask ui e2e — WebdriverIO @wdio/tauri-service (embedded provider) drives the real WebKit Tauri window against an ephemeral run(Config) core + local origin: (1) the Warp base layout + filter bar render with an empty flow list; (2) a proxied request appears as a live flow row (SSE-driven, method/host/path/status); (3) a non-matching host filter empties the list and clearing it restores the row; (4) a second proxied request appends a row without a manual refresh. The exact UC-4 request sequence. Discharges the E-UISHELL browser-assertion waiver. Re-run green on the review-fix tip."
+  integration:
+    count: 2
+    what: "ui/src/App.test.tsx (Vitest + Testing Library) — the layout + flow list mounted against a mock API renders a row and applies the design tokens, hides the row under a non-matching host filter, and appends a row on an injected SSE event (the UC-4 sequence, no window). tests/api.rs::cross_origin_grant_rides_every_response — the CORS grant rides /flows + /stream + an OPTIONS preflight (204), the cross-origin contract the native app depends on."
+  unit:
+    count: 11
+    what: "Front-end (Vitest): flow.test.ts — statusTone 2xx/4xx/5xx/pending mapping + toRow host/path split and placeholders (5); api.test.ts — filterParams trims/omits empties, listFlows fetches /flows with the filter and parses typed rows, throws on non-ok (3); components.test.tsx — Field/StatusPill/LiveDot render with Warp theme token classes (3); App.test.tsx — the live dot tracks the real SSE connection state (starts disconnected, green on open, warn on error) — the review-fix regression test (1). Core (Rust): api::tests::every_response_carries_the_cross_origin_grant — the CORS layer grants * on a listing and 204s a preflight."
