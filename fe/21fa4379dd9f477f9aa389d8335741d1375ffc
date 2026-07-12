@@ -1,6 +1,6 @@
 schema: test/v2
-level: commit
+level: epic
 epic: E-UIFOUND
 branch: epic/uifound
 tests:
-  unit: { waived: "behavior-preserving import refactor in e2e-harness config (wdio.conf.ts) — folds a redundant node:fs dynamic import into the existing static import; no logic changed, the e2e specs already exercise the onComplete teardown path" }
+  e2e: { count: 4, covers: "ui/e2e/specs/flows.spec.ts via cargo xtask ui e2e — WebdriverIO @wdio/tauri-service (embedded provider) drives the real WebKit Tauri window against an ephemeral run(Config) core + local origin, proving UC-4 end to end: (1) the Warp base layout + filter bar render with an empty flow list; (2) a proxied request appears as a live flow row (SSE-driven, method/host/path/status); (3) a non-matching host filter empties the list and clearing it restores the row; (4) a second proxied request appends a row without a manual refresh. Landed on W2 (the epic's demoable tenant), green at the epic tip; discharges the E-UISHELL browser-assertion waiver in full. The WU integration (Vitest+RTL + core CORS seam) and commit unit layers are on the W2 tip. The epic tip adds only docs (roadmap reversal + archive) and one behavior-preserving e2e-harness import refactor (wdio.conf.ts) — no new behavior to test at the epic seam beyond the e2e already proving UC-4." }
