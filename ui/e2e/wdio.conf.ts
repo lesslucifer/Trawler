@@ -2,7 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { createInterface } from "node:readline";
-import { writeFileSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, rmSync } from "node:fs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -63,7 +63,7 @@ export const config: WebdriverIO.Config = {
   },
   onComplete: async () => {
     try {
-      const ports = JSON.parse((await import("node:fs")).readFileSync(PORTS_FILE, "utf8"));
+      const ports = JSON.parse(readFileSync(PORTS_FILE, "utf8"));
       await fetch(`${ports.control}/stop`).catch(() => {});
     } catch {
       /* ports file may not exist if startup failed */
