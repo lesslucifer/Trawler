@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+epic: E-UIFOUND
+branch: epic/uifound
+tests:
+  unit: { waived: "behavior-preserving import refactor in e2e-harness config (wdio.conf.ts) — folds a redundant node:fs dynamic import into the existing static import; no logic changed, the e2e specs already exercise the onComplete teardown path" }
