@@ -1,0 +1,17 @@
+schema: mr/v1
+level: epic
+tip: 950d7cda07ebf7b155bc087a2b332cc76aaa6ba3
+base: 3091a3503f861ff163502bddab2c924ac61c8958
+tier: key
+signer: vuluu
+report: docs/.archive/2026-07-12-archdoc-result.html
+report_sha256: 608d29cd6e07c1207f0770efeeadeb655d7c7582f8a09b2ef6ea732d361bf6fe
+date: 2026-07-12
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+  EEhUxfjpFJ4ff7DVGaBQnMaRPtNHJbaotNwZT7hU7pqTEEAkyxwK63m5GwX3b5N4SXDgy8
+  vcbzGVUeJhA12yU/hgAAAAp0cmF3bGVyLW1yAAAAAAAAAAZzaGE1MTIAAABjAAAAE2VjZH
+  NhLXNoYTItbmlzdHAyNTYAAABIAAAAIC+TS4PRbb/Pv0bZWKfI1NOUVoAKg62q0x/62b9u
+  Pxn0AAAAIFUme8j3aQ+RO/DrCpJrzf5jZIBv3EQJMyypitnrfoB4
+  -----END SSH SIGNATURE-----
