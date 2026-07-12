@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-UIFOUND
+wu: E-UIFOUND.W2
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: modified
+    distills: "UC-4 (watch live traffic in the native app) added alongside UC-3 — the cross-origin native client, same GET /flows filtering + GET /stream SSE, functional status color, configurable base URL, CORS grant; doc retitled to UI surfaces (both surfaces, one doc)"
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: modified
+    distills: "UC-4 row added to the use-cases index"
+  - path: docs/decisions/dec-12-native-ui-stack.html
+    tier: T2
+    action: added
+    distills: "DEC-12 — native desktop app as the primary UI and out-of-process API client; Tauri+Vite+TS+React+Tailwind mirroring Strata; Warp design system with functional status color as the one accent exception; open CORS grant on the read-only loopback API; configurable API base URL; web shell kept; reverses the web-primary framing. Records that the epic plan drafted this as DEC-11 but that ID was consumed at the E-MRSIG renumbering, so it takes DEC-12."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: modified
+    distills: "DEC-12 row added to the decisions index"
+  - path: docs/core-architecture.html
+    tier: T1
+    action: modified
+    distills: "the native desktop app recorded as a second out-of-process API client (GET / row), and the open CORS grant on every API response documented as a callout — both linked to DEC-12 for the why"
+  - path: docs/testing-strategy.html
+    tier: T1
+    action: modified
+    distills: "front-end test stack added to the tooling table (Vitest+RTL unit/integration, @wdio/tauri-service WebDriver e2e) + a callout that ui/ obeys the same Epic/WU/commit charter and that E-UIFOUND discharges the E-UISHELL browser-assertion waiver"
+  - path: docs/work/uifound-w2-result.html
+    tier: T3
+    action: added
+    distills: "W2 WU result — outcome, deviations (CORS, runtime base URL, e2e harness shape, jest-dom), test evidence, distillation, and follow-ups against the epic plan"
+t2_distilled: "UC-4 and DEC-12 land here (W2 delivers the epic user-facing contract). The epic T0 (CLAUDE.md) + roadmap touches are Owner-facing and land at the epic gate; the W1/W2 plan+result T3 docs archive to docs/.archive/ at the epic gate."
