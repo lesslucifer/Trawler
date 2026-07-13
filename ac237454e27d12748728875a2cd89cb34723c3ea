@@ -1,5 +1,9 @@
 schema: doc/v1
 epic: E-UIINSPECT
 wu: E-UIINSPECT.W1
-changes: []
-t2_waived: "W1 is a backend-only change to the view-time decode chain (src/api/decode.rs) touching no docs. Per the E-UIINSPECT plan's distillation table, the ?decode=1 broadening is distilled at epic close: the UC-5 body-decode contract lands in docs/use-cases/web-ui.html and the broadened-decode note in docs/core-architecture.html once the inspector surfaces it (W3). No decision doc is warranted — this rides DEC-12 and the existing view-time-decode design. Nothing to distill at the WU boundary."
+changes:
+  - path: docs/work/2026-07-13-uiinspect-w1-result.html
+    tier: T3
+    action: added
+    distills: "WU result report for the decode-chain completion — outcome, deviations, evidence, distillation, follow-ups. Scratch T3; archived to docs/.archive/ at epic close with the epic result's lineage."
+t2_waived: "W1 is a backend-only change to the view-time decode chain (src/api/decode.rs) touching no T1/T2 docs. Per the E-UIINSPECT plan's distillation table, the ?decode=1 broadening is distilled at epic close: the UC-5 body-decode contract lands in docs/use-cases/web-ui.html and the broadened-decode note in docs/core-architecture.html once the inspector surfaces it (W3). No decision doc — rides DEC-12 and the existing view-time-decode design. The only doc in this WU's diff is the T3 result report above."
