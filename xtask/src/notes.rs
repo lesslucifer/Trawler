@@ -196,8 +196,15 @@ pub fn tier_of(path: &str) -> Option<&'static str> {
     }
 }
 
+// The frontend (`ui/src`, `ui/e2e`) is code the gate must enforce, same as the
+// Rust crates — `ui/`-root config and git-ignored `ui/dist`/`ui/node_modules`
+// stay infra.
 pub fn is_code(path: &str) -> bool {
-    path.starts_with("src/") || path.starts_with("xtask/") || path.starts_with("tests/")
+    path.starts_with("src/")
+        || path.starts_with("xtask/")
+        || path.starts_with("tests/")
+        || path.starts_with("ui/src/")
+        || path.starts_with("ui/e2e/")
 }
 
 pub fn is_doc(path: &str) -> bool {
@@ -349,6 +356,9 @@ t2_waived: null
         assert!(is_code("src/lib.rs"));
         assert!(is_code("xtask/src/gate.rs"));
         assert!(is_code("tests/api.rs"));
+        assert!(is_code("ui/src/FlowDetail.tsx"), "frontend source is gated code");
+        assert!(is_code("ui/e2e/specs/flows.spec.ts"), "frontend e2e is gated code");
+        assert!(!is_code("ui/vite.config.ts"), "ui-root config stays infra");
         assert!(!is_code("docs/workflow.html"));
         assert!(!is_code("Cargo.toml"));
 
