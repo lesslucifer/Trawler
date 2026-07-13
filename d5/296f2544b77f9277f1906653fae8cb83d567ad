@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+tests:
+  unit:
+    count: 1
+    what: "xtask/src/notes.rs::path_classification (extended): asserts is_code now returns true for ui/src/FlowDetail.tsx and ui/e2e/specs/flows.spec.ts, and false for ui/vite.config.ts (ui-root config stays infra) — locking the fix that stops verify-dod exempting UI-only Working Units. cargo xtask gate0 green (fmt + clippy pedantic + full suite)."
