@@ -1,12 +1,25 @@
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { afterEach, beforeAll, vi } from "vitest";
+import { invoke } from "@tauri-apps/api/core";
 import App from "./App";
 import type { Filter, FlowSummary, StreamHandlers, TrawlerApi } from "./api";
 import type { OnbState } from "./onboardingMachine";
 
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
+
 // Capture is proven only by a live decrypted flow (W4); until then App shows
 // onboarding. These list/filter tests force the proven phase to reach the list.
 const PROVEN: OnbState = { phase: "proven", step: "verify", everProven: true };
+const ONBOARDING: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
+
+const PEM = "-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----\n";
+
+function onMacHost() {
+  Object.defineProperty(window.navigator, "userAgent", {
+    configurable: true,
+    value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+  });
+}
 
 // jsdom reports 0 layout, so react-virtual would render no rows. Give the scroll
 // container a real height/width so the virtualizer materializes rows.
@@ -45,6 +58,7 @@ function mockApi(store: () => FlowSummary[]) {
       }
       return rows;
     }),
+    caCertPem: vi.fn(async () => PEM),
     stream: vi.fn((handlers: StreamHandlers) => {
       onEvent = handlers.onEvent;
       onLive = handlers.onLive ?? (() => {});
@@ -84,6 +98,39 @@ test("tapping the status dot re-opens setup from the flow list", async () => {
   expect(await screen.findByText(/Trust the CA/)).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
   expect(screen.getByTestId("onb-exit")).toBeInTheDocument(); // Back to flows, since ever proven
+});
+
+test("Install fetches the PEM and invokes install_ca; the step reports done, not proven", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  fireEvent.click(await screen.findByTestId("install-ca"));
+  await screen.findByText(/Verify step will prove/);
+
+  expect(api.caCertPem).toHaveBeenCalledOnce();
+  expect(invoke).toHaveBeenCalledWith("install_ca", { pem: PEM });
+  // command exit 0 is a weak signal — the machine stays in onboarding until W4 captures
+  expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "active");
+  expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
+test("a rejected install reports failed and keeps the guided steps visible", async () => {
+  onMacHost();
+  vi.mocked(invoke).mockRejectedValueOnce(new Error("user declined the elevation prompt"));
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  fireEvent.click(await screen.findByTestId("install-ca"));
+  await screen.findByText(/follow the steps below/);
+
+  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/security add-trusted-cert/);
+  expect(screen.getByTestId("install-error")).toHaveTextContent("user declined the elevation prompt");
+  expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "active");
+
+  fireEvent.click(screen.getByTestId("onb-next"));
+  expect(screen.getByTestId("step-trust-ca")).toHaveTextContent("✗ failed");
+  expect(screen.getByTestId("step-trust-ca")).not.toHaveTextContent("✓ done");
 });
 
 test("a non-matching host filter empties the list; SSE appends a new row", async () => {

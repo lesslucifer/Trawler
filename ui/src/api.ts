@@ -57,6 +57,7 @@ export interface StreamHandlers {
 
 export interface TrawlerApi {
   listFlows(filter: Filter): Promise<FlowSummary[]>;
+  caCertPem(): Promise<string>;
   stream(handlers: StreamHandlers): () => void;
 }
 
@@ -69,6 +70,11 @@ export function createApi(baseUrl?: string): TrawlerApi {
       const res = await fetch(`${base()}/flows?${filterParams(filter)}`);
       if (!res.ok) throw new Error(`GET /flows failed: ${res.status}`);
       return (await res.json()) as FlowSummary[];
+    },
+    async caCertPem() {
+      const res = await fetch(`${base()}/ca.crt`);
+      if (!res.ok) throw new Error(`GET /ca.crt failed: ${res.status}`);
+      return res.text();
     },
     stream({ onEvent, onLive }) {
       const source = new EventSource(`${base()}/stream`);

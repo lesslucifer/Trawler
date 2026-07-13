@@ -3,12 +3,21 @@ import { useReducer } from "react";
 import { expect, test, vi } from "vitest";
 import { Onboarding } from "./Onboarding";
 import { COPY, reduce, type OnbState } from "./onboardingMachine";
+import { guidedSteps } from "./setup";
+
+vi.mock("./setup", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("./setup")>();
+  return { ...mod, guidedSteps: vi.fn(mod.guidedSteps) };
+});
 
 const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
 
-function Harness({ start = onboarding }: { start?: OnbState }) {
+function Harness({
+  start = onboarding,
+  ...props
+}: { start?: OnbState } & Partial<Pick<Parameters<typeof Onboarding>[0], "os" | "onInstallCa">>) {
   const [state, dispatch] = useReducer(reduce, start);
-  return <Onboarding state={state} dispatch={dispatch} />;
+  return <Onboarding state={state} dispatch={dispatch} {...props} />;
 }
 
 test("renders all three steps and the active step's body", () => {
@@ -25,6 +34,54 @@ test("Next moves the active step forward", () => {
   fireEvent.click(screen.getByTestId("onb-next"));
   expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-status", "active");
   expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "done");
+});
+
+test("an auto-capable host shows Install wired to onInstallCa, with guided steps alongside", async () => {
+  const onInstallCa = vi.fn(async () => {});
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={onInstallCa} />);
+
+  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/security add-trusted-cert/);
+  fireEvent.click(screen.getByTestId("install-ca"));
+  expect(onInstallCa).toHaveBeenCalledOnce();
+  expect(await screen.findByText(/Verify step will prove/)).toBeInTheDocument();
+});
+
+test("a failed install shows the error and marks the passed step failed, not done", async () => {
+  const onInstallCa = vi.fn(() => Promise.reject(new Error("GET /ca.crt failed: 500")));
+  render(<Harness start={onboarding} os="macos" onInstallCa={onInstallCa} />);
+
+  fireEvent.click(screen.getByTestId("install-ca"));
+  expect(await screen.findByText(/follow the steps below/)).toBeInTheDocument();
+  expect(screen.getByTestId("install-error")).toHaveTextContent("GET /ca.crt failed: 500");
+
+  fireEvent.click(screen.getByTestId("onb-next"));
+  expect(screen.getByTestId("step-trust-ca")).toHaveTextContent("✗ failed");
+});
+
+test("a non-auto host shows only the guided steps for its system", () => {
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" />);
+  expect(screen.queryByTestId("install-ca")).toBeNull();
+  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/update-ca-certificates/);
+});
+
+test("removal steps are shown for the selected system and switch with it", () => {
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
+  expect(screen.getByTestId("removal-steps")).toHaveTextContent(/security delete-certificate/);
+  fireEvent.change(screen.getByTestId("trust-target"), { target: { value: "windows" } });
+  expect(screen.getByTestId("removal-steps")).toHaveTextContent(/certutil -delstore ROOT/);
+});
+
+test("selecting another system switches the steps and hides the auto install", () => {
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
+  fireEvent.change(screen.getByTestId("trust-target"), { target: { value: "firefox" } });
+  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/own certificate store/);
+  expect(screen.queryByTestId("install-ca")).toBeNull();
+});
+
+test("guided steps render as text, never markup", () => {
+  vi.mocked(guidedSteps).mockReturnValueOnce(["<b>not bold</b> — literal text"]);
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" />);
+  expect(screen.getByText("<b>not bold</b> — literal text")).toBeInTheDocument();
 });
 
 test("Back to flows shows only once ever proven", () => {
