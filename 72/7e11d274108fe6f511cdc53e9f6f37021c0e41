@@ -1,0 +1,6 @@
+schema: test/v2
+level: epic
+epic: E-UIINSPECT
+branch: epic/uiinsp
+tests:
+  e2e: { count: 10, covers: "ui/e2e/specs/flows.spec.ts via cargo xtask ui e2e — WebdriverIO @wdio/tauri-service (embedded provider) drives the real WebKit Tauri window against an ephemeral run(Config) core + local origin. UC-4's four steps stay green (layout, live row, filter narrow/restore, live append). UC-5's six steps prove the inspector end to end: (1) proxied /json -> row click opens the detail with headers/timing/HTTP versions; (2) the JSON response body renders as a collapsible tree; (3) the raw/decoded toggle shows the stored bytes as text and back; (4) copy-as-curl asserted as text in the DOM (WebDriver clipboard unreliable — real clipboard write and the native save dialog are recorded manual checks, per the epic plan waiver); (5) a brotli-compressed JSON response still renders as a tree — W1's server-side decode chain proven through the UI; (6) a proxied PNG renders as an <img>. Green at W3's merged tree; the epic tip since adds only docs (UC-5 distillation, roadmap, workflow code-paths line, archives) — no new behavior at the epic seam. The WU integration layers (tests/api.rs decode seam; Vitest+RTL viewer/panel/list vs mock API — 50 green) and commit unit layers are on the WU tips with their test/v2 notes." }
