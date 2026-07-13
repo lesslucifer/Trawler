@@ -1,7 +1,7 @@
 import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { afterEach, beforeAll, vi } from "vitest";
 import App from "./App";
-import type { Filter, FlowSummary, StreamHandlers, TrawlerApi } from "./api";
+import type { Filter, FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 
 // jsdom reports 0 layout, so react-virtual would render no rows. Give the scroll
 // container a real height/width so the virtualizer materializes rows.
@@ -40,6 +40,22 @@ function mockApi(store: () => FlowSummary[]) {
       }
       return rows;
     }),
+    getFlow: vi.fn(async (id: string): Promise<FlowView> => {
+      const summary = store().find((f) => f.id === id)!;
+      return {
+        ...summary,
+        request_http_version: "HTTP/1.1",
+        response_http_version: "HTTP/1.1",
+        request_headers: [{ name: "Accept", value: "application/json" }],
+        response_headers: [],
+        request_body: { state: "empty" },
+        response_body: { state: "empty" },
+      };
+    }),
+    getBody: vi.fn(async () => ({
+      bytes: new TextEncoder().encode('{"greeting":"hello"}'),
+      contentType: "application/json",
+    })),
     stream: vi.fn((handlers: StreamHandlers) => {
       onEvent = handlers.onEvent;
       onLive = handlers.onLive ?? (() => {});
@@ -77,6 +93,59 @@ test("a non-matching host filter empties the list; SSE appends a new row", async
   rows = [...rows, flow({ id: "f2", uri: "http://example.com/second", status: 404 })];
   fire();
   await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
+});
+
+test("clicking a row fetches /flows/{id} and opens the detail panel with curl", async () => {
+  const { api } = mockApi(() => [flow({ id: "f1", uri: "http://example.com/a", method: "GET" })]);
+  render(<App api={api} />);
+  fireEvent.click(await screen.findByTestId("flow-row"));
+
+  const detail = await screen.findByTestId("detail");
+  expect(api.getFlow).toHaveBeenCalledWith("f1");
+  expect(detail).toHaveTextContent("http://example.com/a");
+  expect(screen.getByTestId("curl")).toHaveTextContent(
+    "curl 'http://example.com/a' -H 'Accept: application/json'",
+  );
+});
+
+test("a captured response body is fetched decoded and rendered by the viewer", async () => {
+  const { api } = mockApi(() => [flow({ id: "f1" })]);
+  (api.getFlow as ReturnType<typeof vi.fn>).mockResolvedValue({
+    ...flow({ id: "f1" }),
+    request_http_version: "HTTP/1.1",
+    response_http_version: "HTTP/1.1",
+    request_headers: [],
+    response_headers: [],
+    request_body: { state: "empty" },
+    response_body: { state: "captured", size: 20, data_base64: "" },
+  } satisfies FlowView);
+  render(<App api={api} />);
+  fireEvent.click(await screen.findByTestId("flow-row"));
+
+  const tree = await screen.findByTestId("body-json");
+  expect(api.getBody).toHaveBeenCalledWith("f1", "response", true);
+  expect(tree).toHaveTextContent("greeting");
+  expect(screen.getByRole("button", { name: "save" })).toBeInTheDocument();
+});
+
+test("selecting a different flow resets the copy button (no stale 'copied')", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal("navigator", { clipboard: { writeText } });
+  const rows = [flow({ id: "f1", uri: "http://a/" }), flow({ id: "f2", uri: "http://b/" })];
+  const { api } = mockApi(() => rows);
+  render(<App api={api} />);
+
+  const [rowA, rowB] = await screen.findAllByTestId("flow-row");
+  fireEvent.click(rowA);
+  await screen.findByTestId("curl");
+  fireEvent.click(screen.getByText("copy"));
+  await waitFor(() => expect(screen.getByText("copied")).toBeInTheDocument());
+
+  fireEvent.click(rowB);
+  await waitFor(() => expect(screen.getByTestId("detail")).toHaveTextContent("http://b/"));
+  expect(screen.getByText("copy")).toBeInTheDocument();
+  expect(screen.queryByText("copied")).toBeNull();
+  vi.unstubAllGlobals();
 });
 
 test("the live dot reflects the real stream connection state", async () => {

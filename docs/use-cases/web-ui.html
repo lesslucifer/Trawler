@@ -10,9 +10,10 @@
     <div class="inner">
       <h1>Use Cases — UI surfaces</h1>
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
-      surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4).</p>
-      <div class="meta">v2 · 2026-07-12 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
-      UC-4 by <span class="badge id">E-UIFOUND</span></div>
+      surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4 watch ·
+      UC-5 inspect).</p>
+      <div class="meta">v3 · 2026-07-13 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span></div>
     </div>
   </header>
   <main>
@@ -75,6 +76,46 @@
       contracts (<code>GET /flows</code>, <code>GET /stream</code>) are consumed unchanged; the CORS grant
       is the one API-response addition. UC-3 (web shell) stays valid — both surfaces are clients of the
       same API.</p>
+    </div>
+
+    <h2 id="uc-5">UC-5 — Inspect a captured flow in the native app</h2>
+    <div data-c="uc-5-contract">
+      <p>Clicking a flow row in the native app (<span class="badge id">E-UIINSPECT</span>) opens the
+      detail panel over <code>GET /flows/{id}</code> — request line, status with the 2xx/4xx/5xx
+      functional color, total duration, per-leg HTTP versions, and the full request + response
+      header tables. No new endpoint; the panel is a pure client of the existing API.</p>
+      <ul>
+        <li><strong>Bodies render by content type</strong> over
+        <code>GET /flows/{id}/{leg}/body</code>: JSON as a collapsible tree, XML/HTML as
+        (pretty-printed) text, <code>image/*</code> as the image, form-urlencoded as a decoded
+        key/value table, other text as text, anything else as a hex dump. A
+        <strong>raw / decoded</strong> toggle switches between the stored bytes
+        (<code>?decode=0</code>, sniffed to text or hex) and the server-decoded rendering
+        (<code>?decode=1</code>). Oversize renderings are bounded — hex and the JSON tree cap and
+        fall back rather than hang the window.</li>
+        <li><strong>States are never blank</strong>: an empty, streaming-passthrough, too-large,
+        read-error, or not-yet-responded body shows an explicit notice instead of a viewer.</li>
+        <li><strong>Copy-as-curl</strong> reproduces the request (method, URL, headers, body,
+        shell-quoted); <strong>copy body</strong> puts the shown body on the clipboard (the hex
+        dump for hex-rendered bodies; hidden for images); <strong>save body</strong> writes the
+        shown leg's bytes to a file via the OS save dialog, with a filename derived from the flow
+        id, leg, and content type.</li>
+        <li>The <code>?decode=1</code> contract is server-side — gzip/deflate/brotli reversal,
+        charset→UTF-8, JSON + XML pretty-printing — so <code>curl</code> and the web shell gain
+        the same decoded view the app shows.</li>
+      </ul>
+    </div>
+
+    <div class="callout" data-c="uc-5-provenance">
+      <p>Pinned by the epic e2e (<code>ui/e2e/specs/flows.spec.ts</code>): row click → headers /
+      timing / versions; a JSON response renders as a tree; the raw toggle shows the stored bytes
+      as text; the curl text is asserted in the DOM (WebDriver clipboard is unreliable — the real
+      clipboard write is a recorded manual check, as is the native save dialog); a
+      <em>brotli-compressed</em> JSON body still renders as a tree — the decode chain proven
+      through the UI; a proxied PNG renders as an image. The decode chain itself is pinned at the
+      API seam in <code>tests/api.rs</code> and the <code>src/api/decode.rs</code> unit suite;
+      viewer dispatch, states, and copy/save are covered by the Vitest unit + integration layers.
+      <code>scripts/seed-proxy.mjs</code> seeds one flow per case for manual checks.</p>
     </div>
 
   </main>

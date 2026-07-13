@@ -1,13 +1,16 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createApi, type TrawlerApi } from "./api";
-import { useFlows } from "./useFlows";
+import { useFlows, useFlowDetail } from "./useFlows";
 import { Layout } from "./Layout";
 import { FlowList } from "./FlowList";
+import { FlowDetail } from "./FlowDetail";
 import { Field, LiveDot } from "./components";
 
 export default function App({ api }: { api?: TrawlerApi }) {
   const client = useMemo(() => api ?? createApi(), [api]);
   const { filter, flows, live, update } = useFlows(client);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const detail = useFlowDetail(client, selectedId);
 
   return (
     <Layout
@@ -49,8 +52,18 @@ export default function App({ api }: { api?: TrawlerApi }) {
           </span>
         </>
       }
+      detail={
+        selectedId == null ? undefined : (
+          <FlowDetail
+            key={selectedId}
+            api={client}
+            flow={detail}
+            onClose={() => setSelectedId(null)}
+          />
+        )
+      }
     >
-      <FlowList flows={flows} />
+      <FlowList flows={flows} selectedId={selectedId} onSelect={setSelectedId} />
     </Layout>
   );
 }
