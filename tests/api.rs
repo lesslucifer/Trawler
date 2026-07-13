@@ -13,7 +13,7 @@ use tokio_stream::StreamExt;
 use tower::ServiceExt;
 use trawler::store::Store;
 
-use common::{captured, gzip, FlowBuilder};
+use common::{brotli, captured, gzip, FlowBuilder};
 
 fn router_with(store: Arc<Store>) -> Router {
     trawler::api::router(store, Arc::new("--CA PEM--".to_string()))
@@ -111,6 +111,31 @@ async fn body_endpoints_raw_decode_and_edges() {
 
     let (status, _h, _b) = get(&r, &format!("/flows/{id}/response/body")).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn decode_brotli_charset_and_xml_over_router() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    let br = brotli(br#"{"a":1}"#);
+    let latin1 = [b'c', b'a', b'f', b'\xe9'];
+    let flow = FlowBuilder::new()
+        .req_header("Content-Type", "application/json")
+        .req_header("Content-Encoding", "br")
+        .req_body(captured(&br))
+        .status(200)
+        .resp_header("Content-Type", "application/xml; charset=ISO-8859-1")
+        .resp_body(captured(&latin1))
+        .build();
+    let id = flow.id;
+    store.insert(flow);
+    let r = router_with(store);
+
+    let (_s, _h, decoded) = get(&r, &format!("/flows/{id}/request/body?decode=1")).await;
+    let parsed: Value = serde_json::from_slice(&decoded).unwrap();
+    assert_eq!(parsed["a"], 1);
+
+    let (_s, _h, resp) = get(&r, &format!("/flows/{id}/response/body?decode=1")).await;
+    assert_eq!(String::from_utf8(resp).unwrap(), "café");
 }
 
 #[tokio::test]
