@@ -122,7 +122,7 @@ sequenceDiagram
         <tr><td>Never buffer streaming bodies</td><td>Event-stream responses are recorded as "streaming" and forwarded untouched — buffering them would hang forever.</td></tr>
         <tr><td>Synchronous store lock</td><td>Ring operations are pure/synchronous, so a plain mutex keeps locking off the async machinery — no actor ceremony.</td></tr>
         <tr><td>Compact live events</td><td>SSE carries lifecycle notifications (ids, method/uri/status, body <em>state</em>), not encoded bodies; clients fetch detail on demand.</td></tr>
-        <tr><td>View-side decoding</td><td>Capture stores raw bytes faithfully; decoding (content-encoding, pretty-print) is an opt-in read transform, isolated in one place.</td></tr>
+        <tr><td>View-side decoding</td><td>Capture stores raw bytes faithfully; decoding (content-encoding reversal, charset→UTF-8, JSON/XML pretty-print) is an opt-in read transform (<code>?decode=1</code>), isolated in one place.</td></tr>
         <tr><td>Control endpoints on the API port</td><td>Everything a client needs — including the CA certificate download — is served off the API port, not the forward-proxy port.</td></tr>
         <tr><td>Open CORS on loopback</td><td>Read-only API bound to loopback carries an open CORS grant so an out-of-process webview client can reach it; adds no exposure beyond the bind address (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</td></tr>
         <tr><td>UI out of process</td><td>The native app is a separate project and a network client only, so a headless core build stays GUI-free (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</td></tr>
@@ -138,10 +138,10 @@ sequenceDiagram
         <tr><td>CA / certificates</td><td><code>rcgen</code></td><td>Generates and persists the root CA that signs those leaf certs.</td></tr>
         <tr><td>Web framework</td><td><code>axum</code></td><td>The control API: REST routes, the SSE stream, and the CA-cert endpoint.</td></tr>
         <tr><td>Serialization</td><td><code>serde</code> · <code>serde_json</code></td><td>Projects flows to JSON for the REST + SSE surface.</td></tr>
-        <tr><td>Body / decode utilities</td><td><code>http-body-util</code> · <code>flate2</code> · <code>base64</code></td><td>Draining bodies and reversing content-encoding for the decode view.</td></tr>
+        <tr><td>Body / decode utilities</td><td><code>http-body-util</code> · <code>flate2</code> · <code>brotli</code> · <code>encoding_rs</code> · <code>quick-xml</code> · <code>base64</code></td><td>Draining bodies; the decode view reverses content-encoding, transcodes charsets to UTF-8, and pretty-prints JSON/XML.</td></tr>
         <tr><td>Logging</td><td><code>tracing</code> · <code>tracing-subscriber</code></td><td>Structured, level-filtered diagnostics.</td></tr>
         <tr><td>Native shell</td><td><code>Tauri</code></td><td>Hosts the desktop app's window (a shell only, no business logic).</td></tr>
-        <tr><td>Front-end framework + bundler</td><td><code>React</code> · <code>Vite</code> · <code>TypeScript</code></td><td>Builds the webview UI that renders the live flow list from the API.</td></tr>
+        <tr><td>Front-end framework + bundler</td><td><code>React</code> · <code>Vite</code> · <code>TypeScript</code></td><td>Builds the webview UI that renders the live flow list and the flow inspector (the detail region's first tenant: headers, timing, body viewers, copy/save) from the API.</td></tr>
         <tr><td>Styling</td><td><code>Tailwind CSS</code></td><td>The UI design system / theming.</td></tr>
         <tr><td>Test runners</td><td><code>cargo test</code> · <code>Vitest</code> · <code>WebdriverIO</code></td><td>Unit/integration/e2e for the core; unit/component for the UI; a WebDriver stack that drives the real native window end to end.</td></tr>
       </tbody>
