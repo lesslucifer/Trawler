@@ -1,0 +1,17 @@
+schema: mr/v1
+level: working-unit
+tip: c793c94fca56c1c8dd760f13b6c1d8e0aaf778bd
+base: d5296f2544b77f9277f1906653fae8cb83d567ad
+tier: key
+signer: vuluu
+report: docs/work/2026-07-13-uiinspect-w3-result.html
+report_sha256: ae17af6c32cae27a5cab94b55314c8fffaadfd74b41a5dc967a41dc9fcbf4098
+date: 2026-07-13
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+  EEhUxfjpFJ4ff7DVGaBQnMaRPtNHJbaotNwZT7hU7pqTEEAkyxwK63m5GwX3b5N4SXDgy8
+  vcbzGVUeJhA12yU/hgAAAAp0cmF3bGVyLW1yAAAAAAAAAAZzaGE1MTIAAABkAAAAE2VjZH
+  NhLXNoYTItbmlzdHAyNTYAAABJAAAAIDw4cBq4J7XP/9A4qMIPxOaeMK8nUAxSUWq9HTd7
+  OmHlAAAAIQDGPOXNMrIF8lN/7EusOZy07TR0V44oOhdVWXOGhs24yw==
+  -----END SSH SIGNATURE-----
