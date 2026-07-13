@@ -4,8 +4,8 @@ epic: E-UISETUP
 wu: E-UISETUP.W2
 branch: wu/uisetup/trust-ca
 base: d2701e458784a5ce83ce220626560f36d8fbceb2
-head: 7902a687f5ceafcc16e698a95739e9b3d0964ee7
-diff_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+head: 7902a6834c289dccefa9029f2a4b2a0faf50eb95
+diff_sha256: d12cbd7159c75f52350ad951f6df75047f213f9379ed825c63dad5d695df00dc
 dimensions: [correctness, reuse, simplification, efficiency, altitude]
 findings: { found: 6, verified: 1, waived: 0 }
 waivers: []
