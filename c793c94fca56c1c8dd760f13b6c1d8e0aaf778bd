@@ -27,4 +27,4 @@ notes: >
   claim in the result report against the code and found the report accurate.
   Vitest 50 green, tsc/pnpm build clean, UC-5 e2e 10/10, gate0 green.
 verdict: PASS
-date: 2026-07-13" c793c94fca56c1c8dd760f13b6c1d8e0aaf778bd && echo CR-ATTACHED
+date: 2026-07-13
