@@ -1,0 +1,30 @@
+schema: cr/v2
+scope: "epic uiinsp -> main"
+epic: E-UIINSPECT
+branch: epic/uiinsp
+base: 3091a3503f861ff163502bddab2c924ac61c8958
+head: 727e11d274108fe6f511cdc53e9f6f37021c0e41
+diff_sha256: 9187b516eb1b334ea718bc3d4b5e1b901a0a050716473fe2b6b15862b3d7e3bb
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 11, verified: 1, waived: 0 }
+notes: >
+  Epic-seam review over the full main..epic diff (three WUs, each already cr/v2
+  PASS at its own merge, + the epic-close distillation + the gate infra commit).
+  Five isolated finders prompted at the cross-WU seams the per-WU reviews could
+  not see; eleven candidates, one fresh verifier each. One verified real: the
+  workflow.html code-paths sentence was stale against the epic's own is_code
+  change (ui/src, ui/e2e) — fixed on this tip as a human-signed one-line doc
+  edit (Reviewed-By vuluu). Ten refuted, notably: the double body transfer on
+  row click is a pre-existing FlowView shape the epic consumes as planned
+  (data_base64 feeds copy-as-curl; the body fetch is structurally required for
+  the server-side decode toggle; loopback transport); toCurl's lossy UTF-8 on
+  binary request bodies is curl's inherent text limitation with a narrow
+  real-world window; useFlowDetail's silent catch clears on the next user
+  action and matches the W2-reviewed pattern; pretty_xml peak allocation is
+  bounded by body_cap; UC-5's decode wording states observable boundary
+  behavior, not implementation; FormBody/HeaderTable stay two private
+  ten-liners per the component-kit growth rule; two re-raises of per-WU
+  adjudications dropped on the standing refutations. Gate0 green; e2e 10/10 at
+  the W3 tree; the epic tip adds only docs.
+verdict: PASS
+date: 2026-07-13
