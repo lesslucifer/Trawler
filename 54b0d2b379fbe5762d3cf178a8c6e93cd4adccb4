@@ -1,0 +1,7 @@
+schema: doc/v1
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W2
+changes:
+  - path: docs/work/2026-07-13-uiinspect-w2-result.html
+    tier: T3
+t2_waived: "W2 adds no API contract and does not complete UC-5 on its own (the body viewers + raw/decoded toggle are W3). Per the epic plan distillation table, UC-5 lands in docs/use-cases/web-ui.html and the inspector/detail-region note in docs/core-architecture.html at epic close, once W3 surfaces the full inspector. No decision doc — rides DEC-12 + the E-UIFOUND Layout.detail region. Only the T3 result report lands at this WU boundary."
