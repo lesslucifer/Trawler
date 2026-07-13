@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a54e5b79f34851f0dfa8d33">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-UIINSPECT.W2 Result (flow detail panel)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-UIINSPECT.W2 — Flow detail panel</h1>
+      <p>Row click → the reserved detail region: headers · timing · HTTP versions · copy-as-curl.</p>
+      <div class="meta">v1 · 2026-07-13 · Trawler · <span class="badge id">wu-result</span> · <span class="badge id">E-UIINSPECT.W2</span> · branch <code>wu/uiinsp/detail-panel</code></div>
+    </div>
+  </header>
+  <main data-artifact="wu-result">
+
+    <h2 id="outcome">Outcome</h2>
+    <p data-item="outcome">
+      E-UIFOUND shipped the live flow list but left <code>Layout.detail</code> empty.
+      W2 fills it: clicking a row selects the flow and opens the detail panel over
+      the existing <code>GET /flows/{id}</code> — no new endpoint, no core change.
+      The panel renders:
+    </p>
+    <table data-c="outcome-table">
+      <thead><tr><th>Region</th><th>Shows</th></tr></thead>
+      <tbody>
+        <tr><td>Header bar</td><td>method, status pill (functional color via <code>statusTone</code>), total duration, a close (×) button</td></tr>
+        <tr><td>Request</td><td>the full request URI + <code>HTTP/1.1 → HTTP/2.0</code> version line</td></tr>
+        <tr><td>Copy as curl</td><td>a runnable <code>curl</code> in a <code>&lt;pre&gt;</code> + a copy button that writes it to the clipboard</td></tr>
+        <tr><td>Headers</td><td>request + response header tables (name/value), "none" when empty</td></tr>
+        <tr><td>Body</td><td>a one-line state summary per leg — the placeholder W3 replaces with real viewers</td></tr>
+      </tbody>
+    </table>
+    <p>
+      The typed client gains <code>getFlow(id) → FlowView</code> (+ <code>HeaderView</code> /
+      <code>BodyView</code> types mirroring the server's <code>view.rs</code>). A
+      <code>useFlowDetail</code> hook fetches on selection change with stale-response
+      cancellation; <code>toCurl</code> / <code>bodyText</code> are pure functions in
+      <code>flow.ts</code> alongside <code>toRow</code>. UI-only — no Rust touched, the
+      core stays GUI-free. The requirement sentence ("row selection → the detail region;
+      client gains <code>getFlow</code>; panel renders request line, status, timing,
+      versions, header tables, and copy-as-curl; body area a placeholder W3 replaces")
+      is met in full.
+    </p>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <p>None from the requirement or contract; no new dependencies — W2 reuses the E-UIFOUND kit (<code>Layout</code>, <code>StatusPill</code>, <code>statusTone</code>) and the existing typed client. One review-round fix:</p>
+      <p>
+        The code review found one verified real defect: the copy button's
+        <code>copied=true</code> state persisted when the selection moved to another
+        flow — the same <code>FlowDetail</code> instance was reused, so the "copied"
+        label showed for a flow the user never copied. Fixed by keying the panel
+        with <code>key={selectedId}</code> so it remounts (and resets local state)
+        on reselect; a regression test guards it. The other 11 candidates were
+        adjudicated false-positive (notably <code>atob</code>-on-malformed-base64 is
+        unreachable — the server's <code>BodyView::Captured</code> always emits
+        <code>STANDARD.encode</code> base64 that <code>atob</code> accepts) or
+        excluded micro-optimizations; two comment nits were trimmed to the
+        self-documenting rule. No debt left behind.
+      </p>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <p>Gates green on tip <code>5c5f421</code> (test/v2 · cr/v2 PASS · doc/v1):</p>
+      <ul>
+        <li><span class="badge id">unit</span> 12 across
+          <code>flow.test.ts</code> and <code>FlowDetail.test.tsx</code>:
+          <code>bodyText</code> decodes captured base64 as UTF-8 (<code>héllo</code>)
+          and returns empty for non-captured legs; <code>toCurl</code> omits
+          <code>-X</code> for GET, shell-quotes url + each header, adds
+          <code>-X METHOD</code> + <code>--data-raw</code> for a captured request
+          body, and escapes embedded single quotes; the panel renders request
+          line / status(<code>text-ok</code>) / timing / versions / both header
+          tables / curl from a fixture; the copy button writes the curl to the
+          clipboard and the close button fires <code>onClose</code>.</li>
+        <li><span class="badge id">integration</span> 2 in
+          <code>App.test.tsx</code> (RTL over the mock <code>TrawlerApi</code>):
+          clicking a row calls <code>getFlow(id)</code> and opens the panel with
+          the fetched flow's uri + a curl line reflecting its headers; and the
+          review-fix regression — after copying, selecting a different row resets
+          the copy button (proving the <code>key={selectedId}</code> remount).</li>
+        <li><span class="badge id">e2e</span> waived at this WU → carried by W3,
+          which drives the real Tauri window (click row → detail: headers/timing/
+          versions, curl text asserted in the DOM per the plan's curl waiver).</li>
+        <li><span class="badge id">gate0</span> fmt + clippy pedantic + full Rust
+          suite green (UI-only diff, so Rust unchanged); vitest 23 green, <code>tsc -b</code>
+          and <code>pnpm build</code> clean.
+          <span class="badge id">cr/v2</span> PASS: 12 candidate findings, 1
+          verified real (fixed), 0 waived.</li>
+      </ul>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <p>
+        Nothing distilled at the WU boundary — recorded in the <code>doc/v1</code>
+        note's <code>t2_waived</code>. W2 adds no API contract and does not complete
+        UC-5 on its own (the body viewers + raw/decoded toggle that make the
+        inspector demoable are W3). Per the epic plan's distillation table, UC-5
+        lands in <code>docs/use-cases/web-ui.html</code> and the inspector /
+        detail-region note in <code>docs/core-architecture.html</code> at
+        <strong>epic close</strong>, once W3 surfaces the full inspector. No
+        decision doc — this rides DEC-12 and the E-UIFOUND <code>Layout.detail</code>
+        region. This result report archives to <code>docs/.archive/</code> at epic
+        close with the epic result's lineage.
+      </p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <ul>
+        <li><strong>W3 — Body rendering</strong> (type dispatch + raw/decoded
+          toggle): mounts the real body viewers in W2's panel, consuming both W2
+          (host panel) and W1 (decoded bytes: brotli-JSON → tree, pretty XML →
+          text). Carries the epic e2e that discharges the W2 e2e waiver above.</li>
+        <li>No debt left behind — the one review finding was fixed, not deferred.</li>
+      </ul>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

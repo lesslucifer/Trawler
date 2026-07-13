@@ -13,6 +13,33 @@ export interface FlowSummary {
   response_body_state: string | null;
 }
 
+export interface HeaderView {
+  name: string;
+  value: string;
+}
+
+export type BodyView =
+  | { state: "captured"; size: number; data_base64: string }
+  | { state: "streaming"; content_type: string }
+  | { state: "not_captured"; reason: string; actual: number | null }
+  | { state: "empty" };
+
+// Full flow projection from GET /flows/{id} — mirrors the server's FlowView.
+export interface FlowView {
+  id: string;
+  started_at: string;
+  duration_ms: number | null;
+  method: string;
+  uri: string;
+  status: number | null;
+  request_http_version: string;
+  response_http_version: string | null;
+  request_headers: HeaderView[];
+  response_headers: HeaderView[];
+  request_body: BodyView;
+  response_body: BodyView | null;
+}
+
 export interface Filter {
   q?: string;
   host?: string;
@@ -57,6 +84,7 @@ export interface StreamHandlers {
 
 export interface TrawlerApi {
   listFlows(filter: Filter): Promise<FlowSummary[]>;
+  getFlow(id: string): Promise<FlowView>;
   stream(handlers: StreamHandlers): () => void;
 }
 
@@ -69,6 +97,11 @@ export function createApi(baseUrl?: string): TrawlerApi {
       const res = await fetch(`${base()}/flows?${filterParams(filter)}`);
       if (!res.ok) throw new Error(`GET /flows failed: ${res.status}`);
       return (await res.json()) as FlowSummary[];
+    },
+    async getFlow(id) {
+      const res = await fetch(`${base()}/flows/${encodeURIComponent(id)}`);
+      if (!res.ok) throw new Error(`GET /flows/${id} failed: ${res.status}`);
+      return (await res.json()) as FlowView;
     },
     stream({ onEvent, onLive }) {
       const source = new EventSource(`${base()}/stream`);
