@@ -1,19 +1,45 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useReducer } from "react";
 import { createApi, type TrawlerApi } from "./api";
 import { useFlows } from "./useFlows";
 import { Layout } from "./Layout";
 import { FlowList } from "./FlowList";
-import { Field, LiveDot } from "./components";
+import { Onboarding } from "./Onboarding";
+import { Field, StatusDot } from "./components";
+import { dotStatus, initial, reduce, type OnbState } from "./onboardingMachine";
 
-export default function App({ api }: { api?: TrawlerApi }) {
+export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const { filter, flows, live, update } = useFlows(client);
+  const { filter, flows, update } = useFlows(client);
+  const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
+
+  // W1 placeholder for W4's launch self-test: nothing detects live capture yet,
+  // so a fresh launch falls straight through to onboarding.
+  useEffect(() => {
+    if (state.phase === "checking") dispatch({ t: "not-detected" });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
+
+  if (state.phase !== "proven") {
+    return (
+      <Layout
+        header={
+          <>
+            {dot}
+            <h1 className="font-serif text-lg italic">Trawler</h1>
+          </>
+        }
+      >
+        <Onboarding state={state} dispatch={dispatch} />
+      </Layout>
+    );
+  }
 
   return (
     <Layout
       header={
         <>
-          <LiveDot live={live} />
+          {dot}
           <h1 className="mr-2 font-serif text-lg italic">Trawler</h1>
           <Field
             aria-label="filter"

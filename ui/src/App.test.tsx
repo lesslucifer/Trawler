@@ -2,6 +2,11 @@ import { render, screen, waitFor, fireEvent, act } from "@testing-library/react"
 import { afterEach, beforeAll, vi } from "vitest";
 import App from "./App";
 import type { Filter, FlowSummary, StreamHandlers, TrawlerApi } from "./api";
+import type { OnbState } from "./onboardingMachine";
+
+// Capture is proven only by a live decrypted flow (W4); until then App shows
+// onboarding. These list/filter tests force the proven phase to reach the list.
+const PROVEN: OnbState = { phase: "proven", step: "verify", everProven: true };
 
 // jsdom reports 0 layout, so react-virtual would render no rows. Give the scroll
 // container a real height/width so the virtualizer materializes rows.
@@ -55,18 +60,36 @@ function mockApi(store: () => FlowSummary[]) {
 
 afterEach(() => vi.restoreAllMocks());
 
-test("renders a flow row from the API and applies status tone", async () => {
-  const { api } = mockApi(() => [flow()]);
+test("on mount shows the onboarding surface, not the empty flow list", async () => {
+  const { api } = mockApi(() => []);
   render(<App api={api} />);
+  expect(await screen.findByText(/Trust the CA/)).toBeInTheDocument();
+  expect(screen.queryByTestId("empty")).toBeNull();
+});
+
+test("a forced-proven phase reveals the flow list", async () => {
+  const { api } = mockApi(() => [flow()]);
+  render(<App api={api} initialState={PROVEN} />);
   const row = await screen.findByTestId("flow-row");
   expect(row).toHaveTextContent("example.com");
   expect(row.querySelector(".text-ok")).not.toBeNull();
+  expect(screen.queryByText(/Trust the CA/)).toBeNull();
+});
+
+test("tapping the status dot re-opens setup from the flow list", async () => {
+  const { api } = mockApi(() => [flow()]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+  fireEvent.click(screen.getByTestId("status-dot"));
+  expect(await screen.findByText(/Trust the CA/)).toBeInTheDocument();
+  expect(screen.queryByTestId("flow-row")).toBeNull();
+  expect(screen.getByTestId("onb-exit")).toBeInTheDocument(); // Back to flows, since ever proven
 });
 
 test("a non-matching host filter empties the list; SSE appends a new row", async () => {
   let rows = [flow({ id: "f1", uri: "http://example.com/" })];
   const { api, fire } = mockApi(() => rows);
-  render(<App api={api} />);
+  render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
 
   fireEvent.change(screen.getByLabelText("host"), { target: { value: "other.test" } });
@@ -77,15 +100,4 @@ test("a non-matching host filter empties the list; SSE appends a new row", async
   rows = [...rows, flow({ id: "f2", uri: "http://example.com/second", status: 404 })];
   fire();
   await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
-});
-
-test("the live dot reflects the real stream connection state", async () => {
-  const { api, setLive } = mockApi(() => []);
-  render(<App api={api} />);
-  // Starts disconnected until the stream opens — not eagerly green.
-  expect(screen.getByTestId("live").className).toMatch(/bg-warn/);
-  setLive(true);
-  await waitFor(() => expect(screen.getByTestId("live").className).toMatch(/bg-ok/));
-  setLive(false);
-  await waitFor(() => expect(screen.getByTestId("live").className).toMatch(/bg-warn/));
 });
