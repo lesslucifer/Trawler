@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W1 design+skeleton -> epic/uisetup"
+epic: E-UISETUP
+wu: E-UISETUP.W1
+branch: wu/uisetup/design-skeleton
+base: 3fde21dda10bac54c65721fd2e592976660954db
+head: de3f6d0ae65b38e7290e87b8eee3e174e6344359
+diff_sha256: e61cd6ac8d7a47204cd25e2bc5f683f6c7c6257a0a8e24d02cac3b62d01735f2
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 6, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-13
