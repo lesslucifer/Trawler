@@ -61,6 +61,14 @@ pub fn zlib(data: &[u8]) -> Vec<u8> {
     encoder.finish().expect("zlib finish")
 }
 
+pub fn brotli(data: &[u8]) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut encoder = brotli::CompressorWriter::new(&mut out, 4096, 5, 22);
+    encoder.write_all(data).expect("brotli write");
+    drop(encoder);
+    out
+}
+
 /// Fluent builder so tests read as scenarios. Sensible defaults (a GET with no
 /// bodies and no response); every field is overridable.
 pub struct FlowBuilder {
