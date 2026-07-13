@@ -4,7 +4,7 @@
 use std::path::Path;
 use std::process::Command;
 
-pub fn install_command(os: &str, cert: &Path) -> Option<Vec<String>> {
+fn install_command(os: &str, cert: &Path) -> Option<Vec<String>> {
     let cert = cert.to_string_lossy().into_owned();
     let argv: &[&str] = match os {
         "macos" => &[
@@ -24,7 +24,7 @@ pub fn install_command(os: &str, cert: &Path) -> Option<Vec<String>> {
     Some(argv)
 }
 
-pub fn elevated_argv(os: &str, argv: &[String]) -> Vec<String> {
+fn elevated_argv(os: &str, argv: &[String]) -> Vec<String> {
     match os {
         "macos" => {
             let script = argv.iter().map(|a| format!("'{a}'")).collect::<Vec<_>>().join(" ");
