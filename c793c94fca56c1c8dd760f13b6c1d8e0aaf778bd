@@ -1,0 +1,30 @@
+schema: cr/v2
+scope: "WU body-viewers -> epic/uiinsp"
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W3
+branch: wu/uiinsp/body-viewers
+base: d5296f2544b77f9277f1906653fae8cb83d567ad
+head: c793c94fca56c1c8dd760f13b6c1d8e0aaf778bd
+diff_sha256: 00bef9745d1c2ef92e88c1c90ce600b186d15f682ee34fe768eeb1b1aaa6fb7a
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 18, verified: 3, waived: 0 }
+notes: >
+  Three review rounds, five isolated finders + a fresh verifier per candidate
+  each round. Round 1 (9 candidates) verified three real findings, fixed on
+  d54345b with named regression tests first: copy body delivered UTF-8-mangled
+  bytes instead of the shown hex dump (copy now delivers the shown rendering,
+  hidden for images); the JSON tree rendered unbounded DOM for cap-sized bodies
+  (TREE_MAX 128 KiB falls back to text); image/webp+avif saved as .bin
+  (extensions added). Round 2 over the fixed code diff (7 candidates): all
+  false-positive — form-copy copies replayable wire text on purpose; TREE_MAX
+  is a structural heuristic; EXTENSIONS-as-Record, HEX_MAX export, AbortController
+  (matches the established loopback pattern), and two verbatim re-raises dropped
+  on standing adjudications. Round 3 over the final tip adding the T3 result
+  report + scripts/seed-proxy.mjs manual-check seeder (2 candidates): both
+  false-positive — a redundant template-literal coercion and an
+  intentionally-unused _s parameter in the dev seeder are rubric-excluded
+  cosmetic cleanups; the correctness finder verified every count and behavioral
+  claim in the result report against the code and found the report accurate.
+  Vitest 50 green, tsc/pnpm build clean, UC-5 e2e 10/10, gate0 green.
+verdict: PASS
+date: 2026-07-13" c793c94fca56c1c8dd760f13b6c1d8e0aaf778bd && echo CR-ATTACHED
