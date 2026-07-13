@@ -1,0 +1,5 @@
+schema: doc/v1
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W2
+changes: []
+t2_waived: "W2 is a UI-only WU (ui/src/*) adding the flow detail panel chrome — headers, timing, HTTP versions, and copy-as-curl over the existing GET /flows/{id}. It adds no API contract and no new endpoint, and does not complete UC-5 on its own (the body viewers + raw/decoded toggle that make the inspector demoable are W3). Per the E-UIINSPECT plan distillation table, UC-5 lands in docs/use-cases/web-ui.html and the inspector/detail-region note in docs/core-architecture.html at epic close, once W3 surfaces the full inspector. Nothing to distill at this WU boundary; no decision doc warranted (rides DEC-12 + the E-UIFOUND Layout.detail region)."
