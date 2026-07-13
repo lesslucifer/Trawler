@@ -1,0 +1,13 @@
+schema: test/v2
+level: working-unit
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W1
+tests:
+  integration:
+    count: 1
+    what: "tests/api.rs::decode_brotli_charset_and_xml_over_router — over the real api::router: a brotli-encoded JSON request body fetched with ?decode=1 decompresses + pretty-prints to parseable JSON, and an ISO-8859-1 response body with content-type application/xml; charset=ISO-8859-1 transcodes to UTF-8 (café). Proves the broadened ?decode=1 contract at the API seam that curl and the web shell share. The gzip/deflate + raw/decode edge cases (body_endpoints_raw_decode_and_edges) still pass unchanged."
+  unit:
+    count: 22
+    what: "src/api/decode.rs suite (extends the existing gzip/deflate/JSON tests): brotli_round_trip_and_alias (br / BR / spaced), corrupt_brotli_falls_back_to_raw; charset_transcoded_to_utf8 (ISO-8859-1), charset_shift_jis_transcoded, utf8_and_unknown_charset_pass_through (utf-8 / unknown label / no charset all identity); xml_pretty_printed (nested indent), html_content_type_pretty_printed, malformed_xml_unchanged (unclosed tag -> raw); brotli_charset_then_xml_chain (all three stages composed); unknown_or_absent_encoding_is_identity updated (br no longer identity). proptest brotli_lossless joins gzip/deflate lossless + junk-never-panics. Zip-bomb guard + at-limit tests unchanged."
+  e2e:
+    waived: "W1 is a backend-only decode.rs change with no UI surface; the epic e2e (UC-5) is carried by W3, which proves brotli-JSON surfaces as a JSON tree through the inspector window. The API-seam proof lives in the integration test above."
