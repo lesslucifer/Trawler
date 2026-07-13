@@ -1,0 +1,17 @@
+schema: mr/v1
+level: working-unit
+tip: 623dd7ec93a4379c1820f987d01e1fe90e246354
+base: d2701e458784a5ce83ce220626560f36d8fbceb2
+tier: key
+signer: vuluu
+report: docs/work/2026-07-13-e-uisetup-w2-result.html
+report_sha256: f997eec484e3fe299db0f45fe0df4c28f25601241d77ce7c210ef99b17cfe1d0
+date: 2026-07-14
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+  EEhUxfjpFJ4ff7DVGaBQnMaRPtNHJbaotNwZT7hU7pqTEEAkyxwK63m5GwX3b5N4SXDgy8
+  vcbzGVUeJhA12yU/hgAAAAp0cmF3bGVyLW1yAAAAAAAAAAZzaGE1MTIAAABjAAAAE2VjZH
+  NhLXNoYTItbmlzdHAyNTYAAABIAAAAIHC9K85KuBG0T/58p/y1pemvrz234WR4I6ttOmOz
+  vbEgAAAAIGaz3UKqj3XBPQEXvBVbmQALPzlthdFbsJ7r2smhB+m5
+  -----END SSH SIGNATURE-----
