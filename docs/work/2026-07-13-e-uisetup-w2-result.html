@@ -83,6 +83,13 @@
         exactly why the guided steps exist as the always-visible manual fallback (a signed, bundled
         <code>.app</code> gets the SecurityAgent prompt). No trust-store read added; capture (W4) remains
         the proof.</li>
+        <li><strong>Removal instructions added alongside install.</strong> A pure
+        <code>removalSteps(target)</code> mirrors <code>guidedSteps</code> for every system (macOS/Windows/
+        Linux/Firefox/iOS-sim/Android), keyed off the CA's CN <code>Trawler Proxy CA</code> (e.g. macOS
+        <code>security delete-certificate -c "Trawler Proxy CA"</code>). The trust-ca step renders them in a
+        native <code>&lt;details&gt;</code> disclosure ("Remove the certificate later") that tracks the
+        selector, so undoing trust never needs a support question. Unit-tested per target + the selector
+        switch; no auto/privileged removal path (symmetry with the guided-only philosophy).</li>
       </ul>
     </div>
 

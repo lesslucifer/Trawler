@@ -67,3 +67,33 @@ const STEPS: Record<TrustTarget, string[]> = {
 export function guidedSteps(target: TrustTarget): string[] {
   return STEPS[target];
 }
+
+// Trawler's CA is issued with CN "Trawler Proxy CA" — removal keys off that name.
+const REMOVE: Record<TrustTarget, string[]> = {
+  macos: [
+    'Run: sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
+    "Or delete the Trawler Proxy CA entry in Keychain Access → System.",
+  ],
+  windows: [
+    'In an elevated terminal run: certutil -delstore ROOT "Trawler Proxy CA"',
+  ],
+  linux: [
+    "Run: sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
+    "NSS store: certutil -d sql:$HOME/.pki/nssdb -D -n trawler",
+  ],
+  firefox: [
+    "Settings → Privacy & Security → Certificates → View Certificates → Authorities.",
+    "Select Trawler Proxy CA → Delete or Distrust.",
+  ],
+  "ios-sim": [
+    "Remove it from the host Mac (the macOS removal above), then restart the Simulator.",
+    "Or reset the Simulator: Device → Erase All Content and Settings.",
+  ],
+  android: [
+    "Settings → Security → Encryption & credentials → Trusted credentials → User → remove Trawler Proxy CA.",
+  ],
+};
+
+export function removalSteps(target: TrustTarget): string[] {
+  return REMOVE[target];
+}

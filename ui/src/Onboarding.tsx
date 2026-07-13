@@ -4,6 +4,7 @@ import {
   canAutoInstall,
   defaultTarget,
   guidedSteps,
+  removalSteps,
   TARGETS,
   type HostOs,
   type TrustTarget,
@@ -85,6 +86,14 @@ function TrustCa({
           <li key={step}>{step}</li>
         ))}
       </ol>
+      <details className="mt-2">
+        <summary className="cursor-pointer text-ink-mute">Remove the certificate later</summary>
+        <ol data-testid="removal-steps" className="mt-1 list-decimal pl-5">
+          {removalSteps(target).map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      </details>
     </div>
   );
 }

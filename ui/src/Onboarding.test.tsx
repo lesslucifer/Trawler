@@ -64,6 +64,13 @@ test("a non-auto host shows only the guided steps for its system", () => {
   expect(screen.getByTestId("guided-steps")).toHaveTextContent(/update-ca-certificates/);
 });
 
+test("removal steps are shown for the selected system and switch with it", () => {
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
+  expect(screen.getByTestId("removal-steps")).toHaveTextContent(/security delete-certificate/);
+  fireEvent.change(screen.getByTestId("trust-target"), { target: { value: "windows" } });
+  expect(screen.getByTestId("removal-steps")).toHaveTextContent(/certutil -delstore ROOT/);
+});
+
 test("selecting another system switches the steps and hides the auto install", () => {
   render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
   fireEvent.change(screen.getByTestId("trust-target"), { target: { value: "firefox" } });

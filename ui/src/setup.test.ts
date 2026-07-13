@@ -1,4 +1,4 @@
-import { canAutoInstall, defaultTarget, guidedSteps, hostOs, TARGETS } from "./setup";
+import { canAutoInstall, defaultTarget, guidedSteps, hostOs, removalSteps, TARGETS } from "./setup";
 import type { TrustTarget } from "./setup";
 
 const UA = {
@@ -47,4 +47,25 @@ const expects: [TrustTarget, RegExp][] = [
 
 test.each(expects)("guidedSteps(%s) carries the system-specific instruction", (target, rx) => {
   expect(guidedSteps(target).join("\n")).toMatch(rx);
+});
+
+test("removalSteps covers every target with plain-text instructions", () => {
+  for (const { id } of TARGETS) {
+    const steps = removalSteps(id);
+    expect(steps.length).toBeGreaterThan(0);
+    for (const step of steps) expect(typeof step).toBe("string");
+  }
+});
+
+const removals: [TrustTarget, RegExp][] = [
+  ["macos", /security delete-certificate -c "Trawler Proxy CA"/],
+  ["windows", /certutil -delstore ROOT "Trawler Proxy CA"/],
+  ["linux", /update-ca-certificates --fresh/],
+  ["firefox", /Delete or Distrust/],
+  ["ios-sim", /restart the Simulator/],
+  ["android", /Trusted credentials/],
+];
+
+test.each(removals)("removalSteps(%s) carries the system-specific removal", (target, rx) => {
+  expect(removalSteps(target).join("\n")).toMatch(rx);
 });
