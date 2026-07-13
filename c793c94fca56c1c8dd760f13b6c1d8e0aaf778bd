@@ -3,5 +3,7 @@ epic: E-UIINSPECT
 wu: E-UIINSPECT.W3
 changes:
   - path: docs/work/2026-07-13-uiinspect-w3-result.html
-    kind: T3 wu-result (new; verify-doc green; snapshotted)
+    tier: T3
+    action: created
+    distills: "wu-result report for E-UIINSPECT.W3 (verify-doc green, snapshotted); archives at epic close with the epic result lineage"
 t2_waived: "W3 completes UC-5 (body viewers + raw/decoded toggle + copy/save) and is the epic-closing WU. Per the E-UIINSPECT plan distillation table, the T2 distillation — UC-5 added to docs/use-cases/web-ui.html + index, and the inspector note in docs/core-architecture.html — is the epic-close step that immediately follows this WU merge on the epic branch, same session; nothing else to distill at the WU boundary."
