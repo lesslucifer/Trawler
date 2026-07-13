@@ -1,0 +1,13 @@
+schema: test/v2
+level: working-unit
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W2
+tests:
+  unit:
+    count: 12
+    what: "ui/src/flow.test.ts (extends the toRow/statusTone suite): bodyText decodes captured base64 as UTF-8 (héllo) and returns empty for non-captured legs; toCurl omits -X for GET and shell-quotes url + each header, adds -X METHOD + --data-raw for a captured request body, and escapes embedded single quotes ('it's' -> the '\'' idiom). ui/src/FlowDetail.test.tsx: loading notice until the flow arrives; the panel renders request line/status(text-ok)/timing/versions(HTTP/1.1 -> HTTP/2.0)/both header tables/curl from a fixture; the copy button calls navigator.clipboard.writeText with the curl and flips to copied; the close button fires onClose."
+  integration:
+    count: 1
+    what: "ui/src/App.test.tsx (RTL over the mock TrawlerApi): clicking a flow row calls getFlow(id) and opens the detail panel rendering the fetched flow's uri + a curl line reflecting its headers. Wires selection state -> useFlowDetail -> FlowDetail -> Layout.detail against the typed client, mirroring the real GET /flows/{id} fetch. Full vitest suite 22 green; tsc -b and pnpm build clean."
+  e2e:
+    waived: "W2 adds the detail chrome but not the body viewers; the epic e2e (UC-5) is carried by W3, which drives the real Tauri window (click row -> detail: headers/timing/versions, curl text asserted in the DOM per the plan's curl waiver). W2 is proven at the unit + integration (RTL) layers here; no window-level behavior lands until W3 mounts the body viewers."
