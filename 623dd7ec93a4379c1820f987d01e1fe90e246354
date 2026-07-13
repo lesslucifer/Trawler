@@ -1,0 +1,11 @@
+schema: doc/v1
+epic: E-UISETUP
+wu: E-UISETUP.W2
+changes:
+  - path: docs/work/2026-07-13-e-uisetup-w2-plan.html
+    tier: T3
+    action: created
+  - path: docs/work/2026-07-13-e-uisetup-w2-result.html
+    tier: T3
+    action: created
+t2_waived: "local-OS setup capability flagged for a DEC at epic-close distillation per the epic plan; no T2 fact settles before W4 proves the flow end to end"
