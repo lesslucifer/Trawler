@@ -1,0 +1,22 @@
+schema: cr/v2
+scope: "WU detail-panel -> epic/uiinsp"
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W2
+branch: wu/uiinsp/detail-panel
+base: c52c34fa224f03709790ffbe5e0b0ef420cdf46d
+head: 54b0d2b379fbe5762d3cf178a8c6e93cd4adccb4
+diff_sha256: 167973a360a7bfb6d0fad7df546980e8518ee5bc8fa9603dbe6fdabd236266e6
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 12, verified: 1, waived: 0 }
+notes: >
+  Five finders + fresh verifiers over the UI code diff. One verified real finding:
+  the copy button copied=true state persisted across flow reselection; fixed on
+  this tip via key={selectedId} remount + a regression test. All other candidates
+  false-positive (atob-on-malformed-base64 unreachable — server always emits
+  STANDARD.encode base64; the App selectedId guard is load-bearing; HeaderTable
+  index keys correct for a non-reordering list; efficiency notes were excluded
+  micro-opts; reuse nits not cleaner). Two comment nits trimmed. The final commit
+  after review adds only the T3 result report (docs/work/*.html), which is
+  docs-only and test-exempt — no code changed since the reviewed tip 5c5f421.
+verdict: PASS
+date: 2026-07-13
