@@ -61,11 +61,21 @@ pub fn install_ca(pem: String) -> Result<(), String> {
         .ok_or("no automatic install on this system — follow the guided steps")?;
     std::fs::write(&cert, &pem).map_err(|e| e.to_string())?;
     let argv = elevated_argv(os, &inner);
-    let status = Command::new(&argv[0]).args(&argv[1..]).status().map_err(|e| e.to_string())?;
-    if status.success() {
+    let out = Command::new(&argv[0]).args(&argv[1..]).output().map_err(|e| e.to_string())?;
+    if out.status.success() {
         Ok(())
     } else {
-        Err(format!("install command failed: {status}"))
+        Err(failure_message(&String::from_utf8_lossy(&out.stderr)))
+    }
+}
+
+// The OS installer's own stderr is the only actionable signal on failure (e.g.
+// macOS "authorization was denied since no user interaction was possible") — a
+// bare exit code tells the user nothing, so surface the tool's message verbatim.
+fn failure_message(stderr: &str) -> String {
+    match stderr.trim() {
+        "" => "install failed — the OS reported no detail; use the steps below".into(),
+        detail => format!("install failed: {detail}"),
     }
 }
 
@@ -124,6 +134,19 @@ mod tests {
         assert_eq!(argv[0], "powershell");
         assert!(argv[3]
             .contains("Start-Process -FilePath 'certutil' -ArgumentList '-f','ROOT' -Verb RunAs"));
+    }
+
+    #[test]
+    fn failure_message_surfaces_the_os_installer_stderr() {
+        let msg = failure_message(
+            "0:207: execution error: SecTrustSettingsSetTrustSettings: The authorization was denied since no user interaction was possible. (1)\n",
+        );
+        assert!(msg.contains("authorization was denied"));
+    }
+
+    #[test]
+    fn failure_message_falls_back_when_stderr_is_empty() {
+        assert!(failure_message("   ").contains("use the steps below"));
     }
 
     #[test]

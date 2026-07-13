@@ -72,6 +72,17 @@
         reads <strong>✗ failed</strong> in the stepper instead of the positional ✓ done. Proceeding past
         the step stays possible by design — the guided steps are the manual path and only W4's capture
         proves trust — but the stepper no longer claims done for an install it watched fail.</li>
+        <li><strong>Failure surfaces the OS installer's own stderr.</strong> A non-zero install
+        previously returned only <code>install command failed: exit status: 1</code> — useless. Rust now
+        captures the command's stderr (<code>Command::output</code> + a pure, unit-tested
+        <code>failure_message</code> helper) and returns it verbatim, so the webview shows the actionable
+        OS message (e.g. macOS <code>SecTrustSettingsSetTrustSettings: The authorization was denied since
+        no user interaction was possible</code>). That specific error is the OS declining to open a
+        trust-settings authorization session for a <code>security add-trusted-cert</code> launched from an
+        unbundled dev process — an environment limitation of the auto path, not a wrong command; it is
+        exactly why the guided steps exist as the always-visible manual fallback (a signed, bundled
+        <code>.app</code> gets the SecurityAgent prompt). No trust-store read added; capture (W4) remains
+        the proof.</li>
       </ul>
     </div>
 
