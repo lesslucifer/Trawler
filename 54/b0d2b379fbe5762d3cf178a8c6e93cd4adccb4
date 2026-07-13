@@ -1,0 +1,13 @@
+schema: test/v2
+level: working-unit
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W2
+tests:
+  unit:
+    count: 12
+    what: "ui/src/flow.test.ts + ui/src/FlowDetail.test.tsx: bodyText decodes captured base64 as UTF-8 and returns empty for non-captured legs; toCurl omits -X for GET, shell-quotes url + each header, adds -X METHOD + --data-raw for a captured request body, and escapes embedded single quotes; the panel renders request line/status(text-ok)/timing/versions/both header tables/curl from a fixture; the copy button writes the curl to the clipboard and the close button fires onClose."
+  integration:
+    count: 2
+    what: "ui/src/App.test.tsx (RTL over the mock TrawlerApi): clicking a row calls getFlow(id) and opens the panel rendering the fetched flow uri + a curl line reflecting its headers; and the review-fix regression — after copying, selecting a different row resets the copy button (key={selectedId} remount). vitest 23 green; tsc -b + pnpm build clean."
+  e2e:
+    waived: "W2 adds the detail chrome, not the body viewers; the epic e2e (UC-5) is carried by W3, which drives the real Tauri window. The final commit adds only the T3 result report (docs-only, test-exempt)."
