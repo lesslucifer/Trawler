@@ -18,8 +18,4 @@ changes:
     tier: T1
     action: updated
     distills: "code-paths list synced with is_code (ui/src/, ui/e2e/ added) — epic review finding, human-signed (Reviewed-By trailer)"
-  - path: docs/work/2026-07-12-uiinspect-plan.html
-    tier: T3
-    action: archived
-    distills: "epic plan -> docs/.archive/ with the W1/W2/W3 result reports and the epic result report; docs/work/ empty at the epic gate"
-t2_waived: "The plan's T1 architecture note targeted docs/core-architecture.html, which E-ARCHDOC (landed on main after this epic forked) reworked into docs/architecture.html — a file that does not exist on this branch. The inspector/decode note therefore lands on main immediately after the epic merge, same session, as a human-signed T1 doc commit. T1 testing-strategy: nothing to add — the seams fit the existing Epic->e2e / WU->integration / commit->unit mapping unchanged. T0: no change, as planned."
+t2_waived: "T3 lifecycle handled within the branch: the epic plan and W1/W2/W3 result reports were archived to docs/.archive/ (gitignored filesystem archive) and removed from docs/work/, netting out of the main..tip diff — docs/work/ is empty at this gate. The plan's T1 architecture note targeted docs/core-architecture.html, which E-ARCHDOC (landed on main after this epic forked) reworked into docs/architecture.html — a file that does not exist on this branch; the inspector/decode note therefore lands on main immediately after the epic merge, same session, as a human-signed T1 doc commit. T1 testing-strategy: nothing to add — the seams fit the existing Epic->e2e / WU->integration / commit->unit mapping unchanged. T0: no change, as planned."
