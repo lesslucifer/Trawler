@@ -54,7 +54,12 @@ export default function App({ api }: { api?: TrawlerApi }) {
       }
       detail={
         selectedId == null ? undefined : (
-          <FlowDetail key={selectedId} flow={detail} onClose={() => setSelectedId(null)} />
+          <FlowDetail
+            key={selectedId}
+            api={client}
+            flow={detail}
+            onClose={() => setSelectedId(null)}
+          />
         )
       }
     >

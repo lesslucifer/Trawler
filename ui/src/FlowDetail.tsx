@@ -1,7 +1,8 @@
 import { useState } from "react";
-import type { BodyView, FlowView, HeaderView } from "./api";
+import type { FlowView, HeaderView, TrawlerApi } from "./api";
 import { statusTone, toCurl } from "./flow";
 import { StatusPill } from "./components";
+import { BodyViewer } from "./BodyViewer";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -28,22 +29,15 @@ function HeaderTable({ headers }: { headers: HeaderView[] }) {
   );
 }
 
-// A placeholder body summary; W3 replaces the Body section with real viewers.
-function bodyLabel(body: BodyView | null): string {
-  if (body == null) return "none";
-  switch (body.state) {
-    case "captured":
-      return `${body.size} bytes`;
-    case "streaming":
-      return `streaming (${body.content_type})`;
-    case "not_captured":
-      return body.actual == null ? "not captured (read error)" : `not captured (${body.actual} bytes)`;
-    case "empty":
-      return "empty";
-  }
-}
-
-export function FlowDetail({ flow, onClose }: { flow: FlowView | null; onClose: () => void }) {
+export function FlowDetail({
+  api,
+  flow,
+  onClose,
+}: {
+  api: TrawlerApi;
+  flow: FlowView | null;
+  onClose: () => void;
+}) {
   const [copied, setCopied] = useState(false);
 
   if (!flow) {
@@ -118,12 +112,7 @@ export function FlowDetail({ flow, onClose }: { flow: FlowView | null; onClose: 
         </Section>
 
         <Section title="Body">
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-ink-body">
-            <dt className="text-ink-mute">request</dt>
-            <dd>{bodyLabel(flow.request_body)}</dd>
-            <dt className="text-ink-mute">response</dt>
-            <dd>{bodyLabel(flow.response_body)}</dd>
-          </dl>
+          <BodyViewer api={api} flow={flow} />
         </Section>
       </div>
     </div>

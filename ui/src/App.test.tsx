@@ -52,6 +52,10 @@ function mockApi(store: () => FlowSummary[]) {
         response_body: { state: "empty" },
       };
     }),
+    getBody: vi.fn(async () => ({
+      bytes: new TextEncoder().encode('{"greeting":"hello"}'),
+      contentType: "application/json",
+    })),
     stream: vi.fn((handlers: StreamHandlers) => {
       onEvent = handlers.onEvent;
       onLive = handlers.onLive ?? (() => {});
@@ -102,6 +106,26 @@ test("clicking a row fetches /flows/{id} and opens the detail panel with curl", 
   expect(screen.getByTestId("curl")).toHaveTextContent(
     "curl 'http://example.com/a' -H 'Accept: application/json'",
   );
+});
+
+test("a captured response body is fetched decoded and rendered by the viewer", async () => {
+  const { api } = mockApi(() => [flow({ id: "f1" })]);
+  (api.getFlow as ReturnType<typeof vi.fn>).mockResolvedValue({
+    ...flow({ id: "f1" }),
+    request_http_version: "HTTP/1.1",
+    response_http_version: "HTTP/1.1",
+    request_headers: [],
+    response_headers: [],
+    request_body: { state: "empty" },
+    response_body: { state: "captured", size: 20, data_base64: "" },
+  } satisfies FlowView);
+  render(<App api={api} />);
+  fireEvent.click(await screen.findByTestId("flow-row"));
+
+  const tree = await screen.findByTestId("body-json");
+  expect(api.getBody).toHaveBeenCalledWith("f1", "response", true);
+  expect(tree).toHaveTextContent("greeting");
+  expect(screen.getByRole("button", { name: "save" })).toBeInTheDocument();
 });
 
 test("selecting a different flow resets the copy button (no stale 'copied')", async () => {

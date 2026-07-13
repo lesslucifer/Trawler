@@ -1,7 +1,14 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { FlowDetail } from "./FlowDetail";
-import type { FlowView } from "./api";
+import type { FlowView, TrawlerApi } from "./api";
+
+const stubApi = (): TrawlerApi => ({
+  listFlows: vi.fn(),
+  getFlow: vi.fn(),
+  getBody: vi.fn(async () => ({ bytes: new TextEncoder().encode("body!"), contentType: "text/plain" })),
+  stream: vi.fn(),
+});
 
 function view(over: Partial<FlowView> = {}): FlowView {
   return {
@@ -22,12 +29,12 @@ function view(over: Partial<FlowView> = {}): FlowView {
 }
 
 test("shows a loading notice until the flow arrives", () => {
-  render(<FlowDetail flow={null} onClose={() => {}} />);
+  render(<FlowDetail api={stubApi()} flow={null} onClose={() => {}} />);
   expect(screen.getByTestId("detail-loading")).toBeInTheDocument();
 });
 
 test("renders request line, status, timing, versions, headers, and curl", () => {
-  render(<FlowDetail flow={view()} onClose={() => {}} />);
+  render(<FlowDetail api={stubApi()} flow={view()} onClose={() => {}} />);
   expect(screen.getByTestId("detail")).toHaveTextContent("GET");
   expect(screen.getByText("200").className).toMatch(/text-ok/);
   expect(screen.getByTestId("detail")).toHaveTextContent("42 ms");
@@ -42,7 +49,7 @@ test("renders request line, status, timing, versions, headers, and curl", () => 
 test("copy button writes the curl to the clipboard", async () => {
   const writeText = vi.fn().mockResolvedValue(undefined);
   vi.stubGlobal("navigator", { clipboard: { writeText } });
-  render(<FlowDetail flow={view()} onClose={() => {}} />);
+  render(<FlowDetail api={stubApi()} flow={view()} onClose={() => {}} />);
   fireEvent.click(screen.getByText("copy"));
   expect(writeText).toHaveBeenCalledWith(
     "curl 'http://example.com/a?x=1' -H 'Accept: application/json'",
@@ -53,7 +60,7 @@ test("copy button writes the curl to the clipboard", async () => {
 
 test("close button fires onClose", () => {
   const onClose = vi.fn();
-  render(<FlowDetail flow={view()} onClose={onClose} />);
+  render(<FlowDetail api={stubApi()} flow={view()} onClose={onClose} />);
   fireEvent.click(screen.getByLabelText("close"));
   expect(onClose).toHaveBeenCalled();
 });

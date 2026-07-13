@@ -40,6 +40,13 @@ export interface FlowView {
   response_body: BodyView | null;
 }
 
+export type Leg = "request" | "response";
+
+export interface BodyFetch {
+  bytes: Uint8Array;
+  contentType: string | null;
+}
+
 export interface Filter {
   q?: string;
   host?: string;
@@ -85,6 +92,7 @@ export interface StreamHandlers {
 export interface TrawlerApi {
   listFlows(filter: Filter): Promise<FlowSummary[]>;
   getFlow(id: string): Promise<FlowView>;
+  getBody(id: string, leg: Leg, decode: boolean): Promise<BodyFetch>;
   stream(handlers: StreamHandlers): () => void;
 }
 
@@ -102,6 +110,15 @@ export function createApi(baseUrl?: string): TrawlerApi {
       const res = await fetch(`${base()}/flows/${encodeURIComponent(id)}`);
       if (!res.ok) throw new Error(`GET /flows/${id} failed: ${res.status}`);
       return (await res.json()) as FlowView;
+    },
+    async getBody(id, leg, decode) {
+      const query = decode ? "?decode=1" : "";
+      const res = await fetch(`${base()}/flows/${encodeURIComponent(id)}/${leg}/body${query}`);
+      if (!res.ok) throw new Error(`GET ${leg} body for ${id} failed: ${res.status}`);
+      return {
+        bytes: new Uint8Array(await res.arrayBuffer()),
+        contentType: res.headers.get("content-type"),
+      };
     },
     stream({ onEvent, onLive }) {
       const source = new EventSource(`${base()}/stream`);
