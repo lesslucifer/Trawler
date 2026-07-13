@@ -65,6 +65,13 @@
         UAC wrapping asserted).</li>
         <li><strong>Selector fallback:</strong> an undetectable host (<code>other</code>) defaults the
         selector to Linux rather than hiding it — every system's steps remain reachable.</li>
+        <li><strong>Review feedback (manual macOS test).</strong> Two additions from the human review
+        round: (1) a failed install now shows the underlying error — the invoke/fetch rejection message
+        renders under the failed note (and is <code>console.error</code>'d) so "core API unreachable" is
+        distinguishable from "elevation declined"; (2) a trust-ca step passed after a failed auto-install
+        reads <strong>✗ failed</strong> in the stepper instead of the positional ✓ done. Proceeding past
+        the step stays possible by design — the guided steps are the manual path and only W4's capture
+        proves trust — but the stepper no longer claims done for an install it watched fail.</li>
       </ul>
     </div>
 

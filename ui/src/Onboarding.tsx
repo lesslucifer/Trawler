@@ -24,16 +24,21 @@ const INSTALL_NOTE = {
   failed: "Install didn't finish — follow the steps below instead.",
 } as const;
 
+type InstallState = keyof typeof INSTALL_NOTE;
+
 function TrustCa({
   os,
-  onInstallCa,
+  install,
+  error,
+  onInstall,
 }: {
   os: HostOs;
-  onInstallCa?: () => Promise<void>;
+  install: InstallState;
+  error?: string;
+  onInstall?: () => void;
 }) {
   const [target, setTarget] = useState<TrustTarget>(defaultTarget(os));
-  const [install, setInstall] = useState<keyof typeof INSTALL_NOTE>("idle");
-  const auto = onInstallCa && canAutoInstall(os) && target === defaultTarget(os);
+  const auto = onInstall && canAutoInstall(os) && target === defaultTarget(os);
 
   return (
     <div className="mt-2">
@@ -43,21 +48,20 @@ function TrustCa({
             type="button"
             data-testid="install-ca"
             disabled={install === "installing"}
-            onClick={() => {
-              setInstall("installing");
-              onInstallCa().then(
-                () => setInstall("done"),
-                () => setInstall("failed"),
-              );
-            }}
+            onClick={onInstall}
             className="rounded-button border border-hairline px-2 py-1 text-ink disabled:opacity-60"
           >
             {COPY.steps["trust-ca"].action}
           </button>
           {INSTALL_NOTE[install] && (
-            <p data-testid="install-status" data-install={install} className="mt-1">
-              {INSTALL_NOTE[install]}
-            </p>
+            <div data-testid="install-status" data-install={install} className="mt-1">
+              <p>{INSTALL_NOTE[install]}</p>
+              {install === "failed" && error && (
+                <p data-testid="install-error" className="text-warn">
+                  {error}
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -98,6 +102,22 @@ export function Onboarding({
 }) {
   const atFirst = state.step === STEPS[0];
   const atLast = state.step === STEPS[STEPS.length - 1];
+  const [install, setInstall] = useState<InstallState>("idle");
+  const [installError, setInstallError] = useState<string>();
+  const runInstall =
+    onInstallCa &&
+    (() => {
+      setInstall("installing");
+      setInstallError(undefined);
+      onInstallCa().then(
+        () => setInstall("done"),
+        (err: unknown) => {
+          console.error("CA install failed:", err);
+          setInstall("failed");
+          setInstallError(err instanceof Error ? err.message : String(err));
+        },
+      );
+    });
 
   return (
     <div className="flex h-full flex-col overflow-auto">
@@ -123,6 +143,9 @@ export function Onboarding({
             {STEPS.map((step, i) => {
               const status = stepStatus(state, step);
               const copy = COPY.steps[step];
+              const installFailed = step === "trust-ca" && install === "failed";
+              const glyph =
+                installFailed && status === "done" ? "✗ failed" : GLYPH[status];
               return (
                 <li
                   key={step}
@@ -140,14 +163,21 @@ export function Onboarding({
                     <span>
                       {i + 1} · {copy.title}
                     </span>
-                    <small className="text-ink-mute">{GLYPH[status]}</small>
+                    <small className={glyph === "✗ failed" ? "text-warn" : "text-ink-mute"}>
+                      {glyph}
+                    </small>
                   </button>
 
                   {status === "active" && (
                     <div data-testid="step-body" className="mt-2 text-sm text-ink-mute">
                       <p>{copy.body}</p>
                       {step === "trust-ca" ? (
-                        <TrustCa os={os} onInstallCa={onInstallCa} />
+                        <TrustCa
+                          os={os}
+                          install={install}
+                          error={installError}
+                          onInstall={runInstall}
+                        />
                       ) : (
                         copy.action && (
                           <button

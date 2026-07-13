@@ -125,7 +125,12 @@ test("a rejected install reports failed and keeps the guided steps visible", asy
   await screen.findByText(/follow the steps below/);
 
   expect(screen.getByTestId("guided-steps")).toHaveTextContent(/security add-trusted-cert/);
+  expect(screen.getByTestId("install-error")).toHaveTextContent("user declined the elevation prompt");
   expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "active");
+
+  fireEvent.click(screen.getByTestId("onb-next"));
+  expect(screen.getByTestId("step-trust-ca")).toHaveTextContent("✗ failed");
+  expect(screen.getByTestId("step-trust-ca")).not.toHaveTextContent("✓ done");
 });
 
 test("a non-matching host filter empties the list; SSE appends a new row", async () => {

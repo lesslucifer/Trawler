@@ -12,9 +12,12 @@ vi.mock("./setup", async (importOriginal) => {
 
 const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
 
-function Harness({ start = onboarding }: { start?: OnbState }) {
+function Harness({
+  start = onboarding,
+  ...props
+}: { start?: OnbState } & Partial<Pick<Parameters<typeof Onboarding>[0], "os" | "onInstallCa">>) {
   const [state, dispatch] = useReducer(reduce, start);
-  return <Onboarding state={state} dispatch={dispatch} />;
+  return <Onboarding state={state} dispatch={dispatch} {...props} />;
 }
 
 test("renders all three steps and the active step's body", () => {
@@ -41,6 +44,18 @@ test("an auto-capable host shows Install wired to onInstallCa, with guided steps
   fireEvent.click(screen.getByTestId("install-ca"));
   expect(onInstallCa).toHaveBeenCalledOnce();
   expect(await screen.findByText(/Verify step will prove/)).toBeInTheDocument();
+});
+
+test("a failed install shows the error and marks the passed step failed, not done", async () => {
+  const onInstallCa = vi.fn(() => Promise.reject(new Error("GET /ca.crt failed: 500")));
+  render(<Harness start={onboarding} os="macos" onInstallCa={onInstallCa} />);
+
+  fireEvent.click(screen.getByTestId("install-ca"));
+  expect(await screen.findByText(/follow the steps below/)).toBeInTheDocument();
+  expect(screen.getByTestId("install-error")).toHaveTextContent("GET /ca.crt failed: 500");
+
+  fireEvent.click(screen.getByTestId("onb-next"));
+  expect(screen.getByTestId("step-trust-ca")).toHaveTextContent("✗ failed");
 });
 
 test("a non-auto host shows only the guided steps for its system", () => {
