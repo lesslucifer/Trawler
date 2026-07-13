@@ -1,0 +1,12 @@
+schema: test/v2
+level: working-unit
+epic: E-UISETUP
+wu: E-UISETUP.W2
+tests:
+  unit:
+    count: 27
+    covers: "Rust setup.rs (8): install argv per OS, None elsewhere, osascript/UAC wrapping, non-PEM rejected, failure_message surfaces stderr + empty fallback. TS setup.ts (8): UA→os, canAutoInstall, selector default, guidedSteps per target, removalSteps per target + per-target removal command. Onboarding trust-ca body (6): auto Install + steps, non-auto steps-only, selector switch, render-as-text, failed shows error + ✗ failed glyph, removal steps shown + switch with selector. api.caCertPem (1)"
+  integration:
+    count: 2
+    covers: "App seam: Install → caCertPem → invoke(install_ca,{pem}) → done, no phase change; rejected invoke → failed with error shown, guided steps visible, passed step glyph ✗ failed"
+  waived: "the elevated install itself needs a real OS privilege prompt — not hermetically runnable; command builder, elevation wrapper, failure_message unit-tested; full journey proven by W4 e2e (epic waiver). Removal is guided-only text, no privileged path."
