@@ -1,0 +1,33 @@
+schema: cr/v2
+scope: "WU decode-chain -> epic/uiinsp"
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W1
+branch: wu/uiinsp/decode-chain
+base: 1a71e48d47fecf02d561fdd029002de61618f82c
+head: ac237454e27d12748728875a2cd89cb34723c3ea
+diff_sha256: 22dd716352c7914a356fb05f00e8b571da158bd39b39d6485ab0e83ecad30cc8
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 8, verified: 2, waived: 0 }
+waivers: []
+notes: >
+  Five isolated finders + one fresh verifier per candidate over the code diff.
+  Eight candidates raised; six refuted at verify: (correctness) discarding
+  encoding_rs had_errors is spec-correct — U+FFFD replacement is what browsers do
+  and raw-byte fallback would be strictly worse for a view render; (efficiency)
+  charset/is_xml String allocs and the 4096-byte brotli read buffer are on the
+  view-time ?decode=1 path, not a hot path — rubric excludes micro-opts there, and
+  is_xml matches the pre-existing is_json convention; (altitude) HTML-as-XML pretty
+  is the designed UC-5 body category per the epic plan, not a leaked policy. Two
+  nits confirmed and FIXED on the reviewed tip (not waived): brotli pinned to a
+  duplicate 7.x copy alongside the transitive 8.0.4 (now brotli = "8", single
+  copy), and a redundant reader.config_mut().check_end_names = true (quick-xml
+  default; removed — the malformed-XML fallback rides the default plus the depth
+  sentinel). Both behavior-preserving; decode suite green.
+  Re-bind note: the reviewed code diff was f8e8c80dc5949c204f8255ad012a02cabeb90677c0a5bb4ad2fc862fccc1c569
+  (base..f2c46d7). This head adds ONE commit, the T3 WU result report
+  (docs/work/2026-07-13-uiinspect-w1-result.html) — the code diff excluding that
+  doc is byte-identical to the reviewed diff, so the findings and verdict stand
+  unchanged; only base..head (which now includes the T3 doc) is re-hashed to
+  22dd716352c7914a356fb05f00e8b571da158bd39b39d6485ab0e83ecad30cc8.
+verdict: PASS
+date: 2026-07-13
