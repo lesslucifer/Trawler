@@ -1,0 +1,14 @@
+schema: test/v2
+level: working-unit
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W3
+tests:
+  unit:
+    count: 10
+    what: "ui/src/body.test.ts (pure fns): bodyKind dispatches content type -> json/+json, image/*, form-urlencoded, text (text/*, xml, +xml, javascript), else/null hex, parameters stripped; rawKind sniffs stored bytes (printable UTF-8 text vs control-chars/invalid-UTF-8 hex); hexDump emits offset + 16 hex pairs + ascii gutter and caps at HEX_MAX with a remainder line; formEntries decodes pairs keeping duplicates; bodyNotice maps every non-captured BodyView state to a notice and captured to null; saveFilename derives short-id + leg + content-type extension (.json/.txt/.png/.svg/.html/.bin); bodyText decodes UTF-8. ui/src/api.test.ts: getBody fetches /flows/{id}/{leg}/body with ?decode=1 only when asked, returns bytes + content-type, throws on non-ok."
+  integration:
+    count: 14
+    what: "ui/src/BodyViewer.test.tsx (viewer vs mock TrawlerApi, RTL): JSON renders as a collapsible details tree (decoded fetch asserted); unparseable JSON falls back to text; image renders an <img> over an object URL; form renders a key/value table; binary renders a hex dump; text renders text; the raw toggle refetches with decode=false and shows stored bytes as text; leg tabs switch to the request body; every body state (empty/streaming/too_large/read_error) shows a notice without fetching; a pending response shows no-response-yet on the response tab; a failed fetch shows an error notice; copy body writes the shown bytes to the clipboard and flips to copied; save downloads under the derived filename. ui/src/App.test.tsx: clicking a row with a captured response fetches the body decoded and renders the tree with copy/save present (selection -> useFlowDetail -> FlowDetail -> BodyViewer wiring). Full vitest suite 47 green; tsc -b and pnpm build clean."
+  e2e:
+    count: 6
+    what: "ui/e2e/specs/flows.spec.ts UC-5 (real Tauri window via @wdio/tauri-service against an ephemeral run(Config) core, cargo xtask ui e2e): proxied /json -> row click opens detail with headers/timing/versions; response body renders as a JSON tree; raw toggle shows stored bytes as text and back; copy-as-curl asserted as text in the DOM (clipboard waived per the epic plan); proxied brotli-compressed JSON still renders a JSON tree (W1 decode chain proven through the UI); proxied PNG renders an <img> over a blob URL. Harness origin gained /json, /br (pre-compressed brotli), /img routes and /hit?p=. Save-to-file native dialog is a recorded manual check: WebDriver cannot drive the OS save dialog; the browser-fallback path is covered at the integration layer."
