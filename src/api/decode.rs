@@ -66,7 +66,6 @@ fn pretty_xml(bytes: Vec<u8>) -> Vec<u8> {
     use quick_xml::{Reader, Writer};
 
     let mut reader = Reader::from_reader(&bytes[..]);
-    reader.config_mut().check_end_names = true;
     let mut writer = Writer::new_with_indent(Vec::new(), b' ', 2);
     let mut depth = 0usize;
     loop {
