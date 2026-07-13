@@ -1,0 +1,25 @@
+schema: cr/v2
+scope: "WU detail-panel -> epic/uiinsp"
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W2
+branch: wu/uiinsp/detail-panel
+base: c52c34fa224f03709790ffbe5e0b0ef420cdf46d
+head: 5c5f421675d8c4f4a49efb2bf5962c15df0b3071
+diff_sha256: f7710a979ddba3be821103134cfadd9ae1946731e6114141989e8cd9ab7ed5ae
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 12, verified: 1, waived: 0 }
+notes: >
+  Five finders + fresh verifiers over the UI-only diff. One verified real finding:
+  the copy button copied=true state persisted across flow reselection (same
+  FlowDetail instance reused). Fixed on this tip via key={selectedId} remount +
+  a regression test (App.test.tsx). All other candidates adjudicated
+  false-positive: atob-on-malformed-base64 is unreachable (server BodyView::Captured
+  always emits STANDARD.encode base64 that browser atob accepts); the App
+  selectedId guard is load-bearing (gates the aside open/closed, not redundant);
+  HeaderTable index keys are correct for a non-reordering list with possibly
+  duplicate header names; efficiency notes were excluded micro-opts; reuse nits
+  (inline status/duration formatting) would require calling toRow purely for two
+  one-line strings, which is not cleaner. Two comment nits addressed by trimming
+  to the self-documenting rule.
+verdict: PASS
+date: 2026-07-13
