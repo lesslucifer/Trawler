@@ -55,8 +55,7 @@ function shellQuote(s: string): string {
   return `'${s.replace(/'/g, "'\\''")}'`;
 }
 
-// Reproduce the request as a runnable curl: method (omitted for GET), URL, each
-// request header, and the captured request body. Pure — the panel copies its output.
+// -X is omitted for GET, matching curl's own default, so the common case reads clean.
 export function toCurl(flow: FlowView): string {
   const parts = ["curl"];
   if (flow.method !== "GET") parts.push("-X", flow.method);

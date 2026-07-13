@@ -28,7 +28,7 @@ function HeaderTable({ headers }: { headers: HeaderView[] }) {
   );
 }
 
-// A one-line description of a body leg — W3 replaces this with the real viewers.
+// A placeholder body summary; W3 replaces the Body section with real viewers.
 function bodyLabel(body: BodyView | null): string {
   if (body == null) return "none";
   switch (body.state) {

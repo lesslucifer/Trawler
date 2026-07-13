@@ -104,6 +104,26 @@ test("clicking a row fetches /flows/{id} and opens the detail panel with curl", 
   );
 });
 
+test("selecting a different flow resets the copy button (no stale 'copied')", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal("navigator", { clipboard: { writeText } });
+  const rows = [flow({ id: "f1", uri: "http://a/" }), flow({ id: "f2", uri: "http://b/" })];
+  const { api } = mockApi(() => rows);
+  render(<App api={api} />);
+
+  const [rowA, rowB] = await screen.findAllByTestId("flow-row");
+  fireEvent.click(rowA);
+  await screen.findByTestId("curl");
+  fireEvent.click(screen.getByText("copy"));
+  await waitFor(() => expect(screen.getByText("copied")).toBeInTheDocument());
+
+  fireEvent.click(rowB);
+  await waitFor(() => expect(screen.getByTestId("detail")).toHaveTextContent("http://b/"));
+  expect(screen.getByText("copy")).toBeInTheDocument();
+  expect(screen.queryByText("copied")).toBeNull();
+  vi.unstubAllGlobals();
+});
+
 test("the live dot reflects the real stream connection state", async () => {
   const { api, setLive } = mockApi(() => []);
   render(<App api={api} />);
