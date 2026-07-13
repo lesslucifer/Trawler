@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 import { BodyViewer } from "./BodyViewer";
+import { hexDump, TREE_MAX } from "./body";
 import type { BodyFetch, BodyView, FlowView, TrawlerApi } from "./api";
 
 function flow(over: Partial<FlowView> = {}): FlowView {
@@ -147,6 +148,40 @@ test("a failed body fetch shows an error notice", async () => {
   (api.getBody as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
   render(<BodyViewer api={api} flow={flow()} />);
   expect(await screen.findByTestId("body-notice")).toHaveTextContent("failed to load body");
+});
+
+test("copy body on a hex-rendered body copies the hex dump, not mangled bytes", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal("navigator", { clipboard: { writeText } });
+  const bytes = new Uint8Array([0, 1, 2]);
+  const api = apiWith({ bytes, contentType: "application/octet-stream" });
+  render(<BodyViewer api={api} flow={flow()} />);
+  await screen.findByTestId("body-text");
+
+  fireEvent.click(screen.getByRole("button", { name: "copy body" }));
+  expect(writeText).toHaveBeenCalledWith(hexDump(bytes));
+});
+
+test("an image body offers save but not copy (no text representation)", async () => {
+  vi.stubGlobal("URL", {
+    ...URL,
+    createObjectURL: vi.fn(() => "blob:fake"),
+    revokeObjectURL: vi.fn(),
+  });
+  const api = apiWith({ bytes: new Uint8Array([137, 80]), contentType: "image/png" });
+  const { unmount } = render(<BodyViewer api={api} flow={flow()} />);
+  await screen.findByTestId("body-image");
+  expect(screen.queryByRole("button", { name: "copy body" })).toBeNull();
+  expect(screen.getByRole("button", { name: "save" })).toBeInTheDocument();
+  unmount();
+});
+
+test("a JSON body over the tree cap renders as text, never an unbounded tree", async () => {
+  const big = `{"pad":"${"x".repeat(TREE_MAX)}"}`;
+  const api = apiWith({ bytes: text(big), contentType: "application/json" });
+  render(<BodyViewer api={api} flow={flow()} />);
+  expect(await screen.findByTestId("body-text")).toBeInTheDocument();
+  expect(screen.queryByTestId("body-json")).toBeNull();
 });
 
 test("copy body writes the shown body text to the clipboard", async () => {

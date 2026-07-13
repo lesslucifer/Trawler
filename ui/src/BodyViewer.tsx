@@ -9,6 +9,8 @@ import {
   rawKind,
   saveBody,
   saveFilename,
+  TREE_MAX,
+  type BodyKind,
 } from "./body";
 
 function JsonNode({ name, value }: { name: string; value: unknown }) {
@@ -37,6 +39,7 @@ function JsonNode({ name, value }: { name: string; value: unknown }) {
 }
 
 function JsonTree({ text }: { text: string }) {
+  if (text.length > TREE_MAX) return <TextBody text={text} />;
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -95,8 +98,7 @@ function ImageBody({ bytes, contentType }: { bytes: Uint8Array; contentType: str
   );
 }
 
-function Rendered({ fetched, decode }: { fetched: BodyFetch; decode: boolean }) {
-  const kind = decode ? bodyKind(fetched.contentType) : rawKind(fetched.bytes);
+function Rendered({ fetched, kind }: { fetched: BodyFetch; kind: BodyKind }) {
   switch (kind) {
     case "json":
       return <JsonTree text={bodyText(fetched.bytes)} />;
@@ -142,6 +144,9 @@ export function BodyViewer({ api, flow }: { api: TrawlerApi; flow: FlowView }) {
 
   const body: BodyView | null = leg === "request" ? flow.request_body : flow.response_body;
   const notice = bodyNotice(body);
+  const loaded = fetched !== null && fetched !== "error" ? fetched : null;
+  const kind: BodyKind | null =
+    loaded && (decode ? bodyKind(loaded.contentType) : rawKind(loaded.bytes));
 
   useEffect(() => {
     setFetched(null);
@@ -161,17 +166,20 @@ export function BodyViewer({ api, flow }: { api: TrawlerApi; flow: FlowView }) {
     };
   }, [api, flow.id, leg, decode, body?.state]);
 
+  // Copy delivers what the viewer shows: the hex dump for hex-rendered bodies,
+  // the body text otherwise. Images have no text representation — no copy.
   const copyBody = () => {
-    if (fetched === null || fetched === "error") return;
-    navigator.clipboard?.writeText(bodyText(fetched.bytes)).then(
+    if (!loaded) return;
+    const shown = kind === "hex" ? hexDump(loaded.bytes) : bodyText(loaded.bytes);
+    navigator.clipboard?.writeText(shown).then(
       () => setCopied(true),
       () => {},
     );
   };
 
   const save = () => {
-    if (fetched === null || fetched === "error") return;
-    void saveBody(fetched.bytes, saveFilename(flow.id, leg, fetched.contentType));
+    if (!loaded) return;
+    void saveBody(loaded.bytes, saveFilename(flow.id, leg, loaded.contentType));
   };
 
   return (
@@ -190,11 +198,13 @@ export function BodyViewer({ api, flow }: { api: TrawlerApi; flow: FlowView }) {
         <ModeButton active={!decode} onClick={() => setDecode(false)}>
           raw
         </ModeButton>
-        {fetched !== null && fetched !== "error" && (
+        {loaded && (
           <span className="ml-auto flex gap-1">
-            <ModeButton active={false} onClick={copyBody}>
-              {copied ? "copied" : "copy body"}
-            </ModeButton>
+            {kind !== "image" && (
+              <ModeButton active={false} onClick={copyBody}>
+                {copied ? "copied" : "copy body"}
+              </ModeButton>
+            )}
             <ModeButton active={false} onClick={save}>
               save
             </ModeButton>
@@ -210,10 +220,10 @@ export function BodyViewer({ api, flow }: { api: TrawlerApi; flow: FlowView }) {
         <p data-testid="body-notice" className="text-xs text-warn">
           failed to load body
         </p>
-      ) : fetched === null ? (
+      ) : !loaded || kind == null ? (
         <p className="text-xs text-ink-mute">loading…</p>
       ) : (
-        <Rendered fetched={fetched} decode={decode} />
+        <Rendered fetched={loaded} kind={kind} />
       )}
     </div>
   );

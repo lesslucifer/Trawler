@@ -35,9 +35,14 @@ export function bodyText(bytes: Uint8Array): string {
   return new TextDecoder().decode(bytes);
 }
 
-// ponytail: hex view caps at 4 KiB — a full 2 MiB capture would be ~128k DOM
+// ponytail: hex view caps at 4 KiB — a full capture-cap body would be ~600k DOM
 // lines; raise the cap or virtualize if inspecting deep binary ever matters.
 export const HEX_MAX = 4096;
+
+// ponytail: JSON over 128 KiB renders as text, not a tree — an unbounded tree
+// on a 10 MiB body means tens of thousands of synchronous DOM nodes; virtualize
+// with @tanstack/react-virtual (already a dep) if tree-view of huge JSON matters.
+export const TREE_MAX = 131_072;
 
 export function hexDump(bytes: Uint8Array, max: number = HEX_MAX): string {
   const shown = bytes.subarray(0, max);
@@ -78,6 +83,8 @@ const EXTENSIONS: [test: (mime: string) => boolean, ext: string][] = [
   [(m) => m === "image/png", ".png"],
   [(m) => m === "image/jpeg", ".jpg"],
   [(m) => m === "image/gif", ".gif"],
+  [(m) => m === "image/webp", ".webp"],
+  [(m) => m === "image/avif", ".avif"],
   [(m) => m === "image/svg+xml", ".svg"],
   [(m) => m === "application/json" || m.endsWith("+json"), ".json"],
   [(m) => m === "text/html", ".html"],

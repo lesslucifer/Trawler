@@ -75,6 +75,8 @@ test("saveFilename derives short-id, leg, and a content-type extension", () => {
     "0192a1b2-request.txt",
   );
   expect(saveFilename(id, "response", "image/png")).toBe("0192a1b2-response.png");
+  expect(saveFilename(id, "response", "image/webp")).toBe("0192a1b2-response.webp");
+  expect(saveFilename(id, "response", "image/avif")).toBe("0192a1b2-response.avif");
   expect(saveFilename(id, "response", "image/svg+xml")).toBe("0192a1b2-response.svg");
   expect(saveFilename(id, "response", "text/html")).toBe("0192a1b2-response.html");
   expect(saveFilename(id, "response", null)).toBe("0192a1b2-response.bin");
