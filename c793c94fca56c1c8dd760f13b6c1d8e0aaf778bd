@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W3
+base: d5296f2544b77f9277f1906653fae8cb83d567ad
+tip: c793c94fca56c1c8dd760f13b6c1d8e0aaf778bd
+diff_sha256: 00bef9745d1c2ef92e88c1c90ce600b186d15f682ee34fe768eeb1b1aaa6fb7a
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review]
+date: 2026-07-13
