@@ -1,0 +1,5 @@
+schema: doc/v1
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W1
+changes: []
+t2_waived: "W1 is a backend-only change to the view-time decode chain (src/api/decode.rs) touching no docs. Per the E-UIINSPECT plan's distillation table, the ?decode=1 broadening is distilled at epic close: the UC-5 body-decode contract lands in docs/use-cases/web-ui.html and the broadened-decode note in docs/core-architecture.html once the inspector surfaces it (W3). No decision doc is warranted — this rides DEC-12 and the existing view-time-decode design. Nothing to distill at the WU boundary."
