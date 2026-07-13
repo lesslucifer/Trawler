@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
-import { Field, StatusPill, LiveDot } from "./components";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { expect, test, vi } from "vitest";
+import { Field, StatusPill, StatusDot } from "./components";
 
 test("Field renders with Warp theme token classes", () => {
   render(<Field aria-label="filter" />);
@@ -15,9 +16,15 @@ test("StatusPill maps tone to a functional status color class", () => {
   expect(screen.getByText("500").className).toMatch(/text-warn/);
 });
 
-test("LiveDot reflects connection state", () => {
-  const { rerender } = render(<LiveDot live={false} />);
-  expect(screen.getByTestId("live").className).toMatch(/bg-warn/);
-  rerender(<LiveDot live />);
-  expect(screen.getByTestId("live").className).toMatch(/bg-ok/);
+test("StatusDot maps capture status to a color and is tappable to re-run setup", () => {
+  const onClick = vi.fn();
+  const { rerender } = render(<StatusDot status="broken" onClick={onClick} />);
+  const dot = screen.getByTestId("status-dot");
+  expect(dot.className).toMatch(/bg-warn/);
+  fireEvent.click(dot);
+  expect(onClick).toHaveBeenCalledOnce();
+  rerender(<StatusDot status="checking" onClick={onClick} />);
+  expect(screen.getByTestId("status-dot").className).toMatch(/bg-ink-mute/);
+  rerender(<StatusDot status="connected" onClick={onClick} />);
+  expect(screen.getByTestId("status-dot").className).toMatch(/bg-ok/);
 });

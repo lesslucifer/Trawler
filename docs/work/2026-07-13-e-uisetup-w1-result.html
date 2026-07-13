@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a54ce7e9f34851f0dfa8d28" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-UISETUP.W1 result: design + skeleton</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-UISETUP.W1 — result</h1>
+      <p>The onboarding design (state machine, copy, wireframes) was reviewed and settled, and the
+      navigable skeleton is wired into <code>Layout</code>: a pure reducer, a 3-state capture-status dot,
+      and a stepper surface that shows until capture is proven. No CA/proxy logic (W2/W3), no live
+      detector (W4).</p>
+      <div class="meta">Result v1 · 2026-07-13 · Trawler · T3 WU result · epic:
+      <a href="2026-07-12-e-uisetup-plan.html">E-UISETUP</a> · plan:
+      <a href="2026-07-13-e-uisetup-w1-plan.html">W1 plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Delivered as planned.</strong> Against the W1 requirement and its "done when":</p>
+      <ul>
+        <li><strong>Design reviewed &amp; settled.</strong> The <a href="2026-07-13-e-uisetup-w1-plan.html">W1
+        plan</a> went through three review rounds (proof-by-live-capture, broken-setup recovery, the
+        3-state status dot + Back control); all comments resolved.</li>
+        <li><strong>Pure state machine.</strong> <code>onboardingMachine.ts</code> — <code>initial</code>,
+        <code>reduce</code> (every event: next/back/goto/captured/not-detected/re-invoke/exit),
+        <code>stepStatus</code>, <code>dotStatus</code>, <code>STEPS</code>, <code>COPY</code>. No React,
+        no I/O, so transitions are unit-testable directly.</li>
+        <li><strong>Navigable shell.</strong> On launch the app shows the onboarding stepper (three steps:
+        trust the CA · set the proxy · verify), not the bare "no flows yet" list. Next/Back and clicking a
+        step walk the active step; Verify shows the waiting copy. Step actions are inert placeholders.</li>
+        <li><strong>3-state capture-status dot.</strong> The header <code>StatusDot</code> renders
+        broken/checking/connected from <code>dotStatus(state)</code> and, tapped, dispatches
+        <code>re-invoke</code> to re-open setup. It supersedes the old 2-state <code>LiveDot</code>.</li>
+        <li><strong>Phase-driven entry.</strong> <code>App</code> shows <code>Onboarding</code> until
+        <code>proven</code>, then the full filter header + <code>FlowList</code>. <code>everProven</code>
+        gates a <em>Back to flows</em> control (hidden on first run). W1 dispatches <code>not-detected</code>
+        on mount as the placeholder for W4's scheduled self-test.</li>
+        <li><code>Layout</code> and <code>FlowList</code> reused unchanged.</li>
+      </ul>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <ul>
+        <li><strong>File renamed <code>onboarding.ts</code> → <code>onboardingMachine.ts</code>.</strong>
+        The plan named the pure module <code>onboarding.ts</code>, but that case-collides with the
+        component <code>Onboarding.tsx</code> on macOS's case-insensitive filesystem — TypeScript resolved
+        <code>./Onboarding</code> to the machine file and the build failed. Renamed the machine module (and
+        its test). The plan's files table is updated to match; W2–W4 import from
+        <code>onboardingMachine</code>.</li>
+        <li><strong><code>checking</code> dot renders muted grey, not amber.</strong> The wireframe legend
+        showed checking in an accent colour, but the Warp theme deliberately has no chromatic accent token
+        (DEC-11) — only <code>ok</code>/<code>warn</code> + muted. So the dot maps
+        connected→<code>ok</code> (green), broken→<code>warn</code> (red), checking→<code>ink-mute</code>
+        (grey). checking is transient (mount immediately dispatches <code>not-detected</code>), so this is
+        cosmetic; the tooltip still says "Checking capture…".</li>
+      </ul>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <ul>
+        <li><strong>New:</strong> <code>ui/src/onboardingMachine.ts</code>,
+        <code>ui/src/Onboarding.tsx</code>, and their tests
+        <code>ui/src/onboardingMachine.test.ts</code>, <code>ui/src/Onboarding.test.tsx</code>.</li>
+        <li><strong>Edited:</strong> <code>ui/src/App.tsx</code> (phase entry + header + dot),
+        <code>ui/src/components.tsx</code> (<code>LiveDot</code> → <code>StatusDot</code>),
+        <code>ui/src/App.test.tsx</code> (onboarding entry seam), <code>ui/src/components.test.tsx</code>
+        (StatusDot test).</li>
+        <li><strong>Docs:</strong> W1 plan updated (rename + colour note); this result report added.</li>
+      </ul>
+    </div>
+
+    <h2 id="tests">Tests</h2>
+    <table data-item="tests">
+      <thead><tr><th>Level</th><th>What</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><b>unit</b></td><td><code>onboardingMachine.test.ts</code> (9): initial state,
+        not-detected, next/back clamp, goto, captured latch, re-invoke, exit gating, dotStatus, stepStatus</td><td>green</td></tr>
+        <tr><td><b>unit</b></td><td><code>Onboarding.test.tsx</code> (3): three steps + active body,
+        Next advances active step, Back-to-flows visibility; <code>components.test.tsx</code>: StatusDot
+        colour map + tap</td><td>green</td></tr>
+        <tr><td><b>integration</b></td><td><code>App.test.tsx</code>: mount shows onboarding (not empty
+        list), forced-proven reveals the list, tapping the dot re-opens setup</td><td>green</td></tr>
+        <tr><td><b>full suite</b></td><td><code>pnpm exec vitest run</code></td><td>26/26 pass</td></tr>
+        <tr><td><b>build</b></td><td><code>tsc -b</code> + <code>vite build</code></td><td>clean</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Deferred to later WUs (by design):</strong> real CA install (W2), proxy auto-set + snippet
+    (W3), the scheduled live-capture self-test / <code>/stream</code> watch that dispatches
+    <code>captured</code>/<code>not-detected</code> and flips the dot red mid-use, and the full e2e journey
+    (W4). W1 exercises the proof signal at the reducer level, not yet over a live connection.</p>
+
+    <h2 id="gate">Gate</h2>
+    <div data-item="gate">
+      <p>The changed code is entirely under <code>ui/</code>, which the gate's <code>is_code</code>
+      (core <code>src/</code>/<code>xtask/</code>/<code>tests/</code>) does not classify as core code, so
+      <code>verify-dod wu</code> treats this WU as docs/infra-only — exempt from the test/cr/doc-note
+      checks, with working-unit <strong>manual review (<code>mr/v1</code>)</strong> still required. Full
+      <code>test/v2</code>, <code>doc/v1</code> and a <code>cr/v2</code> PASS note are attached anyway, per
+      the workflow prose and the mandatory-test rule. This report is the artifact the <code>mr/v1</code>
+      sign-off attests.</p>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
