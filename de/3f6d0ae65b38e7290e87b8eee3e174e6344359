@@ -1,0 +1,11 @@
+schema: test/v2
+level: working-unit
+epic: E-UISETUP
+wu: E-UISETUP.W1
+tests:
+  unit:
+    count: 13
+    covers: "onboardingMachine reduce transitions + dotStatus/stepStatus; Onboarding render/nav/Back visibility; StatusDot colour map + tap"
+  integration:
+    count: 3
+    covers: "App phase entry seam: mount shows onboarding not empty-list; forced-proven reveals flow list; tapping StatusDot re-opens setup"
