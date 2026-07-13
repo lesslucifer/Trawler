@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useReducer } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { createApi, type TrawlerApi } from "./api";
+import { hostOs } from "./setup";
 import { useFlows } from "./useFlows";
 import { Layout } from "./Layout";
 import { FlowList } from "./FlowList";
@@ -18,6 +20,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     if (state.phase === "checking") dispatch({ t: "not-detected" });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const installCa = async () => {
+    const pem = await client.caCertPem();
+    await invoke("install_ca", { pem });
+  };
+
   const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
 
   if (state.phase !== "proven") {
@@ -30,7 +37,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           </>
         }
       >
-        <Onboarding state={state} dispatch={dispatch} />
+        <Onboarding state={state} dispatch={dispatch} os={hostOs()} onInstallCa={installCa} />
       </Layout>
     );
   }

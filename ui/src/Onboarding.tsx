@@ -1,17 +1,100 @@
+import { useState } from "react";
 import { COPY, STEPS, stepStatus, type OnbEvent, type OnbState } from "./onboardingMachine";
+import {
+  canAutoInstall,
+  defaultTarget,
+  guidedSteps,
+  TARGETS,
+  type HostOs,
+  type TrustTarget,
+} from "./setup";
 
 // The onboarding surface: a centered stepper rendered from the state machine.
-// Step actions are inert placeholders — the real CA install (W2), proxy set (W3)
-// and live verify (W4) land later. Back to flows shows only once a list exists.
+// Trust-ca is live (W2); proxy set (W3) and live verify (W4) land later.
+// Back to flows shows only once a list exists.
 
 const GLYPH = { done: "✓ done", active: "▸ active", pending: "○ waiting" } as const;
+
+// done/failed report only that the elevated command ran (or didn't) — trust is
+// proven solely by W4's live capture, so the machine never transitions here.
+const INSTALL_NOTE = {
+  idle: null,
+  installing: "Installing — approve the system prompt…",
+  done: "Command ran. The Verify step will prove capture works.",
+  failed: "Install didn't finish — follow the steps below instead.",
+} as const;
+
+function TrustCa({
+  os,
+  onInstallCa,
+}: {
+  os: HostOs;
+  onInstallCa?: () => Promise<void>;
+}) {
+  const [target, setTarget] = useState<TrustTarget>(defaultTarget(os));
+  const [install, setInstall] = useState<keyof typeof INSTALL_NOTE>("idle");
+  const auto = onInstallCa && canAutoInstall(os) && target === defaultTarget(os);
+
+  return (
+    <div className="mt-2">
+      {auto && (
+        <div className="mb-2">
+          <button
+            type="button"
+            data-testid="install-ca"
+            disabled={install === "installing"}
+            onClick={() => {
+              setInstall("installing");
+              onInstallCa().then(
+                () => setInstall("done"),
+                () => setInstall("failed"),
+              );
+            }}
+            className="rounded-button border border-hairline px-2 py-1 text-ink disabled:opacity-60"
+          >
+            {COPY.steps["trust-ca"].action}
+          </button>
+          {INSTALL_NOTE[install] && (
+            <p data-testid="install-status" data-install={install} className="mt-1">
+              {INSTALL_NOTE[install]}
+            </p>
+          )}
+        </div>
+      )}
+      <label className="flex items-center gap-2">
+        Steps for
+        <select
+          data-testid="trust-target"
+          value={target}
+          onChange={(e) => setTarget(e.target.value as TrustTarget)}
+          className="rounded-button border border-hairline bg-transparent px-1 py-0.5 text-ink"
+        >
+          {TARGETS.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <ol data-testid="guided-steps" className="mt-1 list-decimal pl-5">
+        {guidedSteps(target).map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+    </div>
+  );
+}
 
 export function Onboarding({
   state,
   dispatch,
+  os = "other",
+  onInstallCa,
 }: {
   state: OnbState;
   dispatch: (e: OnbEvent) => void;
+  os?: HostOs;
+  onInstallCa?: () => Promise<void>;
 }) {
   const atFirst = state.step === STEPS[0];
   const atLast = state.step === STEPS[STEPS.length - 1];
@@ -63,15 +146,19 @@ export function Onboarding({
                   {status === "active" && (
                     <div data-testid="step-body" className="mt-2 text-sm text-ink-mute">
                       <p>{copy.body}</p>
-                      {copy.action && (
-                        <button
-                          type="button"
-                          disabled
-                          title="Available in a later step of setup"
-                          className="mt-2 rounded-button border border-hairline px-2 py-1 text-ink opacity-60"
-                        >
-                          {copy.action}
-                        </button>
+                      {step === "trust-ca" ? (
+                        <TrustCa os={os} onInstallCa={onInstallCa} />
+                      ) : (
+                        copy.action && (
+                          <button
+                            type="button"
+                            disabled
+                            title="Available in a later step of setup"
+                            className="mt-2 rounded-button border border-hairline px-2 py-1 text-ink opacity-60"
+                          >
+                            {copy.action}
+                          </button>
+                        )
                       )}
                     </div>
                   )}

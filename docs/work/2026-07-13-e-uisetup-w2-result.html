@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a54fb439f34851f0dfa8d82" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-UISETUP.W2 result: trust the CA</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-UISETUP.W2 — result</h1>
+      <p>The trust-ca onboarding step is live: on macOS/Windows one confirm + an OS elevation prompt
+      installs Trawler's CA natively (the app's first Tauri command), and a system selector shows the
+      correct guided steps for any system — always visible, auto path or not. The machine, stepper and
+      status dot are untouched; proof stays W4's capture.</p>
+      <div class="meta">Result v1 · 2026-07-13 · Trawler · T3 WU result · epic:
+      <a href="2026-07-12-e-uisetup-plan.html">E-UISETUP</a> · plan:
+      <a href="2026-07-13-e-uisetup-w2-plan.html">W2 plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Delivered as planned.</strong> Against the W2 requirement and its "done when":</p>
+      <ul>
+        <li><strong>Native install, Rust owns the command.</strong> <code>ui/src-tauri/src/setup.rs</code>
+        — <code>install_ca(pem)</code> validates the PEM header, writes a temp <code>.pem</code>, builds
+        the exact per-OS argv from a fixed template (<code>install_command</code>: macOS
+        <code>security add-trusted-cert … System.keychain</code> · Windows
+        <code>certutil -addstore -f ROOT</code> · else <code>None</code>) and wraps it in elevation
+        (<code>elevated_argv</code>: osascript "with administrator privileges" / PowerShell
+        <code>Start-Process -Verb RunAs</code>). The webview passes only the PEM, never a command.
+        Registered as the app's first <code>invoke_handler</code> command.</li>
+        <li><strong>System selector + guided steps everywhere.</strong> <code>ui/src/setup.ts</code> —
+        <code>hostOs()</code> (UA family), <code>canAutoInstall</code> (mac/win only),
+        <code>guidedSteps(target)</code> as plain-text data for all six targets
+        (macOS/Windows/Linux/Firefox/iOS-Simulator/Android, incl. the Firefox-own-store and
+        Simulator-uses-host notes). The selector defaults to the detected host; steps stay visible on the
+        auto path and after any failure.</li>
+        <li><strong>Step body wired, machine untouched.</strong> <code>Onboarding.tsx</code>'s trust-ca
+        body renders the selector, steps, and — only when selected == host &amp;&amp; auto-capable — the
+        <em>Install certificate</em> button with local idle/installing/done/failed state.
+        <code>App.tsx</code> supplies <code>installCa</code> = <code>api.caCertPem()</code>
+        (new <code>GET /ca.crt</code> client method) → <code>invoke("install_ca", {pem})</code>. done means
+        only "the command exited 0"; nothing transitions the machine — W4's capture proves trust.</li>
+        <li><strong>Gates green, headless.</strong> 43 vitest tests (7 files) · 6 <code>cargo test</code>
+        units in the standalone <code>src-tauri</code> crate · clippy clean ·
+        <code>cargo xtask ui build</code> (tsc + vite) clean.</li>
+      </ul>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <ul>
+        <li><strong><code>install_ca</code> is sync, not <code>async</code>.</strong> The plan sketched
+        <code>async fn</code>; a Tauri sync command runs on a worker thread, which is the right place to
+        block on an elevation prompt — an async command would park a runtime thread for the prompt's
+        duration. Same IPC surface, same contract.</li>
+        <li><strong><code>install_command(os: &amp;str, …)</code> instead of a <code>HostOs</code>
+        enum.</strong> It takes <code>std::env::consts::OS</code>'s string directly — one type fewer, the
+        unit tests pin the identical argv output the plan's contract specified.</li>
+        <li><strong><code>elevated_argv</code> split out and unit-tested.</strong> The plan required
+        builder tests only; keeping the elevation wrapper pure made it testable for free (osascript /
+        UAC wrapping asserted).</li>
+        <li><strong>Selector fallback:</strong> an undetectable host (<code>other</code>) defaults the
+        selector to Linux rather than hiding it — every system's steps remain reachable.</li>
+      </ul>
+    </div>
+
+    <h2 id="verification">Verification</h2>
+    <table data-item="verification">
+      <thead><tr><th>Level</th><th>Where</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td><b>unit · Rust</b></td><td><code>setup.rs</code> (6)</td>
+          <td>exact macOS/Windows argv · <code>None</code> elsewhere · osascript/UAC elevation wrapping ·
+          non-certificate PEM rejected</td></tr>
+        <tr><td><b>unit · TS</b></td><td><code>setup.test.ts</code> (6)</td>
+          <td>UA→os mapping · <code>canAutoInstall</code> · selector default · per-target guided steps
+          (all six, system-specific instruction pinned)</td></tr>
+        <tr><td><b>unit · TS</b></td><td><code>Onboarding.test.tsx</code> (+4)</td>
+          <td>auto host shows Install wired to <code>onInstallCa</code> + steps alongside · non-auto host
+          steps-only · selector switch hides auto + swaps steps · <code>&lt;b&gt;</code> renders literally
+          (text, never markup)</td></tr>
+        <tr><td><b>integration · seam</b></td><td><code>App.test.tsx</code> (+2)</td>
+          <td>Install → <code>caCertPem()</code> → <code>invoke("install_ca", {pem})</code> → done, no
+          phase change · rejected invoke → failed with guided steps still visible</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="waiver">
+      <p><strong>Waived (as planned):</strong> the elevated install itself needs a real OS privilege
+      prompt, so it is not hermetically runnable — the command builder and elevation wrapper are
+      unit-tested instead, and the full journey is proven by W4's e2e via a real proxied HTTPS request.</p>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -36,6 +36,17 @@ test("listFlows fetches /flows with the filter and parses typed rows", async () 
   expect(result[0].status).toBe(200);
 });
 
+test("caCertPem fetches /ca.crt as text and throws on a non-ok response", async () => {
+  const pem = "-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----\n";
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => pem });
+  vi.stubGlobal("fetch", fetchMock);
+  await expect(createApi("http://127.0.0.1:9999").caCertPem()).resolves.toBe(pem);
+  expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:9999/ca.crt");
+
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+  await expect(createApi("http://x").caCertPem()).rejects.toThrow(/404/);
+});
+
 test("listFlows throws on a non-ok response", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
   await expect(createApi("http://x").listFlows({})).rejects.toThrow(/500/);

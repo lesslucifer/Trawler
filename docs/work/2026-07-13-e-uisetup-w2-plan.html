@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a54e6589f34851f0dfa8d38" data-artifact="wu-plan" data-status="draft">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-UISETUP.W2 WU plan: trust the CA</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-UISETUP.W2 — Trust the CA</h1>
+      <p>Make the machine trust Trawler's CA from inside the native app: one confirm + elevation
+      installs it on macOS and Windows; correct guided steps everywhere else. The first Tauri
+      command in the app — the CA-trust half of the onboarding stepper W1 shipped.</p>
+      <div class="meta">Draft v1 · 2026-07-13 · Trawler · T3 WU plan · epic:
+      <a href="2026-07-12-e-uisetup-plan.html">E-UISETUP</a> · builds on:
+      <a href="2026-07-13-e-uisetup-w1-plan.html">W1</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">The onboarding <strong>Trust the CA</strong> step installs Trawler's CA
+    (PEM bytes from <code>GET /ca.crt</code>) into the OS trust store <strong>natively</strong>: on macOS
+    and Windows, one confirm + an OS elevation prompt runs the install for the user
+    (<code>security add-trusted-cert</code> into the System keychain · <code>certutil -addstore ROOT</code>).
+    A <strong>system selector</strong> (defaulting to the detected host) lets the user read the correct
+    <strong>guided steps for any system</strong> — Linux, Firefox's own store, simulators, devices — as text
+    (UC-3/UC-4 invariant); the steps stay visible even on the auto path, as the manual alternative. The
+    privileged command is built in <code>ui/src-tauri</code> from a fixed per-OS template — the webview
+    passes only the PEM, never a command. <strong>Verifying it worked:</strong> the install command's exit
+    status gives a weak "the command ran" signal (step → <code>done</code>/<code>failed</code>); the
+    authoritative "trusted on this system?" answer is W4's live capture. No trust-store inspection. Decline
+    the elevation prompt ⇒ the guided steps carry them the rest of the way (consent, never silent).</p>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">Epic <a href="2026-07-12-e-uisetup-plan.html#w2">E-UISETUP.W2</a> — the
+    <strong>CA-trust</strong> step of the <a href="2026-07-12-e-uisetup-plan.html#onboarding-flow">UC-5
+    onboarding flow</a>. Fills the <code>trust-ca</code> step body that W1 left as an inert placeholder in
+    <a href="../../ui/src/Onboarding.tsx">Onboarding.tsx</a>; the machine, stepper and status dot are
+    unchanged. CA bytes come from the existing <code>ca_cert_pem</code> served at
+    <a href="../../src/api/routes.rs">routes.rs</a> — <strong>no core / API change</strong>. Introduces the
+    app's first <strong>local-OS setup capability</strong> (Tauri command + process execution, consent +
+    elevation) — the new boundary the epic's distillation plan flags for a DEC, established here alongside
+    <a href="../decisions/dec-12-native-ui-stack.html">DEC-12</a> (configurable API base, no hardcoded port).</p>
+
+    <h2 id="design">Design</h2>
+    <p>W1's frontend is a pure HTTP client with zero Tauri IPC; <a href="../../ui/src-tauri/src/lib.rs">lib.rs</a>
+    registers no commands. W2 adds the first: a Rust <code>install_ca</code> command, and the frontend's
+    first <code>invoke()</code>. <code>@tauri-apps/api</code> is already a dependency — no new JS package.</p>
+
+    <div class="callout warn" data-c="trust-boundary">
+      <p><strong>Trust boundary — Rust owns the privileged command; JS passes only data.</strong> The
+      command never takes an argv or shell string from the webview (that would be arbitrary elevated code
+      execution over IPC). <code>install_ca(pem)</code> accepts the PEM string only, <strong>validates</strong>
+      it looks like a certificate (<code>-----BEGIN CERTIFICATE-----</code>) before writing it to a temp
+      file, and builds the install command from a <strong>fixed per-OS template</strong>. Because the app
+      never reads the trust store back, there is no store-parsing attack surface either — success is a real
+      captured flow (W4), not a self-report.</p>
+    </div>
+
+    <div class="diagram" data-c="install-flow">
+      <pre class="mermaid">
+flowchart LR
+  Sel["System selector<br/>(defaults to detected host)"] --> Steps["guidedSteps(target)<br/>shown as text — always visible"]
+  Sel -->|host is mac/win| Btn["‘Install certificate’<br/>auto · one confirm"]
+  Btn --> Fetch["api.caCertPem()<br/>GET /ca.crt → PEM text"]
+  Fetch --> Inv["invoke('install_ca', {pem})"]
+  Inv --> Rust["src-tauri/setup.rs<br/>validate PEM · write temp .pem<br/>build cmd per std::env::consts::OS<br/>run elevated (osascript / UAC)"]
+  Rust -->|exit 0| Done["step → done<br/>(command ran; NOT trust-proof — W4 proves)"]
+  Rust -->|err / declined| Failed["step → failed<br/>(guided steps stay visible)"]
+      </pre>
+      <div class="caption">The selector always shows the manual steps for the chosen system; the auto
+      Install button appears only when the detected host is mac/win. Any decline or failure leaves the
+      guided steps in place. One confirm, one elevation prompt.</div>
+    </div>
+
+    <div class="callout" data-c="how-verified">
+      <p><strong>"Installed properly?" — two signals, and why not a third.</strong> The trust-ca step is a
+      local 3-state, <code>idle → installing → done | failed</code>. <strong>done</strong> means only that
+      the elevated command exited 0 (<code>security</code>/<code>certutil</code> reported success) — real,
+      but <em>weak</em>: it says the command ran, not that the client trusts us. The
+      <strong>authoritative</strong> answer, "is the CA trusted on this system right now?", is W4's live
+      self-test: a proxied HTTPS request that comes back decrypted. We deliberately do <strong>not</strong>
+      inspect the trust store as a third signal — store presence is OS- and store-specific (system vs login
+      vs Firefox's NSS vs per-app), brittle to parse, and still wouldn't prove decryption works. Capture is
+      the ground truth (epic: <em>prove by capture</em>).</p>
+    </div>
+
+    <div class="callout" data-c="returning-user">
+      <p><strong>Reopened the app, or trusted the CA some other way?</strong> Nothing to redo, and nothing
+      to persist. Onboarding entry is driven by <em>live capture</em>, not a remembered checkbox: at launch
+      W4's self-test fires a proxied HTTPS request, and if it returns decrypted — however the CA got trusted
+      (a prior session, a manual install, another tool) — the machine goes straight to <code>proven</code>
+      and the onboarding surface is skipped entirely. So "already done" shows up as <em>never seeing the
+      step</em>, not as a pre-ticked one. We do not persist per-step status and do not read the trust store
+      (both epic non-goals — see the <a href="2026-07-12-e-uisetup-plan.html#open-questions">epic open
+      question</a> "persist across restarts": derive from capture, no new store). If the user <em>does</em>
+      land back on the trust-ca step — e.g. the CA is trusted but the proxy isn't set, so capture can't yet
+      confirm — re-running Install is safe: <code>certutil -addstore -f</code> overwrites and
+      <code>add-trusted-cert</code> re-applies trust; no duplicate cert, no error.</p>
+    </div>
+
+    <div class="callout" data-c="os-detection">
+      <p><strong>Two independent OS reads, by design.</strong> The frontend picks <em>which step content to
+      render</em> (auto button vs guided text) from <code>navigator.userAgent</code> — synchronous, no new
+      dependency, and reliable for the mac/win/linux family because the webview's UA always reflects the host
+      OS. Rust builds the <em>actual privileged command</em> from <code>std::env::consts::OS</code> —
+      authoritative at the moment of action. They serve different moments and need no shared source; if they
+      ever disagreed, Rust is still correct for the install. <em>Considered and declined:</em>
+      <code>@tauri-apps/plugin-os</code> (new JS + Rust dep + capability) and a <code>host_os</code> IPC
+      round-trip — both heavier than a three-line UA check for family detection.</p>
+    </div>
+
+    <h3 id="files">Files</h3>
+    <table data-c="files">
+      <thead><tr><th>File</th><th></th><th>Role</th><th>W2 content</th></tr></thead>
+      <tbody>
+        <tr><td><code>ui/src-tauri/src/setup.rs</code></td><td>new</td><td>install command + pure builder</td>
+          <td><code>#[tauri::command] install_ca(pem)</code>; pure <code>install_command(os, cert)</code>
+          argv/template builder; PEM sanity-check; <code>#[cfg(test)]</code> builder tests</td></tr>
+        <tr><td><code>ui/src-tauri/src/lib.rs</code></td><td>edit</td><td>register the command</td>
+          <td><code>.invoke_handler(tauri::generate_handler![setup::install_ca])</code></td></tr>
+        <tr><td><code>ui/src/api.ts</code></td><td>edit</td><td>CA bytes over HTTP</td>
+          <td><code>caCertPem(): Promise&lt;string&gt;</code> — <code>GET /ca.crt</code> as text, reusing the
+          existing <code>base()</code> resolution (DEC-12)</td></tr>
+        <tr><td><code>ui/src/setup.ts</code></td><td>new</td><td>pure OS helpers</td>
+          <td><code>hostOs()</code> · <code>canAutoInstall(os)</code> · <code>guidedSteps(target)</code>
+          for every system (macOS/Windows/Linux/Firefox/iOS-sim/Android) — instruction text as data,
+          never markup</td></tr>
+        <tr><td><code>ui/src/Onboarding.tsx</code></td><td>edit</td><td>trust-ca step body</td>
+          <td>system selector (default = detected host) + always-visible <code>guidedSteps</code> for the
+          selected target; auto <em>Install certificate</em> button only when selected == host &amp;&amp;
+          auto-capable → <code>onInstallCa</code>; local state idle/installing/done/failed; failure keeps
+          the guided steps visible</td></tr>
+        <tr><td><code>ui/src/App.tsx</code></td><td>edit</td><td>wire the install action</td>
+          <td><code>installCa</code> = <code>api.caCertPem()</code> then
+          <code>invoke('install_ca', {pem})</code>; passes <code>os</code> + handler into
+          <code>Onboarding</code></td></tr>
+        <tr><td><code>ui/src/setup.test.ts</code></td><td>new</td><td>unit</td>
+          <td>UA→os mapping; <code>canAutoInstall</code>; <code>guidedSteps</code> for every target</td></tr>
+        <tr><td><code>ui/src/Onboarding.test.tsx</code></td><td>edit</td><td>unit</td>
+          <td>auto host shows Install + guided steps; selecting another system switches steps;
+          render-as-text; click calls <code>onInstallCa</code>; failure → failed, steps stay</td></tr>
+        <tr><td><code>ui/src/App.test.tsx</code></td><td>edit</td><td>integration seam</td>
+          <td>Install → <code>caCertPem</code> → <code>invoke('install_ca',{pem})</code>; reject → guided</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="contracts">Contracts (the shape the tests pin)</h3>
+    <pre data-c="rust-contract">// ui/src-tauri/src/setup.rs — Rust owns the privileged command
+enum HostOs { MacOs, Windows, Other }          // from std::env::consts::OS at call time
+
+fn install_command(os: HostOs, cert: &Path) -> Option&lt;Privileged&gt;
+//   MacOs   → security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain &lt;cert&gt;
+//   Windows → certutil -addstore -f ROOT &lt;cert&gt;
+//   Other   → None                             // guided-only; no auto path
+
+#[tauri::command]
+async fn install_ca(pem: String) -> Result&lt;(), String&gt;
+//   reject if !pem.contains("BEGIN CERTIFICATE") → temp .pem →
+//   wrap install_command in elevation (osascript "with administrator privileges" / UAC) → run → map status</pre>
+    <pre data-c="ts-contract">// ui/src/setup.ts — pure, no I/O
+type HostOs      = 'macos' | 'windows' | 'linux' | 'other';
+type TrustTarget = 'macos' | 'windows' | 'linux' | 'firefox' | 'ios-sim' | 'android';
+hostOs(): HostOs                             // navigator.userAgent (webview UA == host OS)
+canAutoInstall(os: HostOs): boolean          // true only for macos | windows
+guidedSteps(t: TrustTarget): string[]        // per-system instructions, plain text — for ANY target
+// selector default = hostOs() mapped to its TrustTarget</pre>
+    <p>The install action lives <strong>outside the state machine</strong> — the W1 reducer stays pure and
+    unchanged. The step's <code>done</code>/<code>failed</code> status and the selected system are local
+    step state, not phase transitions; only W4's live <code>captured</code> flips the machine to
+    <code>proven</code>.</p>
+
+    <h3 id="os-matrix">Per-client CA trust</h3>
+    <table data-c="os-matrix">
+      <thead><tr><th>Client</th><th>CA trust</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td>macOS system + Safari/Chrome</td><td><span class="badge auto">auto</span></td>
+          <td><code>security add-trusted-cert</code> → System keychain, elevated</td></tr>
+        <tr><td>Windows system + Edge/Chrome</td><td><span class="badge auto">auto</span></td>
+          <td><code>certutil -addstore -f ROOT</code>, elevated (UAC)</td></tr>
+        <tr><td>Linux system / Chrome</td><td><span class="badge">guided</span></td>
+          <td>copy to <code>/usr/local/share/ca-certificates</code> + <code>update-ca-certificates</code>
+          (Chrome uses the NSS store)</td></tr>
+        <tr><td>Firefox (own cert store)</td><td><span class="badge">guided</span></td>
+          <td>Settings → Privacy → Certificates → Import</td></tr>
+        <tr><td>iOS Simulator</td><td><span class="badge auto">auto</span></td>
+          <td>uses the host Mac's trust — the macOS auto path already covers it</td></tr>
+        <tr><td>Android emulator / device</td><td><span class="badge">guided</span></td>
+          <td>push the cert + install in the OS settings</td></tr>
+      </tbody>
+    </table>
+    <p>The system selector exposes every row above — a user on any host can read the steps for Firefox, a
+    simulator, or a device without leaving the trust-ca step.</p>
+
+    <h2 id="expected">Expected (done when)</h2>
+    <div data-item="expected">
+      <ul>
+        <li>On macOS/Windows the <code>trust-ca</code> step shows an <em>Install certificate</em> action;
+        clicking it fetches the PEM, invokes <code>install_ca</code>, and one OS elevation prompt runs the
+        real install. Command exit 0 → step <code>done</code>; declining or a non-zero exit →
+        <code>failed</code>, with the guided steps still visible.</li>
+        <li>A <strong>system selector</strong> (default = detected host) lets the user read the correct
+        <strong>guided steps for any system</strong> as text — reachable even on the auto host, no browser
+        "download" UX.</li>
+        <li>The Rust <code>install_command</code> builder emits the exact per-OS argv
+        (<code>security …</code> / <code>certutil …</code>) and <code>None</code> elsewhere; the PEM
+        validation rejects non-certificate input. Unit-tested.</li>
+        <li><code>setup.ts</code> (UA→os · <code>canAutoInstall</code> · <code>guidedSteps</code> per target)
+        and the text-safe render are unit-tested; the install seam (fetch → invoke; selector switches steps;
+        failure → <code>failed</code>) has an integration test.</li>
+        <li>The onboarding machine is untouched; a successful install does <strong>not</strong> mark the
+        step proven, and the trust store is never read — only W4's capture proves trust.
+        <code>cargo xtask ui build</code> (tsc) clean; <code>cargo test</code> in <code>ui/src-tauri</code>
+        green, headless.</li>
+      </ul>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <thead><tr><th>Level</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td><b>unit</b> (commit · Rust)</td><td><code>setup.rs</code> <code>install_command</code>:
+        macos → <code>security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain &lt;cert&gt;</code>;
+        windows → <code>certutil -addstore -f ROOT &lt;cert&gt;</code>; other → <code>None</code>. PEM
+        validation rejects input without a <code>BEGIN CERTIFICATE</code> header. Runs under
+        <code>cargo test</code> in the standalone <code>src-tauri</code> crate — pure functions, GUI-free.</td></tr>
+        <tr><td><b>unit</b> (commit · TS)</td><td><code>setup.test.ts</code>: <code>hostOs()</code> maps
+        macOS/Windows/Linux UA samples; <code>canAutoInstall</code> true only for mac/win;
+        <code>guidedSteps</code> returns the correct instructions for <strong>every</strong> target
+        (incl. the Firefox-own-store and iOS-Simulator-uses-host notes).</td></tr>
+        <tr><td><b>unit</b> (commit · TS)</td><td><code>Onboarding.test.tsx</code>: with <code>os=macos</code>
+        the step renders an enabled <em>Install certificate</em> button (wired to <code>onInstallCa</code>)
+        <em>and</em> the guided steps; changing the selector to another system switches the shown steps; a
+        string containing <code>&lt;b&gt;</code> appears <strong>literally</strong> (render-as-text, no
+        <code>dangerouslySetInnerHTML</code>).</td></tr>
+        <tr><td><b>integration</b> (WU seam)</td><td><code>App.test.tsx</code>: clicking Install calls
+        <code>api.caCertPem()</code> then <code>invoke('install_ca', {pem})</code> (both mocked) and the
+        step reaches <code>done</code>; a <em>rejected</em> invoke sets <code>failed</code> with the guided
+        steps still shown (the decline/consent path); no machine phase change (proof stays W4).</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="waiver">
+      <p><strong>Waiver (judged at review):</strong> the elevated install itself
+      (<code>osascript … with administrator privileges</code> / UAC) needs an OS privilege prompt, so it is
+      <em>not</em> hermetically runnable in CI — the <strong>command builder</strong> is unit-tested instead,
+      and the full journey is proven in W4's e2e via a real proxied HTTPS request. By design, not a gap:
+      success = a decrypted flow observed, never a trust-store read. Matches the
+      <a href="2026-07-12-e-uisetup-plan.html#e2e-plan">epic e2e waiver</a>.</p>
+    </div>
+
+    <h2 id="scope">Out of scope for W2</h2>
+    <table data-c="scope">
+      <thead><tr><th>Not in W2</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>Proxy auto-set + copy-paste snippet</td><td>W3</td></tr>
+        <tr><td>Live proof detector · self-test · <code>/stream</code> watch · dot-goes-red</td><td>W4</td></tr>
+        <tr><td>Persisting per-step "done" across restarts / detecting a prior or out-of-band install</td><td>derive from capture at launch (W4); epic non-goal — no new store</td></tr>
+        <tr><td>Trust-store inspection (reading whether trust exists)</td><td>never — proof is capture (epic)</td></tr>
+        <tr><td>Linux auto-install</td><td>epic non-goal; guided now, auto later if demand</td></tr>
+        <tr><td>Passive broken-setup detection (needs a new core failed-handshake signal)</td><td>future epic</td></tr>
+        <tr><td>The DEC doc recording the local-OS setup capability</td><td>epic-close distillation</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
