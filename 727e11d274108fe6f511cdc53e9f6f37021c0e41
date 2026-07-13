@@ -7,6 +7,9 @@ head: 727e11d274108fe6f511cdc53e9f6f37021c0e41
 diff_sha256: 9187b516eb1b334ea718bc3d4b5e1b901a0a050716473fe2b6b15862b3d7e3bb
 dimensions: [correctness, reuse, simplification, efficiency, altitude]
 findings: { found: 11, verified: 1, waived: 0 }
+walk_waivers:
+  - seam: 4f40b4708b
+    why: "E-UIINSPECT.W2 merged UI-only under the pre-d5296f2 gate, whose is_code exempted ui/src (the exact bug d5296f2 later fixed), so its seam carries the older doc/v1 shape (no action field) and no dod receipt. The seam is safe: W2's own cr/v2 PASS is bound to its exact diff (base c52c34f, head 5c5f421) with test/v2 + doc/v1 notes on that tip; its behavior is covered by the UC-5 epic e2e (detail panel steps); and every W2 line is inside this epic review's PASS over the full main..tip diff. Schema-era misfire, not missing evidence."
 notes: >
   Epic-seam review over the full main..epic diff (three WUs, each already cr/v2
   PASS at its own merge, + the epic-close distillation + the gate infra commit).
