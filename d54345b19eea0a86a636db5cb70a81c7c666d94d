@@ -1,0 +1,29 @@
+schema: cr/v2
+scope: "WU body-viewers -> epic/uiinsp"
+epic: E-UIINSPECT
+wu: E-UIINSPECT.W3
+branch: wu/uiinsp/body-viewers
+base: d5296f2544b77f9277f1906653fae8cb83d567ad
+head: d54345b19eea0a86a636db5cb70a81c7c666d94d
+diff_sha256: efed0dee828ee050383c5d63c2d560b91963e05b16b9496419b75e91610106ab
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 16, verified: 3, waived: 0 }
+notes: >
+  Two review rounds, five isolated finders + fresh verifier per candidate each
+  round. Round 1 (9 candidates) verified three real findings, all fixed on this
+  tip with named regression tests first: (1) copy body delivered UTF-8-mangled
+  bytes instead of the shown hex dump for hex-rendered bodies — copy now
+  delivers the shown rendering and is hidden for images (no text
+  representation); (2) the JSON tree rendered unbounded DOM for cap-sized
+  bodies while the hex view had HEX_MAX — TREE_MAX (128 KiB) now falls back to
+  text; (3) image/webp+avif saved as .bin — extensions added. Round 2 over the
+  fixed diff (7 candidates): all adjudicated false-positive — form-copy copies
+  the replayable wire text on purpose; TREE_MAX is a structural heuristic, not
+  a byte-exact gate; EXTENSIONS-as-Record and HEX_MAX-unexport are code
+  golf/deliberate symmetry; missing AbortController matches the established,
+  previously-PASSed useFlowDetail pattern on a loopback API (bounded at 4
+  toggle states); two verbatim re-raises of round-1 refutations (mime one-liner
+  duplication, saveBody placement) dropped on the standing adjudications.
+  Vitest 50 green, tsc/pnpm build clean, UC-5 e2e 10/10 on this tip.
+verdict: PASS
+date: 2026-07-13
