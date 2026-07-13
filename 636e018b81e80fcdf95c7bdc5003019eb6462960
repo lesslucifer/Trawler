@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W2 trust-ca -> epic/uisetup"
+epic: E-UISETUP
+wu: E-UISETUP.W2
+branch: wu/uisetup/trust-ca
+base: d2701e458784a5ce83ce220626560f36d8fbceb2
+head: 636e018b81e80fcdf95c7bdc5003019eb6462960
+diff_sha256: 94fe5a29fa622f43e76a849679ab5b0a8ac1a94c23c57ed19f7ba5f1f72a9ae1
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-13
