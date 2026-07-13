@@ -1,0 +1,11 @@
+schema: doc/v1
+epic: E-UISETUP
+wu: E-UISETUP.W1
+changes:
+  - path: docs/work/2026-07-13-e-uisetup-w1-plan.html
+    tier: T3
+    action: updated
+  - path: docs/work/2026-07-13-e-uisetup-w1-result.html
+    tier: T3
+    action: created
+t2_waived: "W1 is design + skeleton: no use-case/decision fact is settled yet. The onboarding UX contract is captured in the T3 plan; it distills into T2 when behaviour is real (W2-W4)."
