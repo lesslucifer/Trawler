@@ -143,9 +143,9 @@ export function Onboarding({
             {STEPS.map((step, i) => {
               const status = stepStatus(state, step);
               const copy = COPY.steps[step];
-              const installFailed = step === "trust-ca" && install === "failed";
-              const glyph =
-                installFailed && status === "done" ? "✗ failed" : GLYPH[status];
+              const showFailed =
+                step === "trust-ca" && install === "failed" && status === "done";
+              const glyph = showFailed ? "✗ failed" : GLYPH[status];
               return (
                 <li
                   key={step}
@@ -163,9 +163,7 @@ export function Onboarding({
                     <span>
                       {i + 1} · {copy.title}
                     </span>
-                    <small className={glyph === "✗ failed" ? "text-warn" : "text-ink-mute"}>
-                      {glyph}
-                    </small>
+                    <small className={showFailed ? "text-warn" : "text-ink-mute"}>{glyph}</small>
                   </button>
 
                   {status === "active" && (
