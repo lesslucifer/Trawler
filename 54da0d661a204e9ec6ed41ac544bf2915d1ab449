@@ -1,0 +1,11 @@
+schema: doc/v1
+epic: E-UISETUP
+wu: E-UISETUP.W5
+changes:
+  - path: docs/work/2026-07-14-e-uisetup-w5-plan.html
+    tier: T3
+    action: created
+  - path: docs/work/2026-07-14-e-uisetup-w5-result.html
+    tier: T3
+    action: created
+t2_waived: "no T2 fact settles at the WU level — W5 completes the teardown half of the UC-5 journey that distils into web-ui.html at EPIC close (per the epic plan distillation plan). The local-OS setup capability (install CA / set + unset proxy, consent + elevation) is the DEC the epic plan already flagged alongside DEC-12, authored at epic-close. No T1 change (one control added to the existing set-proxy step body, no new region/route)."
