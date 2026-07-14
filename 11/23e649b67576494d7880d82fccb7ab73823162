@@ -1,0 +1,24 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W6 onboarding UX (honest per-step status + connection signal + P1/P3 + copy) -> epic/uisetup"
+epic: E-UISETUP
+wu: E-UISETUP.W6
+branch: wu/uisetup/w6-onboarding-ux
+base: b2c6168698fa2b1fae0f5f816dec157ffc3cdcfa
+head: 1123e649b67576494d7880d82fccb7ab73823162
+diff_sha256: 9687bccdaade55cc0d78bdb451cfe393fca43e74a083588a73082d29fcc34725
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 10, verified: 2, waived: 0 }
+review_history:
+  - round: 1
+    tip: 97d4796c679d10a74613146cfba8559f0272f14c
+    verdict: FAIL
+    verified:
+      - "ui/src/api.ts: 'connection' bound to onEvent too -> redundant /flows refetch (nit)"
+      - "ui/src/setup.ts trustStatus: error branch preceded probe===trusted -> stale error could mask an already-trusted probe (nit)"
+    refuted: ["proxyStatus(foreign) folds into no-traffic (by plan design)", "useFlows seed/live double-count (undercount at worst; >0 gate only)", "test harness duplication (Harness can't take upstream_extra_root_pems; mirrors sibling)", "trafficSeen OR redundant (load-bearing: http flows have no CONNECT)", "running helper / double stepStatus (pure taste)", "doc-comments name consumer (rationale not coupling; P5)"]
+  - round: 2
+    tip: 1123e649b67576494d7880d82fccb7ab73823162
+    verdict: PASS
+    note: "follow-up commit 1123e64 fixed both nits behavior-preservingly + added 4 regression tests (api.test.ts x2, setup.test.ts x2); re-review of the fix delta (97d4796..1123e64) confirmed both fixes correct, tests non-vacuous (fail on old code), no new findings."
+verdict: PASS
+date: 2026-07-15
