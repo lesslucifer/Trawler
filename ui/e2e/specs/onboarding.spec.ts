@@ -15,8 +15,10 @@ const hit = () => fetch(`${ports.control}/hit`);
 // UC-5 (E-UISETUP) end to end: the real Tauri window against a real ephemeral core.
 // A fresh launch with no decrypted flow shows onboarding; a real proxied HTTPS
 // request (the harness /hit) is decrypted by the core, and the Verify check flips
-// to proven and reveals the flow list. This spec MUST run before flows.spec.ts —
-// once capture is proven the app latches everProven and never re-forces onboarding.
+// to proven and reveals the flow list. The onboarding assertions must come before
+// the list ones (the tests below are ordered), since capture latches everProven and
+// the app then never re-forces onboarding — so the UC-4 list checks are folded in
+// here after the reveal rather than living in a separate spec.
 async function pointAppAtCore() {
   // sessionStorage survives the reload; the fresh page reads it before React
   // mounts, so both the launch /flows read and the SSE stream bind the port.
