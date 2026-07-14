@@ -1,0 +1,15 @@
+schema: test/v2
+level: working-unit
+epic: E-UISETUP
+wu: E-UISETUP.W5
+tests:
+  unit:
+    count: 27
+    covers: "Rust setup.rs (+5): unset_proxy_commands macOS = ONE osascript-elevated compound script running networksetup -setwebproxystate off / -setsecurewebproxystate off per enabled service (quoted, saved address never rewritten); Windows = reg add HKCU ProxyEnable=0 + the SAME PowerShell InternetSetOption refresh, NO elevation wrapper; None elsewhere; revert_if_marked is a no-op when the marker is absent; proxy_is_set reflects the marker and clear_proxy_marker drops it without running any OS command. TS Onboarding.test.tsx (+1): the Stop-routing control is hidden until the proxy was set, appears after a successful set, invokes onUnsetProxy, shows the resume note. TS closeConfirm.test.tsx (+7): the quit guard — no ask when the proxy isn't ours-set; when it is, close is prevented and the confirm opens; Remove -> unset_proxy then quit; Keep -> clear_proxy_marker (never unset_proxy) then quit; Cancel dismisses without quitting; a failed revert still quits; the dialog spells out the internet-loss consequence and wires Remove/Keep/Esc+backdrop cancel. 19 src-tauri units + 84 vitest green."
+  integration:
+    count: 1
+    covers: "App seam (App.test.tsx +1): after a successful Set-system-proxy, the Stop-routing control -> invoke('unset_proxy'), and the resume note renders — the symmetric counterpart to W3's set_proxy invoke-seam test, proving the App wires unsetProxy through to the Tauri command."
+  e2e:
+    count: 4
+    covers: "ui/e2e/specs/onboarding.spec.ts: the onboarding->capture journey passes with the new lifecycle wiring — the app boots through the Tauri setup hook (crash reconciliation, off the main thread) and quits through the RunEvent::ExitRequested/Exit net (revert_if_marked, a no-op with no marker in the hermetic harness). A broken hook or missing capability would fail this launch/quit."
+  waived: "the real OS proxy-off (osascript with-admin / live reg add + InternetSetOption) needs a privileged host and would mutate the CI machine's system proxy — not hermetically runnable, so neither the auto-revert nor the quit confirm's Remove path is driven end-to-end in e2e. The off-command builders, the marker gate, the two marker commands, and the whole close-confirm hook/dialog are unit-tested; e2e proves the control surface + lifecycle wiring. Epic waiver inherited (consent proven by the same explicit confirm/elevation W3 uses). macOS Cmd-Q bypasses onCloseRequested (verified in tao/tauri source); the RunEvent::Exit net covers that path — hard-kill/SIGKILL remain the acknowledged unfixable tail, reconciled on next launch."
