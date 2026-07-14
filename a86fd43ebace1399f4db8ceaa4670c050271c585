@@ -1,0 +1,10 @@
+schema: dod/v1
+level: working-unit
+epic: E-UISETUP
+wu: E-UISETUP.W4
+branch: HEAD
+base: 14b7212ece0811d8cb2aa6329847ca9bcdc5cdec
+tip: a86fd43ebace1399f4db8ceaa4670c050271c585
+diff_sha256: 682f1ba8ec31dd066af58fe14e3c0fbadf3a3bb426305284c49180ddc33dce0a
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review]
+date: 2026-07-14
