@@ -176,6 +176,18 @@ test("trustStatus: a running install and a failure surface their own transient s
   expect(trustStatus("untrusted", NONE, null, "denied")).toMatchObject({ tone: "warn" });
 });
 
+test("trustStatus: an authoritative positive wins over a stale action error", () => {
+  // Probe says trusted (or a flow decrypted) despite a failed last click — the CA
+  // IS trusted, so show green, not a misleading 'Install failed'.
+  expect(trustStatus("trusted", NONE, null, "denied")).toMatchObject({ tone: "ok", glyph: "✓" });
+  expect(trustStatus("untrusted", DECRYPTED, null, "denied")).toMatchObject({ tone: "ok" });
+});
+
+test("proxyStatus: an authoritative positive wins over a stale set error", () => {
+  expect(proxyStatus("ours", NONE, null, "denied")).toMatchObject({ tone: "ok", glyph: "✓" });
+  expect(proxyStatus("none", TRAFFIC, null, "denied")).toMatchObject({ tone: "ok" });
+});
+
 test("proxyStatus: the probe or ANY connection turns it green, decrypt or not", () => {
   expect(proxyStatus("ours", NONE, null)).toMatchObject({ tone: "ok", glyph: "✓" });
   const seen = proxyStatus("none", TRAFFIC, null);

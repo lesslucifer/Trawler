@@ -210,10 +210,13 @@ export function trustStatus(
   error?: string,
 ): StepStatusView {
   if (running === "installing") return { glyph: "⟳", tone: "muted", message: "Installing…" };
-  if (error) return { glyph: "⚠", tone: "warn", message: `Install failed — ${error}` };
+  // An authoritative positive — the machine trusts the CA, proven by the probe or
+  // a decrypted flow — wins over a stale action error: the CA is trusted whatever
+  // the last click did.
   if (probe === "trusted") return { glyph: "✓", tone: "ok", message: "Trusted on this machine" };
   if (seen.decrypted)
     return { glyph: "✓", tone: "ok", message: "Trusted — confirmed by captured traffic" };
+  if (error) return { glyph: "⚠", tone: "warn", message: `Install failed — ${error}` };
   if (seen.trafficSeen)
     return {
       glyph: "⚠",
@@ -232,11 +235,13 @@ export function proxyStatus(
   error?: string,
 ): StepStatusView {
   if (running === "setting") return { glyph: "⟳", tone: "muted", message: "Setting the proxy…" };
-  if (error) return { glyph: "⚠", tone: "warn", message: `Couldn't set the proxy — ${error}` };
+  // Same rule as trustStatus: an authoritative positive (probe says the system
+  // proxy is Trawler, or traffic is actually arriving) wins over a stale set error.
   if (probe === "ours")
     return { glyph: "✓", tone: "ok", message: "System proxy is set to Trawler" };
   if (seen.trafficSeen)
     return { glyph: "✓", tone: "ok", message: "Receiving traffic" };
+  if (error) return { glyph: "⚠", tone: "warn", message: `Couldn't set the proxy — ${error}` };
   if (probe === "unknown")
     return { glyph: "◐", tone: "muted", message: "Can't check automatically — we'll confirm when traffic arrives." };
   return { glyph: "○", tone: "muted", message: "No traffic reaching Trawler yet" };

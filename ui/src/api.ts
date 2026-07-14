@@ -100,7 +100,9 @@ export function createApi(baseUrl?: string): TrawlerApi {
     },
     stream({ onEvent, onLive, onConnection }) {
       const source = new EventSource(`${base()}/stream`);
-      for (const name of ["request", "response", "evicted", "lagged", "connection"]) {
+      // `connection` is deliberately absent here: a bare tunnel never becomes a
+      // flow, so it must not trigger a /flows refetch — only bump the counter.
+      for (const name of ["request", "response", "evicted", "lagged"]) {
         source.addEventListener(name, onEvent);
       }
       if (onConnection) source.addEventListener("connection", onConnection);
