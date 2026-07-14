@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W5 proxy-revert -> epic/uisetup (1 important found + fixed: blocking elevation on the main thread; 4 candidates refuted; 1 new nit documented as a ponytail ceiling)"
+epic: E-UISETUP
+wu: E-UISETUP.W5
+branch: wu/uisetup/proxy-revert
+base: 128b19e2c21043dce0c5191c87c43d7231726997
+head: 6b0cbd0be9bac14cbca2bb25df7fdb64e8464033
+diff_sha256: a538c75b959ed4fc8f71d0c07c3dcb5a0d0f8177b3b22019e8fd1142e6d9f10f
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 1, verified: 1, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-14
