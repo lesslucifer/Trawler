@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W5 proxy-revert (native unset + status-based quit consent + remote-device notice + Cmd-Q net) -> epic/uisetup. Three review rounds: r1 fixed blocking-elevation-on-main-thread; r2 fixed the macOS Cmd-Q onCloseRequested bypass (RunEvent::ExitRequested|Exit net, verified vs tao/tauri source); r3 (status-based rework) fixed the HTTP-only-proxy detection gap + 2 clean nits (enum not pub, parse rename). All verified findings resolved; the TOCTOU double-elevation nit documented as a ponytail ceiling."
+epic: E-UISETUP
+wu: E-UISETUP.W5
+branch: wu/uisetup/proxy-revert
+base: 128b19e2c21043dce0c5191c87c43d7231726997
+head: 3964b595cb60712ac4357971561114b2013ce4e2
+diff_sha256: 2bf400bdd793da913f1b27c53ee4248d1fc557f6436683e6875706e4fbb84d25
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 3, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-15
