@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-UISETUP
+wu: E-UISETUP.W3
+changes:
+  - path: docs/work/2026-07-14-e-uisetup-w3-plan.html
+    tier: T3
+    action: created
+  - path: docs/work/2026-07-14-e-uisetup-w3-result.html
+    tier: T3
+    action: created
+  - path: docs/work/2026-07-12-e-uisetup-plan.html
+    tier: T3
+    action: edited
+t2_waived: "same as W2 — the local-OS setup capability is flagged for a DEC at epic-close distillation per the epic plan; no T2 fact settles before W4 proves the flow end to end. W5 (proxy revert / manual off) and the bind-beyond-loopback exposure open question are recorded in the T3 epic plan."
