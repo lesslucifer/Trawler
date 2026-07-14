@@ -85,6 +85,47 @@ test("on mount shows the onboarding surface, not the empty flow list", async () 
   expect(screen.queryByTestId("empty")).toBeNull();
 });
 
+test("launch with a pre-existing decrypted HTTPS flow goes straight to the list", async () => {
+  const { api } = mockApi(() => [flow({ uri: "https://example.com/" })]);
+  render(<App api={api} />);
+  const row = await screen.findByTestId("flow-row");
+  expect(row).toHaveTextContent("example.com");
+  expect(screen.queryByText(/Trust the CA/)).toBeNull();
+});
+
+test("launch with only a plain-HTTP flow shows onboarding (http:// is not proof)", async () => {
+  const { api } = mockApi(() => [flow({ uri: "http://example.com/" })]);
+  render(<App api={api} />);
+  expect(await screen.findByText(/Trust the CA/)).toBeInTheDocument();
+  expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
+test("a decrypted HTTPS flow arriving live flips Verify green and reveals the list", async () => {
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} />);
+  await screen.findByText(/Trust the CA/); // fresh launch → onboarding
+
+  rows = [flow({ uri: "https://example.com/" })];
+  fire();
+  const row = await screen.findByTestId("flow-row");
+  expect(row).toHaveTextContent("example.com");
+  expect(screen.queryByText(/Trust the CA/)).toBeNull();
+});
+
+test("a plain-HTTP flow arriving live does not flip out of onboarding", async () => {
+  let rows: FlowSummary[] = [];
+  const { api, fire } = mockApi(() => rows);
+  render(<App api={api} />);
+  await screen.findByText(/Trust the CA/);
+
+  rows = [flow({ uri: "http://example.com/" })];
+  fire();
+  await waitFor(() => expect(vi.mocked(api.listFlows).mock.calls.length).toBeGreaterThan(1));
+  expect(screen.getByText(/Trust the CA/)).toBeInTheDocument();
+  expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
 test("a forced-proven phase reveals the flow list", async () => {
   const { api } = mockApi(() => [flow()]);
   render(<App api={api} initialState={PROVEN} />);
@@ -94,14 +135,18 @@ test("a forced-proven phase reveals the flow list", async () => {
   expect(screen.queryByText(/Trust the CA/)).toBeNull();
 });
 
-test("tapping the status dot re-opens setup from the flow list", async () => {
-  const { api } = mockApi(() => [flow()]);
+test("tapping the status dot re-opens setup and stays there despite the captured flow", async () => {
+  // A decrypted flow is still present, but re-invoke is a deliberate user action;
+  // the live check must not instantly bounce an ever-proven user back to the list.
+  const { api } = mockApi(() => [flow({ uri: "https://example.com/" })]);
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
   fireEvent.click(screen.getByTestId("status-dot"));
   expect(await screen.findByText(/Trust the CA/)).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
   expect(screen.getByTestId("onb-exit")).toBeInTheDocument(); // Back to flows, since ever proven
+  fireEvent.click(screen.getByTestId("onb-exit"));
+  expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
 });
 
 test("Install fetches the PEM and invokes install_ca; the step reports done, not proven", async () => {

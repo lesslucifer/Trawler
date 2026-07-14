@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a5624e29f34851f0dfa8e4f" data-artifact="wu-plan" data-status="draft">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-UISETUP.W4 WU plan: live check + wiring</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-UISETUP.W4 — Live check + wiring</h1>
+      <p>The "it works" check: watch <code>/stream</code> for the first <em>decrypted HTTPS</em> flow, flip
+      the Verify step red → green, and reveal the flow list. Wires the launch entry — onboarding when
+      capture isn't proven, the list when it is — tying W2's trust step and W3's proxy step into one
+      journey. The epic's e2e spine.</p>
+      <div class="meta">Draft v1 · 2026-07-14 · Trawler · T3 WU plan · epic:
+      <a href="2026-07-12-e-uisetup-plan.html">E-UISETUP</a> · builds on:
+      <a href="2026-07-13-e-uisetup-w1-plan.html">W1</a> · integrates:
+      <a href="2026-07-13-e-uisetup-w2-plan.html">W2</a> +
+      <a href="2026-07-14-e-uisetup-w3-plan.html">W3</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">On launch the app <strong>decides its own entry</strong>: it reads
+    <code>GET /flows</code> once, and if a <strong>decrypted HTTPS flow</strong> is already present it goes
+    straight to the list (<code>proven</code>); otherwise it shows onboarding. While unproven it watches
+    <code>GET /stream</code>, and the <strong>first decrypted HTTPS flow</strong> that arrives flips the
+    machine to <code>proven</code> — the Verify step turns from red to green and the flow list is revealed
+    (never re-forced back to onboarding). "Decrypted HTTPS" is the flow's own truth: an
+    <code>https://</code> absolute-form request URI, which only a MITM'd (decrypted) exchange produces —
+    a plain-HTTP proxied flow (<code>http://…</code>) does <strong>not</strong> count (epic:
+    <em>"Works" = a decrypted HTTPS flow</em>). Nothing self-reports done; capture is the sole proof. The
+    status dot re-invokes setup; from a re-invoked onboarding, <em>Back to flows</em> returns to the list
+    only because capture was ever proven. No core / API change — reads the existing
+    <code>/flows</code> + <code>/stream</code>.</p>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">Epic <a href="2026-07-12-e-uisetup-plan.html#w4">E-UISETUP.W4</a> — the
+    <strong>live-check + completion</strong> of the
+    <a href="2026-07-12-e-uisetup-plan.html#onboarding-flow">UC-5 onboarding flow</a>. Replaces the
+    W1 mount placeholder in <a href="../../ui/src/App.tsx">App.tsx</a> that unconditionally dropped a
+    fresh launch into onboarding; the state machine
+    (<a href="../../ui/src/onboardingMachine.ts">onboardingMachine.ts</a>) already carries every event this
+    needs (<code>captured</code>, <code>not-detected</code>, <code>re-invoke</code>, <code>exit</code>) —
+    W1 built them for exactly this WU, so <strong>no machine change</strong>. Integrates W2 + W3: their
+    steps do the setup, this step proves it worked. Reads existing endpoints only (DEC-12 base URL, same as
+    UC-4); no new Tauri command, no core / API surface.</p>
+
+    <h2 id="design">Design</h2>
+    <p>W1 shipped the machine, the stepper, and the mount placeholder; W2/W3 filled the trust and proxy step
+    bodies. Everything W4 needs already exists — it is pure <strong>wiring in App.tsx</strong> plus one
+    tiny detector predicate. The machine is untouched; App just dispatches the events W1 defined at the
+    right moments, sourced from the two endpoints UC-4 already consumes.</p>
+
+    <div class="diagram" data-c="entry-flow">
+      <pre class="mermaid">
+flowchart TD
+  M["App mounts · phase=checking"] --> F["GET /flows once"]
+  F --> Q{"any https:// flow?"}
+  Q -- yes --> P["dispatch captured → proven → list"]
+  Q -- no --> O["dispatch not-detected → onboarding"]
+  O --> S["watch /stream (unproven only)"]
+  S --> E{"event → refetch /flows"}
+  E -- "https:// flow seen" --> P
+  E -- "none yet" --> S
+  P -.-> D["status dot → re-invoke → onboarding"]
+  D -.-> S
+      </pre>
+      <div class="caption">Launch is state-driven: the flow data decides the entry, capture flips it, the dot re-opens it.</div>
+    </div>
+
+    <h3 id="detector">The detector — one predicate, the flow's own truth</h3>
+    <p data-c="detector">A decrypted HTTPS flow is exactly one whose request URI is <code>https://…</code>.
+    hudsucker rewrites a MITM'd request to absolute form with the real scheme (see
+    <a href="../../src/recorder.rs">recorder.rs</a> — <code>uri: parts.uri.to_string()</code>), so the
+    scheme in <code>FlowSummary.uri</code> is authoritative: only a decrypted exchange yields
+    <code>https://</code>; a plain proxied request stays <code>http://</code>. The predicate is therefore
+    a one-liner — <code>flows.some(f =&gt; f.uri.startsWith("https://"))</code> — living beside
+    <code>toRow</code> in <a href="../../ui/src/flow.ts">flow.ts</a> as <code>isDecryptedHttps</code>, so
+    both the launch check and the live check share the same definition of "done".</p>
+
+    <div class="callout" data-c="why-flow-predicate">
+      <p><strong>Why the flow, not a self-test?</strong> The epic's "done when" mentions the app firing its
+      own HTTPS request when the proxy was auto-set. That request can only route through a
+      <em>real</em> just-set system proxy on a real OS — it is not hermetically runnable and belongs to the
+      privileged auto path the epic already <a href="2026-07-12-e-uisetup-plan.html#waiver">waives from
+      e2e</a>. The universal, testable proof is the same for auto and manual users alike: <em>a decrypted
+      flow was observed</em>. W4 wires that. A native self-test request is a thin later add-on over the same
+      detector, not this WU's contract — noted, not built (consent/elevation path, deferred with the auto
+      paths).</p>
+    </div>
+
+    <h3 id="wiring">The wiring — App.tsx, three touch-points</h3>
+    <table>
+      <thead><tr><th>Touch-point</th><th>Was (W1)</th><th>Becomes (W4)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Launch entry</strong></td>
+          <td><code>useEffect</code> unconditionally dispatches <code>not-detected</code> — every fresh
+          launch falls into onboarding.</td>
+          <td>On mount (while <code>phase==="checking"</code>) call <code>listFlows({})</code> once:
+          a decrypted-HTTPS flow present ⇒ <code>captured</code> (straight to the list, <code>everProven</code>
+          latched); else ⇒ <code>not-detected</code>. Derived from live capture, no new store (epic non-goal).</td>
+        </tr>
+        <tr>
+          <td><strong>Live check</strong></td>
+          <td>none — the stream drives only <code>useFlows</code>' list.</td>
+          <td>While not proven, on each stream event refetch <code>/flows</code> and, if a decrypted-HTTPS
+          flow is now present, dispatch <code>captured</code>. Reuse <code>useFlows</code>' existing
+          <code>flows</code> + SSE rather than opening a second <code>EventSource</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>Reveal</strong></td>
+          <td>proven ⇒ list (already wired by W1's phase check).</td>
+          <td>Unchanged — <code>captured</code> sets <code>phase="proven"</code> and the existing
+          <code>phase !== "proven"</code> branch reveals the list. Re-invoke via the dot still works;
+          <em>Back to flows</em> returns to proven because <code>everProven</code> latched.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="reuse-useflows">
+      <p><strong>Reuse over rebuild.</strong> <code>useFlows</code> already fetches <code>/flows</code>,
+      subscribes to <code>/stream</code>, and re-fetches (debounced) on every event. W4 does not open its
+      own stream — it derives the decrypted-HTTPS check from the <code>flows</code> that hook already
+      maintains, so there is one SSE connection and one source of flow truth. The launch <code>/flows</code>
+      read is the one extra call, made once on mount before the phase resolves.</p>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p>Every layer this WU touches gets its test; the machine's own transitions are already covered by W1's
+    <a href="../../ui/src/onboardingMachine.test.ts">onboardingMachine.test.ts</a> (this WU adds no machine
+    logic, so nothing to re-test there).</p>
+
+    <table>
+      <thead><tr><th>Level</th><th>Where</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge id">unit</span></td>
+          <td><a href="../../ui/src/flow.test.ts">flow.test.ts</a></td>
+          <td><code>isDecryptedHttps</code>: true for an <code>https://</code> URI, false for
+          <code>http://</code>, false for a relative/opaque URI, false on an empty list.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">integration (seam)</span></td>
+          <td><a href="../../ui/src/App.test.tsx">App.test.tsx</a></td>
+          <td>Launch with a pre-existing <code>https://</code> flow ⇒ list directly (no onboarding). Launch
+          with only an <code>http://</code> flow (or none) ⇒ onboarding. From onboarding, an SSE event that
+          brings in a decrypted-HTTPS flow ⇒ Verify green + list revealed. A plain-HTTP flow arriving does
+          <strong>not</strong> flip it. Re-invoke via the dot then <em>Back to flows</em> returns to the
+          list (everProven).</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">e2e</span></td>
+          <td><a href="../../ui/e2e/specs/">ui/e2e/specs/</a> + harness</td>
+          <td>The epic spine: fresh launch shows onboarding; a real <em>proxied HTTPS</em> request through
+          the ephemeral core produces a decrypted flow; the Verify check flips to green and the list shows
+          it; a relaunch/already-proven start goes to the list directly.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="e2e-https">
+      <p><strong>The e2e harness must serve HTTPS.</strong> Today
+      <a href="../../ui/e2e/harness/main.rs">harness/main.rs</a>'s origin is plain HTTP, so its
+      <code>/hit</code> produces an <code>http://</code> flow — which by design does <em>not</em> prove
+      capture. W4 adds a CA-signed <strong>HTTPS origin</strong> (the exact pattern from
+      <a href="../../tests/e2e_capture.rs">e2e_capture.rs</a>'s <code>https_mitm_decrypts_and_captures</code>:
+      generate a CA, sign a <code>localhost</code> leaf, feed the CA to the core via
+      <code>upstream_extra_root_pems</code>, serve TLS with <code>axum_server</code>), so <code>/hit</code>
+      drives a request that the core decrypts and records as <code>https://</code>. The proxy client trusts
+      the core's own CA (from <code>/ca.crt</code>) exactly as the integration test does. This keeps the e2e
+      hermetic (ephemeral ports, tempdir CA, no public network) while proving the real thing the check keys
+      on.</p>
+    </div>
+
+    <div class="callout" data-c="waiver">
+      <p><strong>Waiver (judged at review), inherited from the epic.</strong> The auto CA-install and
+      auto-proxy paths need OS elevation and are not hermetically runnable; their command builders are
+      unit-tested (W2/W3) and the journey is proven here via a real proxied HTTPS request. Success is proven
+      by capture — a decrypted flow observed — never by reading a trust store or self-reporting. The native
+      auto-proxy self-test request is deferred with those auto paths (noted above), not a gap in this WU.</p>
+    </div>
+
+    <h2 id="done-when">Done when</h2>
+    <ul data-item="done-when">
+      <li>A decrypted HTTPS flow (real proxied request) flips the Verify check to success and reveals the
+      flow list; a plain-HTTP flow does not.</li>
+      <li>A fresh launch (no decrypted flow yet) shows onboarding; an already-proven launch (a decrypted
+      flow already present) shows the list directly, onboarding not forced.</li>
+      <li>Re-invoke via the status dot re-opens setup; <em>Back to flows</em> returns to the list because
+      capture was ever proven.</li>
+      <li>Detector predicate unit-tested; launch + live transitions integration-tested on a mock stream;
+      the full journey proven in e2e against a real ephemeral core over a proxied HTTPS request.</li>
+      <li>Gates green headless: vitest + <code>cargo clippy</code> (harness crate) + <code>cargo xtask ui
+      build</code>; e2e run green.</li>
+    </ul>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-item="non-goals">
+      <li><strong>Any machine change</strong> — the setup lives in W2/W3; W4 only observes the result.</li>
+      <li><strong>A native self-test HTTPS request</strong> on auto-set — deferred with the elevation-gated
+      auto paths; the universal proof (a decrypted flow) covers both auto and manual users.</li>
+      <li><strong>A new store / persisted onboarding state</strong> — entry is derived from live capture
+      every launch (epic non-goal).</li>
+      <li><strong>Proving plain-HTTP capture</strong> — "works" means a decrypted HTTPS flow.</li>
+      <li><strong>Proxy teardown / auto-revert</strong> — that is W5.</li>
+    </ul>
+
+    <h2 id="distillation">Distillation (at epic close)</h2>
+    <p data-item="distillation">W4 completes the UC-5 journey but adds no standalone T2 fact of its own — the
+    onboarding contract distilled into <code>web-ui.html</code> + index at epic close is what this WU makes
+    true end to end. This plan + result archive under <code>docs/work/</code> (DEC-3). No T1 change (no new
+    UI region or route — the list and onboarding surfaces already exist).</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

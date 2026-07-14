@@ -13,6 +13,8 @@ publish = false
 trawler = { path = "../../.." }
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
 axum = "0.8"
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+rcgen = { version = "0.14", features = ["pem", "crypto"] }
 tempfile = "3"
 serde_json = "1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
