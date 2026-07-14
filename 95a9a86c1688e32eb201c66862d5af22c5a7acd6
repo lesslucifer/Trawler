@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W5 proxy-revert (native unset + marker gate + manual stop + quit-time consent confirm) -> epic/uisetup. Two review rounds: r1 found 1 important (blocking elevation on main thread) — fixed. r2 (after adding the quit confirm) found 1 blocker (macOS Cmd-Q bypasses onCloseRequested) — fixed by a RunEvent::ExitRequested|Exit net, re-verified against tao/tauri source; 3 nits addressed, Deps-seam nit kept deliberately (makes the hook unit-testable)."
+epic: E-UISETUP
+wu: E-UISETUP.W5
+branch: wu/uisetup/proxy-revert
+base: 128b19e2c21043dce0c5191c87c43d7231726997
+head: 95a9a86c1688e32eb201c66862d5af22c5a7acd6
+diff_sha256: 255ac16181004ffef918928bfb4f1279a2dcf487e37b74d65449c165c8f95781
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 2, verified: 2, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-14
