@@ -1,0 +1,15 @@
+schema: test/v2
+level: working-unit
+epic: E-UISETUP
+wu: E-UISETUP.W4
+tests:
+  unit:
+    count: 1
+    covers: "flow.ts isDecryptedHttps: true only for an https:// URI (a MITM-decrypted exchange); false for http://, a relative/opaque URI, and an empty list. Both the launch check and the live check share this one predicate for \"capture proven\"."
+  integration:
+    count: 4
+    covers: "App seam (App.test.tsx): launch with a pre-existing https:// flow -> flow list directly (no onboarding); launch with only an http:// flow (or none) -> onboarding (http:// is not proof); a decrypted https:// flow arriving live over SSE -> Verify green + list revealed; a plain-http flow arriving live does NOT flip out of onboarding; plus a strengthened re-invoke test: tapping the status dot re-opens setup and STAYS (not bounced by the already-captured flow, gated on !everProven), then Back-to-flows returns to the list."
+  e2e:
+    count: 4
+    covers: "onboarding.spec.ts against a real ephemeral core (real Tauri WebKit window): fresh launch shows onboarding not a bare list; a real proxied HTTPS request through the core (harness now serves a CA-signed localhost HTTPS origin, core trusts it via upstream_extra_root_pems, /hit trusts the core /ca.crt) produces a decrypted flow -> Verify flips green -> list shows the localhost row; the revealed list filters out on a non-matching host and back, and appends a second row live. Folds in the old UC-4 flows.spec.ts (deleted) since post-W4 a fresh launch is onboarding, not an empty list."
+  waived: "the auto CA-install / auto-proxy paths need OS elevation and are not hermetically runnable (epic waiver, inherited); their command builders are unit-tested in W2/W3 and the journey is proven here via a real proxied HTTPS request. A native auto-proxy self-test HTTPS request is deferred with those elevation-gated auto paths (plan non-goal), not a gap. The 10px status-dot re-invoke interaction is covered at the integration layer, not re-proven in e2e (WebKit click-target fragility); the e2e keeps to the capture-driven journey spine."
