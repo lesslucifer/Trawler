@@ -119,6 +119,7 @@ flowchart TD
           <tr><td>Settings / preferences panel</td><td>Onboarding is first-run + re-invoke, not config</td></tr>
           <tr><td>Auto-config remote / physical devices</td><td>Deferred; local simulators + devices get guided steps (same-network proxy + CA)</td></tr>
           <tr><td>Prove plain-HTTP capture</td><td>"Works" = a decrypted HTTPS flow</td></tr>
+          <tr><td>Pause / stop recording while the proxy stays up</td><td>Needs a core capture-toggle + a control-API endpoint (a "recording on/off" flag) — onboarding is setup-only and "no new API endpoint" is a non-goal above. Separate future epic (capture control). Turning the <em>proxy</em> off in-app (W5) already covers "stop intercepting my traffic" with no core change</td></tr>
           <tr><td>Onboarding in the web shell (UC-3)</td><td>Native-only; shell retires at parity</td></tr>
         </tbody>
       </table>
@@ -133,8 +134,11 @@ flowchart LR
   W1 --> W4["W4 · live check + wiring"]
   W2 --> W4
   W3 --> W4
+  W3 --> W5["W5 · proxy auto-revert"]
+  W4 --> W5
       </pre>
-      <div class="caption">W1 lays the shell; W2/W3 fill two steps in parallel; W4 verifies and ties it together.</div>
+      <div class="caption">W1 lays the shell; W2/W3 fill two steps in parallel; W4 verifies and ties it
+      together; W5 tears the proxy back down cleanly on exit.</div>
     </div>
     <div data-item="wu-summaries">
 
@@ -187,6 +191,33 @@ networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420</pre>
             <tr><th>Maps to</th><td data-item="wu-maps-to">UC-5 live-check + completion · <code>/flows</code> (initial) + <code>/stream</code> (live)</td></tr>
             <tr><th>Done when</th><td data-item="wu-expected">A decrypted HTTPS flow (proxied, or the app's self-test) flips the check to success and reveals the flow; fresh shows onboarding, proven doesn't. Transitions unit-tested on mock stream; this is the e2e spine.</td></tr>
             <tr><th>Needs</th><td data-item="wu-deps">W1 · integrates W2 + W3 (but testable on a proxied request alone)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div data-wu="E-UISETUP.W5">
+        <h3 id="w5">W5 — Proxy auto-revert</h3>
+        <table>
+          <tbody>
+            <tr><th>Builds</th><td data-item="wu-summary">Tear the system proxy back down cleanly so
+            Trawler never leaves the machine pointing at a dead proxy. A symmetric <code>unset_proxy</code>
+            Tauri command <em>runs</em> W3's per-client turn-off commands, exposed both as a
+            <strong>manual "stop routing through Trawler" control</strong> (turn the proxy off without
+            quitting) and as <strong>auto-revert on clean app quit</strong> (Tauri exit / window-close
+            hook), gated on a "we set it" marker so it only reverts what Trawler set; plus
+            <strong>crash reconciliation at launch</strong> — the marker lets the next launch detect a
+            stale self-set proxy and clear it (coordinated with W4's launch self-test). The unfixable
+            tail — app gone for good with no relaunch — is called out, not solved from inside a dead
+            process (would need an OS-level watchdog).</td></tr>
+            <tr><th>Maps to</th><td data-item="wu-maps-to">UC-5 <em>consent, never silent</em> — turning
+            setup off is as first-class as turning it on · local-OS capability (W2/W3) · reuses W3's
+            off-commands</td></tr>
+            <tr><th>Done when</th><td data-item="wu-expected">A manual control turns the proxy off (and
+            back on) without quitting; quitting the app reverts a proxy it set; relaunch after a crash
+            detects and clears a stale self-set proxy; revert only ever touches a proxy Trawler set.
+            <code>unset_proxy</code> builder + lifecycle wiring unit-tested; the quit-reverts path
+            covered in e2e.</td></tr>
+            <tr><th>Needs</th><td data-item="wu-deps">W3 (off-commands + set marker) · W4 (launch path)</td></tr>
           </tbody>
         </table>
       </div>
@@ -256,6 +287,7 @@ flowchart LR
           <tr><td>Detect which client / device connected?</td><td>Not needed — Verify catches a flow from any source (incl. simulators/devices). Surfacing the source client is a possible later enhancement</td></tr>
           <tr><td>Which flow counts for the check?</td><td>First decrypted HTTPS flow <em>after</em> reaching Verify (ignore stale ones)</td></tr>
           <tr><td>Persist onboarding across restarts?</td><td>Derive from live capture; no new store this epic; re-invoke via help</td></tr>
+          <tr><td>How universal is the proxy address — same host, LAN device, internet?</td><td>Same host works today (loopback default). LAN devices need the core <strong>bound beyond loopback</strong> (<code>0.0.0.0</code>/LAN IP) — an exposure decision + likely a small DEC, out of scope for this epic (DEC-12: no core change); the LAN IP is then cheap to surface. Internet is a <strong>non-goal</strong> (open decrypting relay). The configurable <code>defaultProxyAddr()</code> is the universal hook regardless of bind. See <a href="2026-07-14-e-uisetup-w3-plan.html#reachability">W3 reachability</a></td></tr>
           <tr><td>Onboard the web shell (UC-3) too?</td><td>No — native-only; shell retires at parity</td></tr>
         </tbody>
       </table>

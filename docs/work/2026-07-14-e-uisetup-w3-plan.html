@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a5597d69f34851f0dfa8dd8" data-artifact="wu-plan" data-status="draft">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-UISETUP.W3 WU plan: set the proxy</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-UISETUP.W3 — Set the proxy</h1>
+      <p>Route the machine's traffic through Trawler from inside the native app: one click sets the
+      system proxy on macOS and Windows; a copy-pasteable snippet carries the real proxy address
+      everywhere else. The proxy-config half of the onboarding stepper — W2's sibling step.</p>
+      <div class="meta">Draft v1 · 2026-07-14 · Trawler · T3 WU plan · epic:
+      <a href="2026-07-12-e-uisetup-plan.html">E-UISETUP</a> · builds on:
+      <a href="2026-07-13-e-uisetup-w1-plan.html">W1</a> · sibling:
+      <a href="2026-07-13-e-uisetup-w2-plan.html">W2</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">The onboarding <strong>Set the proxy</strong> step points the system at
+    Trawler's proxy <strong>natively</strong>: on macOS one confirm + an OS elevation prompt runs
+    <code>networksetup -setwebproxy</code>/<code>-setsecurewebproxy</code> on every enabled network
+    service; on Windows one click writes the per-user WinINET registry proxy
+    (<code>ProxyServer</code>/<code>ProxyEnable</code>) and nudges running apps via
+    <code>InternetSetOption</code> — no elevation, HKCU is user-writable. A <strong>client
+    selector</strong> (defaulting to the detected host) shows the correct <strong>snippet and guided
+    steps for any client</strong> — Linux, Firefox's own proxy settings, terminal/CLI, simulators,
+    devices — as text (UC-3/UC-4 invariant), with a working <em>Copy</em> for the command-shaped ones.
+    Every snippet carries the <strong>real proxy address from configuration</strong>
+    (<a href="../decisions/dec-12-native-ui-stack.html">DEC-12</a> — default
+    <code>127.0.0.1:7420</code>, never hardcoded in component code). The privileged command is built in
+    <code>ui/src-tauri</code> from fixed per-OS templates — the webview passes only
+    <code>host</code> + <code>port</code>, never a command. The set command's exit status gives the weak
+    "it ran" signal (step → <code>done</code>/<code>failed</code>); the authoritative "traffic actually
+    routes through Trawler" answer is W4's live capture. Decline or failure ⇒ the snippets carry them
+    the rest of the way (consent, never silent).</p>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">Epic <a href="2026-07-12-e-uisetup-plan.html#w3">E-UISETUP.W3</a> — the
+    <strong>proxy-config</strong> step of the <a href="2026-07-12-e-uisetup-plan.html#onboarding-flow">UC-5
+    onboarding flow</a>. Fills the <code>set-proxy</code> step body that W1 left as an inert placeholder in
+    <a href="../../ui/src/Onboarding.tsx">Onboarding.tsx</a>; the machine, stepper and status dot are
+    unchanged. <strong>No core / API change</strong> — the proxy address is frontend configuration
+    resolved exactly like the API base (DEC-12). Second use of the local-OS setup capability W2
+    established (Tauri command + process execution, consent + elevation), same trust boundary, same
+    DEC-at-epic-close.</p>
+
+    <h2 id="design">Design</h2>
+    <p>W2 shipped the app's first Tauri command (<code>install_ca</code>) and the per-OS
+    template/elevation plumbing in <a href="../../ui/src-tauri/src/setup.rs">setup.rs</a>. W3 adds the
+    second command, <code>set_proxy</code>, reusing the same file, the same osascript elevation wrapper,
+    and the same UI shape (selector + auto button + guided text) from W2's trust-ca step.</p>
+
+    <div class="callout warn" data-c="trust-boundary">
+      <p><strong>Trust boundary — same rule as W2, sharper edge.</strong> W2's PEM went to a temp file and
+      never entered the command line; W3's <code>host</code> and <code>port</code> are <em>interpolated
+      into an elevated shell string</em> (the osascript script). The command still never takes an argv
+      from the webview: <code>set_proxy(host, port)</code> takes data only, <code>port</code> is a
+      <code>u16</code> by type, and <code>host</code> is <strong>validated against
+      <code>^[A-Za-z0-9.-]+$</code></strong> before use — no spaces, no quotes, no shell metacharacters,
+      so injection into the elevated script is impossible by construction. macOS service names come from
+      <code>networksetup -listallnetworkservices</code> output (not from IPC) and are single-quoted with
+      quote-escaping when spliced into the script.</p>
+    </div>
+
+    <div class="diagram" data-c="set-flow">
+      <pre class="mermaid">
+flowchart LR
+  Sel["Client selector<br/>(defaults to detected host)"] --> Steps["proxySteps(target, addr)<br/>text + Copy on command snippets"]
+  Sel -->|host is mac/win| Btn["‘Set system proxy’<br/>auto · one confirm"]
+  Btn --> Inv["invoke('set_proxy', {host, port})<br/>from defaultProxyAddr() — DEC-12"]
+  Inv --> Rust["src-tauri/setup.rs<br/>validate host · build per-OS argvs<br/>macOS: enabled services → one elevated script<br/>Windows: HKCU reg ×2 + refresh, unelevated"]
+  Rust -->|all exit 0| Done["step → done<br/>(command ran; NOT routing-proof — W4 proves)"]
+  Rust -->|err / declined| Failed["step → failed<br/>(snippets stay visible)"]
+      </pre>
+      <div class="caption">The selector always shows the manual snippet for the chosen client; the auto
+      button appears only when the detected host is mac/win. Any decline or failure leaves the snippets
+      in place. macOS: one confirm, one elevation prompt covering every enabled service.</div>
+    </div>
+
+    <div class="callout" data-c="proxy-addr">
+      <p><strong>Where the address comes from (DEC-12).</strong> The epic forbids a hardcoded proxy port
+      and a new API endpoint, so the proxy address is frontend configuration mirroring the API base
+      chain: <code>window.__TRAWLER_PROXY__</code> → <code>sessionStorage</code> →
+      <code>VITE_TRAWLER_PROXY</code> → default <code>127.0.0.1:7420</code>. <code>defaultProxyAddr()</code>
+      lives beside <code>defaultBaseUrl()</code> in <a href="../../ui/src/api.ts">api.ts</a> — one home
+      for "how the app learns addresses". Snippets and the Rust command receive the address as data;
+      <code>setup.ts</code> stays pure.</p>
+    </div>
+
+    <div class="callout" data-c="reachability">
+      <p><strong>How universal can the address be? Two layers — and the snippet is only the second.</strong>
+      Reaching Trawler is a <em>bind</em> question before it is an <em>address</em> question:</p>
+      <ul>
+        <li><strong>Bind (core, not this epic).</strong> The core binds <code>127.0.0.1:7420</code>
+        (<a href="../../src/config.rs">config.rs</a>). A loopback socket is unreachable from any other
+        device <em>whatever address you advertise</em>. Serving a LAN device needs the core bound to a
+        routable interface (<code>0.0.0.0</code> / the LAN IP) — a real <strong>exposure decision</strong>:
+        a decrypting MITM proxy open on the network is an interception surface, and the API's blanket
+        CORS grant is safe today <em>because</em> everything is loopback
+        (<a href="../../src/api/mod.rs">api/mod.rs</a>). DEC-12 put "no core/API change" on this epic, so
+        W3 cannot change what Trawler binds to — only advertise it.</li>
+        <li><strong>Advertised address (what W3 puts in snippets)</strong> depends on the client's vantage:
+          <ul>
+            <li><strong>Same host</strong> (system proxy, terminal, same-machine Firefox) →
+            <code>127.0.0.1:7420</code>. Correct and working today — the 90% onboarding case.</li>
+            <li><strong>LAN device</strong> (phone, tablet, another laptop; Android emulator via
+            <code>10.0.2.2</code>) → needs the machine's LAN IP <em>and</em> the core bound beyond
+            loopback. The LAN IP is cheap to find (<code>UdpSocket::connect</code> →
+            <code>local_addr()</code> — stdlib, sends no packets), but surfacing it is pointless until
+            the bind decision is made, so it rides <em>with</em> that decision rather than being
+            stranded here.</li>
+            <li><strong>Internet</strong> → <strong>non-goal.</strong> An internet-facing decrypting
+            proxy is an open relay and a mass HTTPS-interception surface, and needs NAT traversal
+            (port-forward or a tunnel). We document why not; we do not build it.</li>
+          </ul>
+        </li>
+      </ul>
+      <p><strong>The universal hook W3 does ship</strong> is the configurable
+      <code>defaultProxyAddr()</code> above: bind Trawler wherever you like, set the config once, and
+      every snippet + the auto-set follow — no hardcoded port anywhere. Making the LAN case <em>easy</em>
+      (auto-detect and show the LAN IP) is gated on the bind / exposure decision, now raised as an
+      <a href="2026-07-12-e-uisetup-plan.html#open-questions">epic open question</a>.</p>
+    </div>
+
+    <div class="callout" data-c="manual-ux">
+      <p><strong>What the manual path looks like to the user.</strong> "Set it up manually" is not a
+      wall of prose — it is the same stepper card, driven by the client selector:</p>
+      <ul>
+        <li>A <strong>client dropdown</strong> defaulting to their detected OS; picking a client
+        (Firefox, terminal, a phone) swaps the card to that client's instructions.</li>
+        <li><strong>Numbered steps + a one-click Copy</strong> of the exact command, with the real
+        configured address already filled in — nothing to hand-edit, no <code>&lt;proxy port&gt;</code>
+        placeholder to decode.</li>
+        <li>On an auto-capable host the one-click <em>Set system proxy</em> button sits above those
+        steps; the steps stay as the fallback and as the way to configure any <em>other</em> client
+        from the same screen.</li>
+      </ul>
+      <p><strong>The Verify step (W4) is what makes manual bearable.</strong> The user never has to
+      judge whether they got it right: the moment a real decrypted flow arrives the check flips green
+      and the list appears. Manual setup gets the same closed-loop confirmation as the one-click path
+      — proof by capture, not a self-reported checkbox.</p>
+    </div>
+
+    <div class="callout" data-c="windows-unelevated">
+      <p><strong>Windows runs unelevated — deliberately.</strong> WinINET's proxy is per-user
+      (<code>HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings</code>), writable without
+      admin rights. Elevating would be worse than unnecessary: UAC can run the write as a
+      <em>different</em> (admin) account and set the proxy in the wrong user's hive. Consent here is the
+      in-app button click itself — the OS has no prompt to add, and nothing is silent: the button says
+      exactly what it will do. After the two <code>reg add</code> writes, a fixed PowerShell one-liner
+      calls <code>InternetSetOption</code> (<code>SETTINGS_CHANGED</code> then <code>REFRESH</code>) so
+      running WinINET apps pick the change up immediately instead of at next poll. macOS keeps W2's
+      osascript elevation: <code>networksetup</code> writes need admin, and every enabled service
+      (Wi-Fi, Ethernet, …) is set in <em>one</em> elevated compound script — one password prompt, both
+      web and secure-web proxies, matching what Charles/mitmproxy do.</p>
+    </div>
+
+    <div class="callout" data-c="undo">
+      <p><strong>Turning it off matters more than turning it on.</strong> A system proxy left pointing
+      at a stopped Trawler breaks the machine's connectivity, so the step always exposes per-client
+      <em>turn-it-off</em> steps in a details fold (like W2's certificate removal). Each is the exact
+      inverse of what the set path did:</p>
+      <ul>
+        <li><strong>macOS</strong> — <code>networksetup -setwebproxystate '&lt;service&gt;' off</code>
+        and <code>-setsecurewebproxystate '&lt;service&gt;' off</code> on each enabled service: keeps
+        the saved host/port but stops routing through them.</li>
+        <li><strong>Windows</strong> — <code>reg add … /v ProxyEnable /t REG_DWORD /d 0 /f</code>: flips
+        the WinINET proxy off (<code>0</code> = disabled) without deleting the address.</li>
+        <li><strong>Terminal / CLI</strong> — <code>unset HTTPS_PROXY HTTP_PROXY</code>: clears the
+        environment variables the snippet exported.</li>
+        <li><strong>Firefox / devices</strong> — the guided text names the setting to switch back to
+        "No proxy" / off.</li>
+      </ul>
+      <p><strong>Doing that revert automatically</strong> — on app quit, and reconciling a stale proxy
+      after a crash — is real app-lifecycle scope (a symmetric <code>unset_proxy</code> command + Tauri
+      exit hooks + a "we set it" marker so we only ever revert what Trawler set). The Owner asked for
+      it; it is split into its own <a href="2026-07-12-e-uisetup-plan.html#w5">W5</a> rather than
+      bloating this step. Re-running <em>Set system proxy</em> is safe and idempotent: the same values
+      are simply written again.</p>
+      <p><strong>Turning it off without quitting</strong> is the same <code>unset_proxy</code> command
+      exposed as a <em>manual</em> control — a "stop routing through Trawler" toggle — which also lands
+      in <a href="2026-07-12-e-uisetup-plan.html#w5">W5</a>, alongside the automatic revert. No core
+      change: it just clears the system proxy, so traffic flows normally until you switch it back on.
+      That is distinct from <strong>pausing capture</strong> (proxy stays up, recording toggles off —
+      the Charles "stop recording" model): that needs a core capture-toggle + a control-API endpoint
+      the onboarding epic deliberately doesn't add, so it is a
+      <a href="2026-07-12-e-uisetup-plan.html#non-goals">separate future epic</a>. If the intent is
+      just "stop intercepting my traffic," the manual proxy-off covers it with zero core work.</p>
+    </div>
+
+    <div class="callout" data-c="one-predicate">
+      <p><strong>One auto-capable predicate, renamed.</strong> "This OS has a one-click local setup
+      path" is one concept covering both steps (macOS + Windows, per the epic's client table), not two —
+      W2's <code>canAutoInstall(os)</code> is renamed <code>canAutoSetup(os)</code> and shared, rather
+      than growing a duplicate <code>canAutoSetProxy</code> with the same body. Host detection stays
+      W2's <code>hostOs()</code> UA check; Rust still decides from <code>std::env::consts::OS</code> at
+      the moment of action.</p>
+    </div>
+
+    <h3 id="files">Files</h3>
+    <table data-c="files">
+      <thead><tr><th>File</th><th></th><th>Role</th><th>W3 content</th></tr></thead>
+      <tbody>
+        <tr><td><code>ui/src-tauri/src/setup.rs</code></td><td>edit</td><td>set-proxy command + pure builders</td>
+          <td><code>#[tauri::command] set_proxy(host, port)</code>; pure <code>parse_services(output)</code>
+          (skips the header line and <code>*</code>-disabled services) and
+          <code>set_proxy_commands(os, services, host, port)</code> argv-list builder; host validation;
+          shell-quoting helper; <code>#[cfg(test)]</code> builder tests</td></tr>
+        <tr><td><code>ui/src-tauri/src/lib.rs</code></td><td>edit</td><td>register the command</td>
+          <td><code>generate_handler![setup::install_ca, setup::set_proxy]</code></td></tr>
+        <tr><td><code>ui/src/api.ts</code></td><td>edit</td><td>proxy address from config</td>
+          <td><code>defaultProxyAddr(): string</code> — <code>__TRAWLER_PROXY__</code> global →
+          sessionStorage → <code>VITE_TRAWLER_PROXY</code> → <code>127.0.0.1:7420</code> (DEC-12 chain,
+          mirrors <code>defaultBaseUrl</code>)</td></tr>
+        <tr><td><code>ui/src/setup.ts</code></td><td>edit</td><td>pure proxy helpers</td>
+          <td><code>canAutoInstall</code> → <code>canAutoSetup</code> (rename, shared);
+          <code>ProxyTarget</code> + <code>PROXY_TARGETS</code> (adds <em>Terminal / CLI</em>);
+          <code>defaultProxyTarget(os)</code> (<code>other</code> → <code>terminal</code>);
+          <code>splitProxyAddr(addr)</code> → <code>{host, port}</code>;
+          <code>proxySnippet(t, addr)</code> — the one copyable command, <code>null</code> for GUI-only
+          clients; <code>proxySteps(t, addr)</code> · <code>proxyOffSteps(t)</code> — instruction text as
+          data, never markup</td></tr>
+        <tr><td><code>ui/src/Onboarding.tsx</code></td><td>edit</td><td>set-proxy step body</td>
+          <td><code>SetProxy</code> mirroring <code>TrustCa</code>: client selector (default = detected
+          host) + always-visible steps; <em>Copy</em> button on the snippet
+          (<code>navigator.clipboard</code>); auto <em>Set system proxy</em> button only when selected ==
+          host &amp;&amp; auto-capable → <code>onSetProxy</code>; local idle/setting/done/failed + error;
+          failed-glyph handling generalised to cover both steps; off-steps in a details fold</td></tr>
+        <tr><td><code>ui/src/App.tsx</code></td><td>edit</td><td>wire the set action</td>
+          <td><code>setProxy</code> = <code>splitProxyAddr(defaultProxyAddr())</code> →
+          <code>invoke('set_proxy', {host, port})</code>; passes <code>proxyAddr</code> + handler into
+          <code>Onboarding</code></td></tr>
+        <tr><td><code>ui/src/onboardingMachine.ts</code></td><td>edit</td><td>copy only</td>
+          <td><code>COPY.steps['set-proxy'].body</code> drops the <code>127.0.0.1:&lt;proxy port&gt;</code>
+          placeholder — the step body now shows the real configured address</td></tr>
+        <tr><td><code>ui/src/setup.test.ts</code></td><td>edit</td><td>unit</td>
+          <td><code>defaultProxyTarget</code>; <code>splitProxyAddr</code>; <code>proxySnippet</code> /
+          <code>proxySteps</code> / <code>proxyOffSteps</code> for <strong>every</strong> target carry the
+          passed address (Android says LAN address, not 127.0.0.1)</td></tr>
+        <tr><td><code>ui/src/api.test.ts</code></td><td>edit</td><td>unit</td>
+          <td><code>defaultProxyAddr</code> resolution order + default</td></tr>
+        <tr><td><code>ui/src/Onboarding.test.tsx</code></td><td>edit</td><td>unit</td>
+          <td>auto host shows <em>Set system proxy</em> + snippet; selector switches clients; Copy writes
+          the exact snippet to the clipboard; failure → failed, snippets stay; render-as-text</td></tr>
+        <tr><td><code>ui/src/App.test.tsx</code></td><td>edit</td><td>integration seam</td>
+          <td>Set → <code>invoke('set_proxy', {host, port})</code> parsed from the configured address;
+          reject → failed + snippets; no machine phase change</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="contracts">Contracts (the shape the tests pin)</h3>
+    <pre data-c="rust-contract">// ui/src-tauri/src/setup.rs — additions; Rust owns the privileged command
+fn parse_services(list: &amp;str) -&gt; Vec&lt;String&gt;
+//   `networksetup -listallnetworkservices` output → enabled services
+//   (drops the "An asterisk…" header and any *-prefixed disabled service)
+
+fn set_proxy_commands(os: &amp;str, services: &amp;[String], host: &amp;str, port: u16) -&gt; Option&lt;Vec&lt;Vec&lt;String&gt;&gt;&gt;
+//   macos   → [ one osascript-elevated compound script:
+//               networksetup -setwebproxy '&lt;svc&gt;' &lt;host&gt; &lt;port&gt; &amp;&amp; networksetup -setsecurewebproxy '&lt;svc&gt;' &lt;host&gt; &lt;port&gt;
+//               … for every enabled service — one password prompt ]
+//   windows → [ reg add "HKCU\…\Internet Settings" /v ProxyServer /t REG_SZ /d &lt;host&gt;:&lt;port&gt; /f,
+//               reg add "HKCU\…\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f,
+//               powershell InternetSetOption(SETTINGS_CHANGED=39) + (REFRESH=37) ]   // NOT elevated — HKCU
+//   other   → None                                                                   // snippets only
+
+#[tauri::command]
+fn set_proxy(host: String, port: u16) -&gt; Result&lt;(), String&gt;
+//   reject host !~ ^[A-Za-z0-9.-]+$ (elevated-shell injection guard) →
+//   (macos: run -listallnetworkservices, parse; err if none) →
+//   run each argv in order, every one must exit 0 → map status/stderr like install_ca</pre>
+    <pre data-c="ts-contract">// ui/src/api.ts — config resolution (DEC-12), beside defaultBaseUrl()
+defaultProxyAddr(): string        // __TRAWLER_PROXY__ → sessionStorage → VITE_TRAWLER_PROXY → '127.0.0.1:7420'
+
+// ui/src/setup.ts — pure, no I/O
+type ProxyTarget = 'macos' | 'windows' | 'linux' | 'firefox' | 'terminal' | 'ios-sim' | 'android';
+canAutoSetup(os: HostOs): boolean          // renamed from canAutoInstall — shared by trust-ca + set-proxy
+defaultProxyTarget(os: HostOs): ProxyTarget // host family; 'other' → 'terminal'
+splitProxyAddr(addr: string): { host: string; port: number }   // split on the last ':'
+proxySnippet(t: ProxyTarget, addr: string): string | null      // the ONE copyable command; null = GUI-only
+proxySteps(t: ProxyTarget, addr: string): string[]             // guided text carrying the real address
+proxyOffSteps(t: ProxyTarget): string[]                        // how to turn it back off</pre>
+    <p>The set action lives <strong>outside the state machine</strong> — the W1 reducer stays untouched.
+    The step's <code>done</code>/<code>failed</code> status and the selected client are local step
+    state; only W4's live <code>captured</code> flips the machine to <code>proven</code>.</p>
+
+    <h3 id="client-matrix">Per-client proxy config</h3>
+    <table data-c="client-matrix">
+      <thead><tr><th>Client</th><th>Proxy</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td>macOS system + Safari/Chrome</td><td><span class="badge auto">auto</span></td>
+          <td><code>networksetup</code> web + secure-web on every enabled service, one elevation</td></tr>
+        <tr><td>Windows system + Edge/Chrome</td><td><span class="badge auto">auto</span></td>
+          <td>WinINET HKCU <code>ProxyServer</code>/<code>ProxyEnable</code> +
+          <code>InternetSetOption</code> refresh, unelevated</td></tr>
+        <tr><td>Linux (GNOME)</td><td><span class="badge">snippet</span></td>
+          <td><code>gsettings</code> manual proxy mode + http/https host&amp;port</td></tr>
+        <tr><td>Firefox (own proxy settings)</td><td><span class="badge">guided</span></td>
+          <td>Settings → Network Settings → Manual proxy · "Also use this proxy for HTTPS"</td></tr>
+        <tr><td>Terminal / CLI (curl, npm, scripts)</td><td><span class="badge">snippet</span></td>
+          <td><code>export HTTPS_PROXY=http://&lt;addr&gt; HTTP_PROXY=http://&lt;addr&gt;</code></td></tr>
+        <tr><td>iOS Simulator</td><td><span class="badge auto">auto</span></td>
+          <td>uses the host Mac's system proxy — the macOS auto path already covers it</td></tr>
+        <tr><td>Android emulator / device</td><td><span class="badge">guided</span></td>
+          <td>Wi-Fi → manual proxy; host = the machine's LAN address (emulator: <code>10.0.2.2</code>)</td></tr>
+      </tbody>
+    </table>
+    <p>The client selector exposes every row — a user on any host can read the snippet for a device,
+    Firefox, or a terminal without leaving the set-proxy step. The device rows depend on the
+    <a href="#reachability">reachability layer</a> above: they need Trawler bound beyond loopback and
+    the machine's LAN IP. W3 states that in the snippet text but neither changes the bind nor detects
+    the IP — both wait on the bind / exposure open question.</p>
+
+    <h2 id="expected">Expected (done when)</h2>
+    <div data-item="expected">
+      <ul>
+        <li>On macOS/Windows the <code>set-proxy</code> step shows a <em>Set system proxy</em> action;
+        clicking it invokes <code>set_proxy</code> with the configured address — macOS: one elevation
+        prompt sets web + secure-web proxies on every enabled service; Windows: HKCU registry + refresh,
+        no elevation. All exit 0 → step <code>done</code>; declining or a non-zero exit →
+        <code>failed</code>, with the snippets still visible.</li>
+        <li>A <strong>client selector</strong> (default = detected host) shows the correct snippet /
+        guided steps as text for every client in the matrix; each command-shaped snippet has a
+        <em>Copy</em> that puts the exact command — carrying the real configured address — on the
+        clipboard.</li>
+        <li>No hardcoded proxy address anywhere in component code: <code>defaultProxyAddr()</code>
+        resolves global → sessionStorage → env → default (DEC-12), and both the snippets and the Tauri
+        invoke consume it.</li>
+        <li>The Rust builders emit the exact per-OS argvs (compound elevated <code>networksetup</code>
+        script · unelevated <code>reg</code>+refresh) and <code>None</code> elsewhere; host validation
+        rejects shell metacharacters; service parsing drops disabled entries. Unit-tested,
+        <code>cargo test</code> in <code>ui/src-tauri</code>, headless.</li>
+        <li>Turn-it-off steps are visible per client; the onboarding machine is untouched — a successful
+        set does <strong>not</strong> mark capture proven; only W4's flow does.
+        <code>cargo xtask ui build</code> (tsc) clean.</li>
+      </ul>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <thead><tr><th>Level</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td><b>unit</b> (commit · Rust)</td><td><code>setup.rs</code>: <code>parse_services</code>
+        drops the header line and <code>*</code>-disabled services; <code>set_proxy_commands</code> —
+        macos → one osascript argv whose script sets web + secure-web for <em>each</em> enabled service
+        (quoted names, spaces survive); windows → the two <code>reg add</code> argvs
+        (<code>ProxyServer</code> = <code>host:port</code>, <code>ProxyEnable</code> = 1) + the
+        <code>InternetSetOption</code> refresh, and <strong>no elevation wrapper</strong>; other →
+        <code>None</code>. <code>set_proxy</code> rejects hosts with spaces/quotes/semicolons
+        (injection guard) and errors when macOS yields zero services. Pure functions, GUI-free.</td></tr>
+        <tr><td><b>unit</b> (commit · TS)</td><td><code>setup.test.ts</code>: <code>canAutoSetup</code>
+        true only for mac/win; <code>defaultProxyTarget</code> maps hosts and sends <code>other</code> →
+        <code>terminal</code>; <code>splitProxyAddr</code> splits host/port;
+        <code>proxySnippet</code>/<code>proxySteps</code>/<code>proxyOffSteps</code> for every target
+        embed the passed address exactly (never a hardcoded port), Android text says LAN address.
+        <code>api.test.ts</code>: <code>defaultProxyAddr</code> honours global → session → env → default
+        order.</td></tr>
+        <tr><td><b>unit</b> (commit · TS)</td><td><code>Onboarding.test.tsx</code>: with
+        <code>os=macos</code> the step renders an enabled <em>Set system proxy</em> button (wired to
+        <code>onSetProxy</code>) <em>and</em> the snippet; changing the selector switches the shown
+        snippet/steps; <em>Copy</em> writes the exact snippet text via a mocked
+        <code>navigator.clipboard</code>; a snippet containing <code>&lt;b&gt;</code> renders literally;
+        failure → <code>failed</code> note + snippets stay; the step glyph shows ✗ on failure (shared
+        failed-glyph path covers both steps).</td></tr>
+        <tr><td><b>integration</b> (WU seam)</td><td><code>App.test.tsx</code>: with
+        <code>__TRAWLER_PROXY__</code> set to an ephemeral address, clicking <em>Set system proxy</em>
+        calls <code>invoke('set_proxy', {host, port})</code> with that address split correctly (mocked);
+        a rejected invoke sets <code>failed</code> with snippets still shown (decline/consent path); no
+        machine phase change (proof stays W4).</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="waiver">
+      <p><strong>Waiver (judged at review):</strong> the real OS write (<code>osascript … with
+      administrator privileges</code> · live <code>reg add</code>/<code>InternetSetOption</code>) needs a
+      privileged / Windows host, so it is <em>not</em> hermetically runnable in CI — the
+      <strong>command builders</strong> are unit-tested instead, and the full journey is proven in W4's
+      e2e via a real proxied HTTPS request. Same shape as the
+      <a href="2026-07-13-e-uisetup-w2-plan.html#test-plan">W2 waiver</a> and the
+      <a href="2026-07-12-e-uisetup-plan.html#e2e-plan">epic e2e waiver</a>.</p>
+    </div>
+
+    <h2 id="scope">Out of scope for W3</h2>
+    <table data-c="scope">
+      <thead><tr><th>Not in W3</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>Live proof detector · self-test · <code>/stream</code> watch</td><td>W4</td></tr>
+        <tr><td>Automatic proxy revert on app quit / crash</td><td><strong>W5</strong> — its own WU
+        (turn-off is off-steps text here; a set proxy with Trawler stopped breaks connectivity)</td></tr>
+        <tr><td>Binding the proxy beyond loopback (LAN / device reachability)</td><td>core + exposure
+        decision — <a href="2026-07-12-e-uisetup-plan.html#open-questions">epic open question</a>; DEC-12
+        forbids core changes this epic</td></tr>
+        <tr><td>Linux / Firefox auto-set</td><td>epic non-goal; snippet now, auto later if demand</td></tr>
+        <tr><td>PAC files · per-app proxies (git, Docker, JVM flags)</td><td>terminal env vars cover the
+        common CLI case; more targets if demand</td></tr>
+        <tr><td>LAN-IP autodetection for device snippets</td><td>cheap (<code>UdpSocket::connect</code>),
+        but gated on the bind / exposure decision — text says "your machine's LAN address" for now</td></tr>
+        <tr><td>Persisting per-step "done" across restarts</td><td>derive from capture at launch (W4); epic non-goal</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

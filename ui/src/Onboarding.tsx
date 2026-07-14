@@ -1,70 +1,131 @@
 import { useState } from "react";
 import { COPY, STEPS, stepStatus, type OnbEvent, type OnbState } from "./onboardingMachine";
 import {
-  canAutoInstall,
+  canAutoSetup,
+  defaultProxyTarget,
   defaultTarget,
   guidedSteps,
+  proxyOffSteps,
+  proxySnippet,
+  proxySteps,
+  PROXY_TARGETS,
   removalSteps,
   TARGETS,
   type HostOs,
+  type ProxyTarget,
   type TrustTarget,
 } from "./setup";
 
 // The onboarding surface: a centered stepper rendered from the state machine.
-// Trust-ca is live (W2); proxy set (W3) and live verify (W4) land later.
+// Trust-ca (W2) and set-proxy (W3) are live; live verify (W4) lands later.
 // Back to flows shows only once a list exists.
 
 const GLYPH = { done: "✓ done", active: "▸ active", pending: "○ waiting" } as const;
 
-// done/failed report only that the elevated command ran (or didn't) — trust is
-// proven solely by W4's live capture, so the machine never transitions here.
-const INSTALL_NOTE = {
+// The local action states are proven-by-running only: done/failed report just
+// that the elevated command ran (or didn't). Capture is proven solely by W4's
+// live flow, so neither action ever transitions the machine.
+type ActionState = "idle" | "running" | "done" | "failed";
+
+const INSTALL_NOTE: Record<ActionState, string | null> = {
   idle: null,
-  installing: "Installing — approve the system prompt…",
+  running: "Installing — approve the system prompt…",
   done: "Command ran. The Verify step will prove capture works.",
   failed: "Install didn't finish — follow the steps below instead.",
-} as const;
+};
 
-type InstallState = keyof typeof INSTALL_NOTE;
+const SETPROXY_NOTE: Record<ActionState, string | null> = {
+  idle: null,
+  running: "Setting the proxy — approve the prompt if asked…",
+  done: "Proxy set. The Verify step will prove capture works.",
+  failed: "Couldn't set the proxy — follow the steps below instead.",
+};
+
+function useAction(run?: () => Promise<void>) {
+  const [state, setState] = useState<ActionState>("idle");
+  const [error, setError] = useState<string>();
+  const trigger =
+    run &&
+    (() => {
+      setState("running");
+      setError(undefined);
+      run().then(
+        () => setState("done"),
+        (err: unknown) => {
+          console.error("setup action failed:", err);
+          setState("failed");
+          setError(err instanceof Error ? err.message : String(err));
+        },
+      );
+    });
+  return { state, error, trigger };
+}
+
+function ActionButton({
+  testId,
+  label,
+  state,
+  error,
+  note,
+  onClick,
+}: {
+  testId: string;
+  label: string;
+  state: ActionState;
+  error?: string;
+  note: Record<ActionState, string | null>;
+  onClick: () => void;
+}) {
+  return (
+    <div className="mb-2">
+      <button
+        type="button"
+        data-testid={testId}
+        disabled={state === "running"}
+        onClick={onClick}
+        className="rounded-button border border-hairline px-2 py-1 text-ink disabled:opacity-60"
+      >
+        {label}
+      </button>
+      {note[state] && (
+        <div data-testid={`${testId}-status`} data-state={state} className="mt-1">
+          <p>{note[state]}</p>
+          {state === "failed" && error && (
+            <p data-testid={`${testId}-error`} className="text-warn">
+              {error}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function TrustCa({
   os,
-  install,
+  state,
   error,
   onInstall,
 }: {
   os: HostOs;
-  install: InstallState;
+  state: ActionState;
   error?: string;
   onInstall?: () => void;
 }) {
   const [target, setTarget] = useState<TrustTarget>(defaultTarget(os));
-  const auto = onInstall && canAutoInstall(os) && target === defaultTarget(os);
+  const auto = onInstall && canAutoSetup(os) && target === defaultTarget(os);
 
   return (
     <div className="mt-2">
       {auto && (
-        <div className="mb-2">
-          <button
-            type="button"
-            data-testid="install-ca"
-            disabled={install === "installing"}
-            onClick={onInstall}
-            className="rounded-button border border-hairline px-2 py-1 text-ink disabled:opacity-60"
-          >
-            {COPY.steps["trust-ca"].action}
-          </button>
-          {INSTALL_NOTE[install] && (
-            <div data-testid="install-status" data-install={install} className="mt-1">
-              <p>{INSTALL_NOTE[install]}</p>
-              {install === "failed" && error && (
-                <p data-testid="install-error" className="text-warn">
-                  {error}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+        <ActionButton
+          testId="install-ca"
+          label={COPY.steps["trust-ca"].action}
+          state={state}
+          error={error}
+          note={INSTALL_NOTE}
+          onClick={onInstall}
+        />
       )}
       <label className="flex items-center gap-2">
         Steps for
@@ -98,35 +159,100 @@ function TrustCa({
   );
 }
 
+function SetProxy({
+  os,
+  addr,
+  state,
+  error,
+  onSetProxy,
+}: {
+  os: HostOs;
+  addr: string;
+  state: ActionState;
+  error?: string;
+  onSetProxy?: () => void;
+}) {
+  const [target, setTarget] = useState<ProxyTarget>(defaultProxyTarget(os));
+  const auto = onSetProxy && canAutoSetup(os) && target === defaultProxyTarget(os);
+  const snippet = proxySnippet(target, addr);
+
+  return (
+    <div className="mt-2">
+      {auto && (
+        <ActionButton
+          testId="set-proxy"
+          label={COPY.steps["set-proxy"].action}
+          state={state}
+          error={error}
+          note={SETPROXY_NOTE}
+          onClick={onSetProxy}
+        />
+      )}
+      <label className="flex items-center gap-2">
+        Steps for
+        <select
+          data-testid="proxy-target"
+          value={target}
+          onChange={(e) => setTarget(e.target.value as ProxyTarget)}
+          className="rounded-button border border-hairline bg-transparent px-1 py-0.5 text-ink"
+        >
+          {PROXY_TARGETS.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <ol data-testid="proxy-steps" className="mt-1 list-decimal pl-5">
+        {proxySteps(target, addr).map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+      {snippet && (
+        <button
+          type="button"
+          data-testid="copy-snippet"
+          onClick={() => navigator.clipboard.writeText(snippet)}
+          className="mt-1 rounded-button border border-hairline px-2 py-1 text-ink"
+        >
+          Copy command
+        </button>
+      )}
+      <details className="mt-2">
+        <summary className="cursor-pointer text-ink-mute">Turn the proxy off later</summary>
+        <ol data-testid="proxy-off-steps" className="mt-1 list-decimal pl-5">
+          {proxyOffSteps(target).map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      </details>
+    </div>
+  );
+}
+
 export function Onboarding({
   state,
   dispatch,
   os = "other",
+  proxyAddr = "127.0.0.1:7420",
   onInstallCa,
+  onSetProxy,
 }: {
   state: OnbState;
   dispatch: (e: OnbEvent) => void;
   os?: HostOs;
+  proxyAddr?: string;
   onInstallCa?: () => Promise<void>;
+  onSetProxy?: () => Promise<void>;
 }) {
   const atFirst = state.step === STEPS[0];
   const atLast = state.step === STEPS[STEPS.length - 1];
-  const [install, setInstall] = useState<InstallState>("idle");
-  const [installError, setInstallError] = useState<string>();
-  const runInstall =
-    onInstallCa &&
-    (() => {
-      setInstall("installing");
-      setInstallError(undefined);
-      onInstallCa().then(
-        () => setInstall("done"),
-        (err: unknown) => {
-          console.error("CA install failed:", err);
-          setInstall("failed");
-          setInstallError(err instanceof Error ? err.message : String(err));
-        },
-      );
-    });
+  const install = useAction(onInstallCa);
+  const setProxyAction = useAction(onSetProxy);
+
+  const failedState = (step: string) =>
+    (step === "trust-ca" && install.state === "failed") ||
+    (step === "set-proxy" && setProxyAction.state === "failed");
 
   return (
     <div className="flex h-full flex-col overflow-auto">
@@ -152,8 +278,7 @@ export function Onboarding({
             {STEPS.map((step, i) => {
               const status = stepStatus(state, step);
               const copy = COPY.steps[step];
-              const showFailed =
-                step === "trust-ca" && install === "failed" && status === "done";
+              const showFailed = failedState(step) && status === "done";
               const glyph = showFailed ? "✗ failed" : GLYPH[status];
               return (
                 <li
@@ -181,9 +306,17 @@ export function Onboarding({
                       {step === "trust-ca" ? (
                         <TrustCa
                           os={os}
-                          install={install}
-                          error={installError}
-                          onInstall={runInstall}
+                          state={install.state}
+                          error={install.error}
+                          onInstall={install.trigger}
+                        />
+                      ) : step === "set-proxy" ? (
+                        <SetProxy
+                          os={os}
+                          addr={proxyAddr}
+                          state={setProxyAction.state}
+                          error={setProxyAction.error}
+                          onSetProxy={setProxyAction.trigger}
                         />
                       ) : (
                         copy.action && (

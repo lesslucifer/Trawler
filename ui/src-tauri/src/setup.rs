@@ -79,6 +79,128 @@ fn failure_message(stderr: &str) -> String {
     }
 }
 
+const WININET_KEY: &str =
+    r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
+
+// `networksetup -listallnetworkservices` prints a header line then one service
+// per line; a leading '*' marks a disabled service — those are skipped.
+fn parse_services(list: &str) -> Vec<String> {
+    list.lines()
+        .skip(1)
+        .filter(|l| !l.starts_with('*'))
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .map(ToString::to_string)
+        .collect()
+}
+
+fn set_proxy_commands(
+    os: &str,
+    services: &[String],
+    host: &str,
+    port: u16,
+) -> Option<Vec<Vec<String>>> {
+    match os {
+        "macos" => {
+            let script = services
+                .iter()
+                .flat_map(|svc| {
+                    let svc = shell_quote(svc);
+                    [
+                        format!("networksetup -setwebproxy {svc} {host} {port}"),
+                        format!("networksetup -setsecurewebproxy {svc} {host} {port}"),
+                    ]
+                })
+                .collect::<Vec<_>>()
+                .join(" && ");
+            Some(vec![vec![
+                "osascript".into(),
+                "-e".into(),
+                format!("do shell script \"{script}\" with administrator privileges"),
+            ]])
+        }
+        "windows" => Some(vec![
+            reg_add("ProxyServer", "REG_SZ", &format!("{host}:{port}")),
+            reg_add("ProxyEnable", "REG_DWORD", "1"),
+            internet_set_option_refresh(),
+        ]),
+        _ => None,
+    }
+}
+
+fn reg_add(value: &str, kind: &str, data: &str) -> Vec<String> {
+    ["reg", "add", WININET_KEY, "/v", value, "/t", kind, "/d", data, "/f"]
+        .map(ToString::to_string)
+        .to_vec()
+}
+
+// SETTINGS_CHANGED (39) then REFRESH (37) so running WinINET apps pick the new
+// proxy up now, not at their next settings poll.
+fn internet_set_option_refresh() -> Vec<String> {
+    vec![
+        "powershell".into(),
+        "-NoProfile".into(),
+        "-Command".into(),
+        concat!(
+            "$s='[DllImport(\"wininet.dll\")]public static extern bool ",
+            "InternetSetOption(IntPtr h,int o,IntPtr b,int l);';",
+            "$t=Add-Type -MemberDefinition $s -Name W -Namespace I -PassThru;",
+            "$t::InternetSetOption([IntPtr]::Zero,39,[IntPtr]::Zero,0);",
+            "$t::InternetSetOption([IntPtr]::Zero,37,[IntPtr]::Zero,0)"
+        )
+        .into(),
+    ]
+}
+
+// Service names come from networksetup output, not IPC, but still get quoted
+// (names contain spaces, e.g. "Wi-Fi", "Thunderbolt Bridge") and single quotes
+// escaped so they splice safely into the osascript shell string.
+fn shell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', r"'\''"))
+}
+
+fn valid_host(host: &str) -> bool {
+    !host.is_empty()
+        && host.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
+}
+
+#[tauri::command]
+pub fn set_proxy(host: String, port: u16) -> Result<(), String> {
+    if !valid_host(&host) {
+        return Err("invalid proxy host".into());
+    }
+    if port == 0 {
+        return Err("invalid proxy port".into());
+    }
+    let os = std::env::consts::OS;
+    let services = if os == "macos" {
+        let out = Command::new("networksetup")
+            .arg("-listallnetworkservices")
+            .output()
+            .map_err(|e| e.to_string())?;
+        let services = parse_services(&String::from_utf8_lossy(&out.stdout));
+        if services.is_empty() {
+            return Err("no network services to configure".into());
+        }
+        services
+    } else {
+        Vec::new()
+    };
+    let commands = set_proxy_commands(os, &services, &host, port)
+        .ok_or("no automatic proxy setup on this system — follow the guided steps")?;
+    for argv in commands {
+        let out = Command::new(&argv[0]).args(&argv[1..]).output().map_err(|e| e.to_string())?;
+        if !out.status.success() {
+            let detail = String::from_utf8_lossy(&out.stderr);
+            return Err(match detail.trim() {
+                "" => "couldn't set the proxy — no detail; use the steps below".into(),
+                d => format!("couldn't set the proxy: {d}"),
+            });
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -153,5 +275,59 @@ mod tests {
     fn install_ca_rejects_non_certificate_input() {
         let err = install_ca("BEGIN RSA PRIVATE KEY".into()).unwrap_err();
         assert!(err.contains("not a PEM certificate"));
+    }
+
+    #[test]
+    fn parse_services_drops_the_header_and_disabled_entries() {
+        let list = "An asterisk (*) denotes that a network service is disabled.\n\
+                    Wi-Fi\n\
+                    *Thunderbolt Bridge\n\
+                    Ethernet\n";
+        assert_eq!(parse_services(list), ["Wi-Fi", "Ethernet"].map(String::from));
+    }
+
+    #[test]
+    fn macos_set_proxy_is_one_elevated_script_covering_every_service() {
+        let svcs = ["Wi-Fi".into(), "Thunderbolt Bridge".into()];
+        let cmds = set_proxy_commands("macos", &svcs, "127.0.0.1", 7420).unwrap();
+        assert_eq!(cmds.len(), 1);
+        assert_eq!(cmds[0][0], "osascript");
+        let script = &cmds[0][2];
+        assert!(script.contains("with administrator privileges"));
+        assert!(script.contains("networksetup -setwebproxy 'Wi-Fi' 127.0.0.1 7420"));
+        assert!(script.contains("networksetup -setsecurewebproxy 'Wi-Fi' 127.0.0.1 7420"));
+        assert!(script.contains("networksetup -setwebproxy 'Thunderbolt Bridge' 127.0.0.1 7420"));
+        assert!(script.contains("networksetup -setsecurewebproxy 'Thunderbolt Bridge' 127.0.0.1 7420"));
+    }
+
+    #[test]
+    fn windows_set_proxy_writes_hkcu_and_refreshes_without_elevation() {
+        let cmds = set_proxy_commands("windows", &[], "127.0.0.1", 7420).unwrap();
+        assert_eq!(cmds.len(), 3);
+        assert_eq!(cmds[0], reg_add("ProxyServer", "REG_SZ", "127.0.0.1:7420"));
+        assert_eq!(cmds[1], reg_add("ProxyEnable", "REG_DWORD", "1"));
+        assert_eq!(cmds[2][0], "powershell");
+        assert!(cmds[2].last().unwrap().contains("InternetSetOption"));
+        for cmd in &cmds {
+            assert_ne!(cmd[0], "osascript");
+            assert!(!cmd.iter().any(|a| a.contains("RunAs")));
+        }
+    }
+
+    #[test]
+    fn other_systems_have_no_auto_proxy_path() {
+        assert_eq!(set_proxy_commands("linux", &[], "127.0.0.1", 7420), None);
+    }
+
+    #[test]
+    fn set_proxy_rejects_hosts_with_shell_metacharacters() {
+        for bad in ["127.0.0.1 x", "a;rm -rf", "a'b", "a\"b", "$(x)", ""] {
+            assert!(set_proxy(bad.into(), 7420).is_err(), "should reject {bad:?}");
+        }
+    }
+
+    #[test]
+    fn set_proxy_rejects_port_zero() {
+        assert!(set_proxy("127.0.0.1".into(), 0).unwrap_err().contains("port"));
     }
 }

@@ -3,14 +3,16 @@ import { useReducer } from "react";
 import { expect, test, vi } from "vitest";
 import { Onboarding } from "./Onboarding";
 import { COPY, reduce, type OnbState } from "./onboardingMachine";
-import { guidedSteps } from "./setup";
+import { guidedSteps, proxySnippet, proxySteps } from "./setup";
 
 vi.mock("./setup", async (importOriginal) => {
   const mod = await importOriginal<typeof import("./setup")>();
-  return { ...mod, guidedSteps: vi.fn(mod.guidedSteps) };
+  return { ...mod, guidedSteps: vi.fn(mod.guidedSteps), proxySteps: vi.fn(mod.proxySteps) };
 });
 
 const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
+const atSetProxy: OnbState = { phase: "onboarding", step: "set-proxy", everProven: false };
+const ADDR = "10.1.2.3:9999";
 
 function Harness({
   start = onboarding,
@@ -52,7 +54,7 @@ test("a failed install shows the error and marks the passed step failed, not don
 
   fireEvent.click(screen.getByTestId("install-ca"));
   expect(await screen.findByText(/follow the steps below/)).toBeInTheDocument();
-  expect(screen.getByTestId("install-error")).toHaveTextContent("GET /ca.crt failed: 500");
+  expect(screen.getByTestId("install-ca-error")).toHaveTextContent("GET /ca.crt failed: 500");
 
   fireEvent.click(screen.getByTestId("onb-next"));
   expect(screen.getByTestId("step-trust-ca")).toHaveTextContent("✗ failed");
@@ -82,6 +84,60 @@ test("guided steps render as text, never markup", () => {
   vi.mocked(guidedSteps).mockReturnValueOnce(["<b>not bold</b> — literal text"]);
   render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" />);
   expect(screen.getByText("<b>not bold</b> — literal text")).toBeInTheDocument();
+});
+
+test("the set-proxy step shows Set system proxy wired to onSetProxy, with the snippet alongside", () => {
+  const onSetProxy = vi.fn(async () => {});
+  render(
+    <Onboarding
+      state={atSetProxy}
+      dispatch={vi.fn()}
+      os="macos"
+      proxyAddr={ADDR}
+      onSetProxy={onSetProxy}
+    />,
+  );
+  expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/networksetup -setwebproxy/);
+  fireEvent.click(screen.getByTestId("set-proxy"));
+  expect(onSetProxy).toHaveBeenCalledOnce();
+});
+
+test("changing the client selector switches the shown snippet and steps", () => {
+  render(<Onboarding state={atSetProxy} dispatch={vi.fn()} os="macos" proxyAddr={ADDR} onSetProxy={vi.fn()} />);
+  fireEvent.change(screen.getByTestId("proxy-target"), { target: { value: "terminal" } });
+  expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/HTTPS_PROXY=http:\/\/10\.1\.2\.3:9999/);
+  expect(screen.queryByTestId("set-proxy")).toBeNull(); // auto button only on the detected host
+});
+
+test("Copy puts the exact snippet command on the clipboard", () => {
+  const writeText = vi.fn();
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  render(<Onboarding state={atSetProxy} dispatch={vi.fn()} os="macos" proxyAddr={ADDR} onSetProxy={vi.fn()} />);
+  fireEvent.click(screen.getByTestId("copy-snippet"));
+  expect(writeText).toHaveBeenCalledWith(proxySnippet("macos", ADDR));
+});
+
+test("proxy steps render as text, never markup", () => {
+  vi.mocked(proxySteps).mockReturnValueOnce(["<b>not bold</b> — literal"]);
+  render(<Onboarding state={atSetProxy} dispatch={vi.fn()} os="linux" proxyAddr={ADDR} />);
+  expect(screen.getByText("<b>not bold</b> — literal")).toBeInTheDocument();
+});
+
+test("a failed set-proxy shows the error, keeps the snippet, and marks the passed step failed", async () => {
+  const onSetProxy = vi.fn(() => Promise.reject(new Error("couldn't set the proxy: denied")));
+  const Harn = () => {
+    const [state, dispatch] = useReducer(reduce, atSetProxy);
+    return <Onboarding state={state} dispatch={dispatch} os="macos" proxyAddr={ADDR} onSetProxy={onSetProxy} />;
+  };
+  render(<Harn />);
+
+  fireEvent.click(screen.getByTestId("set-proxy"));
+  expect(await screen.findByText(/follow the steps below/)).toBeInTheDocument();
+  expect(screen.getByTestId("set-proxy-error")).toHaveTextContent("couldn't set the proxy: denied");
+  expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/networksetup/);
+
+  fireEvent.click(screen.getByTestId("onb-next"));
+  expect(screen.getByTestId("step-set-proxy")).toHaveTextContent("✗ failed");
 });
 
 test("Back to flows shows only once ever proven", () => {

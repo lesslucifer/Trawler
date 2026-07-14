@@ -12,7 +12,9 @@ export function hostOs(ua: string = navigator.userAgent): HostOs {
   return "other";
 }
 
-export function canAutoInstall(os: HostOs): boolean {
+// "This OS has a one-click local setup path" — one concept shared by both the
+// trust-ca and set-proxy steps (macOS + Windows), so it is not duplicated.
+export function canAutoSetup(os: HostOs): boolean {
   return os === "macos" || os === "windows";
 }
 
@@ -96,4 +98,104 @@ const REMOVE: Record<TrustTarget, string[]> = {
 
 export function removalSteps(target: TrustTarget): string[] {
   return REMOVE[target];
+}
+
+// --- Set the proxy (E-UISETUP.W3) ---------------------------------------------
+// Same shape as the trust-ca helpers: pure, no I/O, instruction text as data.
+// Every snippet carries the real configured address — never a hardcoded port.
+
+export type ProxyTarget = "macos" | "windows" | "linux" | "firefox" | "terminal" | "ios-sim" | "android";
+
+export function defaultProxyTarget(os: HostOs): ProxyTarget {
+  return os === "other" ? "terminal" : os;
+}
+
+export const PROXY_TARGETS: readonly { id: ProxyTarget; label: string }[] = [
+  { id: "macos", label: "macOS" },
+  { id: "windows", label: "Windows" },
+  { id: "linux", label: "Linux (GNOME)" },
+  { id: "firefox", label: "Firefox" },
+  { id: "terminal", label: "Terminal / CLI" },
+  { id: "ios-sim", label: "iOS Simulator" },
+  { id: "android", label: "Android" },
+];
+
+export function splitProxyAddr(addr: string): { host: string; port: number } {
+  const at = addr.lastIndexOf(":");
+  return { host: addr.slice(0, at), port: Number(addr.slice(at + 1)) };
+}
+
+// The one copyable command for the target, or null for GUI-only clients whose
+// steps are point-and-click (Firefox, iOS Simulator, Android).
+export function proxySnippet(t: ProxyTarget, addr: string): string | null {
+  const { host, port } = splitProxyAddr(addr);
+  switch (t) {
+    case "macos":
+      return `networksetup -setwebproxy Wi-Fi ${host} ${port} && networksetup -setsecurewebproxy Wi-Fi ${host} ${port}`;
+    case "windows":
+      return `reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyServer /t REG_SZ /d ${addr} /f && reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 1 /f`;
+    case "linux":
+      return `gsettings set org.gnome.system.proxy mode 'manual' && gsettings set org.gnome.system.proxy.http host '${host}' && gsettings set org.gnome.system.proxy.http port ${port} && gsettings set org.gnome.system.proxy.https host '${host}' && gsettings set org.gnome.system.proxy.https port ${port}`;
+    case "terminal":
+      return `export HTTPS_PROXY=http://${addr} HTTP_PROXY=http://${addr}`;
+    default:
+      return null;
+  }
+}
+
+export function proxySteps(t: ProxyTarget, addr: string): string[] {
+  const { host, port } = splitProxyAddr(addr);
+  const snippet = proxySnippet(t, addr);
+  switch (t) {
+    case "macos":
+      return ["Run — this sets the Wi-Fi service; change the name for Ethernet etc.:", snippet!];
+    case "windows":
+      return ["Run:", snippet!];
+    case "linux":
+      return ["GNOME — run:", snippet!, "Chrome/Electron inherit this system proxy."];
+    case "firefox":
+      return [
+        "Firefox keeps its own proxy settings, separate from the system.",
+        "Settings → Network Settings → Settings… → Manual proxy configuration.",
+        `HTTP Proxy ${host}, Port ${port}, and check "Also use this proxy for HTTPS".`,
+      ];
+    case "terminal":
+      return ["Export the proxy in your shell (curl, npm, and most CLIs honour it):", snippet!];
+    case "ios-sim":
+      return [
+        "The iOS Simulator uses the host Mac's system proxy — the macOS setup already covers it.",
+        "Restart the Simulator if it was running when you set the proxy.",
+      ];
+    case "android":
+      return [
+        `Wi-Fi → your network → Proxy → Manual. Host = your machine's LAN address, Port ${port}.`,
+        "Android emulator: use host 10.0.2.2 to reach the machine it runs on.",
+        "Reaching a device needs Trawler bound beyond loopback — see setup notes.",
+      ];
+  }
+}
+
+export function proxyOffSteps(t: ProxyTarget): string[] {
+  switch (t) {
+    case "macos":
+      return [
+        "Turn it off per enabled service (keeps the saved address):",
+        "networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off",
+      ];
+    case "windows":
+      return [
+        "Disable the WinINET proxy (keeps the saved address):",
+        'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f',
+      ];
+    case "linux":
+      return ["GNOME — back to no proxy:", "gsettings set org.gnome.system.proxy mode 'none'"];
+    case "firefox":
+      return ["Settings → Network Settings → Settings… → select \"No proxy\"."];
+    case "terminal":
+      return ["Clear the environment variables:", "unset HTTPS_PROXY HTTP_PROXY"];
+    case "ios-sim":
+      return ["Turn the host Mac's proxy off (the macOS steps above), then restart the Simulator."];
+    case "android":
+      return ["Wi-Fi → your network → Proxy → None."];
+  }
 }
