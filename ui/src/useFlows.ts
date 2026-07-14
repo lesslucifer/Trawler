@@ -10,6 +10,10 @@ export function useFlows(api: TrawlerApi) {
   const [filter, setFilter] = useState<Filter>({});
   const [flows, setFlows] = useState<FlowSummary[]>([]);
   const [live, setLive] = useState(false);
+  // Tunnels that reached the proxy but may never become a flow (untrusted-CA
+  // handshakes). Onboarding treats connections>0 as "proxy is routing"; the
+  // flow list itself ignores them. Seeded once from /stats, then bumped live.
+  const [connections, setConnections] = useState(0);
 
   const filterRef = useRef(filter);
   filterRef.current = filter;
@@ -30,7 +34,12 @@ export function useFlows(api: TrawlerApi) {
   }, [filter, debouncedRefresh]);
 
   useEffect(() => {
-    const close = api.stream({ onEvent: debouncedRefresh, onLive: setLive });
+    api.connectionCount().then(setConnections).catch(() => {});
+    const close = api.stream({
+      onEvent: debouncedRefresh,
+      onLive: setLive,
+      onConnection: () => setConnections((n) => n + 1),
+    });
     return () => {
       setLive(false);
       close();
@@ -42,5 +51,5 @@ export function useFlows(api: TrawlerApi) {
     [],
   );
 
-  return { filter, flows, live, update };
+  return { filter, flows, live, connections, update };
 }

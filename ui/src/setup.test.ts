@@ -4,15 +4,19 @@ import {
   defaultTarget,
   guidedSteps,
   hostOs,
+  proveItSnippet,
   PROXY_TARGETS,
   proxyOffSteps,
   proxySnippet,
+  proxyStatus,
   proxySteps,
   removalSteps,
   splitProxyAddr,
   TARGETS,
+  trustStatus,
+  verifyStatus,
 } from "./setup";
-import type { ProxyTarget, TrustTarget } from "./setup";
+import type { Observed, ProxyTarget, TrustTarget } from "./setup";
 
 const UA = {
   mac: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)",
@@ -129,6 +133,69 @@ test("the Android steps say to use the machine's LAN address, not loopback", () 
   const text = proxySteps("android", ADDR).join("\n");
   expect(text).toMatch(/LAN address/);
   expect(text).not.toMatch(/127\.0\.0\.1/);
+});
+
+// --- Honest per-step status derivation (W6) ---
+
+const NONE: Observed = { decrypted: false, trafficSeen: false };
+const TRAFFIC: Observed = { decrypted: false, trafficSeen: true };
+const DECRYPTED: Observed = { decrypted: true, trafficSeen: true };
+
+test("trustStatus: the local probe is the fast, green ~90% path", () => {
+  const v = trustStatus("trusted", NONE, null);
+  expect(v).toMatchObject({ glyph: "✓", tone: "ok" });
+  expect(v.message).toMatch(/Trusted on this machine/);
+});
+
+test("trustStatus: a decrypted flow proves trust even when the probe can't (remote/manual)", () => {
+  expect(trustStatus("untrusted", DECRYPTED, null)).toMatchObject({ tone: "ok", glyph: "✓" });
+  expect(trustStatus("unknown", DECRYPTED, null).message).toMatch(/captured traffic/);
+});
+
+test("trustStatus: traffic arriving but not decrypting points at the sending device, as a warning not a red error", () => {
+  const v = trustStatus("untrusted", TRAFFIC, null);
+  expect(v.tone).toBe("warn");
+  expect(v.message).toMatch(/install the certificate on the device you're capturing from/);
+});
+
+test("trustStatus: an un-probeable OS with no traffic says capture will confirm, never 'not set up'", () => {
+  const v = trustStatus("unknown", NONE, null);
+  expect(v.glyph).toBe("◐");
+  expect(v.message).toMatch(/we'll confirm when traffic arrives/);
+  expect(v.message).not.toMatch(/not trusted/i);
+});
+
+test("trustStatus: probed untrusted with nothing seen is a calm 'not trusted yet', not an alarm", () => {
+  const v = trustStatus("untrusted", NONE, null);
+  expect(v.glyph).toBe("○");
+  expect(v.tone).toBe("muted");
+});
+
+test("trustStatus: a running install and a failure surface their own transient states", () => {
+  expect(trustStatus("untrusted", NONE, "installing").message).toMatch(/Installing/);
+  expect(trustStatus("untrusted", NONE, null, "denied")).toMatchObject({ tone: "warn" });
+});
+
+test("proxyStatus: the probe or ANY connection turns it green, decrypt or not", () => {
+  expect(proxyStatus("ours", NONE, null)).toMatchObject({ tone: "ok", glyph: "✓" });
+  const seen = proxyStatus("none", TRAFFIC, null);
+  expect(seen.tone).toBe("ok");
+  expect(seen.message).toMatch(/Receiving traffic/);
+});
+
+test("proxyStatus: nothing yet vs can't-check are distinct, both calm", () => {
+  expect(proxyStatus("none", NONE, null)).toMatchObject({ glyph: "○", tone: "muted" });
+  expect(proxyStatus("unknown", NONE, null).message).toMatch(/we'll confirm when traffic arrives/);
+});
+
+test("verifyStatus flips green only on a decrypted flow", () => {
+  expect(verifyStatus(NONE)).toMatchObject({ glyph: "○", tone: "muted" });
+  expect(verifyStatus(TRAFFIC)).toMatchObject({ glyph: "○" }); // traffic alone isn't decrypt
+  expect(verifyStatus(DECRYPTED)).toMatchObject({ glyph: "✓", tone: "ok" });
+});
+
+test("proveItSnippet carries the real proxy address, never a hardcoded port", () => {
+  expect(proveItSnippet("10.1.2.3:9999")).toBe("curl -x http://10.1.2.3:9999 https://example.com");
 });
 
 test("proxyOffSteps covers every target with the inverse action", () => {

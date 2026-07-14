@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a56ae599f34851f0dfa8ef9" data-artifact="wu-result" data-status="built">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-UISETUP.W6 result: onboarding UX enhancement</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-UISETUP.W6 — result</h1>
+      <p>Honest, device-aware, immediate per-step setup status — as built.</p>
+      <div class="meta">Built v1 · 2026-07-15 · Trawler · T3 result · plan:
+      <a href="2026-07-14-e-uisetup-w6-plan.html">W6 plan</a> · epic:
+      <a href="2026-07-12-e-uisetup-plan.html">E-UISETUP</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="shipped">What shipped</h2>
+    <table>
+      <thead><tr><th>Pain</th><th>Fix, as built</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">P1</span> Verify dead-end</td>
+          <td>The Verify step renders a concrete prove-it: "open any website, or run the command below" plus a
+          copyable <code>curl -x http://&lt;addr&gt; https://example.com</code> carrying the real proxy
+          address (<code>proveItSnippet</code>). Green still flips only from a real decrypted flow.</td></tr>
+        <tr><td><span class="badge id">P2</span> Dishonest &amp; blind status</td>
+          <td>Each step derives a separated, honest status from two truths — a local probe and observed
+          traffic (<code>trustStatus</code> / <code>proxyStatus</code> / <code>verifyStatus</code> in
+          <a href="../../ui/src/setup.ts">setup.ts</a>). No more ✓ from cursor position.</td></tr>
+        <tr><td><span class="badge id">P3</span> Buried happy path</td>
+          <td>On macOS/Windows the one-click action is primary; the per-OS manual steps collapse behind a
+          "Set it up manually" disclosure that force-opens on an auto-setup failure. Non-auto OSes stay
+          inline.</td></tr>
+        <tr><td>Enabling signal</td>
+          <td><code>FlowEvent::ConnectionSeen</code> + a store counter + <code>GET /stats</code> +
+          <code>connection</code> SSE. A <code>CONNECT</code> whose handshake fails (untrusted CA) now leaves
+          a trace, so the proxy step goes green on <em>any</em> traffic, decrypt or not.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="two-truths">Two truths, wired</h2>
+    <ul>
+      <li><strong>Local probe (~90%).</strong> <code>ca_trusted</code> (new, CN match) + W5's existing
+      <code>proxy_status</code> (host:port classify). Run on entering onboarding and re-run after an action;
+      failures fall back to <em>unknown</em>, never a false "not set up".</li>
+      <li><strong>Observed traffic.</strong> App threads <code>{ decrypted, trafficSeen }</code> into
+      Onboarding — <code>decrypted</code> = an <code>https://</code> flow (W4), <code>trafficSeen</code> =
+      any flow OR <code>connections &gt; 0</code> (seeded from <code>/stats</code>, bumped on the
+      <code>connection</code> event via <code>useFlows</code>).</li>
+      <li><strong>Reveal stays capture-only.</strong> A probe-green or a bare connection never reveals the
+      list — only a decrypted flow does (unchanged from W4).</li>
+    </ul>
+
+    <h2 id="deviations">Deviations from plan</h2>
+    <div class="callout" data-c="cn-not-fingerprint">
+      <p><strong>CA probe matches on Common Name, not SHA-256 fingerprint</strong> (owner-approved). Avoids a
+      crypto dep in the thin Tauri shell. Ceiling: a stale cert reusing the CN "Trawler Proxy CA" would read
+      as trusted; the upgrade path (hash the live <code>/ca.crt</code> DER, match the store's fingerprint
+      line) is a <code>ponytail:</code> note in <a href="../../ui/src-tauri/src/setup.rs">setup.rs</a>.</p>
+    </div>
+    <div class="callout" data-c="proxy-probe-reuse">
+      <p><strong>No new proxy probe.</strong> The plan's "proxy → us?" probe is W5's shipped
+      <code>proxy_status</code> verbatim — <code>"ours"</code> ⇒ the step is green. Reuse, not a new command.</p>
+    </div>
+    <div class="callout" data-c="e2e-scope">
+      <p><strong>e2e: W4 spine only.</strong> The connection-goes-green-before-decrypt path is proven
+      hermetically at integration (<a href="../../tests/e2e_capture.rs">untrusted_https_records_a_connection_not_a_flow</a>);
+      the WebDriver harness only drives a <em>trusted</em> proxied request, so the untrusted case isn't
+      re-asserted there. The 4-spec journey stays green.</p>
+    </div>
+
+    <h2 id="gates">Gates</h2>
+    <p><code>cargo test</code> (core, incl. the new connection integration + <code>/stats</code> tests) ·
+    <code>cargo clippy --all-targets</code> (both crates, clean) · Tauri <code>cargo test</code> (23) ·
+    vitest (104) · <code>tsc -b</code> · <code>cargo xtask ui build</code> · e2e (4) — all green.</p>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

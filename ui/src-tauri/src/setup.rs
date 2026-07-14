@@ -79,8 +79,49 @@ fn failure_message(stderr: &str) -> String {
     }
 }
 
-const WININET_KEY: &str =
-    r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
+// Trawler's CA is issued with this CN; the store dumps below are matched on it,
+// the same key W2's removal steps use.
+const CA_COMMON_NAME: &str = "Trawler Proxy CA";
+
+// Read-only probe: is Trawler's CA in this machine's system trust store? Feeds
+// the onboarding Trust step so the ~90% local case gets an instant, honest
+// status instead of waiting on a captured flow. macOS/Windows only — the same
+// systems that have an auto-install path; elsewhere we can't conclude.
+//
+// ponytail: matches on the CA's Common Name, not a key fingerprint. A stale cert
+// left over from an earlier run with the same CN would read as trusted. Upgrade
+// path if that bites: compute the SHA-256 of the live /ca.crt DER (add `sha2`)
+// and match the store's fingerprint line instead of the CN.
+fn ca_is_trusted(os: &str) -> Option<bool> {
+    match os {
+        "macos" => {
+            let out = Command::new("security")
+                .args(["find-certificate", "-a", "-c", CA_COMMON_NAME])
+                .output()
+                .ok()?;
+            Some(out.status.success() && !out.stdout.is_empty())
+        }
+        "windows" => {
+            let out = Command::new("certutil").args(["-store", "ROOT"]).output().ok()?;
+            Some(String::from_utf8_lossy(&out.stdout).contains(CA_COMMON_NAME))
+        }
+        _ => None,
+    }
+}
+
+// "trusted" / "untrusted" ⇒ probed this machine and concluded; "unknown" ⇒ no
+// reliable probe on this OS, so the UI falls back to capture-will-confirm wording.
+#[tauri::command]
+pub fn ca_trusted() -> String {
+    match ca_is_trusted(std::env::consts::OS) {
+        Some(true) => "trusted",
+        Some(false) => "untrusted",
+        None => "unknown",
+    }
+    .into()
+}
+
+const WININET_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
 
 // `networksetup -listallnetworkservices` prints a header line then one service
 // per line; a leading '*' marks a disabled service — those are skipped.
@@ -189,8 +230,7 @@ fn shell_quote(s: &str) -> String {
 }
 
 fn valid_host(host: &str) -> bool {
-    !host.is_empty()
-        && host.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
+    !host.is_empty() && host.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
 }
 
 fn macos_services() -> Result<Vec<String>, String> {
@@ -506,7 +546,9 @@ mod tests {
         assert!(script.contains("networksetup -setwebproxy 'Wi-Fi' 127.0.0.1 7420"));
         assert!(script.contains("networksetup -setsecurewebproxy 'Wi-Fi' 127.0.0.1 7420"));
         assert!(script.contains("networksetup -setwebproxy 'Thunderbolt Bridge' 127.0.0.1 7420"));
-        assert!(script.contains("networksetup -setsecurewebproxy 'Thunderbolt Bridge' 127.0.0.1 7420"));
+        assert!(
+            script.contains("networksetup -setsecurewebproxy 'Thunderbolt Bridge' 127.0.0.1 7420")
+        );
     }
 
     #[test]
@@ -588,7 +630,10 @@ mod tests {
         let marker = marker_path();
         std::fs::write(&marker, []).unwrap();
         clear_proxy_marker();
-        assert!(!marker.exists(), "clear drops the marker (proxy itself untouched — no OS command run)");
+        assert!(
+            !marker.exists(),
+            "clear drops the marker (proxy itself untouched — no OS command run)"
+        );
     }
 
     #[test]

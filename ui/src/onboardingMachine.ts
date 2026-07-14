@@ -69,24 +69,24 @@ export const COPY = {
   steps: {
     "trust-ca": {
       title: "Trust the CA",
-      body: "Trawler decrypts HTTPS by signing with its own certificate authority. Your machine has to trust it first.",
+      body: "To read HTTPS traffic, Trawler signs it with its own certificate. Your machine needs to trust that certificate first.",
       action: "Install certificate",
     },
     "set-proxy": {
       title: "Set the proxy",
-      body: "Route your traffic through Trawler. One click on macOS or Windows; a copy-paste snippet everywhere else.",
+      body: "Send your traffic through Trawler. One click on macOS and Windows; a copy-and-paste command elsewhere.",
       action: "Set system proxy",
     },
     verify: {
       title: "Verify",
-      body: "Waiting for your first decrypted HTTPS flow…",
+      body: "Almost there — now generate some traffic. Open any website, or run the command below. Your first request will show up here.",
       action: null,
     },
   },
   back: "‹ Back to flows",
   dotTitle: {
-    broken: "Capture isn't working — tap to set up",
-    checking: "Checking capture…",
-    connected: "Capturing — tap to re-run setup",
+    broken: "Not capturing yet — click to set up",
+    checking: "Checking…",
+    connected: "Capturing — click to run setup again",
   },
 } as const;

@@ -15,6 +15,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             setup::install_ca,
+            setup::ca_trusted,
             setup::set_proxy,
             setup::unset_proxy,
             setup::proxy_status,
@@ -26,10 +27,8 @@ pub fn run() {
     let builder =
         builder.plugin(tauri_plugin_wdio::init()).plugin(tauri_plugin_wdio_webdriver::init());
 
-    builder
-        .build(tauri::generate_context!())
-        .expect("error while running trawler-ui")
-        .run(|_app, event| {
+    builder.build(tauri::generate_context!()).expect("error while running trawler-ui").run(
+        |_app, event| {
             // Last-chance safety net: on macOS, Cmd-Q / the menu Quit go through
             // [NSApp terminate:], which never fires the window's onCloseRequested —
             // so the webview confirm (App.tsx) is skipped on that path. tao doesn't
@@ -44,5 +43,6 @@ pub fn run() {
             if matches!(event, tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit) {
                 setup::revert_if_marked();
             }
-        });
+        },
+    );
 }

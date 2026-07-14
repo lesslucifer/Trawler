@@ -38,31 +38,35 @@ test("Next moves the active step forward", () => {
   expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "done");
 });
 
-test("an auto-capable host shows Install wired to onInstallCa, with guided steps alongside", async () => {
+test("an auto-capable host shows Install wired to onInstallCa, with guided steps behind the manual disclosure", async () => {
   const onInstallCa = vi.fn(async () => {});
   render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={onInstallCa} />);
 
+  // P3: the one-click action is primary; the per-OS steps live behind a disclosure.
+  expect(screen.getByTestId("manual")).toBeInTheDocument();
   expect(screen.getByTestId("guided-steps")).toHaveTextContent(/security add-trusted-cert/);
   fireEvent.click(screen.getByTestId("install-ca"));
   expect(onInstallCa).toHaveBeenCalledOnce();
-  expect(await screen.findByText(/Verify step will prove/)).toBeInTheDocument();
+  expect(await screen.findByText(/confirm it's working at the Verify step/)).toBeInTheDocument();
 });
 
-test("a failed install shows the error and marks the passed step failed, not done", async () => {
+test("a failed install shows the error and marks the step warn in its status line, not a false done", async () => {
   const onInstallCa = vi.fn(() => Promise.reject(new Error("GET /ca.crt failed: 500")));
   render(<Harness start={onboarding} os="macos" onInstallCa={onInstallCa} />);
 
   fireEvent.click(screen.getByTestId("install-ca"));
-  expect(await screen.findByText(/follow the steps below/)).toBeInTheDocument();
+  expect(await screen.findByText(/use the manual steps below/)).toBeInTheDocument();
   expect(screen.getByTestId("install-ca-error")).toHaveTextContent("GET /ca.crt failed: 500");
 
-  fireEvent.click(screen.getByTestId("onb-next"));
-  expect(screen.getByTestId("step-trust-ca")).toHaveTextContent("✗ failed");
+  const status = screen.getByTestId("step-trust-ca-status");
+  expect(status).toHaveTextContent(/Install failed/);
+  expect(status).not.toHaveTextContent(/Trusted/);
 });
 
-test("a non-auto host shows only the guided steps for its system", () => {
+test("a non-auto host shows the guided steps inline, no disclosure to bury them", () => {
   render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" />);
   expect(screen.queryByTestId("install-ca")).toBeNull();
+  expect(screen.queryByTestId("manual")).toBeNull();
   expect(screen.getByTestId("guided-steps")).toHaveTextContent(/update-ca-certificates/);
 });
 
@@ -132,12 +136,13 @@ test("a failed set-proxy shows the error, keeps the snippet, and marks the passe
   render(<Harn />);
 
   fireEvent.click(screen.getByTestId("set-proxy"));
-  expect(await screen.findByText(/follow the steps below/)).toBeInTheDocument();
+  expect(await screen.findByText(/use the manual steps below/)).toBeInTheDocument();
   expect(screen.getByTestId("set-proxy-error")).toHaveTextContent("couldn't set the proxy: denied");
   expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/networksetup/);
 
-  fireEvent.click(screen.getByTestId("onb-next"));
-  expect(screen.getByTestId("step-set-proxy")).toHaveTextContent("✗ failed");
+  const status = screen.getByTestId("step-set-proxy-status");
+  expect(status).toHaveTextContent(/Couldn't set the proxy/);
+  expect(status).not.toHaveTextContent(/System proxy is set/);
 });
 
 test("Stop routing appears only after the proxy was set, and is wired to onUnsetProxy", async () => {
@@ -157,6 +162,62 @@ test("Stop routing appears only after the proxy was set, and is wired to onUnset
   fireEvent.click(await screen.findByTestId("unset-proxy"));
   expect(onUnsetProxy).toHaveBeenCalledOnce();
   expect(await screen.findByText(/Set it again to resume/)).toBeInTheDocument();
+});
+
+// --- W6: P1 prove-it + honest per-step status ---
+
+test("Verify renders the concrete prove-it command with the real address, as plain copyable text", () => {
+  const writeText = vi.fn();
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  render(<Onboarding state={{ ...onboarding, step: "verify" }} dispatch={vi.fn()} proxyAddr={ADDR} />);
+  const cmd = "curl -x http://10.1.2.3:9999 https://example.com";
+  expect(screen.getByTestId("prove-it")).toHaveTextContent(cmd);
+  fireEvent.click(screen.getByTestId("copy-prove-it"));
+  expect(writeText).toHaveBeenCalledWith(cmd);
+});
+
+test("the trust status line reflects the probe: trusted → green, untrusted+traffic → device warning", () => {
+  const { rerender } = render(
+    <Onboarding state={onboarding} dispatch={vi.fn()} os="macos" trustProbe="trusted" onInstallCa={vi.fn()} />,
+  );
+  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent(/Trusted on this machine/);
+  expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-tone", "ok");
+
+  rerender(
+    <Onboarding
+      state={onboarding}
+      dispatch={vi.fn()}
+      os="macos"
+      trustProbe="untrusted"
+      observed={{ decrypted: false, trafficSeen: true }}
+      onInstallCa={vi.fn()}
+    />,
+  );
+  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent(/device you're capturing from/);
+  expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-tone", "warn");
+});
+
+test("the proxy status line goes green on a connection even with no decrypt", () => {
+  render(
+    <Onboarding
+      state={atSetProxy}
+      dispatch={vi.fn()}
+      os="macos"
+      proxyAddr={ADDR}
+      proxyProbe="none"
+      observed={{ decrypted: false, trafficSeen: true }}
+      onSetProxy={vi.fn()}
+    />,
+  );
+  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent(/Receiving traffic/);
+  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-tone", "ok");
+});
+
+test("an un-probeable host shows 'can't check' rather than a false 'not set up'", () => {
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" trustProbe="unknown" />);
+  const status = screen.getByTestId("step-trust-ca-status");
+  expect(status).toHaveTextContent(/we'll confirm when traffic arrives/);
+  expect(status).not.toHaveTextContent(/[Nn]ot trusted/);
 });
 
 test("Back to flows shows only once ever proven", () => {

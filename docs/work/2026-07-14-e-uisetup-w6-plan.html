@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a56373f9f34851f0dfa8e64" data-artifact="wu-plan" data-status="built">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-UISETUP.W6 WU plan: onboarding UX enhancement</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-UISETUP.W6 — Onboarding UX enhancement</h1>
+      <p>The onboarding journey shipped (W1–W4) but under-delivers on the epic's own UX rules. W6 makes each
+      step's status <strong>honest, device-aware, and immediate</strong>: it reads the real machine state
+      (trust store + system proxy) for the ~90% local case, treats <em>any</em> traffic reaching Trawler as
+      proof the proxy routes, and turns the ambiguous cases into clear messages instead of a dead-end
+      "Waiting…". This deliberately reverses two earlier "prove by capture only" calls (see
+      <a href="#reversed">Reversed decisions</a>) and adds one small core signal so the proxy step is
+      observable even before decryption works.</p>
+      <div class="meta">Built v3 · 2026-07-15 · Trawler · T3 WU plan · epic:
+      <a href="2026-07-12-e-uisetup-plan.html">E-UISETUP</a> · builds on:
+      <a href="2026-07-13-e-uisetup-w1-plan.html">W1</a> +
+      <a href="2026-07-14-e-uisetup-w4-plan.html">W4</a> · sequenced after:
+      <a href="2026-07-12-e-uisetup-plan.html#w5">W5</a></div>
+    </div>
+  </header>
+  <main>
+
+    <div class="callout" data-c="scope-note">
+      <p><strong>As built — one WU, three layers.</strong> W6 spans the core (connection-seen signal), the
+      Tauri app (one read-only CA-trust probe; the proxy probe reused W5's <code>proxy_status</code>), and
+      the UI (status model + P1/P3 + copy pass). It shipped as a single coherent contract — <em>honest
+      per-step setup status</em> — not split. <strong>One deviation from plan, owner-approved:</strong> the
+      CA-trust probe matches on the CA's <em>Common Name</em>, not a SHA-256 fingerprint — avoids a crypto
+      dep in the thin Tauri shell; the stale-cert ceiling + fingerprint upgrade path are marked with a
+      <code>ponytail:</code> note in <a href="../../ui/src-tauri/src/setup.rs">setup.rs</a>.</p>
+    </div>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">Every onboarding step answers <em>its own</em> question truthfully, with the
+    least user work, and never misleads in the edge cases. Three fixes plus one enabling core signal:</p>
+    <ul>
+      <li><strong>(1) Verify is actionable (P1).</strong> Instead of a bare <em>"Waiting for your first
+      decrypted HTTPS flow…"</em>, the step renders a concrete, text-only <em>prove-it</em> instruction —
+      open any site (the proxy is system-wide once set), or a copyable
+      <code>curl -x http://&lt;addr&gt; https://example.com</code> carrying the real proxy address. Success
+      still flips green only from a <em>real captured flow</em> (W4).</li>
+      <li><strong>(2) Honest, device-aware per-step status (P2).</strong> Each step derives a
+      <em>separated</em> status from two independent signals — a <strong>local probe</strong> (does
+      <em>this machine</em> trust the CA / point its proxy at Trawler?) and <strong>observed traffic</strong>
+      (has any request/connection reached Trawler, from any device?). <em>Trust</em> is confirmed by the
+      local fingerprint probe or a decrypted flow; when neither holds it shows a <em>clarifying</em> message,
+      never a red error. <em>Proxy</em> is confirmed by the local probe or by any connection reaching
+      Trawler. <em>Verify</em> is the decrypted flow that also reveals the list. No extra user step: the
+      remote / manual / un-probeable cases are inferred from the signals and shown plainly.</li>
+      <li><strong>(3) The happy path is unburied (P3).</strong> Where a one-click action exists (macOS /
+      Windows) the manual per-OS steps collapse behind an on-demand "set it up manually" disclosure; where
+      there is no auto path the manual steps stay inline.</li>
+      <li><strong>Enabling core signal.</strong> The proxy passes <code>CONNECT</code> through untouched
+      (<a href="../../src/recorder.rs">recorder.rs</a>), so an undecryptable HTTPS attempt leaves no trace. W6
+      adds a <code>connection seen</code> signal (count + event) so "proxy is routing" is observable for
+      every device, decrypt or not.</li>
+    </ul>
+    <p>Instructions and snippets stay <strong>text, never markup</strong> (UC-3/UC-4 invariant).</p>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">Epic <a href="2026-07-12-e-uisetup-plan.html#onboarding-flow">E-UISETUP · UC-5</a>
+    — the epic's own UX rules <em>"do the work for the user / least manual work wins"</em> and
+    <em>"show the user a truthful state"</em>. Touches: the <strong>core</strong>
+    (<a href="../../src/event.rs">event.rs</a>, <a href="../../src/store.rs">store.rs</a>,
+    <a href="../../src/recorder.rs">recorder.rs</a>, <a href="../../src/api/">api/</a>) for the connection
+    signal; <strong>ui/src-tauri</strong> for two read-only probes; and
+    <a href="../../ui/src/Onboarding.tsx">Onboarding.tsx</a> + <a href="../../ui/src/setup.ts">setup.ts</a>
+    for the status model + P1/P3. Reuses W2/W3's target picker + snippet/copy and the
+    <code>&lt;details&gt;</code> disclosure, and W4's <code>isDecryptedHttps</code> + stream watch.</p>
+
+    <h2 id="pains">The pains, from the user's view</h2>
+    <p>Walked as a fresh clean-machine user across the merged W1–W4 surface. Ranked by how badly each bites.</p>
+    <table>
+      <thead><tr><th>#</th><th>Pain</th><th>Where</th><th>Why it hurts</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge id">P1</span></td>
+          <td><strong>Verify is a dead end</strong></td>
+          <td>Verify body <code>"Waiting…"</code>, <code>action: null</code>
+          (<a href="../../ui/src/onboardingMachine.ts">onboardingMachine.ts</a>)</td>
+          <td>Nothing fires a request and nothing tells the user to. They finish both steps and stare at
+          "Waiting…" forever — the epic's entire payoff (green → list) silently never fires.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">P2</span></td>
+          <td><strong>Status is dishonest <em>and</em> blind</strong></td>
+          <td><code>stepStatus</code> — done by cursor position
+          (<a href="../../ui/src/onboardingMachine.ts">onboardingMachine.ts</a>)</td>
+          <td>Click Next twice and two steps read ✓ done though nothing happened (over-claims); and the app
+          never actually checks whether the CA is trusted or the proxy is set, so it can't tell the user
+          where they really are (blind).</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">P3</span></td>
+          <td><strong>Happy path buried</strong></td>
+          <td>Manual step list always under the one-click button
+          (<a href="../../ui/src/Onboarding.tsx">Onboarding.tsx</a>)</td>
+          <td>The epic says "least manual work wins"; the UI shows the full manual wall even when one click
+          does it. Long <code>sudo</code> snippets also wrap badly in the ~384px column.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="design">Design</h2>
+
+    <h3 id="two-truths">Two truths per step</h3>
+    <p>The fix for P2 is recognising each step has <strong>two independent signals</strong> that answer
+    different questions — a fast local <em>precondition</em> and an authoritative <em>outcome</em>. Per-step
+    status is driven by the probe; Verify by capture; and capture can retro-confirm a step whose probe was
+    blind (the remote case).</p>
+    <table data-c="signals">
+      <thead><tr><th>Signal</th><th>Answers</th><th>Scope</th><th>Speed</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Local probe</strong> (trust store / system proxy)</td><td>"Is <em>this machine</em>
+        configured?"</td><td>local, ~90%</td><td>instant</td></tr>
+        <tr><td><strong>Observed traffic</strong> (connection / flow)</td><td>"Is traffic actually reaching
+        &amp; decrypting through Trawler?"</td><td>any device</td><td>needs traffic</td></tr>
+      </tbody>
+    </table>
+
+    <div class="diagram" data-c="signal-flow">
+      <pre class="mermaid">
+flowchart TD
+  E["Enter / re-invoke setup"] --> PR["Probe this machine: CA trusted? proxy set?"]
+  PR --> ST["Trust and Proxy steps show local status instantly"]
+  E --> W["Watch traffic: /stats + connection &amp; flow events"]
+  W --> C{"What arrived?"}
+  C -- "a connection (any)" --> PX["Proxy ✓ receiving traffic"]
+  C -- "http:// flow, no https" --> TR["Trust: not decrypting → trust the CA on the sending device"]
+  C -- "https:// flow (decrypted)" --> OK["Trust ✓ + Verify ✓ proven → reveal list"]
+      </pre>
+      <div class="caption">Probes light the steps immediately for the local case; observed traffic confirms (and, for other devices, is the only thing that can).</div>
+    </div>
+
+    <h3 id="status-model">Per-step status — separated and truthful</h3>
+    <p>Every row below is a state the app can honestly distinguish. The ✗/⚠ cases are actionable; the "can't
+    tell" cases are worded to guide, never to alarm.</p>
+
+    <p><strong>Trust the CA</strong> — no remote probe exists (we can't read another device's store), so a
+    decrypted flow is the only positive remote proof:</p>
+    <table data-c="trust-status">
+      <thead><tr><th>Local trust probe</th><th>Decrypted flow?</th><th>Traffic seen?</th><th>Shows</th></tr></thead>
+      <tbody>
+        <tr><td>fingerprint match</td><td>–</td><td>–</td><td><code>✓ Trusted on this machine</code></td></tr>
+        <tr><td>installing / failed</td><td>–</td><td>–</td><td><code>⟳ Installing…</code> / <code>⚠ Install failed &lt;err&gt;</code> → manual</td></tr>
+        <tr><td>no match</td><td>yes</td><td>–</td><td><code>✓ Trusted</code> (proven by a decrypted flow)</td></tr>
+        <tr><td>no match</td><td>no</td><td>yes</td><td><code>⚠ Not decrypting — trust the CA on the device sending traffic</code></td></tr>
+        <tr><td>no match</td><td>no</td><td>no</td><td><code>○ Not trusted on this machine</code> (install / manual / "another device?" hint)</td></tr>
+        <tr><td>un-probeable OS</td><td>no</td><td>–</td><td><code>◐ Can't verify here — capture will confirm</code></td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Set the proxy</strong> — <em>any</em> connection reaching Trawler proves routing, so this goes
+    green without needing a decrypt:</p>
+    <table data-c="proxy-status">
+      <thead><tr><th>Local proxy probe</th><th>Connection / flow seen?</th><th>Shows</th></tr></thead>
+      <tbody>
+        <tr><td>host:port match</td><td>–</td><td><code>✓ System proxy → Trawler</code></td></tr>
+        <tr><td>setting / failed</td><td>–</td><td><code>⟳ Setting…</code> / <code>⚠ Set failed &lt;err&gt;</code> → manual</td></tr>
+        <tr><td>no match</td><td>yes</td><td><code>✓ Receiving traffic</code> (works from any device)</td></tr>
+        <tr><td>no match</td><td>no</td><td><code>○ No traffic detected yet</code> (set / manual / "another device?" hint)</td></tr>
+        <tr><td>un-probeable OS</td><td>no</td><td><code>◐ Can't verify here — capture will confirm</code></td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Verify</strong> — unchanged from W4: a decrypted <code>https://</code> flow flips it
+    <code>✓ Capturing</code> and reveals the list. Probe-green on the earlier steps does <em>not</em> reveal
+    the list; capture does.</p>
+
+    <div class="callout" data-c="no-extra-step">
+      <p><strong>No mode toggle, no extra step.</strong> The remote-device case is <em>inferred</em>, not
+      declared: if the local probe finds nothing but traffic is arriving, the wording already says
+      "on the device sending traffic". The existing target picker still switches the manual steps to a
+      device's instructions; nothing new is asked of the user.</p>
+    </div>
+
+    <h3 id="connection-signal">Core: the "connection seen" signal</h3>
+    <p data-c="connection-signal">A <code>CONNECT</code> is passed straight through today
+    (<a href="../../src/recorder.rs">recorder.rs</a> — <code>if req.method() == Method::CONNECT { return
+    req.into(); }</code>), and a flow is only created for a fully-decoded request. So an HTTPS attempt from a
+    client that doesn't trust the CA fails its handshake and leaves <em>nothing</em> in <code>/flows</code>.
+    W6 records the connection itself, reusing the existing broadcast bus so every interface tails it exactly
+    like flows:</p>
+    <table>
+      <thead><tr><th>File</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../../src/event.rs">event.rs</a></td><td>Add <code>FlowEvent::ConnectionSeen { authority }</code> (the bus is the "what the proxy observed" channel; update its doc comment).</td></tr>
+        <tr><td><a href="../../src/store.rs">store.rs</a></td><td>A <code>connections</code> counter + <code>note_connection(authority)</code> that increments and broadcasts <code>ConnectionSeen</code>; <code>connection_count()</code> reader.</td></tr>
+        <tr><td><a href="../../src/recorder.rs">recorder.rs</a></td><td>In the <code>CONNECT</code> branch, read the target authority and call <code>store.note_connection</code> before returning — no behavioural change to the tunnel.</td></tr>
+        <tr><td><a href="../../src/api/view.rs">api/view.rs</a></td><td><code>sse_event</code> maps <code>ConnectionSeen</code> → event name <code>connection</code>, data <code>{ authority }</code>.</td></tr>
+        <tr><td><a href="../../src/api/routes.rs">api/routes.rs</a> + <a href="../../src/api/mod.rs">mod.rs</a></td><td><code>GET /stats</code> → <code>{ connections }</code> for the launch/entry read (mirrors W4's one-shot <code>/flows</code> read); live updates ride the <code>connection</code> SSE event.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="connection-consume">
+      <p><strong>UI consumption.</strong> On entry the onboarding reads <code>/stats</code> once (any
+      connections so far?) alongside W4's <code>/flows</code> read, then updates live from the
+      <code>connection</code> and flow events on the one existing <code>/stream</code>. "Any traffic seen" =
+      <code>connections &gt; 0</code> <em>or</em> any flow present; "not decrypting" = traffic seen with no
+      <code>https://</code> flow.</p>
+    </div>
+
+    <h3 id="probes">The two local probes (ui/src-tauri, read-only)</h3>
+    <table data-c="probes">
+      <thead><tr><th>Probe</th><th>macOS</th><th>Windows</th><th>Linux / other</th></tr></thead>
+      <tbody>
+        <tr><td><strong>CA trusted?</strong></td><td><code>security find-certificate -a -Z</code>, match Trawler's fingerprint</td><td><code>certutil -store ROOT</code>, match fingerprint</td><td>best-effort file check; else <em>unknown</em></td></tr>
+        <tr><td><strong>Proxy → us?</strong></td><td><code>networksetup -getsecurewebproxy &lt;service&gt;</code>, match host:port</td><td>WinINET registry (<code>ProxyEnable</code>/<code>ProxyServer</code>)</td><td>env / gsettings best-effort; else <em>unknown</em></td></tr>
+      </tbody>
+    </table>
+    <p>Match the CA by <strong>fingerprint</strong> (computed from the <code>/ca.crt</code> bytes the UI
+    already fetches) so a stale certificate can't false-positive. Where a probe can't conclude, the step
+    shows <code>◐ Can't verify here — capture will confirm</code> — never a false "not set up". Probing is
+    reliable exactly where auto-setup is (macOS / Windows), which is the same ~90%.</p>
+
+    <h3 id="unbury">P3 — one primary action, manual behind a disclosure</h3>
+    <p data-c="unbury">On an auto-capable OS the one-click action stays primary and the per-OS "Steps for
+    [OS]" list moves inside a <code>&lt;details&gt;</code> — <em>"Set it up manually instead"</em> — the same
+    disclosure pattern already used for "Remove the certificate later". Where there is no auto path the manual
+    steps render inline. Pure render reshuffle.</p>
+
+    <div class="callout warn" data-c="reversed">
+      <p><strong>Reversed decisions (logged at distillation).</strong> W2 stated <em>"no trust-store
+      inspection — trust is proven by capture, not by reading the store"</em> and
+      <a href="2026-07-14-e-uisetup-w4-plan.html#non-goals">W4 deferred any OS probe / self-test</a>. W6
+      supersedes both on owner review: local probes cover the 90% single-machine case with instant, honest
+      per-step feedback (and detect a manually-trusted CA that the old model couldn't). Capture remains the
+      authority for the remote/other-device cases and for revealing the list. A DEC recording this reversal +
+      the new <code>/stats</code> · <code>connection</code> API fact lands with distillation.</p>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table>
+      <thead><tr><th>Level</th><th>Where</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge id">unit · Rust</span></td>
+          <td><a href="../../src/store.rs">store.rs</a></td>
+          <td><code>note_connection</code> increments <code>connection_count</code> and broadcasts
+          <code>ConnectionSeen { authority }</code>; count is independent of flow inserts/evictions.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">integration</span> <span class="badge id">core contract</span></td>
+          <td><a href="../../tests/">tests/</a></td>
+          <td>Against an ephemeral core: a client CONNECT whose TLS handshake fails (untrusted CA) records
+          <strong>no flow</strong> yet bumps <code>GET /stats</code> <code>connections</code> and emits a
+          <code>connection</code> SSE event. A plain <code>http://</code> request yields a flow (proxy proven
+          without decrypt). A trusted <code>https://</code> request yields a decrypted flow.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">unit · TS</span></td>
+          <td><a href="../../ui/src/setup.test.ts">setup.test.ts</a></td>
+          <td>Probe output parsers: match/no-match/unknown from representative <code>security</code> /
+          <code>certutil</code> / <code>networksetup</code> / registry output; fingerprint match is exact.
+          The status-derivation function returns the right row of the <a href="#status-model">status
+          tables</a> for each (probe, decrypted, traffic) combination.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">unit · TS</span></td>
+          <td><a href="../../ui/src/Onboarding.test.tsx">Onboarding.test.tsx</a></td>
+          <td><strong>P1:</strong> Verify renders the concrete prove-it text + copyable snippet with the real
+          address, as plain text. <strong>P3:</strong> auto OS → manual steps inside a collapsed disclosure,
+          one-click primary; non-auto OS → inline. Status glyphs/messages render per the derivation result.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">integration (seam)</span></td>
+          <td><a href="../../ui/src/App.test.tsx">App.test.tsx</a></td>
+          <td>Device-aware transitions on mixed signals: probe none + a <code>connection</code> event ⇒ proxy
+          <code>✓ receiving</code> while trust shows <em>not decrypting</em>; an <code>http://</code> flow ⇒
+          same; a decrypted flow ⇒ trust ✓ + Verify ✓ + list revealed. Probe-green alone never reveals the
+          list. A step never acted on shows no false ✓.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">e2e</span></td>
+          <td><a href="../../ui/e2e/specs/">ui/e2e/specs/</a></td>
+          <td>The W4 spine stays green: fresh launch → prove-it prompt → the harness's proxied HTTPS request
+          → Verify green → list. If drivable in the harness, assert the proxy step goes green on a connection
+          before a decrypted flow exists.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="waiver">
+      <p><strong>Waiver (judged at review).</strong> The two probes read the real machine, so they are not
+      hermetically runnable — their output parsers + the status derivation are unit-tested and the live probe
+      is waived, exactly as W2/W3's auto-set commands are. The connection signal <em>is</em> hermetic (drive
+      a CONNECT at an ephemeral core) and is proven at integration, no waiver.</p>
+    </div>
+
+    <h2 id="done-when">Done when</h2>
+    <ul data-item="done-when">
+      <li>Verify shows a concrete, text prove-it instruction with the real address; the green flip is still
+      capture-driven.</li>
+      <li>Each step shows a separated, honest status: Trust from the local probe or a decrypted flow (else a
+      clarifying, non-alarming message); Proxy from the local probe or any connection reaching Trawler; a
+      step never acted on shows no false ✓; un-probeable OSes show "can't verify — capture will confirm".</li>
+      <li>An undecryptable HTTPS attempt (untrusted-CA handshake) records no flow but bumps
+      <code>/stats</code> connections + emits a <code>connection</code> event; the proxy step reflects it.</li>
+      <li>On macOS / Windows the one-click action is primary with manual behind a disclosure; text-only render.</li>
+      <li>Gates green headless: <code>cargo test</code> + <code>cargo clippy</code> (core) · vitest ·
+      <code>cargo xtask ui build</code>; e2e run green.</li>
+    </ul>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-item="non-goals">
+      <li><strong>A one-action "Set up Trawler" chain</strong> (CA → proxy → verify behind one button) —
+      deferred; W6 keeps the three discrete, consent-per-change steps.</li>
+      <li><strong>An app-initiated self-test request</strong> — the prove-it prompt guides the user; the app
+      fires no network of its own.</li>
+      <li><strong>Recording undecryptable requests as flows</strong> — connections are a lightweight
+      count + event, not entries in <code>/flows</code> (no CONNECT pseudo-flows cluttering the list).</li>
+      <li><strong>Probing remote devices</strong> — impossible; remote trust/proxy is shown from observed
+      traffic + clear wording only.</li>
+      <li><strong>A settings / preferences panel</strong> — epic non-goal.</li>
+      <li><strong>Proxy teardown / auto-revert</strong> — that is <a href="2026-07-12-e-uisetup-plan.html#w5">W5</a>.</li>
+    </ul>
+
+    <div class="callout" data-c="w5-carryover">
+      <p><strong>Carried from W5 (deferred here).</strong> W5's quit-time proxy check shows a remote-device
+      "check your proxy" notice whenever <em>no</em> Trawler proxy is detected on this system (a device
+      elsewhere may still route through Trawler). That fires even for users who never proved capture, so it
+      can nag on quit before Trawler has done anything. <strong>W6 refinement:</strong> when no system proxy
+      is detected, only show that notice once capture has been <em>proven</em> (a request was actually
+      proxied through Trawler), so a user who never routed traffic isn't warned about a proxy that cannot
+      exist. Gate the info-only (non-"ours") branch of the quit confirm on the same
+      <code>everProven</code> / captured signal W4 already tracks.</p>
+    </div>
+
+    <div class="callout" data-c="sequencing">
+      <p><strong>Sequenced after W5.</strong> W6 depends only on the merged W1–W4 surface; W5 (proxy
+      teardown) is independent and also touches the onboarding surface / setup module. Landing W5 first means
+      Onboarding.tsx is polished once, over the complete feature set, rather than twice. W6 needs nothing from
+      W5 — the ordering is efficiency, not a hard dependency.</p>
+    </div>
+
+    <h2 id="copy">Copy — as shipped (reviewed pre-execution)</h2>
+    <p>The onboarding wording was reviewed for professionalism/clarity before build. The rules applied and the
+    strings that changed:</p>
+    <table data-c="copy-rules">
+      <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>No internal/API terms in user copy</td><td>The download step no longer leaks <code>GET /ca.crt on the control API</code> — now just "Save Trawler's certificate as trawler-ca.pem." (also matches the native-app decision).</td></tr>
+        <tr><td>"click", never "tap"</td><td>Desktop app — the status-dot tooltips said "tap".</td></tr>
+        <tr><td>One word for the generated thing: "request"</td><td>Subtitle already said "request"; Verify said "flow". Unified.</td></tr>
+        <tr><td>"confirm it's working", not "capture"/"Command ran"</td><td>The install/set notes read like a shell log.</td></tr>
+        <tr><td>Consistent failure line</td><td>Both auto-setup failures now say "Automatic … failed — use the manual steps below." and the manual disclosure auto-opens.</td></tr>
+      </tbody>
+    </table>
+    <table data-c="copy-strings">
+      <thead><tr><th>Where</th><th>Shipped string</th></tr></thead>
+      <tbody>
+        <tr><td>Trust body</td><td>"To read HTTPS traffic, Trawler signs it with its own certificate. Your machine needs to trust that certificate first."</td></tr>
+        <tr><td>Proxy body</td><td>"Send your traffic through Trawler. One click on macOS and Windows; a copy-and-paste command elsewhere."</td></tr>
+        <tr><td>Verify body (P1)</td><td>"Almost there — now generate some traffic. Open any website, or run the command below. Your first request will show up here." + copyable <code>curl -x http://&lt;addr&gt; https://example.com</code></td></tr>
+        <tr><td>Trust status</td><td>✓ "Trusted on this machine" · ✓ "Trusted — confirmed by captured traffic" · ⚠ "Traffic is arriving but not decrypting — install the certificate on the device you're capturing from." · ○ "Not trusted on this machine yet" · ◐ "Can't check automatically — we'll confirm when traffic arrives."</td></tr>
+        <tr><td>Proxy status</td><td>✓ "System proxy is set to Trawler" · ✓ "Receiving traffic" · ○ "No traffic reaching Trawler yet" · ◐ "Can't check automatically — we'll confirm when traffic arrives."</td></tr>
+        <tr><td>Verify status</td><td>✓ "It's working — capturing traffic." · ○ "Waiting for your first request."</td></tr>
+        <tr><td>Dot tooltips</td><td>"Not capturing yet — click to set up" · "Checking…" · "Capturing — click to run setup again"</td></tr>
+        <tr><td>Manual disclosure</td><td>"Set it up manually" (force-opens on an auto-setup failure)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation (at epic close)</h2>
+    <p data-item="distillation">W6 adds two facts that outlive it and must distil: the <code>/stats</code>
+    endpoint + <code>connection</code> SSE event (a new API surface — into <code>web-ui.html</code> / API
+    index), and a <strong>DEC</strong> recording the reversal of W2's "no trust-store inspection" stance with
+    its rationale (local probe for the 90%, capture for the rest). The onboarding status model folds into the
+    UC-5 contract. This plan + result archive under <code>docs/work/</code> (DEC-3).</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

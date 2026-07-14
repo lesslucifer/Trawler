@@ -66,10 +66,14 @@ export function defaultProxyAddr(): string {
 export interface StreamHandlers {
   onEvent: () => void;
   onLive?: (live: boolean) => void;
+  // A tunnel reached the proxy (may never become a flow — untrusted-CA handshake).
+  // Onboarding's proxy step goes green on this alone; the flow list ignores it.
+  onConnection?: () => void;
 }
 
 export interface TrawlerApi {
   listFlows(filter: Filter): Promise<FlowSummary[]>;
+  connectionCount(): Promise<number>;
   caCertPem(): Promise<string>;
   stream(handlers: StreamHandlers): () => void;
 }
@@ -84,16 +88,22 @@ export function createApi(baseUrl?: string): TrawlerApi {
       if (!res.ok) throw new Error(`GET /flows failed: ${res.status}`);
       return (await res.json()) as FlowSummary[];
     },
+    async connectionCount() {
+      const res = await fetch(`${base()}/stats`);
+      if (!res.ok) throw new Error(`GET /stats failed: ${res.status}`);
+      return ((await res.json()) as { connections: number }).connections;
+    },
     async caCertPem() {
       const res = await fetch(`${base()}/ca.crt`);
       if (!res.ok) throw new Error(`GET /ca.crt failed: ${res.status}`);
       return res.text();
     },
-    stream({ onEvent, onLive }) {
+    stream({ onEvent, onLive, onConnection }) {
       const source = new EventSource(`${base()}/stream`);
-      for (const name of ["request", "response", "evicted", "lagged"]) {
+      for (const name of ["request", "response", "evicted", "lagged", "connection"]) {
         source.addEventListener(name, onEvent);
       }
+      if (onConnection) source.addEventListener("connection", onConnection);
       source.onopen = () => onLive?.(true);
       source.onerror = () => onLive?.(false);
       return () => source.close();
