@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W3 set-proxy -> epic/uisetup"
+epic: E-UISETUP
+wu: E-UISETUP.W3
+branch: wu/uisetup/set-proxy
+base: 9f09f68ceed24903bd4bd1a6cd70bb233b12f865
+head: d83812158d91f37a3bf98ba0e6a3fdd1387e3238
+diff_sha256: 8c57ea6b132ddda80af4c21f7169de5169f3c94e9593dffc5aed7a5a662927b8
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 5, verified: 5, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-14
