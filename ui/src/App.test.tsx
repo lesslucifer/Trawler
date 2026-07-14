@@ -11,6 +11,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
 // onboarding. These list/filter tests force the proven phase to reach the list.
 const PROVEN: OnbState = { phase: "proven", step: "verify", everProven: true };
 const ONBOARDING: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
+const AT_SET_PROXY: OnbState = { phase: "onboarding", step: "set-proxy", everProven: false };
 
 const PEM = "-----BEGIN CERTIFICATE-----\nabc\n-----END CERTIFICATE-----\n";
 
@@ -72,7 +73,10 @@ function mockApi(store: () => FlowSummary[]) {
   };
 }
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  delete window.__TRAWLER_PROXY__;
+});
 
 test("on mount shows the onboarding surface, not the empty flow list", async () => {
   const { api } = mockApi(() => []);
@@ -125,12 +129,39 @@ test("a rejected install reports failed and keeps the guided steps visible", asy
   await screen.findByText(/follow the steps below/);
 
   expect(screen.getByTestId("guided-steps")).toHaveTextContent(/security add-trusted-cert/);
-  expect(screen.getByTestId("install-error")).toHaveTextContent("user declined the elevation prompt");
+  expect(screen.getByTestId("install-ca-error")).toHaveTextContent("user declined the elevation prompt");
   expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "active");
 
   fireEvent.click(screen.getByTestId("onb-next"));
   expect(screen.getByTestId("step-trust-ca")).toHaveTextContent("✗ failed");
   expect(screen.getByTestId("step-trust-ca")).not.toHaveTextContent("✓ done");
+});
+
+test("Set system proxy invokes set_proxy with the configured address; the step stays active, not proven", async () => {
+  onMacHost();
+  window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={AT_SET_PROXY} />);
+
+  fireEvent.click(await screen.findByTestId("set-proxy"));
+  await screen.findByText(/Verify step will prove/);
+
+  expect(invoke).toHaveBeenCalledWith("set_proxy", { host: "127.0.0.1", port: 7999 });
+  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-status", "active");
+  expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
+test("a rejected set_proxy reports failed and keeps the snippet visible", async () => {
+  onMacHost();
+  window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
+  vi.mocked(invoke).mockRejectedValueOnce(new Error("no network services to configure"));
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={AT_SET_PROXY} />);
+
+  fireEvent.click(await screen.findByTestId("set-proxy"));
+  await screen.findByText(/follow the steps below/);
+  expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/networksetup/);
+  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-status", "active");
 });
 
 test("a non-matching host filter empties the list; SSE appends a new row", async () => {

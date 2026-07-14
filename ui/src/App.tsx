@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useReducer } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { createApi, type TrawlerApi } from "./api";
-import { hostOs } from "./setup";
+import { createApi, defaultProxyAddr, type TrawlerApi } from "./api";
+import { hostOs, splitProxyAddr } from "./setup";
 import { useFlows } from "./useFlows";
 import { Layout } from "./Layout";
 import { FlowList } from "./FlowList";
@@ -25,6 +25,12 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     await invoke("install_ca", { pem });
   };
 
+  const proxyAddr = defaultProxyAddr();
+  const setProxy = async () => {
+    const { host, port } = splitProxyAddr(proxyAddr);
+    await invoke("set_proxy", { host, port });
+  };
+
   const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
 
   if (state.phase !== "proven") {
@@ -37,7 +43,14 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           </>
         }
       >
-        <Onboarding state={state} dispatch={dispatch} os={hostOs()} onInstallCa={installCa} />
+        <Onboarding
+          state={state}
+          dispatch={dispatch}
+          os={hostOs()}
+          proxyAddr={proxyAddr}
+          onInstallCa={installCa}
+          onSetProxy={setProxy}
+        />
       </Layout>
     );
   }

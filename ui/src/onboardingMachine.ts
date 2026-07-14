@@ -74,7 +74,7 @@ export const COPY = {
     },
     "set-proxy": {
       title: "Set the proxy",
-      body: "Route your traffic through Trawler at 127.0.0.1:<proxy port>.",
+      body: "Route your traffic through Trawler. One click on macOS or Windows; a copy-paste snippet everywhere else.",
       action: "Set system proxy",
     },
     verify: {

@@ -34,6 +34,7 @@ export function filterParams(filter: Filter): URLSearchParams {
 declare global {
   interface Window {
     __TRAWLER_API__?: string;
+    __TRAWLER_PROXY__?: string;
   }
 }
 
@@ -48,6 +49,18 @@ export function defaultBaseUrl(): string {
     if (stored) return stored;
   }
   return import.meta.env.VITE_TRAWLER_API ?? "http://127.0.0.1:7421";
+}
+
+// The proxy address resolves the same way as the base URL (DEC-12: configurable,
+// never hardcoded in component code). Both snippets and the native set-proxy
+// command consume it as data.
+export function defaultProxyAddr(): string {
+  if (typeof window !== "undefined") {
+    if (window.__TRAWLER_PROXY__) return window.__TRAWLER_PROXY__;
+    const stored = window.sessionStorage?.getItem("__TRAWLER_PROXY__");
+    if (stored) return stored;
+  }
+  return import.meta.env.VITE_TRAWLER_PROXY ?? "127.0.0.1:7420";
 }
 
 export interface StreamHandlers {

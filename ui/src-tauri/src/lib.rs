@@ -2,7 +2,8 @@ mod setup;
 
 pub fn run() {
     let builder =
-        tauri::Builder::default().invoke_handler(tauri::generate_handler![setup::install_ca]);
+        tauri::Builder::default()
+            .invoke_handler(tauri::generate_handler![setup::install_ca, setup::set_proxy]);
     #[cfg(feature = "e2e")]
     let builder =
         builder.plugin(tauri_plugin_wdio::init()).plugin(tauri_plugin_wdio_webdriver::init());

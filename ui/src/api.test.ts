@@ -1,8 +1,22 @@
 import { afterEach, vi } from "vitest";
-import { createApi, filterParams } from "./api";
+import { createApi, defaultProxyAddr, filterParams } from "./api";
 import type { FlowSummary } from "./api";
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  delete window.__TRAWLER_PROXY__;
+  window.sessionStorage.clear();
+});
+
+test("defaultProxyAddr resolves global, then session, then the default", () => {
+  expect(defaultProxyAddr()).toBe("127.0.0.1:7420");
+
+  window.sessionStorage.setItem("__TRAWLER_PROXY__", "10.0.0.2:8080");
+  expect(defaultProxyAddr()).toBe("10.0.0.2:8080");
+
+  window.__TRAWLER_PROXY__ = "192.168.1.9:7000";
+  expect(defaultProxyAddr()).toBe("192.168.1.9:7000");
+});
 
 test("filterParams sets only non-empty, trimmed keys", () => {
   const p = filterParams({ q: " get ", host: "", method: "POST", status: "  " });
