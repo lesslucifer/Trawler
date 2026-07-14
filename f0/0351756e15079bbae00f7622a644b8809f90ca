@@ -1,0 +1,12 @@
+schema: test/v2
+level: working-unit
+epic: E-UISETUP
+wu: E-UISETUP.W3
+tests:
+  unit:
+    count: 21
+    covers: "Rust setup.rs (+5): parse_services drops header + *-disabled; set_proxy_commands macOS = ONE osascript-elevated compound script setting web+secure-web per enabled service (quoted, spaces survive); Windows = two reg add HKCU (ProxyServer=host:port, ProxyEnable=1) + PowerShell InternetSetOption refresh, NO elevation wrapper; None elsewhere; set_proxy rejects hosts with spaces/quotes/semicolons/empty (injection guard). TS setup.ts (+~10): canAutoSetup mac/win only; defaultProxyTarget (other->terminal); splitProxyAddr; proxySnippet/proxySteps carry the passed address for every target (never 7420), GUI-only clients null, Android says LAN address; proxyOffSteps inverse per target. api.ts (+1): defaultProxyAddr global->session->env->default order. Onboarding set-proxy body (+5): auto Set-system-proxy wired to onSetProxy + snippet; selector switches snippet/steps & hides auto; Copy writes exact snippet via mocked clipboard; <b> renders literally; failure -> failed note + snippet stays + shared ✗ failed glyph."
+  integration:
+    count: 2
+    covers: "App seam: Set -> invoke(set_proxy,{host,port}) split from configured __TRAWLER_PROXY__ -> step stays active, no machine phase change; rejected invoke -> failed with snippet still visible (decline/consent path)."
+  waived: "the real OS write (osascript with-admin / live reg add + InternetSetOption) needs a privileged/Windows host — not hermetically runnable; command builders + host validation unit-tested instead; full journey proven by W4 e2e (epic waiver). Off-steps are guided-only text, no privileged path."
