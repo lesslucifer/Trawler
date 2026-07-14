@@ -1,0 +1,29 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W6 onboarding UX (honest per-step status + connection signal + P1/P3 + copy) -> epic/uisetup"
+epic: E-UISETUP
+wu: E-UISETUP.W6
+branch: wu/uisetup/w6-onboarding-ux
+base: b2c6168698fa2b1fae0f5f816dec157ffc3cdcfa
+head: 97d4796c679d10a74613146cfba8559f0272f14c
+diff_sha256: 39fc5f090895492e4a258665015518443b29a73eb8ca2d3395041ad860c722bc
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 10, verified: 2, waived: 0 }
+verified_findings:
+  - location: "ui/src/api.ts stream()"
+    claim: "connection is bound to BOTH the onEvent loop (redundant /flows refetch) and onConnection"
+    severity: nit
+    note: "idempotent, debounced, loopback — zero defect; fixed in follow-up commit"
+  - location: "ui/src/setup.ts trustStatus()"
+    claim: "error branch precedes probe===trusted, so a stale action error can mask an already-trusted probe"
+    severity: nit
+    note: "near-unreachable (reprobe not called on invoke throw) + zero harm; fixed in follow-up commit"
+refuted:
+  - "proxyStatus(foreign) folds into no-traffic — by plan design (proxy-status table collapses foreign into no-match)"
+  - "useFlows seed/live double-count — worst case undercount; only a >0 boolean gate consumes it"
+  - "test harness duplication — Harness cannot absorb upstream_extra_root_pems; mirrors existing sibling test"
+  - "trafficSeen OR redundant — load-bearing: http:// flows have no CONNECT so connections stays 0"
+  - "running helper / double stepStatus — pure taste, excluded"
+  - "doc-comments name consumer — rationale not coupling; aids P5 intent-legibility"
+verdict: FAIL
+date: 2026-07-15
+next: "trigger session fixes the two verified nits (behavior-preserving/improving), then re-runs code-review on the fixed tip for a PASS bound to the new diff"
