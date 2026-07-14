@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-UISETUP
 wu: E-UISETUP.W3
-branch: wu/uisetup/set-proxy
 base: 9f09f68ceed24903bd4bd1a6cd70bb233b12f865
 tip: d83812158d91f37a3bf98ba0e6a3fdd1387e3238
 diff_sha256: 8c57ea6b132ddda80af4c21f7169de5169f3c94e9593dffc5aed7a5a662927b8
