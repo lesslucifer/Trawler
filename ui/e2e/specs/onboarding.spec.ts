@@ -12,13 +12,14 @@ const ports = JSON.parse(readFileSync(PORTS_FILE, "utf8")) as {
 const rowCount = () => $$('[data-testid="flow-row"]').length;
 const hit = () => fetch(`${ports.control}/hit`);
 
-// UC-4 end to end: the real Tauri window against a real ephemeral core. Point the
-// app at the core's API port (runtime config, no rebuild) with a plain WebDriver
-// eval — no Tauri invoke bridge — then prove the live flow list, filtering, and
-// SSE-driven append.
+// UC-5 (E-UISETUP) end to end: the real Tauri window against a real ephemeral core.
+// A fresh launch with no decrypted flow shows onboarding; a real proxied HTTPS
+// request (the harness /hit) is decrypted by the core, and the Verify check flips
+// to proven and reveals the flow list. This spec MUST run before flows.spec.ts —
+// once capture is proven the app latches everProven and never re-forces onboarding.
 async function pointAppAtCore() {
   // sessionStorage survives the reload; the fresh page reads it before React
-  // mounts, so both the fetch and the SSE stream bind the ephemeral port.
+  // mounts, so both the launch /flows read and the SSE stream bind the port.
   await browser.execute((api: string) => {
     window.sessionStorage.setItem("__TRAWLER_API__", api);
     location.reload();
@@ -26,26 +27,33 @@ async function pointAppAtCore() {
   await $("header").waitForExist({ timeout: 15_000 });
 }
 
-describe("UC-4 — watch live traffic in the native app", () => {
+describe("UC-5 — onboard to the first captured flow", () => {
   before(async () => {
     await pointAppAtCore();
   });
 
-  it("renders the base layout with an empty flow list", async () => {
-    await expect($("header")).toBeExisting();
-    await expect($('[aria-label="host"]')).toBeExisting();
-    await expect($('[data-testid="empty"]')).toBeExisting();
+  it("a fresh launch shows onboarding, not the flow list", async () => {
+    await expect($('[data-testid="step-trust-ca"]')).toBeExisting();
+    await expect($('[data-testid="step-verify"]')).toBeExisting();
+    await expect($('[aria-label="host"]')).not.toBeExisting();
   });
 
-  it("shows a proxied request as a live flow row", async () => {
+  it("a decrypted HTTPS flow flips Verify green and reveals the list", async () => {
     await hit();
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
-      timeoutMsg: "flow row never appeared after a proxied request",
+      timeoutMsg: "onboarding never revealed the list after a decrypted flow",
     });
-    await expect($('[data-testid="flow-row"]')).toHaveText(expect.stringContaining("127.0.0.1"));
+    await expect($('[data-testid="step-trust-ca"]')).not.toBeExisting();
+    await expect($('[data-testid="flow-row"]')).toHaveText(expect.stringContaining("localhost"));
   });
 
+  // Re-invoke (status dot) + Back-to-flows navigation is covered at the integration
+  // layer (App.test.tsx); the e2e proves the capture-driven journey spine, not the
+  // 10px dot-click interaction.
+
+  // UC-4 list behaviour, now reached through onboarding: the revealed list filters
+  // and appends live exactly as before W4.
   it("filters the row out on a non-matching host and back in when cleared", async () => {
     await $('[aria-label="host"]').setValue("no-such-host.test");
     await browser.waitUntil(async () => (await rowCount()) === 0, {

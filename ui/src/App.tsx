@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, type TrawlerApi } from "./api";
 import { hostOs, splitProxyAddr } from "./setup";
+import { isDecryptedHttps } from "./flow";
 import { useFlows } from "./useFlows";
 import { Layout } from "./Layout";
 import { FlowList } from "./FlowList";
@@ -14,11 +15,31 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const { filter, flows, update } = useFlows(client);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
 
-  // W1 placeholder for W4's launch self-test: nothing detects live capture yet,
-  // so a fresh launch falls straight through to onboarding.
+  // Launch self-test (W4): read /flows once and let live capture decide the entry
+  // — a decrypted HTTPS flow already present means setup works, straight to the
+  // list; otherwise show onboarding. Derived from capture, no persisted state.
   useEffect(() => {
-    if (state.phase === "checking") dispatch({ t: "not-detected" });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (state.phase !== "checking") return;
+    let live = true;
+    client
+      .listFlows({})
+      .then((flows) => live && dispatch(isDecryptedHttps(flows) ? { t: "captured" } : { t: "not-detected" }))
+      .catch(() => live && dispatch({ t: "not-detected" }));
+    return () => {
+      live = false;
+    };
+  }, [client, state.phase]);
+
+  // Live check (W4): the first-ever decrypted HTTPS flow the stream brings in flips
+  // Verify green and reveals the list. Gated on !everProven so a deliberate
+  // re-invoke (help) isn't instantly bounced back by the already-captured flow;
+  // once proven, the dot and Back-to-flows drive navigation. `flows` refetches on
+  // every SSE event via useFlows, so observing it is the whole live check.
+  useEffect(() => {
+    if (state.phase === "onboarding" && !state.everProven && isDecryptedHttps(flows)) {
+      dispatch({ t: "captured" });
+    }
+  }, [state.phase, state.everProven, flows]);
 
   const installCa = async () => {
     const pem = await client.caCertPem();
