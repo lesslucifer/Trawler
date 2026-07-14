@@ -1,0 +1,13 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W4 (live check + wiring) -> epic/uisetup"
+epic: E-UISETUP
+wu: E-UISETUP.W4
+branch: wu/uisetup/live-check
+base: 14b7212ece0811d8cb2aa6329847ca9bcdc5cdec
+head: a86fd43ebace1399f4db8ceaa4670c050271c585
+diff_sha256: 682f1ba8ec31dd066af58fe14e3c0fbadf3a3bb426305284c49180ddc33dce0a
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 5, verified: 1, waived: 0 }
+notes: "Five isolated finders, one verifier per candidate. Verified real: 1 nit — a spec comment named the deleted flows.spec.ts (misleading stale reference), FIXED in this tip (comment-only reword, e2e still 4 passing) before the PASS. Refuted (false-positive): per-/hit reqwest::Client build (test-only harness, /hit called ~twice per run, non-hot-path — excluded); three comment-restatement nits on flow.ts/App.tsx (each carries a genuine non-obvious why — the hudsucker absolute-URI MITM invariant, the derive-from-capture/no-persistence design choice, the !everProven re-invoke-bounce guardrail + useFlows stream-reuse contract — consistent with house comment density). Reuse + efficiency finders returned empty: gen_certs cannot share the library tls_origin across the standalone-crate + test-utils-feature boundary and the API shape differs (PEM triple vs ServerConfig); the launch listFlows({}) is a purposeful one-shot, not redundant with useFlows debounced fetch. Correctness cleared the detector predicate (http::Uri lowercases schemes; CONNECT discarded pre-store; H2 carries https in :scheme), the launch-vs-live effect mutual exclusion, the live cancellation flag, and the two-party TLS trust wiring."
+verdict: PASS
+date: 2026-07-14
