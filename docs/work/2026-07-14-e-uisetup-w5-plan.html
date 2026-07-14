@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a56350d9f34851f0dfa8e5f" data-artifact="wu-plan" data-status="draft">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-UISETUP.W5 WU plan: proxy auto-revert</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-UISETUP.W5 — Proxy auto-revert</h1>
+      <p>Tear the system proxy back down cleanly so Trawler never leaves the machine pointing at a dead
+      proxy. A symmetric <code>unset_proxy</code> command runs W3's per-OS turn-off, exposed as a manual
+      "stop routing" control and as auto-revert on clean quit, gated on a <em>we-set-it</em> marker so it
+      only ever reverts a proxy Trawler set — plus crash reconciliation at the next launch.</p>
+      <div class="meta">Draft v1 · 2026-07-14 · Trawler · T3 WU plan · epic:
+      <a href="2026-07-12-e-uisetup-plan.html">E-UISETUP</a> · needs:
+      <a href="2026-07-14-e-uisetup-w3-plan.html">W3</a> (off-commands + set marker) ·
+      <a href="2026-07-14-e-uisetup-w4-plan.html">W4</a> (launch path)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">A symmetric <code>unset_proxy</code> Tauri command runs the native turn-off
+    of whatever <a href="2026-07-14-e-uisetup-w3-plan.html">W3</a>'s <code>set_proxy</code> switched on
+    (macOS <code>networksetup -setwebproxystate&nbsp;off</code> / <code>-setsecurewebproxystate off</code>
+    per enabled service in one elevation; Windows <code>ProxyEnable=0</code> + the WinINET refresh). It is
+    <strong>gated on a we-set-it marker</strong> — a small file written when <code>set_proxy</code>
+    succeeds, deleted when <code>unset_proxy</code> succeeds — so a revert <strong>only ever touches a proxy
+    Trawler set</strong>, never a proxy the user configured themselves. The command is exposed three ways:
+    (1) a <strong>manual</strong> "stop routing through Trawler" control that turns the proxy off without
+    quitting (and setting it again turns it back on); (2) <strong>auto-revert on clean quit</strong> via a
+    Tauri window-close / exit hook; (3) <strong>crash reconciliation at launch</strong> — a marker present
+    on the next launch means a previous run set the proxy and died before reverting, so that launch clears
+    the stale self-set proxy (coordinated with W4's launch self-test). The unfixable tail — the app killed
+    for good with no relaunch — is called out, not solved from inside a dead process (that needs an OS-level
+    watchdog, out of scope). No core / API change: the off-commands run locally in
+    <code>ui/src-tauri</code>, same boundary as W2/W3.</p>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">Epic <a href="2026-07-12-e-uisetup-plan.html">E-UISETUP.W5</a> — the teardown half
+    of the <code>UC-5</code> onboarding contract: the epic's <em>consent, never silent</em> rule makes
+    turning setup <em>off</em> as first-class as turning it on. Reuses <a
+    href="2026-07-14-e-uisetup-w3-plan.html">W3</a>'s native set path (<code>set_proxy_commands</code>,
+    <code>parse_services</code>, the elevation wrapper, the WinINET refresh) and its off-step vocabulary
+    (<code>proxyOffSteps</code> already documents the exact commands per client); adds the symmetric
+    <em>native</em> builder and the marker those steps never needed as text. Integrates with <a
+    href="2026-07-14-e-uisetup-w4-plan.html">W4</a>'s launch path — reconciliation runs on the same startup
+    the self-test already owns. Local-OS capability only; no new endpoint, no core change (DEC-12 holds).</p>
+
+    <h2 id="design">Design</h2>
+    <p>W3 already builds and runs per-OS elevated argvs from fixed templates and writes
+    the WinINET refresh; W5 is the mirror image plus one persistence fact — the marker. The teardown reuses
+    every piece of W3's machinery; the only genuinely new question is <strong>"did <em>we</em> set
+    it?"</strong>, and the answer is a single file whose <em>presence</em> is the whole signal.</p>
+
+    <div class="diagram" data-c="lifecycle-diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Launch
+  Launch --> Reconcile: marker present?
+  Reconcile --> Cleared: yes → unset_proxy, delete marker
+  Reconcile --> Ready: no
+  Cleared --> Ready
+  Ready --> Set: set_proxy ok → write marker
+  Set --> Off: manual "stop routing" / clean quit → unset_proxy, delete marker
+  Off --> Ready
+  Set --> [*]: hard kill (no revert — unfixable tail, marker survives)
+  [*] --> Launch: next launch reconciles the stale marker
+      </pre>
+      <div class="caption">The marker is the single source of "Trawler set this proxy": written on set,
+      deleted on unset, and the one thing a fresh launch reads to detect a crash-orphaned proxy.</div>
+    </div>
+
+    <h3 id="marker">The marker — presence is the whole signal</h3>
+    <p>A zero-content file in the OS temp dir (<code>std::env::temp_dir().join(
+    "trawler-proxy-set")</code>, the same temp-dir pattern W2 uses for the CA bytes). It is written
+    <em>after</em> <code>set_proxy</code>'s commands all exit 0, and deleted <em>after</em>
+    <code>unset_proxy</code>'s do. Its <strong>existence</strong> means "a Trawler run switched the system
+    proxy on and hasn't turned it back off" — nothing more is stored, because the off-commands re-derive
+    everything they need at run time (macOS re-queries <code>-listallnetworkservices</code>; Windows just
+    flips <code>ProxyEnable</code>). This is the laziest correct marker: no serialized state to version, no
+    stale service list to reconcile, presence-or-absence and done.</p>
+    <div class="callout"><strong>Why temp, not app-data.</strong> Temp survives a process crash (the crash
+    tail we must handle) without threading a Tauri <code>AppHandle</code> path through the pure command
+    builders. The one residual case — the OS clears temp between a crash and the next launch — leaves the
+    proxy set with no marker to reconcile from; that collapses into the same <em>unfixable tail</em> the
+    epic already calls out (a self-set proxy no live process can see), not a new gap. The marker guarantees
+    the <em>common</em> crash-then-relaunch case, which is the one worth guaranteeing.</div>
+
+    <h3 id="native-off">The native off-builder — mirror of W3's set</h3>
+    <p><code>unset_proxy_commands(os, services)</code> sits beside
+    <code>set_proxy_commands</code> in <code>setup.rs</code>, same signature minus host/port, same shape of
+    output (a <code>Vec&lt;Vec&lt;String&gt;&gt;</code> of argvs):</p>
+    <table>
+      <thead><tr><th>OS</th><th><code>set_proxy</code> (W3)</th><th><code>unset_proxy</code> (W5)</th></tr></thead>
+      <tbody>
+        <tr><td>macOS</td>
+          <td>one elevated <code>osascript</code> running <code>-setwebproxy</code> /
+          <code>-setsecurewebproxy</code> per enabled service</td>
+          <td>one elevated <code>osascript</code> running <code>-setwebproxystate&nbsp;off</code> /
+          <code>-setsecurewebproxystate&nbsp;off</code> per enabled service (same
+          <code>parse_services</code> + <code>shell_quote</code>, keeps the saved address, matches
+          <code>proxyOffSteps("macos")</code>)</td></tr>
+        <tr><td>Windows</td>
+          <td><code>reg add</code> ProxyServer + ProxyEnable=1, then WinINET refresh</td>
+          <td><code>reg add</code> ProxyEnable=<strong>0</strong>, then the <em>same</em>
+          <code>internet_set_option_refresh()</code> (keeps the saved address, matches
+          <code>proxyOffSteps("windows")</code>), unelevated</td></tr>
+        <tr><td>other</td><td><code>None</code></td><td><code>None</code> — guided-only, same as set</td></tr>
+      </tbody>
+    </table>
+    <p>The <code>unset_proxy</code> command validates nothing from IPC (it takes no arguments — host/port
+    are irrelevant to a state-off), runs the argvs exactly as <code>set_proxy</code> does, surfaces the OS
+    tool's stderr on failure, and deletes the marker on success.</p>
+
+    <h3 id="wiring">The three exposures — one command, three callers</h3>
+    <table>
+      <thead><tr><th>Exposure</th><th>Where</th><th>What fires <code>unset_proxy</code></th></tr></thead>
+      <tbody>
+        <tr><td>Manual "stop routing"</td>
+          <td><code>Onboarding.tsx</code> set-proxy body (auto-capable host only)</td>
+          <td>A control shown once the proxy was set this session: click →
+          <code>invoke("unset_proxy")</code>. Re-running <em>Set system proxy</em> turns it back on
+          (symmetry). Guided clients keep their existing text <code>proxyOffSteps</code> fold — unchanged.</td></tr>
+        <tr><td>Confirm on quit</td>
+          <td><code>closeConfirm.ts</code> — the webview's <code>onCloseRequested</code></td>
+          <td><em>Revised in build (see the W5 result).</em> The plan first put this on a silent
+          <code>WindowEvent::CloseRequested</code> Rust hook; a bare elevation prompt at quit is confusing
+          and declining it strands the user. So the close is intercepted in the webview and gated on the
+          <em>real</em> system status (<code>proxy_status</code>), not a session flag: <code>ours</code> ⇒
+          prevent + <code>ProxyCloseDialog</code> Remove (<code>unset_proxy</code>) / Keep
+          (<code>clear_proxy_marker</code>); <code>foreign</code> / <code>none</code> ⇒ info-only notice
+          (a device elsewhere may still point here) with a durable "don't show again"; dismiss cancels.</td></tr>
+        <tr><td>Cmd-Q / menu Quit net</td>
+          <td><code>lib.rs</code> — <code>RunEvent::ExitRequested</code></td>
+          <td><em>Added in build (review finding).</em> macOS Cmd-Q / menu Quit go through
+          <code>[NSApp terminate:]</code>, which never fires <code>onCloseRequested</code> and can't be
+          cancelled to show a dialog — so the confirm above is skipped on that path. A synchronous
+          <code>revert_if_marked()</code> here guarantees the machine is never left on a dead proxy; it is a
+          no-op after a consented Remove/Keep.</td></tr>
+        <tr><td>Crash reconciliation</td>
+          <td><code>lib.rs</code> — app <code>setup</code> hook, on the W4 launch path</td>
+          <td>At startup, if the marker is present, a previous run set the proxy and never reverted →
+          run the off-commands and clear the marker (off the main thread), so the fresh launch begins from a
+          clean slate. The hard-crash tail nothing got to answer.</td></tr>
+      </tbody>
+    </table>
+    <p>The launch path uses the marker-gated <code>revert_if_marked()</code> helper
+    (present ⇒ run off-commands ⇒ delete marker; absent ⇒ no-op); the quit path reads the same marker via
+    <code>proxy_is_set</code> and routes the user's choice through <code>unset_proxy</code> or
+    <code>clear_proxy_marker</code>. Every revert is gated on the one marker, so it can never touch a proxy
+    Trawler didn't set.</p>
+
+    <div class="callout warn"><strong>The unfixable tail, named not solved.</strong> If the app is force-
+    killed and <em>never relaunched</em>, no Trawler code runs to revert, and nothing inside a dead process
+    can. Reconciliation covers crash-then-relaunch; the terminal case (gone for good) is a known limit that
+    would need an OS-level watchdog — explicitly out of scope for this WU and this epic.</div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p data-item="test-plan">Same layering as W2/W3: the pure builders and the marker gate are unit-tested in
+    the standalone <code>src-tauri</code> crate; the quit-reverts journey is the e2e add.</p>
+    <table>
+      <thead><tr><th>Level</th><th>Where</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td>unit</td><td><code>setup.rs</code> (Rust)</td>
+          <td><code>unset_proxy_commands("macos", …)</code> is one elevated <code>osascript</code> with
+          <code>-setwebproxystate off</code> + <code>-setsecurewebproxystate off</code> for every service,
+          single-quoted, address untouched. <code>unset_proxy_commands("windows", …)</code> writes
+          <code>ProxyEnable</code>=0 and reuses the InternetSetOption refresh, unelevated (no
+          <code>RunAs</code>). <code>None</code> on <code>linux</code>. The marker gate:
+          <code>revert_if_marked</code> is a no-op when the marker file is absent and runs-then-deletes when
+          present (temp-file roundtrip, no elevation needed for the presence check).</td></tr>
+        <tr><td>e2e</td><td><code>ui/e2e/specs/</code> + harness</td>
+          <td>The quit-reverts path: the manual "stop routing" control is present in the set-proxy body and
+          invokes the command; and the lifecycle wiring is exercised end to end in the real Tauri window.
+          See the waiver — the OS-level proxy write/read is elevation-gated and not hermetic, so e2e proves
+          the <em>wiring and control surface</em>, and the actual argvs are the unit contract.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout"><strong>Waiver (judged at review), inherited from the epic.</strong> The native
+    proxy-off, like W3's set, needs OS elevation / a real system proxy store and is not hermetically
+    runnable in e2e — the off-command builders and the marker gate are unit-tested, and e2e proves the
+    control + lifecycle wiring. Reverting a real system proxy on the CI host would mutate the machine, which
+    the hermetic-test rule forbids; by design, not a gap.</div>
+
+    <h2 id="done-when">Done when</h2>
+    <ul data-item="expected">
+      <li>A manual control turns the proxy off (and setting it again turns it back on) without quitting.</li>
+      <li>Quitting the app reverts a proxy it set (clean-close hook), and does nothing if it set none.</li>
+      <li>Relaunch after a crash detects the stale we-set-it marker and clears the self-set proxy.</li>
+      <li>A revert only ever touches a proxy Trawler set — every path is gated on the marker.</li>
+      <li><code>unset_proxy</code> builder + the marker gate unit-tested; the quit-reverts / control wiring
+      covered in e2e. Gates green headless: vitest + <code>cargo test</code> (src-tauri) + clippy pedantic +
+      <code>cargo xtask ui build</code>.</li>
+    </ul>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul>
+      <li><strong>Reverting a proxy Trawler didn't set</strong> — the marker gate forbids it; we never touch
+      a user-configured proxy.</li>
+      <li><strong>The gone-for-good tail</strong> — app killed and never relaunched; needs an OS watchdog,
+      out of scope.</li>
+      <li><strong>Auto-revert of the CA trust</strong> — trust is longer-lived and its removal stays guided
+      (W2's <code>removalSteps</code>); only the proxy auto-reverts.</li>
+      <li><strong>A persisted store or new API endpoint</strong> — the marker is a single presence file in
+      temp, not a config surface; DEC-12 (no core change) holds.</li>
+      <li><strong>Reverting guided (non-auto) clients</strong> — Linux/Firefox/devices keep their existing
+      text off-steps; auto-revert is only for what Trawler auto-set (macOS/Windows).</li>
+    </ul>
+
+    <h2 id="distillation">Distillation (at epic close)</h2>
+    <p>W5 closes the UC-5 journey's teardown half. The <em>consent, never silent</em>
+    + auto-revert behaviour folds into the <code>web-ui.html</code> UC-5 contract distilled at epic close;
+    the local-OS setup capability (install CA / set + <strong>unset</strong> proxy, consent + elevation) is
+    the likely DEC the epic plan already flagged alongside DEC-12. This plan + result archive under
+    <code>docs/work/</code> (DEC-3). No T1 change (no new UI region or route — the set-proxy step body gains
+    one control).</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

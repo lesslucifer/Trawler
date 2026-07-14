@@ -41,6 +41,13 @@ const SETPROXY_NOTE: Record<ActionState, string | null> = {
   failed: "Couldn't set the proxy — follow the steps below instead.",
 };
 
+const UNSETPROXY_NOTE: Record<ActionState, string | null> = {
+  idle: null,
+  running: "Turning the proxy off — approve the prompt if asked…",
+  done: "Proxy off. Set it again to resume routing through Trawler.",
+  failed: "Couldn't turn the proxy off — follow the steps below instead.",
+};
+
 function useAction(run?: () => Promise<void>) {
   const [state, setState] = useState<ActionState>("idle");
   const [error, setError] = useState<string>();
@@ -165,16 +172,21 @@ function SetProxy({
   state,
   error,
   onSetProxy,
+  unset,
 }: {
   os: HostOs;
   addr: string;
   state: ActionState;
   error?: string;
   onSetProxy?: () => void;
+  unset: ReturnType<typeof useAction>;
 }) {
   const [target, setTarget] = useState<ProxyTarget>(defaultProxyTarget(os));
   const auto = onSetProxy && canAutoSetup(os) && target === defaultProxyTarget(os);
   const snippet = proxySnippet(target, addr);
+  // Reverting is marker-gated in Rust, so this only ever turns off a proxy Trawler
+  // set — safe to offer the moment a native set succeeds.
+  const showStop = auto && state === "done";
 
   return (
     <div className="mt-2">
@@ -186,6 +198,16 @@ function SetProxy({
           error={error}
           note={SETPROXY_NOTE}
           onClick={onSetProxy}
+        />
+      )}
+      {showStop && unset.trigger && (
+        <ActionButton
+          testId="unset-proxy"
+          label="Stop routing through Trawler"
+          state={unset.state}
+          error={unset.error}
+          note={UNSETPROXY_NOTE}
+          onClick={unset.trigger}
         />
       )}
       <label className="flex items-center gap-2">
@@ -237,6 +259,7 @@ export function Onboarding({
   proxyAddr = "127.0.0.1:7420",
   onInstallCa,
   onSetProxy,
+  onUnsetProxy,
 }: {
   state: OnbState;
   dispatch: (e: OnbEvent) => void;
@@ -244,11 +267,13 @@ export function Onboarding({
   proxyAddr?: string;
   onInstallCa?: () => Promise<void>;
   onSetProxy?: () => Promise<void>;
+  onUnsetProxy?: () => Promise<void>;
 }) {
   const atFirst = state.step === STEPS[0];
   const atLast = state.step === STEPS[STEPS.length - 1];
   const install = useAction(onInstallCa);
   const setProxyAction = useAction(onSetProxy);
+  const unsetProxyAction = useAction(onUnsetProxy);
 
   const failedState = (step: string) =>
     (step === "trust-ca" && install.state === "failed") ||
@@ -317,6 +342,7 @@ export function Onboarding({
                           state={setProxyAction.state}
                           error={setProxyAction.error}
                           onSetProxy={setProxyAction.trigger}
+                          unset={unsetProxyAction}
                         />
                       ) : (
                         copy.action && (

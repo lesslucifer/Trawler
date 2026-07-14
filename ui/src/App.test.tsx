@@ -6,6 +6,11 @@ import type { Filter, FlowSummary, StreamHandlers, TrawlerApi } from "./api";
 import type { OnbState } from "./onboardingMachine";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
+// App wires a quit-time close guard (W5); stub the window so onCloseRequested is a
+// no-op here. The guard's own behavior is covered in closeConfirm.test.tsx.
+vi.mock("@tauri-apps/api/window", () => ({
+  getCurrentWindow: () => ({ onCloseRequested: async () => () => {}, destroy: async () => {} }),
+}));
 
 // Capture is proven only by a live decrypted flow (W4); until then App shows
 // onboarding. These list/filter tests force the proven phase to reach the list.
@@ -207,6 +212,19 @@ test("a rejected set_proxy reports failed and keeps the snippet visible", async 
   await screen.findByText(/follow the steps below/);
   expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/networksetup/);
   expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-status", "active");
+});
+
+test("Stop routing invokes unset_proxy after the proxy was set (W5)", async () => {
+  onMacHost();
+  window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={AT_SET_PROXY} />);
+
+  fireEvent.click(await screen.findByTestId("set-proxy"));
+  fireEvent.click(await screen.findByTestId("unset-proxy"));
+
+  await screen.findByText(/Set it again to resume/);
+  expect(invoke).toHaveBeenCalledWith("unset_proxy");
 });
 
 test("a non-matching host filter empties the list; SSE appends a new row", async () => {

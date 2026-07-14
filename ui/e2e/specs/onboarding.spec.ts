@@ -54,6 +54,15 @@ describe("UC-5 — onboard to the first captured flow", () => {
   // layer (App.test.tsx); the e2e proves the capture-driven journey spine, not the
   // 10px dot-click interaction.
 
+  // W5 (proxy auto-revert) lifecycle wiring is exercised here implicitly: this app
+  // boots through the Tauri setup hook (launch reconciliation) and quits through the
+  // RunEvent::ExitRequested net — a broken hook or capability would fail this
+  // launch/quit. The quit-time confirm (App.tsx onCloseRequested), the unset_proxy /
+  // proxy_is_set / clear_proxy_marker commands, the marker gate and native off-argvs
+  // are unit-tested in src-tauri + closeConfirm.test.tsx; the real proxy-off is
+  // elevation-gated and not hermetically runnable (epic waiver W5 inherits), so it is
+  // not driven from the UI here.
+
   // UC-4 list behaviour, now reached through onboarding: the revealed list filters
   // and appends live exactly as before W4.
   it("filters the row out on a non-matching host and back in when cleared", async () => {
