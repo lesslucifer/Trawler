@@ -1,0 +1,11 @@
+schema: doc/v1
+epic: E-UISETUP
+wu: E-UISETUP.W4
+changes:
+  - path: docs/work/2026-07-14-e-uisetup-w4-plan.html
+    tier: T3
+    action: created
+  - path: docs/work/2026-07-14-e-uisetup-w4-result.html
+    tier: T3
+    action: created
+t2_waived: "no standalone T2 fact settles in W4 — it makes the UC-5 onboarding journey true end to end but adds no new use-case/decision of its own. The UC-5 onboarding contract (web-ui.html + index) and the likely local-OS-setup DEC are distilled at epic close per the T3 epic plan, once W5 (proxy revert) also lands. No T1 change: no new UI region or route (list + onboarding surfaces already exist)."
