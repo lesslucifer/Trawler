@@ -4,9 +4,11 @@ import { createApi, defaultProxyAddr, type TrawlerApi } from "./api";
 import { hostOs, splitProxyAddr } from "./setup";
 import { isDecryptedHttps } from "./flow";
 import { useFlows } from "./useFlows";
+import { useProxyCloseConfirm } from "./closeConfirm";
 import { Layout } from "./Layout";
 import { FlowList } from "./FlowList";
 import { Onboarding } from "./Onboarding";
+import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { Field, StatusDot } from "./components";
 import { dotStatus, initial, reduce, type OnbState } from "./onboardingMachine";
 
@@ -52,6 +54,22 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     await invoke("set_proxy", { host, port });
   };
 
+  const unsetProxy = async () => {
+    await invoke("unset_proxy");
+  };
+
+  const close = useProxyCloseConfirm(proxyAddr);
+  const closeDialog = close.mode && (
+    <ProxyCloseDialog
+      mode={close.mode}
+      os={hostOs()}
+      onRemove={close.remove}
+      onKeep={close.keep}
+      onAcknowledge={close.acknowledge}
+      onCancel={close.cancel}
+    />
+  );
+
   const dot = <StatusDot status={dotStatus(state)} onClick={() => dispatch({ t: "re-invoke" })} />;
 
   if (state.phase !== "proven") {
@@ -64,6 +82,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           </>
         }
       >
+        {closeDialog}
         <Onboarding
           state={state}
           dispatch={dispatch}
@@ -71,6 +90,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           proxyAddr={proxyAddr}
           onInstallCa={installCa}
           onSetProxy={setProxy}
+          onUnsetProxy={unsetProxy}
         />
       </Layout>
     );
@@ -117,6 +137,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         </>
       }
     >
+      {closeDialog}
       <FlowList flows={flows} />
     </Layout>
   );

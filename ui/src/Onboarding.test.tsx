@@ -140,6 +140,25 @@ test("a failed set-proxy shows the error, keeps the snippet, and marks the passe
   expect(screen.getByTestId("step-set-proxy")).toHaveTextContent("✗ failed");
 });
 
+test("Stop routing appears only after the proxy was set, and is wired to onUnsetProxy", async () => {
+  const onUnsetProxy = vi.fn(async () => {});
+  render(
+    <Onboarding
+      state={atSetProxy}
+      dispatch={vi.fn()}
+      os="macos"
+      proxyAddr={ADDR}
+      onSetProxy={vi.fn(async () => {})}
+      onUnsetProxy={onUnsetProxy}
+    />,
+  );
+  expect(screen.queryByTestId("unset-proxy")).toBeNull();
+  fireEvent.click(screen.getByTestId("set-proxy"));
+  fireEvent.click(await screen.findByTestId("unset-proxy"));
+  expect(onUnsetProxy).toHaveBeenCalledOnce();
+  expect(await screen.findByText(/Set it again to resume/)).toBeInTheDocument();
+});
+
 test("Back to flows shows only once ever proven", () => {
   const { rerender } = render(<Onboarding state={onboarding} dispatch={vi.fn()} />);
   expect(screen.queryByTestId("onb-exit")).toBeNull();
