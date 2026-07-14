@@ -1,0 +1,12 @@
+schema: test/v2
+level: working-unit
+epic: E-UISETUP
+wu: E-UISETUP.W5
+tests:
+  unit:
+    count: 22
+    covers: "Rust setup.rs (+4): unset_proxy_commands macOS = ONE osascript-elevated compound script running networksetup -setwebproxystate off / -setsecurewebproxystate off per enabled service (quoted, saved address never rewritten); Windows = reg add HKCU ProxyEnable=0 + the SAME PowerShell InternetSetOption refresh, NO elevation wrapper; None elsewhere; revert_if_marked is a no-op when the marker file is absent (temp-file presence check, no OS command run). TS Onboarding.test.tsx (+1): the Stop-routing control is hidden until the proxy was set, appears after a successful set, invokes onUnsetProxy, and shows the resume note. All 18 src-tauri units + 76 vitest green."
+  e2e:
+    count: 4
+    covers: "ui/e2e/specs/onboarding.spec.ts: the onboarding->capture journey passes unchanged with the new lifecycle wiring in place — the app boots through the Tauri setup hook (crash reconciliation) and closes through the WindowEvent::CloseRequested hook (auto-revert on clean quit). A broken hook would fail this launch/quit."
+  waived: "the real OS proxy-off (osascript with-admin / live reg add + InternetSetOption) needs a privileged host and would mutate the CI machine's system proxy — not hermetically runnable, so it is NOT driven from the UI in e2e. The off-command builders + the marker gate are unit-tested instead; e2e proves the control surface + lifecycle wiring. Epic waiver inherited (consent proven by the same explicit confirm/elevation W3 uses)."
