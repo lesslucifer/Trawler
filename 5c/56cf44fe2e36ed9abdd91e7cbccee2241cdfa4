@@ -1,0 +1,16 @@
+schema: doc/v1
+epic: E-UISETUP
+wu: E-UISETUP.W6
+changes:
+  - path: docs/work/2026-07-14-e-uisetup-w6-plan.html
+    tier: T3
+    action: updated
+    note: "flipped draft->built; scope-note now records 'one WU, three layers' + the CN-not-fingerprint deviation; added a settled Copy appendix (rules + as-shipped strings from the pre-execution review)"
+  - path: docs/work/2026-07-14-e-uisetup-w6-result.html
+    tier: T3
+    action: created
+  - path: docs/work/2026-07-12-e-uisetup-plan.html
+    tier: T3
+    action: updated
+    note: "W6 node + summary added to the epic WU flow during planning"
+t2_waived: "No T2 fact settles at the WU level. Two facts distil at EPIC close (already flagged in the epic plan + this WU's distillation section): (1) the /stats endpoint + 'connection' SSE event — a new API surface, into web-ui.html / the API index; (2) a DEC recording the reversal of W2's 'no trust-store inspection' + W4's 'no OS probe' stance (local probe for the ~90%, capture for the rest). The onboarding honest-status model folds into the UC-5 contract at epic close. No T1 change (no new region/route in the architecture doc; the status model lives inside the existing onboarding surface)."
