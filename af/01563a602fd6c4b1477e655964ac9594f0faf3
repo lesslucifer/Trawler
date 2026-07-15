@@ -1,0 +1,7 @@
+schema: test/v2
+level: commit
+epic: E-UISETUP
+tests:
+  unit:
+    count: 1
+    covers: "setup.test.ts — proxyStatus(\"foreign\") yields a distinct muted message naming the conflict (Another proxy…), not byte-identical to the \"none\" message. The dead useFlows.live removal is behavior-preserving (no consumer read it) and covered by the unchanged App.test.tsx suite staying green (111)."
