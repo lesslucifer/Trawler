@@ -98,3 +98,27 @@ test("stream routes a connection event to onConnection only, never onEvent", () 
   listeners["request"].forEach((fn) => fn(new Event("request")));
   expect(onEvent).toHaveBeenCalledOnce();
 });
+
+test("getBody fetches the leg body, decode=1 only when asked, and keeps the content type", async () => {
+  const bytes = new TextEncoder().encode("hi");
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    arrayBuffer: async () => bytes.buffer,
+    headers: new Headers({ "content-type": "text/plain" }),
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const api = createApi("http://x");
+
+  const decoded = await api.getBody("f1", "response", true);
+  expect(fetchMock).toHaveBeenLastCalledWith("http://x/flows/f1/response/body?decode=1");
+  expect(decoded.contentType).toBe("text/plain");
+  expect([...decoded.bytes]).toEqual([...bytes]);
+
+  await api.getBody("f1", "request", false);
+  expect(fetchMock).toHaveBeenLastCalledWith("http://x/flows/f1/request/body");
+});
+
+test("getBody throws on a non-ok response", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+  await expect(createApi("http://x").getBody("f1", "response", true)).rejects.toThrow(/404/);
+});

@@ -10,10 +10,11 @@
     <div class="inner">
       <h1>Use Cases — UI surfaces</h1>
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
-      surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4), plus the native
-      app's guided onboarding to the first captured flow (UC-5).</p>
-      <div class="meta">v3 · 2026-07-15 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
-      UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UISETUP</span></div>
+      surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4 watch ·
+      UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD).</p>
+      <div class="meta">v4 · 2026-07-15 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
+      UC-ONBOARD by <span class="badge id">E-UISETUP</span></div>
     </div>
   </header>
   <main>
@@ -78,8 +79,48 @@
       same API.</p>
     </div>
 
-    <h2 id="uc-5">UC-5 — Onboard a fresh machine to the first captured flow</h2>
+    <h2 id="uc-5">UC-5 — Inspect a captured flow in the native app</h2>
     <div data-c="uc-5-contract">
+      <p>Clicking a flow row in the native app (<span class="badge id">E-UIINSPECT</span>) opens the
+      detail panel over <code>GET /flows/{id}</code> — request line, status with the 2xx/4xx/5xx
+      functional color, total duration, per-leg HTTP versions, and the full request + response
+      header tables. No new endpoint; the panel is a pure client of the existing API.</p>
+      <ul>
+        <li><strong>Bodies render by content type</strong> over
+        <code>GET /flows/{id}/{leg}/body</code>: JSON as a collapsible tree, XML/HTML as
+        (pretty-printed) text, <code>image/*</code> as the image, form-urlencoded as a decoded
+        key/value table, other text as text, anything else as a hex dump. A
+        <strong>raw / decoded</strong> toggle switches between the stored bytes
+        (<code>?decode=0</code>, sniffed to text or hex) and the server-decoded rendering
+        (<code>?decode=1</code>). Oversize renderings are bounded — hex and the JSON tree cap and
+        fall back rather than hang the window.</li>
+        <li><strong>States are never blank</strong>: an empty, streaming-passthrough, too-large,
+        read-error, or not-yet-responded body shows an explicit notice instead of a viewer.</li>
+        <li><strong>Copy-as-curl</strong> reproduces the request (method, URL, headers, body,
+        shell-quoted); <strong>copy body</strong> puts the shown body on the clipboard (the hex
+        dump for hex-rendered bodies; hidden for images); <strong>save body</strong> writes the
+        shown leg's bytes to a file via the OS save dialog, with a filename derived from the flow
+        id, leg, and content type.</li>
+        <li>The <code>?decode=1</code> contract is server-side — gzip/deflate/brotli reversal,
+        charset→UTF-8, JSON + XML pretty-printing — so <code>curl</code> and the web shell gain
+        the same decoded view the app shows.</li>
+      </ul>
+    </div>
+
+    <div class="callout" data-c="uc-5-provenance">
+      <p>Pinned by the inspector e2e (<code>ui/e2e/specs/flows.spec.ts</code>): row click → headers /
+      timing / versions; a JSON response renders as a tree; the raw toggle shows the stored bytes
+      as text; the curl text is asserted in the DOM (WebDriver clipboard is unreliable — the real
+      clipboard write is a recorded manual check, as is the native save dialog); a
+      <em>brotli-compressed</em> JSON body still renders as a tree — the decode chain proven
+      through the UI; a proxied PNG renders as an image. The decode chain itself is pinned at the
+      API seam in <code>tests/api.rs</code> and the <code>src/api/decode.rs</code> unit suite;
+      viewer dispatch, states, and copy/save are covered by the Vitest unit + integration layers.
+      <code>scripts/seed-proxy.mjs</code> seeds one flow per case for manual checks.</p>
+    </div>
+
+    <h2 id="uc-onboard">UC-ONBOARD — Onboard a fresh machine to the first captured flow</h2>
+    <div data-c="uc-onboard-contract">
       <p>On a machine that can't yet decrypt HTTPS, the native app opens a three-step guided setup — Trust
       the CA · Set the proxy · Verify — instead of the flow list. Its rule
       (<span class="badge id">E-UISETUP</span>): <strong>do the work for the user in the common case, tell
@@ -113,7 +154,7 @@
       </ul>
     </div>
 
-    <div class="diagram" data-c="uc-5-flow">
+    <div class="diagram" data-c="uc-onboard-flow">
       <pre class="mermaid">
 flowchart TD
   E["Enter setup (no decrypted flow yet)"] --> PR["Probe this machine: CA trusted? proxy set?"]
@@ -127,7 +168,7 @@ flowchart TD
       <div class="caption">Probes light the steps instantly for the local case; observed traffic confirms — and, for a remote device, is the only thing that can. The list reveal is decrypted-flow-only.</div>
     </div>
 
-    <div class="callout" data-c="uc-5-provenance">
+    <div class="callout" data-c="uc-onboard-provenance">
       <p>New API surface (consumed by onboarding, usable by any client): <code>GET /stats</code> →
       <code>{ connections }</code> and the <code>connection</code> SSE event (<code>{ authority }</code>) on
       the existing <code>/stream</code>. The connection tally is a monotonic counter in the store, bumped
@@ -139,7 +180,7 @@ flowchart TD
       feedback; capture stays the authority for the remote cases and the sole thing that reveals the list.
       Pinned by <code>tests/e2e_capture.rs::untrusted_https_records_a_connection_not_a_flow</code> (a failed
       handshake bumps <code>/stats</code> + emits <code>connection</code>, records no flow), the status
-      derivation + probe-parser unit tests, and the UC-5 e2e spine. Why these reversals were approved:
+      derivation + probe-parser unit tests, and the UC-ONBOARD e2e spine. Why these reversals were approved:
       <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>.</p>
     </div>
 

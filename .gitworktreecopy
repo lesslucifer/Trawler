@@ -6,6 +6,10 @@
 # Environment files — each worktree needs its own .env (gitignored, never committed)
 **/*.env*
 
+# Manual-review allowlist — gitignored + local, so every worktree needs the same
+# registered signing identities copied in rather than re-registered per checkout
+.mr-allowed
+
 # Generated CA — copy so every worktree presents the same system-trusted CA
 # instead of generating a fresh, untrusted one (config.rs resolves ./ca from cwd)
 ca/*

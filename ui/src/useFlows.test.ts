@@ -11,6 +11,8 @@ function fakeApi() {
     listFlows: async () => [],
     connectionCount: () => new Promise<number>((res) => (resolveStats = res)),
     caCertPem: async () => "",
+    getFlow: async () => { throw new Error("unused"); },
+    getBody: async () => { throw new Error("unused"); },
     stream: (h) => {
       handlers = h;
       return () => {};

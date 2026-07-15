@@ -24,7 +24,15 @@ function HeaderRow() {
   );
 }
 
-export function FlowList({ flows }: { flows: FlowSummary[] }) {
+export function FlowList({
+  flows,
+  selectedId,
+  onSelect,
+}: {
+  flows: FlowSummary[];
+  selectedId?: string | null;
+  onSelect?: (id: string) => void;
+}) {
   const parentRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: flows.length,
@@ -50,12 +58,18 @@ export function FlowList({ flows }: { flows: FlowSummary[] }) {
       <div ref={parentRef} data-testid="flow-scroll" className="min-h-0 flex-1 overflow-auto">
         <div style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
           {virtualizer.getVirtualItems().map((item) => {
-            const row = toRow(flows[item.index]);
+            const flow = flows[item.index];
+            const row = toRow(flow);
+            const selected = flow.id === selectedId;
             return (
               <div
-                key={flows[item.index].id}
+                key={flow.id}
                 data-testid="flow-row"
-                className="absolute left-0 top-0 grid w-full items-center gap-3 border-b border-hairline px-4 font-mono text-ink-body"
+                aria-selected={selected}
+                onClick={() => onSelect?.(flow.id)}
+                className={`absolute left-0 top-0 grid w-full cursor-pointer items-center gap-3 border-b border-hairline px-4 font-mono text-ink-body hover:bg-canvas-soft ${
+                  selected ? "bg-canvas-soft" : ""
+                }`}
                 style={{
                   gridTemplateColumns: COLUMNS,
                   height: ROW_HEIGHT,

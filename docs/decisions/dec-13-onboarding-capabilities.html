@@ -12,15 +12,15 @@
       <p>Why the native app may change the machine, and why the core grew a
       pre-decrypt "connection seen" signal.</p>
       <div class="meta">v1 · 2026-07-15 · Trawler · T2 decision · minted by
-      <a href="../work/2026-07-15-e-uisetup-result.html">E-UISETUP</a> ·
+      <span class="badge id">E-UISETUP</span> ·
       relates to <a href="dec-12-native-ui-stack.html">DEC-12</a> ·
-      <a href="../use-cases/web-ui.html#uc-5">UC-5</a></div>
+      <a href="../use-cases/web-ui.html#uc-onboard">UC-ONBOARD</a></div>
     </div>
   </header>
   <main>
 
     <h2 id="dec-13">DEC-13 · What onboarding is allowed to touch</h2>
-    <p>E-UISETUP added guided onboarding (<a href="../use-cases/web-ui.html#uc-5">UC-5</a>):
+    <p>E-UISETUP added guided onboarding (<a href="../use-cases/web-ui.html#uc-onboard">UC-ONBOARD</a>):
     walk a fresh machine from an untrusted CA and an unconfigured client to its first
     decrypted HTTPS flow. Two of its choices overturn boundaries written earlier in the
     epic's own plan and one of its WUs. This record is their durable home — the plan that
@@ -41,7 +41,7 @@
     <h3 id="local-os">Local-OS actions in the Tauri process</h3>
     <p>The core stays a pure MITM proxy + read-only control API — it never touches the
     host's trust store or proxy settings. Onboarding's "do the work for the user" rule
-    (UC-5) needs exactly those writes, so they live <strong>in the native app</strong>
+    (UC-ONBOARD) needs exactly those writes, so they live <strong>in the native app</strong>
     (<a href="../../ui/src-tauri/src/setup.ts">ui/src-tauri</a>), never in the core:</p>
     <ul>
       <li><strong>CA install</strong> — <code>security add-trusted-cert</code> (macOS) /

@@ -101,6 +101,19 @@ fn hook(repo: &Path, level: &str) -> Result<(i32, String), String> {
     let heads = merge_tips(repo)?;
     match heads.as_slice() {
         [] => Ok((0, "no merge in progress - gate not required".to_string())),
+        // A back-merge of already-landed history (main, or a sibling already on
+        // main) into an epic carries no net-new WU seam - its commits passed their
+        // own gate before landing, and its tip is a merge commit with no WU notes.
+        // Skip it, exactly as the epic walk's is_landed_history does (DEC-8); a
+        // genuine forward WU tip carries work absent from main, so this never
+        // swallows it. The final epic->main gate re-walks every real seam.
+        [tip] if lvl == Level::Wu && is_ancestor(repo, tip, "main") => Ok((
+            0,
+            format!(
+                "back-merge of landed history {} - not a WU seam, gate not required",
+                gate::short(tip)
+            ),
+        )),
         [tip] => gate_run(repo, lvl, tip, "HEAD"),
         _ => Ok((
             1,
@@ -108,6 +121,10 @@ fn hook(repo: &Path, level: &str) -> Result<(i32, String), String> {
                 .to_string(),
         )),
     }
+}
+
+fn is_ancestor(repo: &Path, commit: &str, of: &str) -> bool {
+    git(repo, &["merge-base", "--is-ancestor", commit, of]).is_ok()
 }
 
 fn merge_tips(repo: &Path) -> Result<Vec<String>, String> {
@@ -235,5 +252,51 @@ mod tests {
         assert_eq!(flag_value(&["--target", "epic/x"], "--target").as_deref(), Some("epic/x"));
         assert_eq!(flag_value(&["--target"], "--target"), None);
         assert_eq!(flag_value(&[], "--target"), None);
+    }
+
+    // The WU hook must skip a back-merge of main into an epic (main is landed,
+    // gated history — not a net-new WU seam, DEC-8) while still gating a forward WU
+    // tip carrying epic-only work. is_ancestor(tip, main) is the discriminator.
+    #[test]
+    fn wu_hook_skips_back_merge_of_landed_history_but_gates_forward_work() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let repo = dir.path();
+        let g = |args: &[&str]| super::git(repo, args).unwrap();
+        let commit = |name: &str, msg: &str| {
+            std::fs::write(repo.join(name), msg).unwrap();
+            g(&["add", "-A"]);
+            g(&["commit", "-q", "-m", msg]);
+            g(&["rev-parse", "HEAD"])
+        };
+
+        g(&["init", "-q", "-b", "main"]);
+        g(&["config", "user.email", "t@t"]);
+        g(&["config", "user.name", "t"]);
+        g(&["config", "commit.gpgsign", "false"]);
+        commit("base", "base");
+        g(&["branch", "epic"]);
+
+        let main_tip = commit("m", "main advances past the fork");
+
+        g(&["checkout", "-q", "epic"]);
+        let forward_wu_tip = commit("w", "epic-only WU work, absent from main");
+
+        assert!(
+            super::is_ancestor(repo, &main_tip, "main"),
+            "main's own tip is landed history — the WU hook skips a back-merge of it"
+        );
+        assert!(
+            !super::is_ancestor(repo, &forward_wu_tip, "main"),
+            "a forward WU tip carries work not on main — the WU hook still gates it"
+        );
+
+        // Drive hook() itself, not just the discriminator: a MERGE_HEAD pointing at
+        // main (a back-merge) is skipped clean at the WU level, proving the
+        // lvl == Level::Wu arm fires end to end.
+        let git_dir = super::git(repo, &["rev-parse", "--git-dir"]).unwrap();
+        std::fs::write(repo.join(&git_dir).join("MERGE_HEAD"), format!("{main_tip}\n")).unwrap();
+        let (code, msg) = super::hook(repo, "wu").unwrap();
+        assert_eq!(code, 0, "back-merge of landed history must not fail the WU hook");
+        assert!(msg.contains("back-merge of landed history"), "got: {msg}");
     }
 }

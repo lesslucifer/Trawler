@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Filter, FlowSummary, TrawlerApi } from "./api";
+import type { Filter, FlowSummary, FlowView, TrawlerApi } from "./api";
 
 const DEBOUNCE_MS = 150;
 
@@ -52,4 +52,27 @@ export function useFlows(api: TrawlerApi) {
   );
 
   return { filter, flows, connections, update };
+}
+
+// Fetches GET /flows/{id} when the selection changes; null clears it. A cancel
+// flag drops a stale response if the selection moves before the fetch resolves.
+export function useFlowDetail(api: TrawlerApi, id: string | null) {
+  const [flow, setFlow] = useState<FlowView | null>(null);
+
+  useEffect(() => {
+    setFlow(null);
+    if (id == null) return;
+    let cancelled = false;
+    api
+      .getFlow(id)
+      .then((f) => {
+        if (!cancelled) setFlow(f);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [api, id]);
+
+  return flow;
 }

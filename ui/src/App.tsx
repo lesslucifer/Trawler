@@ -3,10 +3,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, type TrawlerApi } from "./api";
 import { hostOs, splitProxyAddr, type ProxyProbe, type TrustProbe } from "./setup";
 import { isDecryptedHttps } from "./flow";
-import { useFlows } from "./useFlows";
+import { useFlows, useFlowDetail } from "./useFlows";
 import { useProxyCloseConfirm } from "./closeConfirm";
 import { Layout } from "./Layout";
 import { FlowList } from "./FlowList";
+import { FlowDetail } from "./FlowDetail";
 import { Onboarding } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { Field, StatusDot } from "./components";
@@ -16,6 +17,8 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
   const client = useMemo(() => api ?? createApi(), [api]);
   const { filter, flows, connections, update } = useFlows(client);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const detail = useFlowDetail(client, selectedId);
 
   // Launch self-test (W4): read /flows once and let live capture decide the entry
   // — a decrypted HTTPS flow already present means setup works, straight to the
@@ -168,9 +171,19 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           </span>
         </>
       }
+      detail={
+        selectedId == null ? undefined : (
+          <FlowDetail
+            key={selectedId}
+            api={client}
+            flow={detail}
+            onClose={() => setSelectedId(null)}
+          />
+        )
+      }
     >
       {closeDialog}
-      <FlowList flows={flows} />
+      <FlowList flows={flows} selectedId={selectedId} onSelect={setSelectedId} />
     </Layout>
   );
 }

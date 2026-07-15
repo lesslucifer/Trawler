@@ -13,6 +13,40 @@ export interface FlowSummary {
   response_body_state: string | null;
 }
 
+export interface HeaderView {
+  name: string;
+  value: string;
+}
+
+export type BodyView =
+  | { state: "captured"; size: number; data_base64: string }
+  | { state: "streaming"; content_type: string }
+  | { state: "not_captured"; reason: string; actual: number | null }
+  | { state: "empty" };
+
+// Full flow projection from GET /flows/{id} — mirrors the server's FlowView.
+export interface FlowView {
+  id: string;
+  started_at: string;
+  duration_ms: number | null;
+  method: string;
+  uri: string;
+  status: number | null;
+  request_http_version: string;
+  response_http_version: string | null;
+  request_headers: HeaderView[];
+  response_headers: HeaderView[];
+  request_body: BodyView;
+  response_body: BodyView | null;
+}
+
+export type Leg = "request" | "response";
+
+export interface BodyFetch {
+  bytes: Uint8Array;
+  contentType: string | null;
+}
+
 export interface Filter {
   q?: string;
   host?: string;
@@ -75,6 +109,8 @@ export interface TrawlerApi {
   listFlows(filter: Filter): Promise<FlowSummary[]>;
   connectionCount(): Promise<number>;
   caCertPem(): Promise<string>;
+  getFlow(id: string): Promise<FlowView>;
+  getBody(id: string, leg: Leg, decode: boolean): Promise<BodyFetch>;
   stream(handlers: StreamHandlers): () => void;
 }
 
@@ -97,6 +133,20 @@ export function createApi(baseUrl?: string): TrawlerApi {
       const res = await fetch(`${base()}/ca.crt`);
       if (!res.ok) throw new Error(`GET /ca.crt failed: ${res.status}`);
       return res.text();
+    },
+    async getFlow(id) {
+      const res = await fetch(`${base()}/flows/${encodeURIComponent(id)}`);
+      if (!res.ok) throw new Error(`GET /flows/${id} failed: ${res.status}`);
+      return (await res.json()) as FlowView;
+    },
+    async getBody(id, leg, decode) {
+      const query = decode ? "?decode=1" : "";
+      const res = await fetch(`${base()}/flows/${encodeURIComponent(id)}/${leg}/body${query}`);
+      if (!res.ok) throw new Error(`GET ${leg} body for ${id} failed: ${res.status}`);
+      return {
+        bytes: new Uint8Array(await res.arrayBuffer()),
+        contentType: res.headers.get("content-type"),
+      };
     },
     stream({ onEvent, onLive, onConnection }) {
       const source = new EventSource(`${base()}/stream`);
