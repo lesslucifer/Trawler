@@ -99,7 +99,6 @@ export function defaultProxyAddr(): string {
 
 export interface StreamHandlers {
   onEvent: () => void;
-  onLive?: (live: boolean) => void;
   // A tunnel reached the proxy (may never become a flow — untrusted-CA handshake).
   // Onboarding's proxy step goes green on this alone; the flow list ignores it.
   onConnection?: () => void;
@@ -148,7 +147,7 @@ export function createApi(baseUrl?: string): TrawlerApi {
         contentType: res.headers.get("content-type"),
       };
     },
-    stream({ onEvent, onLive, onConnection }) {
+    stream({ onEvent, onConnection }) {
       const source = new EventSource(`${base()}/stream`);
       // `connection` is deliberately absent here: a bare tunnel never becomes a
       // flow, so it must not trigger a /flows refetch — only bump the counter.
@@ -156,8 +155,6 @@ export function createApi(baseUrl?: string): TrawlerApi {
         source.addEventListener(name, onEvent);
       }
       if (onConnection) source.addEventListener("connection", onConnection);
-      source.onopen = () => onLive?.(true);
-      source.onerror = () => onLive?.(false);
       return () => source.close();
     },
   };
