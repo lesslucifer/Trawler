@@ -105,17 +105,22 @@
     </table>
 
     <h2 id="distillation">Distillation</h2>
-    <p data-item="distillation">Two facts outlive W6 and distil <strong>at epic close</strong> (deferred, per
-    the epic plan's distillation plan — not citable to a T2 doc at WU level yet):</p>
-    <ul>
-      <li>the <code>GET /stats</code> endpoint + the <code>connection</code> SSE event — a new API surface,
-      into <code>web-ui.html</code> / the API index;</li>
-      <li>a <strong>DEC</strong> recording the reversal of W2's <em>"no trust-store inspection"</em> + W4's
-      <em>"no OS probe"</em> stance (local probe for the ~90%, capture for the rest), and the CN-match
-      ceiling above.</li>
-    </ul>
-    <p>The onboarding honest-status model folds into the UC-5 contract at epic close. No T1 change (no new
-    architecture region/route). This plan + result archive under <code>docs/work/</code> (DEC-3).</p>
+    <p data-item="distillation">The onboarding flow is intricate enough that it must not wait for epic close,
+    so it is <strong>distilled to T2 now</strong>: a new
+    <a href="../use-cases/web-ui.html#uc-5"><strong>UC-5</strong></a> in
+    <code>docs/use-cases/web-ui.html</code> (indexed) captures the durable model as an observable contract —
+    the <strong>two-truths per-step status</strong> (a fast local probe OR observed traffic; never the
+    stepper cursor; un-probeable ⇒ "capture will confirm", never a false "not set up"), the
+    <strong>connection-seen signal</strong> (an untrusted-CA <code>CONNECT</code> leaves no flow, so the core
+    counts the tunnel: <code>GET /stats</code> + the <code>connection</code> SSE event turn the proxy step
+    green on any traffic, decrypt or not), and the invariant that <strong>only a decrypted flow reveals the
+    list</strong>. UC-5's provenance callout also records the new <code>/stats</code> · <code>connection</code>
+    API surface and the reversal of W2/W4's "prove by capture only" stances (probe for the 90%, capture for
+    the rest + the CN-match ceiling) — enough that a future agent won't have to rederive the flow.</p>
+    <p>Still deferred to <strong>epic close</strong>: a formal <strong>DEC</strong> recording the
+    trust-store-inspection reversal + the local-OS-setup capability rationale (the epic plan already tracks
+    this alongside DEC-12), and any T1 change — there is none (no new architecture region/route). This plan +
+    result archive under <code>docs/work/</code> (DEC-3).</p>
 
     <h2 id="follow-ups">Follow-ups</h2>
     <ul data-item="follow-ups">

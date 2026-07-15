@@ -10,9 +10,10 @@
     <div class="inner">
       <h1>Use Cases — UI surfaces</h1>
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
-      surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4).</p>
-      <div class="meta">v2 · 2026-07-12 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
-      UC-4 by <span class="badge id">E-UIFOUND</span></div>
+      surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4), plus the native
+      app's guided onboarding to the first captured flow (UC-5).</p>
+      <div class="meta">v3 · 2026-07-15 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UISETUP</span></div>
     </div>
   </header>
   <main>
@@ -77,7 +78,79 @@
       same API.</p>
     </div>
 
+    <h2 id="uc-5">UC-5 — Onboard a fresh machine to the first captured flow</h2>
+    <div data-c="uc-5-contract">
+      <p>On a machine that can't yet decrypt HTTPS, the native app opens a three-step guided setup — Trust
+      the CA · Set the proxy · Verify — instead of the flow list. Its rule
+      (<span class="badge id">E-UISETUP</span>): <strong>do the work for the user in the common case, tell
+      the truth in every case, and prove success only by real capture.</strong></p>
+      <ul>
+        <li><strong>Least manual work.</strong> On macOS/Windows each step offers one native action
+        (install the CA, set the system proxy — both elevation-gated); the per-OS manual steps sit behind a
+        "Set it up manually" disclosure that auto-opens if the action fails. Other OSes show the manual steps
+        inline. Instructions are always plain text, never markup.</li>
+        <li><strong>Two-truths status per step</strong> (never the stepper cursor — a step is never ✓ just
+        because you clicked past it). Each step's honest status comes from either of two independent signals:
+        <ul>
+          <li>a fast <em>local probe</em> — does <em>this machine</em> trust the CA / route its system proxy
+          to Trawler? (the ~90% single-machine case; instant, read-only OS queries), or</li>
+          <li><em>observed traffic</em> — has anything actually reached Trawler, from any device?</li>
+        </ul>
+        When the probe can't conclude (un-probeable OS, or a remote device) the wording says so and points
+        at capture — it never shows a false "not set up".</li>
+        <li><strong>The proxy step goes green on <em>any</em> connection, decrypt or not.</strong> An HTTPS
+        attempt from a client that doesn't trust the CA fails its TLS handshake and produces <em>no flow</em>
+        — so the core counts the tunnel itself: <code>GET /stats</code> returns a monotonic
+        <code>connections</code> tally and a <code>connection</code> SSE event fires. That proves "traffic is
+        routing through Trawler" even before decryption works. Traffic seen but not decrypting ⇒ the Trust
+        step says "install the certificate on the device you're capturing from".</li>
+        <li><strong>Only a decrypted flow reveals the list.</strong> A probe-green step or a bare connection
+        never ends onboarding — the payoff (Verify → flow list) fires solely on the first <code>https://</code>
+        flow (a decrypted request the MITM rewrote to absolute form). The Verify step shows a concrete
+        prove-it: open any site, or run a copyable <code>curl -x http://&lt;addr&gt; https://example.com</code>
+        with the real proxy address. Capture, once proven, latches (the status dot re-invokes setup on demand;
+        "Back to flows" returns).</li>
+      </ul>
+    </div>
+
+    <div class="diagram" data-c="uc-5-flow">
+      <pre class="mermaid">
+flowchart TD
+  E["Enter setup (no decrypted flow yet)"] --> PR["Probe this machine: CA trusted? proxy set?"]
+  PR --> ST["Trust and Proxy steps show local status instantly"]
+  E --> W["Watch traffic: GET /stats + connection and flow SSE events"]
+  W --> C{"What arrived?"}
+  C -- "any connection" --> PX["Proxy step green: receiving traffic"]
+  C -- "http flow, no https" --> TR["Trust: not decrypting, install the CA on the sending device"]
+  C -- "https flow (decrypted)" --> OK["Trust green + Verify green: reveal the flow list"]
+      </pre>
+      <div class="caption">Probes light the steps instantly for the local case; observed traffic confirms — and, for a remote device, is the only thing that can. The list reveal is decrypted-flow-only.</div>
+    </div>
+
+    <div class="callout" data-c="uc-5-provenance">
+      <p>New API surface (consumed by onboarding, usable by any client): <code>GET /stats</code> →
+      <code>{ connections }</code> and the <code>connection</code> SSE event (<code>{ authority }</code>) on
+      the existing <code>/stream</code>. The connection tally is a monotonic counter in the store, bumped
+      when the proxy opens a <code>CONNECT</code> tunnel — kept outside the flow ring so eviction never
+      touches it. The two local probes (CA-in-trust-store, system-proxy-address) live in the Tauri app, not
+      the core; they read the real machine so they are not hermetically testable (the status <em>derivation</em>
+      they feed is fully unit-tested). This deliberately supersedes two earlier "prove by capture only"
+      stances (no trust-store inspection / no OS self-test): the probe covers the 90% for instant honest
+      feedback; capture stays the authority for the remote cases and the sole thing that reveals the list.
+      Pinned by <code>tests/e2e_capture.rs::untrusted_https_records_a_connection_not_a_flow</code> (a failed
+      handshake bumps <code>/stats</code> + emits <code>connection</code>, records no flow), the status
+      derivation + probe-parser unit tests, and the UC-5 e2e spine.</p>
+    </div>
+
   </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
 </html>
