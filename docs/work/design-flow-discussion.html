@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a5751129f34851f0dfa8f41">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Design System &amp; Harness (epic direction)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design System &amp; Harness — epic direction</h1>
+      <p>Give AI agents a way to design app UI that is <em>consistent</em> and <em>verifiable</em>, and wire it into the dev lifecycle. This doc sets the epic's direction and surfaces the hard problems — it does not execute any design.</p>
+      <div class="meta">Draft v4 · 2026-07-15 · Trawler · T3 scratch (docs/work/) · epic/design-flow</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="what-this-is">What this epic is</h2>
+    <div class="callout">
+      A <strong>design system + harness</strong> so any UI a Trawler agent designs is (a) composed from a shared component vocabulary, (b) bound by shared rules/tokens, (c) produced by a repeatable flow, and (d) <strong>gated</strong> to a minimum bar before it can proceed — then connected to the dev workflow.
+    </div>
+    <p>The animating problem, in your words: <em>raw instruction is not reliable — agents hallucinate and forget.</em> So consistency can't rest on instruction; it needs a <strong>gate</strong>, the same way code quality rests on clippy + tests + <code>verify-dod</code>, not on "please write good code."</p>
+    <p class="muted">This is an <strong>epic discussion</strong> — direction only. Each requirement becomes its own Working Unit. We do not run a design in this doc.</p>
+
+    <h2 id="the-frame">The unifying frame — a design gate that mirrors the dev gate</h2>
+    <table data-c="mirror-table">
+      <thead><tr><th>Development workflow (exists)</th><th>Design workflow (this epic)</th></tr></thead>
+      <tbody>
+        <tr><td>Coding conventions (CLAUDE.md)</td><td><strong>Tokens + rules</strong> — layout, structure, content, wording <span class="badge id">#2</span></td></tr>
+        <tr><td>Reuse / stdlib-first (ponytail)</td><td><strong>Component registry</strong> — compose, don't reinvent <span class="badge id">#1</span></td></tr>
+        <tr><td>Epic → WU → commit process</td><td><strong>The design flow</strong> — idea → draft mockup <span class="badge id">flow</span></td></tr>
+        <tr><td>clippy + tests + <code>verify-dod</code> + CR skill</td><td><strong>Design harness</strong> — mechanical + self-reflex + adversarial <span class="badge id">#3</span></td></tr>
+        <tr><td><code>dod/v1</code> · <code>cr/v2</code> receipts</td><td><strong>Design receipts</strong> bound to the artifact <span class="badge id">#3</span></td></tr>
+        <tr><td>The merge is the gate</td><td><strong>Workflow integration</strong> — design gate feeds dev <span class="badge id">#4</span></td></tr>
+      </tbody>
+    </table>
+    <p>The gate defines "done": a design is finished when it <strong>passes with a receipt</strong>, not when it looks nice. Reliability lives in the gate, not the agent.</p>
+
+    <h2 id="enforcement">The enforcement model (settled)</h2>
+    <p>We can't programmatically verify design <em>quality</em>. What we <em>can</em> verify is that <strong>every rule was considered, with a citation-backed verdict</strong> — that's how "the agent didn't forget" becomes mechanically true. Three tiers, cheapest first:</p>
+    <div class="cards">
+      <div class="card" data-c="tier-mech">
+        <h3>Tier 1 · Mechanical gate</h3>
+        <p>Deterministic, no judgment. Checks <strong>completeness</strong> (required sections + per-step artifacts exist), <strong>fixed rules</strong> (only tokens, only registry components or a declared new-component request, spacing scale…), and <strong>receipt coverage</strong> (every rule id has a verdict). Like clippy.</p>
+      </div>
+      <div class="card" data-c="tier-self">
+        <h3>Tier 2 · Self-reflex receipt</h3>
+        <p>The designing agent emits its own verifiable receipt: per rule id → considered / verdict / citation. Cheap, catches forgetting. Can be hallucinated — but cheaply reduces the odds, and Tier 1 checks it's complete.</p>
+      </div>
+      <div class="card" data-c="tier-adv">
+        <h3>Tier 3 · Adversarial review</h3>
+        <p>Independent agents (the CR-skill model) review, cite the exact rule/inconsistency violated, or pass. Scoped to what mechanics can't judge — soft rules + new-component warrant.</p>
+      </div>
+    </div>
+    <p class="muted">Tier 1 polices the <em>receipts</em> of Tiers 2 &amp; 3: it can't judge the design, but it can refuse a receipt that skipped a rule id. That is the whole trick.</p>
+
+    <h2 id="registry">The component registry (settled shape)</h2>
+    <p>Code is the source of truth. Each registry component carries a <strong>structured usage doc-comment</strong> (when to use / when not / tier). An <strong>index file</strong> is the single thing an agent loads to know the whole vocabulary (so it needn't open every component file); sync is a Tier-1 check that <strong>the index lists every file in the collection folder</strong> (unless a file carries a waiver directive). A design either <strong>reuses</strong> a registry component or <strong>proposes a new one</strong> — passing with a <em>spec</em>, not built yet; the build happens later in the dev phase, and a human approves the addition after all gates pass. The collection grows over time.</p>
+    <p>Five reusability tiers (higher may use lower, never the reverse). You named them badly and asked for help — here's my recommendation:</p>
+    <table data-c="tier-table">
+      <thead><tr><th>Tier</th><th>Your example</th><th>Proposed name</th><th>In collection?</th><th>Reuse contract</th></tr></thead>
+      <tbody>
+        <tr><td>T0</td><td>HTML / native / lib</td><td><strong>Foundation</strong></td><td>No (external, fixed)</td><td>Use only when nothing higher fits</td></tr>
+        <tr><td>T1</td><td>button, input</td><td><strong>Primitives</strong></td><td>Yes</td><td>Reuse-first</td></tr>
+        <tr><td>T2</td><td>searchbar, status button</td><td><strong>Widgets</strong></td><td>Yes</td><td>Reuse-first</td></tr>
+        <tr><td>T3</td><td>a screen row</td><td><strong>Locals</strong></td><td>No</td><td>Build locally, <em>waive</em> reuse explicitly</td></tr>
+        <tr><td>T4</td><td>a panel, a screen</td><td><strong>Compositions</strong></td><td>No</td><td>Build locally, waive (as T3)</td></tr>
+      </tbody>
+    </table>
+    <p class="muted">Alt names if these don't land: T2 <em>Composites</em>/<em>Blocks</em>, T3 <em>Parts</em>, T4 <em>Screens</em>. The collection = <strong>Primitives + Widgets</strong> only; Locals/Compositions are just local code with a waiver.</p>
+
+    <h2 id="hardsoft">Hard vs. soft rules — the examples you asked for</h2>
+    <p>The confusion was fair. "Rules" span a spectrum of <em>enforceability</em>. Same rulebook, but each rule is tagged so the harness knows <em>how</em> to enforce it:</p>
+    <table data-c="hardsoft-table">
+      <thead><tr><th>Hard — Tier-1 mechanical (grep/parse, pass/fail)</th><th>Soft — Tier-3 judged (LLM, best-effort)</th></tr></thead>
+      <tbody>
+        <tr><td>Only colour tokens, never raw hex</td><td>Wording is professional &amp; consistent with app voice</td></tr>
+        <tr><td>Only Primitives/Widgets, or a declared new-component request</td><td>Layout groups related things sensibly</td></tr>
+        <tr><td>Spacing uses the 8/12/16… scale</td><td>Visual hierarchy makes the primary action obvious</td></tr>
+        <tr><td>Every interactive element lists its states (hover/focus/disabled)</td><td>This new component is genuinely warranted, not needless</td></tr>
+      </tbody>
+    </table>
+    <p>The problem I was flagging: if you write all of these in one flat list and tell the harness "verify the design follows the rules," it can truly check the left column but only <em>pretend</em> to check the right. The fix (per your enforcement model): <strong>tag each rule hard/soft</strong>. Hard → Tier 1 mechanically. Soft → Tier 3 judged. <em>Both</em> still require a receipt verdict — the tag only decides whether Tier 1 <em>also</em> checks it mechanically.</p>
+
+    <h2 id="decided">Decided (from your feedback)</h2>
+    <ul>
+      <li data-c="d-enforce"><strong>Enforcement = 3 tiers + receipts</strong> (mechanical / self-reflex / adversarial); the gate guarantees <em>consideration</em>, not quality.</li>
+      <li data-c="d-registry"><strong>Registry: code is truth</strong>, usage in structured doc-comments + an <strong>index file</strong> agents load (Tier-1 check: index covers the folder unless waived), reuse-or-propose (pass with a spec, build later, human approves), five tiers (Foundation → Compositions), collection = Primitives + Widgets.</li>
+      <li data-c="d-stop"><strong>Draft mockup is the finish line</strong> — lo-fi structural, no hi-fi visual.</li>
+      <li data-c="d-artifact"><strong>Fresh artifact per stage</strong>, distilled on epic merge.</li>
+      <li data-c="d-guinea"><strong>Guinea-pig = the flow detail panel</strong> (inspector), executed in a WU.</li>
+      <li data-c="d-e2e"><strong>Flow e2e</strong> = scripted run with <em>both</em> a fake user and a fake AI agent, proving the <strong>harness/flow plumbing</strong> works end-to-end (never stuck / misleading, yields output) — not real design quality. Not part of app e2e — run once, re-run manually on change (like the workflow e2e).</li>
+      <li data-c="d-rulebook"><strong>Rulebook = a T1 doc</strong>, enumerable with stable rule ids so receipts can be coverage-checked.</li>
+      <li data-c="d-fit"><strong>Reuse is fit-first</strong>: don't rebuild what exists at any tier; tier order is only a tiebreaker.</li>
+      <li data-c="d-advscope"><strong>Adversarial review scoped</strong> to soft rules + new-component warrant (Tier 1 owns the hard rules).</li>
+      <li data-c="d-wf"><strong>Design→dev integration (#4) deferred</strong> to its own WU (W8).</li>
+    </ul>
+
+    <h2 id="wus">WU sequence (your iterative order, with your splits)</h2>
+    <table data-c="wu-table">
+      <thead><tr><th>WU</th><th>Requirement</th></tr></thead>
+      <tbody>
+        <tr><td>W1</td><td>Base flow + hand-run on the flow detail panel — no harness, no rules. Learn what we actually need.</td></tr>
+        <tr><td>W2</td><td>Seed #1 registry, extracted from W1.</td></tr>
+        <tr><td>W3</td><td>Seed #2 tokens/rules, extracted from W1.</td></tr>
+        <tr><td>W4</td><td>Integrated run — flow consumes the W2+W3 substrate (kept <em>frozen</em>), verified in real work; produces a findings list.</td></tr>
+        <tr><td>W5</td><td>Revise #1 registry from W4 findings. <span class="badge id">grill M</span></td></tr>
+        <tr><td>W6</td><td>Revise #2 tokens/rules from W4 findings. <span class="badge id">grill M</span></td></tr>
+        <tr><td>W7</td><td>Harness (#3) — mechanical + self-reflex + adversarial + receipts; <strong>completes the design flow</strong> (wires the gate in). Carries the flow e2e (fake user + fake agent) that proves the plumbing end-to-end.</td></tr>
+        <tr><td>W8</td><td>Integrate the completed design flow into the dev workflow (#4).</td></tr>
+        <tr><td>W9</td><td>Final review WU. <span class="badge id">grill N</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="grill">Still grilling you</h2>
+    <p>A–L are all resolved (see Decided / Enforcement / Registry / WU table). Two new, small, both about not over-building the epic:</p>
+
+    <h3 id="g-revise">M · Are the revise WUs (W5/W6) committed, or conditional?</h3>
+    <p data-c="g-revise-q"><strong>Grill:</strong> committing to "revise registry" + "revise rules" WUs before W4 has shown there's anything to revise is speculative. Better: W4 emits a findings list, and W5/W6 exist <em>only if</em> findings warrant (else they collapse to no-ops / fold into W4). Agree they're conditional-on-findings, not guaranteed?</p>
+
+    <h3 id="g-finalrev">N · What does the W9 final-review WU add?</h3>
+    <p data-c="g-finalrev-q"><strong>Grill:</strong> every WU already gets a CR gate, and the epic merge re-walks all seams. So what does a separate "final review" add beyond that? My suggestion: repurpose W9 into a <em>second-screen reuse proof</em> — run the finished flow+harness on a fresh screen (not the flow detail panel) to prove it generalizes. Distinct value, or drop W9?</p>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

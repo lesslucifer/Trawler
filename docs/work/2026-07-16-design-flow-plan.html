@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a57e6709f34851f0dfa902c" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW Epic Plan (Design System &amp; Harness)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW — Design System &amp; Harness</h1>
+      <p>Epic plan. A repeatable, gated flow by which AI agents design app UI consistently and verifiably, wired into the dev workflow.</p>
+      <div class="meta">Epic plan · 2026-07-16 · Trawler · T3 (docs/work/) · epic/design-flow · direction: docs/work/design-flow-discussion.html</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">UI screens are starting to land (E-UI, E-UIINSPECT) and each new screen risks being designed ad-hoc, so the app drifts toward inconsistency — different components reinvented, rules applied unevenly. Raw instruction ("follow the design rules") does not hold: agents hallucinate and forget. This epic builds a <strong>design system + harness</strong> — a shared component vocabulary, an enumerable rulebook, a staged design flow, and a gate that mechanically proves every rule was considered — so that any UI an agent designs is consistent and verifiable, exactly as code quality already rests on clippy + tests + <code>verify-dod</code> rather than good intentions. It ships the <em>method</em>, not a redesign; a later epic uses it to actually design/ship UI.</p>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <p data-item="use-cases"><strong>Process epic — touches no app use-case.</strong> No UC-* contract is delivered or changed; the app's runtime behavior is unchanged. The flow-detail-panel design produced during this epic (W1/W4) is <em>proof the flow works</em>, not a shipped UI change. The truth this epic creates lives in T1 process docs + a T2 decision record, not in <code>docs/use-cases/</code>. A future UI epic that consumes this flow may then update <code>web-ui.html</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>After the epic, a reader who wasn't here can observe all of:</p>
+      <ul>
+        <li>A <strong>T1 design-flow process doc</strong> describing the staged flow (Frame → Layout → Elements → Interaction → Draft mockup → Tune) and its per-stage artifacts.</li>
+        <li>A <strong>component registry</strong>: a collection folder of components, each carrying a structured usage doc-comment, plus an <strong>index file</strong> an agent loads; a mechanical check fails when the index omits a collection file (unless waived).</li>
+        <li>A <strong>T1 rulebook doc</strong> of enumerable, stable-id'd rules, each tagged <em>hard</em> (Tier-1 checkable) or <em>soft</em> (Tier-3 judged).</li>
+        <li>A <strong>design harness</strong> that enforces three tiers (mechanical completeness + fixed rules + receipt-coverage · self-reflex receipt · adversarial review scoped to soft rules + new-component warrant) and emits a design receipt, red/green like the DoD gate.</li>
+        <li>The flow <strong>run once on the flow detail panel</strong> to a passing, receipted design spec (draft-mockup fidelity).</li>
+        <li>A <strong>flow e2e</strong> (fake user + fake agent) proving the harness/flow plumbing runs end-to-end without getting stuck or misleading — separate from app e2e, run-once + manual re-run.</li>
+        <li>The completed design flow <strong>connected to the dev workflow</strong>.</li>
+      </ul>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-item="non-goals">
+      <li>No Trawler UI re-design — a later epic uses this flow to design/ship UI.</li>
+      <li>No hi-fi visual design — draft mockup (lo-fi, structural, interactions defined) is the finish line.</li>
+      <li>No automated verification of design <em>quality</em> — the gate proves rules were <em>considered</em> (citation-backed verdict per rule), never that the design is good.</li>
+      <li>No building of real feature components — the registry is seeded only from what the guinea-pig screen needs.</li>
+      <li>The design→dev integration <em>shape</em> (mandatory vs optional gate, conformance back-check) is decided in W8, not pre-committed here.</li>
+    </ul>
+
+    <h2 id="wu-summaries">WU summaries</h2>
+    <p>Iterative order: learn by a hand-run, seed the substrate, verify it integrated, revise it, then build and wire the harness. Full WU plans live in each WU's own plan doc.</p>
+    <div data-item="wu-summaries">
+
+      <div data-wu="E-DFLOW.W1">
+        <h3>W1 · Base flow + hand-run</h3>
+        <p data-item="wu-summary">Define a first-cut staged design flow and run it <em>by hand</em> on the flow detail panel — no harness, no rules — to a draft mockup, capturing what the flow actually needed.</p>
+        <p data-item="wu-maps-to">E-DFLOW intent (the flow · process); bottom-up build order.</p>
+        <p data-item="wu-expected">A written base flow (the stages + per-stage artifact shapes) and one worked example (flow-detail-panel artifacts), with a findings note of gaps to fill.</p>
+        <p data-item="wu-deps">none</p>
+      </div>
+
+      <div data-wu="E-DFLOW.W2">
+        <h3>W2 · Seed component registry (#1)</h3>
+        <p data-item="wu-summary">Create the registry: a collection folder, the five reusability tiers (Foundation/Primitives/Widgets/Locals/Compositions), structured usage doc-comments, and an index file — seeded from what W1 surfaced.</p>
+        <p data-item="wu-maps-to">Requirement #1 (component registry); reuse-first, fit-first.</p>
+        <p data-item="wu-expected">A working collection + index for the components the guinea-pig needed; the reuse-or-propose contract documented.</p>
+        <p data-item="wu-deps">W1</p>
+      </div>
+
+      <div data-wu="E-DFLOW.W3">
+        <h3>W3 · Seed tokens + rules (#2)</h3>
+        <p data-item="wu-summary">Author the rulebook as a T1 doc: enumerable, stable-id'd rules across layout/structure/content/wording (beyond colour/font), each tagged hard or soft — seeded from W1.</p>
+        <p data-item="wu-maps-to">Requirement #2 (tokens + rules); the enforcement model.</p>
+        <p data-item="wu-expected">A first rulebook the flow can consume and a harness can enumerate for coverage.</p>
+        <p data-item="wu-deps">W1</p>
+      </div>
+
+      <div data-wu="E-DFLOW.W4">
+        <h3>W4 · Integrated run (verify substrate)</h3>
+        <p data-item="wu-summary">Update the flow to consume the W2 registry + W3 rulebook, then run it — substrate kept <em>frozen</em> — to verify both in real work; produce a findings list of what the seed got wrong.</p>
+        <p data-item="wu-maps-to">The flow (process) exercised against #1 + #2.</p>
+        <p data-item="wu-expected">A second worked run and an explicit findings list feeding W5/W6.</p>
+        <p data-item="wu-deps">W2, W3</p>
+      </div>
+
+      <div data-wu="E-DFLOW.W5">
+        <h3>W5 · Revise registry (#1)</h3>
+        <p data-item="wu-summary">Apply W4 findings to the registry — retier, split, merge, or document components; refine the index and usage docs.</p>
+        <p data-item="wu-maps-to">Requirement #1, second pass.</p>
+        <p data-item="wu-expected">A registry that held up under the integrated run.</p>
+        <p data-item="wu-deps">W4</p>
+      </div>
+
+      <div data-wu="E-DFLOW.W6">
+        <h3>W6 · Revise tokens + rules (#2)</h3>
+        <p data-item="wu-summary">Apply W4 findings to the rulebook — add/remove/retag rules, sharpen ids and hard/soft tags.</p>
+        <p data-item="wu-maps-to">Requirement #2, second pass.</p>
+        <p data-item="wu-expected">A rulebook that held up under the integrated run.</p>
+        <p data-item="wu-deps">W4</p>
+      </div>
+
+      <div data-wu="E-DFLOW.W7">
+        <h3>W7 · Harness (#3)</h3>
+        <p data-item="wu-summary">Build the three-tier harness — Tier-1 mechanical (completeness + fixed rules + receipt-coverage, incl. index-covers-folder), Tier-2 self-reflex receipt, Tier-3 adversarial review scoped to soft rules + new-component warrant — emitting a design receipt; wire it into the flow so the harness <em>completes</em> the design flow. Carries the flow e2e (fake user + fake agent).</p>
+        <p data-item="wu-maps-to">Requirement #3 (harness); the enforcement model.</p>
+        <p data-item="wu-expected">A red/green design gate + receipt; a passing receipted run on the flow detail panel; a green flow e2e.</p>
+        <p data-item="wu-deps">W5, W6</p>
+      </div>
+
+      <div data-wu="E-DFLOW.W8">
+        <h3>W8 · Integrate into the dev workflow (#4)</h3>
+        <p data-item="wu-summary">Connect the completed, gated design flow to the existing dev lifecycle — where a design gate sits relative to a UI-touching WU, and what evidence it hands to development. Shape decided here, with the harness in hand.</p>
+        <p data-item="wu-maps-to">Requirement #4 (workflow integration).</p>
+        <p data-item="wu-expected">A documented, exercised handoff from design to development.</p>
+        <p data-item="wu-deps">W7</p>
+      </div>
+
+      <div data-wu="E-DFLOW.W9">
+        <h3>W9 · Final review</h3>
+        <p data-item="wu-summary">A closing review of the whole design system + harness; likely a second-screen reuse proof (run the finished flow on a fresh screen to show it generalizes). Exact scope realized at the time.</p>
+        <p data-item="wu-maps-to">Whole-epic acceptance.</p>
+        <p data-item="wu-expected">Evidence the flow generalizes beyond its guinea-pig, plus any final tuning.</p>
+        <p data-item="wu-deps">W8</p>
+      </div>
+
+    </div>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <p><strong>Flow e2e (built in W7).</strong> A scripted run that stubs <em>both</em> the human (fake taste feedback at each stage) and the designing AI agent, driving the full flow through all three harness tiers. Asserts the plumbing: the flow never stalls or emits a misleading/ambiguous prompt, every stage yields its required artifact, the receipt covers every rule id, and a deliberately rule-violating input is caught red while a compliant one passes green. It tests <em>mechanics, not design quality</em>. Like the workflow e2e, it is excluded from the app e2e suite — run once, re-run manually when the flow/harness changes.</p>
+      <p><strong>Acceptance demonstration.</strong> The real hand/assisted run on the flow detail panel (W1 then W4, gated in W7) standing as the concrete end-to-end proof that the flow produces a passing, receipted draft-mockup spec. No waiver intended.</p>
+    </div>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <ul data-item="distillation-plan">
+      <li><strong>New T1 process doc</strong> — the design flow (stages, artifacts, the gate), sibling to <code>workflow.html</code> / <code>testing-strategy.html</code>.</li>
+      <li><strong>New T1 rulebook doc</strong> — the enumerable, id'd design rules (hard/soft).</li>
+      <li><strong>New T2 decision record</strong> — the design system + harness rationale (enforcement model, tiers, reuse-or-propose), a sibling to DEC-11; registered in <code>decisions-index.html</code>.</li>
+      <li>Registry truth stays in <strong>code</strong> (collection folder + index + doc-comments); docs link to it, never copy it.</li>
+      <li>Touch <code>workflow.html</code> / <code>documentation-system.html</code> where the design gate connects to the dev gate (W8).</li>
+      <li>Archive <code>design-flow-discussion.html</code> and the WU plan/result docs per the T3 rule.</li>
+    </ul>
+
+    <h2 id="open-questions">Open questions</h2>
+    <ul data-item="open-questions">
+      <li><strong>W9 scope</strong> — default: a second-screen reuse proof; final scope realized when W9 is reached (user's call).</li>
+      <li><strong>#4 integration shape</strong> — default: a passing design is a mandatory upstream gate for UI-touching WUs, with the dev gate later checking impl-vs-design; decided in W8 with evidence.</li>
+      <li><strong>Harness runner location</strong> — default: a <code>cargo xtask design-verify</code> subcommand that shells to Node/TS checks (design lives in the <code>ui/</code> toolchain), plus authoring-time harness hooks mirroring <code>verify-doc</code>; settled in W7.</li>
+      <li><strong>Tier names</strong> — default: Foundation / Primitives / Widgets / Locals / Compositions (alts noted in the direction doc).</li>
+    </ul>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
