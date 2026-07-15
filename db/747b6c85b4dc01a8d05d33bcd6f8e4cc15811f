@@ -1,0 +1,4 @@
+schema: doc/v1
+epic: E-GATEFIX
+changes: []
+t2_waived: "Gate-internal bug fix: the WU merge hook now skips a back-merge of landed history, bringing the hook path in line with the epic walk's existing is_landed_history skip. No product use-case or new decision — the principle is already recorded as DEC-8 (workflow-gates.html: 'epic walk skips target-reachable history'); this fix removes a divergence from it, it does not change it. No doc files touched."
