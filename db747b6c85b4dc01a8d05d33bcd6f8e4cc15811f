@@ -1,0 +1,17 @@
+schema: mr/v1
+level: epic
+tip: db747b6c85b4dc01a8d05d33bcd6f8e4cc15811f
+base: 8527a2dfa8e01a0f5eb271f1049d8f37940cac5f
+tier: key
+signer: vuluu
+report: docs/.archive/2026-07-15-e-gatefix-result.html
+report_sha256: 06f27bfa3bbcde308da6f3d7c765c785106976ce36e5b4479fe2abcf37d98f70
+date: 2026-07-15
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+  EEhUxfjpFJ4ff7DVGaBQnMaRPtNHJbaotNwZT7hU7pqTEEAkyxwK63m5GwX3b5N4SXDgy8
+  vcbzGVUeJhA12yU/hgAAAAp0cmF3bGVyLW1yAAAAAAAAAAZzaGE1MTIAAABjAAAAE2VjZH
+  NhLXNoYTItbmlzdHAyNTYAAABIAAAAIAgfaRBjfmmWs5fT3WPwKMu1Zl9ViNi/Rh457n72
+  58z5AAAAIGTanorD/BNrNJhLemREmtizj/R0K3L/5qu/PLctTgpv
+  -----END SSH SIGNATURE-----
