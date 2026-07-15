@@ -1,0 +1,26 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W6 onboarding UX (honest per-step status + connection signal + P1/P3 + copy) -> epic/uisetup"
+epic: E-UISETUP
+wu: E-UISETUP.W6
+branch: wu/uisetup/w6-onboarding-ux
+base: b2c6168698fa2b1fae0f5f816dec157ffc3cdcfa
+head: b35cc1b2ecf349543bcba9a882e820e5cfec2843
+diff_sha256: 22943bd437b4a1c24cb2ec316dd11ca7bedcc2377f4c3a4cd9ac146ff4fbbb6f
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 10, verified: 2, waived: 0 }
+review_history:
+  - round: 1
+    tip: 97d4796c679d10a74613146cfba8559f0272f14c
+    verdict: FAIL
+    verified: ["ui/src/api.ts connection bound to onEvent -> redundant /flows refetch (nit)", "ui/src/setup.ts trustStatus error preceded probe===trusted (nit)"]
+    refuted: ["proxyStatus(foreign) folds into no-traffic (plan design)", "useFlows seed/live double-count (>0 gate only)", "test harness duplication (Harness can't take upstream_extra_root_pems)", "trafficSeen OR redundant (http flows have no CONNECT)", "running helper / double stepStatus (taste)", "doc-comments name consumer (rationale not coupling)"]
+  - round: 2
+    tip: 1123e649b67576494d7880d82fccb7ab73823162
+    verdict: PASS
+    note: "follow-up 1123e64 fixed both nits + 4 regression tests; re-review of the fix delta confirmed correct, no new findings."
+  - round: 3
+    tip: 5c56cf44fe2e36ed9abdd91e7cbccee2241cdfa4
+    verdict: PASS
+    note: "tip advanced by 5c56cf4, a DOCS-ONLY (T3) change — rewrote the wu-result report to its checklist + post-review facts (verify-doc green). No code delta vs 1123e64 (git diff 1123e64..5c56cf4 = docs/work/…-w6-result.html only), so the round-2 PASS carries; re-bound head + diff_sha256 to the new tip."
+verdict: PASS
+date: 2026-07-15
