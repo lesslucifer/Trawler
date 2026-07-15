@@ -1,0 +1,7 @@
+schema: test/v2
+level: commit
+epic: E-GATEFIX
+tests:
+  unit:
+    count: 1
+    covers: "xtask lib.rs is_ancestor_discriminates_back_merge_from_forward_wu: a temp repo where main advances past an epic fork proves is_ancestor(main_tip, main) is true (the WU hook skips a back-merge of landed history, DEC-8 parity) while is_ancestor(forward_wu_tip, main) is false (a forward WU tip carrying epic-only work still gates)."
