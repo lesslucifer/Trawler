@@ -1,0 +1,20 @@
+schema: doc/v1
+epic: E-UISETUP
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    note: "UC-5 is the durable onboarding contract (distilled in W6, v3); epic close adds the DEC-13 link to its provenance callout so the why is one hop from the what."
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: updated
+    note: "UC-5 row -> web-ui.html#uc-5 (from W6)."
+  - path: docs/decisions/dec-13-onboarding-capabilities.html
+    tier: T2
+    action: created
+    note: "New decision record: onboarding local-OS actions (native CA install / proxy set-unset / read-only probes in the Tauri app) and the core connection signal (GET /stats + connection SSE event). Supersedes the epic-plan non-goal no-new-backend/API and W2 no-trust-store-inspection, for onboarding scope only; capture still proves done."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    note: "DEC-13 row added; version bumped to v10."
+t2_waived: null
