@@ -381,14 +381,15 @@ export function Onboarding({
 
           <ol>
             {STEPS.map((step, i) => {
-              const active = stepStatus(state, step) === "active";
+              const status = stepStatus(state, step);
+              const active = status === "active";
               const copy = COPY.steps[step];
               const view = statusOf(step);
               return (
                 <li
                   key={step}
                   data-testid={`step-${step}`}
-                  data-status={stepStatus(state, step)}
+                  data-status={status}
                   data-tone={view.tone}
                   className={`my-2 rounded-lg border px-3 py-2 ${
                     active ? "border-ink-mute" : "border-hairline"
