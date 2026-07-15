@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, type TrawlerApi } from "./api";
-import { hostOs, splitProxyAddr } from "./setup";
+import { hostOs, splitProxyAddr, type ProxyProbe, type TrustProbe } from "./setup";
 import { isDecryptedHttps } from "./flow";
 import { useFlows } from "./useFlows";
 import { useProxyCloseConfirm } from "./closeConfirm";
@@ -14,7 +14,7 @@ import { dotStatus, initial, reduce, type OnbState } from "./onboardingMachine";
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const { filter, flows, update } = useFlows(client);
+  const { filter, flows, connections, update } = useFlows(client);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
 
   // Launch self-test (W4): read /flows once and let live capture decide the entry
@@ -43,19 +43,48 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     }
   }, [state.phase, state.everProven, flows]);
 
+  const proxyAddr = defaultProxyAddr();
+
+  // Local probes (W6): the fast, ~90% truth for the Trust and Proxy steps — does
+  // *this machine* trust the CA / route its proxy through Trawler? Runs on entry
+  // and re-runs after an action so the step reflects the change immediately;
+  // capture stays the authority for the remote cases. Invoke isn't available in
+  // jsdom, so a failure just leaves the probe "unknown" (capture-will-confirm).
+  const [trustProbe, setTrustProbe] = useState<TrustProbe>("unknown");
+  const [proxyProbe, setProxyProbe] = useState<ProxyProbe>("unknown");
+  const [probeNonce, setProbeNonce] = useState(0);
+  const reprobe = useCallback(() => setProbeNonce((n) => n + 1), []);
+
+  useEffect(() => {
+    if (state.phase !== "onboarding") return;
+    const { host, port } = splitProxyAddr(proxyAddr);
+    let live = true;
+    invoke<TrustProbe>("ca_trusted")
+      .then((p) => live && setTrustProbe(p))
+      .catch(() => live && setTrustProbe("unknown"));
+    invoke<ProxyProbe>("proxy_status", { host, port })
+      .then((p) => live && setProxyProbe(p))
+      .catch(() => live && setProxyProbe("unknown"));
+    return () => {
+      live = false;
+    };
+  }, [state.phase, proxyAddr, probeNonce]);
+
   const installCa = async () => {
     const pem = await client.caCertPem();
     await invoke("install_ca", { pem });
+    reprobe();
   };
 
-  const proxyAddr = defaultProxyAddr();
   const setProxy = async () => {
     const { host, port } = splitProxyAddr(proxyAddr);
     await invoke("set_proxy", { host, port });
+    reprobe();
   };
 
   const unsetProxy = async () => {
     await invoke("unset_proxy");
+    reprobe();
   };
 
   const close = useProxyCloseConfirm(proxyAddr);
@@ -88,6 +117,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           dispatch={dispatch}
           os={hostOs()}
           proxyAddr={proxyAddr}
+          trustProbe={trustProbe}
+          proxyProbe={proxyProbe}
+          observed={{ decrypted: isDecryptedHttps(flows), trafficSeen: flows.length > 0 || connections > 0 }}
           onInstallCa={installCa}
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}

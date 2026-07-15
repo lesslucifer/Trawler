@@ -31,7 +31,7 @@ export const TARGETS: readonly { id: TrustTarget; label: string }[] = [
   { id: "android", label: "Android" },
 ];
 
-const DOWNLOAD = "Save Trawler's CA certificate — GET /ca.crt on the control API — as trawler-ca.pem.";
+const DOWNLOAD = "Save Trawler's certificate as trawler-ca.pem.";
 
 const STEPS: Record<TrustTarget, string[]> = {
   macos: [
@@ -173,6 +173,90 @@ export function proxySteps(t: ProxyTarget, addr: string): string[] {
         "Reaching a device needs Trawler bound beyond loopback — see setup notes.",
       ];
   }
+}
+
+// --- Honest per-step status (E-UISETUP.W6) -----------------------------------
+// Each step has two independent truths: a fast LOCAL PROBE (does *this machine*
+// trust the CA / route its proxy through Trawler? — the ~90% case) and OBSERVED
+// TRAFFIC (has any request/connection actually reached Trawler, from any
+// device?). The derivation below turns those into one honest line per step —
+// green when a probe or capture confirms, a clarifying (never alarming) message
+// when neither can, so the remote/manual/un-probeable cases guide instead of
+// mislead. Pure data → unit-tested; the probes themselves live in Rust.
+
+export type TrustProbe = "trusted" | "untrusted" | "unknown";
+export type ProxyProbe = "ours" | "foreign" | "none" | "unknown";
+export type StepTone = "ok" | "warn" | "muted";
+
+export interface StepStatusView {
+  glyph: string;
+  tone: StepTone;
+  message: string;
+}
+
+// What the app has observed reaching Trawler this session, plus the running
+// action's transient state. `decrypted` ⇒ a real https:// flow (trust proven);
+// `trafficSeen` ⇒ any connection or flow at all (proxy proven, decrypt or not).
+export interface Observed {
+  decrypted: boolean;
+  trafficSeen: boolean;
+}
+export type Running = "installing" | "setting" | null;
+
+export function trustStatus(
+  probe: TrustProbe,
+  seen: Observed,
+  running: Running,
+  error?: string,
+): StepStatusView {
+  if (running === "installing") return { glyph: "⟳", tone: "muted", message: "Installing…" };
+  // An authoritative positive — the machine trusts the CA, proven by the probe or
+  // a decrypted flow — wins over a stale action error: the CA is trusted whatever
+  // the last click did.
+  if (probe === "trusted") return { glyph: "✓", tone: "ok", message: "Trusted on this machine" };
+  if (seen.decrypted)
+    return { glyph: "✓", tone: "ok", message: "Trusted — confirmed by captured traffic" };
+  if (error) return { glyph: "⚠", tone: "warn", message: `Install failed — ${error}` };
+  if (seen.trafficSeen)
+    return {
+      glyph: "⚠",
+      tone: "warn",
+      message: "Traffic is arriving but not decrypting — install the certificate on the device you're capturing from.",
+    };
+  if (probe === "unknown")
+    return { glyph: "◐", tone: "muted", message: "Can't check automatically — we'll confirm when traffic arrives." };
+  return { glyph: "○", tone: "muted", message: "Not trusted on this machine yet" };
+}
+
+export function proxyStatus(
+  probe: ProxyProbe,
+  seen: Observed,
+  running: Running,
+  error?: string,
+): StepStatusView {
+  if (running === "setting") return { glyph: "⟳", tone: "muted", message: "Setting the proxy…" };
+  // Same rule as trustStatus: an authoritative positive (probe says the system
+  // proxy is Trawler, or traffic is actually arriving) wins over a stale set error.
+  if (probe === "ours")
+    return { glyph: "✓", tone: "ok", message: "System proxy is set to Trawler" };
+  if (seen.trafficSeen)
+    return { glyph: "✓", tone: "ok", message: "Receiving traffic" };
+  if (error) return { glyph: "⚠", tone: "warn", message: `Couldn't set the proxy — ${error}` };
+  if (probe === "unknown")
+    return { glyph: "◐", tone: "muted", message: "Can't check automatically — we'll confirm when traffic arrives." };
+  return { glyph: "○", tone: "muted", message: "No traffic reaching Trawler yet" };
+}
+
+export function verifyStatus(seen: Observed): StepStatusView {
+  return seen.decrypted
+    ? { glyph: "✓", tone: "ok", message: "It's working — capturing traffic." }
+    : { glyph: "○", tone: "muted", message: "Waiting for your first request." };
+}
+
+// P1 prove-it: the concrete, copyable command that generates the first request.
+// Text only — the app never fires it (epic non-goal); it guides the user.
+export function proveItSnippet(addr: string): string {
+  return `curl -x http://${addr} https://example.com`;
 }
 
 export function proxyOffSteps(t: ProxyTarget): string[] {

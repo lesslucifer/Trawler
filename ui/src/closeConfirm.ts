@@ -55,13 +55,14 @@ export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
   }, [deps, proxyAddr]);
 
   const quit = () => deps.getWindow().destroy();
-  const runThenQuit = (cmd: "unset_proxy" | "clear_proxy_marker") =>
-    deps.invoke(cmd).catch(() => {}).then(quit);
 
   return {
     mode,
-    remove: () => runThenQuit("unset_proxy"),
-    keep: () => runThenQuit("clear_proxy_marker"),
+    remove: () => deps.invoke("unset_proxy").catch(() => {}).then(quit),
+    // Live proxy state is the only source of truth (no persisted marker): keeping
+    // the proxy is just quitting — there is nothing to record, and next launch
+    // does no reconciliation.
+    keep: quit,
     // Info-only notice: optionally persist "don't show again", then quit.
     acknowledge: (dontShowAgain: boolean) =>
       (dontShowAgain ? deps.invoke("dismiss_remote_notice").catch(() => {}) : Promise.resolve()).then(quit),

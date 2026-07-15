@@ -65,3 +65,36 @@ test("listFlows throws on a non-ok response", async () => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500 }));
   await expect(createApi("http://x").listFlows({})).rejects.toThrow(/500/);
 });
+
+test("connectionCount reads /stats and returns the connections tally", async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ connections: 3 }) });
+  vi.stubGlobal("fetch", fetchMock);
+  await expect(createApi("http://127.0.0.1:9999").connectionCount()).resolves.toBe(3);
+  expect(fetchMock).toHaveBeenCalledWith("http://127.0.0.1:9999/stats");
+});
+
+// A bare CONNECT tunnel never becomes a flow, so a `connection` event must bump
+// the counter (onConnection) and must NOT trigger the flow-list refetch (onEvent).
+test("stream routes a connection event to onConnection only, never onEvent", () => {
+  const listeners: Record<string, EventListener[]> = {};
+  class FakeSource {
+    onopen: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    addEventListener(name: string, fn: EventListener) {
+      (listeners[name] ??= []).push(fn);
+    }
+    close() {}
+  }
+  vi.stubGlobal("EventSource", FakeSource);
+
+  const onEvent = vi.fn();
+  const onConnection = vi.fn();
+  createApi("http://x").stream({ onEvent, onConnection });
+
+  listeners["connection"].forEach((fn) => fn(new Event("connection")));
+  expect(onConnection).toHaveBeenCalledOnce();
+  expect(onEvent).not.toHaveBeenCalled();
+
+  listeners["request"].forEach((fn) => fn(new Event("request")));
+  expect(onEvent).toHaveBeenCalledOnce();
+});

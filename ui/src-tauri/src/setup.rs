@@ -79,8 +79,49 @@ fn failure_message(stderr: &str) -> String {
     }
 }
 
-const WININET_KEY: &str =
-    r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
+// Trawler's CA is issued with this CN; the store dumps below are matched on it,
+// the same key W2's removal steps use.
+const CA_COMMON_NAME: &str = "Trawler Proxy CA";
+
+// Read-only probe: is Trawler's CA in this machine's system trust store? Feeds
+// the onboarding Trust step so the ~90% local case gets an instant, honest
+// status instead of waiting on a captured flow. macOS/Windows only — the same
+// systems that have an auto-install path; elsewhere we can't conclude.
+//
+// ponytail: matches on the CA's Common Name, not a key fingerprint. A stale cert
+// left over from an earlier run with the same CN would read as trusted. Upgrade
+// path if that bites: compute the SHA-256 of the live /ca.crt DER (add `sha2`)
+// and match the store's fingerprint line instead of the CN.
+fn ca_is_trusted(os: &str) -> Option<bool> {
+    match os {
+        "macos" => {
+            let out = Command::new("security")
+                .args(["find-certificate", "-a", "-c", CA_COMMON_NAME])
+                .output()
+                .ok()?;
+            Some(out.status.success() && !out.stdout.is_empty())
+        }
+        "windows" => {
+            let out = Command::new("certutil").args(["-store", "ROOT"]).output().ok()?;
+            Some(String::from_utf8_lossy(&out.stdout).contains(CA_COMMON_NAME))
+        }
+        _ => None,
+    }
+}
+
+// "trusted" / "untrusted" ⇒ probed this machine and concluded; "unknown" ⇒ no
+// reliable probe on this OS, so the UI falls back to capture-will-confirm wording.
+#[tauri::command]
+pub fn ca_trusted() -> String {
+    match ca_is_trusted(std::env::consts::OS) {
+        Some(true) => "trusted",
+        Some(false) => "untrusted",
+        None => "unknown",
+    }
+    .into()
+}
+
+const WININET_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
 
 // `networksetup -listallnetworkservices` prints a header line then one service
 // per line; a leading '*' marks a disabled service — those are skipped.
@@ -189,8 +230,7 @@ fn shell_quote(s: &str) -> String {
 }
 
 fn valid_host(host: &str) -> bool {
-    !host.is_empty()
-        && host.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
+    !host.is_empty() && host.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
 }
 
 fn macos_services() -> Result<Vec<String>, String> {
@@ -219,14 +259,6 @@ fn run_all(commands: Vec<Vec<String>>, verb: &str) -> Result<(), String> {
     Ok(())
 }
 
-// Presence of this file means "a Trawler run switched the system proxy on and
-// hasn't turned it back off" — the sole gate on every revert path (W5). Temp
-// survives a crash without threading a Tauri path into the pure builders; the
-// off-commands re-derive everything else at run time, so no state is stored.
-fn marker_path() -> std::path::PathBuf {
-    std::env::temp_dir().join("trawler-proxy-set")
-}
-
 #[tauri::command]
 pub fn set_proxy(host: String, port: u16) -> Result<(), String> {
     if !valid_host(&host) {
@@ -239,9 +271,7 @@ pub fn set_proxy(host: String, port: u16) -> Result<(), String> {
     let services = if os == "macos" { macos_services()? } else { Vec::new() };
     let commands = set_proxy_commands(os, &services, &host, port)
         .ok_or("no automatic proxy setup on this system — follow the guided steps")?;
-    run_all(commands, "set")?;
-    let _ = std::fs::write(marker_path(), []);
-    Ok(())
+    run_all(commands, "set")
 }
 
 #[tauri::command]
@@ -250,21 +280,7 @@ pub fn unset_proxy() -> Result<(), String> {
     let services = if os == "macos" { macos_services()? } else { Vec::new() };
     let commands = unset_proxy_commands(os, &services)
         .ok_or("no automatic proxy setup on this system — follow the guided steps")?;
-    run_all(commands, "turn off")?;
-    let _ = std::fs::remove_file(marker_path());
-    Ok(())
-}
-
-// Launch reconciliation: revert iff a prior run set the proxy and died without
-// reverting, then clear the marker so a revert can never touch a proxy Trawler
-// didn't set. Best-effort — the result is ignored so a dead-proxy revert failure
-// never blocks launch; the OS off-command can spawn an elevation prompt, so this
-// blocks until it returns and is run off the main thread (see lib.rs). The
-// clean-quit path is user-driven in the webview instead (App.tsx onCloseRequested).
-pub fn revert_if_marked() {
-    if marker_path().exists() {
-        let _ = unset_proxy();
-    }
+    run_all(commands, "turn off")
 }
 
 // The actual system proxy state, classified against Trawler's own address — the
@@ -368,8 +384,8 @@ pub fn proxy_status(host: String, port: u16) -> String {
 }
 
 // The remote-device notice's "don't show again" is a durable user preference, so
-// it lives in the app config dir (survives reboots), NOT temp like the set-marker.
-// The file logic is pure (dir injected) so it stays unit-testable off a real app.
+// it lives in the app config dir (survives reboots). The file logic is pure (dir
+// injected) so it stays unit-testable off a real app.
 fn notice_dismissed_path(config_dir: &Path) -> std::path::PathBuf {
     config_dir.join("remote-notice-dismissed")
 }
@@ -399,21 +415,10 @@ pub fn dismiss_remote_notice(app: tauri::AppHandle) {
     }
 }
 
-// The user chose to keep the proxy on quit: drop the marker without touching the
-// proxy, so their choice is durable and the next launch won't reconcile it away.
-#[tauri::command]
-pub fn clear_proxy_marker() {
-    let _ = std::fs::remove_file(marker_path());
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::path::PathBuf;
-    use std::sync::Mutex;
-
-    // The marker is one shared temp path, so tests that mutate it serialize here.
-    static MARKER_LOCK: Mutex<()> = Mutex::new(());
 
     fn cert() -> PathBuf {
         PathBuf::from("/tmp/trawler-ca.pem")
@@ -506,7 +511,9 @@ mod tests {
         assert!(script.contains("networksetup -setwebproxy 'Wi-Fi' 127.0.0.1 7420"));
         assert!(script.contains("networksetup -setsecurewebproxy 'Wi-Fi' 127.0.0.1 7420"));
         assert!(script.contains("networksetup -setwebproxy 'Thunderbolt Bridge' 127.0.0.1 7420"));
-        assert!(script.contains("networksetup -setsecurewebproxy 'Thunderbolt Bridge' 127.0.0.1 7420"));
+        assert!(
+            script.contains("networksetup -setsecurewebproxy 'Thunderbolt Bridge' 127.0.0.1 7420")
+        );
     }
 
     #[test]
@@ -571,24 +578,6 @@ mod tests {
     #[test]
     fn other_systems_have_no_auto_unset_path() {
         assert_eq!(unset_proxy_commands("linux", &[]), None);
-    }
-
-    #[test]
-    fn revert_is_a_no_op_when_the_marker_is_absent() {
-        let _guard = MARKER_LOCK.lock().unwrap();
-        let marker = marker_path();
-        let _ = std::fs::remove_file(&marker);
-        revert_if_marked();
-        assert!(!marker.exists(), "no marker ⇒ nothing to revert, nothing created");
-    }
-
-    #[test]
-    fn clear_proxy_marker_drops_the_marker_without_reverting() {
-        let _guard = MARKER_LOCK.lock().unwrap();
-        let marker = marker_path();
-        std::fs::write(&marker, []).unwrap();
-        clear_proxy_marker();
-        assert!(!marker.exists(), "clear drops the marker (proxy itself untouched — no OS command run)");
     }
 
     #[test]

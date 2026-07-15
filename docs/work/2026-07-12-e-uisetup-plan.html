@@ -136,9 +136,10 @@ flowchart LR
   W3 --> W4
   W3 --> W5["W5 · proxy auto-revert"]
   W4 --> W5
+  W5 --> W6["W6 · onboarding UX"]
       </pre>
       <div class="caption">W1 lays the shell; W2/W3 fill two steps in parallel; W4 verifies and ties it
-      together; W5 tears the proxy back down cleanly on exit.</div>
+      together; W5 tears the proxy back down cleanly on exit; W6 polishes the completed surface's UX.</div>
     </div>
     <div data-item="wu-summaries">
 
@@ -218,6 +219,39 @@ networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420</pre>
             <code>unset_proxy</code> builder + lifecycle wiring unit-tested; the quit-reverts path
             covered in e2e.</td></tr>
             <tr><th>Needs</th><td data-item="wu-deps">W3 (off-commands + set marker) · W4 (launch path)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div data-wu="E-UISETUP.W6">
+        <h3 id="w6">W6 — Onboarding UX enhancement</h3>
+        <table>
+          <tbody>
+            <tr><th>Builds</th><td data-item="wu-summary">Makes each onboarding step's status
+            <strong>honest, device-aware, and immediate</strong>: <strong>(1) Verify becomes actionable</strong>
+            — a concrete text prove-it prompt (open any site, or a copyable <code>curl -x</code> with the real
+            address) replaces the "Waiting…" dead-end; <strong>(2) per-step status from two signals</strong> —
+            a local probe (does <em>this machine</em> trust the CA / point its proxy at Trawler?) for the ~90%
+            case, plus observed traffic (any connection reaching Trawler proves routing; a decrypted flow
+            proves trust) for every device, with the remote / un-probeable cases shown as clear messages, not
+            a false "not set up"; <strong>(3) unbury the happy path</strong> — one-click primary, manual behind
+            a disclosure. Adds a small <strong>core "connection seen" signal</strong> (<code>event</code>/<code>store</code>/<code>recorder</code>
+            + <code>GET /stats</code> + a <code>connection</code> SSE event) so the proxy step is observable
+            even for an HTTPS attempt Trawler can't yet decrypt. Full plan:
+            <a href="2026-07-14-e-uisetup-w6-plan.html">W6 WU plan</a>.</td></tr>
+            <tr><th>Maps to</th><td data-item="wu-maps-to">UC-5 surface · the UX rule <em>"do the work / least
+            manual work"</em> · <strong>reverses</strong> W2's "no trust-store inspection" + the epic's
+            "no new backend/API" for a small connection signal (owner-approved; DEC at distillation) ·
+            new read-only probes in ui/src-tauri</td></tr>
+            <tr><th>Done when</th><td data-item="wu-expected">Verify shows a concrete prove-it instruction;
+            each step shows a separated honest status (local probe or observed traffic, clarifying message
+            when neither); an undecryptable HTTPS attempt bumps <code>/stats</code> + emits a
+            <code>connection</code> event with no flow; one-click primary + manual disclosure; text-only.
+            Probe parsers + status derivation unit-tested, connection signal integration-tested, W4 spine
+            green in e2e; live probes waived (not hermetic).</td></tr>
+            <tr><th>Needs</th><td data-item="wu-deps">W1–W4 surface · sequenced after W5 (both touch the
+            onboarding surface — order is efficiency, not a hard dependency). Big WU — may split into a core
+            "connection signal" WU + a UI WU.</td></tr>
           </tbody>
         </table>
       </div>

@@ -53,9 +53,10 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
 // Mock API: `store` is the current server-side result; a filter with host !== ""
 // narrows it (mirroring GET /flows). `fire()` triggers a captured SSE listener;
 // `setLive(b)` drives the connection-state callback the real EventSource wires.
-function mockApi(store: () => FlowSummary[]) {
+function mockApi(store: () => FlowSummary[], connections = 0) {
   let onEvent = () => {};
   let onLive: (live: boolean) => void = () => {};
+  let onConnection = () => {};
   const api: TrawlerApi = {
     listFlows: vi.fn(async (filter: Filter) => {
       const rows = store();
@@ -64,16 +65,19 @@ function mockApi(store: () => FlowSummary[]) {
       }
       return rows;
     }),
+    connectionCount: vi.fn(async () => connections),
     caCertPem: vi.fn(async () => PEM),
     stream: vi.fn((handlers: StreamHandlers) => {
       onEvent = handlers.onEvent;
       onLive = handlers.onLive ?? (() => {});
+      onConnection = handlers.onConnection ?? (() => {});
       return () => {};
     }),
   };
   return {
     api,
     fire: () => act(() => onEvent()),
+    fireConnection: () => act(() => onConnection()),
     setLive: (live: boolean) => act(() => onLive(live)),
   };
 }
@@ -160,7 +164,7 @@ test("Install fetches the PEM and invokes install_ca; the step reports done, not
   render(<App api={api} initialState={ONBOARDING} />);
 
   fireEvent.click(await screen.findByTestId("install-ca"));
-  await screen.findByText(/Verify step will prove/);
+  await screen.findByText(/confirm it's working at the Verify step/);
 
   expect(api.caCertPem).toHaveBeenCalledOnce();
   expect(invoke).toHaveBeenCalledWith("install_ca", { pem: PEM });
@@ -169,22 +173,32 @@ test("Install fetches the PEM and invokes install_ca; the step reports done, not
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
+// Reject one specific command, letting the read-only probes (ca_trusted /
+// proxy_status) resolve normally — they fire on entry, so a blanket
+// mockRejectedValueOnce would be consumed by a probe, not the action.
+function rejectCommand(cmd: string, error: Error) {
+  vi.mocked(invoke).mockImplementation(async (name: string) => {
+    if (name === cmd) throw error;
+    return undefined;
+  });
+}
+
 test("a rejected install reports failed and keeps the guided steps visible", async () => {
   onMacHost();
-  vi.mocked(invoke).mockRejectedValueOnce(new Error("user declined the elevation prompt"));
+  rejectCommand("install_ca", new Error("user declined the elevation prompt"));
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
   fireEvent.click(await screen.findByTestId("install-ca"));
-  await screen.findByText(/follow the steps below/);
+  await screen.findByText(/use the manual steps below/);
 
   expect(screen.getByTestId("guided-steps")).toHaveTextContent(/security add-trusted-cert/);
   expect(screen.getByTestId("install-ca-error")).toHaveTextContent("user declined the elevation prompt");
   expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "active");
 
-  fireEvent.click(screen.getByTestId("onb-next"));
-  expect(screen.getByTestId("step-trust-ca")).toHaveTextContent("✗ failed");
-  expect(screen.getByTestId("step-trust-ca")).not.toHaveTextContent("✓ done");
+  const status = screen.getByTestId("step-trust-ca-status");
+  expect(status).toHaveTextContent(/Install failed/);
+  expect(status).not.toHaveTextContent(/Trusted on this machine/);
 });
 
 test("Set system proxy invokes set_proxy with the configured address; the step stays active, not proven", async () => {
@@ -194,7 +208,7 @@ test("Set system proxy invokes set_proxy with the configured address; the step s
   render(<App api={api} initialState={AT_SET_PROXY} />);
 
   fireEvent.click(await screen.findByTestId("set-proxy"));
-  await screen.findByText(/Verify step will prove/);
+  await screen.findByText(/confirm it's working at the Verify step/);
 
   expect(invoke).toHaveBeenCalledWith("set_proxy", { host: "127.0.0.1", port: 7999 });
   expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-status", "active");
@@ -204,12 +218,12 @@ test("Set system proxy invokes set_proxy with the configured address; the step s
 test("a rejected set_proxy reports failed and keeps the snippet visible", async () => {
   onMacHost();
   window.__TRAWLER_PROXY__ = "127.0.0.1:7999";
-  vi.mocked(invoke).mockRejectedValueOnce(new Error("no network services to configure"));
+  rejectCommand("set_proxy", new Error("no network services to configure"));
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={AT_SET_PROXY} />);
 
   fireEvent.click(await screen.findByTestId("set-proxy"));
-  await screen.findByText(/follow the steps below/);
+  await screen.findByText(/use the manual steps below/);
   expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/networksetup/);
   expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-status", "active");
 });
@@ -225,6 +239,23 @@ test("Stop routing invokes unset_proxy after the proxy was set (W5)", async () =
 
   await screen.findByText(/Set it again to resume/);
   expect(invoke).toHaveBeenCalledWith("unset_proxy");
+});
+
+test("a connection event turns the proxy step green while trust warns — no flow, no decrypt", async () => {
+  onMacHost();
+  const { api, fireConnection } = mockApi(() => []); // no flows ever
+  render(<App api={api} initialState={AT_SET_PROXY} />);
+  await screen.findByTestId("step-set-proxy");
+
+  fireConnection(); // a tunnel reached the proxy; its handshake failed → no flow
+  await waitFor(() =>
+    expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent(/Receiving traffic/),
+  );
+  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-tone", "ok");
+  // Trust can't be green (nothing decrypted); it points at the sending device.
+  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent(/device you're capturing from/);
+  // Probe-green/traffic alone never reveals the list — that's still capture-only.
+  expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
 test("a non-matching host filter empties the list; SSE appends a new row", async () => {

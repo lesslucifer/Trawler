@@ -54,14 +54,13 @@ test("ours + Remove: reverts the proxy then quits", async () => {
   expect(f.destroy).toHaveBeenCalledOnce();
 });
 
-test("ours + Keep: clears the marker (proxy left up) then quits", async () => {
+test("ours + Keep: leaves the proxy up and just quits — no unset, no persisted state", async () => {
   const f = fakeDeps("ours");
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
   await closeAndWait(f);
   await act(async () => {
     await result.current.keep();
   });
-  expect(f.invoke).toHaveBeenCalledWith("clear_proxy_marker");
   expect(f.invoke).not.toHaveBeenCalledWith("unset_proxy");
   expect(f.destroy).toHaveBeenCalledOnce();
 });

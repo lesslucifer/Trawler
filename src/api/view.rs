@@ -155,6 +155,9 @@ pub fn sse_event(event: &FlowEvent) -> (&'static str, Value) {
         FlowEvent::FlowEvicted { flow_id } => {
             ("evicted", json!({ "flow_id": flow_id.to_string() }))
         }
+        FlowEvent::ConnectionSeen { authority } => {
+            ("connection", json!({ "authority": authority }))
+        }
     }
 }
 
@@ -271,6 +274,11 @@ mod tests {
         let (name, data) = sse_event(&FlowEvent::FlowEvicted { flow_id: flow.id });
         assert_eq!(name, "evicted");
         assert_eq!(data["flow_id"], flow.id.to_string());
+
+        let (name, data) =
+            sse_event(&FlowEvent::ConnectionSeen { authority: "example.com:443".into() });
+        assert_eq!(name, "connection");
+        assert_eq!(data["authority"], "example.com:443");
     }
 
     #[test]

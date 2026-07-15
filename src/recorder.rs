@@ -52,6 +52,12 @@ impl HttpHandler for Recorder {
         req: Request<Body>,
     ) -> RequestOrResponse {
         if req.method() == Method::CONNECT {
+            // The tunnel is forwarded untouched; note it so "traffic reached the
+            // proxy" is observable even when the client's handshake later fails
+            // (untrusted CA) and no flow is ever decoded from it.
+            let authority =
+                req.uri().authority().map_or_else(|| req.uri().to_string(), ToString::to_string);
+            self.store.note_connection(authority);
             return req.into();
         }
 

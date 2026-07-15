@@ -10,6 +10,11 @@ export function useFlows(api: TrawlerApi) {
   const [filter, setFilter] = useState<Filter>({});
   const [flows, setFlows] = useState<FlowSummary[]>([]);
   const [live, setLive] = useState(false);
+  // Count of CONNECT tunnels the proxy has opened — every HTTPS attempt, whether
+  // or not it later decrypts into a flow (an untrusted-CA handshake produces a
+  // tunnel but no flow). Onboarding treats connections>0 as "proxy is routing";
+  // the flow list itself ignores them. Seeded once from /stats, then bumped live.
+  const [connections, setConnections] = useState(0);
 
   const filterRef = useRef(filter);
   filterRef.current = filter;
@@ -30,7 +35,16 @@ export function useFlows(api: TrawlerApi) {
   }, [filter, debouncedRefresh]);
 
   useEffect(() => {
-    const close = api.stream({ onEvent: debouncedRefresh, onLive: setLive });
+    // The /stats seed and live `connection` bumps race: the seed fetch may resolve
+    // after a bump already landed, and its count predates that connection. Merge as
+    // a floor (max) inside the functional updater so the stale seed can never regress
+    // a value live events have already advanced — the counter is monotonic anyway.
+    api.connectionCount().then((c) => setConnections((n) => Math.max(n, c))).catch(() => {});
+    const close = api.stream({
+      onEvent: debouncedRefresh,
+      onLive: setLive,
+      onConnection: () => setConnections((n) => n + 1),
+    });
     return () => {
       setLive(false);
       close();
@@ -42,5 +56,5 @@ export function useFlows(api: TrawlerApi) {
     [],
   );
 
-  return { filter, flows, live, update };
+  return { filter, flows, live, connections, update };
 }
