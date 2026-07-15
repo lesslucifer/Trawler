@@ -1,6 +1,8 @@
 schema: test/v2
-level: commit
+level: epic
 epic: E-UISETUP
 tests:
-  unit:
-    waived: "Behavior-preserving deletion of dead interface surface: StreamHandlers.onLive had no consumer after W6 replaced LiveDot with the onboarding-state StatusDot. The two EventSource onopen/onerror wirings it fed were no-ops (onLive always undefined). No test asserted onLive; the unchanged api.test.ts stream test + the full 148-test vitest suite stay green, proving nothing relied on it. No new logic to test."
+  e2e:
+    count: 10
+    covers: "cargo xtask ui e2e — two specs against one real ephemeral run(Config) core in a real Tauri WebKit window, run in explicit order (onboarding first). onboarding.spec.ts (4): a fresh launch shows onboarding not a bare list; a real proxied+decrypted HTTPS request flips Verify green and reveals the list; the list filters out on a non-matching host and back; a second request appends live. flows.spec.ts (6, the merged-in E-UIINSPECT inspector, now reusing the revealed list): row click opens the detail with headers/timing/versions; a JSON body renders as a tree; the raw toggle shows stored bytes; a runnable curl; a brotli body renders as a tree (decode chain through the UI); a PNG renders as an image. The harness origin is HTTPS serving both onboarding (a decrypted flow) and the inspector body routes (/json,/br,/img)."
+  waived: "The auto CA-install / auto-proxy paths and the read-only OS probes read the real machine and are not hermetically runnable (epic waiver, inherited from W2/W3); their command builders + status derivation are unit-tested, and the journey is proven via a real proxied HTTPS request. Lower layers: core cargo test (incl. untrusted_https_records_a_connection_not_a_flow + the /stats tally) and UI Vitest 148 all green; per-WU and per-commit evidence on the interior seams."
