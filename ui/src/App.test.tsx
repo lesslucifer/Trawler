@@ -51,11 +51,9 @@ function flow(over: Partial<FlowSummary> = {}): FlowSummary {
 }
 
 // Mock API: `store` is the current server-side result; a filter with host !== ""
-// narrows it (mirroring GET /flows). `fire()` triggers a captured SSE listener;
-// `setLive(b)` drives the connection-state callback the real EventSource wires.
+// narrows it (mirroring GET /flows). `fire()` triggers a captured SSE listener.
 function mockApi(store: () => FlowSummary[], connections = 0) {
   let onEvent = () => {};
-  let onLive: (live: boolean) => void = () => {};
   let onConnection = () => {};
   const api: TrawlerApi = {
     listFlows: vi.fn(async (filter: Filter) => {
@@ -69,7 +67,6 @@ function mockApi(store: () => FlowSummary[], connections = 0) {
     caCertPem: vi.fn(async () => PEM),
     stream: vi.fn((handlers: StreamHandlers) => {
       onEvent = handlers.onEvent;
-      onLive = handlers.onLive ?? (() => {});
       onConnection = handlers.onConnection ?? (() => {});
       return () => {};
     }),
@@ -78,7 +75,6 @@ function mockApi(store: () => FlowSummary[], connections = 0) {
     api,
     fire: () => act(() => onEvent()),
     fireConnection: () => act(() => onConnection()),
-    setLive: (live: boolean) => act(() => onLive(live)),
   };
 }
 

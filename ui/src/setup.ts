@@ -242,6 +242,12 @@ export function proxyStatus(
   if (seen.trafficSeen)
     return { glyph: "✓", tone: "ok", message: "Receiving traffic" };
   if (error) return { glyph: "⚠", tone: "warn", message: `Couldn't set the proxy — ${error}` };
+  if (probe === "foreign")
+    return {
+      glyph: "○",
+      tone: "muted",
+      message: "Another proxy is set on this machine — point it at Trawler here, or capture from a device configured to use Trawler.",
+    };
   if (probe === "unknown")
     return { glyph: "◐", tone: "muted", message: "Can't check automatically — we'll confirm when traffic arrives." };
   return { glyph: "○", tone: "muted", message: "No traffic reaching Trawler yet" };

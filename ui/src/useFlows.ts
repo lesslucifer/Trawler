@@ -9,7 +9,6 @@ const DEBOUNCE_MS = 150;
 export function useFlows(api: TrawlerApi) {
   const [filter, setFilter] = useState<Filter>({});
   const [flows, setFlows] = useState<FlowSummary[]>([]);
-  const [live, setLive] = useState(false);
   // Count of CONNECT tunnels the proxy has opened — every HTTPS attempt, whether
   // or not it later decrypts into a flow (an untrusted-CA handshake produces a
   // tunnel but no flow). Onboarding treats connections>0 as "proxy is routing";
@@ -42,13 +41,9 @@ export function useFlows(api: TrawlerApi) {
     api.connectionCount().then((c) => setConnections((n) => Math.max(n, c))).catch(() => {});
     const close = api.stream({
       onEvent: debouncedRefresh,
-      onLive: setLive,
       onConnection: () => setConnections((n) => n + 1),
     });
-    return () => {
-      setLive(false);
-      close();
-    };
+    return close;
   }, [api, debouncedRefresh]);
 
   const update = useCallback(
@@ -56,5 +51,5 @@ export function useFlows(api: TrawlerApi) {
     [],
   );
 
-  return { filter, flows, live, connections, update };
+  return { filter, flows, connections, update };
 }

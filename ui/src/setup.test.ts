@@ -200,6 +200,13 @@ test("proxyStatus: nothing yet vs can't-check are distinct, both calm", () => {
   expect(proxyStatus("unknown", NONE, null).message).toMatch(/we'll confirm when traffic arrives/);
 });
 
+test("proxyStatus: a foreign proxy names the conflict, not a silent 'no traffic'", () => {
+  const foreign = proxyStatus("foreign", NONE, null);
+  expect(foreign).toMatchObject({ glyph: "○", tone: "muted" });
+  expect(foreign.message).toMatch(/[Aa]nother proxy/);
+  expect(foreign.message).not.toBe(proxyStatus("none", NONE, null).message);
+});
+
 test("verifyStatus flips green only on a decrypted flow", () => {
   expect(verifyStatus(NONE)).toMatchObject({ glyph: "○", tone: "muted" });
   expect(verifyStatus(TRAFFIC)).toMatchObject({ glyph: "○" }); // traffic alone isn't decrypt
