@@ -1,0 +1,31 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W6 onboarding UX (+ proxy-set marker removal) -> epic/uisetup"
+epic: E-UISETUP
+wu: E-UISETUP.W6
+branch: wu/uisetup/w6-onboarding-ux
+base: b2c6168698fa2b1fae0f5f816dec157ffc3cdcfa
+head: e6b0ac6037ac52380f7ad8cd1a7eabefcb9c9d00
+diff_sha256: 3ed491777f61453b945b2db4e51f029b1f9aa171fe514627dac0a1c62fa8a4a9
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 12, verified: 2, waived: 0 }
+verified_findings:
+  - location: ui/src/useFlows.ts:37
+    severity: important
+    claim: "The /stats seed setConnections(n) is a non-functional setter; a 'connection' SSE bump (setConnections(n=>n+1)) that fires while the seed fetch is in flight is clobbered when the stale /stats count resolves, so connections drops back to 0 and trafficSeen goes false despite an observed connection. For a single untrusted-CA tunnel (the exact onboarding case) nothing self-heals it."
+    dimension: correctness
+  - location: ui/src/Onboarding.tsx:384
+    severity: nit
+    claim: "stepStatus(state, step) is called twice per loop iteration with identical args (line 384 for `active`, line 391 for data-status); the function is pure, so one const serves both — strictly simpler."
+    dimension: simplification
+refuted:
+  - "setup.ts proxyStatus foreign/none collapse — deliberate (traffic-seen is the authoritative positive; type carries foreign for the Rust caller)."
+  - "setup.rs ca_is_trusted CN substring match — documented ponytail ceiling + owner-approved deviation in the WU docs."
+  - "recorder.rs counts non-tunnel / non-HTTPS CONNECTs — that is exactly UC-5's 'green on any connection, decrypt or not' intent; hook fires only after a client reaches Trawler."
+  - "e2e_capture.rs api_json duplication — reuse structurally blocked (no Harness instance; TLS origin + untrusting client); forcing it invents an abstraction."
+  - "Onboarding.tsx `running` helper — carries a Running type constraint at both call sites; inlining loses it."
+  - "recorder.rs authority String alloc — owned by the broadcast payload, cannot be deferred; one short alloc per CONNECT is not a hot-path cost."
+  - "setup.rs certutil -store ROOT dump — cold once-per-probe path, not hot."
+  - "routes.rs /stats json!() inline — consistent with view.rs's existing json!() usage for small payloads."
+  - "App.tsx trafficSeen inline — mirrors the existing isDecryptedHttps(flows) call-site pattern."
+verdict: FAIL
+date: 2026-07-15
