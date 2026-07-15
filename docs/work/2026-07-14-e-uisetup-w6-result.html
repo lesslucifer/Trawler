@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-UISETUP.W6 — result</h1>
       <p>Honest, device-aware, immediate per-step setup status — as built.</p>
-      <div class="meta">Built v2 · 2026-07-15 · Trawler · T3 result · plan:
+      <div class="meta">Built v3 · 2026-07-15 · Trawler · T3 result · plan:
       <a href="2026-07-14-e-uisetup-w6-plan.html">W6 plan</a> · epic:
       <a href="2026-07-12-e-uisetup-plan.html">E-UISETUP</a></div>
     </div>
@@ -70,14 +70,23 @@
       (<a href="../../tests/e2e_capture.rs">untrusted_https_records_a_connection_not_a_flow</a>); the
       WebDriver harness only drives a <em>trusted</em> proxied request, so the untrusted case is not
       re-asserted there.</li>
+      <li><strong>Proxy-set marker removed post-review</strong> (owner-approved). W5's temp
+      <code>trawler-proxy-set</code> marker was a second source of truth that could drift from the live
+      system proxy; a stale marker made every launch (and Cmd-Q) fire an elevated, password-prompting
+      revert of an already-off proxy. It is deleted — live <code>proxy_status</code> is now the sole truth.
+      The launch/Cmd-Q auto-revert went with it; the quit-time confirm (keys off live
+      <code>proxy_status</code>) is the only proxy guard. <strong>Narrowing:</strong> Cmd-Q no longer reverts
+      an "ours" proxy (the webview <code>onCloseRequested</code> doesn't fire on Cmd-Q), matching a hard kill —
+      accepted as the cost of never surprise-prompting.</li>
     </ul>
 
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence">
       <thead><tr><th>Kind</th><th>Pointer</th></tr></thead>
       <tbody>
-        <tr><td>Tips</td><td><code>97d4796</code> (WU) → <code>1123e64</code> (cr-fix follow-up) on
-        <code>wu/uisetup/w6-onboarding-ux</code>; merge-base <code>b2c6168</code> (epic tip incl. W5).</td></tr>
+        <tr><td>Tips</td><td>WU tip <code>c40e83a</code> on <code>wu/uisetup/w6-onboarding-ux</code>
+        (<code>c0f2e53</code> UC-5 T2 · <code>e6b0ac6</code> marker removal · <code>c40e83a</code> cr-fix);
+        merge-base <code>b2c6168</code> (epic tip incl. W5).</td></tr>
         <tr><td>Core</td><td><a href="../../src/event.rs">event.rs</a> (<code>ConnectionSeen</code>) ·
         <a href="../../src/store.rs">store.rs</a> (counter + <code>note_connection</code>) ·
         <a href="../../src/recorder.rs">recorder.rs</a> (CONNECT hook) ·
@@ -87,19 +96,27 @@
         <code>proveItSnippet</code>) · <a href="../../ui/src/App.tsx">App.tsx</a> (probe wiring) ·
         <a href="../../ui/src/Onboarding.tsx">Onboarding.tsx</a> (status render, P1, P3) ·
         <a href="../../ui/src/useFlows.ts">useFlows.ts</a> · <a href="../../ui/src/api.ts">api.ts</a>.</td></tr>
-        <tr><td>Tests</td><td><strong>unit 21</strong> — Rust store (+1 connection signal) + view (+1 SSE
+        <tr><td>Tests</td><td><strong>unit</strong> — Rust store (+1 connection signal) + view (+1 SSE
         shape); TS <a href="../../ui/src/setup.test.ts">setup.test.ts</a> (+13 derivation, incl.
         positive-beats-error), <a href="../../ui/src/api.test.ts">api.test.ts</a> (+2:
-        <code>connectionCount</code>, connection→onConnection-only). <strong>integration 3</strong> — the
+        <code>connectionCount</code>, connection→onConnection-only),
+        <a href="../../ui/src/useFlows.test.ts">useFlows.test.ts</a> (+2: the seed-race regression — a live
+        bump is not clobbered by a stale <code>/stats</code> seed). <strong>integration 3</strong> — the
         untrusted-CA connection contract, <code>/stats</code> tally, and the App device-aware seam.
-        <strong>e2e 4</strong> — the UC-5 spine. Full suites: <code>cargo test</code>, Tauri
-        <code>cargo test</code> (23), vitest (108), all green.</td></tr>
+        <strong>e2e 4</strong> — the UC-5 spine. Full suites at the tip: <code>cargo test</code> (core), Tauri
+        <code>cargo test</code> (21, −2 for the deleted marker tests), vitest (110, +2 seed-race),
+        <code>tsc -b</code> — all green.</td></tr>
         <tr><td>Gates</td><td>Gate 0 (<code>fmt</code> + <code>clippy -D warnings</code> +
-        tests) · <code>tsc -b</code> · <code>cargo xtask ui build</code> · e2e — all green.</td></tr>
-        <tr><td>Review</td><td><code>cr/v2</code> two rounds: r1 <strong>FAIL</strong> (2 verified nits —
-        redundant <code>/flows</code> refetch on a connection; a stale error masking an already-trusted
-        probe), fixed behavior-preservingly with 4 regression tests → r2 <strong>PASS</strong> bound to
-        <code>1123e64</code>. Six other candidate findings refuted. Evidence in the tip's
+        tests) · <code>tsc -b</code> · <code>cargo xtask ui build</code> · e2e — all green. (One Gate 0 run hit
+        a known flake in <code>tests/e2e_h2.rs</code>; isolated re-run 4/4, full gate green — the diff touches
+        no H2/transport code.)</td></tr>
+        <tr><td>Review</td><td><code>cr/v2</code> on the final tip <code>c40e83a</code>, two rounds: r1
+        <strong>FAIL</strong> (2 verified — an <em>important</em> correctness race: the <code>/stats</code>
+        connection seed clobbered a live bump via a non-functional setter; a nit: <code>stepStatus</code>
+        called twice per loop), fixed with a failing-first regression test (proven to fail 1→0 on the pre-fix
+        code) → r2 <strong>FAIL</strong> (1 nit: a misleading <code>connections</code> comment) → resolved →
+        <strong>PASS</strong>. Eleven other candidate findings refuted (incl. the CN-match ponytail, the
+        foreign/none collapse, CONNECT-counts-all as the UC-5 intent). Evidence in the tip's
         <code>test</code>/<code>doc</code>/<code>cr</code> notes.</td></tr>
       </tbody>
     </table>
