@@ -1,0 +1,9 @@
+schema: dod/v1
+level: epic
+epic: E-GATEFIX
+branch: epic/gatefix-backmerge
+base: 8527a2dfa8e01a0f5eb271f1049d8f37940cac5f
+tip: db747b6c85b4dc01a8d05d33bcd6f8e4cc15811f
+diff_sha256: 145340502863e719df59e68130cd6c05201493c3a16c1dec3f7670851226650a
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review, walk]
+date: 2026-07-15
