@@ -27,6 +27,8 @@ function flow(over: Partial<FlowView> = {}): FlowView {
 function apiWith(body: Partial<BodyFetch>): TrawlerApi {
   return {
     listFlows: vi.fn(),
+    connectionCount: vi.fn(async () => 0),
+    caCertPem: vi.fn(async () => ""),
     getFlow: vi.fn(),
     stream: vi.fn(),
     getBody: vi.fn(async () => ({

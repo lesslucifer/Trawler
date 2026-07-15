@@ -13,13 +13,14 @@ use crate::store::Store;
 use routes::AppState;
 
 /// Build the inspect-only control API: the embedded UI shell, filtered
-/// listing, full-flow detail, raw or decoded bodies, a live SSE stream, and
-/// the CA download.
+/// listing, a connection tally (`/stats`), full-flow detail, raw or decoded
+/// bodies, a live SSE stream, and the CA download.
 pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {
     let state = AppState { store, ca_cert_pem };
     Router::new()
         .route("/", get(routes::ui_page))
         .route("/flows", get(routes::list_flows))
+        .route("/stats", get(routes::stats))
         .route("/flows/{id}", get(routes::get_flow))
         .route("/flows/{id}/request/body", get(routes::request_body))
         .route("/flows/{id}/response/body", get(routes::response_body))
@@ -63,6 +64,7 @@ mod tests {
         for (path, expected) in [
             ("/", StatusCode::OK),
             ("/flows", StatusCode::OK),
+            ("/stats", StatusCode::OK),
             ("/flows/not-a-uuid", StatusCode::BAD_REQUEST),
             ("/flows/not-a-uuid/request/body", StatusCode::BAD_REQUEST),
             ("/flows/not-a-uuid/response/body", StatusCode::BAD_REQUEST),
