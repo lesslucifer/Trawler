@@ -234,7 +234,7 @@ flowchart TD
     </div>
 
     <h2 id="test-plan">Test plan</h2>
-    <table>
+    <table data-item="test-plan">
       <thead><tr><th>Level</th><th>Where</th><th>Asserts</th></tr></thead>
       <tbody>
         <tr>
@@ -290,8 +290,8 @@ flowchart TD
       a CONNECT at an ephemeral core) and is proven at integration, no waiver.</p>
     </div>
 
-    <h2 id="done-when">Done when</h2>
-    <ul data-item="done-when">
+    <h2 id="expected">Done when (expected result)</h2>
+    <ul data-item="expected">
       <li>Verify shows a concrete, text prove-it instruction with the real address; the green flip is still
       capture-driven.</li>
       <li>Each step shows a separated, honest status: Trust from the local probe or a decrypted flow (else a
@@ -305,7 +305,7 @@ flowchart TD
     </ul>
 
     <h2 id="non-goals">Non-goals</h2>
-    <ul data-item="non-goals">
+    <ul>
       <li><strong>A one-action "Set up Trawler" chain</strong> (CA → proxy → verify behind one button) —
       deferred; W6 keeps the three discrete, consent-per-change steps.</li>
       <li><strong>An app-initiated self-test request</strong> — the prove-it prompt guides the user; the app
@@ -364,7 +364,7 @@ flowchart TD
     </table>
 
     <h2 id="distillation">Distillation (at epic close)</h2>
-    <p data-item="distillation">W6 adds two facts that outlive it and must distil: the <code>/stats</code>
+    <p>W6 adds two facts that outlive it and must distil: the <code>/stats</code>
     endpoint + <code>connection</code> SSE event (a new API surface — into <code>web-ui.html</code> / API
     index), and a <strong>DEC</strong> recording the reversal of W2's "no trust-store inspection" stance with
     its rationale (local probe for the 90%, capture for the rest). The onboarding status model folds into the
