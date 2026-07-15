@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+epic: E-UISETUP
+tests:
+  unit:
+    waived: "Behavior-preserving deletion of dead interface surface: StreamHandlers.onLive had no consumer after W6 replaced LiveDot with the onboarding-state StatusDot. The two EventSource onopen/onerror wirings it fed were no-ops (onLive always undefined). No test asserted onLive; the unchanged api.test.ts stream test + the full 148-test vitest suite stay green, proving nothing relied on it. No new logic to test."
