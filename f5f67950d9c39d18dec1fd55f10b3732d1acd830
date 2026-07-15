@@ -1,0 +1,9 @@
+schema: dod/v1
+level: epic
+epic: E-UISETUP
+branch: epic/uisetup
+base: 7d83d77f3dc35bfd9b7647ef1285a316dd23d9dc
+tip: f5f67950d9c39d18dec1fd55f10b3732d1acd830
+diff_sha256: d2f7ec767ba32eda85c4ed7dc81123fe7ea431cf30f98946cd0f40bc0c1c7a0e
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, manual-review, walk]
+date: 2026-07-15
