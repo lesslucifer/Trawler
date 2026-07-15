@@ -1,7 +1,9 @@
 schema: test/v2
-level: commit
+level: epic
 epic: E-GATEFIX
 tests:
   unit:
     count: 1
-    covers: "xtask lib.rs is_ancestor_discriminates_back_merge_from_forward_wu: a temp repo where main advances past an epic fork proves is_ancestor(main_tip, main) is true (the WU hook skips a back-merge of landed history, DEC-8 parity) while is_ancestor(forward_wu_tip, main) is false (a forward WU tip carrying epic-only work still gates)."
+    covers: "xtask lib.rs is_ancestor_discriminates_back_merge_from_forward_wu: a temp repo where main advances past an epic fork proves the WU hook skips a back-merge of landed history (is_ancestor(main_tip, main) true, DEC-8 parity) while a forward WU tip carrying epic-only work still gates (is_ancestor(forward_wu_tip, main) false)."
+  e2e:
+    waived: "Gate-machinery fix in xtask (the merge hook), which has no product surface and no runnable e2e — the WebDriver/Tauri e2e harness exercises the app, not the git hooks. The discriminator (is_ancestor of main) is unit-tested end to end against a real temp git repo; the behaviour it corrects is itself proven live by the very back-merge this fix unblocks."
