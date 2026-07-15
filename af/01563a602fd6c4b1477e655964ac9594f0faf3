@@ -1,8 +1,7 @@
 schema: test/v2
-level: epic
+level: commit
 epic: E-UISETUP
 tests:
-  e2e:
-    count: 4
-    covers: "ui/e2e/specs/onboarding.spec.ts drives a real Tauri WebKit window against an ephemeral run(Config) core (cargo xtask ui e2e): (1) a fresh launch shows onboarding, not a bare flow list; (2) a real proxied+decrypted HTTPS request through the core flips Verify green and reveals the captured localhost row; (3) the revealed list filters out on a non-matching host and back in when cleared; (4) a second request appends a row live without a manual refresh. This is the full UC-5 spine; it folds in the retired UC-4 flows.spec.ts (post-W4 a fresh launch is onboarding). Lower layers: core cargo test (incl. tests/e2e_capture.rs::untrusted_https_records_a_connection_not_a_flow and the /stats tally in tests/api.rs) + UI Vitest 110 green; per-WU unit/integration evidence on each WU tip."
-  waived: "The auto CA-install / auto-proxy paths and the two read-only OS probes read the real machine and are not hermetically runnable (epic waiver, inherited from W2/W3); their command builders and the status derivation they feed are unit-tested, and the journey is proven end-to-end via a real proxied HTTPS request. The native auto-proxy self-test HTTPS request is deferred with those elevation-gated auto paths (plan non-goal), not a coverage gap."
+  unit:
+    count: 1
+    covers: "setup.test.ts — proxyStatus(\"foreign\") yields a distinct muted message naming the conflict (Another proxy…), not byte-identical to the \"none\" message. The dead useFlows.live removal is behavior-preserving (no consumer read it), covered by the App.test.tsx suite staying green."
