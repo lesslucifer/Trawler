@@ -68,6 +68,7 @@ export function filterParams(filter: Filter): URLSearchParams {
 declare global {
   interface Window {
     __TRAWLER_API__?: string;
+    __TRAWLER_PROXY__?: string;
   }
 }
 
@@ -84,13 +85,29 @@ export function defaultBaseUrl(): string {
   return import.meta.env.VITE_TRAWLER_API ?? "http://127.0.0.1:7421";
 }
 
+// The proxy address resolves the same way as the base URL (DEC-12: configurable,
+// never hardcoded in component code). Both snippets and the native set-proxy
+// command consume it as data.
+export function defaultProxyAddr(): string {
+  if (typeof window !== "undefined") {
+    if (window.__TRAWLER_PROXY__) return window.__TRAWLER_PROXY__;
+    const stored = window.sessionStorage?.getItem("__TRAWLER_PROXY__");
+    if (stored) return stored;
+  }
+  return import.meta.env.VITE_TRAWLER_PROXY ?? "127.0.0.1:7420";
+}
+
 export interface StreamHandlers {
   onEvent: () => void;
-  onLive?: (live: boolean) => void;
+  // A tunnel reached the proxy (may never become a flow — untrusted-CA handshake).
+  // Onboarding's proxy step goes green on this alone; the flow list ignores it.
+  onConnection?: () => void;
 }
 
 export interface TrawlerApi {
   listFlows(filter: Filter): Promise<FlowSummary[]>;
+  connectionCount(): Promise<number>;
+  caCertPem(): Promise<string>;
   getFlow(id: string): Promise<FlowView>;
   getBody(id: string, leg: Leg, decode: boolean): Promise<BodyFetch>;
   stream(handlers: StreamHandlers): () => void;
@@ -106,6 +123,16 @@ export function createApi(baseUrl?: string): TrawlerApi {
       if (!res.ok) throw new Error(`GET /flows failed: ${res.status}`);
       return (await res.json()) as FlowSummary[];
     },
+    async connectionCount() {
+      const res = await fetch(`${base()}/stats`);
+      if (!res.ok) throw new Error(`GET /stats failed: ${res.status}`);
+      return ((await res.json()) as { connections: number }).connections;
+    },
+    async caCertPem() {
+      const res = await fetch(`${base()}/ca.crt`);
+      if (!res.ok) throw new Error(`GET /ca.crt failed: ${res.status}`);
+      return res.text();
+    },
     async getFlow(id) {
       const res = await fetch(`${base()}/flows/${encodeURIComponent(id)}`);
       if (!res.ok) throw new Error(`GET /flows/${id} failed: ${res.status}`);
@@ -120,13 +147,14 @@ export function createApi(baseUrl?: string): TrawlerApi {
         contentType: res.headers.get("content-type"),
       };
     },
-    stream({ onEvent, onLive }) {
+    stream({ onEvent, onConnection }) {
       const source = new EventSource(`${base()}/stream`);
+      // `connection` is deliberately absent here: a bare tunnel never becomes a
+      // flow, so it must not trigger a /flows refetch — only bump the counter.
       for (const name of ["request", "response", "evicted", "lagged"]) {
         source.addEventListener(name, onEvent);
       }
-      source.onopen = () => onLive?.(true);
-      source.onerror = () => onLive?.(false);
+      if (onConnection) source.addEventListener("connection", onConnection);
       return () => source.close();
     },
   };

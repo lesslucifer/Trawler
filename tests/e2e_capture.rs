@@ -266,6 +266,73 @@ async fn https_mitm_decrypts_and_captures() {
     server.shutdown().await;
 }
 
+// The onboarding proxy step goes green on *any* connection, decrypt or not, so
+// the proxy signal must be observable even when the client rejects Trawler's CA.
+// A client that does NOT trust the CA fails the MITM handshake → no flow is ever
+// decoded → but the tunnel still counts: `/stats` connections bumps and a
+// `connection` SSE event fires. A plain http:// request needs no decrypt and
+// yields a flow (proxy proven without trust).
+#[tokio::test]
+async fn untrusted_https_records_a_connection_not_a_flow() {
+    trawler::init_crypto();
+    let (ca_pem, leaf_pem, leaf_key_pem) = gen_certs();
+    let (port, _origin) = start_https_origin(leaf_pem, leaf_key_pem).await;
+
+    let ca_dir = tempdir().unwrap();
+    let config = Config {
+        proxy_addr: "127.0.0.1:0".parse().unwrap(),
+        api_addr: "127.0.0.1:0".parse().unwrap(),
+        ca_dir: ca_dir.path().to_path_buf(),
+        upstream_extra_root_pems: vec![ca_pem],
+        ..Default::default()
+    };
+    let server = serve(config).await.unwrap();
+    let api = reqwest::Client::builder().timeout(Duration::from_secs(5)).build().unwrap();
+    let api_json = |path: String| {
+        let api = api.clone();
+        let base = server.api_addr;
+        async move {
+            let body =
+                api.get(format!("http://{base}{path}")).send().await.unwrap().text().await.unwrap();
+            serde_json::from_str::<Value>(&body).unwrap()
+        }
+    };
+
+    // Subscribe to the stream before generating traffic so the connection event
+    // can't be missed.
+    let mut sse = api.get(format!("http://{}/stream", server.api_addr)).send().await.unwrap();
+
+    // Client does NOT add Trawler's CA → the intercepted TLS handshake fails.
+    let client = reqwest::Client::builder()
+        .proxy(reqwest::Proxy::all(format!("http://{}", server.proxy_addr)).unwrap())
+        .timeout(Duration::from_secs(5))
+        .build()
+        .unwrap();
+    let attempt = client.get(format!("https://localhost:{port}/secure")).send().await;
+    assert!(attempt.is_err(), "an untrusted-CA client must fail the MITM handshake");
+
+    let mut seen = String::new();
+    tokio::time::timeout(Duration::from_secs(4), async {
+        while let Some(chunk) = sse.chunk().await.unwrap() {
+            seen.push_str(&String::from_utf8_lossy(&chunk));
+            if seen.contains("event: connection") {
+                return;
+            }
+        }
+        panic!("no connection SSE event for the failed handshake");
+    })
+    .await
+    .expect("connection event never arrived");
+    assert!(seen.contains(&format!("localhost:{port}")), "event carries the target authority");
+
+    let stats = api_json("/stats".into()).await;
+    assert!(stats["connections"].as_u64().unwrap() >= 1, "the tunnel bumped the connection tally");
+    let flows = api_json("/flows".into()).await;
+    assert!(flows.as_array().unwrap().is_empty(), "a failed handshake decodes into no flow");
+
+    server.shutdown().await;
+}
+
 #[tokio::test]
 async fn ui_shell_serves_live_filterable_flow_list() {
     let h = Harness::setup(100).await;

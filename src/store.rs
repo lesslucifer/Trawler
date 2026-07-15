@@ -1,4 +1,5 @@
 use std::collections::{HashMap, VecDeque};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
 use tokio::sync::broadcast;
@@ -8,9 +9,12 @@ use crate::flow::{Flow, FlowId, ResponseRec};
 
 /// Canonical owner of live flows. A bounded ring buffer weighted by retained
 /// body bytes, fronted by a broadcast bus so every interface can live-tail
-/// without the capture path knowing any interface exists.
+/// without the capture path knowing any interface exists. `connections` counts
+/// every tunnel the proxy opened — kept outside the ring so eviction can never
+/// touch it: it is a monotonic "traffic reached us" tally, not storage.
 pub struct Store {
     inner: Mutex<Ring>,
+    connections: AtomicU64,
     tx: broadcast::Sender<FlowEvent>,
 }
 
@@ -95,12 +99,25 @@ impl Store {
                 total_bytes: 0,
                 max_bytes,
             }),
+            connections: AtomicU64::new(0),
             tx,
         }
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<FlowEvent> {
         self.tx.subscribe()
+    }
+
+    /// The proxy opened a tunnel to `authority`. Records "traffic reached us"
+    /// even when the exchange never decodes into a flow (untrusted-CA handshake
+    /// failure), so the onboarding proxy step can go green without a decrypt.
+    pub fn note_connection(&self, authority: String) {
+        self.connections.fetch_add(1, Ordering::Relaxed);
+        let _ = self.tx.send(FlowEvent::ConnectionSeen { authority });
+    }
+
+    pub fn connection_count(&self) -> u64 {
+        self.connections.load(Ordering::Relaxed)
     }
 
     pub fn insert(&self, flow: Flow) {
@@ -311,6 +328,25 @@ mod tests {
         assert!(
             matches!(rx.try_recv(), Ok(FlowEvent::FlowEvicted { flow_id }) if flow_id == first_id)
         );
+    }
+
+    #[test]
+    fn note_connection_counts_and_broadcasts_independently_of_flows() {
+        let s = Store::new(10, 64);
+        let mut rx = s.subscribe();
+        assert_eq!(s.connection_count(), 0);
+
+        s.note_connection("example.com:443".into());
+        assert_eq!(s.connection_count(), 1);
+        assert!(
+            matches!(rx.try_recv(), Ok(FlowEvent::ConnectionSeen { authority }) if authority == "example.com:443")
+        );
+
+        // A flow insert that evicts an older flow leaves the connection tally alone.
+        s.insert(FlowBuilder::new().req_body(captured(&[0u8; 8])).build());
+        s.insert(FlowBuilder::new().req_body(captured(&[0u8; 8])).build());
+        s.note_connection("other:443".into());
+        assert_eq!(s.connection_count(), 2, "eviction and inserts never touch the count");
     }
 
     proptest::proptest! {

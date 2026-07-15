@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_TRAWLER_API?: string;
+  readonly VITE_TRAWLER_PROXY?: string;
   readonly VITE_E2E?: string;
 }
 

@@ -63,6 +63,17 @@ async fn list_flows_orders_and_filters() {
 }
 
 #[tokio::test]
+async fn stats_reports_the_connection_tally() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    let r = router_with(store.clone());
+
+    assert_eq!(json(&r, "/stats").await.1["connections"], 0);
+    store.note_connection("example.com:443".into());
+    store.note_connection("other:443".into());
+    assert_eq!(json(&r, "/stats").await.1["connections"], 2);
+}
+
+#[tokio::test]
 async fn get_flow_ok_missing_and_malformed() {
     let store = Arc::new(Store::new(1_000_000, 64));
     let flow = FlowBuilder::new().uri("http://x/y").status(200).build();
