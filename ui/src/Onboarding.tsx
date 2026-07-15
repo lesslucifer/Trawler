@@ -216,8 +216,8 @@ function SetProxy({
   const [target, setTarget] = useState<ProxyTarget>(defaultProxyTarget(os));
   const auto = onSetProxy && canAutoSetup(os) && target === defaultProxyTarget(os);
   const snippet = proxySnippet(target, addr);
-  // Reverting is marker-gated in Rust, so this only ever turns off a proxy Trawler
-  // set — safe to offer the moment a native set succeeds.
+  // Offered the moment a native set succeeds; the stop action turns the system
+  // proxy back off (idempotent — no-op if it isn't set).
   const showStop = auto && state === "done";
 
   return (
