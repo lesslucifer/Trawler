@@ -1,0 +1,25 @@
+schema: doc/v1
+epic: E-UISETUP
+wu: E-UISETUP.W6
+changes:
+  - path: docs/work/2026-07-14-e-uisetup-w6-plan.html
+    tier: T3
+    action: updated
+    note: "flipped draft->built; scope-note records 'one WU, three layers' + the CN-not-fingerprint deviation; settled Copy appendix."
+  - path: docs/work/2026-07-14-e-uisetup-w6-result.html
+    tier: T3
+    action: updated
+    note: "v3 — corrected Tips to the real branch history (c0f2e53 UC-5 · e6b0ac6 marker removal · c40e83a cr-fix); added the proxy-set-marker-removal deviation + its Cmd-Q narrowing; refreshed the Tests row (Tauri 21, vitest 110 incl. the seed-race regression) and the Review row (final tip c40e83a, the important seed-race finding + fix, the e2e_h2 flake note)."
+  - path: docs/work/2026-07-12-e-uisetup-plan.html
+    tier: T3
+    action: updated
+    note: "W6 node + summary in the epic WU flow."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    note: "UC-5 — the onboarding contract distilled now (per the review comment): two-truths per-step status, the connection-seen signal (GET /stats + the 'connection' SSE event), capture-only list reveal, with a flow diagram + a provenance callout naming the new API and the W2/W4 stance reversal."
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: updated
+    note: "UC-5 row -> web-ui.html#uc-5."
+t2_note: "UC-5 captures the durable onboarding model. The marker removal needs no T2/T1 change: no live doc described the proxy-set marker or launch reconciliation (W5 result is archived T3); UC-5's provenance already states the live-proxy-state stance. Deferred to EPIC close (tracked in the epic plan): (1) the /stats + 'connection' API fact into web-ui.html / the API index at the endpoint level; (2) a DEC recording the trust-store-inspection reversal (W2/W4) and the local-OS-setup capability. No T1 change (no new architecture region/route)."
