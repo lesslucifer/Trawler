@@ -1,0 +1,20 @@
+schema: doc/v1
+epic: E-UISETUP
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    note: "UC-ONBOARD (the onboarding contract) added alongside main-landed UC-5 (inspect); renamed from the epic-internal UC-5 to the slug UC-ONBOARD to avoid colliding with E-UIINSPECT UC-5. Provenance callout links DEC-13."
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: updated
+    note: "UC-ONBOARD row -> web-ui.html#uc-onboard; UC-5 kept as inspect (main, canonical)."
+  - path: docs/decisions/dec-13-onboarding-capabilities.html
+    tier: T2
+    action: created
+    note: "Onboarding local-OS actions + the core connection signal (GET /stats + connection SSE); supersedes the epic-plan no-new-backend non-goal and W2 no-trust-store-inspection for onboarding scope. Cross-refs UC-ONBOARD."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    note: "DEC-13 row added; version bumped."
+t2_waived: null
