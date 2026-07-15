@@ -1,0 +1,45 @@
+schema: cr/v2
+scope: "WU E-UISETUP.W6 onboarding UX (+ proxy-set marker removal + cr-fix) -> epic/uisetup"
+epic: E-UISETUP
+wu: E-UISETUP.W6
+branch: wu/uisetup/w6-onboarding-ux
+base: b2c6168698fa2b1fae0f5f816dec157ffc3cdcfa
+head: b5ebd0cf3f570902d9d5bf8d8719fc31cf6d34b2
+diff_sha256: 9da9d03ebc15fd0ba22b0d83761589189876c382438c2e6e1147a66169a80c6d
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 12, verified: 3, waived: 0 }
+rounds:
+  - round: 1
+    tip: e6b0ac6037ac52380f7ad8cd1a7eabefcb9c9d00
+    verdict: FAIL
+    verified:
+      - "correctness/important — useFlows /stats seed clobbered live connection bumps (non-functional setter)."
+      - "simplification/nit — Onboarding.tsx stepStatus called twice per loop iteration."
+  - round: 2
+    tip: 8805047c608779a75de4b786f64a268f7a33b249
+    verdict: FAIL
+    verified:
+      - "simplification-legibility/nit — useFlows connections comment implied 'only non-flow tunnels'; the counter counts every CONNECT."
+    note: "the two r1 findings confirmed fixed here; re-raised r1 nits (foreign/none collapse, CN-match ponytail, CONNECT-counts-all, macOS trust-store propagation) stayed refuted/acknowledged."
+resolution:
+  - "useFlows.ts: floor-merge the seed — connectionCount().then(c => setConnections(n => Math.max(n, c))); monotonic counter never regresses past a live bump."
+  - "useFlows.test.ts (NEW, +2): bump-before-stale-seed keeps the bumped value (fails 1->0 on the pre-fix code, proven by temporary revert); seed still advances when ahead."
+  - "Onboarding.tsx: hoisted stepStatus to one const used by active + data-status."
+  - "useFlows.ts comment: rewritten to say the counter is every CONNECT tunnel, decrypt or not."
+refuted:
+  - "setup.ts proxyStatus foreign/none collapse — deliberate; traffic-seen is the authoritative positive; type carries foreign for the Rust caller."
+  - "setup.rs ca_is_trusted CN substring match — documented ponytail ceiling + owner-approved deviation in the WU docs."
+  - "recorder.rs counts non-tunnel / non-HTTPS CONNECTs — exactly UC-5's 'green on any connection, decrypt or not'; hook fires only after a client reaches Trawler."
+  - "e2e_capture.rs api_json duplication — reuse structurally blocked (no Harness instance; TLS origin + untrusting client)."
+  - "Onboarding.tsx `running` helper — carries a Running type constraint at both call sites."
+  - "recorder.rs authority String alloc — owned by the broadcast payload, one short alloc per CONNECT, not a hot-path cost."
+  - "setup.rs certutil -store ROOT dump — cold once-per-probe path, not hot."
+  - "routes.rs /stats json!() inline — consistent with view.rs's existing json!() usage."
+  - "App.tsx trafficSeen inline — mirrors the existing isDecryptedHttps(flows) call-site pattern."
+  - "useFlows.test.ts statsPending stale-true post-resolve — never queried after resolution; harmless."
+  - "useFlows.test.ts waitFor(statsPending) — genuinely needed: connectionCount runs in a post-commit useEffect, not synchronously during renderHook."
+gate0:
+  status: green
+  note: "one Gate 0 run showed a flaky failure in tests/e2e_h2.rs (real-TLS ephemeral-port e2e); re-ran in isolation 4/4 pass and full gate0 green. The diff touches no core H2/transport code (UI TS + Tauri + one core-adjacent comment)."
+verdict: PASS
+date: 2026-07-15
