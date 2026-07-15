@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a572a879f34851f0dfa8f2c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-13 onboarding local-OS + core connection signal</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-13 — Onboarding's local-OS actions &amp; the core connection signal</h1>
+      <p>Why the native app may change the machine, and why the core grew a
+      pre-decrypt "connection seen" signal.</p>
+      <div class="meta">v1 · 2026-07-15 · Trawler · T2 decision · minted by
+      <span class="badge id">E-UISETUP</span> ·
+      relates to <a href="dec-12-native-ui-stack.html">DEC-12</a> ·
+      <a href="../use-cases/web-ui.html#uc-onboard">UC-ONBOARD</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="dec-13">DEC-13 · What onboarding is allowed to touch</h2>
+    <p>E-UISETUP added guided onboarding (<a href="../use-cases/web-ui.html#uc-onboard">UC-ONBOARD</a>):
+    walk a fresh machine from an untrusted CA and an unconfigured client to its first
+    decrypted HTTPS flow. Two of its choices overturn boundaries written earlier in the
+    epic's own plan and one of its WUs. This record is their durable home — the plan that
+    named the non-goals is archived out of git (<a href="workflow-gates.html">DEC-3</a>),
+    so the reversal lives here, not there.</p>
+
+    <div class="callout">
+      <strong>Decision.</strong> The native app performs two classes of action a
+      pure API client would not: (1) it <strong>reads and writes OS state</strong> —
+      installs the CA into the trust store, sets/unsets the system proxy, and probes
+      both — all in the Tauri process, gated on an explicit confirm + OS elevation;
+      (2) the <strong>core</strong> emits a <strong>pre-decrypt "connection seen"
+      signal</strong> (<code>GET /stats</code> + a <code>connection</code> SSE event) so
+      the proxy step can go green on any tunnel, even an HTTPS attempt Trawler can't yet
+      decrypt. Both were owner-approved during the epic.</p>
+    </div>
+
+    <h3 id="local-os">Local-OS actions in the Tauri process</h3>
+    <p>The core stays a pure MITM proxy + read-only control API — it never touches the
+    host's trust store or proxy settings. Onboarding's "do the work for the user" rule
+    (UC-ONBOARD) needs exactly those writes, so they live <strong>in the native app</strong>
+    (<a href="../../ui/src-tauri/src/setup.ts">ui/src-tauri</a>), never in the core:</p>
+    <ul>
+      <li><strong>CA install</strong> — <code>security add-trusted-cert</code> (macOS) /
+      <code>certutil -addstore</code> (Windows); guided text elsewhere.</li>
+      <li><strong>Proxy set/unset</strong> — <code>networksetup</code> (macOS) / WinINET
+      (Windows); symmetric revert on clean quit and crash-reconciliation at launch.</li>
+      <li><strong>Read-only probes</strong> — "does this machine trust the CA / route its
+      proxy at Trawler?", used for the ~90% single-machine case.</li>
+    </ul>
+    <p>Every write is one explicit confirm + an OS elevation prompt away; decline ⇒
+    guided steps. This is consistent with <a href="dec-12-native-ui-stack.html">DEC-12</a>
+    (the native app is an out-of-process client of the API) — the API contract is
+    unchanged; the OS-touching capability is a property of the desktop shell alone.</p>
+
+    <div class="callout warn">
+      <strong>Reverses W2's "no trust-store inspection".</strong> W2 built CA install
+      with the rule <em>"trust is proven by capture, not by reading the store."</em> W6
+      added a read-only trust probe (<code>ca_trusted</code>) for an honest instant
+      per-step status. Reading the store to <em>report status</em> is now allowed;
+      <strong>revealing the flow list is still capture-only</strong> — a probe-green step
+      never ends onboarding. The narrow invariant that survives: <em>done = a real
+      decrypted flow</em>, never a self-reported or probe-reported checkbox.
+    </div>
+
+    <h3 id="connection-signal">The core connection signal</h3>
+    <p>An HTTPS client that doesn't yet trust the CA fails its TLS handshake and produces
+    <em>no flow</em> — so "is my traffic even routing through Trawler?" had no observable
+    answer before decryption worked. The core now counts the tunnel itself:</p>
+    <ul>
+      <li><a href="../../src/recorder.rs">recorder</a> calls
+      <code>store.note_connection(authority)</code> on the CONNECT authority;</li>
+      <li><a href="../../src/store.rs">store</a> holds a monotonic
+      <code>connections: AtomicU64</code> and broadcasts
+      <code>FlowEvent::ConnectionSeen { authority }</code>
+      (<a href="../../src/event.rs">event</a>);</li>
+      <li><a href="../../src/api/routes.rs">api</a> exposes
+      <code>GET /stats → { connections }</code> (one-shot seed) and maps the event to a
+      <code>connection</code> SSE event (live bump).</li>
+    </ul>
+
+    <div class="callout warn">
+      <strong>Reverses the epic's "no new backend / API endpoint" non-goal.</strong> The
+      epic plan promised onboarding would add no core/API surface. It added the smallest
+      possible one: a read-only counter + one SSE event kind, no new capture behaviour,
+      no config. The tally is a monotonic <code>u64</code> (no unbounded growth, no
+      per-authority map). It exists solely so the proxy step is observable pre-decrypt —
+      it never reveals the flow list (that stays gated on a decrypted <code>https://</code>
+      flow). curl-reachability (<a href="../use-cases/web-ui.html">UC-3</a>) is preserved:
+      <code>/stats</code> is a plain GET like every other route.
+    </div>
+
+    <h3 id="why-not">Alternatives rejected</h3>
+    <table>
+      <thead><tr><th>Instead of…</th><th>Rejected because</th></tr></thead>
+      <tbody>
+        <tr><td>Keep "prove by capture only", no probe, no signal</td>
+          <td>Left the honest 90% case ("I'm on this machine, is it set up?") with a
+          "Waiting…" dead-end and a false "not set up" when a device <em>was</em> routing
+          but not decrypting. The whole epic's UX rule is "tell the truth in every case".</td></tr>
+        <tr><td>Per-authority connection map / rich stats</td>
+          <td>Onboarding needs one bit — "has anything arrived?". A monotonic counter
+          answers it with zero growth risk; a map is speculative surface (YAGNI).</td></tr>
+        <tr><td>Infer connections client-side from failed fetches</td>
+          <td>A remote device's failed TLS handshake is invisible to the app; only the
+          proxy sees the tunnel. The signal has to come from the core.</td></tr>
+        <tr><td>CA/proxy writes in the core</td>
+          <td>The core is API-first and headless; touching the host trust store / proxy
+          from it breaks that and has no API justification. The desktop shell is the right
+          owner (DEC-12).</td></tr>
+      </tbody>
+    </table>
+
+    <p><em>Status: active. Supersedes the epic-plan non-goal "no new backend/API endpoint"
+    and W2's "no trust-store inspection", both for onboarding's scope only; the core's
+    API-first, capture-proves-done invariants otherwise stand.</em></p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

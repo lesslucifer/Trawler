@@ -12,6 +12,14 @@ export function statusTone(status: number | null): StatusTone {
   return "muted";
 }
 
+// A decrypted HTTPS flow is the sole proof onboarding worked (E-UISETUP.W4): the
+// MITM rewrites a decrypted request to absolute form, so an https:// URI means
+// the exchange was intercepted and decrypted; a plain proxied request stays
+// http:// and does not count.
+export function isDecryptedHttps(flows: FlowSummary[]): boolean {
+  return flows.some((f) => f.uri.startsWith("https://"));
+}
+
 export interface FlowRow {
   time: string;
   method: string;

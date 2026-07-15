@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v9 · 2026-07-11 · Trawler</div>
+      <div class="meta">v10 · 2026-07-15 · Trawler</div>
     </div>
   </header>
   <main>
@@ -48,6 +48,12 @@
           <td><a href="dec-12-native-ui-stack.html"><code>dec-12-native-ui-stack.html</code></a></td>
           <td><span class="badge id">DEC-12</span></td>
           <td>Primary UI is a native desktop app (Tauri+Vite+TS+React+Tailwind, mirror Strata), an out-of-process client of the control API; Warp design system with functional status color; open CORS grant on the loopback API; configurable API base URL; web shell kept — reverses the web-primary framing</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-13-onboarding-capabilities.html"><code>dec-13-onboarding-capabilities.html</code></a></td>
+          <td><span class="badge id">DEC-13</span></td>
+          <td>Onboarding's local-OS actions (native CA install / proxy set-unset / read-only probes in the Tauri app, confirm + elevation) and the core's pre-decrypt connection signal (<code>GET /stats</code> + a <code>connection</code> SSE event) — reverses the epic's "no new backend/API" non-goal and W2's "no trust-store inspection", for onboarding's scope only; capture still proves done</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

@@ -1,4 +1,4 @@
-import { bodyText, statusTone, toCurl, toRow } from "./flow";
+import { bodyText, isDecryptedHttps, statusTone, toCurl, toRow } from "./flow";
 import type { BodyView, FlowSummary, FlowView } from "./api";
 
 test("status tone: 2xx ok, 4xx/5xx warn, pending/other muted", () => {
@@ -42,6 +42,14 @@ test("toRow keeps a relative/unparseable URI whole as the path", () => {
   const row = toRow({ ...flow, uri: "/relative/only" });
   expect(row.host).toBe("");
   expect(row.path).toBe("/relative/only");
+});
+
+test("isDecryptedHttps: only an https:// URI proves capture", () => {
+  expect(isDecryptedHttps([])).toBe(false);
+  expect(isDecryptedHttps([flow])).toBe(false); // http://
+  expect(isDecryptedHttps([{ ...flow, uri: "/relative/only" }])).toBe(false);
+  expect(isDecryptedHttps([{ ...flow, uri: "https://example.com/" }])).toBe(true);
+  expect(isDecryptedHttps([flow, { ...flow, id: "f2", uri: "https://example.com/" }])).toBe(true);
 });
 
 const b64 = (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));

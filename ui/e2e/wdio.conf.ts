@@ -37,7 +37,11 @@ function startCore(): Promise<void> {
 
 export const config: WebdriverIO.Config = {
   runner: "local",
-  specs: ["./specs/**/*.spec.ts"],
+  // One core for the whole run, specs sequential (maxInstances 1) — so a captured
+  // flow persists across specs. Onboarding's "fresh launch shows onboarding" is only
+  // true before any flow exists, so it MUST run first; the inspector spec then reuses
+  // the revealed list. Order is explicit, not alphabetical-by-accident.
+  specs: ["./specs/onboarding.spec.ts", "./specs/flows.spec.ts"],
   maxInstances: 1,
 
   services: [["@wdio/tauri-service", { driverProvider: "embedded" }]],

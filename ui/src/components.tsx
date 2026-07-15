@@ -1,5 +1,6 @@
 import type { InputHTMLAttributes, ReactNode } from "react";
 import type { StatusTone } from "./flow";
+import { COPY, type DotStatus } from "./onboardingMachine";
 
 // Base component kit — Warp-styled primitives later UI epics reuse. Kept to what
 // the flow list needs today (a text field, a status pill, a live dot); grow it
@@ -24,12 +25,25 @@ export function StatusPill({ tone, children }: { tone: StatusTone; children: Rea
   return <span className={`font-mono tabular-nums ${TONE_CLASS[tone]}`}>{children}</span>;
 }
 
-export function LiveDot({ live }: { live: boolean }) {
+// Capture-status dot in the app header — the single connection indicator AND
+// the always-available setup entry (tap to re-invoke onboarding). Supersedes the
+// old 2-state stream LiveDot. checking has no chromatic token (Warp DEC-11), so
+// it reads muted; broken/connected reuse warn/ok.
+const DOT_CLASS: Record<DotStatus, string> = {
+  broken: "bg-warn",
+  checking: "bg-ink-mute",
+  connected: "bg-ok",
+};
+
+export function StatusDot({ status, onClick }: { status: DotStatus; onClick: () => void }) {
   return (
-    <span
-      data-testid="live"
-      title={live ? "live stream connected" : "stream disconnected"}
-      className={`inline-block h-2 w-2 rounded-full ${live ? "bg-ok" : "bg-warn"}`}
+    <button
+      type="button"
+      data-testid="status-dot"
+      data-status={status}
+      title={COPY.dotTitle[status]}
+      onClick={onClick}
+      className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${DOT_CLASS[status]}`}
     />
   );
 }

@@ -5,6 +5,8 @@ import type { FlowView, TrawlerApi } from "./api";
 
 const stubApi = (): TrawlerApi => ({
   listFlows: vi.fn(),
+  connectionCount: vi.fn(async () => 0),
+  caCertPem: vi.fn(async () => ""),
   getFlow: vi.fn(),
   getBody: vi.fn(async () => ({ bytes: new TextEncoder().encode("body!"), contentType: "text/plain" })),
   stream: vi.fn(),
