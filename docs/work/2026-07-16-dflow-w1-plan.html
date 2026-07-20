@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a57ea5a9f34851f0dfa9031" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W1 Plan (Base flow + hand-run)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W1 — Base flow + hand-run</h1>
+      <p>WU plan. Define a first-cut staged design flow and run it by hand on the flow detail panel — no harness, no rules — to learn what the flow actually needs.</p>
+      <div class="meta">WU plan · 2026-07-16 · Trawler · T3 (docs/work/) · wu/design-flow/base-flow-hand-run · epic: docs/work/2026-07-16-design-flow-plan.html</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement"><strong>Define a first-cut staged design flow and run it <em>by hand</em> on the flow detail panel — no harness, no rules — to a draft mockup, capturing what the flow actually needed.</strong></p>
+    <p data-item="maps-to">Maps to: E-DFLOW intent (the <em>flow</em> · process) and the bottom-up build order — W1 is the empirical bottom. Everything W2–W7 seed/build (registry, rulebook, harness) is extracted from what this hand-run surfaces. Depends on: <strong>none</strong>.</p>
+    <p data-item="expected">Expected result: a written first-cut base flow (stages + per-stage artifact shapes — <em>in this doc</em>), one worked example (flow-detail-panel artifacts for all stages — in the run doc), and a findings note of gaps tagged for W2 / W3 / the flow itself.</p>
+
+    <h2 id="why-a-hand-run">Why hand-run first (not build the harness)</h2>
+    <p>The epic can't know the right stages, artifact shapes, component tiers, or rules by fiat — raw instruction is exactly what this epic distrusts. So W1 <strong>discovers the requirements by doing the work once, unassisted</strong>: an agent designs a real screen following only the staged flow, and every time it reaches for something that isn't there (a component to reuse, a token to cite, a rule to obey) that friction is logged. Those friction points <em>are</em> the seed lists for W2 (registry) and W3 (rulebook). Build-first would hard-code guesses; run-first turns guesses into evidence.</p>
+    <div class="callout">
+      <strong>Deliberately absent in W1:</strong> no component registry, no rulebook, no harness, no receipt, no gate. The only structure is the stage sequence below. Wanting any of the absent things mid-run is not a blocker — it is <em>the finding</em>.
+    </div>
+
+    <h2 id="decisions">Decisions for this WU</h2>
+    <p>Two forks the epic left to this plan. Both resolved here; override by comment if wrong.</p>
+
+    <div data-c="d1-medium">
+      <h3 id="d1">D1 · Artifact medium — one HTML scratch doc, no <code>ui/</code> code</h3>
+      <p>All six stage artifacts, including the draft mockup, live inline in a single T3 run doc (<code>docs/work/2026-07-16-dflow-run-1.html</code>). The draft mockup is a <strong>lo-fi structural wireframe</strong> — plain HTML boxes / ASCII, no real styling, no JSX in the app.</p>
+      <p><em>Why:</em> lightest medium that stays commentable + diffable under htmldoc; one place to review the whole run. Critically, writing <strong>zero <code>ui/</code> code</strong> keeps the epic's promise honest — this is <em>proof the flow works</em>, not a UI change that could be mistaken for a shipped redesign. Rejected: a real rendered mockup in <code>ui/</code> (heavier, blurs proof-vs-product); markdown files (breaks the HTML-docs rule, loses the comment/diff layer).</p>
+    </div>
+
+    <div data-c="d2-framing">
+      <h3 id="d2">D2 · Guinea-pig framing — design fresh, cross-check the shipped panel last</h3>
+      <p>The flow detail panel already exists (<code>ui/src/FlowDetail.tsx</code>, shipped by E-UIINSPECT). W1 runs the flow <strong>as if the panel does not exist</strong> — deriving each artifact from the screen's purpose, not from the current code. Only at the very end do we diff the draft mockup against the shipped panel, and any divergence is recorded as a <em>finding</em> (about the flow or the existing screen), never silently "corrected" to match.</p>
+      <p><em>Why:</em> the point is to test the flow's <strong>generative</strong> power. Reverse-engineering the shipped panel would test our ability to document an existing screen — a different, weaker thing that would launder the flow's gaps.</p>
+    </div>
+
+    <h2 id="base-flow">The first-cut base flow</h2>
+    <p>Six stages, cheapest commitment first, each producing one artifact that feeds the next. This is a <em>first cut</em> — the hand-run is licensed to find a stage redundant, mis-ordered, or missing, and say so in the findings.</p>
+
+    <div class="diagram" data-c="flow-diagram">
+      <pre class="mermaid">
+flowchart LR
+  F[Frame] --> L[Layout] --> E[Elements] --> I[Interaction] --> D[Draft mockup] --> T[Tune]
+  T -. revise .-> L
+      </pre>
+      <div class="caption">Linear stages with a single tune-back loop; each stage's artifact is the next stage's input.</div>
+    </div>
+
+    <table data-c="stage-table">
+      <thead>
+        <tr><th>Stage</th><th>Question it answers</th><th>Artifact shape</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>1 · Frame</strong></td><td>What is this region for, who reads it, what job does it do, and which states must it handle (loading / empty / error / populated)? Where does it sit in the app shell?</td><td><em>Frame statement</em> — a short paragraph + a bullet list of required states.</td></tr>
+        <tr><td><strong>2 · Layout</strong></td><td>How is the frame divided into regions, and what is their priority/hierarchy? (No content yet — zones only.)</td><td><em>Region map</em> — labelled boxes (wireframe) with a one-line priority note per zone.</td></tr>
+        <tr><td><strong>3 · Elements</strong></td><td>What concrete UI elements fill each region? What is each one? (No registry in W1 — elements are free-named; reaching for "does this already exist?" is a finding.)</td><td><em>Element inventory</em> — region → list of named elements, each with a one-line role.</td></tr>
+        <tr><td><strong>4 · Interaction</strong></td><td>For each interactive element: what triggers it, what states it has (hover / focus / active / disabled), and how the screen handles the empty / error / loading transitions from Frame?</td><td><em>Interaction table</em> — element → trigger → states → transition behavior.</td></tr>
+        <tr><td><strong>5 · Draft mockup</strong></td><td>Assembled, does it hold together as one screen?</td><td><em>Lo-fi wireframe</em> — HTML/ASCII structure realizing layout + elements, with interaction notes annotated. The finish line.</td></tr>
+        <tr><td><strong>6 · Tune</strong></td><td>Stepping back from the whole: what grouping, hierarchy, or redundancy is off, and why?</td><td><em>Tune notes</em> — a short before/after list; may loop back to Layout.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="hand-run">The hand-run protocol</h2>
+    <ol data-c="protocol">
+      <li>An AI agent walks the six stages <strong>in order</strong> on the flow detail panel, writing each artifact into the run doc as it goes — nothing skipped, nothing back-filled from <code>FlowDetail.tsx</code> (D2).</li>
+      <li>At every stage the agent keeps a <strong>friction log</strong>: any moment it wishes a component, token, or rule existed, or the stage prompt felt ambiguous/underspecified. One line per friction, tagged <code>→W2</code> (registry), <code>→W3</code> (rules), or <code>→flow</code> (the stage sequence/artifacts themselves).</li>
+      <li>The "fake taste" role (the human stand-in the epic's e2e will later automate) is played lightly here: a sanity read after Layout and after Draft mockup, its reactions folded into Tune. W1 does not build any stubbed roles — that is W7.</li>
+      <li>After Tune, diff the draft mockup against the shipped panel; record divergences as findings (D2).</li>
+      <li>Distil the friction log into the <strong>findings note</strong> — the ranked gap list W2/W3 consume.</li>
+    </ol>
+
+    <h2 id="deliverables">Deliverables</h2>
+    <ul data-c="deliverables">
+      <li><strong>This plan doc</strong> — decides W1 scope, the first-cut base flow, and D1/D2.</li>
+      <li><strong>Run doc</strong> — <code>docs/work/2026-07-16-dflow-run-1.html</code>: the worked flow-detail-panel example, all six stage artifacts inline, plus the shipped-panel cross-check.</li>
+      <li><strong>Findings note</strong> — a section of the run doc: the friction log distilled into a tagged, ranked gap list feeding W2 / W3 / the flow revision (W4).</li>
+    </ul>
+    <p>No <code>ui/</code> or <code>src/</code> code, no T1/T2 doc changes. The base-flow definition here is a first cut that only becomes the T1 process doc after W4 validates it — W1 distils nothing upward yet.</p>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div class="callout warn" data-c="test-plan">
+      <p><strong>Level: WU → integration — waived (process / docs-only).</strong> W1 changes no app code; its deliverables are three docs. Per the project rule, docs/infra-only diffs are exempt from the test layers, so the WU tip carries <code>test/v2</code> with <code>waived: "process WU — deliverables are the plan + worked run + findings docs; no app code. The flow's plumbing gets its scripted e2e in W7 (fake user + fake agent); the receipted acceptance run is W4/W7."</code></p>
+      <p>The hand-run itself is the informal validation: if the flow stalls, produces an empty artifact, or its stages read as ambiguous, that surfaces as a finding rather than a passing gate — which is exactly W1's job.</p>
+    </div>
+
+    <h2 id="open-questions">Open questions</h2>
+    <ul data-c="open-questions">
+      <li><strong>Does <em>Tune</em> earn a distinct stage?</strong> Default: keep it distinct in the first cut; if the hand-run finds it a no-op or inseparable from Draft mockup, that is a <code>→flow</code> finding for W4.</li>
+      <li><strong>Are <em>states</em> (loading/empty/error) a Frame output or their own stage?</strong> Default: an output of Frame, exercised in Interaction. Revisit if the hand-run shows they need first-class treatment.</li>
+    </ul>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a58e6379f34851f0dfa9127" data-artifact="scratch" data-status="review">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W1 Elements representation</title>
+  <style>
+    #elements-map [data-key]{cursor:pointer;border-radius:3px;padding:0 3px;transition:background .1s;}
+    #elements-map .tree [data-key]:hover{background:var(--line);}
+    #elements-map .tree span.hl{background:color-mix(in srgb, var(--accent) 24%, transparent);color:var(--ink);font-weight:600;}
+    #elements-map tbody tr[data-key]{cursor:pointer;}
+    #elements-map tbody tr[data-key]:hover td{background:var(--line);}
+    #elements-map tbody tr.hl td{background:color-mix(in srgb, var(--accent) 16%, transparent);}
+    #elements-map .hint{color:var(--muted);font-size:12px;}
+    .tier{font-weight:600;white-space:nowrap;}
+    .t0{color:var(--muted);}
+    .t1{color:var(--accent);}
+    .t2{color:var(--ok);}
+    .t3{color:var(--warn);}
+    .t4{color:var(--warn);}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Elements — combined interactive artifact</h1>
+      <p>The component catalog fused with the composition/placement tree. The tree ties back to the Layout zones; click any node to light up the component it maps to — a shared component lights up in several tree spots but a single catalog row, which <em>is</em> the reuse.</p>
+      <div class="meta">Scratch · 2026-07-16 · Trawler · T3 (docs/work/) · pick → merge to 2026-07-16-dflow-run-1.html</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="model">The model — assign each element a reusability tier</h2>
+    <p>Elements decides, per element, <strong>which tier of the epic's reusability ladder</strong> it is (fixed in <a href="design-flow-discussion.html">design-flow-discussion.html</a>). Higher tiers may use lower, never the reverse:</p>
+    <table data-c="tier-ladder">
+      <thead><tr><th>Tier</th><th>Example</th><th>In collection?</th><th>Contract</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tier t0">T0 · Foundation</span></td><td>HTML / native / lib</td><td>no — external, fixed</td><td>use only when nothing higher fits</td></tr>
+        <tr><td><span class="tier t1">T1 · Primitive</span></td><td>button, input, label</td><td><strong>yes</strong></td><td>reuse-first · <strong>no business logic</strong></td></tr>
+        <tr><td><span class="tier t2">T2 · Widget</span></td><td>status button, searchbar</td><td><strong>yes</strong></td><td>reuse-first · <strong>has business logic</strong></td></tr>
+        <tr><td><span class="tier t3">T3 · Local</span></td><td>a screen row</td><td>no</td><td>build local, waive reuse</td></tr>
+        <tr><td><span class="tier t4">T4 · Composition</span></td><td>a panel, a screen</td><td>no</td><td>build local, waive · break into lower tiers</td></tr>
+      </tbody>
+    </table>
+    <p class="hint">The T1↔T2 line is exactly <strong>business logic</strong>: a primitive is presentation only; a widget carries logic (status→tone mapping, search behavior, decode). The collection = <strong>T1 + T2</strong>; T3/T4 are local code with a waiver; T0 is external.</p>
+    <div class="callout warn">
+      <strong>The collection is empty in W1, so nothing can actually be reused yet.</strong> Every T1/T2 below is therefore a <strong>propose-new</strong> seed — it passes with a <em>spec</em> now, gets built + human-approved later (the reuse-or-propose rule). Every T4 is local+waived but complex enough to <strong>break down</strong> into lower tiers — that breakdown is W4. (Tier calls below are mine, for you to review.)
+    </div>
+
+    <div id="elements-map">
+      <h2 id="tree">Placement + composition <span class="hint">(click a node)</span></h2>
+      <p class="hint">Zone labels (A–D) are the Layout regions — this is where Elements refs back to Layout. <code>◇ ◆ ▣</code> mark components that recur; click one to see it highlight everywhere it appears <em>and</em> its single row below.</p>
+      <pre class="tree" style="font-family:var(--mono,monospace);font-size:12.5px;line-height:1.7;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:14px;overflow-x:auto;">
+panel
+├─ <strong>A identity</strong> ── <span data-key="method">method</span> · <span data-key="statuspill">status pill</span> · <span data-key="duration">duration</span> · <span data-key="iconbtn">icon button ×</span>
+├─ <strong>B overview</strong> ── <span data-key="uri">URI (click-copy)</span> · <span data-key="protocol">protocol</span> · <span data-key="timestamp">timestamp</span> · <span data-key="copybtn">copy button ◆</span>
+├─ <strong>C request</strong> ─── <span data-key="headertable">header table ◇</span> · <span data-key="bodyviewer">body viewer ▣</span>
+└─ <strong>D response</strong> ── <span data-key="headertable">header table ◇</span> · <span data-key="bodyviewer">body viewer ▣</span>
+
+   <span data-key="headertable">◇ header table</span> = row (key/value) · select/copy cell · copy-all-as-headers
+   <span data-key="bodyviewer">▣ body viewer</span> = per-type renderer (JSON·XML·image·form·hex) · raw/decoded toggle · <span data-key="copybtn">copy button ◆</span> · save button
+      </pre>
+
+      <h2 id="catalog">Component catalog</h2>
+      <p class="hint">One row per <strong>distinct</strong> component. "Used in" with two zones = a shared component (the reuse). Click a row to highlight it in the tree above.</p>
+      <table>
+        <thead><tr><th>Component</th><th>What it is</th><th>Used in</th><th>Tier</th></tr></thead>
+        <tbody>
+          <tr data-key="method"><td>method label</td><td>the verb, monospace</td><td>A</td><td><span class="tier t1">T1</span> — plain label, no logic (→ T2 only if verb-colour mapping is added; flag if intended)</td></tr>
+          <tr data-key="statuspill"><td>status pill</td><td>outcome tone: ok / warn / muted / "…"</td><td>A</td><td><span class="tier t2">T2</span> — status→tone mapping is business logic</td></tr>
+          <tr data-key="duration"><td>duration text</td><td>elapsed ms</td><td>A</td><td><span class="tier t1">T1</span> — duration display field; format only</td></tr>
+          <tr data-key="iconbtn"><td>icon button</td><td>bare glyph button</td><td>A</td><td><span class="tier t1">T1</span> — generic icon button; no logic</td></tr>
+          <tr data-key="uri"><td>URI text</td><td>full request target; <strong>click to copy</strong></td><td>B</td><td><span class="tier t1">T1</span> — click-to-copy text field; wraps, never overflows</td></tr>
+          <tr data-key="protocol"><td>protocol line</td><td>request→response versions</td><td>B</td><td><span class="tier t1">T1</span> — plain text ("req → resp")</td></tr>
+          <tr data-key="timestamp"><td>timestamp</td><td>when it started</td><td>B</td><td><span class="tier t1">T1</span> — time display field</td></tr>
+          <tr data-key="copybtn"><td>copy button <span style="color:var(--accent)">◆</span></td><td>click → clipboard, label swaps to "copied" ~2s</td><td><strong>B · body viewer</strong></td><td><span class="tier t1">T1</span> — copy-with-confirm button; confirm is generic UI</td></tr>
+          <tr data-key="headertable"><td>header table <span style="color:var(--accent)">◇</span></td><td>key/value list; "none" empty; wraps. <strong>Select/copy cells, copy-all as header-formatted text</strong></td><td><strong>C · D</strong></td><td><span class="tier t4">T4</span> — composition; breaks into a row (T1) + copy-all-headers (T2, business logic) + selection. Needs consideration (W4)</td></tr>
+          <tr data-key="bodyviewer"><td>body viewer <span style="color:var(--accent)">▣</span></td><td>renders a body by type, raw↔decoded, copy/save; "awaiting…"/"not captured" when absent</td><td><strong>C · D</strong></td><td><span class="tier t4">T4</span> — composition; complex, breaks into per-type renderers + decode toggle (T2) + copy (T1) + save. Needs breakdown (W4)</td></tr>
+          <tr data-key="section"><td>section container</td><td>titled block framing each zone's content</td><td>A · B · C · D</td><td><span class="tier t1">T1</span> — titled section wrapper; no logic</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="breakdown">T4 compositions — break down in W4</h2>
+    <div class="callout" data-c="breakdown">
+      <p>The two components too big to be collection entries. They are built <em>local</em> to this screen (waived from reuse), but each decomposes into lower-tier parts — and those parts, if reusable, become the real T1/T2 collection seeds. The decomposition is W4 work:</p>
+      <ol>
+        <li><strong>header table (T4)</strong> → key/value <em>row</em> (T1) · <em>select/copy a cell</em> (T1 behavior) · <em>copy-all-as-headers</em> — reserialising to wire-format header text is business logic → <span class="tier t2">T2</span>. Users need both select-and-copy and copy-whole-table; worth its own consideration.</li>
+        <li><strong>body viewer (T4)</strong> → the <em>per-type renderer</em> family (JSON tree · XML · image · form · hex — each likely a T2/T3 of its own) · <em>raw/decoded toggle</em> (decode = <span class="tier t2">T2</span>) · <em>copy button</em> (T1, reused) · <em>save</em>. The most complex node in the screen.</li>
+      </ol>
+      <p class="hint">Everything else is a <span class="tier t1">T1</span> primitive except <strong>status pill</strong> (<span class="tier t2">T2</span>). With the collection empty, all of those are propose-new seeds pending W2.</p>
+    </div>
+
+    <h2 id="merge">Merging back</h2>
+    <p>This combined widget replaces the zone→element table as the Elements artifact in the run doc. It subsumes what the old friction prose narrated: reuse is now the "used in" column + the highlight link; composition is the two T4 rows + the breakdown callout; the tier verdict is its own column. The Elements friction shrinks to the findings this <em>can't</em> show: <code>→W2</code> "collection empty, so every tier call is a propose-new proposal, not a lookup" and <code>→flow</code> "the flow needs a per-element tier verdict, and T4 compositions need a break-down step (feeds W4)."</p>
+  </main>
+  <script>
+    (function () {
+      const root = document.getElementById('elements-map');
+      const keyed = root.querySelectorAll('[data-key]');
+      function light(key) {
+        keyed.forEach((el) => el.classList.toggle('hl', el.dataset.key === key));
+      }
+      function clear() { keyed.forEach((el) => el.classList.remove('hl')); }
+      keyed.forEach((el) => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const already = el.classList.contains('hl');
+          clear();
+          if (!already) light(el.dataset.key);
+        });
+      });
+      document.addEventListener('click', clear);
+    })();
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
