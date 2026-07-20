@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a58d85a9f34851f0dfa90f6" data-artifact="scratch" data-status="review">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W1 Frame representation (driver table)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Frame — driver table</h1>
+      <p>The Frame brief as a <strong>driver table</strong>: each driver (goal / constraint / quality) forces a design consequence — the row <em>is</em> the reasoning. Two variants: a concise read and a full one that loses no information.</p>
+      <div class="meta">Scratch · 2026-07-16 · Trawler · T3 (docs/work/) · pick concise-vs-full → merge back to 2026-07-16-dflow-run-1.html</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="the-pick">The pick</h2>
+    <p>The <strong>driver model</strong> won — a driver on the left, the design consequence it forces on the right, the mapping carrying the "why." No draw.io: it's just a table. The concern was that the concise diagram dropped items the other forms had, so below are two variants — <strong>concise</strong> (the punchy drivers) and <strong>full</strong> (every brief item, plus which success criterion checks it). The full one is the candidate to merge; concise is here to confirm the shorter read still holds up.</p>
+    <div class="callout" data-c="input-note">
+      <strong>Given capabilities (functional input — received, not designed):</strong> CAP-1 show one flow (req+resp, headers+body) · CAP-2 copy as curl · CAP-3 inspect bodies by type, raw↔decoded. Everything below is the design frame that decides <em>how</em> those are housed.
+    </div>
+
+    <h2 id="driver-concise">Driver table · concise</h2>
+    <p><em>The drivers that visibly shape the screen. Quick read; the full table adds the rest.</em></p>
+    <table data-c="driver-concise-table">
+      <thead><tr><th>Driver</th><th>…therefore (design consequence)</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">G1</span> <strong>Triage</strong> — know what + whether-ok fast</td><td>outcome bar fixed at the top</td></tr>
+        <tr><td><span class="badge id">G2</span> <strong>Debug</strong> — read the actual bodies</td><td>bodies get the space; headers collapse</td></tr>
+        <tr><td><span class="badge id">G3</span> <strong>Reproduce</strong> — run it elsewhere</td><td>copy-as-curl button, subordinate</td></tr>
+        <tr><td><span class="badge id">C1</span> <strong>Narrow column</strong> — shares width with the list</td><td>single column; wrap, never overflow</td></tr>
+        <tr><td><span class="badge id">C2</span> <strong>Live traffic</strong> — captured request-first</td><td>response half degrades to "awaiting…"</td></tr>
+        <tr><td><span class="badge id">Q5</span> <strong>Trustworthy</strong> — it's a debugger</td><td>raw truth; decoded view is an opt-in toggle</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="driver-full">Driver table · full</h2>
+    <p><em>Every brief item as a driver → consequence, with the why and the success criterion that checks it. Nothing dropped — this folds in the qualities and success criteria the diagram left out (success criteria become the "checked by" column, which is where they naturally belong).</em></p>
+    <table data-c="driver-full-table">
+      <thead><tr><th>Driver</th><th>…therefore (design consequence)</th><th>why</th><th>checked by</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4"><strong>Goals</strong> — the ranking is the visual hierarchy</td></tr>
+        <tr><td><span class="badge id">G1</span> Triage</td><td>outcome bar fixed at the top</td><td>#1 reason a dev opens the panel; slow here = the panel failed its main job</td><td><span class="badge id">SC1</span> outcome &lt;1s</td></tr>
+        <tr><td><span class="badge id">G2</span> Debug</td><td>bodies get the space; headers collapse</td><td>reading payloads is the real work</td><td><span class="badge id">SC2</span> header without scrolling past a body</td></tr>
+        <tr><td><span class="badge id">G3</span> Reproduce</td><td>copy-as-curl button, subordinate</td><td>occasional, one action — a button, not a region</td><td>—</td></tr>
+        <tr><td colspan="4"><strong>Constraints</strong> — hard boundaries</td></tr>
+        <tr><td><span class="badge id">C1</span> Narrow column</td><td>single column; wrap, never overflow</td><td>permanently shares width with the flow list</td><td><span class="badge id">SC3</span> never widen to read the URL</td></tr>
+        <tr><td><span class="badge id">C2</span> Live / variable</td><td>response degrades to "awaiting…"; bodies handle empty ↔ multi-MB</td><td>a live proxy captures request-first</td><td><span class="badge id">SC4</span> in-flight never looks broken</td></tr>
+        <tr><td><span class="badge id">C3</span> Fit the app shell</td><td>reuse the shell's chrome + tokens</td><td>consistency, not a bespoke island</td><td>—</td></tr>
+        <tr><td colspan="4"><strong>Qualities</strong> — Tune's yardstick (drive the <em>feel</em>, not the regions)</td></tr>
+        <tr><td><span class="badge id">Q1</span> Scannable</td><td>strong anchors, aligned columns</td><td>the eye must land fast across many flows</td><td>—</td></tr>
+        <tr><td><span class="badge id">Q2</span> Dense but legible</td><td>tight spacing, clear type hierarchy</td><td>much data, little width (C1)</td><td>—</td></tr>
+        <tr><td><span class="badge id">Q3</span> Terminal-like</td><td>monospace for wire data, minimal chrome</td><td>technical audience + app shell</td><td>—</td></tr>
+        <tr><td><span class="badge id">Q4</span> Calm</td><td>no colour/ornament except signal (status)</td><td>ornament competes with the data</td><td>—</td></tr>
+        <tr><td><span class="badge id">Q5</span> Trustworthy</td><td>raw by default; decoded is an explicit toggle</td><td>a silently altered body kills trust in the whole tool</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--muted)">Blank "checked by" = the driver shapes the design but has no single observable test yet — a gap the rulebook (W3) or a later success criterion could fill.</p>
+
+    <h2 id="baseline">Full text (baseline, for reference)</h2>
+    <p><em>The original prose version — reasoning inline but wall-shaped. Kept only so you can confirm the driver table lost nothing.</em></p>
+    <div data-c="rep-d-fulltext">
+      <p><strong>The design frame.</strong> General design principles (state handling, a11y, spacing scale) live once in the rulebook (W3); everything here is <em>case-specific</em> and overrides a general principle on conflict.</p>
+      <p><em>User &amp; context.</em> A developer mid-debugging — task-focused, scanning fast, comparing many flows across a session, keyboard-heavy, desktop dark-theme app.</p>
+      <p><em>Ranked goals</em> (ordering = hierarchy): <span class="badge id">G1</span> Triage — know what + whether-ok at a glance; owns the top. <span class="badge id">G2</span> Debug — read the bodies; the bulk. <span class="badge id">G3</span> Reproduce — copy as curl; subordinate.</p>
+      <p><em>Content priority</em> (high → low): outcome/status + method + URL › bodies › headers › timing / protocol.</p>
+      <p><em>Qualities:</em> <span class="badge id">Q1</span> scannable · <span class="badge id">Q2</span> dense but legible · <span class="badge id">Q3</span> terminal-like · <span class="badge id">Q4</span> calm · <span class="badge id">Q5</span> trustworthy (raw truth, no lossy prettifying without a toggle).</p>
+      <p><em>Constraints:</em> <span class="badge id">C1</span> narrow column — wrap, never overflow. <span class="badge id">C2</span> content wildly variable — empty ↔ multi-MB, in-flight/streaming (overrides the generic "handle states" principle). <span class="badge id">C3</span> fit the app shell.</p>
+      <p><em>Success criteria:</em> <span class="badge id">SC1</span> outcome &lt;1s · <span class="badge id">SC2</span> header without scrolling past a body · <span class="badge id">SC3</span> never widen for the URL · <span class="badge id">SC4</span> in-flight never looks broken.</p>
+      <p><em>Non-goals.</em> No edit/replay · no diffing two flows · no hi-fi polish.</p>
+    </div>
+
+    <h2 id="concise-vs-full">Concise vs full</h2>
+    <table data-c="tradeoffs">
+      <thead><tr><th>Variant</th><th>Strength</th><th>Weakness</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Concise driver table</strong></td><td>fastest read; shows only what visibly shapes the screen</td><td>drops qualities + success criteria — the "missing info" concern</td></tr>
+        <tr><td><strong>Full driver table</strong></td><td>loses nothing; success criteria fold in as the "checked by" column; still scannable by driver</td><td>wider — four columns; more to take in than the concise six rows</td></tr>
+        <tr><td><strong>Full text (baseline)</strong></td><td>richest, most natural reasoning</td><td>wall of text — no scanning; what we're replacing</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Recommendation:</strong> merge the <strong>full driver table</strong> back into the run doc's Frame — it's the driver model you picked, as a table, with nothing lost. Keep the concise one only if you want a summary strip above it.</p>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

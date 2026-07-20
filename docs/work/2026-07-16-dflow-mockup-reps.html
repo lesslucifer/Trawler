@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a59dabb9f34851f0dfa91cf" data-artifact="scratch" data-status="review">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W1 Mockup presentation</title>
+  <style>
+    .mock{max-width:430px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-family:var(--mono,monospace);font-size:12px;color:var(--ink);overflow:hidden;}
+    .mock .bar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);}
+    .mock .pill{border:1px solid var(--ok);color:var(--ok);border-radius:999px;padding:0 8px;font-size:11px;}
+    .mock .dur{margin-left:auto;color:var(--muted);}
+    .mock .x{color:var(--muted);}
+    .mock .sec{padding:8px 12px;border-bottom:1px solid var(--line);}
+    .mock .sec:last-child{border-bottom:0;}
+    .mock .lbl{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:5px;}
+    .mock .uri{word-break:break-all;}
+    .mock .proto{color:var(--muted);margin-top:3px;}
+    .mock .curl{display:flex;gap:8px;align-items:flex-start;}
+    .mock .curl pre{flex:1;min-width:0;margin:0;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:4px 6px;white-space:pre-wrap;word-break:break-all;}
+    .mock .btn{border:1px solid var(--line);border-radius:4px;padding:1px 8px;color:var(--muted);white-space:nowrap;}
+    .mock .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;}
+    .mock .kv .k{color:var(--muted);white-space:nowrap;}
+    .mock .toggle{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:7px;}
+    .mock .toggle span{padding:1px 9px;color:var(--muted);}
+    .mock .toggle .on{background:var(--line);color:var(--ink);}
+    .mock .body{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px;white-space:pre-wrap;}
+    .mock .await{color:var(--muted);font-style:italic;}
+    .mock .inflight-only{display:none;}
+    .mock.inflight .complete-only{display:none;}
+    .mock.inflight .inflight-only{display:revert;}
+    .mock.inflight .pill{border-color:var(--muted);color:var(--muted);}
+    .statebtn{margin-bottom:10px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:5px;padding:4px 10px;cursor:pointer;font-size:12px;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Draft mockup — how to present it</h1>
+      <p>Stage 5 produces a lo-fi wireframe. The same flow-detail panel is rendered three ways below, filtered against what this medium actually requires. Includes the draw.io question, answered by looking.</p>
+      <div class="meta">Scratch · 2026-07-16 · Trawler · T3 (docs/work/) · pick → merge to 2026-07-16-dflow-run-1.html</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="constraints">What the medium requires</h2>
+    <p>The mockup lives in an htmldoc: a single self-contained HTML file, opened from <code>file://</code> (no server), dark-mode, and — critically — <strong>commentable and diffable</strong> by the htmldoc layers. Any tool has to survive that filter. A lo-fi mockup also wants to show <em>states</em> (complete / in-flight / empty), which the Interaction use-cases demand.</p>
+
+    <h2 id="survey">Tools surveyed</h2>
+    <table data-c="survey">
+      <thead><tr><th>Tool / approach</th><th>Self-contained &amp; offline</th><th>Diffs in git</th><th>Dark-mode</th><th>States / interactive</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><strong>ASCII</strong> (monospace <code>&lt;pre&gt;</code>)</td><td>yes</td><td>yes — perfect</td><td>yes</td><td>no</td><td>baseline; crude, can't show real widgets</td></tr>
+        <tr><td><strong>Native HTML/CSS</strong></td><td>yes</td><td>yes — it's HTML</td><td>yes — via tokens</td><td><strong>yes</strong></td><td><span class="tier" style="color:var(--ok);font-weight:600">★ recommended</span></td></tr>
+        <tr><td><strong>draw.io</strong> (viewer-static embed)</td><td>needs CDN; white-canvas island</td><td>XML diffs poorly; encoding gotcha</td><td>no (light canvas)</td><td>no</td><td>viable; rich shape library, but friction — see below</td></tr>
+        <tr><td><strong>Inline SVG</strong></td><td>yes</td><td>verbose but textual</td><td>yes</td><td>limited</td><td>ok for a fixed picture; tedious to hand-author</td></tr>
+        <tr><td><strong>Excalidraw / tldraw</strong> (export SVG)</td><td>yes (after export)</td><td>SVG blob — poor</td><td>neutral</td><td>no</td><td>nice hand-drawn "lo-fi" signal; adds an export step, not interactive</td></tr>
+        <tr><td><strong>Figma / Balsamiq / SaaS</strong></td><td><strong>no</strong> — external</td><td>no</td><td>n/a</td><td>yes (in-app)</td><td>rejected — breaks self-contained / offline / diffable</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rep-b">Rep B · Native HTML/CSS <span class="tier" style="color:var(--ok);font-weight:600">candidate</span></h2>
+    <p>The doc is already HTML and the mockup is a UI — so render it directly. Dark-mode via the shared tokens, real widgets, and it can hold <strong>state</strong>: the button flips complete ↔ in-flight, exactly the Interaction use-case.</p>
+    <button class="statebtn" id="toggleState" type="button">▶ show in-flight</button>
+    <div class="mock" id="mockB">
+      <div class="bar">
+        <span>GET</span>
+        <span class="pill complete-only">200 ok</span>
+        <span class="pill inflight-only">…</span>
+        <span class="dur complete-only">142 ms</span>
+        <span class="dur inflight-only">&nbsp;</span>
+        <span class="x">×</span>
+      </div>
+      <div class="sec">
+        <div class="lbl">Request</div>
+        <div class="uri">https://api.example.com/v1/users?page=2</div>
+        <div class="proto">HTTP/1.1 → HTTP/2</div>
+      </div>
+      <div class="sec">
+        <div class="lbl">Copy as curl</div>
+        <div class="curl"><pre>curl -X GET 'https://api.example.com/v1/users?page=2' -H 'accept: application/json'</pre><span class="btn">copy</span></div>
+      </div>
+      <div class="sec">
+        <div class="lbl">Request headers</div>
+        <div class="kv"><span class="k">accept</span><span>application/json</span><span class="k">authorization</span><span>Bearer ····</span></div>
+      </div>
+      <div class="sec">
+        <div class="lbl">Response headers</div>
+        <div class="kv complete-only"><span class="k">content-type</span><span>application/json</span><span class="k">content-length</span><span>1274</span></div>
+        <div class="await inflight-only">awaiting response…</div>
+      </div>
+      <div class="sec">
+        <div class="lbl">Body</div>
+        <div class="toggle complete-only"><span class="on">raw</span><span>decoded</span></div>
+        <div class="body complete-only">{ "users": [ { "id": 2, "name": "…" } ], "page": 2 }</div>
+        <div class="await inflight-only">awaiting response…</div>
+      </div>
+    </div>
+
+    <h2 id="rep-a">Rep A · ASCII <span class="tier" style="color:var(--muted);font-weight:600">baseline</span></h2>
+    <p>What the run doc has today. Zero dependencies, diffs perfectly — but it can't render a real toggle, a tone, or a state, and alignment is fiddly.</p>
+    <pre data-c="rep-a" style="font-family:var(--mono,monospace);font-size:12px;line-height:1.4;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;">
+┌──────────────────────────────────────────────┐
+│ A  GET  [ 200 ok ]              142 ms     [×] │  ← fixed, never scrolls
+├──────────────────────────────────────────────┤
+│ B  https://api.example.com/v1/users?page=2     │  ← URI, monospace, wraps
+│    HTTP/1.1 → HTTP/2                            │
+│    curl -X GET '…'                   [ copy ]  │
+├──────────────────────────────────────────────┤
+│ C  REQUEST HEADERS                             │
+│    accept          application/json            │
+├──────────────────────────────────────────────┤
+│ D  RESPONSE HEADERS                            │
+│    content-type    application/json            │
+│    BODY            [ raw | decoded ]           │
+│    { "users": [ … ], "page": 2 }               │
+└──────────────────────────────────────────────┘
+    </pre>
+
+    <h2 id="rep-c">Rep C · draw.io embed <span class="tier" style="color:var(--muted);font-weight:600">the question</span></h2>
+    <p>Yes, draw.io <em>can</em> be embedded (below, live — pan/zoom works). But note what it costs: it renders on a forced <strong>white canvas</strong> (a light island in a dark doc), the diagram is opaque XML that doesn't diff meaningfully, authoring the embed needs an encoding workaround for the htmldoc linter, and it is <strong>static</strong> — no state toggle. Its real edge (vendor icons, precise geometry, a full UI mockup shape library) doesn't buy much for a narrow box-stack like this. We already trialled and dropped it for Layout for the same reasons.</p>
+    <div class="diagram" data-c="rep-c">
+      <div class="mxgraph" style="max-width:100%;border:1px solid var(--line);border-radius:6px;background:#ffffff;" data-mxgraph='{"highlight":"#00b8d4","nav":true,"resize":true,"toolbar":"zoom","xml":"<mxfile host=\"app.diagrams.net\"><diagram name=\"wire\" id=\"w1\"><mxGraphModel dx=\"640\" dy=\"480\" grid=\"0\" gridSize=\"10\" guides=\"1\" connect=\"0\" arrows=\"0\" fold=\"1\" page=\"1\" pageScale=\"1\" pageWidth=\"360\" pageHeight=\"560\" math=\"0\" shadow=\"0\"><root><mxCell id=\"0\"/><mxCell id=\"1\" parent=\"0\"/><mxCell id=\"p\" value=\"\" style=\"rounded=1;fillColor=#ffffff;strokeColor=#444444;verticalAlign=top;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"20\" width=\"320\" height=\"520\" as=\"geometry\"/></mxCell><mxCell id=\"hdr\" value=\"GET    [ 200 ok ]    142 ms    x\" style=\"rounded=0;fillColor=#f5f5f5;strokeColor=#999999;fontFamily=Courier New;fontSize=11;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"20\" y=\"20\" width=\"320\" height=\"34\" as=\"geometry\"/></mxCell><mxCell id=\"uri\" value=\"https://api.example.com/v1/users?page=2\" style=\"rounded=0;fillColor=none;strokeColor=#cccccc;dashed=1;fontFamily=Courier New;fontSize=10;align=left;spacingLeft=6;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"30\" y=\"64\" width=\"300\" height=\"40\" as=\"geometry\"/></mxCell><mxCell id=\"curl\" value=\"curl -X GET ...            [copy]\" style=\"rounded=0;fillColor=#f5f5f5;strokeColor=#cccccc;fontFamily=Courier New;fontSize=10;align=left;spacingLeft=6;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"30\" y=\"114\" width=\"300\" height=\"34\" as=\"geometry\"/></mxCell><mxCell id=\"rqh\" value=\"Request headers  (key : value ...)\" style=\"rounded=0;fillColor=none;strokeColor=#cccccc;dashed=1;fontFamily=Courier New;fontSize=10;align=left;spacingLeft=6;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"30\" y=\"158\" width=\"300\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"rsh\" value=\"Response headers  (key : value ...)\" style=\"rounded=0;fillColor=none;strokeColor=#cccccc;dashed=1;fontFamily=Courier New;fontSize=10;align=left;spacingLeft=6;verticalAlign=top;spacingTop=4;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"30\" y=\"228\" width=\"300\" height=\"60\" as=\"geometry\"/></mxCell><mxCell id=\"btog\" value=\"[ raw | decoded ]\" style=\"rounded=0;fillColor=#f5f5f5;strokeColor=#999999;fontFamily=Courier New;fontSize=10;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"30\" y=\"298\" width=\"130\" height=\"24\" as=\"geometry\"/></mxCell><mxCell id=\"body\" value=\"{ json body ... }\" style=\"rounded=0;fillColor=none;strokeColor=#cccccc;dashed=1;fontFamily=Courier New;fontSize=10;align=left;spacingLeft=6;verticalAlign=top;spacingTop=6;\" vertex=\"1\" parent=\"1\"><mxGeometry x=\"30\" y=\"326\" width=\"300\" height=\"200\" as=\"geometry\"/></mxCell></root></mxGraphModel></diagram></mxfile>"}'></div>
+      <div class="caption">draw.io wireframe, live-embedded. Note the white island and the lack of a state toggle.</div>
+    </div>
+
+    <h2 id="recommendation">Recommendation</h2>
+    <p><strong>Rep B — native HTML/CSS.</strong> The mockup is a UI and the doc is HTML, so express the UI directly: zero dependencies, exact dark-mode, diffs as plain HTML, fully commentable, and — uniquely — it can carry the <strong>state toggle</strong> the Interaction use-cases call for (complete ↔ in-flight). It's a truer "lo-fi build" than a picture of one. Keep ASCII as the throwaway sketch when a full render isn't worth it; keep draw.io in reserve for diagrams that genuinely need vendor icons or precise geometry — not for UI mockups. External SaaS tools are out: they break the self-contained/offline/diffable contract this whole doc system rests on.</p>
+    <p class="hint" style="color:var(--muted)">If you want a hand-drawn "clearly not final" aesthetic, the fallback is Excalidraw exported to inline SVG — but it loses interactivity and diffs as a blob. Say so and I'll add a fourth rep to compare.</p>
+  </main>
+  <script>
+    (function () {
+      const mock = document.getElementById('mockB');
+      const btn = document.getElementById('toggleState');
+      if (!mock || !btn) return;
+      btn.addEventListener('click', () => {
+        const inflight = mock.classList.toggle('inflight');
+        btn.textContent = inflight ? '◀ show complete' : '▶ show in-flight';
+      });
+    })();
+  </script>
+  <script src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

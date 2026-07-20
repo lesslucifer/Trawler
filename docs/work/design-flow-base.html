@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a5ca0dd9f34851f0dfa9223" data-artifact="base-flow" data-status="draft">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Design flow (base spec &amp; templates)</title>
+  <style>
+    .tmpl{border:1px dashed var(--accent);border-radius:6px;padding:10px 12px;margin:8px 0;background:color-mix(in srgb, var(--accent) 6%, transparent);}
+    .tmpl::before{content:"TEMPLATE — copy & fill";display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+    .tmpl pre{margin:0;white-space:pre-wrap;font-family:var(--mono,monospace);font-size:12px;line-height:1.5;}
+    .ph{color:var(--muted);font-style:italic;}
+    .stage{border-left:3px solid var(--line);padding-left:14px;margin-left:2px;}
+    .kd{color:var(--muted);}
+    .tier{font-weight:600;white-space:nowrap;}
+    .t0{color:var(--muted);} .t1{color:var(--accent);} .t2{color:var(--ok);} .t3{color:var(--warn);} .t4{color:var(--warn);}
+    table{font-size:13px;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design flow — base spec &amp; templates</h1>
+      <p>The staged flow an AI agent follows to design a screen, with a copy-paste artifact template per stage. Screen-agnostic: the reusable method, not one design. Worked example: the flow-detail panel in <a href="2026-07-16-dflow-run-1.html">dflow-run-1.html</a>.</p>
+      <div class="meta">Base flow · 2026-07-19 · Trawler · T3 (docs/work/) → promoted to a T1 process doc after W4 · from E-DFLOW.W1</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="status">What this is</h2>
+    <p>The <strong>written base flow</strong> produced by E-DFLOW.W1: six stages, each with the concrete artifact <em>template</em> the hand-run converged on, plus the conventions that make an artifact reviewable. It is a <strong>first cut hardened by one real run</strong> — W4 re-runs it against the seeded registry (W2) + rulebook (W3) and revises; only then is it distilled into the T1 process doc. Until then it lives here in T3.</p>
+
+    <h2 id="principles">Principles (apply to every stage)</h2>
+    <ul data-c="principles">
+      <li><strong>Representation is load-bearing — optimize for human perception.</strong> The reviewer is the bottleneck. Every artifact is picture- or table-first; prose is demoted to a compact reference. Walls of text and over-dense diagrams (mindmaps) failed review in the run. When a form isn't obvious, <em>pick it by comparison</em> (a throwaway side-by-side doc), don't assume.</li>
+      <li><strong>Cite by name, not coded ids.</strong> Drivers, rules, and components are referenced by name; the harness coverage-checks the named rows. Coded ids (G1/C2/…) were tried and dropped as noise.</li>
+      <li><strong>Reuse-or-propose.</strong> A design either reuses a registry component or proposes a new one — passing with a <em>spec</em> now, built + human-approved later. It never silently reinvents.</li>
+      <li><strong>One artifact per stage, cheapest commitment first.</strong> Each stage's artifact is the next stage's input. A stage may loop back (Tune → Layout); the loop is real, not decorative.</li>
+    </ul>
+
+    <div class="diagram" data-c="flow-diagram">
+      <pre class="mermaid">
+flowchart LR
+  F[Frame] --> L[Layout] --> E[Elements] --> I[Interaction] --> D[Draft mockup] --> T[Tune]
+  T -. revise .-> L
+      </pre>
+      <div class="caption">Six stages, single tune-back loop.</div>
+    </div>
+
+    <h2 id="tiers">Component tier model (reference)</h2>
+    <p>Used at Elements. Defined in the direction doc; to be <strong>owned</strong> by the W2 registry + the E-DFLOW decision record — referenced here, not duplicated.</p>
+    <table data-c="tiers">
+      <thead><tr><th>Tier</th><th>Example</th><th>In collection?</th><th>Contract</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tier t0">T0 Foundation</span></td><td>HTML / native / lib</td><td>no — external</td><td>use only when nothing higher fits</td></tr>
+        <tr><td><span class="tier t1">T1 Primitive</span></td><td>button, input, label</td><td>yes</td><td>reuse-first · <strong>no business logic</strong></td></tr>
+        <tr><td><span class="tier t2">T2 Widget</span></td><td>status pill, searchbar</td><td>yes</td><td>reuse-first · <strong>has business logic</strong></td></tr>
+        <tr><td><span class="tier t3">T3 Local</span></td><td>a screen row</td><td>no</td><td>build local, waive reuse</td></tr>
+        <tr><td><span class="tier t4">T4 Composition</span></td><td>a panel, a screen</td><td>no</td><td>build local, waive · break into lower tiers</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="stages">The stages</h2>
+
+    <h3 id="s-frame">1 · Frame</h3>
+    <div class="stage">
+      <p><strong>Question:</strong> who reads this screen and in what context, what job does it do, what are its ranked goals, hard constraints, and experience qualities? (The screen's <em>functional capabilities</em> — what it must be able to do — are an <em>input</em>, not the output.)</p>
+      <p><strong>Form:</strong> a <strong>driver table</strong> — each driver forces a design consequence; the row <em>is</em> the reasoning. Grouped Goals / Constraints / Qualities; no coded ids.</p>
+      <div class="tmpl" data-c="tmpl-frame">
+        <pre><span class="ph">Purpose:</span> &lt;one paragraph — user, context, the job this screen does&gt;
+
+<span class="ph">Given capabilities (functional input — received, not designed):</span>
+  &lt;capability&gt; · &lt;capability&gt; · …</pre>
+        <table>
+          <thead><tr><th>Driver</th><th>…therefore (design consequence)</th><th>why</th><th>checked by</th></tr></thead>
+          <tbody>
+            <tr><td colspan="4"><strong>Goals</strong> — the ranking is the visual hierarchy</td></tr>
+            <tr><td class="ph">&lt;goal&gt;</td><td class="ph">&lt;what it forces&gt;</td><td class="ph">&lt;why it ranks here&gt;</td><td class="ph">&lt;observable criterion, or —&gt;</td></tr>
+            <tr><td colspan="4"><strong>Constraints</strong> — hard boundaries</td></tr>
+            <tr><td class="ph">&lt;constraint&gt;</td><td class="ph">&lt;consequence&gt;</td><td class="ph">&lt;why&gt;</td><td class="ph">&lt;criterion&gt;</td></tr>
+            <tr><td colspan="4"><strong>Qualities</strong> — Tune's yardstick (drive the feel)</td></tr>
+            <tr><td class="ph">&lt;quality&gt;</td><td class="ph">&lt;consequence&gt;</td><td class="ph">&lt;why&gt;</td><td class="ph">&lt;criterion&gt;</td></tr>
+            <tr><td colspan="4"><strong>Non-goals</strong>: <span class="ph">&lt;explicitly out of scope&gt;</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="kd"><strong>Key distinctions:</strong> functional requirements are the <em>input</em>; the Frame's output is the <em>design lens</em> (goals become hierarchy, qualities become Tune's yardstick). Each success criterion rides in the driver's "checked by" cell — it verifies that driver's consequence — rather than living in a separate list. General principles (a11y, spacing, state-handling) live in the rulebook, not here; the Frame holds only what is case-specific.</p>
+    </div>
+
+    <h3 id="s-layout">2 · Layout</h3>
+    <div class="stage">
+      <p><strong>Question:</strong> how is the frame divided into regions, and what is their priority/hierarchy? (Zones only — no content yet.)</p>
+      <p><strong>Form:</strong> an <strong>annotated ASCII region sketch</strong> — labelled boxes with a one-line priority/behavior note per zone.</p>
+      <div class="tmpl" data-c="tmpl-layout">
+        <pre>┌───────────────────────────────┐
+│ A  &lt;zone name&gt;                 │  ← &lt;priority / behavior note&gt;
+├───────────────────────────────┤
+│ B  &lt;zone name&gt;                 │  ← &lt;note&gt;
+│                               │
+├───────────────────────────────┤
+│ C  &lt;zone name&gt;                 │  ← &lt;note&gt;
+└───────────────────────────────┘</pre>
+      </div>
+      <p class="kd"><strong>Key distinctions:</strong> draw.io was trialled and dropped — it added no value over ASCII for a region sketch (light-canvas island, static, poor diffs). Keep the sketch compact; a derived structural decision (e.g. "headers collapse") can ride as an annotation or a short callout.</p>
+    </div>
+
+    <h3 id="s-elements">3 · Elements</h3>
+    <div class="stage">
+      <p><strong>Question:</strong> what concrete components fill each region, which are shared, and what is each one's reusability tier?</p>
+      <p><strong>Form:</strong> a <strong>tiered component catalog</strong> — a placement/composition tree (ties back to Layout zones) plus a one-row-per-distinct-component table. Interactive linking (click a node → highlight its row) is nice-to-have; the columns are the substance.</p>
+      <div class="tmpl" data-c="tmpl-elements">
+        <pre>Tree (placement + composition; mark recurring components):
+  panel
+  ├─ &lt;zone A&gt; ── &lt;component&gt; · &lt;component&gt;
+  └─ &lt;zone B&gt; ── &lt;shared component ◆&gt; · &lt;composition ▣&gt;
+        &lt;▣ composition&gt; = &lt;part&gt; · &lt;part&gt; · &lt;shared component ◆&gt;</pre>
+        <table>
+          <thead><tr><th>Component</th><th>What it is</th><th>Used in</th><th>Tier</th></tr></thead>
+          <tbody>
+            <tr><td class="ph">&lt;name&gt;</td><td class="ph">&lt;role&gt;</td><td class="ph">&lt;zone(s) — two = shared&gt;</td><td class="ph">&lt;T0–T4&gt; — &lt;reuse note / customization / propose-new&gt;</td></tr>
+          </tbody>
+        </table>
+        <p class="ph" style="margin:6px 0 0">T4 break-down (per composition): &lt;composition&gt; → &lt;lower-tier part (tier)&gt; · &lt;part (tier)&gt; …</p>
+      </div>
+      <p class="kd"><strong>Key distinctions:</strong> the T1↔T2 split is exactly <em>business logic</em> (primitive = presentation only; widget = carries logic). A component in two zones is a reuse; "used in" surfaces it. A <span class="tier t4">T4</span> composition is built local and <strong>broken down</strong> — its lower-tier parts are the real registry seeds. With the collection empty (W1), every T1/T2 verdict is a <em>propose-new</em> proposal, not a lookup.</p>
+    </div>
+
+    <h3 id="s-interaction">4 · Interaction</h3>
+    <div class="stage">
+      <p><strong>Question:</strong> what does the user actually <em>do</em> with this screen? (The use-cases — not each element's default states.)</p>
+      <p><strong>Form:</strong> a <strong>use-case table</strong>, each row grounded in a Frame goal, giving the user's action and the screen's response.</p>
+      <div class="tmpl" data-c="tmpl-interaction">
+        <table>
+          <thead><tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th></tr></thead>
+          <tbody>
+            <tr><td class="ph">&lt;task&gt;</td><td class="ph">&lt;Frame goal&gt;</td><td class="ph">&lt;trigger / action&gt;</td><td class="ph">&lt;coordinated response across elements&gt;</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="kd"><strong>Key distinctions:</strong> per-element default interaction (hover/focus/confirm/tones) belongs to the <em>component</em> (the registry), <strong>not</strong> here — do not re-list it. State handling folds in as use-cases ("watch a live call" <em>is</em> the in-flight state); a state with no defined screen response (e.g. an error the domain never designed) surfaces as a use-case gap — a real finding, not something to invent.</p>
+    </div>
+
+    <h3 id="s-mockup">5 · Draft mockup</h3>
+    <div class="stage">
+      <p><strong>Question:</strong> assembled, does it hold together as one screen?</p>
+      <p><strong>Form:</strong> a <strong>native HTML/CSS build</strong> — dark tokens, real widgets, and <em>stateful</em> (a toggle to show empty / in-flight / error). The finish line: lo-fi and structural, not hi-fi. It is a real build, so it is a truer test than a picture of one.</p>
+      <div class="tmpl" data-c="tmpl-mockup">
+        <pre>&lt;div class="mock"&gt;
+  &lt;div class="bar"&gt;&lt;!-- identity zone: primary outcome, fixed --&gt;&lt;/div&gt;
+  &lt;div class="sec"&gt;&lt;!-- zone: label + content --&gt;&lt;/div&gt;
+  &lt;div class="sec"&gt;
+    &lt;!-- use .complete-only / .inflight-only for state variants --&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;button class="statebtn"&gt;toggle state&lt;/button&gt;
+&lt;!-- styles: var(--paper/--line/--ink/--muted/--ok); ~15-line JS toggles a class --&gt;</pre>
+      </div>
+      <p class="kd"><strong>Key distinctions:</strong> the mockup is a <em>decision</em> stage, not mere assembly — building it in real HTML forces details the earlier stages never surfaced (e.g. click-to-copy on long values, per-body copy affordances, raw-vs-decoded semantics, collapsible sections). A static picture (ASCII / draw.io) lets those slide. Prefer native <code>&lt;details&gt;</code>/inputs over hand-rolled widgets.</p>
+    </div>
+
+    <h3 id="s-tune">6 · Tune</h3>
+    <div class="stage">
+      <p><strong>Question:</strong> stepping back from the whole, what grouping, hierarchy, or redundancy is off — and why?</p>
+      <p><strong>Form:</strong> a short <strong>before/after list</strong>; may loop back to Layout.</p>
+      <div class="tmpl" data-c="tmpl-tune">
+        <pre><span class="ph">&lt;aspect&gt;.</span> Before: &lt;what it was&gt;. After: &lt;the change&gt; — &lt;why&gt;.
+<span class="ph">&lt;aspect&gt;.</span> Before: … After: … (loops back to Layout: &lt;yes/no&gt;)</pre>
+      </div>
+      <p class="kd"><strong>Key distinctions:</strong> Tune is load-bearing — in the run it genuinely sent design back to Layout, so it earns a distinct stage. Every tune call ("hero", "weight", "proximity") is a soft judgment that should cite a rulebook soft-rule, or it is pure vibes.</p>
+    </div>
+
+    <h2 id="provenance">Provenance &amp; what feeds the rest of the epic</h2>
+    <p>This spec was distilled from a single hand-run (<a href="2026-07-16-dflow-run-1.html">dflow-run-1.html</a>, the flow-detail panel). That run also produced two seed lists this doc deliberately does <em>not</em> hold — they belong downstream:</p>
+    <ul>
+      <li><strong>Component candidates → W2</strong> registry (the tiered catalog's rows + T4 break-downs).</li>
+      <li><strong>Rule candidates → W3</strong> rulebook (hard: state declarations, mono-for-wire-data, tokens-not-hex, spacing scale; soft: wording, visual-weight, grouping, ordering).</li>
+      <li><strong>Open flow gaps → W4</strong> (Layout/Elements boundary; no escalation path for upstream-undefined states).</li>
+    </ul>
+    <p>After W4 validates the flow against the seeded substrate, this becomes the T1 design-flow process doc (sibling to <code>workflow.html</code> / <code>testing-strategy.html</code>).</p>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
