@@ -1,0 +1,17 @@
+schema: mr/v1
+level: working-unit
+tip: f70797aac69a9c665132cb6155547dbce79670fe
+base: f5b84a1630bb2715132da86b195c550b480c79c0
+tier: key
+signer: vuluu
+report: docs/work/2026-07-20-dflow-w1-result.html
+report_sha256: 4f6065f0dc415899b49c7ad16012017bf7441bba5fc726edeba1082eb2a0c350
+date: 2026-07-20
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAAGgAAAATZWNkc2Etc2hhMi1uaXN0cDI1NgAAAAhuaXN0cDI1NgAAAE
+  EEhUxfjpFJ4ff7DVGaBQnMaRPtNHJbaotNwZT7hU7pqTEEAkyxwK63m5GwX3b5N4SXDgy8
+  vcbzGVUeJhA12yU/hgAAAAp0cmF3bGVyLW1yAAAAAAAAAAZzaGE1MTIAAABkAAAAE2VjZH
+  NhLXNoYTItbmlzdHAyNTYAAABJAAAAIDd5+yRallxQ8zreg1Zos2d8QQv3mFfEbI5f+vE+
+  OTJ0AAAAIQDpU9N6/pgkqXwviTDPKbrx0UvlcucSxFV1hxA0DySLPA==
+  -----END SSH SIGNATURE-----
