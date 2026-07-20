@@ -1,0 +1,19 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W1
+changes:
+  - path: docs/work/design-flow-base.html
+    tier: T3
+  - path: docs/work/2026-07-16-dflow-run-1.html
+    tier: T3
+  - path: docs/work/2026-07-16-dflow-w1-plan.html
+    tier: T3
+  - path: docs/work/2026-07-20-dflow-w1-result.html
+    tier: T3
+  - path: docs/work/2026-07-16-dflow-frame-reps.html
+    tier: T3
+  - path: docs/work/2026-07-16-dflow-elements-reps.html
+    tier: T3
+  - path: docs/work/2026-07-16-dflow-mockup-reps.html
+    tier: T3
+t2_note: "Nothing distils to T1/T2 yet — by design. The base flow becomes the T1 process doc after W4; seed lists stay T3 until W2/W3 consume them."
