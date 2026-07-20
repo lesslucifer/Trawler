@@ -1,0 +1,7 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W1
+tests:
+  integration:
+    waived: "process/docs-only WU — deliverables are the base-flow spec + worked run + findings docs; no app code. The flow's scripted e2e (fake user + fake agent) is W7; the receipted acceptance run is W4/W7."
