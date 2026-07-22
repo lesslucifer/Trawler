@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60ad8f9f34851f0dfa92f8">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W2 Plan (Seed component registry)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W2 — Seed component registry</h1>
+      <p>Design-only WU. Author the component-design template, design every component the flow-detail panel needs through it, and specify the code-as-truth registry mechanism a later WU builds.</p>
+      <div class="meta">WU plan · 2026-07-22 · Trawler · T3 (docs/work/) · wu/design-flow/seed-registry · epic: <a href="2026-07-16-design-flow-plan.html">E-DFLOW plan</a> · decisions: <a href="2026-07-20-dflow-w2-discussion.html">W2 discussion</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-c="req">
+      Seed the component registry from what W1 surfaced — a <strong>component-design template</strong> plus every W1 component <strong>designed</strong> through it — and specify the <strong>code-as-truth mechanism</strong> (TSDoc → generated index → regenerate-and-diff freshness gate) a later WU will build. <strong>Design-only: no <code>ui/</code> code.</strong>
+    </div>
+    <table data-c="req-map">
+      <tr><td><strong>Maps to</strong></td><td>Requirement #1 (component registry) · reuse-first, fit-first</td></tr>
+      <tr><td><strong>Depends on</strong></td><td>W1 (its catalog + findings are the seed)</td></tr>
+      <tr><td><strong>Expected result</strong></td><td>The template · the W1 component set designed through it (T1/T2 collected, T3/T4 designed-only) · the written mechanism + gate spec. No code; tests waived.</td></tr>
+    </table>
+
+    <h2 id="model">The model (what W2 produces)</h2>
+    <div class="diagram" data-c="model">
+      <pre class="mermaid">
+flowchart LR
+  W1["W1 seed<br/>catalog + findings"] --> TPL["① design template<br/>= required TSDoc shape"]
+  TPL --> DES["③ W1 components designed<br/>(one filled template each)"]
+  DES -.->|"built later WU"| CODE["ui/src/components/*.tsx<br/>TSDoc = usage truth"]
+  CODE -.->|"② generator"| IDX["index (generated)<br/>agent loads 1 file<br/>= whole vocabulary"]
+      </pre>
+      <div class="caption">Code-as-truth: usage lives in <strong>TSDoc</strong>; the index is <strong>generated</strong> from it. Solid = W2 (design-only: ① template + ③ designs). Dashed = a later WU (code + generator + gate).</div>
+    </div>
+    <div class="cards">
+      <div class="card"><span class="badge id">①</span> <strong>Component design template</strong><br>The per-component shape — <code>tier · anatomy · use/avoid · states · made-of</code> — which is also the required TSDoc shape each component will carry.</div>
+      <div class="card"><span class="badge id">②</span> <strong>Generated-index mechanism (spec)</strong><br>How usage TSDoc rolls up into the one file an agent loads. <span class="badge warn">built later WU</span> — W2 writes the spec only.</div>
+      <div class="card"><span class="badge id">③</span> <strong>W1 components designed</strong><br>Every component (T1/T2 + the T4 compositions) designed through the template, as design artifacts. No code.</div>
+    </div>
+
+    <h2 id="tiers">What lands where</h2>
+    <div class="diagram" data-c="tier-map">
+      <pre class="mermaid">
+flowchart TD
+  subgraph IN["✅ In collection — designed (built in a later WU)"]
+    T1["T1 Primitives<br/>icon button · copy-confirm button<br/>header row · Section · …"]
+    T2["T2 Widgets<br/>StatusPill · copy-all-as-headers<br/>decode toggle · …"]
+  end
+  subgraph OUT["🚫 Not in collection — designed only"]
+    T3["T3 Locals<br/>screen-specific one-offs"]
+    T4["T4 Compositions<br/>header table · body viewer"]
+  end
+  T2 -->|"may use"| T1
+  T4 -.->|"made of"| T2
+  T4 -.->|"made of"| T1
+      </pre>
+      <div class="caption">Membership is <strong>tier-based</strong> — the tier assignment is the reuse judgment. Collection = T1 + T2; T3/T4 designed but not collected. Component roster comes from the <a href="2026-07-16-dflow-run-1.html">W1 run findings</a>.</div>
+    </div>
+
+    <h2 id="gate">Freshness-gate spec (for the later build WU)</h2>
+    <div class="diagram" data-c="gate-diag">
+      <pre class="mermaid">
+flowchart LR
+  SRC["ui/src/components/*.tsx<br/>TSDoc = truth"] --> GEN["gen-index<br/>(deterministic)"]
+  GEN --> IDX["index (committed,<br/>generated file)"]
+  IDX --> GATE{"gate: re-run gen-index,<br/>git diff vs committed?"}
+  GATE -->|"differs"| RED["❌ stale — run gen-index"]
+  GATE -->|"identical"| GREEN["✅ fresh"]
+      </pre>
+      <div class="caption"><strong>Store nothing forgeable.</strong> The gate regenerates the index from the real <code>.tsx</code> and <code>git diff</code>s against the committed copy — the committer never supplies the comparison value, so a hand-edited index or a pasted hash can't pass. Same pattern as <code>Cargo.lock</code> freshness / <code>verify-doc</code>. W2 specifies this; a later WU / W7 builds it.</div>
+    </div>
+
+    <h2 id="decisions">Decisions (resolved in the W2 discussion)</h2>
+    <table data-c="ledger">
+      <tr><th>#</th><th>Fork</th><th>Resolved</th></tr>
+      <tr><td><span class="badge id">D1</span></td><td>Collection home</td><td><code>ui/src/components/</code> (later WU) — not a separate design-only tree</td></tr>
+      <tr><td><span class="badge id">D2</span></td><td>Usage-truth home</td><td>In code, as <strong>TSDoc</strong> (code-as-truth)</td></tr>
+      <tr><td><span class="badge id">D3</span></td><td>Index format</td><td><strong>Generated</strong> from TSDoc — a build artifact, not a hand-authored doc</td></tr>
+      <tr><td><span class="badge id">D4</span></td><td>Membership</td><td>Tier-based: T1 + T2 collected; T3/T4 designed-only. Template = core deliverable</td></tr>
+      <tr><td><span class="badge id">D5</span></td><td>Scope</td><td><strong>Design-only</strong> — template + component designs; build deferred to a later WU</td></tr>
+      <tr><td><span class="badge id">D6</span></td><td>Tests</td><td><strong>Waived</strong> — docs/process WU (nothing built); gate tested when built</td></tr>
+    </table>
+    <p class="meta">Full reasoning + the superseded alternatives live in the <a href="2026-07-20-dflow-w2-discussion.html">W2 discussion</a>; this table is the settled basis, not a re-derivation.</p>
+
+    <h2 id="deliverables">Deliverables</h2>
+    <table data-c="deliverables">
+      <tr><th>Artifact</th><th>What</th></tr>
+      <tr><td>This plan doc</td><td>W2 scope, the model, the settled decisions, the gate spec.</td></tr>
+      <tr><td>Registry-seed doc <br><code>2026-07-22-dflow-w2-registry-seed.html</code></td><td>The <strong>component-design template</strong> + every W1 component designed through it (T1/T2 marked collected, T3/T4 designed-only), + the generated-index mechanism narrative. The reviewable W2 product.</td></tr>
+    </table>
+    <div class="callout" data-c="no-code">
+      <strong>Deliberately absent in W2:</strong> no <code>ui/</code> code, no TSDoc in real components, no generator, no gate, no T1/T2 doc changes. Design-only. The template + designs stay T3 until W4 validates them (mirrors W1 — the base flow stayed T3 until validated); distillation upward happens then, not now.
+    </div>
+
+    <h2 id="test">Test plan</h2>
+    <div class="callout" data-c="test">
+      <strong>Level: WU → integration — waived</strong> (design/docs-only). W2 changes no app code; deliverables are two T3 docs. Per the project rule, docs-only diffs are exempt. The WU tip carries <code>test/v2</code> with <code>waived: "design/docs-only WU — deliverables are the plan + registry-seed docs (template + component designs); no ui/ code. The generated-index + freshness gate are specified here and get their tests in the later build WU / W7."</code>
+    </div>
+
+    <h2 id="open">Open questions (deferred, not W2's call)</h2>
+    <ul>
+      <li><strong>Generated-index format + generator location</strong> — file shape (md/json/ts) and <code>xtask</code> vs npm script; decided by the build WU / W7 that implements it. W2 pins only the <em>behavior</em> (regenerate + diff).</li>
+      <li><strong>Template → T1 promotion</strong> — whether the design template becomes a T1 artifact or stays a registry-doc section; decided at distillation after W4 validation.</li>
+      <li><strong>Optional code back-pointer</strong> — a one-line <code>// registry: &lt;name&gt;</code> in each component; a build-WU nicety, not required.</li>
+    </ul>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
