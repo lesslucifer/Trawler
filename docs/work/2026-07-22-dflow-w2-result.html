@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60b2069f34851f0dfa9314" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W2 result (Seed component registry)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W2 result — Seed component registry</h1>
+      <p>The result report this WU tip attests. Design-only WU: the component-design template, the W1 component set designed through it, and the code-as-truth registry mechanism spec.</p>
+      <div class="meta">WU result · 2026-07-22 · Trawler · T3 (docs/work/) · wu/design-flow/seed-registry → epic/design-flow · plan: <a href="2026-07-22-dflow-w2-plan.html">W2 plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p>Everything the plan's deliverables table names, in <a href="2026-07-22-dflow-w2-registry-seed.html">2026-07-22-dflow-w2-registry-seed.html</a>:</p>
+      <ul>
+        <li><strong>① The component-design template</strong> — six fields (name+one-liner · tier · anatomy · use/avoid · states · made-of), each mapped to a TSDoc tag; the template <em>is</em> the required TSDoc shape.</li>
+        <li><strong>③ Fifteen W1 components designed through it</strong> — 12 collected (8 <span style="color:var(--accent)">T1</span> + 4 <span style="color:var(--ok)">T2</span> incl. the 5-member BodyRenderer family), 3 designed-only (ProtocolLine T3; HeaderTable, BodyViewer T4 with full break-downs). Roster table carries reuse evidence and exists-today pointers.</li>
+        <li><strong>② The mechanism spec</strong> — TSDoc → deterministic generated index → regenerate-and-diff freshness gate (store nothing forgeable), pinned-behavior vs deferred-form table, plus the reuse-or-propose contract for future screens.</li>
+      </ul>
+      <p>Design-only as planned: no <code>ui/</code> code, no TSDoc in real components, no generator, no gate, no T1/T2 changes.</p>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <p>None from the plan's scope. Four W1 catalog calls were settled differently — in-scope tier/shape judgment, recorded in the seed doc's <em>verdicts</em> table: ProtocolLine re-tiered T1→T3 (a one-off is T3); "URI text" generalised to CopyText; "select/copy a cell" folded into HeaderRow (native selection, nothing to build); copy-as-curl ruled a CopyButton use, not a component.</p>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <ul>
+        <li><strong>Tests: waived</strong> — design/docs-only WU per the plan's test plan; deliverables are two T3 docs (this report + the registry seed). The generated-index + freshness gate get their tests in the build WU / W7.</li>
+        <li><code>cargo xtask verify-doc</code> green on both new docs (seed: ungoverned by design; this report: wu-result checklist).</li>
+        <li>Reuse-evidence claims grounded in shipped code: <code>StatusPill</code>/<code>Field</code>/<code>StatusDot</code> in <code>ui/src/components.tsx</code>, local <code>Section</code> in <code>FlowDetail.tsx</code>, list-row method/time/duration in <code>FlowList.tsx</code>.</li>
+      </ul>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <p>Nothing distils to T1/T2 yet — by design (mirrors W1). The template and designs stay T3 until W4 validates the flow that consumes them; the template→T1 promotion question is decided at that distillation.</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <ul>
+        <li><strong>Build WU:</strong> turn cards into <code>ui/src/components/*.tsx</code> with the TSDoc; build gen-index + the freshness gate; decide index format and generator home; resolve the per-leg vs single BodyViewer fork; give shipped <code>Field</code>/<code>StatusDot</code> the TSDoc shape.</li>
+        <li><strong>W4:</strong> realise the reuse-or-propose path inside the revised flow; validate the template against a second screen run.</li>
+        <li><strong>W7:</strong> wire the freshness gate into the DoD gate.</li>
+      </ul>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
