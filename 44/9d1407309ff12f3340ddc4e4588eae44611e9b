@@ -1,0 +1,9 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W2
+changes:
+  - path: docs/work/2026-07-22-dflow-w2-registry-seed.html
+    tier: T3
+  - path: docs/work/2026-07-22-dflow-w2-result.html
+    tier: T3
+t2_note: "Nothing distils to T1/T2 yet — by design (mirrors W1). Template + designs stay T3 until W4 validates the flow that consumes them; template→T1 promotion decided at that distillation."
