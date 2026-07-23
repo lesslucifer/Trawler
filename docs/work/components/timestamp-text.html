@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60d5f89f34851f0dfa93d9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — TimestampText component design</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+    /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
+    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
+    .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
+    .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
+    .ts{color:var(--a-mute);font-variant-numeric:tabular-nums;}
+    .ts-body{color:var(--a-body);font-variant-numeric:tabular-nums;}
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:Inter,system-ui,sans-serif;}
+    .tsdoc{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .flow-ex{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .flow-ex .arr{color:var(--muted);font-size:11px;white-space:nowrap;}
+    /* list-row specimen */
+    .list-row{display:grid;align-items:center;gap:12px;font-family:"DM Mono",ui-monospace,monospace;font-size:12px;border-bottom:1px solid var(--a-line);padding:4px 12px;background:var(--a-canvas);}
+    .list-row.cols-full{grid-template-columns:110px 70px 1fr 60px 90px;}
+    .list-row .col-mute{color:var(--a-mute);}
+    .list-row .col-body{color:var(--a-body);}
+    /* before/after table */
+    .ba{width:100%;border-collapse:collapse;font-family:"DM Mono",ui-monospace,monospace;font-size:12px;}
+    .ba th{text-align:left;color:var(--muted);font-weight:normal;text-transform:uppercase;font-size:10px;letter-spacing:.05em;padding:4px 10px 4px 0;}
+    .ba td{padding:5px 10px 5px 0;border-top:1px solid var(--line);color:var(--a-body);font-variant-numeric:tabular-nums;}
+    .ba td.raw{color:var(--muted);}
+    .ba td.ren{color:var(--a-body);}
+    .ba td.note{color:var(--muted);font-family:Inter,system-ui,sans-serif;font-size:11px;font-variant-numeric:normal;}
+    .ba td.ms{color:var(--a-mute);}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>TimestampText <span class="tier t1">T1</span></h1>
+      <p>Point-in-time text — local wall-clock, absolute HH:MM:SS by default; custom moment format or relative mode opt-in. Status: <strong>confirmed 2026-07-23</strong>.</p>
+      <div class="meta">Component design · 2026-07-22 · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> <code>toLocaleTimeString()</code> is locale-variable, not tabular, and is inlined at every callsite — the same unfixed derivation repeated; every point-in-time label needs one component that parses anything moment parses and renders deterministic, seconds-precise, stable column output — with custom-format and relative modes where the default doesn't fit.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — time formatting only, no business logic → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>list rows (time column, 110 px) · flow detail overview (W2 verdict on W1 "plain span ×2" finding)</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>plain <code>&lt;span&gt;</code> — <code>FlowList.tsx:79</code> via <code>flow.ts:44</code> <code>toLocaleTimeString()</code> (no seconds guarantee, no tabular-nums) → extract and harden</td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (pure display; no composed registry components)</td></tr>
+      <tr><td><strong>Depends on</strong></td><td><code>moment</code> (new UI dependency) — one parser/formatter for all three modes; see Fork F5</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① log correlation — read alongside server/app logs</td><td>absolute wall-clock display by default; relative ("2 s ago") is opt-in, never the default — see Fork F1</td></tr>
+        <tr><td>② seconds precision mandatory</td><td>default format pinned to HH:MM:SS 24 h — locale-default rendering may omit seconds or add AM/PM; see Forks F2/F4</td></tr>
+        <tr><td>③ tabular column — 110 px grid slot (<code>FlowList.tsx:9</code>)</td><td><code>tabular-nums</code>, mono, fixed-width — HH:MM:SS is always 8 chars, stable under burst</td></tr>
+        <tr><td>④ local timezone — sessions are live screen-watching, not archived traces</td><td>system clock, no UTC conversion — see Fork F3</td></tr>
+        <tr><td>⑤ calm, dense list</td><td>muted tone (<code>text-ink-mute</code>), no decoration — time is context, not signal</td></tr>
+        <tr><td>⑥ cross-midnight sessions (proxy left running overnight)</td><td>date prefix "DD/MM · " when date ≠ today — see State S2</td></tr>
+        <tr><td>⑦ generic T1 — future surfaces won't all want the list-column default</td><td><code>format</code> prop: custom moment format string, or <code>"relative"</code> — see States S5/S6</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy">
+      <div class="list-row cols-full">
+        <span class="col-mute" style="font-variant-numeric:tabular-nums;">14:07:52<span class="anno">1</span></span>
+        <span class="col-body">GET</span>
+        <span class="col-body">api.example.com/v2/orders</span>
+        <span class="col-mute" style="text-align:right;">200</span>
+        <span class="col-mute" style="text-align:right;">312 ms</span>
+      </div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="lbl">Time column (same-day)</div>
+            <span class="ts">14:07:52</span>
+          </div>
+          <div class="cap">8 chars, always — no locale variability, no AM/PM, no shifting digits</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> clock text</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>default format: 24 h, HH:MM:SS — fixed 8-char output, muted tone, mono, <code>tabular-nums</code> — no other parts</span>
+            <span class="k">why</span><span>24 h avoids AM/PM width variance; <code>tabular-nums</code> + mono keeps the 110 px column stable under burst traffic (<code>FlowList.tsx:9</code>); muted = context, not signal (<code>FlowList.tsx:79</code>)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — the rules the parts obey</h2>
+    <p data-c="behavior-intro" style="color:var(--muted);">Anatomy is what is on screen; behavior is the formatting contract a builder implements and a reviewer can test — the input/output rules for each rendering path.</p>
+    <div class="app parts" data-c="behavior-table">
+      <div class="part">
+        <div class="ex">
+          <table class="ba">
+            <thead><tr><th>raw input</th><th>rendered</th></tr></thead>
+            <tbody>
+              <tr><td class="raw">2026-07-22T14:07:52.381Z</td><td class="ren">14:07:52</td></tr>
+              <tr><td class="raw">1784729272381 (epoch ms)</td><td class="ren">14:07:52</td></tr>
+              <tr><td class="raw">2026-07-22T00:00:01.000Z</td><td class="ren">00:00:01</td></tr>
+              <tr><td class="raw">2026-07-22T23:59:59.999Z</td><td class="ren">23:59:59</td></tr>
+            </tbody>
+          </table>
+          <div class="cap">local wall-clock time; ms truncated (not rounded) — "14:07:52" not "14:07:53" for .381 ms</div>
+        </div>
+        <div>
+          <strong>Default format</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>prop <code>timestamp</code> accepts anything moment parses — ISO 8601 string, epoch ms number, <code>Date</code> (callers pass e.g. <code>flow.started_at</code> raw, no pre-formatting); render local via <code>moment(timestamp).format('HH:mm:ss')</code> — moment formatting floors sub-second, never rounds</span>
+            <span class="k">why</span><span>a T1 primitive is not coupled to any API field name or one wire format; a pinned format string overrides locale defaults that may omit seconds or add AM/PM — the current <code>toLocaleTimeString()</code> call (<code>flow.ts:44</code>) has both risks open</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <table class="ba">
+            <thead><tr><th>raw</th><th>rendered (today = 2026-07-22)</th></tr></thead>
+            <tbody>
+              <tr><td class="raw">2026-07-21T23:14:05.000Z</td><td class="ren">21/07 · 23:14:05</td></tr>
+              <tr><td class="raw">2026-06-01T08:00:00.000Z</td><td class="ren">01/06 · 08:00:00</td></tr>
+            </tbody>
+          </table>
+          <div class="cap">date prefix only when the date differs from today — same-day flows stay uncluttered</div>
+        </div>
+        <div>
+          <strong>Cross-day prefix</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>if local date ≠ today → prepend "DD/MM · " (e.g. "21/07 · "); year appended only when year ≠ current — "DD/MM/YYYY · "</span>
+            <span class="k">why</span><span>a proxy left running overnight produces flows from yesterday; without the prefix the timestamp is ambiguous; numeric zero-padded DD/MM keeps the prefix fixed-width and tabular (unlike "Mmm D", which varies 5–6 chars); same-day sessions carry no date noise (the common case)</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex">
+            <div class="panel"><span class="ts">—</span></div>
+          </div>
+          <div class="cap">no value / unparseable → em-dash, slot preserved — layout doesn't jump</div>
+        </div>
+        <div>
+          <strong>Absent or unparseable value</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>if <code>timestamp</code> is <code>null</code> or <code>moment(timestamp).isValid()</code> is false → render an em-dash "—", same width contract, no component omission</span>
+            <span class="k">why</span><span>DurationText uses blank-but-slot-kept (<code>flow.ts:48</code>); the wide input surface (any moment-parseable value) makes unparseable a real guard, not just a null check — em-dash covers both without a missing-column jump</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <table class="ba">
+            <thead><tr><th>format prop</th><th>rendered</th></tr></thead>
+            <tbody>
+              <tr><td class="raw">(none — default)</td><td class="ren">14:07:52</td></tr>
+              <tr><td class="raw">HH:mm:ss.SSS</td><td class="ren">14:07:52.381</td></tr>
+              <tr><td class="raw">DD/MM HH:mm</td><td class="ren">22/07 14:07</td></tr>
+              <tr><td class="raw">hh:mm:ss A</td><td class="ren">02:07:52 PM</td></tr>
+            </tbody>
+          </table>
+          <div class="cap">format replaces the default logic entirely — incl. the cross-day prefix; still local time</div>
+        </div>
+        <div>
+          <strong>Custom format</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>format</code> prop takes a moment format string; when set, output is <code>moment(timestamp).format(format)</code> — the default same-day/cross-day logic is fully replaced; timezone stays local (F3)</span>
+            <span class="k">why</span><span>ms display (F2), 12 h (F4), and any surface-specific layout become one prop instead of new forks; the zero-config default stays the list-column contract</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex">
+            <div class="panel"><span class="ts">3 minutes ago</span></div>
+          </div>
+          <div class="cap">format="relative" → moment fromNow(); refreshes every 10 s while mounted</div>
+        </div>
+        <div>
+          <strong>Relative mode</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>format="relative"</code> (sentinel value) renders <code>moment(timestamp).fromNow()</code>; re-renders on a 10 s interval owned by the component, cleared on unmount</span>
+            <span class="k">why</span><span>opt-in only — the list column stays absolute (log correlation, F1), so ticking re-render cost is confined to the surfaces that ask for it</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="list-row cols-full" style="background:var(--a-soft);">
+            <span class="col-mute" style="font-variant-numeric:tabular-nums;">14:07:52</span>
+            <span class="col-body">GET</span>
+            <span class="col-body">api.example.com/v2/orders</span>
+            <span class="col-mute" style="text-align:right;">200</span>
+            <span class="col-mute" style="text-align:right;">312 ms</span>
+          </div>
+          <div class="cap">no interactivity — pure display</div>
+        </div>
+        <div>
+          <strong>No interaction</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>no click, no hover affordance, no copy — <code>user-select: text</code> only (native selection for ad-hoc copy is free)</span>
+            <span class="k">why</span><span>start time is context the user reads, not grabs whole — use CopyText if a copy affordance is ever needed</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <p style="color:var(--muted);font-size:13px;" data-c="states-note">TimestampText has no <em>interaction</em> states (no hover, no focus, no active). Its states are value variants (S1–S4) plus the two opt-in format modes (S5 custom moment format string, S6 relative) — what the rendered output looks like given input + props.</p>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel">
+          <div class="lbl">S1 — same-day (common case)</div>
+          <span class="ts">14:07:52</span>
+        </div>
+        <div class="cap"><strong>S1 same-day</strong> — HH:MM:SS only, 8 chars, muted; today's flows never show a date prefix</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="lbl">S2 — cross-midnight / cross-day</div>
+          <span class="ts" style="white-space:nowrap;">21/07 · 23:14:05</span>
+        </div>
+        <div class="cap"><strong>S2 cross-day</strong> — "DD/MM · HH:MM:SS" (year appended when ≠ current); date disambiguates a proxy left running overnight</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="lbl">S3 — sub-second burst (ms truncated)</div>
+          <span class="ts">14:07:52</span><span class="ts ms" style="color:var(--a-mute);font-size:10px;margin-left:4px;">.381</span>
+          <div style="color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;margin-top:4px;">→ rendered: <span class="ts">14:07:52</span> (ms dropped)</div>
+        </div>
+        <div class="cap"><strong>S3 ms truncated</strong> — ms are always dropped from the display; ordering within a burst is handled by list position (insertion order from the server), not sub-second display; see Fork F2</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="lbl">S4 — absent / unparseable</div>
+          <span class="ts">—</span>
+        </div>
+        <div class="cap"><strong>S4 absent</strong> — em-dash for null or any value moment can't parse; guard, not a design state</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="lbl">S5 — custom format (format="HH:mm:ss.SSS")</div>
+          <span class="ts">14:07:52.381</span>
+        </div>
+        <div class="cap"><strong>S5 custom format</strong> — moment format string replaces the default logic entirely; still local time, same muted styling</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="lbl">S6 — relative (format="relative")</div>
+          <span class="ts">3 minutes ago</span>
+        </div>
+        <div class="cap"><strong>S6 relative</strong> — <code>fromNow()</code>, refreshed every 10 s; opt-in only, never the list-column default (F1)</div>
+      </div>
+    </div>
+    <div class="callout" data-c="no-interaction-states">
+      <strong>Deliberate non-states: hover, focus, active, confirming.</strong> TimestampText is display-only — no interactivity, no copy affordance. These states belong to CopyText (if a copy affordance is ever added). No loading/in-flight state: a flow without a start time is an invariant violation at the API level, not a loading state.
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app cards" data-c="f1">
+      <div class="card">
+        <strong>F1 · absolute vs relative time</strong> <span class="badge auto">settled: absolute default · relative opt-in</span>
+        <div class="panel" style="margin-top:8px;">
+          <span class="ts">14:07:52</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);">
+          <strong>Absolute HH:MM:SS default (chosen).</strong> A debugging proxy is used side-by-side with server logs, terminal output, and system clocks. Absolute time reads directly against those; "2 m ago" requires the user to subtract from now. Relative time IS supported — <code>format="relative"</code> (State S6) — for surfaces where recency matters more than log correlation; it is opt-in per callsite, so its 10 s re-render tick is confined to the surfaces that ask for it.
+        </p>
+      </div>
+      <div class="card">
+        <strong>alt: relative as the default</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;">
+          <span class="ts">3 minutes ago</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);">
+          As a list-wide default, relative times require mental arithmetic to correlate against a log, re-render on a timer for every visible row, and become ambiguous after a few hours ("2 h ago" is less useful than "10:07"). Rejected as the default; available only as the explicit <code>format="relative"</code> mode. No hybrid default (relative for recent + absolute after threshold) — a branch point without gain for a debugging tool.
+        </p>
+      </div>
+    </div>
+
+    <div class="app cards" data-c="f2">
+      <div class="card">
+        <strong>F2 · millisecond display</strong> <span class="badge auto">settled: default truncates · custom format shows them</span>
+        <div class="panel" style="margin-top:8px;">
+          <span class="ts">14:07:52</span>
+          <div style="color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;margin-top:4px;">raw: 14:07:52.381 → shown: 14:07:52</div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);">
+          <strong>Seconds only by default (chosen).</strong> The 110 px list column (<code>FlowList.tsx:9</code>) fits exactly 8 chars at the current font size; adding ".mmm" pushes to 12 chars. Ordering within a sub-second burst is preserved by list insertion order (server-side capture order), not by sub-second display. Truncate (floor to second), never round — rounding could display a time 1 second ahead of the real event. A surface that genuinely needs ms is the custom-format case: <code>format="HH:mm:ss.SSS"</code> (State S5) — no new fork required.
+        </p>
+      </div>
+      <div class="card">
+        <strong>alt: milliseconds in the default (HH:MM:SS.mmm)</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;">
+          <span class="ts" style="font-size:11px;">14:07:52.381</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);">
+          12-char output exceeds the 110 px column at current font size. The column would need to widen, pushing host and path columns or triggering truncation. Sub-second burst ordering is already communicated by list row order — ms in the default adds width without a gain. Covered by the <code>format</code> prop where needed.
+        </p>
+      </div>
+    </div>
+
+    <div class="app cards" data-c="f3">
+      <div class="card">
+        <strong>F3 · local vs UTC timezone</strong> <span class="badge auto">settled: always local</span>
+        <div class="panel" style="margin-top:8px;">
+          <span class="ts">14:07:52</span>
+          <div style="color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;margin-top:4px;">system clock: UTC+2 → "14:07:52" (local)</div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);">
+          <strong>Always local (chosen — confirmed).</strong> Trawler is a local desktop proxy; the user's shell, server logs, and browser dev tools all display in local time. A UTC display would require conversion before correlation, which is the opposite of the log-correlation frame driver. Local applies to <em>every</em> mode — the default, custom <code>format</code> strings, and relative all render from the local clock; there is no UTC prop and none planned.
+        </p>
+      </div>
+      <div class="card">
+        <strong>alt: UTC (always suffix "Z")</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;">
+          <span class="ts">12:07:52Z</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);">
+          UTC forces the user to add their offset before matching a local log line. Useful only if target servers always log UTC and users never use local tooling — not the case for a general desktop proxy. Rejected outright — always local, no UTC mode or preference.
+        </p>
+      </div>
+    </div>
+
+    <div class="app cards" data-c="f4">
+      <div class="card">
+        <strong>F4 · 12 h vs 24 h</strong> <span class="badge auto">settled: 24 h default · 12 h via custom format</span>
+        <div class="panel" style="margin-top:8px;">
+          <span class="ts">14:07:52</span>
+          <div style="color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;margin-top:4px;">not "02:07:52 PM"</div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);">
+          <strong>24 h default (chosen).</strong> Server/proxy logs are universally 24 h. An AM/PM suffix adds 3 chars to the output, breaking the 8-char stability contract and the 110 px column. The pinned <code>HH:mm:ss</code> moment format string overrides any locale that defaults to 12 h. A surface that truly wants 12 h is the custom-format case: <code>format="hh:mm:ss A"</code> — no new fork required.
+        </p>
+      </div>
+      <div class="card">
+        <strong>alt: locale default (may be 12 h)</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;">
+          <span class="ts" style="font-size:11px;">02:07:52 PM</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);">
+          The current <code>toLocaleTimeString()</code> call (<code>flow.ts:44</code>) has no options — on a US-English locale it may produce "2:07:52 PM", which is 11 chars with variable leading-zero behavior. Column unstable; format unfamiliar for log correlation. Rejected as the default; covered by the <code>format</code> prop where needed.
+        </p>
+      </div>
+    </div>
+
+    <div class="app cards" data-c="f5">
+      <div class="card">
+        <strong>F5 · date library — moment vs native Date</strong> <span class="badge auto">settled: moment</span>
+        <div class="panel" style="margin-top:8px;">
+          <span class="ts" style="font-size:11px;">moment(timestamp).format('HH:mm:ss')</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);">
+          <strong>moment (chosen — manager direction).</strong> One parser/formatter covers all three modes: lenient parsing of ISO 8601 / epoch ms / <code>Date</code>, format-token rendering for the default and custom strings, and <code>fromNow()</code> for relative — nothing hand-built. New UI dependency (<code>ui/package.json</code> has no date library today). Note: moment is upstream-maintenance-mode; if that ever matters, dayjs shares the same format-token API and the swap is confined to this one component.
+        </p>
+      </div>
+      <div class="card">
+        <strong>alt: native Date + Intl</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;">
+          <span class="ts" style="font-size:11px;">Intl.RelativeTimeFormat + hand-rolled units</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);">
+          Zero-dependency, but three hand-built pieces: <code>Date.parse</code> accepts fewer input shapes than moment, custom formatting would mean inventing a token syntax for the <code>format</code> prop, and relative mode needs hand-rolled unit selection around <code>Intl.RelativeTimeFormat</code>. Rejected in favor of the one dependency.
+        </p>
+      </div>
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>timestamp</code></td><td><code>string | number | Date | null</code></td><td>anything moment parses — ISO 8601 string, epoch ms, <code>Date</code> (e.g. <code>flow.started_at</code> passed raw); null or unparseable renders the em-dash guard</td></tr>
+        <tr><td><code>format</code></td><td><code>string</code> <em>(optional)</em></td><td>moment format string replacing the default same-day/cross-day logic (e.g. <code>"HH:mm:ss.SSS"</code>); sentinel <code>"relative"</code> renders <code>fromNow()</code> with a 10 s refresh; omit for the default</td></tr>
+      </tbody>
+    </table>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built:</p>
+      <pre class="tsdoc">/**
+ * TimestampText — point-in-time text; local wall-clock, absolute HH:MM:SS by default.
+ * @tier T1 — time parsing/formatting only (moment), no business logic
+ * @props timestamp: string | number | Date | null — anything moment parses, passed raw; format?: moment format string or "relative"
+ * @anatomy muted mono clock text; default 24 h HH:MM:SS with cross-day prefix "DD/MM · " when date ≠ today (year appended when ≠ current); tabular-nums, fixed-width
+ * @modes default (same-day/cross-day logic) · format="&lt;moment tokens&gt;" (custom — ms, 12 h, any layout) · format="relative" (fromNow, 10 s tick, opt-in only)
+ * @use list rows (time column) · flow detail overview; anywhere a point-in-time label reads against logs
+ * @avoid relative as a list-column default (log correlation is absolute) · UTC — always local in every mode · caller-side pre-formatting — pass the raw value
+ * @states same-day HH:MM:SS (S1) · cross-day "DD/MM · HH:MM:SS" (S2) · ms truncated by default (S3, floor) · absent/unparseable → em-dash (S4) · custom format (S5) · relative (S6)
+ * @madeof —
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Anywhere a point-in-time label reads against external logs or the system clock: the list time column, the flow detail overview. Pass the raw value (<code>flow.started_at</code>, an epoch, a <code>Date</code>) — no caller-side formatting. When the default doesn't fit a surface, pick a mode via <code>format</code>: a moment format string, or <code>"relative"</code> where recency beats correlation.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>Relative time as the list-column default — <code>format="relative"</code> is opt-in per surface, never the default (F1). UTC display — always local, in every mode (F3). A timestamp the user wants to copy whole — wrap TimestampText in CopyText for that. Live-ticking elapsed time or duration-since-start — that is DurationText.</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part</th><th>Tailwind (build WU)</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>clock text (same-day)</td><td><code>font-mono text-xs text-ink-mute tabular-nums</code></td><td>matches shipped <code>FlowList.tsx:79</code> tone; tabular-nums is the addition</td></tr>
+        <tr><td>date prefix (cross-day)</td><td>same classes; "DD/MM · " prepended by the default format logic</td><td>no color change — context text, same muted tone</td></tr>
+        <tr><td>em-dash (null/unparseable guard)</td><td>same classes</td><td>same width contract; no special styling</td></tr>
+        <tr><td>custom format / relative output</td><td>same classes</td><td>modes change the text, never the styling</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="specimen">Live specimen — raw instant → rendered output</h2>
+    <p data-c="specimen-intro" style="color:var(--muted);font-size:13px;">TimestampText has no interactivity. The specimen is a static table of raw inputs (+ format prop where set) → rendered strings, covering all six states. "Today" is 2026-07-22 local; "now" is 14:07:52.</p>
+    <div class="app" data-c="specimen">
+      <div class="panel" style="max-width:600px;">
+        <div class="lbl">Specimen — all value variants</div>
+        <table class="ba" style="width:100%;">
+          <thead>
+            <tr>
+              <th>raw input (+ format prop)</th>
+              <th>local (UTC+0 assumed)</th>
+              <th>rendered</th>
+              <th>state</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="raw">2026-07-22T14:07:52.381Z</td>
+              <td class="raw">14:07:52</td>
+              <td class="ren">14:07:52</td>
+              <td class="note">S1 same-day</td>
+            </tr>
+            <tr>
+              <td class="raw">1784729272381 (epoch ms)</td>
+              <td class="raw">14:07:52</td>
+              <td class="ren">14:07:52</td>
+              <td class="note">S1 same-day, epoch input</td>
+            </tr>
+            <tr>
+              <td class="raw">2026-07-22T00:00:01.000Z</td>
+              <td class="raw">00:00:01</td>
+              <td class="ren">00:00:01</td>
+              <td class="note">S1 same-day midnight edge</td>
+            </tr>
+            <tr>
+              <td class="raw">2026-07-22T23:59:59.999Z</td>
+              <td class="raw">23:59:59</td>
+              <td class="ren">23:59:59</td>
+              <td class="note">S1 same-day end-of-day edge</td>
+            </tr>
+            <tr>
+              <td class="raw">2026-07-21T23:14:05.000Z</td>
+              <td class="raw">23:14:05</td>
+              <td class="ren">21/07 · 23:14:05</td>
+              <td class="note">S2 cross-day (yesterday)</td>
+            </tr>
+            <tr>
+              <td class="raw">2026-06-01T08:00:00.000Z</td>
+              <td class="raw">08:00:00</td>
+              <td class="ren">01/06 · 08:00:00</td>
+              <td class="note">S2 cross-day (older)</td>
+            </tr>
+            <tr>
+              <td class="raw">2025-12-31T18:30:00.000Z</td>
+              <td class="raw">18:30:00</td>
+              <td class="ren">31/12/2025 · 18:30:00</td>
+              <td class="note">S2 cross-year (year appended)</td>
+            </tr>
+            <tr>
+              <td class="raw">2026-07-22T14:07:52.381Z</td>
+              <td class="raw">14:07:52.381</td>
+              <td class="ren">14:07:52</td>
+              <td class="note">S3 ms truncated (floor, not round)</td>
+            </tr>
+            <tr>
+              <td class="raw">2026-07-22T14:07:52.900Z</td>
+              <td class="raw">14:07:52.900</td>
+              <td class="ren">14:07:52</td>
+              <td class="note">S3 ms truncated (900 ms — still not 53)</td>
+            </tr>
+            <tr>
+              <td class="raw">null</td>
+              <td class="raw">—</td>
+              <td class="ren">—</td>
+              <td class="note">S4 absent guard</td>
+            </tr>
+            <tr>
+              <td class="raw">"not-a-date"</td>
+              <td class="raw">—</td>
+              <td class="ren">—</td>
+              <td class="note">S4 unparseable guard (moment invalid)</td>
+            </tr>
+            <tr>
+              <td class="raw">2026-07-22T14:07:52.381Z + format="HH:mm:ss.SSS"</td>
+              <td class="raw">14:07:52.381</td>
+              <td class="ren">14:07:52.381</td>
+              <td class="note">S5 custom format (ms)</td>
+            </tr>
+            <tr>
+              <td class="raw">2026-07-21T23:14:05.000Z + format="DD/MM HH:mm"</td>
+              <td class="raw">23:14:05</td>
+              <td class="ren">21/07 23:14</td>
+              <td class="note">S5 custom format (replaces cross-day logic too)</td>
+            </tr>
+            <tr>
+              <td class="raw">2026-07-22T14:04:52.000Z + format="relative"</td>
+              <td class="raw">14:04:52</td>
+              <td class="ren">3 minutes ago</td>
+              <td class="note">S6 relative (fromNow, 10 s refresh)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout" style="margin-top:12px;">
+        <strong>Cross-links:</strong>
+        sibling component designs:
+        <a href="section.html">Section</a> ·
+        <a href="icon-button.html">IconButton</a> ·
+        <a href="copy-button.html">CopyButton</a> ·
+        <a href="copy-text.html">CopyText</a> ·
+        <a href="key-value-row.html">KeyValueRow</a> ·
+        <a href="method-label.html">MethodLabel</a> ·
+        <a href="duration-text.html">DurationText</a> ·
+        <a href="status-pill.html">StatusPill</a> ·
+        <a href="copy-all-headers-button.html">CopyAllHeadersButton</a> ·
+        <a href="segmented-control.html">SegmentedControl</a> ·
+        <a href="body-renderer.html">BodyRenderer</a> ·
+        <a href="header-table.html">HeaderTable</a> ·
+        <a href="body-viewer.html">BodyViewer</a>
+      </div>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

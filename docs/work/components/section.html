@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60d58a9f34851f0dfa93cd">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Section component design</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+    /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
+    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
+    /* panel shells */
+    .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
+    .panel .sec-title{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:8px;font-family:Inter,system-ui,sans-serif;}
+    .panel .sec-content{color:var(--a-body);}
+    /* stack of Sections */
+    .sec-stack{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;overflow:hidden;max-width:460px;}
+    .sec-block{border-bottom:1px solid var(--a-line);padding:10px 14px;}
+    .sec-block:last-child{border-bottom:none;}
+    .sec-block .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:8px;font-family:Inter,system-ui,sans-serif;}
+    .sec-block .body{color:var(--a-body);font-family:"DM Mono",ui-monospace,monospace;font-size:12px;}
+    /* part grid */
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    /* swatches */
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+    .swatch .sec-stack{max-width:none;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    /* annotation badge */
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:Inter,system-ui,sans-serif;}
+    /* tsdoc block */
+    .tsdoc{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    /* forks */
+    .fork-row{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
+    .fork-card{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .fork-card .cap{font-size:12px;color:var(--muted);margin-top:8px;}
+    /* placeholder content lines inside specimens */
+    .pl{color:var(--a-body);font-family:"DM Mono",ui-monospace,monospace;font-size:11px;}
+    .pl-mute{color:var(--a-mute);font-family:"DM Mono",ui-monospace,monospace;font-size:11px;}
+    /* flow-ex */
+    .flow-ex{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+    .flow-ex .arr{color:var(--muted);font-size:11px;white-space:nowrap;padding-top:4px;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Section <span class="tier t1">T1</span></h1>
+      <p>Titled grouping container — heading + spacing + hairline separation, no logic. Status: <strong>confirmed 2026-07-23</strong>.</p>
+      <div class="meta">Component design · 2026-07-22 · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> without it, heading typography, padding, and hairline decisions fork per call site — <code>FlowDetail.tsx</code> already did this once, and the same string appears again in <code>FlowList.tsx:14</code>.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — layout chrome only, no business logic → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>"Request", "Copy as curl", "Request headers", "Response headers", "Body" zones in FlowDetail (<code>FlowDetail.tsx:80–116</code>); promoted from the local <code>Section</code> helper (<code>FlowDetail.tsx:7–13</code>) that W2 generalised</td></tr>
+      <tr><td><strong>Exists today</strong></td><td><code>FlowDetail.tsx:7–13</code> — local, not exported</td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (primitive; no sub-components)</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① heading typography drifts per call site</td><td>one heading style locked in the component</td></tr>
+        <tr><td>② spacing rhythm must hold across all zones</td><td>fixed vertical padding owned by Section</td></tr>
+        <tr><td>③ hairline separators are a layout decision, not content</td><td>Section owns the bottom border between siblings</td></tr>
+        <tr><td>④ content must scroll and grow freely</td><td>Section does not clip, scroll, or collapse its slot</td></tr>
+        <tr><td>⑤ calm, dense panel</td><td>zero decorative chrome beyond the hairline</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-specimen">
+      <div class="sec-stack">
+        <div class="sec-block">
+          <div class="lbl">Request <span class="anno">1</span></div>
+          <div class="body"><span class="pl">https://api.example.com/v2/orders/8f3a91c2</span></div>
+          <!-- hairline shown as border-bottom on sec-block ↑ -->
+          <!-- padding annotation: anno 2 (horizontal) and anno 3 (vertical) handled in part blocks below -->
+        </div>
+        <div class="sec-block">
+          <div class="lbl">Response headers <span class="anno">1</span></div>
+          <div class="body"><span class="pl-mute">content-type</span>&nbsp;&nbsp;<span class="pl">application/json</span></div>
+        </div>
+        <div class="sec-block" style="border-bottom:none;">
+          <div class="lbl">Body</div>
+          <div class="body"><span class="pl">{"status":"ok"}</span></div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--muted);">Three Sections stacked — the hairline <span class="anno">3</span> between them is Section's own bottom border; the last one carries none.</div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="sec-stack">
+            <div class="sec-block" style="border-bottom:none;">
+              <div class="lbl">Request headers</div>
+            </div>
+          </div>
+          <div class="cap">heading at rest: uppercase, letter-spaced, muted — reads as a label, not a page heading</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> heading</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>Inter, <code>text-xs</code> (10–11 px), <code>uppercase</code>, <code>tracking-wide</code>, <code>text-ink-mute</code> — the uppercase-mute label pattern; <code>mb-2</code> below before content</span>
+            <span class="k">why</span><span>the shipped class string is <code>text-xs uppercase tracking-wide text-ink-mute</code> (<code>FlowDetail.tsx:10</code>); same pattern on the FlowList column headers (<code>FlowList.tsx:14</code>) — two sightings lock the convention</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="sec-stack" style="max-width:none;">
+            <div class="sec-block" style="border-bottom:none;background:rgba(174,166,156,.07);">
+              <div class="lbl" style="opacity:0.3;">Request</div>
+              <div class="body"><span class="pl">…content slot…</span></div>
+            </div>
+          </div>
+          <div class="cap">content slot: fully transparent — Section contributes nothing to how its children lay out</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> content slot</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>children</code> rendered verbatim; Section adds no wrapper element, no overflow, no flex/grid of its own — the slot grows freely</span>
+            <span class="k">why</span><span>BodyViewer and HeaderTable own their own overflow and layout; a Section that imposed a flex context or <code>overflow:hidden</code> would fight them. The shipped code renders children with no intervening element (<code>FlowDetail.tsx:12</code>)</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="sec-stack">
+            <div class="sec-block">
+              <div class="lbl">Request</div>
+              <div class="body"><span class="pl">…content…</span></div>
+            </div>
+            <div class="sec-block" style="border-bottom:none;">
+              <div class="lbl">Response</div>
+              <div class="body"><span class="pl">…content…</span></div>
+            </div>
+          </div>
+          <div class="cap">hairline between zones — a 1 px bottom border on every Section except the last in its stack</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> hairline separator</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>border-b border-hairline</code> on the Section root; the consumer drops <code>border-b</code> on the last Section (or the parent clips it — see Fork F2)</span>
+            <span class="k">why</span><span>the shipped code uses <code>border-b border-hairline px-4 py-3</code> on every Section (<code>FlowDetail.tsx:9</code>); the hairline is the seam, not a card frame — keeping it on Section means consumers never forget it and never add it twice</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="sec-stack">
+            <div class="sec-block" style="border-bottom:none;">
+              <div class="lbl">Body</div>
+              <div class="body" style="padding:6px 0;"><span class="pl">…content…</span></div>
+            </div>
+          </div>
+          <div class="cap">horizontal: 16 px, vertical: 12 px — matches the shipped <code>px-4 py-3</code></div>
+        </div>
+        <div>
+          <strong><span class="anno">4</span> padding</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>px-4 py-3</code> (16 px horizontal, 12 px vertical) — identical to the shipped code (<code>FlowDetail.tsx:9</code>)</span>
+            <span class="k">why</span><span>consistent rhythm across every zone; padding on the container (not the content) means zone edges always align regardless of what children do</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — the rules the parts obey</h2>
+    <p data-c="behavior-intro" style="color:var(--muted);">Anatomy is what is on screen; behavior is what it <em>does</em>. Section is almost entirely static — its behavior is what it deliberately does <em>not</em> do.</p>
+    <div class="app parts" data-c="behavior-rules">
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex">
+            <div class="sec-stack" style="width:160px;">
+              <div class="sec-block" style="border-bottom:none;">
+                <div class="lbl">Body</div>
+                <div class="body" style="height:60px;overflow:auto;font-size:10px;"><span class="pl">{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7}</span></div>
+              </div>
+            </div>
+            <span class="arr">content scrolls ▸ Section does not</span>
+          </div>
+          <div class="cap">the BodyViewer inside scrolls; Section's border stays fixed — the scroll bubble belongs to the content, not the container</div>
+        </div>
+        <div>
+          <strong>Slot transparency</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>Section never sets <code>overflow</code>, <code>height</code>, <code>max-height</code>, or any flex/grid on its content area — those decisions belong to the child</span>
+            <span class="k">why</span><span>frame driver ④: composability; a Section with overflow:hidden would silently clip BodyViewer's JSON tree</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="sec-stack" style="max-width:none;">
+            <div class="sec-block" style="border-bottom:none;">
+              <div class="lbl">Request headers</div>
+              <div class="body" style="font-size:10px;">
+                <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;">
+                  <span class="pl-mute">content-type</span><span class="pl">application/json</span>
+                  <span class="pl-mute">authorization</span><span class="pl">Bearer eyJhbGc…</span>
+                  <span class="pl-mute">x-request-id</span><span class="pl">8f3a91c2-4d3b</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="cap">content wraps freely — the Section never widens or clips</div>
+        </div>
+        <div>
+          <strong>Width neutrality</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>Section is <code>display:block</code> (the <code>&lt;section&gt;</code> element default); it fills its parent width and does nothing more. Long content wraps; short content leaves whitespace</span>
+            <span class="k">why</span><span>frame driver ④ again; the seed card states "content wraps, never widens the column"</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="sec-stack">
+            <div class="sec-block">
+              <div class="lbl">Request</div>
+              <div class="body"><span class="pl">…</span></div>
+            </div>
+            <div class="sec-block" style="border-bottom:none;">
+              <div class="lbl">Response</div>
+              <div class="body"><span class="pl">…</span></div>
+            </div>
+          </div>
+          <div class="cap">two Sections — each owned by the parent stack, never nested inside each other</div>
+        </div>
+        <div>
+          <strong>No nesting</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>a Section must never render inside another Section's content slot</span>
+            <span class="k">why</span><span>the seed card's avoid line: "nesting a Section inside a Section" — the hairline + padding would double-indent and the heading hierarchy collapses to identical levels</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="sec-stack">
+          <div class="sec-block" style="border-bottom:none;">
+            <div class="lbl">Request</div>
+            <div class="body"><span class="pl">https://api.example.com/v2/orders/8f3a91c2</span></div>
+          </div>
+        </div>
+        <div class="cap"><strong>default (only state)</strong> — heading muted, content slot open, hairline below</div>
+      </div>
+      <div class="swatch">
+        <div class="sec-stack">
+          <div class="sec-block" style="border-bottom:none;">
+            <div class="lbl">Body</div>
+            <div class="body" style="color:var(--a-mute);font-family:'DM Mono',monospace;font-size:11px;">awaiting response…</div>
+          </div>
+        </div>
+        <div class="cap"><strong>with muted-content child</strong> — Section is unchanged; the child (BodyViewer) owns its own empty/loading state. Section is passive throughout</div>
+      </div>
+    </div>
+    <div class="callout" data-c="no-states">
+      <strong>Section owns no interactive states.</strong> No hover, focus, active, disabled, loading, or empty state of its own — the seed card explicitly records "states: none of its own". Any state visible inside a Section belongs to its child. This is what it means to be layout chrome.
+    </div>
+    <div class="callout" data-c="no-collapsible">
+      <strong>No collapsible state.</strong> The HeaderTable's "collapsible headers" disclosure (from the W2 roster seed) is owned by HeaderTable, not by Section. Section never collapses — if a group of content needs to collapse, a disclosure element wraps that content inside the slot. Section is unaware of it.
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="fork-row app" data-c="f1">
+      <div class="fork-card">
+        <strong>F1 · decoration model</strong> <span class="badge auto">settled: hairline only</span>
+        <div class="sec-stack" style="margin-top:8px;">
+          <div class="sec-block">
+            <div class="lbl">Request</div>
+            <div class="body"><span class="pl">…content…</span></div>
+          </div>
+          <div class="sec-block" style="border-bottom:none;">
+            <div class="lbl">Response</div>
+            <div class="body"><span class="pl">…content…</span></div>
+          </div>
+        </div>
+        <p class="cap"><strong>Hairline only.</strong> The <code>border-b border-hairline</code> on the bottom edge of each zone is the seam; no background fill, no card border, no shadow. Frame driver ⑤ + the shipped code (<code>FlowDetail.tsx:9</code>) both confirm this. The panel already has an outer shell; adding per-zone card borders would nest boxes.</p>
+      </div>
+      <div class="fork-card">
+        <strong>alt: card per zone</strong> <span class="badge warn">rejected</span>
+        <div class="sec-stack" style="margin-top:8px;padding:8px;gap:8px;display:flex;flex-direction:column;border-radius:8px;">
+          <div style="background:var(--a-soft);border-radius:6px;padding:8px 10px;border:1px solid var(--a-line);">
+            <div class="lbl">Request</div><div class="body"><span class="pl">…content…</span></div>
+          </div>
+          <div style="background:var(--a-soft);border-radius:6px;padding:8px 10px;border:1px solid var(--a-line);">
+            <div class="lbl">Response</div><div class="body"><span class="pl">…content…</span></div>
+          </div>
+        </div>
+        <p class="cap">Each zone as a rounded card with a soft fill. Heavier chrome, nested boxes — the panel outer frame already provides the card boundary. The shipped code never uses this form.</p>
+      </div>
+    </div>
+    <div class="fork-row app" data-c="f2">
+      <div class="fork-card">
+        <strong>F2 · last-Section hairline</strong> <span class="badge auto">settled: consumer removes it</span>
+        <div class="sec-stack" style="margin-top:8px;">
+          <div class="sec-block">
+            <div class="lbl">Request</div>
+            <div class="body"><span class="pl">…content…</span></div>
+          </div>
+          <div class="sec-block" style="border-bottom:2px dashed var(--a-warn);">
+            <div class="lbl">Body</div>
+            <div class="body"><span class="pl">…content…</span></div>
+          </div>
+        </div>
+        <p class="cap"><strong>Every Section carries <code>border-b</code>; the consumer (the scroll-container parent) uses <code>overflow:hidden</code> on the outer shell to clip the last hairline, or the last Section is passed a prop or class override.</strong> The simplest contract: Section always has the separator, and the outer panel clips or the last child overrides. The shipped code's outer <code>overflow-auto</code> div serves as the clip boundary; the last <code>border-b</code> disappears at the scroll edge.</p>
+      </div>
+      <div class="fork-card">
+        <strong>alt: Section auto-detects last sibling</strong> <span class="badge warn">rejected</span>
+        <p class="cap">Using <code>:last-child</code> CSS or JS to suppress the bottom border internally. Fragile if a sibling is conditionally rendered and becomes last; the component would need to know about its siblings' rendering — that is coupling that belongs outside.</p>
+      </div>
+    </div>
+    <div class="fork-row app" data-c="f3">
+      <div class="fork-card">
+        <strong>F3 · heading element</strong> <span class="badge auto">settled: &lt;h2&gt; inside &lt;section&gt;</span>
+        <div class="sec-stack" style="margin-top:8px;">
+          <div class="sec-block" style="border-bottom:none;">
+            <div class="lbl">Request</div>
+            <div class="body"><span class="pl">…</span></div>
+          </div>
+        </div>
+        <p class="cap"><strong><code>&lt;section&gt;</code> root + <code>&lt;h2&gt;</code> heading.</strong> Each Section is a landmark region; a screen-reader user can navigate between panel zones by heading. The shipped code uses <code>&lt;section&gt;</code> + <code>&lt;h2&gt;</code> (<code>FlowDetail.tsx:7–12</code>). Heading level is fixed at <code>h2</code> — Section always sits one level below the panel's <code>h1</code>-level identity.</p>
+      </div>
+      <div class="fork-card">
+        <strong>alt: heading level as prop</strong> <span class="badge warn">rejected</span>
+        <p class="cap">A <code>level</code> prop (h2/h3/h4) would be needed only if Sections nested — which they must not (see No nesting rule and seed card avoid line). YAGNI: the constraint removes the need for the prop.</p>
+      </div>
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>title</code></td><td><code>string</code></td><td>the heading text — always provided; a Section without a title is not a Section, it is plain spacing</td></tr>
+        <tr><td><code>children</code></td><td><code>React.ReactNode</code></td><td>the content slot — rendered verbatim, no wrapper, no layout imposed</td></tr>
+      </tbody>
+    </table>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built:</p>
+      <pre class="tsdoc">/**
+ * Section — titled grouping container; heading + spacing + hairline separation, no logic.
+ * @tier T1 — layout chrome only; heading typography and hairline rhythm would drift per call site without it
+ * @anatomy uppercase-muted heading (Inter xs, letter-spaced) · transparent content slot (no overflow, no layout) · hairline bottom border between siblings
+ * @use every labelled zone of a detail or settings screen: request, response, headers, body panels
+ * @avoid unlabelled grouping (plain spacing does it) · nesting a Section inside another Section · a Section that needs to collapse (put the disclosure inside the slot instead)
+ * @states none of its own — all interactive states belong to slot children
+ * @madeof —
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Every labelled zone of a detail or settings screen: "Request", "Response headers", "Body", any titled region where the heading + hairline + padding rhythm must hold consistently across sibling zones. Current tenants: the five <code>&lt;Section&gt;</code> calls in <code>FlowDetail.tsx:80–116</code>.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>Unlabelled grouping — plain <code>py-3</code> spacing does it. Nesting a Section inside a Section — the heading hierarchy collapses and padding doubles. Any group that needs to collapse or toggle visibility — put the disclosure element inside the content slot instead; Section itself never collapses. A page-level heading — <code>&lt;h1&gt;</code> belongs to the panel's identity bar, not here.</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part</th><th>Tailwind (build WU)</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>root element</td><td><code>&lt;section&gt;</code> · <code>border-b border-hairline px-4 py-3</code></td><td>exact match to <code>FlowDetail.tsx:9</code></td></tr>
+        <tr><td>heading</td><td><code>&lt;h2&gt;</code> · <code>mb-2 text-xs uppercase tracking-wide text-ink-mute</code></td><td>exact match to <code>FlowDetail.tsx:10</code>; Inter via <code>font-ui</code> inherited from the panel root</td></tr>
+        <tr><td>content slot</td><td>no wrapper — <code>children</code> rendered directly</td><td>zero imposed layout; overflow owned by children</td></tr>
+        <tr><td>hairline color</td><td><code>border-hairline</code> = <code>#3f3a36</code></td><td>from <code>tailwind.config.js:16</code> — the Warp line token</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="app" data-c="specimen">
+      <div style="background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;overflow:hidden;max-width:500px;font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--a-ink);">
+        <div class="sec-block">
+          <div class="lbl">Request</div>
+          <div class="body">
+            <span class="pl">GET&nbsp;</span><span class="pl">https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing</span>
+          </div>
+        </div>
+        <div class="sec-block">
+          <div class="lbl">Request headers</div>
+          <div class="body" style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:11px;">
+            <span class="pl-mute">accept</span><span class="pl">application/json</span>
+            <span class="pl-mute">authorization</span><span class="pl">Bearer eyJhbGciOiJIUzI1NiJ9…</span>
+            <span class="pl-mute">x-request-id</span><span class="pl">8f3a91c2-4d3b-41a2-bc7e</span>
+          </div>
+        </div>
+        <div class="sec-block">
+          <div class="lbl">Response headers</div>
+          <div class="body" style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:11px;">
+            <span class="pl-mute">content-type</span><span class="pl">application/json; charset=utf-8</span>
+            <span class="pl-mute">content-length</span><span class="pl">4218</span>
+          </div>
+        </div>
+        <div class="sec-block" style="border-bottom:none;">
+          <div class="lbl">Body</div>
+          <div class="body" style="font-size:11px;color:var(--a-ok);">{"items":[{"id":"p1","qty":2},{"id":"p7","qty":1}],"total":89.00}</div>
+        </div>
+      </div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:8px;">Static specimen — four Sections stacked in a panel shell: heading + content + hairline per zone, last zone without a bottom border. All tokens from the Warp palette (<code>--a-canvas</code>, <code>--a-line</code>, <code>--a-mute</code>, <code>--a-ink</code>). Section carries no interactive behavior — the specimen is intentionally static.</div>
+    </div>
+    <div class="callout" data-c="specimen-note">
+      <strong>Why static.</strong> Section has no interactive states of its own (the states section records exactly this). A live specimen would be identical to the static one — there is nothing to click, hover, or trigger. The spec-down rule: "the interactivity is negotiable; states stay visual either way." All states are shown in the states swatches above.
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

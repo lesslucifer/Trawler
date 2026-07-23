@@ -72,6 +72,9 @@ Standalone code commits outside a WU carry `test/v2` with `level: commit`.
   shared assets, dark-mode style, React widgets, the comment layer, and the
   snapshot/diff review flow are all owned by the global **`htmldoc` skill** — follow it; don't reinvent any of it (SUPER CRITICAL — ALWAYS FOLLOW THIS).
   **Snapshot a doc before editing it** and after a round share `<doc>.html?diff=latest`.
+- **Docs are visual-first**: lead with diagrams, tables, cards; prose only as
+  captions/one-liners. If a paragraph could be a diagram or table, make it one —
+  walls of text fail review.
 
 ## Documentation tiers — synthesize UP, never duplicate DOWN
 

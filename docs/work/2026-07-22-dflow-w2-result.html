@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60b2069f34851f0dfa9314" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W2 result (Seed component registry)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W2 result — Seed component registry</h1>
+      <p>The result report this WU tip attests. Design-only WU: the per-component design format, one confirmed design file per component, and the code-as-truth registry mechanism spec.</p>
+      <div class="meta">WU result · 2026-07-22 · reworked 2026-07-23 · Trawler · T3 (docs/work/) · wu/design-flow/seed-registry → epic/design-flow · plan: <a href="2026-07-22-dflow-w2-plan.html">W2 plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p>Everything the plan's deliverables table names, delivered in the reworked shape review demanded:</p>
+      <ul>
+        <li><strong>① The design format</strong> — <a href="component-design-base.html">component-design-base.html</a>: one component = one file, nine-section contract (identity &amp; frame → … → specimen), example-first, app-token specimens, forks with their losers, and the review loop. Extracted from the <a href="components/copy-text.html">CopyText pilot</a> after live review rounds; each file's API section carries the registry TSDoc block the mechanism compiles from.</li>
+        <li><strong>③ Every component designed through it</strong> — 13 confirmed design files under <a href="components/copy-text.html">docs/work/components/</a> plus ProtocolLine (T3 — designed inside the seed doc, inline markup, no component) and the <a href="components/copy-all-headers-button.html">CopyAllHeadersButton dissolution record</a>. All confirmed 2026-07-23 through per-file review rounds (history in each doc's snapshots).</li>
+        <li><strong>② The mechanism spec</strong> — in the <a href="2026-07-22-dflow-w2-registry-seed.html">registry seed</a>, now slimmed to index + verdicts: TSDoc → deterministic generated index → regenerate-and-diff freshness gate (store nothing forgeable), pinned-behavior vs deferred-form table, and the reuse-or-propose contract.</li>
+      </ul>
+      <p>Design-only as planned: no <code>ui/</code> code, no TSDoc in real components, no generator, no gate, no T1/T2 changes.</p>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <ul>
+        <li><strong>Deliverable shape reworked mid-WU:</strong> the plan's single registry-seed doc (six-field compact cards) failed review as too compact. Replaced by the per-component design files + the extracted base spec; the seed doc slimmed to roster + verdicts + mechanism, linking out per component. The six-field TSDoc shape survives as each file's compile block — the mechanism is unchanged.</li>
+        <li><strong>Review-driven design verdicts</strong> (recorded in the seed's verdicts table, full forks in the files): HeaderRow → <a href="components/key-value-row.html">KeyValueRow</a> (value cell = CopyText, absorbing "select/copy a cell") · DecodeToggle → <a href="components/segmented-control.html">SegmentedControl</a> (generalised T2→T1; decode semantics moved to BodyViewer) · <a href="components/method-label.html">MethodLabel</a> T1→T2 (verb→colour mapping via named tokens — a deliberate DEC-11 exception widening) · CopyAllHeadersButton dissolved (a CopyButton use; serialisation is HeaderTable's) · ProtocolLine re-tiered T3, not extracted at all.</li>
+      </ul>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <ul>
+        <li><strong>Tests: waived</strong> — design/docs-only WU per the plan's test plan; deliverables are T3 docs. The generated-index + freshness gate get their tests in the build WU / W7.</li>
+        <li>Every design grounded in shipped code with <code>file:line</code> cites (<code>FlowDetail.tsx</code>, <code>FlowList.tsx</code>, <code>components.tsx</code>, <code>BodyViewer.tsx</code>, <code>tailwind.config.js</code>, <code>recorder.rs</code>); review history preserved per doc as htmldoc snapshots.</li>
+        <li><code>cargo xtask verify-doc</code> green on the changed docs (this report: wu-result checklist).</li>
+      </ul>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <p>Nothing distils to T1/T2 yet — by design (mirrors W1). The format + designs stay T3 until W4 validates the flow that consumes them; the <a href="component-design-base.html">component-design-base</a> → T1 promotion question is decided at that distillation.</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <ul>
+        <li><strong>Build WU:</strong> turn each confirmed design file into <code>ui/src/components/*.tsx</code> carrying its TSDoc block; build gen-index + the freshness gate (decide index format and generator home); add the named verb colour tokens MethodLabel's T2 verdict requires; resolve BodyViewer's remaining open fork D5 (toggle visibility when decode is a no-op); give shipped <code>Field</code>/<code>StatusDot</code> the TSDoc shape.</li>
+        <li><strong>W4:</strong> realise the reuse-or-propose path inside the revised flow; validate the format against a second screen run.</li>
+        <li><strong>W7:</strong> wire the freshness gate into the DoD gate.</li>
+      </ul>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60d5c39f34851f0dfa93d3">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — KeyValueRow component design</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+    /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
+    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
+    /* key-value-row specific: the two-column grid row */
+    .hr-table{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;}
+    .hr-key{color:var(--a-mute);white-space:nowrap;}
+    .hr-val{color:var(--a-body);word-break:break-all;text-decoration:underline dotted var(--a-line);text-underline-offset:3px;cursor:text;user-select:text;}
+    .hr-val:hover,.hr-val.s-hover{color:var(--a-ink);text-decoration-color:var(--a-mute);}
+    .hr-val.s-confirm{text-decoration-color:var(--a-ok);}
+    .hr-val.plain{text-decoration:none;}
+    .hr-row{display:contents;}
+    /* panel wrapper */
+    .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
+    .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
+    .chip{display:inline-block;margin-left:8px;font-size:10px;line-height:16px;color:var(--a-ok);border:1px solid var(--a-ok);border-radius:999px;padding:0 6px;vertical-align:1px;font-family:Inter,system-ui,sans-serif;}
+    .sel{background:rgba(174,166,156,.35);color:var(--a-ink);}
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:Inter,system-ui,sans-serif;}
+    .tsdoc{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .flow-ex{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .flow-ex .arr{color:var(--muted);font-size:11px;white-space:nowrap;}
+    .timeline{font-family:"DM Mono",ui-monospace,monospace;font-size:11px;color:var(--a-body);background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 10px;line-height:1.8;white-space:pre;overflow-x:auto;}
+    .timeline .m{color:var(--a-mute);}
+    .timeline .o{color:var(--a-ok);}
+    /* hover-stripe for the rejected D3 alternative specimen */
+    .hr-annotated .hr-row-hl .hr-key{color:var(--a-body);}
+    .hr-annotated .hr-row-hl .hr-val{color:var(--a-ink);}
+    .hr-annotated .hr-row-hl{background:rgba(255,255,255,.035);border-radius:3px;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>KeyValueRow <span class="tier t1">T1</span></h1>
+      <p>One wire key/value pair — muted name, mono value; the value is a CopyText: click grabs it whole, drag-select still takes a part.</p>
+      <div class="meta">Component design · <strong>confirmed 2026-07-23 · review round 1 addressed</strong> · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a> · was: HeaderRow</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> without a shared component, the name/value visual contract (fixed column, wrapping value, typography split) drifts across every callsite — and every callsite re-decides how a value gets copied. KeyValueRow pins both: the <code>display:contents</code> grid shape that already ships (<code>FlowDetail.tsx:23</code>) and one grab contract for values — whole via a <a href="copy-text.html">CopyText</a> click, partial via native selection. Named generically (review 2026-07-23, was <em>HeaderRow</em>): the same row serves headers, trailers and decoded form fields.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — display + value click-copy via CopyText, no business logic → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>request headers · response headers · decoded form body fields (W1 catalog zones C·D; W2 absorbed "select/copy a cell" — review 2026-07-23 settles it as CopyText + native selection)</td></tr>
+      <tr><td><strong>Exists today</strong></td><td><code>FlowDetail.tsx:16–30</code> — inline <code>HeaderTable</code>, no component boundary yet — extract as KeyValueRow</td></tr>
+      <tr><td><strong>Made of</strong></td><td><a href="copy-text.html">CopyText</a> (the value cell) · consumed by <a href="header-table.html">HeaderTable</a> and FormRenderer</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① name ≠ value semantically</td><td>name: muted tone; value: body tone</td></tr>
+        <tr><td>② values can be long (<code>Set-Cookie</code>, JWT)</td><td>value wraps at any width — never truncates</td></tr>
+        <tr><td>③ long values are hard to hand-select whole</td><td>value = CopyText: one click copies it verbatim (review 2026-07-23)</td></tr>
+        <tr><td>④ partial takes stay primary</td><td>CopyText's selection guard: releasing a drag-select never fires the copy</td></tr>
+        <tr><td>⑤ calm, dense panel</td><td>the only added chrome is CopyText's hairline dotted underline; no per-row buttons, no row hover</td></tr>
+        <tr><td>⑥ three tenants, same shape</td><td>both name and value mono throughout</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy">
+      <div class="panel">
+        <div class="lbl">Request headers</div>
+        <div class="hr-table">
+          <div class="hr-row">
+            <span class="hr-key">content-type<span class="anno">1</span></span>
+            <span class="hr-val">application/json<span class="anno">2</span></span>
+          </div>
+          <div class="hr-row">
+            <span class="hr-key">authorization</span>
+            <span class="hr-val s-confirm">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.sig<span class="chip">copied</span><span class="anno">3</span></span>
+          </div>
+          <div class="hr-row">
+            <span class="hr-key">accept</span>
+            <span class="hr-val">*/*</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="hr-table">
+              <span class="hr-key">content-type</span><span class="hr-val">application/json</span>
+              <span class="hr-key">authorization</span><span class="hr-val">Bearer token…</span>
+            </div>
+          </div>
+          <div class="cap">name column: always nowrap, always muted, inert — it reads at a glance</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> name cell</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>mono, muted tone (<code>text-ink-mute</code>), <code>whitespace-nowrap</code> — it never wraps; the column width follows the longest name in the set. Inert: no copy affordance — the name is a label, not a payload</span>
+            <span class="k">why</span><span>names are short identifiers; muting them directs attention to the value column (frame ①). Shipped: <code>FlowDetail.tsx:24</code> — <code>&lt;dt className="whitespace-nowrap text-ink-mute"&gt;</code></span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="hr-table">
+              <span class="hr-key">authorization</span>
+              <span class="hr-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.sig</span>
+            </div>
+          </div>
+          <div class="cap">long JWT: wraps inside the column, dotted hairline underline is the only hint — one click copies all of it</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> value cell — a CopyText</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>a <a href="copy-text.html">CopyText</a> tenant: mono, body tone (<code>text-ink-body</code>), <code>word-break: break-all</code> — wraps at any width, <strong>never truncates, never widens the column</strong> · dotted hairline underline at rest; the whole cell is the click target</span>
+            <span class="k">why</span><span>display = payload: the full value must be visible (frame ②) — and one click must take a whole cookie/JWT: hand-selecting a 300-char wrapped mono string is multi-step and silently error-prone (frame ③, review 2026-07-23). All copy behavior is CopyText's contract, not reimplemented here. Shipped base: <code>FlowDetail.tsx:25</code> — <code>&lt;dd className="break-all"&gt;</code></span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="hr-table">
+              <span class="hr-key">authorization</span>
+              <span class="hr-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.<span class="sel">eyJzdWIiOiJ1c2VyXzg4OTAyIg</span>…</span>
+            </div>
+          </div>
+          <div class="cap">drag-selecting the payload inside a JWT: releasing fires <em>no</em> copy — ⌘C takes just the substring</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> selection guard — partial takes stay native</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>CopyText's guard: a click with a non-collapsed selection fires no copy; <code>user-select: text</code> stays native on both cells</span>
+            <span class="k">why</span><span>partial takes dominate header inspection (frame ④): the host, a token payload, a cookie value — the whole-value affordance must never hijack them (<code>copy-text.html § behavior</code> "Selection guard")</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — the rules the parts obey</h2>
+    <p data-c="behavior-intro" style="color:var(--muted);">Anatomy is what is on screen; behavior is what it <em>does</em>. The row's only behavior is the value cell's CopyText — everything else is layout contract.</p>
+    <div class="app parts" data-c="behavior-table">
+      <div class="part">
+        <div class="ex">
+          <div class="timeline"><span class="m">click value  ▸</span> whole value on clipboard · <span class="o">copied</span> chip ~2 s
+<span class="m">drag+release ▸</span> nothing — native selection; ⌘C takes the part
+<span class="m">name cell    ▸</span> inert — no handler, no affordance</div>
+          <div class="cap">one grab contract: click = whole (guarded), drag = part, names are labels</div>
+        </div>
+        <div>
+          <strong>Value copy (CopyText)</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>the value cell renders as <a href="copy-text.html">CopyText</a> with <code>label = name</code> (aria: "copy {name}") — trigger, selection guard, ~2 s confirm chip, silent clipboard-failure and a11y are all inherited verbatim (<code>copy-text.html § behavior</code>); the row adds no interaction of its own</span>
+            <span class="k">why</span><span>review 2026-07-23 flipped the seed verdict ("native selection covers it"): long values like cookies and tokens are difficult to copy by hand-selection. CopyText solves the whole-value grab while its guard keeps every partial take native — both intents survive (frame ③·④)</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="hr-table">
+              <span class="hr-key">set-cookie</span>
+              <span class="hr-val">session=eyJhbGciOiJSUzI1NiJ9.payload.sig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
+            </div>
+          </div>
+          <div class="cap">long Set-Cookie wraps over multiple lines — the name column stays fixed, the value column absorbs all the space</div>
+        </div>
+        <div>
+          <strong>Column sizing</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>the parent grid uses <code>grid-cols-[auto_1fr]</code>: the name column is as wide as the longest name in the set; the value column takes the rest. Shipped: <code>FlowDetail.tsx:21</code></span>
+            <span class="k">why</span><span>KeyValueRow lives inside the parent grid (<a href="header-table.html">HeaderTable</a>) with <code>display:contents</code> — the row itself contributes cells, not its own grid. Column proportions are therefore a HeaderTable concern; KeyValueRow just declares the name nowrap and value break-all contracts</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex">
+            <div class="panel" style="font-family:'DM Mono',monospace;font-size:12.5px;">
+              <div class="hr-table">
+                <span class="hr-key">x-request-id</span>
+                <span class="hr-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+              </div>
+            </div>
+            <span class="arr">FormRenderer ▸</span>
+            <div class="panel" style="font-family:'DM Mono',monospace;font-size:12.5px;">
+              <div class="hr-table">
+                <span class="hr-key">email</span>
+                <span class="hr-val">user@example.com</span>
+              </div>
+            </div>
+          </div>
+          <div class="cap">same component, two tenants: a response header and a decoded form field — identical visual and grab contract</div>
+        </div>
+        <div>
+          <strong>Tenant invariance</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>the component renders identically for headers, trailers, and decoded form fields — <code>name</code> and <code>value</code> props only, no type discrimination</span>
+            <span class="k">why</span><span>the three tenants are all wire-level name/value; visual differentiation would be noise — and the generic name says so (review 2026-07-23). FormRenderer composes KeyValueRow× to show decoded form fields (roster: <code>2026-07-22-dflow-w2-registry-seed.html</code>)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel">
+          <div class="hr-table">
+            <span class="hr-key">content-type</span><span class="hr-val">application/json</span>
+            <span class="hr-key">accept</span><span class="hr-val">*/*</span>
+          </div>
+        </div>
+        <div class="cap"><strong>rest</strong> — name muted; value body tone with hairline dotted underline; no row background</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="hr-table">
+            <span class="hr-key">content-type</span><span class="hr-val s-hover">application/json</span>
+            <span class="hr-key">accept</span><span class="hr-val">*/*</span>
+          </div>
+        </div>
+        <div class="cap"><strong>hover (value cell)</strong> — ink, underline strengthens, tooltip "click to copy" — CopyText's state, scoped to the cell, never the row</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="hr-table">
+            <span class="hr-key">authorization</span>
+            <span class="hr-val s-confirm">Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.sig<span class="chip">copied</span></span>
+          </div>
+        </div>
+        <div class="cap"><strong>confirming</strong> — inline chip + ok underline for ~2 s after a whole-value copy (CopyText's convention)</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="hr-table">
+            <span class="hr-key">authorization</span>
+            <span class="hr-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.<span class="sel">eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwfQ</span>.sig</span>
+          </div>
+        </div>
+        <div class="cap"><strong>drag-selecting</strong> — native OS selection highlight; releasing fires no copy (the guard)</div>
+      </div>
+    </div>
+    <div class="callout" data-c="non-states">
+      <strong>Deliberate non-states:</strong>
+      <ul style="margin:.5em 0 0;padding-left:1.4em;">
+        <li><strong>No row hover stripe.</strong> The value cell's hover is CopyText's, scoped to the cell; a row-wide tint would fire on every row as the user drags to select — visual noise across 30+ rows, and there is no per-row tint in the zero-chromatic-accent palette (frame ⑤). <em>Fork D3 settles this explicitly.</em></li>
+        <li><strong>No row focus state.</strong> The value cell is CopyText's tab stop (<code>role="button"</code>, its own focus ring); the row and name cell add none.</li>
+        <li><strong>No empty / error state.</strong> A row with an absent value is not rendered — the parent (<a href="header-table.html">HeaderTable</a>) decides when to show "none"; KeyValueRow never renders a missing value.</li>
+        <li><strong>No disabled state.</strong> The row is always either shown or absent; there is no partially-available row.</li>
+      </ul>
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app cards" data-c="d1">
+      <div class="card">
+        <strong>D1 · value wrapping vs truncation</strong> <span class="badge auto">settled: wrap, never truncate</span>
+        <div class="panel" style="margin-top:8px;">
+          <div class="hr-table">
+            <span class="hr-key">set-cookie</span>
+            <span class="hr-val">session=abc123; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>Wrap (settled).</strong> The full value is always visible. Matches the trust contract from the Frame: display = payload. Matches CopyText's "never truncates" rule (<code>copy-text.html § anatomy ①</code>). Shipped today: <code>FlowDetail.tsx:25</code> uses <code>break-all</code> with no truncation. A debug proxy whose headers truncate is a proxy you can't trust.</p>
+      </div>
+      <div class="card">
+        <strong>alt: truncate with expand</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;">
+          <div class="hr-table">
+            <span class="hr-key">set-cookie</span>
+            <span class="hr-val plain" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">session=abc123; Path=/; HttpOnly; Secure…</span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">Truncation + a "show more" toggle hides wire data by default — the opposite of trustworthy display. The panel is scrollable; a long value costing vertical space is expected and correct.</p>
+      </div>
+    </div>
+    <div class="app cards" data-c="d2">
+      <div class="card">
+        <strong>D2 · value copy affordance</strong> <span class="badge auto">settled: value cell is a CopyText — review override 2026-07-23</span>
+        <div class="panel" style="margin-top:8px;">
+          <div class="hr-table">
+            <span class="hr-key">authorization</span>
+            <span class="hr-val s-confirm">Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.sig<span class="chip">copied</span></span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>CopyText on the value (settled on review).</strong> The seed verdict said native selection only; review flipped it: long values (<code>Set-Cookie</code>, JWT) are difficult to hand-select whole. CopyText gives the one-click whole-value grab while its selection guard keeps every partial take native (<code>copy-text.html § behavior</code>) — both intents survive. Whole-<em>set</em> copy still lives in <a href="header-table.html">HeaderTable</a>'s copy-all (a CopyButton), not on each row.</p>
+      </div>
+      <div class="card">
+        <strong>alt: native selection only</strong> <span class="badge warn">rejected on review</span>
+        <div class="panel" style="margin-top:8px;">
+          <div class="hr-table">
+            <span class="hr-key">set-cookie</span>
+            <span class="hr-val plain">session=eyJhbGciOiJSUzI1NiJ9.payload.sig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400</span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">The original seed verdict ("nothing to build"). Zero chrome — but grabbing a whole wrapped 300-char cookie takes a careful multi-line drag, and a one-character miss is silent. That is exactly the failure CopyText exists to remove (<code>copy-text.html § frame</code>); rejected 2026-07-23.</p>
+      </div>
+      <div class="card">
+        <strong>alt: hover copy glyph</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;">
+          <div class="hr-table">
+            <span class="hr-key">authorization</span>
+            <span class="hr-val plain">Bearer token… <span style="color:var(--a-mute);font-size:11px;">⧉</span></span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">A per-row glyph multiplies chrome across 30+ rows, lands at unpredictable positions on wrapped values, and shrinks the hit target to a few pixels. The W1 "no fitting glyph" lesson (<code>2026-07-22-dflow-w2-registry-seed.html</code> IconButton avoid) — and CopyText's own D1 already rejected it for the same reasons.</p>
+      </div>
+    </div>
+    <div class="app cards" data-c="d3">
+      <div class="card">
+        <strong>D3 · row hover highlight</strong> <span class="badge auto">settled: no row hover state</span>
+        <div class="panel" style="margin-top:8px;">
+          <div class="hr-table">
+            <span class="hr-key">content-type</span><span class="hr-val">application/json</span>
+            <span class="hr-key">accept</span><span class="hr-val">*/*</span>
+            <span class="hr-key">x-request-id</span><span class="hr-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>No row highlight (settled).</strong> The interactive target is the value cell, and CopyText's cell-scoped hover already marks it; a row-wide tint would claim the whole row is clickable — it isn't. It would also fire continuously during drag-select across rows — visual thrash. Zero-chromatic-accent palette has no per-row tint token.</p>
+      </div>
+      <div class="card">
+        <strong>alt: subtle row stripe on hover</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;">
+          <div class="hr-table hr-annotated">
+            <span class="hr-key">content-type</span><span class="hr-val">application/json</span>
+            <div class="hr-row hr-row-hl" style="display:contents;">
+              <span class="hr-key" style="color:var(--a-body);">accept</span><span class="hr-val" style="color:var(--a-ink);background:rgba(255,255,255,.035);border-radius:3px;padding:0 2px;">*/*</span>
+            </div>
+            <span class="hr-key">x-request-id</span><span class="hr-val">4f8a2c91…</span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">A row stripe suggests the whole row is a target when only the value cell is. If density concerns make scanning hard, the typography contrast (mute name / body value) is the solution, not a row stripe.</p>
+      </div>
+    </div>
+    <div class="callout" data-c="open-questions">
+      <strong>Review log — 2026-07-23 (manager):</strong>
+      <ul style="margin:.5em 0 0;padding-left:1.4em;">
+        <li><strong>Renamed HeaderRow → KeyValueRow.</strong> A T1 serving headers, trailers and decoded form fields carries a generic name, not its first tenant's.</li>
+        <li><strong>D2 flipped: value cell = CopyText.</strong> Long values (cookie, token) are difficult to copy by hand-selection; CopyText's selection guard keeps partial takes native.</li>
+        <li><strong>Name typography: both cells mono</strong> — confirmed as designed (matches shipped <code>FlowDetail.tsx:21</code>).</li>
+        <li><strong>Row gap: 4 px</strong> (<code>gap-y-1</code>) as shipped — confirmed.</li>
+      </ul>
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>name</code></td><td><code>string</code></td><td>the header name / field key — displayed muted, nowrap, inert; also CopyText's aria label ("copy {name}")</td></tr>
+        <tr><td><code>value</code></td><td><code>string</code></td><td>the value — rendered as a CopyText: body tone, <code>break-all</code>, never truncated; click copies it verbatim</td></tr>
+      </tbody>
+    </table>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built:</p>
+      <pre class="tsdoc">/**
+ * KeyValueRow — one wire key/value pair; muted name, value is a CopyText (click copies whole, selection stays native).
+ * @tier T1 — display + value click-copy via CopyText; no business logic
+ * @anatomy two-column grid (display:contents inside parent): name (muted, nowrap, mono, inert) · value (CopyText: body tone, break-all, mono, never truncated)
+ * @use any wire key/value line: request/response headers, trailers, decoded form fields
+ * @avoid editable forms (that is Field) · data needing sort/filter · standalone full-value fields with no name column (bare CopyText)
+ * @states rest · hover/focus/confirming on the value cell (CopyText's states) · drag-selecting (native; the guard fires no copy)
+ * @madeof CopyText (value cell)
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Any wire-level name/value line: request headers, response headers, HTTP trailers, decoded form body fields. Three or more of these in a block → <a href="header-table.html">HeaderTable</a> wraps them with the parent grid and its copy-all action.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>Editable key/value pairs — that is <a href="section.html">Field</a>. Data that needs sorting or filtering — KeyValueRow has no interaction surface beyond the value copy. A standalone full-value field with no name column (URI, flow id) — that is a bare <a href="copy-text.html">CopyText</a>. Single label/value in UI chrome (non-wire) — plain styled spans are cheaper.</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part</th><th>Tailwind (build WU)</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>row wrapper</td><td><code>contents</code></td><td><code>display:contents</code> participates in the parent HeaderTable <code>grid-cols-[auto_1fr]</code> — no own layout (<code>FlowDetail.tsx:21–23</code>)</td></tr>
+        <tr><td>name cell</td><td><code>font-mono text-xs text-ink-mute whitespace-nowrap</code></td><td>shipped: <code>FlowDetail.tsx:24</code> — identical classes, extracted verbatim</td></tr>
+        <tr><td>value cell</td><td>CopyText with <code>font-mono text-xs text-ink-body break-all</code></td><td>affordance tokens (dotted underline, hover, focus ring, chip) are CopyText's — <code>copy-text.html § tokens</code>, one fact per tier; <code>label = name</code></td></tr>
+        <tr><td>cursor</td><td>(<code>cursor-text</code> via CopyText)</td><td>the I-beam is honest for selectable text — CopyText sets it explicitly so <code>role="button"</code> never flips it; never <code>cursor-pointer</code></td></tr>
+        <tr><td>selection highlight</td><td>(native browser)</td><td>no <code>user-select</code> override on either cell; CopyText's guard makes click-copy and selection coexist</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="callout" data-c="specimen-note" style="margin-bottom:12px;">
+      The row's only behavior is the value cell's CopyText, so the specimen is live (same ~20-line pattern as <code>copy-text.html</code>'s specimen). Click any value: the whole value is copied and a chip confirms for ~2 s. Drag-select a substring first: releasing fires no copy — ⌘C takes just the selection. Names are inert.
+    </div>
+    <div class="app" data-c="specimen">
+      <div class="panel" style="max-width:600px;">
+        <div class="lbl">Request headers</div>
+        <div class="hr-table" id="specimen-req">
+          <span class="hr-key">host</span><span class="hr-val">api.example.com</span>
+          <span class="hr-key">content-type</span><span class="hr-val">application/json; charset=utf-8</span>
+          <span class="hr-key">authorization</span><span class="hr-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.dummysig</span>
+          <span class="hr-key">accept</span><span class="hr-val">application/json</span>
+          <span class="hr-key">x-request-id</span><span class="hr-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+        </div>
+      </div>
+      <div class="panel" style="max-width:600px;margin-top:12px;">
+        <div class="lbl">Response headers</div>
+        <div class="hr-table" id="specimen-resp">
+          <span class="hr-key">content-type</span><span class="hr-val">application/json; charset=utf-8</span>
+          <span class="hr-key">set-cookie</span><span class="hr-val">session=eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.dummysig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
+          <span class="hr-key">content-length</span><span class="hr-val">1842</span>
+          <span class="hr-key">x-trace-id</span><span class="hr-val">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
+          <span class="hr-key">cache-control</span><span class="hr-val">no-store, no-cache, must-revalidate, proxy-revalidate</span>
+        </div>
+      </div>
+      <div class="panel" style="max-width:600px;margin-top:12px;">
+        <div class="lbl">Decoded form body (FormRenderer tenant)</div>
+        <div class="hr-table" id="specimen-form">
+          <span class="hr-key">grant_type</span><span class="hr-val">authorization_code</span>
+          <span class="hr-key">code</span><span class="hr-val">4/P7q7W91a-oMsCeLvIaQm6bTrgtp7</span>
+          <span class="hr-key">redirect_uri</span><span class="hr-val">https://app.example.com/auth/callback?origin=dashboard&amp;next=%2Fprofile</span>
+          <span class="hr-key">client_id</span><span class="hr-val">client_1234567890.apps.example.com</span>
+        </div>
+      </div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:8px;">Interactive — click any value (copies for real, chip confirms ~2 s), drag-select a substring (no copy fires; ⌘C takes the part), Tab + Enter for keyboard copy. All three tenants shown: request headers · response headers · decoded form body (same visual and grab contract). Rendered in the app's Warp tokens.</div>
+    </div>
+  </main>
+  <script>
+    document.querySelectorAll('[data-c="specimen"] .hr-val').forEach((el) => {
+      const value = el.textContent;
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.title = 'click to copy';
+      let timer;
+      function confirmCopy() {
+        el.classList.add('s-confirm');
+        let chip = el.querySelector('.chip');
+        if (!chip) {
+          chip = document.createElement('span');
+          chip.className = 'chip';
+          chip.setAttribute('role', 'status');
+          chip.setAttribute('aria-live', 'polite');
+          chip.textContent = 'copied';
+          el.appendChild(chip);
+        }
+        clearTimeout(timer);
+        timer = setTimeout(() => { el.classList.remove('s-confirm'); chip.remove(); }, 2000);
+      }
+      function copy() {
+        navigator.clipboard?.writeText(value).then(confirmCopy, () => {});
+      }
+      el.addEventListener('click', () => {
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed) return;
+        copy();
+      });
+      el.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        copy();
+      });
+    });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
