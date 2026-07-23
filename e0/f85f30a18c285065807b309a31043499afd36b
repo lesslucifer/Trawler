@@ -1,0 +1,7 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W2
+tests:
+  integration:
+    waived: "design/docs-only WU — deliverables are the component-design format spec, one confirmed design file per component (docs/work/components/), the slimmed registry-seed doc and the WU result report; no ui/ code. The generated-index + freshness gate are specified only and get their tests in the later build WU / W7."
