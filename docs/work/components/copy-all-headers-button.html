@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60d7119f34851f0dfa93f8">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — CopyAllHeadersButton (dissolved)</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+    .t2{color:var(--ok);}
+    .gone{text-decoration:line-through;opacity:.55;}
+    /* app-token scope: specimen renders in the real Warp palette */
+    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
+    .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:520px;}
+    .cb{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--a-line);border-radius:3px;font-family:Inter,system-ui,sans-serif;font-size:11.5px;color:var(--a-mute);cursor:pointer;background:transparent;user-select:none;white-space:nowrap;}
+    .section-bar{display:flex;align-items:center;justify-content:space-between;padding:4px 0 6px;border-bottom:1px solid var(--a-line);margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
+    .section-bar .slbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--a-mute);}
+    .hdr-tbl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-family:"DM Mono",ui-monospace,monospace;font-size:11.5px;}
+    .hdr-tbl .hk{color:var(--a-mute);white-space:nowrap;}
+    .hdr-tbl .hv{color:var(--a-body);word-break:break-all;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1><span class="gone">CopyAllHeadersButton</span> <span class="tier t2 gone">T2</span> → dissolved</h1>
+      <p>Not a component. The button is the T1 <a href="copy-button.html">CopyButton</a>; the press logic (wire-format serialisation) lives in the parent <a href="header-table.html">HeaderTable</a>.</p>
+      <div class="meta">Component design · <strong>dissolved by review</strong> · 2026-07-23 · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="verdict">Review verdict</h2>
+    <div class="callout" data-c="verdict">
+      <strong>Manager review, 2026-07-23:</strong> the button itself carries zero business logic — it is a T1 element (click → auto state change → reset, now also an error state), i.e. <a href="copy-button.html">CopyButton</a>. The press logic — serialising <code>HeaderView[]</code> to wire format and writing it — belongs to the parent: <a href="header-table.html">HeaderTable</a> owns "copy all". A T2 wrapper adding nothing of its own was the wrong seam; it is dissolved.
+    </div>
+    <table data-c="split">
+      <thead><tr><th>What this file specified</th><th>Where it lives now</th></tr></thead>
+      <tbody>
+        <tr><td>button shell, confirm (~2 s label-swap → auto reset), <strong>new error state</strong>, disabled, a11y</td><td><a href="copy-button.html">CopyButton</a> (T1) — states § + behavior §</td></tr>
+        <tr><td>wire-format serialisation formula + format fork (wire vs JSON vs curl vs TSV)</td><td><a href="header-table.html">HeaderTable</a> — behavior § serialisation + fork D4</td></tr>
+        <tr><td>ordering (wire order, never sorted) · trailing newline</td><td><a href="header-table.html">HeaderTable</a> — fork D2 · fork D4</td></tr>
+        <tr><td>placement (sub-bar, right of section heading) · label "copy all"</td><td><a href="header-table.html">HeaderTable</a> — anatomy § sub-bar + fork D3</td></tr>
+        <tr><td>disabled when <code>headers.length === 0</code> · aria-label leg disambiguation</td><td><a href="header-table.html">HeaderTable</a> — empty-set rule · API (<code>label</code> prop)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="result">What the user sees — unchanged</h2>
+    <div class="app" data-c="result-specimen">
+      <div class="panel">
+        <div class="section-bar">
+          <span class="slbl">Request headers</span>
+          <button class="cb" type="button">copy all</button>
+        </div>
+        <div class="hdr-tbl">
+          <span class="hk">accept</span><span class="hv">application/json</span>
+          <span class="hk">authorization</span><span class="hv">Bearer eyJhbG…</span>
+          <span class="hk">content-type</span><span class="hv">application/json</span>
+        </div>
+      </div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:8px;">
+        Same pixels, different seam: HeaderTable renders <code>&lt;CopyButton label="copy all" value={serialised} /&gt;</code> and builds <code>serialised</code> itself — <code>headers.map(h =&gt; `${h.name}: ${h.value}`).join('\n') + '\n'</code>.
+      </div>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

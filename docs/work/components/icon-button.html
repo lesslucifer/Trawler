@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60d59b9f34851f0dfa93cf">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — IconButton component design</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+    /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
+    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
+    .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
+    .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
+
+    /* IconButton specimen styles */
+    .ib{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:3px;cursor:pointer;border:none;background:transparent;font-size:14px;line-height:1;padding:0;color:var(--a-mute);transition:color .1s,background .1s;}
+    .ib:hover,.ib.s-hover{color:var(--a-ink);background:rgba(247,245,240,.07);}
+    .ib:focus-visible,.ib.s-focus{outline:1px solid var(--a-mute);outline-offset:2px;color:var(--a-ink);}
+    .ib:active,.ib.s-active{color:var(--a-ink);background:rgba(247,245,240,.13);}
+    .ib.s-disabled{color:rgba(174,166,156,.35);cursor:not-allowed;background:transparent;}
+    /* hit-target ghost used in anatomy diagram */
+    .ib-ghost{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:3px;border:1px dashed var(--a-mute);background:rgba(174,166,156,.06);font-size:14px;color:var(--a-mute);}
+    /* sub-bar panel: realistic placement */
+    .sub-bar{display:flex;align-items:center;gap:6px;background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:6px 10px;font-family:Inter,system-ui,sans-serif;}
+    .sub-bar .lbl{color:var(--a-mute);font-size:11px;text-transform:uppercase;letter-spacing:.05em;flex:1;}
+    .tooltip{position:relative;display:inline-flex;}
+    .tooltip .tip{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a1714;border:1px solid var(--a-line);border-radius:3px;color:var(--a-body);font-size:11px;font-family:Inter,system-ui,sans-serif;white-space:nowrap;padding:3px 7px;pointer-events:none;}
+    .tooltip .tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:4px solid transparent;border-top-color:#1a1714;}
+
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;display:flex;align-items:center;gap:10px;padding:10px 12px;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:Inter,system-ui,sans-serif;}
+    .tsdoc{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .flow-ex{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .flow-ex .arr{color:var(--muted);font-size:11px;white-space:nowrap;}
+    .timeline{font-family:"DM Mono",ui-monospace,monospace;font-size:11px;color:var(--a-body);background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 10px;line-height:1.8;white-space:pre;overflow-x:auto;}
+    .timeline .m{color:var(--a-mute);}
+    .timeline .o{color:var(--a-ok);}
+    /* fork card sizing */
+    .app .fork-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;}
+    .app .fork-card{background:var(--a-soft);border:1px solid var(--a-line);border-radius:6px;padding:10px 12px;min-width:160px;flex:1;}
+    .app .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--a-mute);margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
+    .app .fork-card .fc-ex{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+    .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:Inter,system-ui,sans-serif;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>IconButton <span class="tier t1">T1</span></h1>
+      <p>Bare-glyph button — a compact affordance for icon-only actions: close, save, collapse.</p>
+      <div class="meta">Component design · <strong>confirmed 2026-07-23</strong> · 2026-07-22 · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> two tenants (close + save) share the same icon-only shape, and the raw <code>&lt;button&gt;</code> at <code>FlowDetail.tsx:69</code> gets three things wrong that a shared primitive fixes — no hit-target guarantee, no accessible-name contract, no consistent hover/focus treatment.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — generic action affordance, no business logic → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>close panel (detail header) · save body to file (BodyViewer sub-bar; both named in W2 roster) · any future icon-only trigger unambiguous in place</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>close button at <code>FlowDetail.tsx:69–76</code> — raw <code>&lt;button&gt;</code>, no shared abstraction</td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (T1 primitive). Sibling of <a href="copy-button.html">CopyButton</a>: both are button primitives; CopyButton is labelled + clipboard; IconButton is icon-only + caller handler</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① touch target</td><td>28 × 28 px hit area by default regardless of glyph size (WCAG 2.5.8 ≥ 24 × 24); optional <code>size</code> prop overrides, floor 24</td></tr>
+        <tr><td>② accessible name — icon alone is not a name</td><td>guaranteed <code>aria-label</code> — caller-supplied, or defaulted from the named glyph; <code>title</code> doubles as tooltip</td></tr>
+        <tr><td>③ zero chromatic accent (Warp DEC-11)</td><td>hover/focus are ink-toned (mute → ink + soft bg) — no colored ring</td></tr>
+        <tr><td>④ calm, dense panel</td><td>no border/background at rest — glyph only</td></tr>
+        <tr><td>⑤ avoid actions with no fitting glyph</td><td>@avoid when a word label would carry intent better</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-hero">
+      <div class="sub-bar" style="max-width:380px;">
+        <span class="lbl">Body</span>
+        <span style="color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;">[raw | decoded]</span>
+        <span style="flex:1;"></span>
+        <button class="ib" title="save to file" aria-label="save body to file"><span class="anno" style="position:absolute;transform:translate(10px,-10px);z-index:1;">1</span>↓</button>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">BodyViewer sub-bar: the glyph is the only visible element at rest</div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;align-items:center;gap:12px;">
+            <span style="position:relative;display:inline-flex;">
+              <span class="ib-ghost">↓</span>
+            </span>
+            <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">dashed = 28×28 hit area; glyph is smaller</span>
+          </div>
+          <div class="cap">hit area is 28×28 px; the glyph occupies the center ~14 px</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> hit area</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>28 × 28 px default, <code>border-radius:3px</code> — the glyph is centered inside it; padding fills the gap. Optional <code>size</code> prop overrides the side length.</span>
+            <span class="k">why</span><span>WCAG 2.5.8 minimum 24×24; 28 keeps alignment in sub-bars that already use 28-tall rows. Padding, not margin: the full hit area is interactive (frame: touch target). Overrides below 24 violate the WCAG floor — don't.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;align-items:center;gap:14px;">
+            <button class="ib" style="pointer-events:none;">×</button>
+            <button class="ib" style="pointer-events:none;">↓</button>
+            <button class="ib s-hover" style="pointer-events:none;">×</button>
+          </div>
+          <div class="cap">rest (muted glyph, no bg) → hover (ink + soft bg wash)</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> glyph</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>muted (<code>#aea69c</code>) at rest — no border, no background. Named built-in glyph via <code>glyph</code> prop (<code>"close"</code> → ×, <code>"save"</code> → ↓) or custom node via <code>children</code>; <code>children</code> wins when both are given.</span>
+            <span class="k">why</span><span>muted rest makes the button present but not loud; the glyph itself carries the action (frame: calm panel). Close × at <code>FlowDetail.tsx:71</code> uses <code>text-ink-mute</code> — same intent.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="padding:0;overflow:hidden;border:none;background:transparent;">
+            <div class="tooltip">
+              <button class="ib s-hover" style="pointer-events:none;">↓</button>
+              <div class="tip">save to file</div>
+            </div>
+          </div>
+          <div class="cap">hover reveals the tooltip from the aria-label / title attribute</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> tooltip</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>native <code>title</code> attribute matches <code>aria-label</code>; appears on hover. Defaults to the glyph name (<code>"close"</code>, <code>"save"</code>) when a named <code>glyph</code> is used and no <code>label</code> is passed. No custom tooltip component — the browser's own.</span>
+            <span class="k">why</span><span>icon alone is not a name; the tooltip surfaces the accessible name visually without adding a component (frame: accessible name). Native <code>title</code> is free — zero JS, zero extra markup.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — the rules the parts obey</h2>
+    <p data-c="behavior-intro" style="color:var(--muted);">Anatomy is what is on screen; behavior is what it <em>does</em> — interaction rules a builder implements and a reviewer tests.</p>
+    <div class="app parts" data-c="behavior-table">
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex">
+            <button class="ib" id="demo-trigger" title="save to file" aria-label="save body to file">↓</button>
+            <span class="arr">click / Enter ▸</span>
+            <span style="font-size:12px;color:var(--a-body);font-family:Inter,system-ui,sans-serif;" id="demo-out">handler fires</span>
+          </div>
+          <div class="cap">caller-supplied <code>onClick</code> — the component has no built-in effect</div>
+        </div>
+        <div>
+          <strong>Trigger</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>single click · Enter / Space when focused · all wired by the native <code>&lt;button&gt;</code></span>
+            <span class="k">why</span><span>native <code>&lt;button&gt;</code> gives click + key handling, focus management, and accessible role for free; no JS needed on top</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="timeline"><span class="m">tab          ▸</span> "save body to file, button"
+<span class="m">enter        ▸</span> handler fires</div>
+          <div class="cap">screen reader output — the button is announced by its label, not the glyph</div>
+        </div>
+        <div>
+          <strong>A11y</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>native <code>&lt;button&gt;</code> (<code>role="button"</code> implicit) · <code>aria-label</code> from <code>label</code>, defaulting to the glyph name when a named <code>glyph</code> is used · <code>title</code> = same string for tooltip · <code>tabIndex</code> default (0) unless disabled</span>
+            <span class="k">why</span><span>icon alone is not a name (frame: accessible name); every icon-only button in shipping UI must carry its label or it's invisible to assistive tech. The close × at <code>FlowDetail.tsx:71</code> already does <code>aria-label="close"</code> — this formalises that precedent.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex">
+            <button class="ib s-disabled" disabled title="">↓</button>
+            <span class="arr">tab ▸</span>
+            <span style="font-size:12px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">skipped (tabIndex −1)</span>
+          </div>
+          <div class="cap">disabled: glyph fades to 35% opacity, not reachable by keyboard or click</div>
+        </div>
+        <div>
+          <strong>Disabled treatment</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>disabled</code> prop → HTML <code>disabled</code> attribute; glyph at 35% mute opacity; <code>cursor:not-allowed</code>; removed from tab order; <code>title</code> cleared (no tooltip for unreachable button)</span>
+            <span class="k">why</span><span>HTML <code>disabled</code> handles click suppression and tab removal natively; 35% is below threshold for active affordance but above invisible — the slot is still legible in the layout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel"><button class="ib" style="pointer-events:none;" title="save to file">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">rest</span></div>
+        <div class="cap"><strong>rest</strong> — muted glyph, no background, no border</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><button class="ib s-hover" style="pointer-events:none;" title="save to file">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">hover</span></div>
+        <div class="cap"><strong>hover</strong> — ink glyph + 7% ink background wash. Tooltip appears (native <code>title</code>).</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><button class="ib s-focus" style="pointer-events:none;">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">focus</span></div>
+        <div class="cap"><strong>focus</strong> — 1 px mute outline at 2 px offset (zero-chromatic-accent rule)</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><button class="ib s-active" style="pointer-events:none;">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">active</span></div>
+        <div class="cap"><strong>active</strong> — ink glyph + 13% ink background (pressed feel)</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><button class="ib s-disabled" disabled>↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">disabled</span></div>
+        <div class="cap"><strong>disabled</strong> — 35% mute opacity, not-allowed cursor, removed from tab order</div>
+      </div>
+    </div>
+    <div class="callout" data-c="no-confirming">
+      <strong>No confirming state.</strong> IconButton fires a handler — the caller owns the result state. CopyButton has a confirming state because it owns the clipboard write; IconButton delegates everything to the caller. A save action's progress (if any) belongs to its parent screen, not this primitive.
+    </div>
+    <div class="callout" data-c="no-loading">
+      <strong>No loading / in-flight state.</strong> An async operation triggered by the button (save, export) may need a loading indicator, but that indicator belongs on the parent screen — this primitive stays stateless. Adding a spinner prop would make it T2 (business logic). If a tenant needs it, propose a SaveButton (T2) that composes IconButton.
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app" data-c="d1">
+      <p style="font-size:12px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-bottom:8px;"><strong>D1 · hover treatment — ink-toned only, no chromatic ring</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex">
+            <button class="ib" style="pointer-events:none;">↓</button>
+            <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">→</span>
+            <button class="ib s-hover" style="pointer-events:none;">↓</button>
+          </div>
+          <div class="fc-note"><strong>mute → ink + soft bg wash.</strong> Rest is muted, hover shifts to full ink + 7% ink bg — no ring, no color. Consistent with the zero-chromatic-accent rule (<code>tailwind.config.js:5</code>): ok/warn are status colors only.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <button class="ib" style="pointer-events:none;color:var(--a-ink);">↓</button>
+          </div>
+          <div class="fc-note"><strong>ink at rest + accent ring on hover.</strong> Introduces chromatic accent that Warp DEC-11 deliberately excludes. The rest-ink approach also makes the glyph always prominent — removes the calm/dense benefit.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d2" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-bottom:8px;"><strong>D2 · at-rest border — none</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex">
+            <button class="ib" style="pointer-events:none;">↓</button>
+            <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">no border at rest</span>
+          </div>
+          <div class="fc-note"><strong>Borderless at rest.</strong> Background and border appear only on hover/focus. Matches the close × in the shipped header (<code>FlowDetail.tsx:69–76</code>): no border, muted glyph only at rest.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <button class="ib" style="pointer-events:none;border:1px solid var(--a-line);">↓</button>
+          </div>
+          <div class="fc-note"><strong>Hairline border at rest (CopyButton style).</strong> CopyButton carries a visible border because its label ("copy") needs the button frame to read as a button. IconButton's glyph is self-contained — the border adds chrome without aiding recognition.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d3" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-bottom:8px;"><strong>D3 · hit area size — 28 × 28 px</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex">
+            <div class="ib-ghost">↓</div>
+            <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">28×28</span>
+          </div>
+          <div class="fc-note"><strong>28 × 28 px default, optional <code>size</code> prop overrides.</strong> 28 exceeds WCAG 2.5.8 minimum (24×24) and fits naturally in the sub-bar height — no row height change needed. Overrides must stay ≥ 24 px (the WCAG floor).</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px dashed var(--a-warn);border-radius:3px;font-size:14px;color:var(--a-mute);">↓</span>
+            <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">glyph-only (~14px)</span>
+          </div>
+          <div class="fc-note"><strong>Glyph-size target only.</strong> The shipped close × at <code>FlowDetail.tsx:69</code> has no explicit padding — its hit target is the glyph alone. Fails WCAG 2.5.8 and is painful on touch. This design fixes it.</div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="open-q" style="margin-top:16px;">
+      <strong>Glyph source — settled by review:</strong> the component ships a small named-glyph registry — <code>glyph="close"</code> → ×, <code>glyph="save"</code> → ↓ (Unicode, extended one entry per new tenant) — and <code>children</code> stays the escape hatch for custom nodes (Unicode or SVG). If a project-wide SVG icon system ships later, the registry swaps internally with no API change.
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Required</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>glyph</code></td><td><code>'close' | 'save'</code></td><td>optional*</td><td>named built-in glyph (× / ↓) from the component's registry — one entry added per new tenant. Ignored when <code>children</code> is given.</td></tr>
+        <tr><td><code>children</code></td><td><code>ReactNode</code></td><td>optional*</td><td>custom glyph (Unicode character or icon element) — wins over <code>glyph</code>. *One of <code>glyph</code> / <code>children</code> is required.</td></tr>
+        <tr><td><code>label</code></td><td><code>string</code></td><td>required unless <code>glyph</code></td><td>accessible name → <code>aria-label</code> and <code>title</code> (tooltip). Defaults to the glyph name ("close", "save") when a named <code>glyph</code> is used. Prefer action phrasing ("close panel", not "X").</td></tr>
+        <tr><td><code>onClick</code></td><td><code>() =&gt; void</code></td><td>✅ required</td><td>caller-supplied handler; component has no built-in effect</td></tr>
+        <tr><td><code>size</code></td><td><code>number</code></td><td>optional (default: 28)</td><td>hit-area side in px — keep ≥ 24 (WCAG 2.5.8)</td></tr>
+        <tr><td><code>disabled</code></td><td><code>boolean</code></td><td>optional (default: false)</td><td>sets HTML <code>disabled</code>, 35% opacity, clears tooltip</td></tr>
+        <tr><td><code>className</code></td><td><code>string</code></td><td>optional</td><td>pass-through for layout overrides (e.g. <code>ml-auto</code>)</td></tr>
+      </tbody>
+    </table>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built (code-as-truth):</p>
+      <pre class="tsdoc">/**
+ * IconButton — bare-glyph button; compact affordance for icon-only actions (close, save, collapse).
+ * @tier T1 — generic action affordance, no business logic
+ * @anatomy 28×28 px hit area by default, size prop overrides (padded beyond the glyph) · glyph from built-in registry (glyph="close"|"save") or custom children · muted glyph at rest, ink+soft-bg on hover/active · 1px mute focus ring (ink-toned, zero chromatic accent) · native title tooltip, defaults to the glyph name
+ * @use icon-only triggers unambiguous in place: close ×, save ↓ — wherever the glyph alone carries the action
+ * @avoid actions with no fitting glyph (word label carries it better — use CopyButton or a plain button) · primary actions (no visual weight at rest)
+ * @states rest (muted glyph, no bg) · hover (ink + 7% bg wash) · focus (1px mute outline) · active (ink + 13% bg) · disabled (35% opacity, not-allowed, no tab)
+ * @madeof —
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Icon-only triggers that are unambiguous in place: close ×, save/download ↓, collapse/expand. The glyph must be self-explanatory in context — the tooltip confirms, it does not substitute. Use when the button must be compact (sub-bar, dense header) and a word label would waste space.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>Actions with no fitting glyph — use a labelled button or <a href="copy-button.html">CopyButton</a> instead (the W1 curl lesson: "copy as curl" failed as an icon). Primary actions that need visual weight — a plain styled button or filled button gives more presence. Multiple-state results (clipboard confirm, progress) — those belong to a T2 widget (e.g. CopyButton for copy, a SaveButton for async save) that composes IconButton rather than replacing it.</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part / state</th><th>Tailwind (build WU)</th></tr></thead>
+      <tbody>
+        <tr><td>hit area (base)</td><td><code>inline-flex items-center justify-center w-7 h-7 rounded-button cursor-pointer</code> (default <code>size</code> 28px = Tailwind <code>w-7</code>/<code>h-7</code>; non-default <code>size</code> via inline <code>width</code>/<code>height</code> style)</td></tr>
+        <tr><td>glyph at rest</td><td><code>text-ink-mute</code> (<code>#aea69c</code>)</td></tr>
+        <tr><td>background at rest</td><td>none — <code>bg-transparent</code>, no border</td></tr>
+        <tr><td>hover</td><td><code>hover:text-ink hover:bg-ink/7</code> (soft wash — 7% ink opacity, matches <code>canvas-soft</code> feel)</td></tr>
+        <tr><td>active</td><td><code>active:text-ink active:bg-ink/[.13]</code></td></tr>
+        <tr><td>focus ring</td><td><code>focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-ink-mute</code> — never a chromatic accent</td></tr>
+        <tr><td>disabled</td><td><code>disabled:opacity-35 disabled:cursor-not-allowed</code>; parent passes <code>disabled</code> attr → browser removes from tab order</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="app" data-c="specimen">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:Inter,system-ui,sans-serif;">Detail header</div>
+          <div style="display:flex;align-items:center;gap:8px;background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 12px;">
+            <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--a-body);">GET</span>
+            <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--a-ok);">200</span>
+            <span style="font-family:Inter,system-ui,sans-serif;font-size:11px;color:var(--a-mute);margin-left:auto;">142 ms</span>
+            <button class="ib" id="spec-close" title="close panel" aria-label="close panel">×</button>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-top:5px;">Click × to close (fires handler); Tab + Enter also works.</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:Inter,system-ui,sans-serif;">BodyViewer sub-bar</div>
+          <div class="sub-bar" style="max-width:320px;">
+            <span class="lbl">Body</span>
+            <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">[raw]</span>
+            <span style="flex:1;"></span>
+            <button class="ib" id="spec-save" title="save to file" aria-label="save body to file">↓</button>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-top:5px;">Click ↓ to save. Hover to see tooltip. Tab + Enter also works. Disabled toggle below.</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:Inter,system-ui,sans-serif;">Disabled state</div>
+          <div style="display:flex;align-items:center;gap:8px;background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 12px;">
+            <button class="ib s-disabled" id="spec-disabled" disabled title="" aria-label="save body to file (unavailable)">↓</button>
+            <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">save (no body)</span>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-top:5px;">Not reachable by Tab. Glyph at 35% opacity.</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;" id="spec-log" style="min-height:20px;"></div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — rendered in app Warp tokens. Hover for tooltip, Tab to focus, Enter/Space to trigger.</div>
+    </div>
+  </main>
+  <script>
+    function logAction(msg) {
+      const el = document.getElementById('spec-log');
+      el.style.cssText = 'font-size:12px;font-family:Inter,system-ui,sans-serif;color:#4cc38a;margin-top:6px;';
+      el.textContent = msg;
+      clearTimeout(el._t);
+      el._t = setTimeout(() => { el.textContent = ''; }, 2000);
+    }
+    document.getElementById('spec-close').addEventListener('click', () => logAction('close handler fired'));
+    document.getElementById('spec-save').addEventListener('click', () => logAction('save handler fired'));
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

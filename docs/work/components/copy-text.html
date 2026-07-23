@@ -42,31 +42,28 @@
     <div class="inner">
       <h1>CopyText <span class="tier t1">T1</span></h1>
       <p>A displayed value the user grabs whole — click copies it verbatim. Canonical exemplar of the <a href="../component-design-base.html">component-design format</a> — new component files copy this structure.</p>
-      <div class="meta">Component design · <strong>confirmed 2026-07-22</strong> · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+      <div class="meta">Component design · <strong>confirmed 2026-07-22 · updated 2026-07-23: KeyValueRow values adopt CopyText</strong> · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
     </div>
   </header>
   <main>
-    <h2 id="identity">Identity</h2>
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> grabbing a whole value is frequent in a debugging proxy (URI → curl, id → grep), and hand-selecting a long wrapped mono string is multi-step and silently error-prone — native selection alone fails that.
+    </div>
     <table data-c="identity">
       <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — display + click-copy, no business logic → <strong>in the collection</strong></td></tr>
-      <tr><td><strong>Origin</strong></td><td>W1's "URI text", generalised (W2 verdict) — the reusable shape is "click-to-copy value"; the URI is one tenant</td></tr>
-      <tr><td><strong>Tenants</strong></td><td>request URI (panel zone B) today · flow id, CA fingerprint when those screens come</td></tr>
-      <tr><td><strong>Exists today</strong></td><td>no — <code>flow.uri</code> is a plain <code>&lt;p&gt;</code> (<code>FlowDetail.tsx:81</code>), no copy affordance shipped</td></tr>
-      <tr><td><strong>Made of</strong></td><td>— (shares the ~2 s confirm <em>convention</em> with CopyButton — one shared hook when built, not composition)</td></tr>
+      <tr><td><strong>Tenants</strong></td><td>request URI today · flow id, CA fingerprint later (W1's "URI text", generalised) · every <a href="key-value-row.html">KeyValueRow</a> value cell (review 2026-07-23)</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>no — <code>flow.uri</code> is a plain <code>&lt;p&gt;</code> (<code>FlowDetail.tsx:81</code>)</td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (shares the ~2 s confirm <em>convention</em> with CopyButton — one shared hook, not composition)</td></tr>
     </table>
-
-    <h2 id="frame">Frame — why this component exists</h2>
-    <div class="callout" data-c="frame-claim">
-      <strong>The claim to existence:</strong> grabbing a whole value is a frequent act in a debugging proxy (URI → curl/browser, id → grep/api), and hand-selecting a long wrapped mono string is multi-step and silently error-prone. If native selection were a good answer, there would be nothing to build — this would be a T3-nothing. The drivers below are what every spec decision traces back to.
-    </div>
     <table data-c="frame-drivers">
-      <thead><tr><th>Driver</th><th>Design consequence</th><th>Why</th><th>Checked by</th></tr></thead>
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
       <tbody>
-        <tr><td>whole-value grab is frequent</td><td>one click copies the entire value</td><td>triple-click/drag on a wrapped URI is multi-act; a partial grab goes unnoticed until the paste fails elsewhere</td><td>Behavior · trigger</td></tr>
-        <tr><td>trustworthy — the tool never alters wire data</td><td>display <em>is</em> the payload: verbatim, never truncated</td><td>a copy that differs from what is shown silently breaks the "give me exactly that" intent</td><td>Anatomy ① · API (<code>value</code> only)</td></tr>
-        <tr><td>calm, dense panel</td><td>no added chrome — the value itself is the affordance</td><td>a per-value button/glyph multiplies noise across every field that wants copying</td><td>Anatomy ② · fork D1</td></tr>
-        <tr><td>partial takes must survive</td><td>native selection preserved; copy is guarded</td><td>substring intent (the host, an id inside a path) must not be hijacked by the whole-value affordance</td><td>Behavior · selection guard</td></tr>
-        <tr><td>verify without looking away</td><td>confirm appears inline at the click point, ~2 s</td><td>the eye is on the value; a distant toast breaks flow</td><td>States · confirming · fork D2</td></tr>
+        <tr><td>① whole-value grab is frequent</td><td>one click copies the entire value</td></tr>
+        <tr><td>② display must equal payload (trust)</td><td>verbatim, never truncated — shown and copied are the same string</td></tr>
+        <tr><td>③ calm, dense panel</td><td>no added chrome — the value itself is the affordance</td></tr>
+        <tr><td>④ partial takes must survive</td><td>native selection preserved; copy is guarded</td></tr>
+        <tr><td>⑤ verify without looking away</td><td>confirm inline at the click point, ~2 s</td></tr>
       </tbody>
     </table>
 
@@ -233,7 +230,7 @@
       <div class="card">
         <strong>alt: no guard</strong> <span class="badge warn">rejected</span>
         <div class="panel" style="margin-top:8px;"><span class="ct">…/orders/<span class="sel">8f3a91c2</span></span><span class="chip">copied</span></div>
-        <p class="cap" style="font-size:12px;color:var(--muted);"><strong>C — every mouseup copies.</strong> Selecting a substring would overwrite your clipboard with the full value — hostile to the "take part of it" case HeaderRow preserves.</p>
+        <p class="cap" style="font-size:12px;color:var(--muted);"><strong>C — every mouseup copies.</strong> Selecting a substring would overwrite your clipboard with the full value — hostile to the "take part of it" case KeyValueRow preserves.</p>
       </div>
     </div>
     <div class="app cards" data-c="d2">
@@ -268,8 +265,8 @@
  * CopyText — a displayed value the user grabs whole; click copies it verbatim.
  * @tier T1 — display + click-copy, no business logic
  * @anatomy value verbatim (mono, wraps, never truncates) · dotted underline, I-beam cursor kept (un-link-like on purpose) · transient "copied" chip
- * @use full-value fields grabbed whole: the request URI, a flow id
- * @avoid prose · values taken in part (native selection covers those) · showing anything but the exact payload
+ * @use full-value fields grabbed whole: the request URI, a flow id, every KeyValueRow value
+ * @avoid prose · showing anything but the exact payload · explicit copy actions with their own label (that is CopyButton)
  * @states rest · hover · focus · confirming (~2 s, resets on value change) · drag-select passes through to native selection
  * @madeof — (shares the confirm convention with CopyButton via one hook)
  */</pre>
@@ -277,8 +274,8 @@
 
     <h2 id="fit">Use / avoid</h2>
     <div class="cards" data-c="fit-cards">
-      <div class="card"><strong>✅ Use</strong><p>Full-value fields grabbed whole: the request URI, a flow id, a CA fingerprint. Anywhere the user's intent is "give me exactly that".</p></div>
-      <div class="card"><strong>🚫 Avoid</strong><p>Prose. Values usually taken in part — header cells stay plain native-selectable text (HeaderRow). Explicit copy actions with their own label — that's CopyButton.</p></div>
+      <div class="card"><strong>✅ Use</strong><p>Full-value fields grabbed whole: the request URI, a flow id, a CA fingerprint. The value cell of every <a href="key-value-row.html">KeyValueRow</a> (headers, form fields — adopted on review 2026-07-23; the selection guard keeps partial takes native). Anywhere the user's intent is "give me exactly that".</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>Prose. Explicit copy actions with their own label — that's CopyButton. Showing anything but the exact payload.</p></div>
     </div>
 
     <h2 id="tokens">Token mapping (mockup → build)</h2>

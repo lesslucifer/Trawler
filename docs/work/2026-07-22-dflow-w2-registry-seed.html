@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trawler — E-DFLOW.W2 Registry seed (component template + designs)</title>
+  <title>Trawler — E-DFLOW.W2 Registry seed (roster + mechanism)</title>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
@@ -21,8 +21,8 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-DFLOW.W2 — Registry seed</h1>
-      <p>The component-design template, every W1 component designed through it, and the code-as-truth mechanism spec (TSDoc → generated index → regenerate-and-diff gate) a later WU builds.</p>
-      <div class="meta">Registry seed · 2026-07-22 · Trawler · T3 (docs/work/) · wu/design-flow/seed-registry · plan: <a href="2026-07-22-dflow-w2-plan.html">W2 plan</a> · seed: <a href="2026-07-16-dflow-run-1.html">W1 run findings</a></div>
+      <p>The registry at a glance: the roster (each component's full design lives in its own file under <code>components/</code>), the W2 verdicts on the W1 catalog, and the code-as-truth mechanism spec (TSDoc → generated index → regenerate-and-diff gate) a later WU builds.</p>
+      <div class="meta">Registry seed · 2026-07-22 · reworked 2026-07-23: per-component design files · Trawler · T3 (docs/work/) · wu/design-flow/seed-registry · plan: <a href="2026-07-22-dflow-w2-plan.html">W2 plan</a> · format: <a href="component-design-base.html">component-design-base</a> · seed: <a href="2026-07-16-dflow-run-1.html">W1 run findings</a></div>
     </div>
   </header>
   <main>
@@ -30,272 +30,72 @@
     <div class="diagram" data-c="model">
       <pre class="mermaid">
 flowchart LR
-  W1["W1 seed<br/>catalog + findings"] --> TPL["① template<br/>= required TSDoc shape<br/>(#template)"]
-  TPL --> DES["③ W1 components designed<br/>(#roster + #designs)"]
+  W1["W1 seed<br/>catalog + findings"] --> FMT["① design format<br/>component-design-base.html"]
+  FMT --> DES["③ one design file per component<br/>components/*.html (#roster)"]
   DES -.->|"built later WU"| CODE["ui/src/components/*.tsx<br/>TSDoc = usage truth"]
   CODE -.->|"② generator (#mechanism)"| IDX["index (generated)<br/>agent loads 1 file<br/>= whole vocabulary"]
       </pre>
-      <div class="caption">Solid = this doc (design-only). Dashed = the later build WU. Every design card below is a pre-filled TSDoc block: when a component is built, its card's fields become the TSDoc verbatim, and the index derives from that — one copy of the truth, in code.</div>
+      <div class="caption">Solid = this WU (design-only). Dashed = the later build WU. Each design file compiles down to its TSDoc block (API section): when a component is built, that block becomes the code's TSDoc verbatim, and the index derives from it — one copy of the truth, in code.</div>
     </div>
 
-    <h2 id="template">① The component-design template</h2>
-    <p>Six fields. Filling them <em>is</em> designing the component; carrying them as TSDoc <em>is</em> registering it. A field that can't be filled honestly means the component isn't understood yet.</p>
-    <table data-c="template-fields">
-      <thead><tr><th>Field</th><th>TSDoc</th><th>What it answers</th></tr></thead>
-      <tbody>
-        <tr><td><strong>name + one-liner</strong></td><td>first line</td><td>What is it? PascalCase name — a dash — one sentence.</td></tr>
-        <tr><td><strong>tier</strong></td><td><code>@tier</code></td><td>The reuse judgment: T0–T4 <em>plus the why</em> (T1↔T2 = business logic; a one-off is T3, not T1).</td></tr>
-        <tr><td><strong>anatomy</strong></td><td><code>@anatomy</code></td><td>The visible parts, in order. What a builder assembles; what a reviewer checks.</td></tr>
-        <tr><td><strong>use / avoid</strong></td><td><code>@use</code> / <code>@avoid</code></td><td>The fit-first contract: when to reuse it — and when reaching for it is the wrong call.</td></tr>
-        <tr><td><strong>states</strong></td><td><code>@states</code></td><td>Every state it owns: hover/focus/active/disabled plus domain states (confirming, empty, in-flight). These live here, not in screen designs — W1 showed per-element defaults never belong to a screen's Interaction stage.</td></tr>
-        <tr><td><strong>made-of</strong></td><td><code>@madeof</code></td><td>The lower-tier registry components it composes (<code>—</code> for primitives). This is how the registry expresses composition, the W1 finding that validated the tier ladder.</td></tr>
-      </tbody>
-    </table>
-    <div data-c="template-tsdoc">
-      <p>The same template as it will appear in code — the required TSDoc shape the generator reads and the freshness gate enforces:</p>
-      <pre class="tsdoc">/**
- * CopyButton — copies a caller-supplied string; label swaps to "copied" for ~2 s.
- * @tier T1 — clipboard + confirm swap is generic UI, no business logic
- * @anatomy compact bordered button · label (word or glyph) → transient "copied" → reverts
- * @use any one-click copy affordance; copy-as-curl = CopyButton + a curl serialiser fn
- * @avoid implicit copy on a value (that is CopyText) · anything that is not a copy
- * @states idle · hover · focus · active · confirming (~2 s; resets if the target changes) · disabled
- * @madeof —
- */
-export function CopyButton(/* … */) { /* … */ }</pre>
-    </div>
+    <h2 id="template">① The design format</h2>
+    <p data-c="format-pointer">One component = one file under <code>components/</code>, authored and reviewed per <a href="component-design-base.html">component-design-base</a> (identity &amp; frame → anatomy → behavior → states → forks → API+TSDoc → use/avoid → tokens → specimen; only a confirmed design feeds the build WU). Each file's API section carries the registry TSDoc block — <code>first line · @tier · @anatomy · @use/@avoid · @states · @madeof</code> — the required shape the generator reads and the freshness gate enforces.</p>
     <div class="callout" data-c="tier-ladder">
       <strong>Tier ladder</strong> (from the epic): <span class="tier t1">T1 Primitive</span> no business logic · <span class="tier t2">T2 Widget</span> has business logic · <span class="tier t3">T3 Local</span> screen-specific one-off · <span class="tier t4">T4 Composition</span> built local, broken into lower-tier parts. T0 Foundation is external (Tailwind tokens). <strong>Collection = T1 + T2</strong> — the tier verdict is the membership decision.
     </div>
 
-    <h2 id="roster">③ The roster — 15 designs, at a glance</h2>
+    <h2 id="roster">③ The roster — at a glance</h2>
+    <p data-c="roster-note">Each name links to the component's full design file (all <strong>confirmed 2026-07-23</strong>); this table is the index, not the design.</p>
     <table class="roster" data-c="roster-table">
       <thead><tr><th>Component</th><th>Tier</th><th>In collection</th><th>Reuse evidence (list · panel zones A–D)</th><th>Exists today</th><th>Made of</th></tr></thead>
       <tbody>
-        <tr><td>Section</td><td><span class="tier t1">T1</span></td><td>✅</td><td>A·B·C·D — and reinvented locally once already</td><td>local <code>Section</code> in <code>FlowDetail.tsx</code> → extract</td><td>—</td></tr>
-        <tr><td>IconButton</td><td><span class="tier t1">T1</span></td><td>✅</td><td>A (close ×) · BodyViewer (save)</td><td>new</td><td>—</td></tr>
-        <tr><td>CopyButton</td><td><span class="tier t1">T1</span></td><td>✅</td><td>B (curl) · body panes ×2</td><td>inline in <code>FlowDetail.tsx</code>/<code>BodyViewer.tsx</code> → extract</td><td>—</td></tr>
-        <tr><td>CopyText</td><td><span class="tier t1">T1</span></td><td>✅</td><td>B (URI); any grab-whole value</td><td>new</td><td>—</td></tr>
-        <tr><td>HeaderRow</td><td><span class="tier t1">T1</span></td><td>✅</td><td>C·D header pairs · form bodies</td><td>new</td><td>—</td></tr>
-        <tr><td>MethodLabel</td><td><span class="tier t1">T1</span></td><td>✅</td><td>list rows · A</td><td>plain span ×2 → extract</td><td>—</td></tr>
-        <tr><td>DurationText</td><td><span class="tier t1">T1</span></td><td>✅</td><td>list rows · A</td><td>plain span ×2 → extract</td><td>—</td></tr>
-        <tr><td>TimestampText</td><td><span class="tier t1">T1</span></td><td>✅</td><td>list rows · B</td><td>plain span ×2 → extract</td><td>—</td></tr>
-        <tr><td>StatusPill</td><td><span class="tier t2">T2</span></td><td>✅</td><td>list rows · A</td><td><code>components.tsx</code> — reuse as-is</td><td>—</td></tr>
-        <tr><td>CopyAllHeadersButton</td><td><span class="tier t2">T2</span></td><td>✅</td><td>header tables ×2</td><td>new</td><td>CopyButton</td></tr>
-        <tr><td>DecodeToggle</td><td><span class="tier t2">T2</span></td><td>✅</td><td>body panes ×2</td><td>inline in <code>BodyViewer.tsx</code> → extract</td><td>—</td></tr>
-        <tr><td>BodyRenderer family (5)</td><td><span class="tier t2">T2</span></td><td>✅</td><td>body panes ×2, selected by content-type</td><td>inline in <code>BodyViewer.tsx</code> → extract</td><td>FormRenderer → HeaderRow</td></tr>
-        <tr><td>ProtocolLine</td><td><span class="tier t3">T3</span></td><td>🚫 designed-only</td><td>B only — a one-off</td><td>new (local)</td><td>—</td></tr>
-        <tr><td>HeaderTable</td><td><span class="tier t4">T4</span></td><td>🚫 designed-only</td><td>C · D</td><td>inline in <code>FlowDetail.tsx</code></td><td>HeaderRow× · CopyAllHeadersButton</td></tr>
-        <tr><td>BodyViewer</td><td><span class="tier t4">T4</span></td><td>🚫 designed-only</td><td>C · D</td><td><code>BodyViewer.tsx</code></td><td>DecodeToggle · BodyRenderers · CopyButton · IconButton</td></tr>
+        <tr><td><a href="components/section.html">Section</a></td><td><span class="tier t1">T1</span></td><td>✅</td><td>A·B·C·D — and reinvented locally once already</td><td>local <code>Section</code> in <code>FlowDetail.tsx</code> → extract</td><td>—</td></tr>
+        <tr><td><a href="components/icon-button.html">IconButton</a></td><td><span class="tier t1">T1</span></td><td>✅</td><td>A (close ×) · BodyViewer (save)</td><td>new</td><td>—</td></tr>
+        <tr><td><a href="components/copy-button.html">CopyButton</a></td><td><span class="tier t1">T1</span></td><td>✅</td><td>B (curl) · body panes ×2</td><td>inline in <code>FlowDetail.tsx</code>/<code>BodyViewer.tsx</code> → extract</td><td>—</td></tr>
+        <tr><td><a href="components/copy-text.html">CopyText</a></td><td><span class="tier t1">T1</span></td><td>✅</td><td>B (URI) · every KeyValueRow value · any grab-whole value</td><td>new</td><td>—</td></tr>
+        <tr><td><a href="components/key-value-row.html">KeyValueRow</a> <span style="color:var(--muted);font-size:11px;">(was HeaderRow)</span></td><td><span class="tier t1">T1</span></td><td>✅</td><td>C·D header pairs · form bodies</td><td>new</td><td>CopyText</td></tr>
+        <tr><td><a href="components/method-label.html">MethodLabel</a></td><td><span class="tier t2">T2</span> <span style="color:var(--muted);font-size:11px;">(was T1)</span></td><td>✅</td><td>list rows · A</td><td>plain span ×2 → extract</td><td>—</td></tr>
+        <tr><td><a href="components/duration-text.html">DurationText</a></td><td><span class="tier t1">T1</span></td><td>✅</td><td>list rows · A</td><td>plain span ×2 → extract</td><td>—</td></tr>
+        <tr><td><a href="components/timestamp-text.html">TimestampText</a></td><td><span class="tier t1">T1</span></td><td>✅</td><td>list rows · B</td><td>plain span ×2 → extract</td><td>—</td></tr>
+        <tr><td><a href="components/segmented-control.html">SegmentedControl</a> <span style="color:var(--muted);font-size:11px;">(was DecodeToggle)</span></td><td><span class="tier t1">T1</span></td><td>✅</td><td>decode switch (body panes ×2) · leg switch — shipped <code>ModeButton</code> serves both</td><td>inline <code>ModeButton</code> in <code>BodyViewer.tsx:116</code> → extract</td><td>—</td></tr>
+        <tr><td><a href="components/status-pill.html">StatusPill</a></td><td><span class="tier t2">T2</span></td><td>✅</td><td>list rows · A</td><td><code>components.tsx</code> — reuse as-is</td><td>—</td></tr>
+        <tr><td><a href="components/copy-all-headers-button.html">CopyAllHeadersButton</a> <span style="color:var(--muted);font-size:11px;">(dissolved 2026-07-23)</span></td><td>—</td><td>🚫 dissolved</td><td colspan="3">not a component: copy-all is a CopyButton use; the wire-format serialisation is HeaderTable's own logic — the file is the dissolution record</td></tr>
+        <tr><td><a href="components/body-renderer.html">BodyRenderer family (5)</a></td><td><span class="tier t2">T2</span></td><td>✅</td><td>body panes ×2, selected by content-type</td><td>inline in <code>BodyViewer.tsx</code> → extract</td><td>FormRenderer → KeyValueRow</td></tr>
+        <tr><td><a href="#protocol-line">ProtocolLine</a></td><td><span class="tier t3">T3</span></td><td>🚫 designed-only</td><td>B only — a one-off</td><td>new — inline in <code>FlowDetail.tsx</code>, no component (review verdict; designed below)</td><td>—</td></tr>
+        <tr><td><a href="components/header-table.html">HeaderTable</a></td><td><span class="tier t4">T4</span></td><td>🚫 designed-only</td><td>C · D</td><td>inline in <code>FlowDetail.tsx</code></td><td>KeyValueRow× · CopyButton (copy-all)</td></tr>
+        <tr><td><a href="components/body-viewer.html">BodyViewer</a></td><td><span class="tier t4">T4</span></td><td>🚫 designed-only</td><td>C · D</td><td><code>BodyViewer.tsx</code></td><td>SegmentedControl · BodyRenderers · CopyButton · IconButton</td></tr>
       </tbody>
     </table>
     <div class="callout" data-c="already-collected">
       <code>ui/src/components.tsx</code> already holds <code>Field</code> and <code>StatusDot</code> — shipped, validated, outside the W1 panel roster. They are not re-designed here; they join the registry when the build WU gives them the TSDoc shape.
     </div>
 
-    <h2 id="designs-t1">T1 Primitives — collected</h2>
-    <div class="cards" data-c="cards-t1">
-      <div class="card">
-        <strong>Section</strong> <span class="tier t1">T1</span>
-        <p class="one">Titled container framing one labelled zone of a screen.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T1 — layout chrome, no logic; already reinvented locally once (the textbook promotion case from the W1 cross-check)</span>
-          <span class="k">anatomy</span><span>uppercase muted label (small, letter-spaced) · content slot · hairline separation from siblings</span>
-          <span class="k">use</span><span>every labelled zone of a detail/settings screen (identity, overview, request, response)</span>
-          <span class="k">avoid</span><span>unlabelled grouping (plain spacing does it) · nesting a Section inside a Section</span>
-          <span class="k">states</span><span>none of its own; content wraps, never widens the column</span>
-          <span class="k">made of</span><span>—</span>
-        </div>
-      </div>
-      <div class="card">
-        <strong>IconButton</strong> <span class="tier t1">T1</span>
-        <p class="one">Bare glyph button.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T1 — generic action affordance, no logic</span>
-          <span class="k">anatomy</span><span>single glyph, no border/background at rest, hit area padded beyond the glyph</span>
-          <span class="k">use</span><span>one-glyph actions unambiguous in place: close ×, save</span>
-          <span class="k">avoid</span><span>actions with no fitting glyph — the word carries it instead (the W1 curl lesson) · primary actions</span>
-          <span class="k">states</span><span>rest (muted) · hover (ink) · focus ring · active · disabled</span>
-          <span class="k">made of</span><span>—</span>
-        </div>
-      </div>
-      <div class="card">
-        <strong>CopyButton</strong> <span class="tier t1">T1</span>
-        <p class="one">Copies a caller-supplied string; label swaps to "copied" for ~2 s.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T1 — clipboard + confirm swap is generic UI, no business logic</span>
-          <span class="k">anatomy</span><span>compact bordered button · label (word or glyph) → transient "copied" → reverts</span>
-          <span class="k">use</span><span>any one-click copy affordance; copy-as-curl = CopyButton + a curl serialiser fn, not a new component</span>
-          <span class="k">avoid</span><span>implicit copy on a displayed value (that is CopyText) · anything that is not a copy</span>
-          <span class="k">states</span><span>idle · hover · focus · active · confirming (~2 s; resets if the copy target changes — the shipped inspector's reselect fix) · disabled when there is nothing to copy</span>
-          <span class="k">made of</span><span>—</span>
-        </div>
-      </div>
-      <div class="card">
-        <strong>CopyText</strong> <span class="tier t1">T1</span>
-        <p class="one">A displayed value the user grabs whole — click copies it.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T1 — display + click-copy, no logic. Generalised from W1's "URI text"; the URI is its first tenant</span>
-          <span class="k">anatomy</span><span>the value verbatim, mono · dotted-underline affordance · wraps at any width — never truncates, never widens the column</span>
-          <span class="k">use</span><span>full-value fields grabbed whole: the request URI, a flow id</span>
-          <span class="k">avoid</span><span>prose · values usually taken in part (header cells stay native selectable text)</span>
-          <span class="k">states</span><span>rest · hover (affordance strengthens, title "click to copy") · focus · copied (transient confirm, same ~2 s convention as CopyButton)</span>
-          <span class="k">made of</span><span>— (shares CopyButton's confirm convention, not the component)</span>
-        </div>
-      </div>
-      <div class="card">
-        <strong>HeaderRow</strong> <span class="tier t1">T1</span>
-        <p class="one">One wire key/value pair.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T1 — pure display; cell copy is native text selection, no logic. Absorbs W1's separate "select/copy a cell" part</span>
-          <span class="k">anatomy</span><span>two-column grid: key (muted, nowrap) · value (ink, wraps) · both mono</span>
-          <span class="k">use</span><span>any wire key/value line: headers, trailers, decoded form fields</span>
-          <span class="k">avoid</span><span>editable forms (that is Field) · data needing sort/filter</span>
-          <span class="k">states</span><span>none of its own; a long value wraps</span>
-          <span class="k">made of</span><span>—</span>
-        </div>
-      </div>
-      <div class="card">
-        <strong>MethodLabel</strong> <span class="tier t1">T1</span>
-        <p class="one">The HTTP verb of a flow.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T1 — plain mono label; becomes T2 the day a verb→colour mapping is added (W1's call, kept)</span>
-          <span class="k">anatomy</span><span>uppercase verb, mono</span>
-          <span class="k">use</span><span>anywhere a flow is identified: list rows, the identity bar</span>
-          <span class="k">avoid</span><span>ad-hoc per-verb styling — colour arrives as a token mapping with the T2 promotion, or not at all</span>
-          <span class="k">states</span><span>—</span>
-          <span class="k">made of</span><span>—</span>
-        </div>
-      </div>
-      <div class="card">
-        <strong>DurationText</strong> <span class="tier t1">T1</span>
-        <p class="one">A flow's elapsed time.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T1 — ms→human formatting only</span>
-          <span class="k">anatomy</span><span>right-aligned muted numeric text, tabular-nums</span>
-          <span class="k">use</span><span>list rows · the identity bar</span>
-          <span class="k">avoid</span><span>a live-ticking counter while in-flight — calm; the slot stays blank until the flow completes</span>
-          <span class="k">states</span><span>value · absent while in-flight (blank, slot kept so nothing jumps)</span>
-          <span class="k">made of</span><span>—</span>
-        </div>
-      </div>
-      <div class="card">
-        <strong>TimestampText</strong> <span class="tier t1">T1</span>
-        <p class="one">When the flow started.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T1 — time formatting only</span>
-          <span class="k">anatomy</span><span>muted mono clock time (HH:MM:SS)</span>
-          <span class="k">use</span><span>list rows · the overview</span>
-          <span class="k">avoid</span><span>relative times ("2 m ago") — they drift and churn re-renders; absolute reads trustworthy</span>
-          <span class="k">states</span><span>—</span>
-          <span class="k">made of</span><span>—</span>
-        </div>
-      </div>
-    </div>
-
-    <h2 id="designs-t2">T2 Widgets — collected</h2>
-    <div class="cards" data-c="cards-t2">
-      <div class="card">
-        <strong>StatusPill</strong> <span class="tier t2">T2</span> <span class="badge id">shipped</span>
-        <p class="one">A status value tinted by outcome tone.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T2 — the status→tone mapping is business logic. Already in <code>components.tsx</code>; reused as-is (D1)</span>
-          <span class="k">anatomy</span><span>mono tabular-nums text tinted by tone token — the shipped form; the W1 mockup's border is dropped, code wins</span>
-          <span class="k">use</span><span>HTTP status in list rows and the identity bar · any ok/warn/muted-toned status value</span>
-          <span class="k">avoid</span><span>raw hex colours (tones come from tokens) · free-form badges</span>
-          <span class="k">states</span><span>tone ok · warn · muted · in-flight = muted "…"</span>
-          <span class="k">made of</span><span>—</span>
-        </div>
-      </div>
-      <div class="card">
-        <strong>CopyAllHeadersButton</strong> <span class="tier t2">T2</span>
-        <p class="one">Copies a whole header set as wire-format text.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T2 — reserialising pairs to <code>key: value</code> wire text is business logic</span>
-          <span class="k">anatomy</span><span>a CopyButton labelled "copy all"</span>
-          <span class="k">use</span><span>the header-table action, request or response leg</span>
-          <span class="k">avoid</span><span>structured export (JSON etc.) — not a need any screen has</span>
-          <span class="k">states</span><span>inherits CopyButton's · disabled when the set is empty ("none")</span>
-          <span class="k">made of</span><span>CopyButton</span>
-        </div>
-      </div>
-      <div class="card">
-        <strong>DecodeToggle</strong> <span class="tier t2">T2</span>
-        <p class="one">Switches a body pane raw ↔ decoded.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T2 — decode (decompress + charset, then per-type pretty-print) is business logic; distinct from "formatted"</span>
-          <span class="k">anatomy</span><span>two-segment toggle [raw | decoded], active segment filled</span>
-          <span class="k">use</span><span>every body pane, request and response</span>
-          <span class="k">avoid</span><span>defaulting to decoded — raw is the trust default (Frame: trustworthy); a silently altered body kills the tool · a third segment</span>
-          <span class="k">states</span><span>raw-active (default) · decoded-active · hover/focus per segment · disabled when the body is absent or not decodable</span>
-          <span class="k">made of</span><span>—</span>
-        </div>
-      </div>
-      <div class="card">
-        <strong>BodyRenderer family</strong> <span class="tier t2">T2</span> <span class="badge id">5 members</span>
-        <p class="one">Per-content-type body renderers; BodyViewer picks one by type.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T2 each — per-type render logic; one entry per member when built</span>
-          <span class="k">use</span><span>inside a body pane, chosen by content-type; parse failure falls back to raw text/hex — never a blank pane</span>
-          <span class="k">avoid</span><span>a renderer silently transforming content (decode is DecodeToggle's, and only ever explicit)</span>
-          <span class="k">states</span><span>rendered · fallback (parse failed, reason shown)</span>
-          <span class="k">made of</span><span>see members ↓</span>
-        </div>
-        <div class="spec" style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">
-          <span class="k">Json</span><span>collapsible tree, depth-capped (the shipped tree cap)</span>
-          <span class="k">Xml</span><span>pretty-printed source</span>
-          <span class="k">Image</span><span>the image, dimensions caption; no copy — save instead (shipped rule)</span>
-          <span class="k">Form</span><span>decoded pairs as HeaderRow× — the family's own reuse</span>
-          <span class="k">Hex</span><span>offset · hex · ascii grid; copy delivers the shown rendering (shipped rule)</span>
-        </div>
-      </div>
-    </div>
-
-    <h2 id="designs-t34">T3 / T4 — designed, not collected</h2>
+    <h2 id="protocol-line">ProtocolLine — T3, designed here (inline, no component file)</h2>
     <div class="cards" data-c="cards-t34">
       <div class="card">
-        <strong>ProtocolLine</strong> <span class="tier t3">T3</span> <span class="badge warn">re-tiered from W1's T1</span>
-        <p class="one">The per-leg protocol versions: "HTTP/1.1 → HTTP/2".</p>
+        <strong>ProtocolLine</strong> <span class="tier t3">T3</span> <span class="badge warn">re-tiered from W1's T1 · inline, no component — design doc folded in here</span>
+        <p class="one">The protocol facts line under the URI: scheme + per-leg HTTP versions.</p>
         <div class="spec">
-          <span class="k">tier</span><span>T3 — appears once, in the overview; a one-off is T3, not T1. Promote only when a second screen shows leg versions</span>
-          <span class="k">anatomy</span><span>muted mono "reqVersion → respVersion"</span>
-          <span class="k">states</span><span>complete · in-flight: response version pending → "HTTP/1.1 → …"</span>
+          <span class="k">tier</span><span>T3 — appears once, in the overview; a one-off is T3, not T1. Review verdict: not extracted at all — inline markup in <code>FlowDetail.tsx</code>'s Request section (replaces the bare <code>&lt;p&gt;</code> at lines 82–85); extract only when a second screen shows leg versions</span>
+          <span class="k">anatomy</span><span>muted mono line: scheme from the <code>flow.uri</code> prefix (ok-tone for https, muted for http; no lock icon) · "·" separator (hairline tone) · request version · "→" (hairline) + response version</span>
+          <span class="k">states</span><span>complete · in-flight: arrow and response version omitted entirely — never "HTTP/1.1 → " or an ellipsis placeholder · no http/https prefix (e.g. CONNECT): scheme and separator omitted, versions only</span>
+          <span class="k">rules</span><span>version strings verbatim from the capture ("HTTP/1.1", "HTTP/2.0" — <code>version_str</code>, <code>recorder.rs:35–37</code>), never reformatted · read-only, no hover/copy · no TLS version/ALPN/cipher (not in <code>FlowView</code>)</span>
           <span class="k">made of</span><span>—</span>
         </div>
       </div>
-      <div class="card">
-        <strong>HeaderTable</strong> <span class="tier t4">T4</span>
-        <p class="one">One leg's full header block.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T4 — composition; built local per the ladder, its parts are the collected seeds</span>
-          <span class="k">anatomy</span><span>collapsible "headers" disclosure (collapsible so bodies keep the space — the W1 Layout decision) · HeaderRow per pair · copy-all action</span>
-          <span class="k">states</span><span>expanded · collapsed · empty → "none"</span>
-          <span class="k">made of</span><span>HeaderRow× · CopyAllHeadersButton · a native disclosure</span>
-        </div>
-      </div>
-      <div class="card">
-        <strong>BodyViewer</strong> <span class="tier t4">T4</span>
-        <p class="one">One leg's body: sub-bar + rendering pane.</p>
-        <div class="spec">
-          <span class="k">tier</span><span>T4 — the screen's most complex node; built local, fully decomposed</span>
-          <span class="k">anatomy</span><span>sub-bar: "body" label · DecodeToggle · CopyButton · IconButton(save) — then the rendering pane</span>
-          <span class="k">states</span><span>raw (default) · decoded via renderer · absent → "awaiting response…" (in-flight) or "not captured" · multi-MB → capped render, save as the escape hatch</span>
-          <span class="k">made of</span><span>DecodeToggle · BodyRenderer family · CopyButton · IconButton</span>
-        </div>
-      </div>
-    </div>
-    <div class="callout" data-c="viewer-fork">
-      <strong>Open fork for the build WU:</strong> this design gives each leg its own BodyViewer (the W1 draft's grouping); shipped <code>BodyViewer.tsx</code> is a single viewer that toggles the leg internally. The W1 cross-check ruled neither wrong — the build WU makes it an explicit, cited layout choice.
     </div>
 
     <h2 id="verdicts">W2 verdicts on the W1 catalog</h2>
     <table data-c="verdicts-table">
       <thead><tr><th>Call</th><th>W1 said</th><th>W2 settles</th><th>Why</th></tr></thead>
       <tbody>
-        <tr><td>ProtocolLine tier</td><td>T1</td><td><span class="tier t3">T3</span></td><td>One place, plain text — the tier verdict is the reuse judgment, and there is no reuse.</td></tr>
+        <tr><td>ProtocolLine tier</td><td>T1</td><td><span class="tier t3">T3</span></td><td>One place, plain text — the tier verdict is the reuse judgment, and there is no reuse. Review went further: inline in <code>FlowDetail.tsx</code>, no component.</td></tr>
         <tr><td>URI text</td><td>a component</td><td>CopyText, generalised</td><td>The reusable shape is "click-to-copy value"; the URI is one tenant of it.</td></tr>
-        <tr><td>select/copy a cell</td><td>separate T1 part</td><td>folded into HeaderRow</td><td>Native text selection — nothing to build, nothing to register.</td></tr>
+        <tr><td>select/copy a cell</td><td>separate T1 part</td><td>folded into KeyValueRow (value = CopyText)</td><td>Seed said native selection only; review 2026-07-23 flipped it — long values (cookie, JWT) are hard to hand-select whole. CopyText's click copies the whole value; its selection guard keeps partial takes native.</td></tr>
+        <tr><td>DecodeToggle</td><td>T2 widget</td><td>SegmentedControl, generalised (T1)</td><td>The control is selection-only — decode semantics are BodyViewer rules (its forks D4/D5); the shipped <code>ModeButton</code> already serves both the decode and leg switches (review 2026-07-23).</td></tr>
         <tr><td>copy-as-curl</td><td>unassigned</td><td>a CopyButton use, not a component</td><td>The curl serialiser is a function the screen passes in; the affordance is CopyButton.</td></tr>
+        <tr><td>CopyAllHeadersButton</td><td>T2 widget (this doc's first cut)</td><td>dissolved (review 2026-07-23)</td><td>Same seam as copy-as-curl: copy-all is a CopyButton use; the wire-format serialisation is HeaderTable's own logic. Record: <a href="components/copy-all-headers-button.html">the dissolution file</a>.</td></tr>
+        <tr><td>MethodLabel colour</td><td>no colour — T1; colour = a later T2 promotion</td><td>colour-coded per verb — <span class="tier t2">T2</span> now (manager 2026-07-23)</td><td>The verb is a primary scan target; named method tokens widen the DEC-11 exception set deliberately (five-verb cap) instead of breaching it ad hoc. Full fork: <a href="components/method-label.html">method-label</a>.</td></tr>
         <tr><td>everything else</td><td>T1/T2/T4 calls</td><td>confirmed</td><td>Reuse evidence held (list + panel for the field texts; two zones for the rest).</td></tr>
       </tbody>
     </table>
@@ -315,7 +115,7 @@ flowchart LR
     <table data-c="mechanism-spec">
       <thead><tr><th>Pinned by W2 (behavior)</th><th>Deferred to the build WU (form)</th></tr></thead>
       <tbody>
-        <tr><td>Truth lives in each component's TSDoc, in the template shape above — one copy, no drift.</td><td>Index file shape (md / json / ts).</td></tr>
+        <tr><td>Truth lives in each component's TSDoc, in the shape the design format pins (<a href="component-design-base.html">component-design-base</a>) — one copy, no drift.</td><td>Index file shape (md / json / ts).</td></tr>
         <tr><td>The index is <em>generated</em>, deterministic, committed — never hand-edited.</td><td>Generator home (<code>cargo xtask</code> vs npm script).</td></tr>
         <tr><td>Index entry = <code>name · tier · one-liner · @use</code> — the minimum for a reuse decision without opening source. Full anatomy/states stay in the TSDoc; an agent opens the <code>.tsx</code> only to build or extend.</td><td>Whether a hash caches a fast local staleness <em>hint</em> (never the gate).</td></tr>
         <tr><td>Gate = regenerate + diff, red on any difference. Runs with the DoD gate (W7 wires it in).</td><td>A <code>// registry: &lt;name&gt;</code> back-pointer nicety.</td></tr>
@@ -331,7 +131,7 @@ flowchart TD
   Q -->|"fits"| REUSE["reuse as-is —
 cite it by name"]
   Q -->|"nearly"| EXTEND["extend the component<br/>(never fork a copy)"]
-  Q -->|"no fit"| PROPOSE["propose-new:<br/>fill the template, tier it"]
+  Q -->|"no fit"| PROPOSE["propose-new:<br/>author a design file, tier it"]
   PROPOSE --> T12["T1/T2 → collection candidate"]
   PROPOSE --> T34["T3 stays local · T4 breaks down"]
       </pre>
@@ -340,7 +140,7 @@ cite it by name"]
 
     <h2 id="not-w2">Deliberately absent</h2>
     <div class="callout" data-c="not-w2">
-      No <code>ui/</code> code, no TSDoc in real components, no generator, no gate, no T1/T2 doc changes. These designs stay T3 until W4 validates the flow that consumes them — distillation upward happens then. The build WU turns each card into a component whose TSDoc is the card's fields.
+      No <code>ui/</code> code, no TSDoc in real components, no generator, no gate, no T1/T2 doc changes. These designs stay T3 until W4 validates the flow that consumes them — distillation upward happens then. The build WU turns each design file into a component whose TSDoc is the file's compile block.
     </div>
   </main>
   <script type="module">

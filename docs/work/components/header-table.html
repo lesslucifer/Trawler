@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60d75e9f34851f0dfa9400">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — HeaderTable component design</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+    .t2{color:var(--ok);}
+    .t4{color:var(--warn);}
+    /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
+    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
+    /* panel shell */
+    .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:520px;}
+    /* section heading inside a panel (mirrors FlowDetail.tsx:10) */
+    .sec-hd{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:8px;font-family:Inter,system-ui,sans-serif;}
+    /* the header-table two-column grid (mirrors FlowDetail.tsx:21) */
+    .ht-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;}
+    .ht-key{color:var(--a-mute);white-space:nowrap;font-size:12.5px;}
+    .ht-val{color:var(--a-body);word-break:break-all;font-size:12.5px;}
+    /* the sub-bar holding the section heading + copy-all-button */
+    .ht-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .ht-bar .sec-hd{margin-bottom:0;}
+    /* copy-all button (styled like shipped CopyButton at FlowDetail.tsx:97–101) */
+    .btn-copyall{border:1px solid var(--a-line);border-radius:3px;padding:2px 8px;font-size:10px;font-family:Inter,system-ui,sans-serif;color:var(--a-mute);background:transparent;cursor:pointer;white-space:nowrap;}
+    .btn-copyall:hover,.btn-copyall.s-hover{color:var(--a-ink);}
+    .btn-copyall.s-confirm{color:var(--a-ok);border-color:var(--a-ok);}
+    .btn-copyall.s-error{color:var(--a-warn);border-color:var(--a-warn);}
+    .btn-copyall.s-disabled{opacity:.38;cursor:default;}
+    /* disclosure summary row */
+    .ht-summary{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;list-style:none;margin-bottom:6px;}
+    .ht-summary .sec-hd{margin-bottom:0;}
+    .ht-chevron{color:var(--a-mute);font-size:9px;transition:transform .15s;}
+    .ht-summary.s-open .ht-chevron{transform:rotate(90deg);}
+    /* "none" empty state */
+    .ht-none{color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;}
+    /* scroll cap */
+    .ht-scroll{max-height:200px;overflow-y:auto;}
+    /* annotation badge (shared with exemplar) */
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:Inter,system-ui,sans-serif;}
+    /* part blocks (verbatim from exemplar) */
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    /* swatches */
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    /* tsdoc */
+    .tsdoc{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    /* flow-ex */
+    .flow-ex{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+    .flow-ex .arr{color:var(--muted);font-size:11px;white-space:nowrap;padding-top:4px;}
+    /* timeline */
+    .timeline{font-family:"DM Mono",ui-monospace,monospace;font-size:11px;color:var(--a-body);background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 10px;line-height:1.8;white-space:pre;overflow-x:auto;}
+    .timeline .m{color:var(--a-mute);}
+    .timeline .o{color:var(--a-ok);}
+    /* chip */
+    .chip{display:inline-block;margin-left:8px;font-size:10px;line-height:16px;color:var(--a-ok);border:1px solid var(--a-ok);border-radius:999px;padding:0 6px;vertical-align:1px;font-family:Inter,system-ui,sans-serif;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>HeaderTable <span class="tier t4">T4</span></h1>
+      <p>One leg's full header set — <a href="key-value-row.html">KeyValueRow</a>× + a "copy all" <a href="copy-button.html">CopyButton</a> inside a <a href="section.html">Section</a>; wire order preserved, one source array, and the copy-all serialisation owned here.</p>
+      <div class="meta">Component design · <strong>confirmed 2026-07-23</strong> · 2026-07-22 · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> a raw <code>&lt;dl&gt;</code> loop (<code>FlowDetail.tsx:21–28</code>) gets rows on screen but misses three composition-level contracts: copy-all placement consistent across both legs, one source array driving both display and serialisation, and wire order preserved as captured — without HeaderTable, each call site owns those decisions independently and they will drift. <strong>HeaderTable also owns the copy-all press logic</strong> (review verdict 2026-07-23): it serialises <code>headers</code> to wire format and hands the payload to a plain T1 <a href="copy-button.html">CopyButton</a> — the former <a href="copy-all-headers-button.html">CopyAllHeadersButton</a> is dissolved.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t4">T4 Composition</span> — assembles T1/T2 parts; designed so the build WU assembles correctly, <strong>not collected</strong> (promoted from inline <code>FlowDetail.tsx:16–30</code>)</td></tr>
+      <tr><td><strong>Tenants</strong></td><td>"Request headers" zone (panel C) · "Response headers" zone (panel D)</td></tr>
+      <tr><td><strong>Exists today</strong></td><td><code>FlowDetail.tsx:16–30</code> — local function, bare <code>&lt;dl&gt;</code> grid; no copy-all, no disclosure, no empty-state text</td></tr>
+      <tr><td><strong>Made of</strong></td><td><a href="key-value-row.html">KeyValueRow</a>× (one per pair) · <a href="copy-button.html">CopyButton</a> (T1, labelled "copy all" — payload serialised by HeaderTable) · hosted inside <a href="section.html">Section</a> at the call site</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① copy-all placement consistent across both legs</td><td>the "copy all" CopyButton sits in the sub-bar, right-aligned against the section heading — Section hosts both</td></tr>
+        <tr><td>② one source of truth for rows + serialisation</td><td><code>headers</code> array → KeyValueRow× AND → the copy-all payload; no secondary map, no derived state</td></tr>
+        <tr><td>③ wire order as captured — never reordered</td><td>render <code>headers</code> in index order; no sort, no group-by (<code>FlowDetail.tsx:22–28</code> confirmed)</td></tr>
+        <tr><td>④ headers can be absent</td><td>empty set → "none" message; no grid rendered, copy-all CopyButton disabled</td></tr>
+        <tr><td>⑤ long header sets (30+ rows) must not push body off screen</td><td>rows region gets a scroll cap; Section slot stays transparent</td></tr>
+        <tr><td>⑥ press logic belongs to the parent (review 2026-07-23)</td><td>HeaderTable serialises <code>headers</code> to wire format and passes it as CopyButton's <code>value</code>; the button stays a dumb T1</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="anatomy">Anatomy — the assembled parts</h2>
+    <div class="app" data-c="anatomy-specimen">
+      <div class="panel">
+        <div class="ht-bar">
+          <span class="sec-hd">Request headers <span class="anno">1</span></span>
+          <button class="btn-copyall" type="button"><span class="anno">2</span> copy all</button>
+        </div>
+        <div class="ht-grid">
+          <span class="ht-key">host <span class="anno">3</span></span><span class="ht-val">api.example.com <span class="anno">4</span></span>
+          <span class="ht-key">content-type</span><span class="ht-val">application/json; charset=utf-8</span>
+          <span class="ht-key">authorization</span><span class="ht-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.sig</span>
+          <span class="ht-key">accept</span><span class="ht-val">application/json</span>
+          <span class="ht-key">x-request-id</span><span class="ht-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+        </div>
+      </div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="ht-bar">
+              <span class="sec-hd">Request headers</span>
+              <button class="btn-copyall" type="button">copy all</button>
+            </div>
+          </div>
+          <div class="cap">sub-bar: the Section heading sits left, the "copy all" CopyButton sits right — both in one flex row. Section itself does not render the heading here; the sub-bar replaces Section's own heading slot</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span>+<span class="anno">2</span> sub-bar (heading + copy-all)</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>a single flex row, <code>justify-between</code>; heading text left (uppercase, muted, <code>text-xs</code> Inter — the Section heading style); a <a href="copy-button.html">CopyButton</a> with <code>label="copy all"</code> right. "copy all" over "copy headers": the heading already says "… headers"; "all" adds the one fact not in context</span>
+            <span class="k">why</span><span>the copy-all action belongs to the full set, not to any individual row — placing it at the heading level makes the scope unambiguous. Consistent across both legs (request C, response D); a caller that puts the button elsewhere splits the visual grammar. Button states (confirm ~2 s, error, disabled) are CopyButton's own — HeaderTable only supplies label + payload</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="ht-grid" style="max-width:none;">
+              <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
+              <span class="ht-key">authorization</span><span class="ht-val">Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig</span>
+              <span class="ht-key">accept</span><span class="ht-val">*/*</span>
+            </div>
+          </div>
+          <div class="cap">the two-column grid: name column auto-width (widest name), value column fills remainder. One <a href="key-value-row.html">KeyValueRow</a> per pair</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span>+<span class="anno">4</span> rows — KeyValueRow×</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>a <code>grid-cols-[auto_1fr]</code> parent; each <a href="key-value-row.html">KeyValueRow</a> is <code>display:contents</code> — it contributes two cells, owns nothing more. Internals (name muted/nowrap, value = CopyText body/break-all) are KeyValueRow's contract, not repeated here</span>
+            <span class="k">why</span><span>KeyValueRow absorbs all per-row decisions (see <code>key-value-row.html</code>); HeaderTable's only grid-level concern is the column split. Shipped: <code>FlowDetail.tsx:21</code> — <code>grid-cols-[auto_1fr] gap-x-3 gap-y-1</code></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — composition-level rules</h2>
+    <p data-c="behavior-intro" style="color:var(--muted);">Anatomy is what is on screen; behavior is what it does. Row internals (value click-copy via CopyText, guarded native selection) are KeyValueRow's rules. These rules govern the assembled whole.</p>
+    <div class="app parts" data-c="behavior-rules">
+      <div class="part">
+        <div class="ex">
+          <div class="timeline"><span class="m">headers array ─────────────────────────────</span>
+<span class="m">                  │                          │</span>
+<span class="m">                  ▼                          ▼</span>
+<span class="m">           KeyValueRow×              serialise (HeaderTable)</span>
+<span class="m">         (render each pair)        "name: value\n…" → value</span>
+<span class="m">                                          ▼</span>
+<span class="m">                                CopyButton "copy all"</span></div>
+          <div class="cap">one <code>headers</code> prop, two consumers — display and the copy-all payload both read the same array in the same order; HeaderTable does the serialising, CopyButton just writes it</div>
+        </div>
+        <div>
+          <strong>Single-source rule</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>headers</code> is the sole input; both the row render and HeaderTable's copy-all serialisation derive from it directly — no derived state, no secondary array, no transform applied before either consumer</span>
+            <span class="k">why</span><span>any intermediate transform (sort, filter, decode) would silently split display from clipboard — the trust contract breaks. Frame driver ②</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="timeline"><span class="m">screen              clipboard</span>
+accept: application/json   <span class="o">accept: application/json</span>
+authorization: Bearer ey…  <span class="o">authorization: Bearer eyJhbGciOiJSUzI…</span> <span class="m">(full value)</span>
+<span class="m">                           trailing \n at end of block</span></div>
+          <div class="cap">the payload HeaderTable builds and passes to CopyButton — one wire-format line per pair, full values, single trailing newline</div>
+        </div>
+        <div>
+          <strong>Serialisation contract — owned by HeaderTable</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>headers.map(h =&gt; `${h.name}: ${h.value}`).join('\n') + '\n'</code> — the complete formula, passed as CopyButton's <code>value</code>. Wire order, full values (no truncation), names as-received (never case-normalised), one trailing newline. Format settled in fork D4</span>
+            <span class="k">why</span><span>review verdict 2026-07-23: press logic belongs to the parent — the button stays a dumb T1. Wire format is paste-ready everywhere (tickets, curl, specs); name case is wire data (HTTP/2 lowercases, HTTP/1.1 is mixed); the trailing newline makes the block clean to append. One expression, no library</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="timeline"><span class="m">wire order captured:</span>
+  <span class="o">host</span>
+  <span class="o">content-type</span>
+  <span class="o">authorization</span>
+  <span class="m">rendered: same order — no sort, no grouping</span></div>
+          <div class="cap">index order from the API is the render order — a debugging proxy must never reorder wire data</div>
+        </div>
+        <div>
+          <strong>Ordering rule — wire order, always</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>headers are rendered in <code>headers[0..n]</code> index order; no sort, no group-by name prefix, no case-insensitive alphabetisation</span>
+            <span class="k">why</span><span>insertion order can itself be a bug signal (a header injected by a proxy, duplicate names, ordering constraints in auth schemes). Shipped: <code>FlowDetail.tsx:22–28</code> iterates raw <code>headers.map</code> — no sort applied, confirmed. Fork D2 settles an open question here</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex">
+            <div class="panel" style="max-width:160px;">
+              <div class="ht-bar"><span class="sec-hd">Request headers</span><button class="btn-copyall s-disabled" type="button">copy all</button></div>
+              <p class="ht-none">none</p>
+            </div>
+          </div>
+          <div class="cap">empty set: the "none" message replaces the grid; the copy-all CopyButton disabled</div>
+        </div>
+        <div>
+          <strong>Empty-set rule</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>when <code>headers.length === 0</code>: the grid is not rendered; a <span style="font-family:'DM Mono',monospace;">"none"</span> line in muted text fills the slot; the copy-all <a href="copy-button.html">CopyButton</a> gets <code>disabled</code> (kept visible — hiding it would shift the sub-bar layout)</span>
+            <span class="k">why</span><span>shipped: <code>FlowDetail.tsx:17–18</code> — <code>if (headers.length === 0) return &lt;p …&gt;none&lt;/p&gt;</code>. Keeps the section present (the slot is never invisible — the absence is legible) while making clear there is nothing to copy</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="max-width:none;">
+            <div class="ht-bar"><span class="sec-hd">Response headers</span><button class="btn-copyall" type="button">copy all</button></div>
+            <div class="ht-scroll ht-grid">
+              <span class="ht-key">content-type</span><span class="ht-val">application/json; charset=utf-8</span>
+              <span class="ht-key">content-length</span><span class="ht-val">14820</span>
+              <span class="ht-key">cache-control</span><span class="ht-val">no-store, max-age=0</span>
+              <span class="ht-key">set-cookie</span><span class="ht-val">session=abc; Path=/; HttpOnly; Secure; SameSite=Strict</span>
+              <span class="ht-key">x-trace-id</span><span class="ht-val">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
+              <span class="ht-key">x-ratelimit-remaining</span><span class="ht-val">47</span>
+              <span class="ht-key">x-ratelimit-reset</span><span class="ht-val">1721649260</span>
+              <span class="ht-key">strict-transport-security</span><span class="ht-val">max-age=31536000; includeSubDomains; preload</span>
+            </div>
+            <div style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;margin-top:4px;">↓ scroll for more</div>
+          </div>
+          <div class="cap">8 rows shown in a capped scroll region — the body section below is not pushed off screen</div>
+        </div>
+        <div>
+          <strong>Scroll cap — long sets</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>the rows region has a <code>max-height</code> with <code>overflow-y: auto</code>; the Section slot stays transparent (Section's no-overflow rule). A fixed cap (~200 px / ~8 rows) keeps the body section reachable without scrolling the whole panel</span>
+            <span class="k">why</span><span>W2 roster seed: "collapsible so bodies keep the space"; Fork D1 settles the cap-vs-disclosure choice. Section must not impose overflow on its children (<code>section.html § behavior · slot transparency</code>); the scroll lives on the rows region itself, not on Section</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="timeline"><span class="m">headers hosted inside Section at call site:</span>
+
+  &lt;Section title="Request headers"&gt;
+    &lt;HeaderTable headers={flow.request_headers} /&gt;
+  &lt;/Section&gt;
+
+<span class="m">HeaderTable renders: sub-bar + grid (no &lt;section&gt; of its own)</span></div>
+          <div class="cap">HeaderTable does not render a Section internally — the call site wraps it; the sub-bar carries the heading text passed from outside</div>
+        </div>
+        <div>
+          <strong>Hosting contract</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>HeaderTable is placed inside a <a href="section.html">Section</a> at the screen level; it does not render its own <code>&lt;section&gt;</code> or heading element. The sub-bar heading text is the Section's title (passed as a prop or read from context)</span>
+            <span class="k">why</span><span>Section owns the heading element and hairline rhythm across all zones — HeaderTable duplicating that would nest sections and double the heading hierarchy. The call site is <code>FlowDetail.tsx:106–108</code> and <code>109–111</code></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel">
+          <div class="ht-bar"><span class="sec-hd">Request headers</span><button class="btn-copyall" type="button">copy all</button></div>
+          <div class="ht-grid">
+            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
+            <span class="ht-key">authorization</span><span class="ht-val">Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig</span>
+            <span class="ht-key">accept</span><span class="ht-val">*/*</span>
+          </div>
+        </div>
+        <div class="cap"><strong>populated</strong> — rows in wire order; copy-all CopyButton enabled</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="ht-bar"><span class="sec-hd">Response headers</span><button class="btn-copyall s-disabled" type="button">copy all</button></div>
+          <p class="ht-none">none</p>
+        </div>
+        <div class="cap"><strong>empty</strong> — "none" replaces the grid; copy-all CopyButton disabled. Shipped: <code>FlowDetail.tsx:17–18</code></div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="ht-bar"><span class="sec-hd">Response headers</span><button class="btn-copyall" type="button">copy all</button></div>
+          <div class="ht-scroll ht-grid">
+            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
+            <span class="ht-key">content-length</span><span class="ht-val">14820</span>
+            <span class="ht-key">cache-control</span><span class="ht-val">no-store, max-age=0</span>
+            <span class="ht-key">set-cookie</span><span class="ht-val">session=abc; Path=/; HttpOnly</span>
+            <span class="ht-key">x-trace-id</span><span class="ht-val">00-4bf92f3577b34da6a3ce929d0e0e4736</span>
+            <span class="ht-key">x-ratelimit-remaining</span><span class="ht-val">47</span>
+            <span class="ht-key">strict-transport-security</span><span class="ht-val">max-age=31536000; includeSubDomains</span>
+            <span class="ht-key">x-ratelimit-reset</span><span class="ht-val">1721649260</span>
+          </div>
+          <div style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;margin-top:4px;">↓ scroll</div>
+        </div>
+        <div class="cap"><strong>long-set (scroll)</strong> — rows region capped; sub-bar and Section heading stay fixed above</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="ht-bar"><span class="sec-hd">Request headers</span><button class="btn-copyall s-confirm" type="button">copied</button></div>
+          <div class="ht-grid">
+            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
+            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
+          </div>
+        </div>
+        <div class="cap"><strong>after copy-all</strong> — CopyButton's confirming state (~2 s); rows unchanged. Button states (confirm, error, disabled) owned by <a href="copy-button.html">CopyButton</a></div>
+      </div>
+    </div>
+    <div class="callout" data-c="non-states">
+      <strong>Deliberate non-states:</strong>
+      <ul style="margin:.5em 0 0;padding-left:1.4em;">
+        <li><strong>No loading / in-flight state.</strong> The table receives a fully-resolved <code>headers</code> array from the parent; in-flight handling belongs to the screen (the panel waits for the flow to complete before rendering the detail). When headers have not yet arrived the Section simply isn't rendered.</li>
+        <li><strong>No collapsed state.</strong> Fork D1 settles this: a scroll cap is used instead of a collapsible disclosure. HeaderTable has no open/closed state; it is always fully expanded.</li>
+        <li><strong>No hover / focus state on the composition.</strong> These belong to KeyValueRow (value cell: CopyText's hover/focus/confirming — review 2026-07-23) and the copy-all CopyButton (its own states, incl. the error state); HeaderTable itself has no interactive states of its own.</li>
+      </ul>
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app cards" data-c="d1">
+      <div class="card">
+        <strong>D1 · space management for long sets</strong> <span class="badge auto">settled: scroll cap</span>
+        <div class="panel" style="margin-top:8px;max-width:none;">
+          <div class="ht-bar"><span class="sec-hd">Response headers</span><button class="btn-copyall" type="button">copy all</button></div>
+          <div class="ht-scroll ht-grid">
+            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
+            <span class="ht-key">cache-control</span><span class="ht-val">no-store</span>
+            <span class="ht-key">set-cookie</span><span class="ht-val">session=abc; Path=/</span>
+            <span class="ht-key">x-trace-id</span><span class="ht-val">00-4bf92f3577b34da6a3ce929d0e</span>
+            <span class="ht-key">x-ratelimit-remaining</span><span class="ht-val">47</span>
+          </div>
+          <div style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;margin-top:4px;">↓ scroll for 12 more</div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>Scroll cap (settled).</strong> A fixed <code>max-height</code> + <code>overflow-y:auto</code> on the rows region keeps the body section reachable. Zero JS state, zero extra chrome. W2 roster seed says "collapsible" — but the disclosure interaction (click to open) is an extra step when the user's intent is inspection; the cap gives full access without the extra click. Simpler than a disclosure: no open/closed state, no animation, no aria-expanded. The cap value (~200 px) is a tunable in the token table.</p>
+      </div>
+      <div class="card">
+        <strong>alt: collapsible disclosure</strong> <span class="badge warn">rejected (by this file; reviewer may push back)</span>
+        <div class="panel" style="margin-top:8px;max-width:none;">
+          <div class="ht-bar">
+            <span class="ht-summary" style="cursor:pointer;display:flex;align-items:center;gap:4px;">
+              <span class="ht-chevron">▶</span>
+              <span class="sec-hd" style="margin:0;">Response headers</span>
+            </span>
+            <button class="btn-copyall" type="button">copy all</button>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:Inter,sans-serif;">(content hidden — click heading to expand)</div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>Native &lt;details&gt;/&lt;summary&gt; disclosure.</strong> Roster seed's original intent. Hides all rows by default — requires an extra click before inspection begins; hostile to the "debugging proxy = inspect fast" frame. Introduces an open/closed state the composition must track. Rejected in favour of the scroll cap — but if a reviewer prefers the disclosure (e.g. for very noisy response-header sets), this is the explicit reversal point.</p>
+      </div>
+    </div>
+    <div class="app cards" data-c="d2">
+      <div class="card">
+        <strong>D2 · ordering</strong> <span class="badge auto">settled: wire order</span>
+        <div class="panel" style="margin-top:8px;max-width:none;">
+          <div class="ht-bar"><span class="sec-hd">Request headers</span><button class="btn-copyall" type="button">copy all</button></div>
+          <div class="ht-grid">
+            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
+            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
+            <span class="ht-key">authorization</span><span class="ht-val">Bearer …</span>
+            <span class="ht-key">x-forwarded-for</span><span class="ht-val">203.0.113.42</span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>Wire order (settled).</strong> The array from the API is in capture order; that order is rendered verbatim. Shipped: <code>FlowDetail.tsx:22</code> uses <code>headers.map(…)</code> with no sort — confirmed. A proxy that reorders headers has altered the instrument of record; insertion order can be a bug signal.</p>
+      </div>
+      <div class="card">
+        <strong>alt: alphabetical sort</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;max-width:none;">
+          <div class="ht-grid">
+            <span class="ht-key">accept</span><span class="ht-val">*/*</span>
+            <span class="ht-key">authorization</span><span class="ht-val">Bearer …</span>
+            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
+            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">Makes scanning for a known name easier, but silently destroys the wire order — a separate proxy-injected header that lands at an unusual position becomes invisible. The frame driver is trust, not convenience.</p>
+      </div>
+    </div>
+    <div class="app cards" data-c="d3">
+      <div class="card">
+        <strong>D3 · copy-all button position</strong> <span class="badge auto">settled: top-right in sub-bar</span>
+        <div class="panel" style="margin-top:8px;max-width:none;">
+          <div class="ht-bar"><span class="sec-hd">Request headers</span><button class="btn-copyall" type="button">copy all</button></div>
+          <div class="ht-grid">
+            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
+            <span class="ht-key">accept</span><span class="ht-val">*/*</span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>Top-right in the sub-bar, against the heading (settled).</strong> The button's scope is the full set — pairing it with the heading that labels the set makes the scope unambiguous. Right-aligned keeps the reading flow undisturbed (heading reads left to right; action is at the far edge). Consistent with the shipped curl copy placement (<code>FlowDetail.tsx:89–103</code> — copy button right of the curl block label).</p>
+      </div>
+      <div class="card">
+        <strong>alt: below the rows</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;max-width:none;">
+          <div class="ht-grid">
+            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
+            <span class="ht-key">accept</span><span class="ht-val">*/*</span>
+          </div>
+          <div style="text-align:right;margin-top:6px;"><button class="btn-copyall" type="button">copy all</button></div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">Placing the button below the rows means it scrolls out of view on a long set — the action disappears exactly when the set is largest. Also inconsistent with the scroll-cap design where the sub-bar sits above the scrollable region.</p>
+      </div>
+    </div>
+    <div class="app cards" data-c="d4">
+      <div class="card">
+        <strong>D4 · copy-all payload format</strong> <span class="badge auto">settled: wire format, trailing \n</span>
+        <div class="timeline" style="margin-top:8px;">accept: application/json
+authorization: Bearer eyJhbG…
+content-type: application/json
+<span class="m">(single trailing newline)</span></div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>Wire format wins</strong> (moved here from the dissolved <a href="copy-all-headers-button.html">CopyAllHeadersButton</a> — HeaderTable owns the serialisation): <code>name: value\n</code> per pair is paste-ready everywhere (tickets, specs, curl), human-readable, and represents duplicates + order faithfully. The trailing newline lands the paste cursor on a fresh line — <code>join('\n') + '\n'</code>, one character.</p>
+      </div>
+      <div class="card">
+        <strong>alts: JSON · curl -H · tab-separated</strong> <span class="badge warn">rejected</span>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:4px;"><strong>JSON object</strong> — needs transformation before use; cannot represent duplicate header names; key order implementation-dependent. <strong>curl -H flags</strong> — curl-only syntax; the full-request case is already served by copy-as-curl (<code>FlowDetail.tsx:51</code> / <code>toCurl</code>). <strong>Tab-separated</strong> — no ecosystem reads tabs as headers; pastes as broken text in most editors.</p>
+      </div>
+    </div>
+
+    <h2 id="api">API + TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>headers</code></td><td><code>HeaderView[]</code></td><td>the full set as captured — rendered in index order as rows AND serialised by HeaderTable into the copy-all payload. <code>HeaderView = { name: string; value: string }</code> from <code>ui/src/api.ts</code></td></tr>
+        <tr><td><code>label</code></td><td><code>string</code></td><td>the section heading text, e.g. "Request headers" — drives the sub-bar heading and the copy-all CopyButton's <code>aria-label</code> ("copy all request headers" — disambiguates the two identical buttons on screen)</td></tr>
+      </tbody>
+    </table>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built:</p>
+      <pre class="tsdoc">/**
+ * HeaderTable — one leg's full header set; wire order preserved, single source for rows and copy-all,
+ * owns the copy-all serialisation (name: value\n per pair, wire order, trailing \n).
+ * @tier T4 — composition; assembled at screen level from collected parts; not in the registry
+ * @anatomy sub-bar (section heading left · CopyButton "copy all" right) · KeyValueRow× in wire-order grid · scroll cap on rows region
+ * @use request-headers zone (panel C) · response-headers zone (panel D)
+ * @avoid re-sorting or filtering headers before passing (breaks wire-order contract) · serialising anywhere else (press logic lives here, the button stays a dumb T1) · rendering without a Section wrapper at the call site
+ * @states populated · empty (rows absent, "none" shown, copy-all disabled) · long-set (rows scroll within capped region)
+ * @madeof KeyValueRow× · CopyButton (T1, label "copy all") · hosted inside Section at call site
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Exactly two call sites: "Request headers" (panel zone C) and "Response headers" (panel zone D) in <code>FlowDetail.tsx</code>. Any future leg that exposes a named header set with a copy-all action follows the same pattern.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>Passing a pre-sorted or pre-filtered array — the composition contract requires the raw captured order. Rendering KeyValueRow× directly without HeaderTable when a copy-all action is also needed — that duplicates the sub-bar placement logic. Using HeaderTable for non-header name/value data that doesn't warrant a copy-all (a single decoded form field, for example — a bare KeyValueRow is sufficient).</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part</th><th>Tailwind (build WU)</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>sub-bar wrapper</td><td><code>flex items-center justify-between mb-2</code></td><td>heading left, copy-all CopyButton right; <code>mb-2</code> matches Section heading margin (<code>FlowDetail.tsx:10</code>)</td></tr>
+        <tr><td>sub-bar heading text</td><td><code>text-xs uppercase tracking-wide text-ink-mute font-ui</code></td><td>identical to Section's heading style (<code>section.html § tokens</code>); do not render a Section heading separately — the sub-bar carries it</td></tr>
+        <tr><td>rows grid</td><td><code>grid grid-cols-[auto_1fr] gap-x-3 gap-y-1</code></td><td>shipped: <code>FlowDetail.tsx:21</code> — extracted verbatim; each KeyValueRow is <code>display:contents</code></td></tr>
+        <tr><td>rows scroll cap</td><td><code>max-h-[200px] overflow-y-auto</code></td><td>ponytail: 200 px cap; adjust if reviewer confirms a different threshold (Fork D1)</td></tr>
+        <tr><td>empty "none" text</td><td><code>text-xs text-ink-mute font-ui</code></td><td>shipped: <code>FlowDetail.tsx:18</code> — <code>text-ink-mute</code> class confirmed</td></tr>
+        <tr><td>copy-all button</td><td>see <a href="copy-button.html">copy-button.html § tokens</a></td><td>plain CopyButton, no overrides; one fact per tier</td></tr>
+        <tr><td>serialisation (no CSS)</td><td><code>headers.map(h =&gt; `${h.name}: ${h.value}`).join('\n') + '\n'</code></td><td>lives in HeaderTable, passed as CopyButton's <code>value</code> — one expression, no library</td></tr>
+        <tr><td>KeyValueRow internals</td><td>see <a href="key-value-row.html">key-value-row.html § tokens</a></td><td>same — one fact per tier</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="callout" data-c="specimen-note" style="margin-bottom:12px;">
+      The composition's behavior is cheap to approximate in a doc: the sub-bar is static HTML, the rows are static HTML, and the copy-all button is live JavaScript (same pattern as CopyText's specimen). The specimen below is functional: HeaderTable's serialisation builds the <code>name: value\n</code> wire-format payload (trailing newline included) and the CopyButton writes it — "copied" for ~2 s on success, "failed" (warn tone) on clipboard denial. KeyValueRow's value copy (CopyText) is live in <code>key-value-row.html</code>'s own specimen; here the rows are static and selection remains fully native.
+    </div>
+    <div class="app" data-c="specimen">
+      <div style="display:flex;gap:16px;flex-wrap:wrap;">
+        <!-- Request leg -->
+        <div class="panel" style="max-width:420px;flex:1;min-width:280px;">
+          <div class="ht-bar">
+            <span class="sec-hd">Request headers</span>
+            <button id="req-copyall" class="btn-copyall" type="button">copy all</button>
+          </div>
+          <div class="ht-grid" id="req-rows">
+            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
+            <span class="ht-key">content-type</span><span class="ht-val">application/json; charset=utf-8</span>
+            <span class="ht-key">authorization</span><span class="ht-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.dummysig</span>
+            <span class="ht-key">accept</span><span class="ht-val">application/json</span>
+            <span class="ht-key">x-request-id</span><span class="ht-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+          </div>
+        </div>
+        <!-- Response leg (long-set, scroll) -->
+        <div class="panel" style="max-width:420px;flex:1;min-width:280px;">
+          <div class="ht-bar">
+            <span class="sec-hd">Response headers</span>
+            <button id="resp-copyall" class="btn-copyall" type="button">copy all</button>
+          </div>
+          <div class="ht-scroll ht-grid" id="resp-rows">
+            <span class="ht-key">content-type</span><span class="ht-val">application/json; charset=utf-8</span>
+            <span class="ht-key">content-length</span><span class="ht-val">14820</span>
+            <span class="ht-key">cache-control</span><span class="ht-val">no-store, no-cache, must-revalidate, proxy-revalidate</span>
+            <span class="ht-key">set-cookie</span><span class="ht-val">session=eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.sig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
+            <span class="ht-key">x-trace-id</span><span class="ht-val">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
+            <span class="ht-key">x-ratelimit-limit</span><span class="ht-val">100</span>
+            <span class="ht-key">x-ratelimit-remaining</span><span class="ht-val">47</span>
+            <span class="ht-key">x-ratelimit-reset</span><span class="ht-val">1721649260</span>
+            <span class="ht-key">strict-transport-security</span><span class="ht-val">max-age=31536000; includeSubDomains; preload</span>
+            <span class="ht-key">access-control-allow-origin</span><span class="ht-val">https://app.example.com</span>
+            <span class="ht-key">vary</span><span class="ht-val">Accept-Encoding, Accept-Language</span>
+          </div>
+          <div style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;margin-top:4px;">↓ scroll for more rows</div>
+        </div>
+        <!-- Empty leg -->
+        <div class="panel" style="max-width:260px;flex:0 0 auto;">
+          <div class="ht-bar">
+            <span class="sec-hd">Trailer headers</span>
+            <button class="btn-copyall s-disabled" type="button" disabled>copy all</button>
+          </div>
+          <p class="ht-none">none</p>
+        </div>
+      </div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:8px;">Interactive specimen — "copy all" buttons are live (click to copy wire-format text to clipboard, ~2 s confirmation). Response leg shows the scroll cap. Trailer leg shows the empty state. Drag-select any value for native partial-take. Rendered in the app's Warp tokens.</div>
+    </div>
+  </main>
+
+  <script>
+    // ponytail: minimal demo — HeaderTable serialises, the button (CopyButton stand-in) shows the state
+    function makeCopyAll(btnId, rowsId) {
+      const btn = document.getElementById(btnId);
+      const rows = document.getElementById(rowsId);
+      if (!btn || !rows) return;
+      let timer;
+      function flash(label, cls) {
+        btn.textContent = label;
+        btn.classList.add(cls);
+        clearTimeout(timer);
+        timer = setTimeout(() => { btn.textContent = 'copy all'; btn.classList.remove('s-confirm', 's-error'); }, 2000);
+      }
+      btn.addEventListener('click', () => {
+        const keys = rows.querySelectorAll('.ht-key');
+        const vals = rows.querySelectorAll('.ht-val');
+        const lines = [];
+        keys.forEach((k, i) => lines.push(k.textContent.trim() + ': ' + (vals[i]?.textContent.trim() ?? '')));
+        const text = lines.join('\n') + '\n';
+        navigator.clipboard?.writeText(text).then(() => flash('copied', 's-confirm'), () => flash('failed', 's-error'));
+      });
+    }
+    makeCopyAll('req-copyall', 'req-rows');
+    makeCopyAll('resp-copyall', 'resp-rows');
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

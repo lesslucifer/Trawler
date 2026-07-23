@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60d72d9f34851f0dfa93fa">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — SegmentedControl component design</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+    .t2{color:var(--ok);}
+    /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
+    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
+    .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
+    .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
+    /* segment group */
+    .seg-group{display:inline-flex;border:1px solid var(--a-line);border-radius:4px;overflow:hidden;font-family:Inter,system-ui,sans-serif;font-size:11px;}
+    .seg{padding:2px 8px;cursor:pointer;color:var(--a-mute);background:transparent;border:none;line-height:1.6;user-select:none;}
+    .seg:hover{color:var(--a-ink);}
+    .seg.active{background:var(--a-soft);color:var(--a-ink);}
+    .seg:focus-visible{outline:1px solid var(--a-mute);outline-offset:-1px;}
+    .seg-group.disabled .seg{opacity:.4;cursor:default;pointer-events:none;}
+    .seg-divider{width:1px;background:var(--a-line);flex-shrink:0;}
+    /* body preview (specimen only) */
+    .body-preview{font-family:"DM Mono",ui-monospace,monospace;font-size:11px;line-height:1.6;color:var(--a-body);background:var(--a-canvas);border:1px solid var(--a-line);border-radius:6px;padding:8px 10px;margin-top:6px;white-space:pre;overflow-x:auto;}
+    .body-preview .k{color:var(--a-mute);}
+    .body-preview .v{color:var(--a-ink);}
+    .sub-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .sub-bar .zone-lbl{color:var(--a-mute);font-family:Inter,system-ui,sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.05em;}
+    /* swatch grid */
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    /* part grid */
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    /* annotation badge */
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:Inter,system-ui,sans-serif;}
+    /* flow example */
+    .flow-ex{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .flow-ex .arr{color:var(--muted);font-size:11px;white-space:nowrap;}
+    /* tsdoc */
+    .tsdoc{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    /* timeline */
+    .timeline{font-family:"DM Mono",ui-monospace,monospace;font-size:11px;color:var(--a-body);background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 10px;line-height:1.8;white-space:pre;overflow-x:auto;}
+    .timeline .m{color:var(--a-mute);}
+    .timeline .o{color:var(--a-ok);}
+    .timeline .w{color:var(--a-warn);}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>SegmentedControl <span class="tier t1">T1</span></h1>
+      <p>Single-select segment group: N mutually exclusive options, one always active, the state legible at a glance. The generic control behind every mode switch — decoded/raw, request/response.</p>
+      <div class="meta">Component design · <strong>confirmed 2026-07-23</strong> · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a> · generalised from the DecodeToggle draft (this file's history — open <code>?diff=latest</code>)</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> the shipped <code>ModeButton</code> (<code>BodyViewer.tsx:116–137</code>) already serves two different switches — request/response and decoded/raw — with identical anatomy. The reusable shape is "single-select segment group"; decode is one tenant of it, exactly as the URI was one tenant of CopyText (W2 verdict).
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — selection display + click/keyboard handling only; what the options <em>mean</em> is the tenant's business logic → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>BodyViewer decode switch (<code>raw | decoded</code>) · BodyViewer leg switch (<code>request | response</code> — the shipped shape; <a href="body-viewer.html">body-viewer.html</a> fork D3-B) · any future mutually exclusive view/mode switch</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>inline <code>ModeButton</code> in <code>BodyViewer.tsx:116–137</code>, already used for both tenants → extract</td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (primitive; consumed by <a href="body-viewer.html">BodyViewer</a>)</td></tr>
+      <tr><td><strong>Provenance</strong></td><td>generalised 2026-07-23 from the DecodeToggle T2 draft; the decode semantics (default, reset on flow change, visibility) moved to <a href="body-viewer.html">body-viewer.html</a> forks D4/D5</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① the state must be legible at a glance</td><td>all options always visible; the active one filled — never a control whose state must be inferred from a label</td></tr>
+        <tr><td>② generic — the control never interprets its options</td><td>labels and values are caller data; defaults, persistence, and when the control renders at all are tenant rules</td></tr>
+        <tr><td>③ keyboard + screen-reader parity</td><td>radiogroup semantics — <code>radiogroup</code>/<code>radio</code>, roving tabindex (Fork D3)</td></tr>
+        <tr><td>④ calm, dense panel</td><td>compact inline-flex, no label of its own — the surrounding bar provides context</td></tr>
+        <tr><td>⑤ zero chromatic accent (Warp DEC-11)</td><td>active = soft fill + ink text; focus = 1 px mute outline — never colored</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy">
+      <div class="panel">
+        <div class="lbl">Response body</div>
+        <div class="sub-bar">
+          <div class="seg-group" role="radiogroup" aria-label="body view">
+            <button class="seg active" role="radio" aria-checked="true"><span class="anno">1</span> raw</button>
+            <div class="seg-divider"></div>
+            <button class="seg" role="radio" aria-checked="false">decoded <span class="anno">2</span></button>
+          </div>
+          <span class="anno">3</span>
+        </div>
+      </div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="seg-group">
+              <button class="seg active">raw</button>
+              <div class="seg-divider"></div>
+              <button class="seg">decoded</button>
+            </div>
+          </div>
+          <div class="cap">the active segment filled soft; the state is always legible without reading anything else</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> active segment</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>filled background (<code>canvas-soft</code>) · ink text · exactly one segment is active at all times — the control cannot render a no-selection state</span>
+            <span class="k">why</span><span>the active segment must be distinguishable at a glance without color — fill tone (ink-family) satisfies driver ① within the zero-chromatic-accent rule</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="seg-group">
+              <button class="seg">req</button>
+              <div class="seg-divider"></div>
+              <button class="seg active">resp</button>
+            </div>
+          </div>
+          <div class="cap">the second tenant, same anatomy: the leg switch — nothing about the control changes</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> inactive segment(s)</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>transparent background · muted text · hover raises to ink (no fill until clicked) · symmetric treatment — no segment is privileged visually</span>
+            <span class="k">why</span><span>the <em>state</em> is shown by fill alone; labels come verbatim from the caller. 2–4 segments — beyond that the scan cost beats a select</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="sub-bar">
+              <span class="zone-lbl">body</span>
+              <div class="seg-group">
+                <button class="seg active">raw</button>
+                <div class="seg-divider"></div>
+                <button class="seg">decoded</button>
+              </div>
+            </div>
+          </div>
+          <div class="cap">placement in a chrome bar: the tenant's zone label provides context; the control carries none</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> slot &amp; dividers</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>inline-flex, hairline outer border, 1 px hairline dividers between segments, no outer label of its own · <code>ariaLabel</code> prop names the group for screen readers</span>
+            <span class="k">why</span><span>the control must fit any dense bar (driver ④); context is the tenant's job — a built-in label would be wrong for one tenant or the other</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — the rules the parts obey</h2>
+    <p data-c="behavior-intro" style="color:var(--muted);">Anatomy is what is on screen; behavior is what it <em>does</em> — the interaction rules a builder implements and a reviewer tests.</p>
+    <div class="app parts" data-c="behavior-table">
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex">
+            <div class="panel" style="padding:6px 8px;">
+              <div class="seg-group">
+                <button class="seg active">raw</button>
+                <div class="seg-divider"></div>
+                <button class="seg">decoded</button>
+              </div>
+            </div>
+            <span class="arr">click "decoded" ▸ onChange("decoded")</span>
+            <div class="panel" style="padding:6px 8px;">
+              <div class="seg-group">
+                <button class="seg">raw</button>
+                <div class="seg-divider"></div>
+                <button class="seg active">decoded</button>
+              </div>
+            </div>
+          </div>
+          <div class="cap">clicking an inactive segment fires onChange; clicking the active one is a no-op</div>
+        </div>
+        <div>
+          <strong>Controlled — value in, onChange out</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>fully controlled: <code>value</code> selects the active segment; clicking an inactive segment calls <code>onChange(option.value)</code>; clicking the active segment is a no-op — <code>onChange</code> is never called with the current value. The control holds no state of its own</span>
+            <span class="k">why</span><span>driver ②: defaults, resets, persistence, and side effects (e.g. BodyViewer's re-fetch with <code>?decode=1</code>) are tenant logic; a stateless control cannot drift from its tenant</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="timeline"><span class="m">tab to group  ▸</span> focus lands on the active segment
+<span class="m">←/→           ▸</span> moves focus between segments
+<span class="m">space/enter   ▸</span> selects focused segment
+<span class="m">screen reader ▸</span> "raw, selected, radio button, 1 of 2"</div>
+        </div>
+        <div>
+          <strong>A11y — radiogroup pattern</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>role="radiogroup"</code> on the container · <code>aria-label</code> from the <code>ariaLabel</code> prop · each segment <code>role="radio"</code> with <code>aria-checked</code> · roving tabindex (active segment holds the tab stop) · arrow keys move focus · Space/Enter selects</span>
+            <span class="k">why</span><span>radiogroup is the correct ARIA pattern for mutually exclusive options — it gives screen readers the "1 of N" positional context (Fork D3 rationale)</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="padding:6px 8px;">
+            <div class="seg-group disabled">
+              <button class="seg active">raw</button>
+              <div class="seg-divider"></div>
+              <button class="seg">decoded</button>
+            </div>
+          </div>
+          <div class="cap">whole-group disabled: BodyViewer uses it while the body is absent or loading</div>
+        </div>
+        <div>
+          <strong>Disabled — whole group only</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>optional <code>disabled</code> prop mutes and inerts the whole group (native <code>disabled</code> on every segment); the current value stays visible. No per-segment disabled</span>
+            <span class="k">why</span><span>a single unclickable option in a 2-option group reads as broken; if one option can't be chosen, the tenant removes it or hides the control — that judgment is domain logic (see <a href="body-viewer.html">body-viewer.html</a> fork D5)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel" style="padding:8px 10px;">
+          <div class="seg-group">
+            <button class="seg active">raw</button>
+            <div class="seg-divider"></div>
+            <button class="seg">decoded</button>
+          </div>
+        </div>
+        <div class="cap"><strong>value-active</strong> — exactly one segment filled at all times; which one is purely the <code>value</code> prop</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="padding:8px 10px;">
+          <div class="seg-group">
+            <button class="seg active">raw</button>
+            <div class="seg-divider"></div>
+            <button class="seg" style="color:var(--a-ink);">decoded</button>
+          </div>
+        </div>
+        <div class="cap"><strong>hover (inactive segment)</strong> — muted → ink; fill does not appear until clicked</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="padding:8px 10px;">
+          <div class="seg-group">
+            <button class="seg active" style="outline:1px solid var(--a-mute);outline-offset:-1px;">raw</button>
+            <div class="seg-divider"></div>
+            <button class="seg">decoded</button>
+          </div>
+        </div>
+        <div class="cap"><strong>focus</strong> — 1 px mute outline on the focused segment. Zero-chromatic-accent rule: never colored</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="padding:8px 10px;">
+          <div class="seg-group disabled">
+            <button class="seg active">raw</button>
+            <div class="seg-divider"></div>
+            <button class="seg">decoded</button>
+          </div>
+        </div>
+        <div class="cap"><strong>disabled (whole group)</strong> — muted, non-interactive, value still visible. E.g. BodyViewer while the body is absent/loading</div>
+      </div>
+    </div>
+    <div class="callout" data-c="no-states">
+      <strong>Deliberate non-states.</strong>
+      No <em>per-segment disabled</em> — reads as broken on a small group; the tenant removes the option or hides the control instead.
+      No <em>empty / no-selection</em> state — <code>value</code> must always match one option; a segmented control with nothing selected is a different (worse) component.
+      No <em>loading</em> or <em>error</em> states — the control is synchronous display; anything asynchronous belongs to the tenant.
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app cards" data-c="d1">
+      <div class="card">
+        <strong>D1 · control form</strong> <span class="badge auto">settled: segment group</span>
+        <div style="margin-top:8px;display:flex;gap:10px;align-items:center;">
+          <div class="seg-group">
+            <button class="seg active">raw</button>
+            <div class="seg-divider"></div>
+            <button class="seg">decoded</button>
+          </div>
+          <span style="color:var(--a-mute);font-size:11px;">← settled</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">All options visible in a single group makes the choice structurally explicit — the current state is unambiguous at a glance (driver ①). A cycling button only names one side and forces the user to read the label to infer the state.</p>
+      </div>
+      <div class="card">
+        <strong>alt: single cycling button</strong> <span class="badge warn">rejected</span>
+        <div style="margin-top:8px;">
+          <button style="border:1px solid var(--a-line);border-radius:4px;padding:2px 8px;background:transparent;color:var(--a-ink);font-size:11px;font-family:Inter,sans-serif;">raw ↔ decoded</button>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">One touch target, but "show decoded" implies decoded is <em>not</em> current while "decoded" implies it <em>is</em> — either reading is ambiguous. Driver ① rules it out.</p>
+      </div>
+    </div>
+    <div class="app cards" data-c="d2">
+      <div class="card">
+        <strong>D2 · selection model</strong> <span class="badge auto">settled: single-select only</span>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">Both known tenants (decode, leg) are mutually exclusive views. Single-select is what "one segment always filled" and the radiogroup pattern mean; the contract stays one prop (<code>value</code>), one event (<code>onChange</code>).</p>
+      </div>
+      <div class="card">
+        <strong>alt: multi-select variant</strong> <span class="badge warn">rejected — no tenant</span>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">A <code>type="multiple"</code> mode (as Radix ToggleGroup offers) would change the value shape to a set and the ARIA pattern to independent <code>aria-pressed</code> toggles — a different component wearing the same clothes. Add as a sibling when a real tenant appears, not before.</p>
+      </div>
+    </div>
+    <div class="app cards" data-c="d3">
+      <div class="card">
+        <strong>D3 · ARIA pattern</strong> <span class="badge auto">settled: radiogroup</span>
+        <div class="timeline" style="margin-top:8px;"><span class="m">tab    ▸</span> "body view, group"
+<span class="m">→      ▸</span> "decoded, radio, 2 of 2"
+<span class="m">space  ▸</span> selects decoded</div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;"><code>role="radiogroup"</code> + <code>role="radio"</code> gives the 1-of-N positional context and the roving tabindex model. Screen readers announce selection without extra markup.</p>
+      </div>
+      <div class="card">
+        <strong>alt: aria-pressed on each segment</strong> <span class="badge warn">rejected</span>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;"><code>aria-pressed</code> implies independent toggles — a screen reader would not convey that selecting one deselects the others. The radiogroup pattern exists precisely for this case.</p>
+      </div>
+    </div>
+    <div class="callout" data-c="moved-forks">
+      <strong>Where the decode forks went.</strong> The DecodeToggle draft's domain decisions were never this control's to make: default mode and reset-on-flow-change (was D2) and visibility when there is nothing to decode (was D3) are BodyViewer rules — now <a href="body-viewer.html">body-viewer.html</a> forks <strong>D4</strong> and <strong>D5</strong>, both open.
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><code>options</code></td><td><code>ReadonlyArray&lt;{ value: string; label: string }&gt;</code></td><td>2–4 entries, rendered in order; labels verbatim</td></tr>
+        <tr><td><code>value</code></td><td><code>string</code></td><td>controlled; must equal one option's <code>value</code></td></tr>
+        <tr><td><code>onChange</code></td><td><code>(value: string) =&gt; void</code></td><td>fires on selecting an inactive segment; never called with the current value</td></tr>
+        <tr><td><code>ariaLabel</code></td><td><code>string</code></td><td>accessible name for the radiogroup (e.g. "body view", "leg")</td></tr>
+        <tr><td><code>disabled?</code></td><td><code>boolean</code></td><td>whole group; value stays visible</td></tr>
+      </tbody>
+    </table>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built:</p>
+      <pre class="tsdoc">/**
+ * SegmentedControl — single-select segment group: N mutually exclusive options,
+ *   one always active, the state legible at a glance.
+ * @tier T1 — selection display + click/keyboard handling only; what the options
+ *   mean is the tenant's business logic
+ * @anatomy bordered inline group · hairline dividers · active segment filled soft,
+ *   inactive muted · radiogroup semantics, roving tabindex
+ * @use any always-visible mutually exclusive view/mode switch: decode (raw | decoded)
+ *   · leg (request | response)
+ * @avoid actions (that is a button) · multi-select · tabs that own panels (tablist)
+ *   · &gt;4 options · domain rules in the control — defaults, persistence, visibility
+ *   belong to the tenant
+ * @states value-active · hover (inactive segment) · focus · disabled (whole group)
+ * @madeof —
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Any mutually exclusive view/mode switch whose state must stay visible: BodyViewer's decode switch and leg switch today; any 2–4-way mode choice tomorrow. The tenant owns the value, the side effects, and the decision to render the control at all.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>Actions — a segment selects a mode, it never <em>does</em> something (that is CopyButton/IconButton). Multi-select (fork D2). Tab navigation that owns panels — that is a <code>tablist</code>, a different ARIA pattern. More than 4 options — use a select. Encoding domain rules in the control: what "decoded" means, which mode is default, when the switch is hidden — all tenant logic.</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part</th><th>Tailwind (build WU)</th></tr></thead>
+      <tbody>
+        <tr><td>container (radiogroup)</td><td><code>inline-flex border border-hairline rounded overflow-hidden</code></td></tr>
+        <tr><td>segment (inactive)</td><td><code>px-2 py-0.5 text-xs text-ink-mute hover:text-ink bg-transparent</code></td></tr>
+        <tr><td>segment (active)</td><td><code>px-2 py-0.5 text-xs text-ink bg-canvas-soft</code></td></tr>
+        <tr><td>segment divider</td><td><code>w-px bg-hairline flex-shrink-0</code></td></tr>
+        <tr><td>focus ring</td><td><code>outline-ink-mute outline-1 -outline-offset-1</code> — never chromatic accent</td></tr>
+        <tr><td>disabled group</td><td><code>opacity-40</code> + native <code>disabled</code> on every segment</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="app" data-c="specimen">
+      <div class="panel">
+        <div class="lbl">Body</div>
+        <div class="sub-bar" style="margin-bottom:8px;">
+          <div id="live-leg" class="seg-group" role="radiogroup" aria-label="leg">
+            <button class="seg" role="radio" aria-checked="false" tabindex="-1" data-v="req">req</button>
+            <div class="seg-divider"></div>
+            <button class="seg active" role="radio" aria-checked="true" tabindex="0" data-v="resp">resp</button>
+          </div>
+          <div id="live-toggle" class="seg-group" role="radiogroup" aria-label="body view">
+            <button class="seg active" role="radio" aria-checked="true" tabindex="0" data-v="raw">raw</button>
+            <div class="seg-divider"></div>
+            <button class="seg" role="radio" aria-checked="false" tabindex="-1" data-v="decoded">decoded</button>
+          </div>
+        </div>
+        <div id="live-body" class="body-preview"></div>
+      </div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — two independent instances of the same control, exactly as BodyViewer composes them: the leg switch and the decode switch. Click or tab in, ←/→ to move, Space/Enter to select. The body preview is illustrative; in the app the tenant reacts to <code>onChange</code> (re-fetch with/without <code>?decode=1</code>).</div>
+    </div>
+    <div class="callout" data-c="cross-links">
+      <strong>Component cross-links:</strong>
+      <a href="section.html">Section</a> ·
+      <a href="icon-button.html">IconButton</a> ·
+      <a href="copy-button.html">CopyButton</a> ·
+      <a href="copy-text.html">CopyText</a> ·
+      <a href="key-value-row.html">KeyValueRow</a> ·
+      <a href="method-label.html">MethodLabel</a> ·
+      <a href="duration-text.html">DurationText</a> ·
+      <a href="timestamp-text.html">TimestampText</a> ·
+      <a href="status-pill.html">StatusPill</a> ·
+      <a href="copy-all-headers-button.html">CopyAllHeadersButton</a> ·
+      <strong>segmented-control.html</strong> ·
+      <a href="body-renderer.html">BodyRenderer</a> ·
+      <a href="header-table.html">HeaderTable</a> ·
+      <a href="body-viewer.html">BodyViewer</a>
+    </div>
+  </main>
+  <script>
+    const BODIES = {
+      resp: {
+        raw: `1f 8b 08 00 00 00 00 00  00 03 4b cb cf 57 48 2c
+52 c8 48 2d 2e cd 2b 01  00 4a b0 2b 4f 07 00 00
+(gzip-compressed bytes — 68 of 142)`,
+        decoded: `{
+  "status": "ok",
+  "count": 42,
+  "items": [
+    { "id": "8f3a91c2", "name": "Widget A" },
+    { "id": "b7e20d45", "name": "Widget B" }
+  ]
+}`,
+      },
+      req: {
+        raw: `orderId=8f3a91c2&qty=3`,
+        decoded: `orderId: 8f3a91c2
+qty:     3`,
+      },
+    };
+
+    const bodyEl = document.getElementById('live-body');
+    const state = { leg: 'resp', mode: 'raw' };
+
+    function render() {
+      bodyEl.textContent = BODIES[state.leg][state.mode];
+      bodyEl.style.color = state.leg === 'resp' && state.mode === 'raw' ? 'var(--a-mute)' : '';
+    }
+
+    function wireGroup(groupId, key) {
+      const group = document.getElementById(groupId);
+      const segs = Array.from(group.querySelectorAll('.seg'));
+
+      function select(value) {
+        state[key] = value;
+        segs.forEach((s) => {
+          const active = s.dataset.v === value;
+          s.classList.toggle('active', active);
+          s.setAttribute('aria-checked', String(active));
+          s.tabIndex = active ? 0 : -1;
+        });
+        render();
+      }
+
+      segs.forEach((s) => s.addEventListener('click', () => {
+        if (s.dataset.v !== state[key]) select(s.dataset.v);
+      }));
+
+      group.addEventListener('keydown', (e) => {
+        const i = segs.findIndex((s) => s.dataset.v === state[key]);
+        let next = null;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = segs[(i + 1) % segs.length];
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = segs[(i - 1 + segs.length) % segs.length];
+        else return;
+        e.preventDefault();
+        select(next.dataset.v);
+        next.focus();
+      });
+    }
+
+    wireGroup('live-leg', 'leg');
+    wireGroup('live-toggle', 'mode');
+    render();
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

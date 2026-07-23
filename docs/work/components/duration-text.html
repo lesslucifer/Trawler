@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60d5e59f34851f0dfa93d7">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DurationText component design</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+    /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
+    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
+    .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
+    .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
+    .dur{color:var(--a-mute);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
+    .dur.fast{}
+    .dur.slow{color:var(--a-mute);}
+    .dur.blank{color:transparent;user-select:none;}
+    .row-grid{display:grid;align-items:center;gap:12px;padding:4px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;background:var(--a-canvas);}
+    .row-grid .r-time{color:var(--a-mute);}
+    .row-grid .r-dur{color:var(--a-mute);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+    .row-grid .r-blank{text-align:right;color:transparent;user-select:none;white-space:nowrap;}
+    .row-grid .r-path{color:var(--a-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:Inter,system-ui,sans-serif;}
+    .tsdoc{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .flow-ex{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .flow-ex .arr{color:var(--muted);font-size:11px;white-space:nowrap;}
+    .conv-table{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;color:var(--a-body);background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 14px;line-height:2;overflow-x:auto;}
+    .conv-table .raw{color:var(--a-mute);}
+    .conv-table .out{color:var(--a-body);font-weight:600;}
+    .conv-table .arrow{color:var(--a-line);margin:0 8px;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DurationText <span class="tier t1">T1</span></h1>
+      <p>A flow's elapsed time — formats a raw duration (unit prop, default ms) to a human-readable string and holds its column slot blank while the flow is still in-flight.</p>
+      <div class="meta">Component design · <strong>confirmed 2026-07-23</strong> · 2026-07-22 · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> two sites hand-format duration independently with raw ms only — any fix must land twice, column width shifts as numbers grow, and in-flight rows reflow on arrival.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — duration→human formatting only, no business logic → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>list rows (duration column) · the detail header identity bar (zone A) — W2 extract from plain span ×2</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>plain <code>&lt;span&gt;</code> × 2 — <code>flow.ts:50</code> always "ms", never scaled; <code>FlowList.tsx:86</code> and <code>FlowDetail.tsx:67</code></td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (pure formatting; no sub-components)</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① glanceability in list columns</td><td>right-aligned, <code>tabular-nums</code>, mono — numerals stack on the decimal point</td></tr>
+        <tr><td>② honest precision (wall-clock ms, not sub-ms)</td><td>unit scales: integer ms below 1 s; one decimal in the largest unit that keeps the value ≥ 1 above — s, min, h, d</td></tr>
+        <tr><td>③ stable column width while in-flight</td><td>pending state renders a fixed-width blank, not nothing</td></tr>
+        <tr><td>④ calm, dense panel</td><td>mute tone only — no chromatic tinting for fast/slow (Warp zero-accent rule)</td></tr>
+        <tr><td>⑤ two sites, same rule</td><td>single component replaces both plain spans</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-annotated">
+      <div style="background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 14px;">
+        <div class="lbl" style="color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;">Duration column (list row)</div>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;">
+          <span class="dur" style="color:var(--a-mute);font-family:'DM Mono',ui-monospace,monospace;font-size:12.5px;font-variant-numeric:tabular-nums;"><span class="anno">1</span>1.8<span class="anno">2</span> s<span class="anno">3</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;justify-content:flex-end;">
+            <span class="dur">1.8 s</span>
+          </div>
+          <div class="cap">right-aligned in its column, mono — numerals stack</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> numeral</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>mono, right-aligned, <code>tabular-nums</code>, mute tone</span>
+            <span class="k">why</span><span>glanceability driver (frame ①); <code>FlowList.tsx:86</code> already sets <code>text-right tabular-nums text-ink-mute</code> on the containing span — the component inherits this contract</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;justify-content:flex-end;gap:16px;">
+            <span class="dur">327 ms</span>
+            <span class="dur">1.8 s</span>
+          </div>
+          <div class="cap">327 ms (below 1 s) · 1.8 s (above 1 s, one decimal)</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> value</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>below 1 000 ms: integer ms; above: one decimal in the largest unit that keeps the value ≥ 1 — s, min, h, d (1.8 s · 1.5 min · 2.0 h · 1.5 d); the decimal is always shown (1.0 s, not "1 s")</span>
+            <span class="k">why</span><span>honest precision (frame ②); one decimal conveys real precision at every rung without lying about measurement granularity; see fork D1</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;justify-content:flex-end;gap:16px;">
+            <span class="dur">327 ms</span>
+            <span class="dur">1.8 s</span>
+          </div>
+          <div class="cap">the unit is always shown, never omitted</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> unit suffix</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>"ms" / "s" / "min" / "h" / "d" — always appended, one space between numeral and suffix</span>
+            <span class="k">why</span><span>a bare number "1.8" with no unit is ambiguous; shipped code already appends " ms" (<code>flow.ts:50</code>); the suffix remains but the unit scales</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — the rules the parts obey</h2>
+    <p data-c="behavior-intro" style="color:var(--muted);">Anatomy is what is on screen; behavior is what it <em>does</em> — the formatting logic a builder implements and a reviewer tests.</p>
+    <div class="app parts" data-c="behavior-rules">
+      <div class="part">
+        <div class="ex">
+          <div class="conv-table">
+            <span class="raw">value 250</span><span class="arrow">→</span><span class="out">250 ms</span><span style="color:var(--a-mute);font-size:11px;margin-left:8px;">(unit defaults to "ms")</span><br>
+            <span class="raw">value 1.5, unit "s"</span><span class="arrow">→</span><span class="out">1.5 s</span><br>
+            <span class="raw">value 90, unit "s"</span><span class="arrow">→</span><span class="out">1.5 min</span><br>
+            <span class="raw">value 36, unit "h"</span><span class="arrow">→</span><span class="out">1.5 d</span><br>
+          </div>
+          <div class="cap">the input unit scales the value; the display unit is still chosen by the ladder — 90 s in renders "1.5 min", never "90.0 s"</div>
+        </div>
+        <div>
+          <strong>Input unit (normalization)</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>unit</code> defaults to <code>"ms"</code>; input normalizes first: <code>ms = value × {ms:1, s:1000, min:60000, h:3600000, d:86400000}[unit]</code> — every rule below operates on the normalized ms</span>
+            <span class="k">why</span><span>review requirement (fork D4): callers may hold a duration in another unit; normalizing at the prop boundary keeps a single format path and the default keeps both current tenants untouched</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="conv-table">
+            <span class="raw">0 ms</span><span class="arrow">→</span><span class="out">0 ms</span><br>
+            <span class="raw">1 ms</span><span class="arrow">→</span><span class="out">1 ms</span><br>
+            <span class="raw">327 ms</span><span class="arrow">→</span><span class="out">327 ms</span><br>
+            <span class="raw">999 ms</span><span class="arrow">→</span><span class="out">999 ms</span><br>
+            <span class="raw">1000 ms</span><span class="arrow">→</span><span class="out">1.0 s</span><br>
+            <span class="raw">1842 ms</span><span class="arrow">→</span><span class="out">1.8 s</span><br>
+            <span class="raw">59999 ms</span><span class="arrow">→</span><span class="out">60.0 s</span><br>
+            <span class="raw">60000 ms</span><span class="arrow">→</span><span class="out">1.0 min</span><br>
+            <span class="raw">5400000 ms</span><span class="arrow">→</span><span class="out">1.5 h</span><br>
+            <span class="raw">129600000 ms</span><span class="arrow">→</span><span class="out">1.5 d</span><br>
+          </div>
+          <div class="cap">each unit hands off at its clock-natural boundary — 999 stays ms, 1000 flips to s; 59 999 stays s, 60 000 flips to min; then h at 60 min, d at 24 h. (59 999 shows "60.0 s" — <code>.toFixed(1)</code> rounds up at the edge; standard devtools behavior, not special-cased)</div>
+        </div>
+        <div>
+          <strong>Unit rule</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>&lt; 1 s</code> → integer ms · <code>&lt; 60 s</code> → <code>(ms/1000).toFixed(1)</code> s · <code>&lt; 60 min</code> → <code>.toFixed(1)</code> min · <code>&lt; 24 h</code> → <code>.toFixed(1)</code> h · else <code>.toFixed(1)</code> d</span>
+            <span class="k">why</span><span>"1 842 ms" or "127.4 s" requires mental arithmetic to compare across rows; the largest unit that keeps the value ≥ 1 is the natural read. Every threshold is a clock boundary — no magic number</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="conv-table">
+            <span class="raw">1000 ms</span><span class="arrow">→</span><span class="out">1.0 s</span><span style="color:var(--a-mute);font-size:11px;margin-left:8px;">(not "1 s")</span><br>
+            <span class="raw">2000 ms</span><span class="arrow">→</span><span class="out">2.0 s</span><span style="color:var(--a-mute);font-size:11px;margin-left:8px;">(not "2 s")</span><br>
+            <span class="raw">1050 ms</span><span class="arrow">→</span><span class="out">1.1 s</span><span style="color:var(--a-mute);font-size:11px;margin-left:8px;">(rounded, not truncated)</span><br>
+          </div>
+          <div class="cap">one decimal always present above the threshold — column width is predictable</div>
+        </div>
+        <div>
+          <strong>Decimal always present</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>.toFixed(1)</code> — always one decimal place in every scaled unit (s / min / h / d); "2.0 s" not "2 s"</span>
+            <span class="k">why</span><span>stable column width: "10 s" and "1.8 s" have different widths; "10.0 s" and "1.8 s" align predictably on the decimal point. <code>tabular-nums</code> alone does not fix digit-count variance</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="conv-table">
+            <span class="raw">null</span><span class="arrow">→</span><span style="color:transparent;font-family:'DM Mono',ui-monospace,monospace;">000 ms</span><span style="color:var(--a-mute);font-size:11px;margin-left:8px;">(invisible placeholder)</span>
+          </div>
+          <div class="cap">the column slot is held by an invisible same-width string — nothing shifts when the value arrives</div>
+        </div>
+        <div>
+          <strong>Pending (null input)</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>value === null</code> → renders an invisible fixed-width placeholder (<code>color:transparent</code>, <code>aria-hidden="true"</code>); the slot is never collapsed</span>
+            <span class="k">why</span><span>stable column width (frame ③); the shipped code returns <code>""</code> (<code>flow.ts:50</code>) which collapses to zero width — any arriving response then reflows the whole row. The placeholder string is "000 ms" (widest short form)</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="conv-table">
+            <span class="raw">327 ms</span><span class="arrow">→</span><span class="out">327 ms</span><span style="color:var(--a-mute);font-size:11px;margin-left:8px;">aria: "327 milliseconds"</span><br>
+            <span class="raw">1842 ms</span><span class="arrow">→</span><span class="out">1.8 s</span><span style="color:var(--a-mute);font-size:11px;margin-left:8px;">aria: "1.8 seconds"</span><br>
+            <span class="raw">null</span><span class="arrow">→</span><span style="color:transparent;font-family:'DM Mono',ui-monospace,monospace;">000 ms</span><span style="color:var(--a-mute);font-size:11px;margin-left:8px;">aria-hidden="true"</span>
+          </div>
+          <div class="cap">visible text is the abbreviated form; the accessible label expands it</div>
+        </div>
+        <div>
+          <strong>A11y</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>aria-label</code>: "N milliseconds" / "N seconds" / "N minutes" / "N hours" / "N days" (expanded); pending placeholder: <code>aria-hidden="true"</code></span>
+            <span class="k">why</span><span>"327 ms" is read aloud as "three two seven m s" — the aria-label makes it "327 milliseconds"; the hidden placeholder must not be read as a value</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel" style="display:flex;justify-content:flex-end;">
+          <span class="dur">327 ms</span>
+        </div>
+        <div class="cap"><strong>fast</strong> — below 1 000 ms; mute tone, integer ms. No tinting — calm palette rule</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="display:flex;justify-content:flex-end;">
+          <span class="dur">1.8 s</span>
+        </div>
+        <div class="cap"><strong>slow</strong> — 1 000 ms and above; mute tone, one decimal in the scaled unit (s / min / h / d). Same visual tone as fast — the user reads the number, not a traffic light</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="display:flex;justify-content:flex-end;">
+          <span class="dur blank" aria-hidden="true">000 ms</span>
+        </div>
+        <div class="cap"><strong>pending / in-flight</strong> — <code>value === null</code>; invisible fixed-width placeholder holds the slot. No "…" spinner — calm; the value arrives when the flow completes</div>
+      </div>
+    </div>
+    <div class="callout" data-c="non-states">
+      <strong>Deliberate non-states:</strong>
+      <ul style="margin:4px 0 0;padding-left:20px;">
+        <li><strong>No hover / focus / active.</strong> DurationText is read-only — it carries no interaction affordance and owns none of those states.</li>
+        <li><strong>No live-ticking counter.</strong> The registry seed explicitly warns against a live counter while in-flight — calm; the slot stays blank. A real-time elapsed ticker creates churn re-renders for zero debugger value; the captured value is what matters.</li>
+        <li><strong>No empty state.</strong> A null <code>value</code> is the pending state, not an error. There is no condition where the component is rendered with no valid slot.</li>
+        <li><strong>No error / failed state.</strong> Duration is a derived field; if the flow failed to complete, <code>duration_ms</code> stays <code>null</code> and the pending state applies.</li>
+      </ul>
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app cards" data-c="d1">
+      <div class="card">
+        <strong>D1 · unit strategy</strong> <span class="badge auto">settled: largest unit ≥ 1 — ms / s / min / h / d, one decimal</span>
+        <div class="conv-table" style="margin-top:8px;">
+          <span class="raw">999 ms</span><span class="arrow">→</span><span class="out">999 ms</span> &nbsp;·&nbsp;
+          <span class="raw">1000 ms</span><span class="arrow">→</span><span class="out">1.0 s</span> &nbsp;·&nbsp;
+          <span class="raw">60000 ms</span><span class="arrow">→</span><span class="out">1.0 min</span> &nbsp;·&nbsp;
+          <span class="raw">5400000 ms</span><span class="arrow">→</span><span class="out">1.5 h</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;"><strong>Chosen: the largest unit that keeps the value ≥ 1, always one decimal in the scaled form.</strong> The capture granularity is wall-clock milliseconds — not sub-ms. Showing "1 842 ms" above 1 s (or "127.4 s" above a minute) forces mental arithmetic; the scaled read is the natural one. One decimal (not two) because the proxy does not claim sub-100 ms precision — <code>.toFixed(1)</code> is the honest precision. Extended past s on review (manager): long flows — streaming, SSE, large exports — are real in a debugging proxy and the same arithmetic burden applies at every rung.</p>
+      </div>
+      <div class="card">
+        <strong>alt: always ms</strong> <span class="badge warn">rejected</span>
+        <div class="conv-table" style="margin-top:8px;">
+          <span class="raw">1842 ms</span><span class="arrow">→</span><span class="out">1842 ms</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">This is what ships today (<code>flow.ts:50</code>). "1842 ms" vs "327 ms" requires the eye to parse digit-count before magnitude — that is the shipped regression this component fixes.</p>
+      </div>
+      <div class="card">
+        <strong>alt: two decimals (1.84 s)</strong> <span class="badge warn">rejected</span>
+        <div class="conv-table" style="margin-top:8px;">
+          <span class="raw">1842 ms</span><span class="arrow">→</span><span class="out">1.84 s</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">Claims 10 ms precision the proxy does not guarantee. Wall-clock capture via tokio adds overhead that can vary by tens of ms. Two decimals is false precision.</p>
+      </div>
+    </div>
+    <div class="app cards" data-c="d2">
+      <div class="card">
+        <strong>D2 · fast/slow tinting</strong> <span class="badge auto">settled: no tinting</span>
+        <div style="display:flex;gap:16px;margin-top:8px;">
+          <div class="panel" style="padding:6px 10px;display:inline-flex;justify-content:flex-end;min-width:80px;">
+            <span class="dur">327 ms</span>
+          </div>
+          <div class="panel" style="padding:6px 10px;display:inline-flex;justify-content:flex-end;min-width:80px;">
+            <span class="dur">1.8 s</span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;"><strong>Both fast and slow render in mute tone.</strong> Warp's zero-chromatic-accent rule: ok/warn are reserved for status outcomes (HTTP 2xx vs 4xx/5xx) — the one exception the proxy needs. Tinting duration "slow = warn" bleeds the warning signal into an informational datum. The user reads the number.</p>
+      </div>
+      <div class="card">
+        <strong>alt: warn for slow (≥ 1 s)</strong> <span class="badge warn">rejected</span>
+        <div style="display:flex;gap:16px;margin-top:8px;">
+          <div class="panel" style="padding:6px 10px;display:inline-flex;justify-content:flex-end;min-width:80px;">
+            <span class="dur" style="color:var(--a-ok);">327 ms</span>
+          </div>
+          <div class="panel" style="padding:6px 10px;display:inline-flex;justify-content:flex-end;min-width:80px;">
+            <span class="dur" style="color:var(--a-warn);">1.8 s</span>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">The threshold that makes a request "slow" is application-specific — this component cannot know it. Hardcoding 1 s as the warn boundary is a design judgment that belongs to the screen, not the primitive. If the product ever adds configurable SLO thresholds, a T2 wrapper handles the mapping.</p>
+      </div>
+    </div>
+    <div class="app cards" data-c="d3">
+      <div class="card">
+        <strong>D3 · pending display</strong> <span class="badge auto">settled: invisible fixed-width placeholder</span>
+        <div style="display:flex;align-items:center;gap:16px;margin-top:8px;">
+          <div class="panel" style="padding:6px 10px;display:inline-flex;justify-content:flex-end;min-width:80px;">
+            <span class="dur blank" aria-hidden="true">000 ms</span>
+          </div>
+          <span style="color:var(--a-mute);font-size:11px;">(no visible text — slot held)</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;"><strong>Invisible placeholder string "000 ms" holds the column width.</strong> Transparent text, not empty string. The list row grid does not reflow when the response arrives and fills the slot.</p>
+      </div>
+      <div class="card">
+        <strong>alt: "…" pending indicator</strong> <span class="badge warn">rejected</span>
+        <div style="margin-top:8px;" class="panel" style="padding:6px 10px;display:inline-flex;justify-content:flex-end;min-width:80px;">
+          <span style="color:var(--a-mute);font-family:'DM Mono',ui-monospace,monospace;">…</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">"…" is the StatusPill's in-flight indicator (status unknown), which is a different semantic — the status is unknown until the response arrives. Duration unknown is not the same as status unknown; conflating the two makes the list noisier. StatusPill shows "…"; DurationText holds blank.</p>
+      </div>
+      <div class="card">
+        <strong>alt: empty (collapse the slot)</strong> <span class="badge warn">rejected</span>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">This is what ships today (<code>flow.ts:50</code> returns <code>""</code>). The duration column collapses to zero width for in-flight rows and then widens — the row reflows. In a virtualised list (<code>FlowList.tsx</code> uses <code>@tanstack/react-virtual</code> with <code>ROW_HEIGHT = 30</code>) this causes a height recalculation. Fixed-slot avoids it entirely.</p>
+      </div>
+    </div>
+    <div class="app cards" data-c="d4">
+      <div class="card">
+        <strong>D4 · input unit</strong> <span class="badge auto">settled: unit prop, default "ms" (revised on review)</span>
+        <div class="conv-table" style="margin-top:8px;">
+          <span class="raw">value 90, unit "s"</span><span class="arrow">→</span><span class="out">1.5 min</span> &nbsp;·&nbsp;
+          <span class="raw">value 250</span><span class="arrow">→</span><span class="out">250 ms</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;"><strong>Chosen: <code>value</code> + optional <code>unit</code> (<code>'ms' | 's' | 'min' | 'h' | 'd'</code>, default <code>'ms'</code>).</strong> Manager decision, revising the first draft's ms-only stance. Input normalizes to ms at the prop boundary (one multiplication) before the single format path runs — the input unit never picks the display unit, the ladder does. The <code>'ms'</code> default keeps both current tenants unchanged: they keep passing <code>duration_ms</code> as-is.</p>
+      </div>
+      <div class="card">
+        <strong>alt: ms-only input</strong> <span class="badge warn">rejected — overruled in review</span>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">The first draft settled ms-only because both tenants pass <code>duration_ms</code> straight from the API types and no other unit exists in the system today. Review requires unit support for future callers; the optional prop costs one lookup-and-multiply and leaves existing call sites untouched.</p>
+      </div>
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>value</code></td><td><code>number | null</code></td><td>the duration, expressed in <code>unit</code>; tenants pass <code>FlowSummary.duration_ms</code> / <code>FlowView.duration_ms</code> as-is; <code>null</code> = in-flight (renders invisible placeholder)</td></tr>
+        <tr><td><code>unit</code></td><td><code>'ms' | 's' | 'min' | 'h' | 'd'</code></td><td>optional, default <code>'ms'</code> — input unit only; normalized to ms before formatting, display unit still chosen by the ladder (fork D4)</td></tr>
+      </tbody>
+    </table>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built (code-as-truth):</p>
+      <pre class="tsdoc">/**
+ * DurationText — a flow's elapsed time; formats a raw duration (unit prop, default ms) to a human-readable string.
+ * @tier T1 — duration→human formatting only, no business logic
+ * @anatomy right-aligned muted numeric text, tabular-nums, mono · input normalized to ms (unit prop, default "ms") · unit scales: integer ms below 1 s, one decimal in the largest unit ≥ 1 above (s / min / h / d) · invisible fixed-width placeholder while in-flight
+ * @use list rows (duration column) · the detail header identity bar
+ * @avoid a live-ticking counter while in-flight (hold blank, not a ticker) · tinting fast/slow with ok/warn (that is a T2 concern if ever needed)
+ * @states fast (&lt;1 000 ms, integer ms) · slow (≥1 000 ms, one-decimal s/min/h/d) · pending (value=null, invisible placeholder holds column width)
+ * @madeof —
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Any place a flow's elapsed time appears: the list duration column, the detail panel identity bar. Pass <code>duration_ms</code> directly from the API type.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>A live-ticking elapsed counter while the flow is in-flight — DurationText is calm. Tinting by speed threshold — that is a T2 wrapper concern. Rendering arbitrary non-flow durations that have different precision semantics.</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part</th><th>Tailwind (build WU)</th></tr></thead>
+      <tbody>
+        <tr><td>numeral + suffix</td><td><code>font-mono text-xs text-ink-mute tabular-nums text-right whitespace-nowrap</code></td></tr>
+        <tr><td>pending placeholder</td><td>same classes + <code>text-transparent</code> · <code>select-none</code> · <code>aria-hidden="true"</code>; placeholder string: <code>"000 ms"</code> (widest short-form shape)</td></tr>
+        <tr><td>container</td><td>no wrapper element — the component is a <code>&lt;span&gt;</code> that the parent grid cell already sets <code>text-right</code> on (<code>FlowList.tsx:86</code> template)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="callout" data-c="specimen-note">
+      DurationText has no interaction — the specimen is a static table of raw inputs → rendered outputs. All values rendered in app tokens below.
+    </div>
+    <div class="app" data-c="specimen">
+      <div style="background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;overflow:hidden;">
+        <div style="display:grid;grid-template-columns:110px 1fr 90px;align-items:center;gap:12px;padding:6px 14px;border-bottom:1px solid var(--a-line);font-family:Inter,system-ui,sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--a-mute);">
+          <span>Time</span>
+          <span>Path</span>
+          <span style="text-align:right;">Duration</span>
+        </div>
+        <!-- fast: 12 ms -->
+        <div class="row-grid" style="grid-template-columns:110px 1fr 90px;border-bottom:1px solid var(--a-line);">
+          <span class="r-time">10:42:01</span>
+          <span class="r-path">/api/health</span>
+          <span class="r-dur" id="sp-12ms"></span>
+        </div>
+        <!-- fast: 327 ms -->
+        <div class="row-grid" style="grid-template-columns:110px 1fr 90px;border-bottom:1px solid var(--a-line);">
+          <span class="r-time">10:42:03</span>
+          <span class="r-path">/api/v2/orders</span>
+          <span class="r-dur" id="sp-327ms"></span>
+        </div>
+        <!-- boundary: 999 ms -->
+        <div class="row-grid" style="grid-template-columns:110px 1fr 90px;border-bottom:1px solid var(--a-line);">
+          <span class="r-time">10:42:05</span>
+          <span class="r-path">/api/v2/search?q=expensive</span>
+          <span class="r-dur" id="sp-999ms"></span>
+        </div>
+        <!-- boundary: 1000 ms (flips to s) -->
+        <div class="row-grid" style="grid-template-columns:110px 1fr 90px;border-bottom:1px solid var(--a-line);">
+          <span class="r-time">10:42:07</span>
+          <span class="r-path">/api/v2/export/csv</span>
+          <span class="r-dur" id="sp-1000ms"></span>
+        </div>
+        <!-- slow: 1842 ms -->
+        <div class="row-grid" style="grid-template-columns:110px 1fr 90px;border-bottom:1px solid var(--a-line);">
+          <span class="r-time">10:42:09</span>
+          <span class="r-path">/api/v2/reports/annual</span>
+          <span class="r-dur" id="sp-1842ms"></span>
+        </div>
+        <!-- boundary: 60000 ms (flips to min) -->
+        <div class="row-grid" style="grid-template-columns:110px 1fr 90px;border-bottom:1px solid var(--a-line);">
+          <span class="r-time">10:42:11</span>
+          <span class="r-path">/api/v2/batch/process</span>
+          <span class="r-dur" id="sp-60000ms"></span>
+        </div>
+        <!-- slow: 5400000 ms (1.5 h) -->
+        <div class="row-grid" style="grid-template-columns:110px 1fr 90px;border-bottom:1px solid var(--a-line);">
+          <span class="r-time">10:42:12</span>
+          <span class="r-path">/api/v2/stream/replay</span>
+          <span class="r-dur" id="sp-5400000ms"></span>
+        </div>
+        <!-- unit input: value 90, unit "s" (D4) -->
+        <div class="row-grid" style="grid-template-columns:110px 1fr 90px;border-bottom:1px solid var(--a-line);">
+          <span class="r-time">10:42:13</span>
+          <span class="r-path">/api/v2/jobs/nightly</span>
+          <span class="r-dur" id="sp-90s"></span>
+        </div>
+        <!-- pending: null -->
+        <div class="row-grid" style="grid-template-columns:110px 1fr 90px;">
+          <span class="r-time">10:42:14</span>
+          <span class="r-path">/api/v2/stream/events</span>
+          <span class="r-blank" id="sp-null" aria-hidden="true">000 ms</span>
+        </div>
+      </div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:8px;">
+        Static specimen — DurationText is read-only, no interactivity. Rendered in app Warp tokens.
+        Last row is in-flight (null value): the placeholder "000 ms" is transparent — column width is held.
+        Raw inputs: 12 · 327 · 999 · 1000 · 1842 · 60000 · 5400000 (all default ms) · value 90 unit "s" (renders 1.5 min — unit input, fork D4) · null.
+      </div>
+    </div>
+    <div class="callout" data-c="cross-links" style="margin-top:16px;">
+      <strong>Sibling components:</strong>
+      <a href="section.html">Section</a> ·
+      <a href="icon-button.html">IconButton</a> ·
+      <a href="copy-button.html">CopyButton</a> ·
+      <a href="copy-text.html">CopyText</a> ·
+      <a href="key-value-row.html">KeyValueRow</a> ·
+      <a href="method-label.html">MethodLabel</a> ·
+      <a href="timestamp-text.html">TimestampText</a> ·
+      <a href="status-pill.html">StatusPill</a> ·
+      <a href="copy-all-headers-button.html">CopyAllHeadersButton</a> ·
+      <a href="segmented-control.html">SegmentedControl</a> ·
+      <a href="body-renderer.html">BodyRenderer</a> ·
+      <a href="header-table.html">HeaderTable</a> ·
+      <a href="body-viewer.html">BodyViewer</a>
+    </div>
+  </main>
+  <script>
+    const UNIT_MS = { ms: 1, s: 1000, min: 60000, h: 3600000, d: 86400000 };
+    function fmt(value, unit = 'ms') {
+      if (value === null) return null;
+      const ms = value * UNIT_MS[unit];
+      if (ms < 1000) return ms + ' ms';
+      if (ms < 60000) return (ms / 1000).toFixed(1) + ' s';
+      if (ms < 3600000) return (ms / 60000).toFixed(1) + ' min';
+      if (ms < 86400000) return (ms / 3600000).toFixed(1) + ' h';
+      return (ms / 86400000).toFixed(1) + ' d';
+    }
+    function ariaLabel(value, unit = 'ms') {
+      if (value === null) return null;
+      const ms = value * UNIT_MS[unit];
+      if (ms < 1000) return ms + ' milliseconds';
+      if (ms < 60000) return (ms / 1000).toFixed(1) + ' seconds';
+      if (ms < 3600000) return (ms / 60000).toFixed(1) + ' minutes';
+      if (ms < 86400000) return (ms / 3600000).toFixed(1) + ' hours';
+      return (ms / 86400000).toFixed(1) + ' days';
+    }
+    const cases = [
+      ['sp-12ms', 12], ['sp-327ms', 327], ['sp-999ms', 999],
+      ['sp-1000ms', 1000], ['sp-1842ms', 1842], ['sp-60000ms', 60000],
+      ['sp-5400000ms', 5400000], ['sp-90s', 90, 's'],
+    ];
+    for (const [id, value, unit] of cases) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.textContent = fmt(value, unit);
+        el.setAttribute('aria-label', ariaLabel(value, unit));
+      }
+    }
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

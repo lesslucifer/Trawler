@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60d5b79f34851f0dfa93d1">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — CopyButton component design</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+    /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
+    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
+    .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
+    .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
+    /* CopyButton styles */
+    .cb{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--a-line);border-radius:3px;font-family:Inter,system-ui,sans-serif;font-size:11.5px;color:var(--a-mute);cursor:pointer;background:transparent;user-select:none;white-space:nowrap;}
+    .cb:hover,.cb.s-hover{color:var(--a-ink);border-color:var(--a-mute);}
+    .cb:focus-visible,.cb.s-focus{outline:1px solid var(--a-mute);outline-offset:2px;color:var(--a-ink);}
+    .cb.s-active{color:var(--a-ink);background:rgba(174,166,156,.12);}
+    .cb.s-confirm{color:var(--a-ok);border-color:var(--a-ok);}
+    .cb.s-error{color:var(--a-warn);border-color:var(--a-warn);}
+    .cb:disabled,.cb.s-disabled{opacity:.38;pointer-events:none;}
+    .cb .cb-icon{font-size:12px;line-height:1;}
+    /* subbar context strip */
+    .subbar{display:flex;align-items:center;gap:8px;padding:4px 8px;border-bottom:1px solid var(--a-line);font-family:Inter,system-ui,sans-serif;}
+    .subbar .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--a-mute);}
+    /* shared swatch/part grid from exemplar */
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:Inter,system-ui,sans-serif;}
+    .tsdoc{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .flow-ex{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+    .flow-ex .arr{color:var(--muted);font-size:11px;white-space:nowrap;}
+    .timeline{font-family:"DM Mono",ui-monospace,monospace;font-size:11px;color:var(--a-body);background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 10px;line-height:1.8;white-space:pre;overflow-x:auto;}
+    .timeline .m{color:var(--a-mute);}
+    .timeline .o{color:var(--a-ok);}
+    /* contrast comparison strip used in fork D2 */
+    .contrast-strip{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+    .contrast-strip .item{flex:1;min-width:120px;}
+    .contrast-strip .item .lbl2{font-size:10px;color:var(--muted);margin-bottom:4px;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>CopyButton <span class="tier t1">T1</span></h1>
+      <p>A labeled button that copies a derived, invisible payload and confirms inline — the payload is not shown; the label says what you will get.</p>
+      <div class="meta">Component design · <strong>confirmed 2026-07-23</strong> · 2026-07-22 · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> a debugging proxy generates derived payloads (curl, body, headers) users must copy in one act — without this, ad-hoc confirm logic gets reinvented per site.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — clipboard write + timed confirm swap, zero business logic → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>copy-as-curl (<code>FlowDetail.tsx:96</code>) · copy body (BodyViewer sub-bar) ×2 · copy all headers (<a href="header-table.html">HeaderTable</a> sub-bar ×2 — HeaderTable serialises, this writes) · any future one-click copy with its own label</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>inline in <code>FlowDetail.tsx:96–103</code> and <code>BodyViewer.tsx</code> — not yet extracted</td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (the generic "flash a state for ~2 s" mechanic is one shared hook with <a href="copy-text.html">CopyText</a>; not composition. The hook is the generic layer, this component is the copy-specific contract — fork D4)</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① derived payload, not displayed</td><td>label names what you'll get, not what you'll see</td></tr>
+        <tr><td>② one-click copy is a repeated pattern</td><td>extract to a shared primitive, not ad-hoc per site</td></tr>
+        <tr><td>③ confirm must be trustworthy</td><td>label-swap "copied" only on a successful write; a failed write shows "failed" (warn tone) — the button never stays mute or lies (review 2026-07-23)</td></tr>
+        <tr><td>④ calm, dense panel</td><td>compact bordered button, ink-toned only — no chromatic accent at rest</td></tr>
+        <tr><td>⑤ verify without looking away</td><td>confirm inline at the button, ~2 s, then auto-revert</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-specimen">
+      <div class="subbar">
+        <span class="lbl">Copy as curl</span>
+        <button class="cb s-confirm" type="button" aria-label="copy curl command">
+          <span class="cb-icon">⧉</span> copied<span class="anno">3</span>
+        </button>
+        <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">← label<span class="anno">1</span> + icon<span class="anno">2</span> in confirming state</span>
+      </div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="subbar" style="border-bottom:none;padding:0;gap:6px;">
+              <button class="cb" type="button">copy curl</button>
+              <button class="cb" type="button">copy body</button>
+            </div>
+          </div>
+          <div class="cap">two CopyButtons in the same sub-bar: label names the payload — "curl", "body"</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> label</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>short noun or verb phrase naming the payload — "copy curl", "copy body", "copy all". Caller-supplied (<code>label</code> prop). Swaps to <strong>"copied"</strong> for ~2 s on confirm, then reverts.</span>
+            <span class="k">why</span><span>payload-transparency: the user must know what will land on the clipboard without seeing it; the label is the only signal (frame ①). Label-swap matches the shipped <code>FlowDetail.tsx:101</code> pattern (<code>copied ? "copied" : "copy"</code>).</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="padding:8px;display:flex;gap:8px;align-items:center;">
+            <button class="cb" type="button"><span class="cb-icon">⧉</span> copy curl</button>
+            <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">← with icon</span>
+            <button class="cb" type="button">copy curl</button>
+            <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">← label-only</span>
+          </div>
+          <div class="cap">icon is optional; label-only is the minimum. Never icon-only — the label is required for payload identity.</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> optional icon</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>leading glyph (⧉ or caller-supplied); optional. <strong>Label is always present</strong> — icon-only is not allowed, except the visible-payload case (fork D2).</span>
+            <span class="k">why</span><span>the payload is invisible; the label is the only payload identifier. Removing it leaves a glyph with no payload name — the W1 "no fitting glyph" lesson (registry seed, IconButton card): "actions with no fitting glyph — the word carries it instead". Here both the word AND the glyph are fine, but the word is non-negotiable.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="padding:8px;display:flex;gap:8px;align-items:center;">
+            <button class="cb s-confirm" type="button"><span class="cb-icon">⧉</span> copied</button>
+          </div>
+          <div class="cap">confirming: label swapped, border + text go ok-tone for ~2 s</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> confirm state</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>label swaps to "copied", border and text go ok-tone (~2 s). On revert: label restores to the original, colors revert to rest. Only fires on a <em>successful</em> clipboard write — a failed write shows the error state instead (behavior § Clipboard failure).</span>
+            <span class="k">why</span><span>ok-tone is the sanctioned status exception in the zero-chromatic-accent palette (Warp / <code>tailwind.config.js</code>); the transient nature limits its footprint.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — the rules the parts obey</h2>
+    <p data-c="behavior-intro" style="color:var(--muted);">Anatomy is what is on screen; behavior is what it <em>does</em> — the interaction rules a builder implements and a reviewer tests.</p>
+    <div class="app parts" data-c="behavior-table">
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex">
+            <div class="panel" style="padding:6px 10px;"><button class="cb" type="button">copy curl</button></div>
+            <span class="arr">click / Enter ▸</span>
+            <div class="panel" style="padding:6px 10px;"><button class="cb s-confirm" type="button">copied</button></div>
+          </div>
+          <div class="cap">one click writes the payload and immediately shows "copied" (if write succeeds)</div>
+        </div>
+        <div>
+          <strong>Trigger</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>single click · Enter or Space when focused → calls <code>navigator.clipboard.writeText(payload)</code> → on success, enter confirming state</span>
+            <span class="k">why</span><span>one click = the cheapest possible act; Enter/Space give keyboard parity. Payload is caller-supplied (<code>payload</code> prop or <code>getPayload</code> fn — see API).</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="timeline"><span class="m">click          ▸</span> <span class="o">copied</span> ── ~2 s ──▸ reverts to "copy curl"
+<span class="m">re-click       ▸</span> timer restarts, stays "copied"
+<span class="m">payload change ▸</span> reverts instantly (stale confirm gone)</div>
+        </div>
+        <div>
+          <strong>Confirm timing</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>~2 s, auto-revert to original label. Timer restarts on re-click (no double-confirm flash). Resets instantly when <code>payload</code>/<code>getPayload</code> changes — stale "copied" must not lie about a new payload.</span>
+            <span class="k">why</span><span>~2 s is the shared rhythm with CopyText (one confirm convention across all copy affordances — <a href="copy-text.html">CopyText behavior § Confirm</a>); reset-on-change is the shipped inspector's reselect fix, generalised here.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex">
+            <div class="panel" style="padding:6px 10px;"><button class="cb" type="button">copy curl</button></div>
+            <span class="arr">OS denies ▸</span>
+            <div class="panel" style="padding:6px 10px;"><button class="cb s-error" type="button">failed</button></div>
+            <span class="arr">~2 s ▸</span>
+            <div class="panel" style="padding:6px 10px;"><button class="cb" type="button">copy curl</button></div>
+          </div>
+          <div class="cap">write fails → label swaps to "failed", warn tone, ~2 s, then auto-reverts — same rhythm as confirm</div>
+        </div>
+        <div>
+          <strong>Clipboard failure — error state</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>failed write → label swaps to <strong>"failed"</strong>, warn-tone text + border, ~2 s, auto-revert to rest (same timer mechanics as confirm: restarts on re-click, resets on payload change). <code>aria-live</code> announces "copy failed". The confirm state still only ever represents a successful write.</span>
+            <span class="k">why</span><span>review verdict 2026-07-23 overrides the shipped silent no-op (<code>FlowDetail.tsx:53–55</code>): a mute button after a failed click reads as a dead control — the user retries against a hidden fault. The label-swap slot already exists; the error reuses it at zero extra chrome. Warn tone is the palette's error voice (<code>--a-warn</code>), transient like the confirm.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="timeline"><span class="m">tab   ▸</span> "copy curl, button"
+<span class="m">enter ▸</span> writes · <span class="o">"copied"</span> announced (aria-live)
+<span class="m">tab   ▸</span> focus stays, moves with tab order</div>
+          <div class="cap">keyboard-native — no mouse required</div>
+        </div>
+        <div>
+          <strong>A11y</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>native <code>&lt;button&gt;</code> element (role + focusability implicit) · <code>aria-label</code> names the action when the label alone is ambiguous (e.g. "copy curl command") · confirm via <code>aria-live="polite"</code> region alongside the button</span>
+            <span class="k">why</span><span>native <code>&lt;button&gt;</code> gives keyboard, focus, and role for free — no ARIA role override needed (matches shipped button in <code>FlowDetail.tsx:96–103</code>). The live region makes confirm audible.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex">
+            <div class="panel" style="padding:6px 10px;display:flex;gap:8px;align-items:center;">
+              <span style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;">curl:</span>
+              <pre style="font-size:10.5px;font-family:'DM Mono',monospace;color:var(--a-body);margin:0;white-space:pre-wrap;word-break:break-all;flex:1;">curl -x http://127.0.0.1:7420 -i 'https://api.example.com/v2/orders/…'</pre>
+              <button class="cb" type="button">copy curl</button>
+            </div>
+          </div>
+          <div class="cap">curl display + CopyButton side by side: the payload description lives in the section, the button copies it</div>
+        </div>
+        <div>
+          <strong>Payload transparency</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>the payload is computed by the caller and <em>not</em> shown in the button. The section heading, surrounding label, or a <code>title</code> tooltip on the button should name what will be copied — not a button responsibility to surface it.</span>
+            <span class="k">why</span><span>W2 verdict: "copy-as-curl = CopyButton + a curl serialiser fn" — the curl string is displayed in the section already (<code>FlowDetail.tsx:90–95</code>), so the button's label "copy" is enough context. When no display exists (body copy from BodyViewer), the label "copy body" names the payload class — sufficient for one-click intent.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel" style="padding:8px 12px;"><button class="cb" type="button">copy curl</button></div>
+        <div class="cap"><strong>rest</strong> — muted text, hairline border</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="padding:8px 12px;"><button class="cb s-hover" type="button">copy curl</button></div>
+        <div class="cap"><strong>hover</strong> — ink text, mute border (strengthens, ink-toned — zero chromatic accent)</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="padding:8px 12px;"><button class="cb s-focus" type="button">copy curl</button></div>
+        <div class="cap"><strong>focus</strong> — 1 px mute outline (ink-toned, not colored — zero-accent rule)</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="padding:8px 12px;"><button class="cb s-active" type="button">copy curl</button></div>
+        <div class="cap"><strong>active</strong> — tinted fill, ink text (press-down acknowledgment; brief)</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="padding:8px 12px;"><button class="cb s-confirm" type="button">copied</button></div>
+        <div class="cap"><strong>confirming</strong> — ok-tone text + border, label "copied", ~2 s then reverts. Only on successful write.</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="padding:8px 12px;"><button class="cb s-error" type="button">failed</button></div>
+        <div class="cap"><strong>error</strong> — warn-tone text + border, label "failed", ~2 s then reverts. Only on failed write (review 2026-07-23).</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="padding:8px 12px;"><button class="cb s-disabled" type="button" disabled>copy curl</button></div>
+        <div class="cap"><strong>disabled</strong> — 38% opacity. Only when there is nothing to copy (e.g. body not yet captured).</div>
+      </div>
+    </div>
+    <div class="callout" data-c="non-states">
+      <strong>Deliberate non-states.</strong> No loading/in-flight state — the write is synchronous enough that a spinner would flash. No empty state — disabled covers "nothing to copy"; the component is not rendered when the section is absent.
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+
+    <div class="app cards" data-c="d1">
+      <div class="card">
+        <strong>D1 · confirm form: label-swap vs chip</strong> <span class="badge auto">settled: label-swap</span>
+        <div class="panel" style="margin-top:8px;padding:6px 10px;">
+          <div class="flow-ex">
+            <button class="cb" type="button">copy curl</button>
+            <span class="arr">click ▸</span>
+            <button class="cb s-confirm" type="button">copied</button>
+            <span class="arr">~2 s ▸</span>
+            <button class="cb" type="button">copy curl</button>
+          </div>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
+          <strong>Label-swap wins:</strong> the shipped <code>FlowDetail.tsx:101</code> pattern already uses <code>copied ? "copied" : "copy"</code> — the label IS the confirm slot. Zero reflow: the button width stays fixed at the longer of "copied" / original label (pick the wider, pad the narrow). The button shape never changes, the confirm lands exactly where the click was.
+          <br><br>
+          <strong>CopyText uses a chip — why not here?</strong> CopyText's confirm chip appends after the value text; removing it and swapping the value would hide what was just copied — that's why CopyText settled on a chip (CopyText fork D2: "swapping the value hides what was just copied"). CopyButton's value is NOT displayed, so the label-swap has no "hiding" cost — swapping "copy curl" → "copied" loses nothing, because the curl was never the button's text. The chip would add DOM outside the button boundary; the swap is cleaner here.
+        </p>
+      </div>
+      <div class="card">
+        <strong>alt: chip after the button</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;">
+          <button class="cb" type="button">copy curl</button>
+          <span style="display:inline-block;font-size:10px;line-height:16px;color:var(--a-ok);border:1px solid var(--a-ok);border-radius:999px;padding:0 6px;font-family:Inter,sans-serif;">copied</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">Appending a chip outside the button is DOM outside the hit zone — reflows the sub-bar, adds a second element to manage, and makes the button narrower than needed while the chip floats. The label-swap keeps everything inside the button.</p>
+      </div>
+      <div class="card">
+        <strong>alt: toast</strong> <span class="badge warn">rejected</span>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:4px;">A distant toast breaks the "verify without looking away" frame driver. Not considered further.</p>
+      </div>
+    </div>
+
+    <div class="app cards" data-c="d2">
+      <div class="card">
+        <strong>D2 · icon: include or omit</strong> <span class="badge auto">settled: optional, caller-controlled</span>
+        <div class="panel" style="margin-top:8px;padding:6px 10px;display:flex;gap:8px;align-items:center;">
+          <button class="cb" type="button"><span class="cb-icon">⧉</span> copy curl</button>
+          <button class="cb" type="button">copy curl</button>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
+          The curl use-case in W1 explicitly dropped glyph-only because no glyph fits the action unambiguously (registry seed, IconButton card). With the label mandatory, a leading ⧉ is additive chrome — acceptable but not required. Caller decides; label-only is the default.
+        </p>
+      </div>
+      <div class="card">
+        <strong>alt: icon-only (no label)</strong> <span class="badge warn">rejected</span>
+        <div class="panel" style="margin-top:8px;padding:6px 10px;"><button class="cb" type="button"><span class="cb-icon">⧉</span></button></div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">The payload is invisible — the label is the only payload identifier. Icon-only collapses that identity. W1 lesson: "actions with no fitting glyph — the word carries it instead". CopyButton must always show the label.<br><br><strong>Exception — visible payload (manager review 2026-07-23, BodyViewer):</strong> when the payload is rendered directly adjacent to the button (BodyViewer's pane shows exactly what copy delivers), the invisible-payload premise doesn't hold, and icon form — ⧉ with mandatory tooltip + <code>aria-label</code>, confirm as a ✓ ok-tone glyph swap — is allowed (<a href="body-viewer.html">body-viewer.html</a> anatomy ④).</p>
+      </div>
+    </div>
+
+    <div class="app cards" data-c="d3">
+      <div class="card">
+        <strong>D3 · payload prop shape: value vs getPayload</strong> <span class="badge auto">settled: value (eager) is the default; getPayload (lazy) optional</span>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
+          The shipped curl case pre-computes <code>curl</code> at render time (<code>FlowDetail.tsx:51</code> — <code>const curl = toCurl(flow)</code>) and passes it directly. Most uses will follow this pattern. A lazy <code>getPayload: () =&gt; string</code> escapes expensive computation on every render without breaking the reset-on-change rule (key the reset on a stable identity token instead). Both are acceptable; <code>value</code> is the primary API, <code>getPayload</code> is the escape hatch.
+        </p>
+      </div>
+    </div>
+
+    <div class="app cards" data-c="d4">
+      <div class="card">
+        <strong>D4 · scope: copy-specific vs generic "flash a state" button</strong> <span class="badge auto">settled: copy-specific; the generic mechanic is the shared hook</span>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
+          (Manager review 2026-07-23: the temporarily-switch-state logic could serve non-copy buttons — make the component generic?) The generic piece is real: timed state swap, timer restart on re-trigger, reset on input change, width stability, aria-live. But that piece is <strong>already factored as the shared confirm hook</strong> CopyText uses (Made of) — the hook IS the generic layer. What sits above it is copy-only and would not survive generalisation: the clipboard write, the "copied"/"failed" vocabulary, and the payload-transparency rules (label names the invisible payload, never icon-only, stale confirm resets on payload change). A generic component could not mandate any of those — each caller would reinvent them, which is exactly the ad-hoc drift frame driver ② exists to prevent.
+        </p>
+      </div>
+      <div class="card">
+        <strong>alt: generic FlashButton (<code>onAction</code> + flash labels); copy = one caller</strong> <span class="badge warn">deferred — no non-copy tenant</span>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
+          Every tenant today is a copy action (Identity § Tenants). Extracting a generic FlashButton now is speculative generality with a real cost (weaker contract, per-caller conventions) and no user. The escape path stays cheap: when a non-copy transient button appears, lift the shell + hook into FlashButton and make CopyButton its thin wrapper — no caller changes, no design rework here.
+        </p>
+      </div>
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>label</code></td><td><code>string</code></td><td>button label at rest ("copy curl", "copy body") — never "copy" alone when two CopyButtons share a zone</td></tr>
+        <tr><td><code>value</code></td><td><code>string</code></td><td>payload to write to clipboard (eager — pre-computed by caller)</td></tr>
+        <tr><td><code>getPayload</code></td><td><code>() =&gt; string</code></td><td>lazy alternative to <code>value</code>; use when payload computation is expensive. One of <code>value</code> or <code>getPayload</code> is required.</td></tr>
+        <tr><td><code>icon</code></td><td><code>ReactNode?</code></td><td>optional leading glyph — omitted by default</td></tr>
+        <tr><td><code>disabled</code></td><td><code>boolean?</code></td><td>38% opacity, pointer-events none; use when there is nothing to copy</td></tr>
+        <tr><td><code>className</code></td><td><code>string?</code></td><td>extra Tailwind classes for layout override by the parent</td></tr>
+      </tbody>
+    </table>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built (code-as-truth):</p>
+      <pre class="tsdoc">/**
+ * CopyButton — labeled button that copies a derived payload and confirms inline; payload is not displayed.
+ * @tier T1 — clipboard write + timed label-swap, no business logic
+ * @anatomy compact bordered button · label (names payload) → "copied" (ok) or "failed" (warn) for ~2 s → reverts · optional leading icon (label always present — icon-only allowed only when the payload is rendered adjacent, e.g. BodyViewer: ⧉ + tooltip, ✓ confirm — fork D2)
+ * @use any one-click copy affordance where the payload is derived/invisible: copy-as-curl, copy body, copy all headers (payload serialised by HeaderTable)
+ * @avoid showing a value the user grabs verbatim (that is CopyText) · icon-only form · anything that is not a copy action · serialising the payload itself (the parent owns press logic)
+ * @states rest · hover · focus · active · confirming (~2 s, restarts on re-click, resets instantly on payload change) · error ("failed", warn tone, ~2 s, same timer rules) · disabled (nothing to copy)
+ * @madeof — (generic ~2 s flash mechanic in one shared hook with CopyText; copy contract lives here — fork D4)
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card">
+        <strong>Use</strong>
+        <p>Any one-click copy where the payload is derived or invisible: copy-as-curl (panel zone B) · copy body (BodyViewer) · copy all headers (<a href="header-table.html">HeaderTable</a> sub-bar — HeaderTable serialises the payload, this button just writes it). Anywhere the label names the payload class and the value is not shown verbatim.</p>
+      </div>
+      <div class="card">
+        <strong>Avoid</strong>
+        <p>A value that IS displayed verbatim and the user grabs whole — that is <a href="copy-text.html">CopyText</a> (the displayed string is both the affordance and the payload). Actions that are not clipboard writes — use <a href="icon-button.html">IconButton</a> or a plain button. Never icon-only when the payload is invisible — the label is load-bearing for payload identity (icon form is allowed only when the payload is rendered adjacent — fork D2 exception, BodyViewer).</p>
+      </div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part</th><th>Tailwind (build WU)</th></tr></thead>
+      <tbody>
+        <tr><td>button shell (rest)</td><td><code>rounded-button border border-hairline px-2 py-1 text-xs text-ink-mute font-ui</code></td></tr>
+        <tr><td>button shell (hover)</td><td><code>hover:text-ink hover:border-ink-mute</code></td></tr>
+        <tr><td>button shell (focus)</td><td><code>focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2</code></td></tr>
+        <tr><td>button shell (active)</td><td><code>active:bg-canvas-soft active:text-ink</code></td></tr>
+        <tr><td>button shell (confirming)</td><td><code>text-ok border-ok</code> (transient class swap)</td></tr>
+        <tr><td>button shell (error)</td><td><code>text-warn border-warn</code> (transient class swap, label "failed")</td></tr>
+        <tr><td>button shell (disabled)</td><td><code>opacity-[.38] pointer-events-none</code></td></tr>
+        <tr><td>optional icon</td><td><code>text-[12px] leading-none</code> (inline before label text)</td></tr>
+        <tr><td>aria-live region</td><td>visually hidden sibling; <code>sr-only</code>, <code>aria-live="polite"</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="width-note">
+      <strong>Width stability note.</strong> When the label swaps to "copied" or "failed", the button must not shrink if the original label is longer ("copy curl" &gt; "copied"). Use <code>min-w-[…]</code> sized to the widest of the three strings, or render all and hide the inactive ones with <code>invisible</code> / <code>w-0 overflow-hidden</code>. The build WU picks the exact implementation; the design constraint is: no layout shift on confirm or error.
+    </div>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="app" data-c="specimen">
+      <div class="panel">
+        <div class="lbl">Copy as curl</div>
+        <div style="display:flex;align-items:flex-start;gap:8px;margin-top:6px;">
+          <pre id="live-curl" style="flex:1;min-width:0;font-family:'DM Mono',monospace;font-size:11px;color:var(--a-body);white-space:pre-wrap;word-break:break-all;border:1px solid var(--a-line);border-radius:3px;padding:6px 8px;margin:0;overflow-x:auto;">curl -x http://127.0.0.1:7420 -i \
+  -H 'Accept: application/json' \
+  'https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&amp;currency=USD'</pre>
+          <button id="live-cb" type="button"
+            class="cb"
+            aria-label="copy curl command"
+            style="flex-shrink:0;">copy curl</button>
+          <span id="live-announce" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"></span>
+        </div>
+      </div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">
+        Interactive — click "copy curl" (copies for real, label swaps to "copied" for ~2 s then reverts). Tab + Enter also works. OS clipboard denial → label swaps to "failed" (warn tone) for ~2 s. Button width stays fixed across all three labels (width-stability note above). Rendered in the app's Warp tokens.
+      </div>
+      <div style="margin-top:12px;" class="panel">
+        <div class="lbl">Disabled example</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+          <span style="font-size:11.5px;font-family:Inter,sans-serif;color:var(--a-mute);">body not captured</span>
+          <button type="button" class="cb s-disabled" disabled>copy body</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const btn = document.getElementById('live-cb');
+    const announce = document.getElementById('live-announce');
+    const payload = document.getElementById('live-curl').textContent;
+    let timer;
+
+    function flash(label, cls, announcement) {
+      btn.textContent = label;
+      btn.classList.add(cls);
+      announce.textContent = announcement;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        btn.textContent = 'copy curl';
+        btn.classList.remove('s-confirm', 's-error');
+        announce.textContent = '';
+      }, 2000);
+    }
+
+    function lockWidth() {
+      if (btn.style.minWidth) return;
+      btn.style.boxSizing = 'border-box';
+      btn.style.minWidth = btn.getBoundingClientRect().width + 'px';
+      btn.style.justifyContent = 'center';
+    }
+
+    function doCopy() {
+      lockWidth();
+      navigator.clipboard?.writeText(payload).then(
+        () => flash('copied', 's-confirm', 'copied'),
+        () => flash('failed', 's-error', 'copy failed'),
+      );
+    }
+
+    btn.addEventListener('click', doCopy);
+    btn.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      doCopy();
+    });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

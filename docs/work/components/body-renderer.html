@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60d74b9f34851f0dfa93fc">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — BodyRenderer family (component design)</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+    .t2{color:var(--ok);}
+    /* app-token scope: specimens in the real Warp palette, not the doc palette */
+    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;--a-key:#8fb8de;--a-str:#9ec99a;--a-num:#d9a866;}
+    .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12px;max-width:560px;}
+    .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
+    /* body text styles */
+    .bink{color:var(--a-ink);}
+    .bmute{color:var(--a-mute);}
+    .bbody{color:var(--a-body);}
+    .bok{color:var(--a-ok);}
+    .bwarn{color:var(--a-warn);}
+    /* json tree */
+    .jtree details{margin:0;padding:0;}
+    .jtree summary{list-style:none;cursor:pointer;outline:none;}
+    .jtree summary::-webkit-details-marker{display:none;}
+    .jtree .indent{border-left:1px solid var(--a-line);padding-left:12px;margin-left:4px;}
+    .jtree .key{color:var(--a-key);}
+    .jtree .val{color:var(--a-str);}
+    .jtree .shape{color:var(--a-ink);font-size:11px;}
+    .jtree .arr{color:var(--a-mute);font-size:11px;}
+    /* json source (pretty-printed, copy-exact, syntax tokens) */
+    .jsrc{white-space:pre;overflow-x:auto;line-height:1.6;margin:0;font-size:12px;}
+    .jsrc .jk{color:var(--a-key);}
+    .jsrc .js{color:var(--a-str);}
+    .jsrc .jn{color:var(--a-num);}
+    .jsrc .jp{color:var(--a-mute);}
+    /* editor-surface mockup bits: fold gutter, folded placeholder, cursor */
+    .jsrc .gut{display:inline-block;width:16px;color:var(--a-mute);user-select:none;font-size:10px;}
+    .jsrc .fold{display:inline-block;background:var(--a-soft);border:1px solid var(--a-line);border-radius:4px;padding:0 6px;color:var(--a-mute);font-size:11px;line-height:1.3;cursor:pointer;}
+    .jsrc .cur{display:inline-block;width:1px;height:13px;background:var(--a-ink);vertical-align:-2px;animation:blink 1s steps(1) infinite;}
+    @keyframes blink{50%{opacity:0;}}
+    /* cut marker */
+    .cut{display:block;margin-top:6px;color:var(--a-warn);font-size:11px;border-top:1px dashed var(--a-line);padding-top:5px;}
+    /* hex dump */
+    .hex{white-space:pre;overflow-x:auto;line-height:1.7;}
+    .hex .off{color:var(--a-mute);}
+    .hex .hx{color:var(--a-body);}
+    .hex .asc{color:var(--a-ink);}
+    /* form pairs — mirror KeyValueRow: value cell is a CopyText (dotted hairline underline) */
+    .fpairs{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;}
+    .fpairs dt{color:var(--a-mute);white-space:nowrap;}
+    .fpairs dd{color:var(--a-body);word-break:break-all;margin:0;text-decoration:underline dotted var(--a-line);text-underline-offset:3px;cursor:text;}
+    /* image */
+    .imgbox{display:flex;flex-direction:column;gap:6px;}
+    .imgbox .thumb{border:1px solid var(--a-line);border-radius:4px;max-width:100%;background:repeating-conic-gradient(#383330 0% 25%, #2b2622 0% 50%) 0 0 / 12px 12px;}
+    .imgbox .dim{color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;}
+    /* notice / fallback */
+    .notice{color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;padding:4px 0;}
+    .fallback-warn{color:var(--a-warn);font-size:12px;font-family:Inter,system-ui,sans-serif;padding:4px 0;}
+    /* xml */
+    .xml{white-space:pre-wrap;overflow-x:auto;line-height:1.6;}
+    .xml .tag{color:var(--a-key);}
+    .xml .attr{color:var(--a-mute);}
+    .xml .val2{color:var(--a-str);}
+    /* dispatch table */
+    .dispatch td:first-child{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;}
+    /* part blocks */
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    /* swatches */
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    /* tsdoc */
+    .tsdoc{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    /* anno badges */
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:Inter,system-ui,sans-serif;}
+    /* member sub-blocks */
+    .member{border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--paper);margin-bottom:10px;}
+    .member h4{margin:0 0 10px;font-size:14px;}
+    .member .mspec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;}
+    .member .mspec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .member-swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:10px;}
+    /* cards for forks */
+    .fork-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px;}
+    .fork-card{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .fork-card .panel{margin-top:8px;}
+    .fork-card .fcap{font-size:12px;color:var(--muted);margin-top:6px;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>BodyRenderer family <span class="tier t2">T2</span></h1>
+      <p>Five content-type-aware body renderers sharing one dispatch contract — BodyViewer picks one by type; the family never renders blank. <strong>Status: confirmed 2026-07-23.</strong></p>
+      <div class="meta">Component design · 2026-07-22 · <strong>confirmed 2026-07-23 · review rounds 1–2 addressed</strong> · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> a plain <code>&lt;pre&gt;</code> fails for JSON (no structure), form-encoded (no decoding), image (wrong element), and binary (noise) — dispatching to a type-aware renderer is the unit that knows how to make a body readable, hence T2.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t2">T2 Widget (all five)</span> — per-type render logic + dispatch + truncation policy = business logic → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>Request body pane · response body pane (inside BodyViewer; extracted from inline functions in <code>BodyViewer.tsx</code> + <code>hexDump</code> in <code>body.ts:47</code>, W2 verdict)</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>Partial — <code>JsonTree</code>/<code>FormBody</code>/<code>ImageBody</code>/<code>TextBody</code> in <code>BodyViewer.tsx:16–99</code>; hex is <code>hexDump</code> in <code>body.ts:47</code>; dispatch in <code>body.ts:8</code> + <code>BodyViewer.tsx:101–113</code> → extract + rename</td></tr>
+      <tr><td><strong>Made of</strong></td><td>Json/Xml → read-only <strong>CodeMirror 6</strong> surface (→ <a href="#dec-13">DEC-13</a>) · Image/Hex — no sub-components · FormRenderer → <a href="key-value-row.html">KeyValueRow</a>×</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① content type determines readability</td><td>one renderer per content type, dispatched by family contract</td></tr>
+        <tr><td>② trustworthy — never alters wire data</td><td>no silent transform; truncation always visible with cut marker + total size</td></tr>
+        <tr><td>③ large bodies cap the DOM, not the data</td><td>hex capped at 4 KiB (<code>body.ts:40</code>); JSON tree over 128 KiB renders as text (<code>body.ts:44</code>); both show a cut marker</td></tr>
+        <tr><td>④ never a blank pane</td><td>unknown type or parse failure falls back to text or hex — never empty</td></tr>
+        <tr><td>⑤ syntax tokens speed scanning</td><td>color-coded tokens — muted key/string/number shades scoped to body panes (→ <a href="#dec-11">DEC-11</a>, flipped on review 2026-07-23)</td></tr>
+        <tr><td>⑥ monospace discipline</td><td>all body text mono; image caption is UI text (Inter) — metadata, not payload</td></tr>
+        <tr><td>⑦ navigate a body like a text file</td><td>Json/Xml render in a read-only CodeMirror 6 surface — real cursor + keyboard navigation, fold gutter to collapse/expand sections (→ <a href="#dec-13">DEC-13</a>, review round 2 2026-07-23)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="anatomy">Anatomy — family contract parts + per-member sub-blocks</h2>
+    <div class="callout" data-c="anatomy-intro">
+      The family contract defines shared anatomy: every renderer occupies the same pane slot inside BodyViewer, obeys the same cut marker rule, and emits the same fallback shape. The five members then each have their own internal anatomy.
+    </div>
+
+    <!-- Annotated overview swatch -->
+    <div class="app" data-c="anatomy-overview">
+      <div class="panel">
+        <div class="lbl">Response body — JSON</div>
+        <pre class="jsrc" style="padding-top:4px;"><span class="gut">▾</span><span class="jp">{</span>
+<span class="gut"></span>  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"ord_8f3a91c2"</span><span class="jp">,</span><span class="anno">1</span>
+<span class="gut"></span>  <span class="jk">"status"</span><span class="jp">:</span> <span class="cur"></span><span class="js">"pending"</span><span class="jp">,</span><span class="anno">4</span>
+<span class="gut">▸</span>  <span class="jk">"items"</span><span class="jp">:</span> <span class="jp">[</span><span class="fold">…</span><span class="jp">]</span><span class="jp">,</span>
+<span class="gut"></span>  <span class="jk">"total"</span><span class="jp">:</span> <span class="jn">49.99</span><span class="anno">2</span>
+<span class="gut"></span><span class="jp">}</span></pre>
+        <span class="cut"><span class="anno">3</span> ⚠ showing 4.0 KiB of 135 KiB — save to see all</span>
+      </div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <pre class="jsrc"><span class="jp">{</span>
+  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"ord_8f3a91c2"</span><span class="jp">,</span>
+  <span class="jk">"status"</span><span class="jp">:</span> <span class="js">"pending"</span>
+<span class="jp">}</span></pre>
+          </div>
+          <div class="cap">the pane IS the pretty-printed source — select or copy anywhere and you get valid JSON</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> rendered body — copy-exact source</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>member-specific rendering; mono throughout; for JSON/XML the editor document is the character-exact pretty-printed source (API pretty-prints server-side, <code>decode.rs</code>) — highlighting is decoration-level and never alters the text, so selection and copy yield the format verbatim</span>
+            <span class="k">why</span><span>monospace = wire data trust contract; copy-exact = review 2026-07-23 — the old tree form (<code>key: value</code>, no braces/quotes/commas) was not valid JSON when copied (→ <a href="#dec-01">DEC-01</a>)</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <pre class="jsrc"><span class="jk">"count"</span><span class="jp">:</span> <span class="jn">42</span><span class="jp">,</span> <span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span></pre>
+          </div>
+          <div class="cap">three muted syntax tokens: key blue, string green, number amber; punctuation mute</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> syntax tokens (Json + Xml)</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>color-coded tokens: key <code>--a-key</code> · string <code>--a-str</code> · number <code>--a-num</code> · punctuation mute; scoped to body panes, never UI chrome; desaturated shades tuned to the Warp palette</span>
+            <span class="k">why</span><span>review 2026-07-23 flipped <a href="#dec-11">DEC-11</a> — token color speeds scanning large payloads; indentation still carries structure so the pane stays readable without color</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <span class="cut">⚠ showing 4.0 KiB of 135 KiB — save to see all</span>
+          </div>
+          <div class="cap">cut marker: always visible, always states total; sizes human-readable; save is the escape hatch</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> cut marker (when body exceeds render cap)</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>warn-tone line: "⚠ showing N of M — save to see all"; N/M formatted human-readable (B · KiB · MiB; one decimal below 10, integer above); appended after the last visible line; never shown when the full body fits</span>
+            <span class="k">why</span><span>trust contract: never silently truncate; raw byte counts ("138 240 bytes") are unreadable at a glance (review 2026-07-23); save (in BodyViewer's sub-bar) is the escape hatch for the full bytes (<code>body.ts:40</code> HEX_MAX, <code>body.ts:44</code> TREE_MAX)</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <pre class="jsrc"><span class="gut">▾</span><span class="jp">{</span>
+<span class="gut">▸</span>  <span class="jk">"items"</span><span class="jp">:</span> <span class="jp">[</span><span class="fold">…</span><span class="jp">]</span><span class="jp">,</span>
+<span class="gut"></span>  <span class="jk">"status"</span><span class="jp">:</span> <span class="cur"></span><span class="js">"pending"</span>
+<span class="gut"></span><span class="jp">}</span></pre>
+          </div>
+          <div class="cap">fold gutter (▾ open / ▸ folded, "…" placeholder re-expands on click) + a real blinking cursor — arrow keys, Home/End, PageUp/Down all work</div>
+        </div>
+        <div>
+          <strong><span class="anno">4</span> editor surface — keyboard nav + folding (Json + Xml)</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>read-only <strong>CodeMirror 6</strong> (<code>EditorState.readOnly</code>): real cursor + selection with full keyboard navigation even though nothing is editable; fold gutter collapses/expands objects, arrays and XML elements (<code>@codemirror/language</code> foldGutter, free with <code>lang-json</code>/<code>lang-xml</code>); folding is view-state only — the document, and anything copied, stays the exact source</span>
+            <span class="k">why</span><span>review round 2 2026-07-23: "textarea UX even when not editable" — navigating a large body needs a cursor, not just a scrollbar; folding returns the collapse affordance DEC-01 gave up, without giving up copy-exactness (→ <a href="#dec-13">DEC-13</a>)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-member sub-blocks -->
+    <h3 id="anatomy-members" style="margin-top:24px;">Per-member anatomy</h3>
+
+    <div class="member app" data-c="member-json">
+      <h4>JsonRenderer <span class="tier t2">T2</span></h4>
+      <div class="mspec">
+        <span class="k">input</span><span>UTF-8 text after decode; <code>bodyKind</code> returns <code>"json"</code> for <code>application/json</code> and <code>*+json</code> (<code>body.ts:10–11</code>)</span>
+        <span class="k">v1 form</span><span>pretty-printed JSON source — the API already pretty-prints server-side when <code>decode=1</code> (<code>decode.rs:106–111</code>, serde_json — no client formatter needed); rendered in the read-only <strong>CodeMirror 6</strong> surface (→ <a href="#dec-13">DEC-13</a>): <code>lang-json</code> highlighting mapped to the DEC-11 tokens, fold gutter on objects/arrays, cursor + keyboard navigation; selecting or copying yields valid JSON verbatim; the shipped collapsible tree (<code>JsonTree</code>/<code>JsonNode</code>, <code>BodyViewer.tsx:16–53</code>) is replaced (→ <a href="#dec-01">DEC-01</a>, flipped on review 2026-07-23)</span>
+        <span class="k">fallback</span><span>unparseable JSON renders as-is (no pretty-print, no tokens) — never a parse error screen</span>
+        <span class="k">cut marker</span><span>when text exceeds the render cap (today TREE_MAX = 128 KiB, <code>body.ts:44</code> — becomes the JSON text cap), truncated display + family cut marker</span>
+        <span class="k">copy</span><span>BodyViewer copies the same exact text (<code>BodyViewer.tsx:172–178</code>): <code>bodyText(loaded.bytes)</code> — pane and clipboard always agree</span>
+      </div>
+      <div class="member-swatches">
+        <div class="swatch">
+          <div class="panel">
+            <pre class="jsrc"><span class="jp">{</span>
+  <span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span><span class="jp">,</span>
+  <span class="jk">"roles"</span><span class="jp">:</span> <span class="jp">[</span>
+    <span class="js">"admin"</span><span class="jp">,</span>
+    <span class="js">"viewer"</span>
+  <span class="jp">]</span><span class="jp">,</span>
+  <span class="jk">"count"</span><span class="jp">:</span> <span class="jn">2</span>
+<span class="jp">}</span></pre>
+          </div>
+          <div class="cap"><strong>pretty-printed source</strong> — exact copyable JSON; key blue, string green, number amber, punctuation mute</div>
+        </div>
+        <div class="swatch">
+          <div class="panel">
+            <pre class="jsrc"><span class="gut">▾</span><span class="jp">{</span>
+<span class="gut"></span>  <span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span><span class="jp">,</span>
+<span class="gut">▸</span>  <span class="jk">"roles"</span><span class="jp">:</span> <span class="jp">[</span><span class="fold">…</span><span class="jp">]</span><span class="jp">,</span>
+<span class="gut"></span>  <span class="jk">"count"</span><span class="jp">:</span> <span class="jn">2</span>
+<span class="gut"></span><span class="jp">}</span></pre>
+          </div>
+          <div class="cap"><strong>folded</strong> — gutter ▸ collapses an object/array to a "…" placeholder; click either to re-expand; view-state only, copy still yields the full source</div>
+        </div>
+        <div class="swatch">
+          <div class="panel">
+            <pre style="margin:0;color:var(--a-body);white-space:pre-wrap;font-size:12px;">{"name":"Alice","roles":["admin","viewer"]}</pre>
+            <span class="cut">⚠ showing 128 KiB of 1.0 MiB — save to see all</span>
+          </div>
+          <div class="cap"><strong>as-is fallback</strong> — unparseable or over the render cap; raw text, no tokens; cut marker appended when capped</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="member app" data-c="member-xml">
+      <h4>XmlRenderer <span class="tier t2">T2</span></h4>
+      <div class="mspec">
+        <span class="k">input</span><span>UTF-8 text after decode; <code>bodyKind</code> returns <code>"text"</code> for <code>application/xml</code>, <code>text/xml</code>, <code>text/html</code>, <code>*+xml</code> (<code>body.ts:14–19</code>); the API's <code>decode_body</code> pretty-prints XML/HTML server-side when <code>decode=1</code> (<code>decode.rs:28–34</code>)</span>
+        <span class="k">v1 form</span><span>indented source text (pretty-printed by the API's <code>decode.rs:64–91</code> using quick-xml); rendered in the same read-only <strong>CodeMirror 6</strong> surface as JSON (→ <a href="#dec-13">DEC-13</a>): <code>lang-xml</code> highlighting, element folding via the fold gutter, cursor + keyboard navigation (supersedes the round-1 "no collapse" settle — see Fork DEC-02)</span>
+        <span class="k">cut marker</span><span>when text length exceeds a shared TEXT_MAX (to be defined — same order of magnitude as TREE_MAX; open question for build WU)</span>
+        <span class="k">copy</span><span>BodyViewer copies <code>bodyText(loaded.bytes)</code></span>
+      </div>
+      <div class="member-swatches">
+        <div class="swatch">
+          <div class="panel">
+            <pre class="xml" style="margin:0;font-size:12px;"><span class="tag">&lt;order</span> <span class="attr">id=</span><span class="val2">"8f3a91c2"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;status&gt;</span><span class="bbody">pending</span><span class="tag">&lt;/status&gt;</span>
+  <span class="tag">&lt;items&gt;</span>
+    <span class="tag">&lt;item&gt;</span><span class="bbody">SKU-001</span><span class="tag">&lt;/item&gt;</span>
+  <span class="tag">&lt;/items&gt;</span>
+<span class="tag">&lt;/order&gt;</span></pre>
+          </div>
+          <div class="cap"><strong>pretty-printed XML</strong> — server-side indent (decode.rs); the exact copyable source; tags in the key token, attribute names mute, attribute values in the string token (→ <a href="#dec-11">DEC-11</a>); element text stays body tone</div>
+        </div>
+        <div class="swatch">
+          <div class="panel">
+            <pre class="xml" style="margin:0;font-size:12px;"><span class="bbody">&lt;div&gt;&lt;p&gt;Order confirmed&lt;/p&gt;&lt;/div&gt;</span></pre>
+          </div>
+          <div class="cap"><strong>HTML body (text/html)</strong> — same path: pretty-printed by decode.rs, rendered as text in XmlRenderer</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="member app" data-c="member-image">
+      <h4>ImageRenderer <span class="tier t2">T2</span></h4>
+      <div class="mspec">
+        <span class="k">input</span><span>raw bytes; <code>bodyKind</code> returns <code>"image"</code> for <code>image/*</code> (<code>body.ts:12</code>); Blob object-URL from <code>ImageBody</code> in <code>BodyViewer.tsx:83–99</code></span>
+        <span class="k">v1 form</span><span>letterboxed <code>&lt;img&gt;</code> (max-width: 100%); checkerboard background reveals transparency; dimensions caption + human-readable size below the image; no copy action — save is the escape hatch (shipped rule from <code>BodyViewer.tsx:200–208</code>: <code>kind !== "image"</code> gates the copy button)</span>
+        <span class="k">cut marker</span><span>not applicable — the image element renders the full bytes; save serves oversized images</span>
+        <span class="k">copy</span><span>none — images have no clipboard text representation; BodyViewer omits the copy button for this kind</span>
+      </div>
+      <div class="member-swatches">
+        <div class="swatch">
+          <div class="panel">
+            <div class="imgbox">
+              <div class="thumb" style="width:120px;height:80px;"></div>
+              <div class="dim">320 × 240 · image/png · 14.5 KiB</div>
+            </div>
+          </div>
+          <div class="cap"><strong>letterboxed preview</strong> — checkerboard (transparency) background; dimensions + MIME + human-readable size caption in muted UI text; no copy button in BodyViewer's sub-bar</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="member app" data-c="member-form">
+      <h4>FormRenderer <span class="tier t2">T2</span></h4>
+      <div class="mspec">
+        <span class="k">input</span><span>URL-encoded text; <code>bodyKind</code> returns <code>"form"</code> for <code>application/x-www-form-urlencoded</code> (<code>body.ts:13</code>); decoded via <code>formEntries</code> = <code>new URLSearchParams(text)</code> (<code>body.ts:60–62</code>)</span>
+        <span class="k">v1 form</span><span>KeyValueRow× rows: key mute/nowrap, value body/break-all with the CopyText value cell (per-value whole copy, selection guard — <a href="key-value-row.html">key-value-row.html</a> § anatomy/behavior); KeyValueRow is <code>display:contents</code>, so FormRenderer supplies the parent <code>grid-cols-[auto_1fr]</code> grid with 4 px row gap (column sizing is the parent's job, per KeyValueRow's contract); BodyViewer copies all (bodyText of the raw URL-encoded string)</span>
+        <span class="k">relation to KeyValueRow</span><span>FormRenderer composes <a href="key-value-row.html">KeyValueRow</a>× — the shipped inline <code>&lt;dl&gt;</code> (<code>FormBody</code>, <code>BodyViewer.tsx:67–81</code>) predates the value-cell CopyText and no longer satisfies the contract (review 2026-07-23)</span>
+        <span class="k">cut marker</span><span>when the decoded pair count would produce more lines than a shared FORM_MAX (open for build WU; likely same TEXT_MAX)</span>
+      </div>
+      <div class="member-swatches">
+        <div class="swatch">
+          <div class="panel">
+            <dl class="fpairs">
+              <dt>grant_type</dt><dd>authorization_code</dd>
+              <dt>client_id</dt><dd>app_8f3a91c2</dd>
+              <dt>redirect_uri</dt><dd>https://example.com/callback</dd>
+              <dt>code</dt><dd>SplxlOBeZQQYbYS6WxSbIA</dd>
+            </dl>
+          </div>
+          <div class="cap"><strong>decoded key/value pairs</strong> — KeyValueRow×, verified against <a href="key-value-row.html">key-value-row.html</a>: key mute/nowrap, value body/break-all with CopyText's dotted hairline underline (click copies the whole value, drag-select stays native); 4 px row gap; URL percent-decoding done by URLSearchParams</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="member app" data-c="member-hex">
+      <h4>HexRenderer <span class="tier t2">T2</span></h4>
+      <div class="mspec">
+        <span class="k">input</span><span>raw bytes when <code>bodyKind</code> returns <code>"hex"</code> (anything not matching json/image/form/text); also used for raw mode when <code>rawKind</code> returns <code>"hex"</code> (non-UTF-8 or control chars, <code>body.ts:25–32</code>)</span>
+        <span class="k">v1 form</span><span>offset (8 hex digits) · hex bytes (space-separated, 16 per line) · ASCII gutter (printable or ".", pipe-delimited); generated by <code>hexDump</code> (<code>body.ts:47–57</code>); rendered as <code>&lt;TextBody&gt;</code> with the hex string — the "hex renderer" is today a format function, not a separate component; the design names it explicitly for the registry</span>
+        <span class="k">cut marker</span><span>built into <code>hexDump</code>: <code>… N more bytes</code> appended when <code>bytes.length &gt; HEX_MAX</code> (4 096, <code>body.ts:40</code>); the component wraps this in the family cut marker style (warn tone, visible)</span>
+        <span class="k">copy</span><span>BodyViewer copies the hex dump text (<code>BodyViewer.tsx:173</code>: <code>kind === "hex" ? hexDump(loaded.bytes) : bodyText(loaded.bytes)</code>)</span>
+      </div>
+      <div class="member-swatches">
+        <div class="swatch">
+          <div class="panel">
+            <pre class="hex" style="margin:0;font-size:11px;"><span class="off">00000000</span>  <span class="hx">89 50 4e 47 0d 0a 1a 0a  00 00 00 0d 49 48 44 52</span>  <span class="asc">|.PNG........IHDR|</span>
+<span class="off">00000010</span>  <span class="hx">00 00 00 10 00 00 00 10  08 02 00 00 00 90 91 68</span>  <span class="asc">|...............h|</span>
+<span class="off">00000020</span>  <span class="hx">36 00 00 00 01 73 52 47  42 00 ae ce 1c e9 00 00</span>  <span class="asc">|6....sRGB.......|</span></pre>
+            <span class="cut">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
+          </div>
+          <div class="cap"><strong>hex grid</strong> — offset (mute), hex bytes (body), ASCII gutter (ink); 16 bytes/line; non-printable → dot; cut marker in warn tone</div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — rules the family obeys</h2>
+    <p data-c="behavior-intro" style="color:var(--muted);">Anatomy = what is on screen. Behavior = what the family does — the dispatch rule, the cut marker rule, and the fallback chain.</p>
+
+    <h3 style="margin-top:16px;">Dispatch rule — content-type → member</h3>
+    <div data-c="dispatch-rule">
+      <p style="color:var(--muted);font-size:13px;">BodyViewer calls <code>bodyKind(contentType)</code> (<code>body.ts:8</code>) when <code>decode=true</code>, or <code>rawKind(bytes)</code> when <code>decode=false</code> (<code>BodyViewer.tsx:149</code>). The dispatch is a pure function — the member is selected before render, not inside a member.</p>
+      <table class="dispatch" data-c="dispatch-table">
+        <thead><tr><th>Content-type pattern (decoded mode)</th><th>Member</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>application/json · *+json</td><td>JsonRenderer</td><td><code>body.ts:10–11</code></td></tr>
+          <tr><td>image/*</td><td>ImageRenderer</td><td><code>body.ts:12</code></td></tr>
+          <tr><td>application/x-www-form-urlencoded</td><td>FormRenderer</td><td><code>body.ts:13</code></td></tr>
+          <tr><td>text/* · application/xml · *+xml · application/javascript · application/ecmascript</td><td>XmlRenderer (for xml/html types) or plain text pre — both map to <code>"text"</code> kind today; XmlRenderer handles the XML/HTML sub-group using pretty-printed server output</td><td><code>body.ts:14–21</code></td></tr>
+          <tr><td>anything else (binary, unknown)</td><td>HexRenderer</td><td><code>body.ts:22</code> default</td></tr>
+        </tbody>
+      </table>
+      <div class="callout" style="margin-top:10px;" data-c="dispatch-raw">
+        <strong>Raw mode dispatch:</strong> <code>rawKind(bytes)</code> returns only <code>"text"</code> or <code>"hex"</code> — no JSON tree, no form decode, no image in raw mode. The distinction is intentional: raw bytes may be compressed; treating them as JSON or form would produce garbage. <code>BodyViewer.tsx:149</code>: <code>decode ? bodyKind(loaded.contentType) : rawKind(loaded.bytes)</code>.
+      </div>
+    </div>
+
+    <div class="app parts" data-c="behavior-rules" style="margin-top:16px;">
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <span class="cut">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
+          </div>
+          <div class="cap">every truncation is visible — total size always shown alongside the shown slice, in human units</div>
+        </div>
+        <div>
+          <strong>Cut marker rule — never silently truncate</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>when the rendered output is capped (HEX_MAX = 4 096 bytes, TREE_MAX = 128 KiB), a warn-tone line "⚠ showing N of M — save to see all" is appended; M is the total size, N the shown size, both formatted human-readable (B · KiB · MiB; one decimal below 10, integer above — 4.0 KiB, 14.5 KiB, 135 KiB, 1.0 MiB); never omitted, never just "…"</span>
+            <span class="k">why</span><span>trust: a user who sees only the first 4 KiB must know 4 KiB is not the whole body (<code>decode.rs:7</code>: even the server-side guard falls back, never drops); raw byte counts mean nothing at a glance (review 2026-07-23); "save to see all" names the escape hatch</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <span class="notice">empty body</span>
+          </div>
+          <div class="cap">the renderer is not shown for empty / not-captured / streaming bodies — BodyViewer shows a notice instead (<code>BodyViewer.tsx:215–227</code>)</div>
+        </div>
+        <div>
+          <strong>Never-blank rule</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>a renderer is only mounted when <code>kind != null</code> and <code>loaded != null</code>; all other body states (empty, not-captured, streaming, error) are handled by BodyViewer as notices — the family never renders a blank or a spinner</span>
+            <span class="k">why</span><span>blank = user thinks "no body" when there may be one; BodyViewer owns the loading/notice states and hands a fully-loaded <code>BodyFetch</code> to the renderer (<code>BodyViewer.tsx:224–227</code>)</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <pre style="margin:0;color:var(--a-body);font-size:12px;">{"name":"Alice"}</pre>
+          </div>
+          <div class="cap">JSON body served as text/plain — rendered as text (trust the header)</div>
+        </div>
+        <div>
+          <strong>Header-trust rule — no content-type sniffing</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>dispatch trusts the served content-type header verbatim; a JSON body with <code>content-type: text/plain</code> renders as plain text, not a JSON tree; manual override is deferred (see Fork DEC-10)</span>
+            <span class="k">why</span><span>the served content-type is what the server declared; sniffing and overriding it silently contradicts the wire truth; if the user wants to interpret it differently, that is an explicit act, not a default</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <pre class="hex" style="margin:0;font-size:11px;"><span class="off">00000000</span>  <span class="hx">1f 8b 08 00 00 00 00 00</span>  <span class="asc">|........|</span></pre>
+          </div>
+          <div class="cap">raw mode: gzip bytes dispatch to hex regardless of content-type</div>
+        </div>
+        <div>
+          <strong>Raw mode is always hex-or-text</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>in raw mode (<code>decode=false</code>), <code>rawKind</code> is used: valid UTF-8 without control chars → text; everything else → hex (<code>body.ts:25–32</code>); never JSON tree or form in raw mode</span>
+            <span class="k">why</span><span>raw bytes are likely compressed; a compressed JSON body is not valid JSON; a compressed form-encoded body is not valid URL-encoded text; the stored bytes are what they are</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <p data-c="states-intro" style="color:var(--muted);">Each member owns its own rendered state; the family shares the fallback + cut-marker states. BodyViewer owns the pre-render states (loading, notice).</p>
+    <div class="app swatches" data-c="states-grid">
+      <div class="swatch">
+        <div class="panel">
+          <pre class="jsrc"><span class="jp">{</span> <span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span> <span class="jp">}</span></pre>
+        </div>
+        <div class="cap"><strong>rendered</strong> — member renders successfully; full body within cap; no cut marker</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <pre class="jsrc"><span class="jp">{</span> <span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span><span class="jp">,</span> …</pre>
+          <span class="cut">⚠ showing 128 KiB of 512 KiB — save to see all</span>
+        </div>
+        <div class="cap"><strong>rendered + cut</strong> — member renders up to the cap; cut marker always appended; shown/total in human units</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <pre style="margin:0;color:var(--a-body);font-size:12px;">{&quot;name&quot;:&quot;Alice&quot;,&quot;roles&quot;:[...]}</pre>
+        </div>
+        <div class="cap"><strong>as-is fallback</strong> — JsonRenderer: parse failed or over the cap; raw text, no pretty-print, no tokens; same cut marker rule applies</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <pre class="hex" style="margin:0;font-size:11px;"><span class="off">00000000</span>  <span class="hx">89 50 4e 47 0d 0a 1a 0a</span>  <span class="asc">|.PNG....|</span></pre>
+          <span class="cut">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
+        </div>
+        <div class="cap"><strong>hex fallback</strong> — unknown binary or raw-mode non-UTF-8; always with cut marker when over HEX_MAX</div>
+      </div>
+    </div>
+    <div class="callout" data-c="non-states">
+      <strong>Non-states owned by BodyViewer, not the family:</strong> loading (spinner), empty body notice, not-captured notice, streaming notice, fetch error. The family receives a fully-loaded <code>BodyFetch</code> — it never renders a spinner or a "no body" message.
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="callout" data-c="review-log">
+      <strong>Review log — 2026-07-23 (manager):</strong>
+      <ul style="margin:.5em 0 0;padding-left:1.4em;">
+        <li><strong>DEC-01 flipped: pretty-printed copy-exact source</strong> replaces the collapsible tree — the tree's <code>key: value</code> form was not valid JSON when copied.</li>
+        <li><strong>DEC-11 flipped: muted color-coded syntax tokens</strong> replace zero-chromatic tone-only rendering.</li>
+        <li><strong>Cut marker sizes human-readable</strong> (B · KiB · MiB) — raw byte counts rejected.</li>
+        <li><strong>FormRenderer re-verified against <a href="key-value-row.html">KeyValueRow</a></strong> — swatches now show the CopyText value cell; parent-grid responsibility spelled out.</li>
+        <li><strong>Round 2 — DEC-13 added: CodeMirror 6 read-only surface</strong> for Json/Xml — textarea-style keyboard navigation + fold gutter; DEC-02 updated (XML folding now free), DEC-01 unchanged (folding is view-state, copy stays exact).</li>
+      </ul>
+    </div>
+
+    <div class="fork-cards app" data-c="dec-01" id="dec-01">
+      <div class="fork-card">
+        <strong>DEC-01 · JsonRenderer v1 form</strong> <span class="badge auto">settled: pretty-printed copy-exact source — review override 2026-07-23</span>
+        <div class="panel">
+          <pre class="jsrc"><span class="jp">{</span>
+  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"abc"</span><span class="jp">,</span>
+  <span class="jk">"roles"</span><span class="jp">:</span> <span class="jp">[</span>
+    <span class="js">"admin"</span>
+  <span class="jp">]</span>
+<span class="jp">}</span></pre>
+        </div>
+        <div class="fcap"><strong>Pretty-printed source (settled on review).</strong> The API already pretty-prints JSON server-side (<code>decode.rs:106–111</code>, serde_json — no prettier dependency needed); the pane shows that exact string with syntax-token spans. Selecting any part — or copying via BodyViewer — yields valid JSON in the displayed format.</div>
+      </div>
+      <div class="fork-card">
+        <strong>alt: collapsible tree</strong> <span class="badge warn">rejected on review</span>
+        <div class="panel">
+          <div class="jtree">
+            <details open>
+              <summary><span class="arr">▾ </span><span class="key">$ </span><span class="shape">{2}</span></summary>
+              <div class="indent"><div><span class="key">id: </span><span class="val">"abc"</span></div></div>
+            </details>
+          </div>
+        </div>
+        <div class="fcap">The shipped <code>JsonNode</code> tree (<code>BodyViewer.tsx:16</code>) drops braces, quotes and commas — its <code>key: value</code> lines are not valid JSON when copied (review 2026-07-23). Copy-exactness beats a lossy tree — and round 2 restored collapse the right way: source-level folding in the editor surface (→ <a href="#dec-13">DEC-13</a>), which never alters the document.</div>
+      </div>
+    </div>
+
+    <div class="fork-cards app" data-c="dec-02" id="dec-02">
+      <div class="fork-card">
+        <strong>DEC-02 · XmlRenderer v1 form</strong> <span class="badge auto">settled: pretty-printed source, folding via the editor surface — updated round 2</span>
+        <div class="panel">
+          <pre class="jsrc"><span class="gut">▾</span><span class="jk">&lt;order&gt;</span>
+<span class="gut">▸</span>  <span class="jk">&lt;items&gt;</span><span class="fold">…</span><span class="jk">&lt;/items&gt;</span>
+<span class="gut"></span>  <span class="jk">&lt;status&gt;</span><span class="bbody">ok</span><span class="jk">&lt;/status&gt;</span>
+<span class="gut"></span><span class="jk">&lt;/order&gt;</span></pre>
+        </div>
+        <div class="fcap">Server-side pretty-print (decode.rs) stays the source of truth. Round 1 settled "no collapse — promote if users request it"; round 2 requested it, and DEC-13's shared CodeMirror surface gives element folding for free (<code>lang-xml</code> + fold gutter) — no custom DOM-parse renderer needed.</div>
+      </div>
+      <div class="fork-card">
+        <strong>alt: custom collapsible XML tree</strong> <span class="badge warn">subsumed by DEC-13</span>
+        <div class="panel">
+          <div class="jtree">
+            <details open>
+              <summary><span class="arr">▾ </span><span class="key">order</span></summary>
+              <div class="indent"><div><span class="key">status: </span><span class="val">ok</span></div></div>
+            </details>
+          </div>
+        </div>
+        <div class="fcap">A hand-built DOM-parse + recursive node renderer was the deferred round-1 alternative. The editor surface's source folding covers the same want with zero custom tree code — this alt is now moot.</div>
+      </div>
+    </div>
+
+    <div class="fork-cards app" data-c="dec-10" id="dec-10">
+      <div class="fork-card">
+        <strong>DEC-10 · sniff vs trust content-type</strong> <span class="badge auto">settled: trust the header; manual override deferred</span>
+        <div class="panel">
+          <pre style="margin:0;color:var(--a-body);font-size:12px;">&#123;"name":"Alice"&#125;</pre>
+          <div class="notice">text/plain → rendered as text (trust header)</div>
+        </div>
+        <div class="fcap"><strong>Trust:</strong> dispatch uses the served content-type verbatim. A JSON body with <code>text/plain</code> renders as text — that is what the server declared. Manual override (a "view as JSON" button) is a later WU, explicitly user-initiated, not a silent sniff.</div>
+      </div>
+      <div class="fork-card">
+        <strong>alt: sniff + auto-promote</strong> <span class="badge warn">rejected</span>
+        <div class="panel">
+          <pre style="margin:0;color:var(--a-body);font-size:12px;">&#123;"name":"Alice"&#125;</pre>
+          <div class="notice" style="color:var(--a-warn);">text/plain sniffed → rendered as JSON tree</div>
+        </div>
+        <div class="fcap">Silently contradicts what the server declared. A proxy tool's primary trust is the wire; silent sniff is an interpretation, not a display.</div>
+      </div>
+    </div>
+
+    <div class="fork-cards app" data-c="dec-11" id="dec-11">
+      <div class="fork-card">
+        <strong>DEC-11 · syntax coloring</strong> <span class="badge auto">settled: muted color-coded tokens — review override 2026-07-23</span>
+        <div class="panel">
+          <pre class="jsrc"><span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span><span class="jp">,</span>
+<span class="jk">"count"</span><span class="jp">:</span> <span class="jn">42</span></pre>
+        </div>
+        <div class="fcap"><strong>Three muted tokens (settled on review).</strong> Key <code>--a-key</code> #8fb8de · string <code>--a-str</code> #9ec99a · number <code>--a-num</code> #d9a866 · punctuation mute — new palette tokens, desaturated to sit calmly against the Warp canvas and scoped to body panes only, never UI chrome. Indentation still carries structure, so the pane stays readable without color (color-blind safe). The manager review overrode the original zero-chromatic settle: token color speeds scanning large payloads.</div>
+      </div>
+      <div class="fork-card">
+        <strong>alt: zero-chromatic tone-only</strong> <span class="badge warn">rejected on review</span>
+        <div class="panel">
+          <div class="jtree" style="font-size:12px;">
+            <div><span style="color:var(--a-mute);">name: </span><span style="color:var(--a-body);">"Alice"</span></div>
+            <div><span style="color:var(--a-mute);">count: </span><span style="color:var(--a-body);">42</span></div>
+          </div>
+        </div>
+        <div class="fcap">The original settle: key mute, value body, shape ink — zero color vocabulary. Readable but slow to scan on large payloads; rejected on review 2026-07-23 in favor of the muted token set.</div>
+      </div>
+    </div>
+
+    <div class="fork-cards app" data-c="dec-12" id="dec-12">
+      <div class="fork-card">
+        <strong>DEC-12 · hex cut marker form</strong> <span class="badge auto">settled: warn-tone line with total size</span>
+        <div class="panel">
+          <span class="cut">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
+        </div>
+        <div class="fcap"><code>hexDump</code> today appends <code>… N more bytes</code> (<code>body.ts:55–56</code>). The design replaces this with the warn-tone family cut marker form (⚠ + shown/total in human-readable units + save hint), consistent across all members.</div>
+      </div>
+      <div class="fork-card">
+        <strong>alt: silent ellipsis</strong> <span class="badge warn">rejected</span>
+        <div class="panel"><span style="color:var(--a-mute);font-size:12px;">… 10724 more bytes</span></div>
+        <div class="fcap">The muted ellipsis form from <code>body.ts:55</code> is easy to miss. Trust rule: truncation must be obvious. Warn tone + save hint is the family standard.</div>
+      </div>
+    </div>
+
+    <div class="fork-cards app" data-c="dec-13" id="dec-13">
+      <div class="fork-card">
+        <strong>DEC-13 · Json/Xml viewer engine</strong> <span class="badge auto">settled: CodeMirror 6, read-only — review round 2 2026-07-23</span>
+        <div class="panel">
+          <pre class="jsrc"><span class="gut">▾</span><span class="jp">{</span>
+<span class="gut">▸</span>  <span class="jk">"items"</span><span class="jp">:</span> <span class="jp">[</span><span class="fold">…</span><span class="jp">]</span><span class="jp">,</span>
+<span class="gut"></span>  <span class="jk">"status"</span><span class="jp">:</span> <span class="cur"></span><span class="js">"pending"</span>
+<span class="gut"></span><span class="jp">}</span></pre>
+        </div>
+        <div class="fcap"><strong>CodeMirror 6 (new dependency, requested round 2).</strong> <code>@codemirror/state</code>+<code>view</code>+<code>language</code>+<code>lang-json</code>/<code>lang-xml</code>, ~300 KB — <code>EditorState.readOnly</code> gives textarea UX without editability: real cursor, arrow/Home/End/PageUp navigation, native selection; foldGutter collapses objects/arrays/elements; a custom <code>HighlightStyle</code> maps tags to the three DEC-11 tokens so the Warp palette holds; document virtualization handles large bodies (caps + cut marker still apply). One shared surface serves both members.</div>
+      </div>
+      <div class="fork-card">
+        <strong>alt: hand-rolled pre + spans</strong> <span class="badge warn">rejected on round 2</span>
+        <div class="panel">
+          <pre class="jsrc"><span class="jp">{</span> <span class="jk">"status"</span><span class="jp">:</span> <span class="js">"pending"</span> <span class="jp">}</span></pre>
+        </div>
+        <div class="fcap">The round-1 form (and the shipped <code>BodyViewer.tsx</code> approach): zero dependencies, but no cursor, no keyboard navigation, no folding — a scrollbar is the only way through a 100 KB body. Rejected once navigation became a requirement.</div>
+      </div>
+      <div class="fork-card">
+        <strong>alt: Monaco · JSON-tree libs</strong> <span class="badge warn">rejected</span>
+        <div class="panel"><span class="notice">monaco-editor ≈ 3 MB+ · react-json-view ≈ tree, not source</span></div>
+        <div class="fcap">Monaco brings a full IDE runtime (multi-MB, its own workers) for a read-only pane — far too heavy. JSON tree-view libs (react-json-view etc.) fail both round-1 rulings: not textarea UX and not copy-exact source. CodeMirror is the smallest thing that satisfies every settled decision.</div>
+      </div>
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Component</th><th>Prop</th><th>Type</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td><strong>JsonRenderer</strong></td><td><code>text</code></td><td><code>string</code></td><td>UTF-8 decoded body text; member parses it</td></tr>
+        <tr><td><strong>XmlRenderer</strong></td><td><code>text</code></td><td><code>string</code></td><td>pretty-printed by API before delivery</td></tr>
+        <tr><td><strong>ImageRenderer</strong></td><td><code>bytes</code></td><td><code>Uint8Array</code></td><td>raw bytes; <code>contentType</code> for Blob MIME</td></tr>
+        <tr><td><strong>ImageRenderer</strong></td><td><code>contentType</code></td><td><code>string | null</code></td><td>passed to Blob for browser MIME handling</td></tr>
+        <tr><td><strong>FormRenderer</strong></td><td><code>text</code></td><td><code>string</code></td><td>raw URL-encoded string; member decodes</td></tr>
+        <tr><td><strong>HexRenderer</strong></td><td><code>bytes</code></td><td><code>Uint8Array</code></td><td>raw bytes; member formats via hexDump</td></tr>
+      </tbody>
+    </table>
+    <div data-c="tsdoc">
+      <p>Family contract TSDoc block — the build WU attaches this to the family barrel export or to each member; one per member when the five live in separate files:</p>
+      <pre class="tsdoc">/**
+ * BodyRenderer family — five content-type-aware body renderers; BodyViewer picks one by dispatch.
+ * @tier T2 each — per-type render logic + dispatch + truncation policy = business logic
+ * @anatomy rendered body (mono; json/xml = copy-exact pretty-printed source in a read-only CodeMirror 6 surface — keyboard nav, fold gutter, muted syntax tokens key/string/number) · cut marker when capped (warn tone, shown/total human-readable, save hint) · no spinner, no blank — BodyViewer gates on loaded
+ * @use inside a body pane, chosen by bodyKind(contentType) in decoded mode or rawKind(bytes) in raw mode
+ * @avoid direct use outside BodyViewer · silently truncating without the cut marker · raw byte counts in the cut marker · syntax color beyond the three muted tokens
+ * @states rendered · rendered+cut (body over cap) · as-is fallback (JsonRenderer: parse fail or over cap — raw text, no tokens)
+ * @madeof JsonRenderer — CodeMirror 6 (read-only) · XmlRenderer — CodeMirror 6 (read-only) · ImageRenderer — none · FormRenderer — KeyValueRow× · HexRenderer — none
+ */
+
+// Per-member naming for the build WU:
+// JsonRenderer, XmlRenderer, ImageRenderer, FormRenderer, HexRenderer</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card">
+        <strong>✅ Use</strong>
+        <p>Inside a body pane (BodyViewer), dispatched by <code>bodyKind</code> or <code>rawKind</code>. Any context that needs to present wire body bytes in a type-appropriate, trust-preserving way. FormRenderer wherever URL-encoded pairs need to be presented — decode + display is its job.</p>
+      </div>
+      <div class="card">
+        <strong>🚫 Avoid</strong>
+        <p>Outside of a body pane context — these are rendering leaves, not general-purpose widgets. Avoid using HexRenderer for non-body binary data (there is no such screen yet). Keep syntax color to the three muted tokens (key/string/number) — no full syntax-theme rainbow, and never in UI chrome. Never mount a member without letting BodyViewer handle the loading/empty/error states first.</p>
+      </div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part</th><th>Tailwind (build WU)</th></tr></thead>
+      <tbody>
+        <tr><td>rendered body text</td><td><code>font-mono text-xs text-ink-body</code></td></tr>
+        <tr><td>JSON key / XML tag name</td><td><code>text-syn-key</code> — new token, #8fb8de (DEC-11)</td></tr>
+        <tr><td>JSON string / XML attr value</td><td><code>text-syn-str</code> — new token, #9ec99a</td></tr>
+        <tr><td>JSON number</td><td><code>text-syn-num</code> — new token, #d9a866</td></tr>
+        <tr><td>JSON punctuation / XML attr name</td><td><code>text-ink-mute</code></td></tr>
+        <tr><td>editor surface (Json/Xml)</td><td>CodeMirror 6 theme extension — bg <code>canvas</code>, cursor <code>ink</code>, selection native; <code>HighlightStyle</code> maps tags → the three <code>syn-*</code> tokens (DEC-13)</td></tr>
+        <tr><td>fold gutter ▾ / ▸ + "…" placeholder</td><td><code>text-ink-mute</code> gutter · placeholder <code>bg-canvas-soft border-hairline rounded text-ink-mute</code></td></tr>
+        <tr><td>form key / form value</td><td>KeyValueRow's tokens — <code>key-value-row.html § tokens</code>, one fact per tier</td></tr>
+        <tr><td>cut marker line</td><td><code>text-warn text-[11px] border-t border-hairline pt-1 mt-1.5 block</code> · sizes via a shared humanBytes() formatter (build WU)</td></tr>
+        <tr><td>hex offset</td><td><code>text-ink-mute</code></td></tr>
+        <tr><td>hex bytes</td><td><code>text-ink-body</code></td></tr>
+        <tr><td>hex ASCII gutter</td><td><code>text-ink</code></td></tr>
+        <tr><td>image checkerboard bg</td><td><code>bg-[repeating-conic-gradient(theme(colors.canvas.soft)_0%_25%,theme(colors.canvas.DEFAULT)_0%_50%)_0_0_/_12px_12px]</code> or inline style</td></tr>
+        <tr><td>image dimensions caption</td><td><code>font-ui text-xs text-ink-mute</code> (Inter, not mono — metadata)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="specimen">Specimen — static samples (scale-down: no live tree or hex grid)</h2>
+    <div class="callout" data-c="specimen-rule">
+      <strong>Scale-down applied.</strong> A live CodeMirror instance, per-value copy, a hex grid, and image object-URL generation are not worth re-implementing in a doc specimen — static swatches with realistic payloads stand in (the fold gutter, cursor and folded "…" placeholder are mocked visually above). The JSON/XML panes below are still the exact copyable source by construction (select and copy them to verify).
+    </div>
+    <div class="app" data-c="specimen-all">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">
+        <div>
+          <div class="panel">
+            <div class="lbl">JsonRenderer</div>
+            <pre class="jsrc"><span class="jp">{</span>
+  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"ord_8f3a91c2"</span><span class="jp">,</span>
+  <span class="jk">"total"</span><span class="jp">:</span> <span class="jn">49.99</span><span class="jp">,</span>
+  <span class="jk">"tags"</span><span class="jp">:</span> <span class="jp">[</span><span class="js">"rush"</span><span class="jp">,</span> <span class="js">"gift"</span><span class="jp">]</span>
+<span class="jp">}</span></pre>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="lbl">XmlRenderer</div>
+            <pre class="xml" style="margin:0;font-size:12px;"><span class="tag">&lt;order&gt;</span>
+  <span class="tag">&lt;id&gt;</span><span class="bbody">8f3a91c2</span><span class="tag">&lt;/id&gt;</span>
+  <span class="tag">&lt;status&gt;</span><span class="bbody">pending</span><span class="tag">&lt;/status&gt;</span>
+<span class="tag">&lt;/order&gt;</span></pre>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="lbl">ImageRenderer</div>
+            <div class="imgbox">
+              <div class="thumb" style="width:100%;height:64px;"></div>
+              <div class="dim">128 × 64 · image/png · 2.0 KiB</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="lbl">FormRenderer</div>
+            <dl class="fpairs" style="font-size:12px;">
+              <dt>grant_type</dt><dd>authorization_code</dd>
+              <dt>client_id</dt><dd>app_8f3a91c2</dd>
+              <dt>code</dt><dd>SplxlOBeZQQYbYS6</dd>
+            </dl>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="lbl">HexRenderer</div>
+            <pre class="hex" style="margin:0;font-size:11px;"><span class="off">00000000</span>  <span class="hx">89 50 4e 47 0d 0a 1a 0a</span>  <span class="asc">|.PNG....|</span>
+<span class="off">00000008</span>  <span class="hx">00 00 00 0d 49 48 44 52</span>  <span class="asc">|....IHDR|</span></pre>
+            <span class="cut">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
+          </div>
+        </div>
+        <div>
+          <div class="panel">
+            <div class="lbl">As-is fallback (JSON parse fail)</div>
+            <pre style="margin:0;color:var(--a-body);font-size:12px;white-space:pre-wrap;">&#123;"broken":true,</pre>
+            <span class="notice">parse failed — displaying as-is</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
