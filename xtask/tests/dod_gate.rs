@@ -596,6 +596,27 @@ fn epic_gate_accepts_a_tracked_backlog_kb_doc() {
     );
 }
 
+// docs/design-rules/ is the fourth T2 KB (living design rulebook + vocabularies,
+// E-DFLOW.W3): a tracked file there must pass both the epic tracked-doc layout
+// check and the doc-note tier derivation (T2), like the other three KBs.
+#[test]
+fn epic_gate_accepts_a_tracked_design_rules_kb_doc() {
+    let (repo, _) = epic_with_merged_wu();
+    repo.write("docs/design-rules/design-rulebook.html", "<html>rulebook</html>\n");
+    repo.commit("home the design rulebook in the design-rules kb");
+    let entry = format!(
+        "{T2_ENTRY}  - path: docs/design-rules/design-rulebook.html\n    tier: T2\n    action: added\n    distills: \"design rulebook homed in the living design-rules kb\"\n"
+    );
+    bless_epic(&repo, &entry);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        report.green(),
+        "docs/design-rules/ is an expected tracked T2 location: {}",
+        format_report(&report)
+    );
+}
+
 #[test]
 fn docs_only_epic_still_rejects_stray_tracked_work_docs() {
     let repo = Repo::new();

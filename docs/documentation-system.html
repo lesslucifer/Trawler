@@ -33,7 +33,7 @@
 flowchart TB
     T0["<b>T0 · CLAUDE.md</b><br/>fixed rules + tier map<br/><i>only on explicit request</i>"]
     T1["<b>T1 · Permanent spine</b><br/>docs/*.html<br/><i>changes only when the shape changes</i>"]
-    T2["<b>T2 · Indexed knowledge bases</b><br/>docs/use-cases/ (what) · docs/decisions/ (why) · docs/backlog/ (what's next)<br/><i>topical files behind an index</i>"]
+    T2["<b>T2 · Indexed knowledge bases</b><br/>docs/use-cases/ (what) · docs/decisions/ (why) · docs/backlog/ (what's next) · docs/design-rules/ (design musts)<br/><i>topical files behind an index · design-rules: one file</i>"]
     T3["<b>T3 · Working docs</b><br/>docs/work/<br/><i>short-lived, per task</i>"]
     T4["<b>T4 · Source code</b><br/>src/…<br/><i>the source of truth</i>"]
     T0 -->|read| T1 -->|read| T2 -->|read| T3 -->|read| T4
@@ -62,9 +62,9 @@ flowchart TB
         </tr>
         <tr>
           <td><span class="badge id">T2</span></td>
-          <td><code>docs/use-cases/</code> · <code>docs/decisions/</code> · <code>docs/backlog/</code></td>
-          <td>“What must it do?” · “Why is it this way?” · “What's next?”</td>
-          <td>Behavior contracts (use-cases) · context, choice, consequences (decisions) · roadmap + deferred work (backlog)</td>
+          <td><code>docs/use-cases/</code> · <code>docs/decisions/</code> · <code>docs/backlog/</code> · <code>docs/design-rules/</code></td>
+          <td>“What must it do?” · “Why is it this way?” · “What's next?” · “What must every design satisfy?”</td>
+          <td>Behavior contracts (use-cases) · context, choice, consequences (decisions) · roadmap + deferred work (backlog) · design rules + vocabularies (design-rules)</td>
           <td>Implementation detail; restating one KB in another</td>
         </tr>
         <tr>
@@ -108,7 +108,7 @@ flowchart TB
     <p>
       Each KB directory holds topical files behind exactly one <code>*-index.html</code>. The
       index is a pure routing table — one row per topic file with a one-line scope, ID prefix
-      (never reused or renumbered), and status — and contains no knowledge of its own. Sessions read index-first: open only the
+      (never reused or renumbered), and status — and contains no knowledge of its own (one exception: a KB may be a single file — design-rules — where the index carries the KB itself). Sessions read index-first: open only the
       relevant topic file(s), synthesize back into only those files, never bulk-read a KB. Topic
       boundaries follow the architecture's component map; when a file outgrows one comfortable
       read, split it and update the index.
@@ -150,6 +150,19 @@ flowchart TB
       pillar, resequencing a wave) is still a <code>decisions/</code> record; the roadmap then reflects it.
     </p>
 
+    <h3 id="t2-design-rules">design-rules/ — design contracts (what must every design satisfy)</h3>
+    <p>
+      A single-file KB: <code>design-rules-index.html</code> carries the rulebook itself
+      (it splits into topic files only if it outgrows one comfortable read).
+      The design KB: enumerable, slug-id'd rules — tagged <strong>hard</strong> (mechanically
+      checkable) or <strong>soft</strong> (judged at review) — plus the fixed vocabularies
+      (tokens, chromatic meanings, lexicon, keyboard conventions) designs pick from. Living like
+      the backlog: entries mutate in place, but a slug cited by a design receipt is never renamed —
+      deprecated with a pointer, so receipts stay valid as the book grows. New entries arrive by
+      reuse-or-propose from design runs and by the distillation row below; the design-flow harness
+      coverage-checks the rule set (E-DFLOW).
+    </p>
+
     <h2 id="t3">T3 · Working docs</h2>
     <p>
       The scratch space where a task thinks, named <code>docs/work/YYYY-MM-DD-&lt;slug&gt;.html</code>.
@@ -174,6 +187,7 @@ stateDiagram-v2
       <tbody>
         <tr><td>Behavior changed or got defined?</td><td>Relevant <code>use-cases/</code> topic file (+ index row if new topic)</td></tr>
         <tr><td>Non-obvious choice made or reversed?</td><td>New <code>decisions/</code> record</td></tr>
+        <tr><td>Design convention surfaced, locked, or contradicted? (new token/term/binding, a second sighting locks a pattern, shipped UI contradicts a rule)</td><td>Relevant <code>design-rules/</code> entry — rule or vocabulary; deprecate slugs, never rename</td></tr>
         <tr><td>Component map or invariant changed?</td><td><code>architecture.html</code></td></tr>
         <tr><td>Repeating process emerged or changed?</td><td>Relevant T1 process doc</td></tr>
         <tr><td>T0 rule should change?</td><td>Surface it in chat and wait for an explicit request — never edit CLAUDE.md silently or as a side effect; once asked, make the edit as its own signed commit</td></tr>
@@ -187,7 +201,7 @@ stateDiagram-v2
     it against <code>git diff --name-only</code> — no missing entries, no phantom entries, tiers derived
     from paths — and hard-fails an epic that keeps unexpected docs tracked: at an epic tip the only
     tracked paths under <code>docs/</code> are flat T1 files, <code>use-cases/</code>,
-    <code>decisions/</code> and <code>backlog/</code>; anything under <code>docs/work/</code> must be archived out of git first.
+    <code>decisions/</code>, <code>backlog/</code> and <code>design-rules/</code>; anything under <code>docs/work/</code> must be archived out of git first.
     Standalone commits need it only when they touch <code>docs/</code>.</p>
     <pre data-c="doc-note-yaml">schema: doc/v1
 epic: E-CAP                       # identity block, same as every note schema
@@ -195,7 +209,7 @@ wu: E-CAP.W2                      # working-unit level only
 branch: wu/capture/pagination
 changes:                          # exactly one entry per docs/ path in the gated diff
   - path: docs/use-cases/control-api.html
-    tier: T2                      # derived from the path — T1 docs/*, T2 use-cases|decisions|backlog, T3 work/
+    tier: T2                      # derived from the path — T1 docs/*, T2 use-cases|decisions|backlog|design-rules, T3 work/
     action: updated               # added | updated | archived | deleted
     distills: "UC-API-7 pagination contract — requirement + edge cases learned in the WU"
   - path: docs/work/2026-07-05-epic-capture-plan.html
@@ -210,7 +224,7 @@ date: 2026-07-05</pre>
     <table data-c="reading-table">
       <thead><tr><th>Task type</th><th>Read before touching code</th></tr></thead>
       <tbody>
-        <tr><td>New feature</td><td>T1 architecture → relevant use-case topic(s) → related decisions. T3 work doc if the task spans sessions or needs a plan.</td></tr>
+        <tr><td>New feature</td><td>T1 architecture → relevant use-case topic(s) → related decisions; UI-touching work adds the <code>design-rules/</code> index. T3 work doc if the task spans sessions or needs a plan.</td></tr>
         <tr><td>Bug fix</td><td>Relevant use-case topic (what <em>should</em> happen) → T4. Check decisions before “fixing” anything that looks deliberate.</td></tr>
         <tr><td>Refactor</td><td>T1 architecture (boundaries to preserve) → decisions touching the area.</td></tr>
         <tr><td>Docs task</td><td>Per T0: open comments of every doc to be touched, first; snapshot before editing.</td></tr>
@@ -229,7 +243,7 @@ date: 2026-07-05</pre>
       <tbody>
         <tr><td><code>CLAUDE.md</code></td><td>T0</td><td>Rules + tier map</td></tr>
         <tr><td><code>docs/*.html</code></td><td>T1</td><td>Architecture + process standards, flat</td></tr>
-        <tr><td><code>docs/use-cases/</code> · <code>docs/decisions/</code> · <code>docs/backlog/</code></td><td>T2</td><td>One index + topic files each</td></tr>
+        <tr><td><code>docs/use-cases/</code> · <code>docs/decisions/</code> · <code>docs/backlog/</code> · <code>docs/design-rules/</code></td><td>T2</td><td>One index + topic files each (design-rules: a single file — the index is the KB)</td></tr>
         <tr><td><code>docs/work/</code></td><td>T3</td><td>Working docs — in-flight only; empty in git at every epic gate</td></tr>
         <tr><td><code>docs/.archive/</code></td><td>T3</td><td>Archived work docs — gitignored, never tracked</td></tr>
         <tr><td><code>src/…</code></td><td>T4</td><td>The truth</td></tr>

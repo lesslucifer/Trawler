@@ -189,6 +189,7 @@ pub fn tier_of(path: &str) -> Option<&'static str> {
     } else if path.starts_with("docs/use-cases/")
         || path.starts_with("docs/decisions/")
         || path.starts_with("docs/backlog/")
+        || path.starts_with("docs/design-rules/")
     {
         Some("T2")
     } else {
@@ -223,6 +224,7 @@ pub fn is_expected_tracked_doc(path: &str) -> bool {
             || rest.starts_with("use-cases/")
             || rest.starts_with("decisions/")
             || rest.starts_with("backlog/")
+            || rest.starts_with("design-rules/")
     })
 }
 
@@ -350,6 +352,7 @@ t2_waived: null
         assert_eq!(tier_of("docs/use-cases/capture.html"), Some("T2"));
         assert_eq!(tier_of("docs/decisions/event-bus.html"), Some("T2"));
         assert_eq!(tier_of("docs/backlog/roadmap.html"), Some("T2"));
+        assert_eq!(tier_of("docs/design-rules/design-rulebook.html"), Some("T2"));
         assert_eq!(tier_of("docs/work/plan.html"), Some("T3"));
         assert_eq!(tier_of("src/lib.rs"), None);
 
@@ -372,6 +375,7 @@ t2_waived: null
         assert!(!is_rule_bearing("docs/use-cases/capture.html"), "T2 is not");
         assert!(!is_rule_bearing("docs/decisions/event-bus.html"), "T2 is not");
         assert!(!is_rule_bearing("docs/backlog/roadmap.html"), "T2 is not");
+        assert!(!is_rule_bearing("docs/design-rules/design-rulebook.html"), "T2 is not");
         assert!(!is_rule_bearing("docs/work/plan.html"), "T3 is not");
         assert!(!is_rule_bearing("src/lib.rs"));
         assert!(!is_rule_bearing(".mr-allowed"), "local trust config, never committed");
@@ -380,6 +384,7 @@ t2_waived: null
         assert!(is_expected_tracked_doc("docs/use-cases/capture.html"));
         assert!(is_expected_tracked_doc("docs/decisions/decisions-index.html"));
         assert!(is_expected_tracked_doc("docs/backlog/roadmap.html"));
+        assert!(is_expected_tracked_doc("docs/design-rules/design-rules-index.html"));
         assert!(!is_expected_tracked_doc("docs/work/plan.html"));
         assert!(!is_expected_tracked_doc("docs/work/archive/plan.html"));
         assert!(!is_expected_tracked_doc("docs/.archive/plan.html"));

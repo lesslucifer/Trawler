@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a648be49f34851f0dfa97dc" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W3 result (Seed design rulebook + design-rules KB)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W3 result — Seed design rulebook + design-rules KB</h1>
+      <p>The result report this WU tip attests. W3 seeded the design rulebook and homed it in a new living T2 KB the doc system and DoD gate now recognise.</p>
+      <div class="meta">WU result · 2026-07-25 · Trawler · T3 (docs/work/) · wu/design-flow/seed-rulebook → epic/design-flow · plan: <a href="2026-07-25-dflow-w3-plan.html">W3 plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Delivered</strong> — every observable in the plan's expected-result table exists:</p>
+      <table>
+        <thead><tr><th>Deliverable</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>The seeded rulebook — 13 hard one-liner rules (Tier-1 predicates), 14 soft rules (DO/DON'T + reviewer questions), 4 vocabularies (token sets, chromatic meanings, lexicon, keyboard conventions), growth lifecycle. Extracted from the W1 run + W2 design files; 6 soft rules are marked principle imports W4 must validate or W6 kills</td><td><a href="../design-rules/design-rules-index.html">docs/design-rules/design-rules-index.html</a></td></tr>
+          <tr><td>Gate recognition: <code>tier_of</code> → T2, epic tips accept the tracked KB, KB stays non-rule-bearing</td><td><code>xtask/src/notes.rs</code></td></tr>
+          <tr><td>Doc-system spec names the fourth KB (tier map/diagram, KB section, layout, doc-note derivation, session protocol) and carries the new distillation-checklist row — the growth engine</td><td><a href="../documentation-system.html">documentation-system.html</a></td></tr>
+          <tr><td>Gate check 6's expected-doc-locations list includes <code>design-rules/</code></td><td><a href="../workflow.html">workflow.html</a></td></tr>
+          <tr><td>The rationale record, routed in the decisions index</td><td><a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <ul data-item="deviations">
+      <li><strong>Scope widening was planned, not deviated</strong>: the epic plan's original "T1 rulebook doc" became this living T2 KB at W3 planning time, recorded in the epic plan's W3 block + distillation plan before code (DEC-5 reasoning; full rationale in DEC-14).</li>
+      <li><strong>Discovered work</strong>: a pre-existing clippy-1.95 pedantic warning (<code>case_sensitive_file_extension_comparisons</code> in <code>mr.rs pub_path_for</code>) turned the hook's <code>clippy -D warnings</code> red for every code commit; fixed minimally (case-insensitive <code>.pub</code> check) riding the gate commit.</li>
+      <li><strong>One-file KB</strong>: the plan's separate routing index + rulebook were combined into the single <code>design-rules-index.html</code> during review rounds (owner decision 2026-07-25) — the KB is one file; DEC-14 and the T1 KB section record the shape.</li>
+      <li>Nothing else — deliverables otherwise match the plan table one-to-one.</li>
+    </ul>
+
+    <h2 id="evidence">Evidence</h2>
+    <ul data-item="evidence">
+      <li><strong>Tests</strong>: unit — <code>notes.rs path_classification</code> extended (tier, whitelist, rule-bearing for the KB); integration — <code>dod_gate.rs epic_gate_accepts_a_tracked_design_rules_kb_doc</code> mirroring the backlog-KB precedent test. Full workspace suite + <code>clippy --all-targets --all-features -D warnings</code> green.</li>
+      <li><strong>Commits</strong>: plan (<code>dbdb87f</code>) · gate recognition (<code>fd4cdd7</code>) · T1 spec, SSH-signed with <code>Reviewed-By: key vuluu</code> (<code>63fba88</code>) · KB + DEC-14.</li>
+      <li><strong>Docs</strong>: <code>cargo xtask verify-doc</code> green on the governed plan/result and all touched docs; every doc snapshotted per htmldoc before editing (review history in each doc's Versions picker).</li>
+      <li>Every rule grounded with a citation to the W1 run, a W2 design file, or shipped code; principle imports explicitly marked.</li>
+    </ul>
+
+    <h2 id="distillation">Distillation</h2>
+    <ul data-item="distillation">
+      <li><strong>T2</strong> — the design-rules KB itself (one file — index = rulebook) is the distillation target and landed as such; DEC-14 records the why; decisions-index routes it.</li>
+      <li><strong>T1</strong> — documentation-system.html + workflow.html now describe the fourth KB (shape change: the tier map itself grew).</li>
+      <li><strong>T3</strong> — the W3 plan/result stay tracked until the epic close archives them; the rulebook's seed-lists source docs (W1/W2) remain T3 inputs for W4.</li>
+    </ul>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <ul data-item="follow-ups">
+      <li><strong>T0</strong>: done — on the owner's explicit request (2026-07-25) the CLAUDE.md T2-line gained <code>design-rules/</code> ("load before UI work"), landed as its own signed commit inside this WU.</li>
+      <li><strong>W4</strong>: run the flow against the frozen rulebook + W2 registry; findings feed W5/W6 — imports that pull no weight are kill candidates.</li>
+      <li><strong>W7</strong>: hard checked-by cells become Tier-1 predicates; receipt cites every slug and pins the rulebook blob hash it ran against.</li>
+      <li><strong>Build WU (from W2)</strong>: add the named verb-colour tokens; <code>zero-accent</code>'s exception list grows with them.</li>
+      <li><strong>Epic close</strong>: re-point the rulebook's grounding links into <code>docs/work/components/</code> when those T3 files distil to their post-epic home.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

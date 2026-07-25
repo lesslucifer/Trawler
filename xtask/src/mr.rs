@@ -511,7 +511,7 @@ fn append_key_line(existing: &str, line: &str) -> String {
 /// (via an ssh-agent, e.g. Secretive) has *only* a public key on disk, so a
 /// `.pub` path is taken as-is; a private-key stem gets `.pub` appended.
 fn pub_path_for(key: &str) -> String {
-    if key.ends_with(".pub") {
+    if std::path::Path::new(key).extension().is_some_and(|ext| ext.eq_ignore_ascii_case("pub")) {
         key.to_string()
     } else {
         format!("{key}.pub")
@@ -1020,6 +1020,7 @@ mod tests {
     fn pub_path_takes_a_dot_pub_as_is_else_appends() {
         assert_eq!(pub_path_for("/home/u/.ssh/id"), "/home/u/.ssh/id.pub");
         assert_eq!(pub_path_for("/home/u/.ssh/se.pub"), "/home/u/.ssh/se.pub");
+        assert_eq!(pub_path_for("/home/u/.ssh/se.PUB"), "/home/u/.ssh/se.PUB");
     }
 
     #[test]
