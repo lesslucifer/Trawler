@@ -85,7 +85,8 @@ plan/spec/test-plan/backlog fails that and is T3 (`docs/work/`), never T1.**
 Spec: `docs/documentation-system.html`. **T0** this file (edited only on
 explicit request — never silently or as a side effect) ·
 **T1** `docs/*.html` architecture + process · **T2** `docs/use-cases/` (what) &
-`docs/decisions/` (why), read index-first · **T3** `docs/work/` scratch, distill
+`docs/decisions/` (why) & `docs/design-rules/` (UI design musts — load before
+UI work), read index-first · **T3** `docs/work/` scratch, distill
 then archive · **T4** `src/` — the truth. One fact per tier (else link); code
 wins conflicts; never copy code into docs.
 
