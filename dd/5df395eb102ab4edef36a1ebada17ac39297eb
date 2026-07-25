@@ -1,0 +1,12 @@
+schema: cr/v2
+scope: "WU integrated-run -> epic/design-flow"
+epic: E-DFLOW
+wu: E-DFLOW.W4
+branch: wu/design-flow/integrated-run
+base: 31beb33ff4140b654abc8300b6dd5973a0b90cbc
+head: dd5df395eb102ab4edef36a1ebada17ac39297eb
+diff_sha256: f756b860c5626f2c64459da9a4778b80303cc6fff06e60d09208d8ef884661aa
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 45, verified: 24, waived: 0 }
+verdict: PASS
+date: 2026-07-26
