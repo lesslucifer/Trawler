@@ -1020,6 +1020,7 @@ mod tests {
     fn pub_path_takes_a_dot_pub_as_is_else_appends() {
         assert_eq!(pub_path_for("/home/u/.ssh/id"), "/home/u/.ssh/id.pub");
         assert_eq!(pub_path_for("/home/u/.ssh/se.pub"), "/home/u/.ssh/se.pub");
+        assert_eq!(pub_path_for("/home/u/.ssh/se.PUB"), "/home/u/.ssh/se.PUB");
     }
 
     #[test]
