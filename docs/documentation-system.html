@@ -108,7 +108,7 @@ flowchart TB
     <p>
       Each KB directory holds topical files behind exactly one <code>*-index.html</code>. The
       index is a pure routing table — one row per topic file with a one-line scope, ID prefix
-      (never reused or renumbered), and status — and contains no knowledge of its own. Sessions read index-first: open only the
+      (never reused or renumbered), and status — and contains no knowledge of its own (one exception: a KB may be a single file — design-rules — where the index carries the KB itself). Sessions read index-first: open only the
       relevant topic file(s), synthesize back into only those files, never bulk-read a KB. Topic
       boundaries follow the architecture's component map; when a file outgrows one comfortable
       read, split it and update the index.
@@ -243,7 +243,7 @@ date: 2026-07-05</pre>
       <tbody>
         <tr><td><code>CLAUDE.md</code></td><td>T0</td><td>Rules + tier map</td></tr>
         <tr><td><code>docs/*.html</code></td><td>T1</td><td>Architecture + process standards, flat</td></tr>
-        <tr><td><code>docs/use-cases/</code> · <code>docs/decisions/</code> · <code>docs/backlog/</code> · <code>docs/design-rules/</code></td><td>T2</td><td>One index + topic files each</td></tr>
+        <tr><td><code>docs/use-cases/</code> · <code>docs/decisions/</code> · <code>docs/backlog/</code> · <code>docs/design-rules/</code></td><td>T2</td><td>One index + topic files each (design-rules: a single file — the index is the KB)</td></tr>
         <tr><td><code>docs/work/</code></td><td>T3</td><td>Working docs — in-flight only; empty in git at every epic gate</td></tr>
         <tr><td><code>docs/.archive/</code></td><td>T3</td><td>Archived work docs — gitignored, never tracked</td></tr>
         <tr><td><code>src/…</code></td><td>T4</td><td>The truth</td></tr>
