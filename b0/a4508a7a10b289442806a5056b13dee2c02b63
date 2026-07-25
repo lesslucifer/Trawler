@@ -1,0 +1,22 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W4
+branch: wu/design-flow/integrated-run
+changes:
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "the flow now consumes the substrate: substrate-load-first, Elements reuse/extend/propose with fit + states-by-citation, keyboard column at Interaction, app-token mockup with the build-vs-stub boundary, slug-cited Tune, three closing artifacts (receipt/proposals/blocked-on), corrected loop topology"
+  - path: docs/work/2026-07-25-dflow-w4-plan.html
+    tier: T3
+    action: added
+    distills: "W4 plan — requirement, mapping, expected observables, waived test plan with the receipt as the stand-in"
+  - path: docs/work/2026-07-25-dflow-w4-run-2.html
+    tier: T3
+    action: added
+    distills: "run #2 — the flow detail panel designed fresh against the frozen substrate (blobs 28f5437 rulebook, 56d6521 roster): six stages, receipt over all 27 slugs, proposals, blocked-on, cross-check vs run #1, 20 ranked findings"
+  - path: docs/work/2026-07-25-dflow-w4-result.html
+    tier: T3
+    action: added
+    distills: "W4 result report this tip attests"
+t2_waived: "Substrate frozen by the WU contract: the 11 rulebook findings are W6 input and the 6 registry findings are W5 input — editing the T2 design-rules KB mid-run would have invalidated the receipt the run exists to produce. No UC contract touched (process WU); T1 flow promotion is the epic distillation."
