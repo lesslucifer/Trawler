@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a6487d09f34851f0dfa97c1" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W3 plan (Seed design rulebook + design-rules KB)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W3 plan — Seed design rulebook + design-rules KB</h1>
+      <p>Seed the design rulebook (rules + vocabularies) and home it in a new living T2 KB, <code>docs/design-rules/</code>, recognised by the doc system and the DoD gate.</p>
+      <div class="meta">WU plan · 2026-07-25 · Trawler · T3 (docs/work/) · wu/design-flow/seed-rulebook → epic/design-flow · epic plan: <a href="2026-07-16-design-flow-plan.html">E-DFLOW</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">An enumerable, slug-id'd design rulebook — rules tagged hard (Tier-1 mechanically checkable) or soft (Tier-3 judged) plus fixed vocabularies (tokens, chromatic meanings, lexicon, keyboard) — seeded from the W1 run and W2 design files, homed in a new fourth T2 KB <code>docs/design-rules/</code> whose paths <code>verify-dod</code> tier-derives as T2 and accepts at epic tips, and whose growth is wired into the distillation checklist.</p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to">E-DFLOW requirement #2 (tokens + rules) and the enforcement model — the W3 summary block in the <a href="2026-07-16-design-flow-plan.html">epic plan</a> (scope widened at planning from "T1 rulebook doc" to a living T2 KB: rules grow per-task with the codebase, T1 is shape-only; DEC-5 precedent — a living tracker is not an append-only decision. Deviation recorded in the epic plan's W3 block and distillation plan).</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <thead><tr><th>Observable</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>The seeded rulebook: 13 hard one-liner rules with Tier-1 predicates, 14 soft rules with DO/DON'T + reviewer questions, 4 vocabularies, growth lifecycle</td><td><code>docs/design-rules/design-rulebook.html</code></td></tr>
+          <tr><td>The KB routing index, one row, status marks the seed frozen through W4</td><td><code>docs/design-rules/design-rules-index.html</code></td></tr>
+          <tr><td><code>tier_of("docs/design-rules/…") == T2</code> and epic tips accept the tracked KB</td><td><code>xtask/src/notes.rs</code></td></tr>
+          <tr><td>The doc system spec names the fourth KB: tier table, KB section, layout, doc-note tier derivation, session protocol, and a new distillation-checklist row (the growth engine)</td><td><code>docs/documentation-system.html</code></td></tr>
+          <tr><td>The epic-gate expected-doc-locations list includes <code>design-rules/</code></td><td><code>docs/workflow.html</code> (check 6)</td></tr>
+          <tr><td>The decision record for the fourth KB (why T2-not-T1, why not decisions/, growth + receipt binding), routed in the index</td><td><code>docs/decisions/dec-14-design-rules-kb.html</code> + index row</td></tr>
+        </tbody>
+      </table>
+      <p>Out of scope: the T0 (CLAUDE.md) tier-map line — edited only on explicit request, surfaced separately; the W7 receipt implementation (pins rulebook blob hash) and W8 design→dev gate.</p>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table>
+        <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+        <tbody>
+          <tr><td><strong>unit</strong></td><td><code>notes.rs</code> tests extend: <code>tier_of</code> maps <code>docs/design-rules/…</code> → T2 · <code>is_expected_tracked_doc</code> accepts <code>docs/design-rules/…</code> · <code>is_rule_bearing</code> stays false for the KB (no commit signature demanded)</td></tr>
+          <tr><td><strong>integration</strong></td><td><code>dod_gate.rs</code>: <code>epic_gate_accepts_a_tracked_design_rules_kb_doc</code> — a tracked <code>docs/design-rules/</code> doc at an epic tip passes the layout check with a T2 <code>doc/v1</code> entry, mirroring <code>epic_gate_accepts_a_tracked_backlog_kb_doc</code> (the DEC-5 backlog precedent)</td></tr>
+          <tr><td><strong>e2e</strong></td><td>waived: epic-level flow e2e is W7 per the epic plan; this WU's contract is the gate's KB recognition, fully covered by the integration level</td></tr>
+        </tbody>
+      </table>
+      <p>Docs deliverables (rulebook, index, DEC, T1 edits) carry no test of their own — doc substance is review territory; the governed plan/result docs are checked by <code>verify-doc</code> at authoring time.</p>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
