@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W3
+branch: wu/design-flow/seed-rulebook
+tests:
+  unit: { count: 1, covers: "notes.rs path_classification — design-rules/ tier derivation (T2), epic-tip whitelist, stays non-rule-bearing; mr.rs pub_path_for incl. the case-insensitive .PUB branch" }
+  integration: { count: 1, covers: "dod_gate epic_gate_accepts_a_tracked_design_rules_kb_doc — a tracked design-rules doc passes the epic layout check with a T2 doc/v1 entry (mirrors the backlog-KB precedent)" }
