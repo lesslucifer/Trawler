@@ -250,7 +250,7 @@ impl Gate<'_> {
                         "6·doc-note",
                         "code changed but no T2 doc was updated and no t2_waived reason given"
                             .to_string(),
-                        "update docs/use-cases|decisions|backlog, or record t2_waived: \"<why>\""
+                        "update docs/use-cases|decisions|backlog|design-rules, or record t2_waived: \"<why>\""
                             .to_string(),
                     ));
                 }
@@ -329,7 +329,7 @@ impl Gate<'_> {
             } else {
                 (
                     format!("{path} is tracked outside the expected doc locations"),
-                    "move it to docs/, docs/use-cases/, docs/decisions/ or docs/backlog/, or archive it to docs/.archive/ (gitignored)",
+                    "move it to docs/, docs/use-cases/, docs/decisions/, docs/backlog/ or docs/design-rules/, or archive it to docs/.archive/ (gitignored)",
                 )
             };
             report.failures.push(Failure::new("6·doc-note", what, fix.to_string()));
