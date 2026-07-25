@@ -1,0 +1,12 @@
+schema: cr/v2
+scope: "WU seed-rulebook -> epic/design-flow"
+epic: E-DFLOW
+wu: E-DFLOW.W3
+branch: wu/design-flow/seed-rulebook
+base: 8173f4721ffc3714cfd5d0cf3148740a8fec507f
+head: 2e20b5cd1f06997447db173d8f06a5b387fb51f8
+diff_sha256: 0d631e30e9555c4a13da69de4999546fbd6fa915569dfa225222b36cc99043c7
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 4, verified: 2, waived: 0 }
+verdict: FAIL
+date: 2026-07-25
