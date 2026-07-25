@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a648b539f34851f0dfa97ce">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-14: design-rules T2 KB</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-14 — the design rulebook lives in a fourth T2 KB, <code>docs/design-rules/</code></h1>
+      <p>Where the design rulebook lives and how it grows with the codebase — a new indexed knowledge base, not a T1 doc, not a decision record, not a use-case.</p>
+      <div class="meta">DEC-14 · 2026-07-25 · Trawler · E-DFLOW.W3 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>E-DFLOW.W3 seeds the design rulebook: enumerable slug-id'd rules (hard/soft) plus fixed vocabularies, the coverage list the design harness (W7) checks receipts against. The epic plan originally slated it as a T1 doc. But the rulebook must <strong>grow with the codebase</strong> — every UI-touching task can lock a convention, add a vocabulary member, or contradict a rule — and T1 is deliberately hard to grow (permanent, shape-level). It fits no existing T2 KB either:</p>
+    <table data-c="options">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>T1 flat doc (the epic plan's original slot)</td><td>T1 changes only when the shape changes; rules change per-task. A frozen rulebook rots into fiction</td></tr>
+        <tr><td><code>decisions/</code> topic file</td><td>append-only by charter; rules are sharpened in place (W6 literally does that). Exactly the DEC-5 precedent — a living tracker is not an append-only decision</td></tr>
+        <tr><td><code>use-cases/</code> topic file</td><td>right mutation model (current truth, updated in place) but wrong contract subject: UC-* binds app runtime behavior; rules bind design artifacts. One KB restating another's charter blurs both</td></tr>
+        <tr><td><code>backlog/</code></td><td>forward-looking roadmap KB; rules are present-tense truth</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="choice">Choice</h2>
+    <p>A <strong>fourth T2 KB, <code>docs/design-rules/</code></strong> ("what must every design satisfy"), topic files behind <a href="../design-rules/design-rules-index.html">design-rules-index.html</a>, first file the <a href="../design-rules/design-rulebook.html">design rulebook</a>. Living like backlog/: entries mutate in place. Two invariants make living rules safe to cite:</p>
+    <ul>
+      <li><strong>Slug immutability</strong> — a rule slug cited by a design receipt is never renamed, only deprecated with a pointer; growth only widens coverage, old receipts stay valid.</li>
+      <li><strong>Vocabulary-not-vigilance</strong> — cross-screen consistency (colours, keys, words, tokens) is fixed vocabularies in the rulebook plus rules forcing designs to pick from them, under the registry's reuse-or-propose contract.</li>
+    </ul>
+    <p>Growth is wired, not promised: the <a href="../documentation-system.html">distillation checklist</a> carries a design-convention row (same-session write-back like every T2), <code>doc/v1</code> notes attest each rulebook edit mechanically at the gate, and the W7 design receipt pins the rulebook blob hash it ran against.</p>
+
+    <h2 id="consequences">Consequences</h2>
+    <table data-c="consequences">
+      <thead><tr><th>Surface</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><code>xtask/src/notes.rs</code></td><td><code>tier_of</code> derives T2 for <code>docs/design-rules/…</code>; <code>is_expected_tracked_doc</code> accepts the KB at epic tips; KB paths stay non-rule-bearing (no commit signature)</td></tr>
+        <tr><td><code>documentation-system.html</code></td><td>tier map, KB section, distillation-checklist row, doc-note tier derivation, layout, session protocol name the fourth KB</td></tr>
+        <tr><td><code>workflow.html</code></td><td>gate check 6's expected-doc-locations list includes <code>design-rules/</code></td></tr>
+        <tr><td>T0 <code>CLAUDE.md</code></td><td>unchanged — its T2 line is edited only on explicit request (it names only use-cases/decisions today; backlog/ is likewise absent)</td></tr>
+        <tr><td>E-DFLOW plan</td><td>distillation target revised from "new T1 rulebook doc" to this KB (recorded in the epic plan's W3 block at planning time)</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
