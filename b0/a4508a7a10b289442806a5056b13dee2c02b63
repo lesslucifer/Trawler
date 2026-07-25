@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W4
+branch: wu/design-flow/integrated-run
+tests:
+  integration:
+    waived: "process/docs-only WU — the deliverables are the substrate-consuming flow templates plus a second worked design run (27-slug receipt, 5 proposals, 2 blocked-on, 20 owned findings); no app code, no xtask change. The receipt is the mechanical-by-hand stand-in: every rule forced to a verdict, so an unusable rule fails visibly. The scripted flow e2e (fake user + fake agent) and the mechanical receipt-coverage check are W7 per the epic plan."
