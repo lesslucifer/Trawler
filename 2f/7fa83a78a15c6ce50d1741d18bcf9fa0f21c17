@@ -1,0 +1,54 @@
+schema: cr/v2
+scope: "WU E-DFLOW.W4 integrated-run -> epic/design-flow"
+epic: E-DFLOW
+wu: E-DFLOW.W4
+branch: wu/design-flow/integrated-run
+base: 31beb33ff4140b654abc8300b6dd5973a0b90cbc
+head: 2f7fa83a78a15c6ce50d1741d18bcf9fa0f21c17
+diff_sha256: d4e7cd476eb043e5803799d897c3c4f9684c3ac32b3f631de2b09f266c738dba
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 21, verified: 8, waived: 0 }
+verified:
+  - severity: important
+    location: "xtask/src/doc.rs:588"
+    finding: "CAPABILITY_STATES accepts a fourth value 'dropped' that the spec never sanctions"
+    evidence: "design-flow-base.html names exactly three legal states in two places (lines 150, 276) and the introducing commit's own message says three. The constant was widened so run #3's own 'dropped, then recovered' row would pass — mechanically confirmed that string contains none of the three legal states. A future run could write bare 'dropped' and pass green, reproducing the silently-dropped-capability defect this predicate exists to catch. The checker was bent to fit its first subject."
+  - severity: important
+    location: "xtask/src/doc.rs:1057"
+    finding: "an archived doc is reported as 'checks silent until ready'"
+    evidence: "Ran the binary on the now-archived run #2 doc: prints 'verify-doc draft on ... - checks silent until ready'. Archived means finished under an older contract and will never become ready, so the message states something that can never be true. One-line fix."
+  - severity: important
+    location: "xtask/src/doc.rs:588 + docs/work/design-flow-base.html:150,276"
+    finding: "the one-fact-per-tier rule is already violated, not merely at risk"
+    evidence: "HTML enumerates three capability states, Rust has four. Independently corroborates the finding above from the documentation side. GIST_MAX_WORDS=14 is also restated as a literal in the spec (lines 35, 188)."
+  - severity: nit
+    location: "xtask/src/doc.rs:678"
+    finding: "elements_of computes the tag boundary with a bare find('>') that ignores quoted attribute values"
+    evidence: "Real but pre-existing as a pattern (element_content:956 does the same) and unreachable today — every governed doc HTML-escapes angle brackets, so no input triggers it."
+  - severity: nit
+    location: "xtask/src/doc.rs:414"
+    finding: "check_avoid_cited tests for the substring @avoid anywhere in the row, not a real citation"
+    evidence: "A row reading 'reuse; @avoid noted' passes with no genuine engagement. Honest limit of what an artifact can prove, but a real gap with no test for the decoration failure mode."
+  - severity: nit
+    location: "xtask/src/doc.rs:609"
+    finding: "unanswered is collected into a Vec when only its length is read"
+    evidence: "Only .len() and .is_empty() are used; .filter().count() is the pattern already used three times in the same file."
+  - severity: nit
+    location: "xtask/src/doc.rs:583"
+    finding: "the check_capabilities comment is incident narrative rather than code rationale"
+    evidence: "Removing the 'Run #3 listed proxy unset as given ... the shipped code disproved it' sentences costs the reader no code-relevant information — it motivates the feature rather than explaining a mechanic. Per CLAUDE.md that rationale belongs in the HTML design docs. Judged separately from the check_avoid_cited comment, which DOES carry a load-bearing invariant (reading order is unobservable in an artifact) and is correct as written."
+  - severity: nit
+    location: "xtask/src/doc.rs:517,553,593,733"
+    finding: "the >=3-td row filter is written four times with a bare magic 3"
+    evidence: "True count is 4, not the 5 the finder claimed. A data_rows() helper would be a small clear win; each call site's follow-up handling differs enough that the shared part is small."
+refuted:
+  - "elements_of's depth scan drops a safety property the older helpers had — the older helpers are fooled by the same input; the comparison baseline was wrong"
+  - "gists() truncates on a nested div — unreachable: gists are inline-only by design, all 30 real ones use only b/em/code"
+  - "check_avoid_cited overclaims what a green check certifies — DEC-15 explicitly discloses this exact limit under 'What the gate does not prove'"
+  - "the four fail closures want a shared constructor — a lifetime-generic closure factory is worse than the four two-line closures it would replace"
+  - "the two test fixtures should share a helper — different compilation units, test-utils is not scoped to xtask, and the integration copy verifies the CLI contract at a different altitude"
+  - "the <p vs <pre prefix collision defeats frame prose checks — root cause predates the diff and no governed doc has a <pre inside its Frame span"
+  - "Verdict needs a variant separating draft from archived — zero callers branch on it today; speculative until the message fix needs it"
+  - "check_elements_map's O(n^2) key comparison is important — needs 32k keys to bite; the largest real doc has 46, verifying in ~11ms"
+verdict: FAIL
+date: 2026-07-26
