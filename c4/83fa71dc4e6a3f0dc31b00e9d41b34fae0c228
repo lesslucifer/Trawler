@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W4
+branch: wu/design-flow/integrated-run
+tests:
+  unit: { count: 13, covers: "doc.rs design-run checker — rulebook slug extraction from the hard/soft tables (header rows and non-slug code spans excluded); a conforming run green with the computed tally; and one red per check: missing soft slug, hard slug in the receipt, misspelling paired with its nearest miss, verdict outside the enum, absent citation, malformed YAML surfacing serde_yaml position, unreadable rulebook red rather than silently green, unkeyed catalog, static mockup, specimen linked in prose only, colour literal — with an id selector and color-mix over tokens asserted green" }
+  integration: { count: 1, covers: "verify_doc.rs a_design_run_is_receipted_against_the_rulebook_on_disk — drives the real binary against a rulebook written into a TempDir: green prints the coverage tally and the machine-checked hard-rule count; a receipt missing a soft rule, carrying a verdict outside the enum, or claiming a hard rule exits 1 naming each" }
+  e2e: { waived: "the scripted flow e2e (fake user + fake agent) is W7 per the epic plan" }
