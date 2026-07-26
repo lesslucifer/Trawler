@@ -1,0 +1,13 @@
+schema: test/v2
+level: commit
+epic: E-DFLOW
+wu: E-DFLOW.W4
+branch: wu/design-flow/integrated-run
+tests:
+  unit: { count: 5, covers: "doc.rs check_elements_map — a keyed tree over an unkeyed catalog red on the catalog half (the hole that shipped: data-map plus any single data-key used to pass while half the map was dead); a keyed catalog under an unkeyed tree red on the tree half; a component placed in the tree with no catalog row red by name, deduped when it appears in several tree spots, since a placed component with no row never faced the reuse-or-propose pass; the missing-data-map case still red and unchanged; and run #3's real Elements stage read off disk, pinning its map as a live two-half map — the regression test that would have caught the inert one. Both green fixtures (unit design_run, integration verify_doc.rs) were themselves the weak single-key shape and were corrected to a real two-half map, so the suite no longer certifies the bug as green" }
+  integration: { waived: "no contract crosses a process or file boundary — the check is a pure function over a doc fragment, and verify_doc.rs already drives verify-doc end to end over a temp-file doc, including the corrected two-half fixture" }
+  e2e: { waived: "the scripted flow e2e (fake user + fake agent) is W7 per the epic plan" }
+verification:
+  mutation: "the check was confirmed to bite rather than pass vacuously by mutating the real doc — renaming one catalog key to a typo produces `elements·map placed but not in the catalog: notice` — and re-run after the ASCII Shape sketches landed to confirm the new <pre class=\"spec\"> blocks carry no data-key and so do not pollute tree-half detection"
+  docs: "verify-doc on the run doc is red on exactly the four pending stage items (receipt, mockup state, proposals, blocked-on) and green on assets·specimen, elements·map and all six frame density predicates"
+notes: "docs/work/design-flow-base.html is a T3 flow spec carrying the same two artifact-shape changes (reference-only Shape sketch; merged placement cell with coloured @use/@avoid) so run #4 inherits them; docs-only diff, exempt"
