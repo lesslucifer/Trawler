@@ -1,0 +1,40 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W4
+branch: wu/design-flow/integrated-run
+covers: "the six commits after 7e54de4, whose own doc/v1 note covers the WU's first round"
+changes:
+  - path: docs/work/components/notice.html
+    tier: T3
+    action: added
+    distills: "Notice — the design file for the component run #2 proposed: four nothing-kinds (empty · pending · capped · not captured), tones, and the @use/@avoid partition whose 'no success/ok states' line run #3 then broke and filed rather than forked"
+  - path: docs/work/components/button.html
+    tier: T3
+    action: added
+    distills: "Button — the second run #2 proposal designed: variants, the in-flight state, and the @avoid line that excludes the copy affordance CopyText owns"
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "flow template rev 4, all of it from run #3's own failures: read @avoid FIRST (the pass is a rejection test, not a matching test); state-the-conclusion-collapse-the-proof as a global principle; Frame rows end in a concrete ✓/✗ pair replacing the abstract 'checked by' column, with six density predicates; Interaction responses are `zone → delta` lines; Tune is drawn, not described; every Frame `Given` capability answered (used · deliberately unused · blocked); data-status=archived as the contract for a finished run; and — from the code review — a predicate's vocabulary is closed, so loosening one is a rulebook change needing its own reasoning, never a same-commit accommodation of the artifact that tripped it"
+  - path: docs/work/2026-07-26-dflow-w4-run-3.html
+    tier: T3
+    action: added
+    distills: "the third worked run, the generalization test: the frozen substrate applied to a screen sharing no element with the panel it was extracted from. 2 reuses · 4 proposals · 2 extends against run #2's 12/2 — the registry covers showing captured data and not telling a user to act. All six stages, a capability-coverage table, a cross-check against the shipped Onboarding.tsx read only after Tune, and 28 findings routed W5 9 · W6 8 · flow 9 · W7 2. Deliberately NOT archived: its tests pin the new predicates against a real artifact, and archiving returns Exempt before any check runs"
+  - path: docs/work/2026-07-25-dflow-w4-result.html
+    tier: T3
+    action: updated
+    distills: "W4 result revised for run #3 — two outcome rows, the beyond-the-plan deviation recorded rather than hidden, evidence 152 -> 270 tests, and the run-#3 follow-ups tabled by owner"
+  - path: docs/work/2026-07-25-dflow-w4-run-2.html
+    tier: T3
+    action: updated
+    distills: "archived (data-status) — a record of what the flow was under an older contract, exempt from the form predicates run #3 added"
+  - path: docs/work/2026-07-16-dflow-run-1.html
+    tier: T3
+    action: updated
+    distills: "archived, same reason"
+  - path: docs/decisions/dec-15-design-run-enforcement.html
+    tier: T2
+    action: updated
+    distills: "three consequences corrected or added: the archived-run model (and why the newest run and any open run are never archived); a run's own failures are the check inventory, which is the model working rather than a sign it was under-specified; and a predicate's vocabulary is closed — the artifact is the suspect when a new check reds, because a gate that bends converts an open defect into a green receipt. Also n/13 -> n/m, since the denominator is counted off the rulebook"
+code_truth: "T4 wins and holds it: xtask/src/doc.rs is the authority on what is checked, and DEC-15 says so explicitly. The specs describe the checks for a reader; the numeric thresholds (GIST_MAX_WORDS, the frame density constants) live in code, with prose in design-flow-base.html citing them rather than restating a second set. Verified consistent by the altitude finder this round"
+notes: "No T0 edit: CLAUDE.md is untouched by this WU. No T1 edit in these six commits — work-planning.html took its one row at 7e54de4 and needed nothing further. Known and out of scope: docs/work/2026-07-26-dflow-w4-output-quality-plan.html lists 9 design-run data-items where the code now has 10; it is a planning doc superseded by the run it planned, flagged in this round's cr/v2 note"
