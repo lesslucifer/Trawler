@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a659b159f34851f0dfa98e2">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Button component design</title>
+  <link rel="stylesheet" href="specimen.css">
+  <style>
+    /* Every component value below comes from specimen.css. This block is doc
+       scaffolding plus ONE new thing: Button itself, which has no extraction
+       yet because it does not exist. Its rules are marked NEW and are the
+       proposal — everything else is composed. */
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+
+    /* NEW — the proposed component. Deliberately CopyButton's chrome with the
+       clipboard behaviour removed: same border, radius, padding, family, size
+       and interaction tones, so the two never read as different buttons. */
+    .bt{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:3px 9px;min-height:24px;border:1px solid var(--a-line);border-radius:3px;font-family:var(--a-ui);font-size:11.5px;color:var(--a-body);cursor:pointer;background:transparent;user-select:none;white-space:nowrap;transition:color .1s,border-color .1s,background .1s;}
+    .bt:hover,.bt.s-hover{color:var(--a-ink);border-color:var(--a-mute);}
+    .bt:focus-visible,.bt.s-focus{outline:1px solid var(--a-mute);outline-offset:2px;color:var(--a-ink);}
+    .bt:active,.bt.s-active{color:var(--a-ink);background:rgba(174,166,156,.12);}
+    .bt:disabled,.bt.s-disabled{opacity:.38;pointer-events:none;}
+    .bt-ghost{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:3px 9px;border:1px dashed var(--a-mute);border-radius:3px;background:rgba(174,166,156,.06);font-family:var(--a-ui);font-size:11.5px;color:var(--a-mute);}
+
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;display:flex;align-items:center;gap:10px;padding:10px 12px;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:var(--a-ui);}
+    .tsdoc{font-family:var(--a-mono);font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .app .fork-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;}
+    .app .fork-card{background:var(--a-soft);border:1px solid var(--a-line);border-radius:6px;padding:10px 12px;min-width:170px;flex:1;}
+    .app .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--a-mute);margin-bottom:6px;font-family:var(--a-ui);}
+    .app .fork-card .fc-ex{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;}
+    .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:var(--a-ui);}
+    .sib th,.sib td{vertical-align:top;}
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Button <span class="tier t1">T1</span></h1>
+      <p>Plain labelled action button — the primitive two other components' contracts already point at, and the registry does not have.</p>
+      <div class="meta">Component design · <strong>proposed</strong> · 2026-07-26 · E-DFLOW.W4 · T3 (docs/work/components/) · proposed by <a href="../2026-07-25-dflow-w4-run-2.html#proposals">run #2</a> · fixes <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 30</a> · owner W5</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> <a href="icon-button.html">IconButton</a>'s <code>@avoid</code> redirects word-labelled actions to <em>"CopyButton or a plain button"</em> — naming a component the roster does not contain. <a href="copy-button.html">CopyButton</a>'s <code>@avoid</code> rules out "anything that is not a copy action". So the first non-copy, non-glyph action the collection met (<em>retry</em>) had nowhere to land. It stayed invisible for four zones because a read-only detail panel has almost no actions that are not copies — the gap is structural, not incidental.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — generic action affordance, no business logic → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td><em>retry</em> and <em>close</em> in the detail panel's three load failures (zone E) · <em>retry</em> in BodyViewer's proposed fifth state · every future form, dialog or confirm the app grows</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>nowhere — and that is the finding. Run #2 had to style its zone-E buttons at screen level because there was nothing to compose</td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (T1 primitive). Third sibling of <a href="copy-button.html">CopyButton</a> and <a href="icon-button.html">IconButton</a>: <strong>Button is the base case</strong> — a label and a handler. The other two are that plus a clipboard, or that minus the label.</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① it must not read as a fourth button style</td><td>identical chrome to CopyButton — same border, radius, padding, family, size, and interaction tones. The visual difference between "copy" and "retry" should be the <em>word</em>, nothing else</td></tr>
+        <tr><td>② it owns no effect (unlike CopyButton)</td><td>no confirming state, no error state. The caller's handler owns the outcome; a retry's result is a new panel state, not a button state</td></tr>
+        <tr><td>③ zero chromatic accent (Warp DEC-11, <code>zero-accent</code>)</td><td>no filled/primary variant. Hover and focus are ink-toned; ok/warn stay reserved for status</td></tr>
+        <tr><td>④ calm, dense panel (<code>data-ink-first</code>)</td><td>hairline border at rest and nothing else — the border is what makes a bare word read as a button, and it is the whole of the chrome</td></tr>
+        <tr><td>⑤ touch target (WCAG 2.5.8)</td><td><code>min-height:24px</code> — the floor IconButton cites. Padding, not margin: the whole box is interactive</td></tr>
+        <tr><td>⑥ its most common host is a failure state</td><td>must survive being the only interactive element on screen, next to warn-toned text, without competing with it — settled in D2</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="siblings">The three button primitives — who owns what</h2>
+    <p style="color:var(--muted);">A new button in a system that already has two needs its boundary drawn before its pixels. This table is the boundary; the <code>@avoid</code> lines of all three must agree with it.</p>
+    <table data-c="siblings" class="sib">
+      <thead><tr><th></th><th>Button <em>(this)</em></th><th><a href="copy-button.html">CopyButton</a></th><th><a href="icon-button.html">IconButton</a></th></tr></thead>
+      <tbody>
+        <tr><td><strong>trigger reads as</strong></td><td>a word</td><td>a word (or ⧉, fork D2)</td><td>a glyph</td></tr>
+        <tr><td><strong>owns an effect</strong></td><td><span class="no">no</span> — caller's handler</td><td><span class="yes">yes</span> — the clipboard write</td><td><span class="no">no</span> — caller's handler</td></tr>
+        <tr><td><strong>result states</strong></td><td>none</td><td>confirming · error</td><td>none</td></tr>
+        <tr><td><strong>chrome</strong></td><td>hairline border</td><td>hairline border</td><td>none at rest</td></tr>
+        <tr><td><strong>use when</strong></td><td>the action needs a word and is not a copy</td><td>the action is a copy</td><td>the glyph alone is unambiguous</td></tr>
+        <tr><td><strong>hit floor</strong></td><td>24px min-height</td><td>(inherits its padding)</td><td>28×28, floor 24</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="sibling-edits">
+      <strong>Two confirmed files need one line each</strong> if this lands — W5's to make, not this file's: <a href="icon-button.html">IconButton</a>'s <code>@avoid</code> should link "a plain button" to this component instead of naming a phantom, and <a href="copy-button.html">CopyButton</a>'s frame should note that its chrome is shared with Button rather than its own. Neither is a design change; both are the registry closing the loop it left open.
+    </div>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-hero">
+      <div class="panel" style="max-width:380px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="bt"><span class="anno" style="position:absolute;transform:translate(24px,-14px);z-index:1;">1</span>retry</button>
+          <button class="bt">close</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">Zone E's action row — two peers, no primary</div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;align-items:center;gap:12px;">
+            <span class="bt-ghost">retry</span>
+            <span style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">dashed = the full hit box</span>
+          </div>
+          <div class="cap">3px/9px padding around the label, 24px minimum height</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> hit box</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>padding:3px 9px</code>, <code>min-height:24px</code>, <code>border-radius:3px</code> — CopyButton's box exactly. Width follows the label; never fixed, never stretched.</span>
+            <span class="k">why</span><span>identical to CopyButton so a retry and a copy sitting in the same row are the same object with different words (driver ①). <code>min-height</code> rather than a fixed height: the padding alone gives ~22px, and WCAG 2.5.8's floor is 24 — the min-height is what closes that gap without changing the drawn look.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;align-items:center;gap:12px;">
+            <button class="bt" style="pointer-events:none;">retry</button>
+            <button class="bt" style="pointer-events:none;">close</button>
+            <button class="bt s-hover" style="pointer-events:none;">retry</button>
+          </div>
+          <div class="cap">rest · rest · hover — body → ink, line → mute</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> label</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>Inter 11.5px, <code>ink-body</code> at rest, <code>white-space:nowrap</code>. One lowercase word wherever a word will do — "retry", "close", "save".</span>
+            <span class="k">why</span><span><code>ink-body</code> rather than <code>ink-mute</code>: unlike CopyButton (an always-available convenience that should stay quiet), a Button usually <em>is</em> the point of its zone — it is the way out of a failure. One notch brighter at rest, same hover target. <code>calm-microcopy</code> keeps it lowercase and verb-first.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;align-items:center;gap:12px;">
+            <button class="bt" style="pointer-events:none;"><span style="font-size:12px;line-height:1;">↻</span>retry</button>
+            <span style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">optional, rarely earned</span>
+          </div>
+          <div class="cap">leading glyph — the same slot CopyButton's ⧉ uses</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> optional leading glyph</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>optional <code>ReactNode</code>, 5px gap before the label, inherits the label's tone. <code>aria-hidden</code> — the label is the accessible name.</span>
+            <span class="k">why</span><span>parity with CopyButton's anatomy, so the two stay one shape. But a glyph on a labelled button is decoration unless it adds recognition the word lacks (<code>data-ink-first</code>) — zone E uses none. Present because the slot must exist for the shapes to match, documented as rarely earned so it does not become the default.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="no-primary">
+      <strong>No primary variant, no filled style.</strong> <code>zero-accent</code> leaves nothing to fill a button with — <code>ok</code> and <code>warn</code> are status colours, and a warn-filled "retry" would state that retrying is the danger. Emphasis comes from <em>which actions are offered at all</em>: zone E's eviction case shows only <em>close</em> precisely because retry can never succeed there. Choosing the actions is the hierarchy; painting one of them is not.
+    </div>
+    <div class="callout" data-c="no-confirm">
+      <strong>No confirming state, no loading state.</strong> CopyButton confirms because it owns the clipboard write and nothing else on screen changes. A Button's handler changes the zone — a successful retry replaces the Notice with content, which is the confirmation. A spinner belongs to the zone doing the work, not to the button that started it. Adding either would make this T2.
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel"><button class="bt" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">rest</span></div>
+        <div class="cap"><strong>rest</strong> — <code>ink-body</code> label, hairline <code>line</code> border, transparent background</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><button class="bt s-hover" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">hover</span></div>
+        <div class="cap"><strong>hover</strong> — label to <code>ink</code>, border to <code>ink-mute</code>. No background (that is active's job)</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><button class="bt s-focus" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">focus</span></div>
+        <div class="cap"><strong>focus</strong> — 1px mute outline at 2px offset, ink label. Ink-toned, never chromatic</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><button class="bt s-active" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">active</span></div>
+        <div class="cap"><strong>active</strong> — 12% mute background wash, ink label (pressed feel)</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><button class="bt s-disabled" disabled>retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">disabled</span></div>
+        <div class="cap"><strong>disabled</strong> — 38% opacity, no pointer events, removed from tab order</div>
+      </div>
+    </div>
+    <p style="color:var(--muted);font-size:12px;">Five states, and they are <a href="copy-button.html">CopyButton</a>'s five minus <em>confirming</em> and <em>error</em> — the two it owns because it owns the clipboard. Same values throughout; the only deliberate divergence is the rest label tone (<code>ink-body</code> vs CopyButton's <code>ink-mute</code>), argued in anatomy ②.</p>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app" data-c="d1">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D1 · chrome — clone CopyButton's box, don't design a new one</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex"><button class="cb" style="pointer-events:none;"><span class="cb-icon">⧉</span>curl</button><button class="bt" style="pointer-events:none;">retry</button></div>
+          <div class="fc-note"><strong>Identical border, radius, padding, family and size.</strong> Side by side, the only difference is the word — which is correct, because the only difference <em>is</em> the word. A second button box would make the collection teach that copies and non-copies are different kinds of thing.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex"><button class="bt" style="pointer-events:none;background:var(--a-soft);border-color:var(--a-mute);color:var(--a-ink);">retry</button></div>
+          <div class="fc-note"><strong>A distinct, slightly heavier box</strong> so actions read as more consequential than copies. Rejected: it invents a weight hierarchy the rulebook does not have, and every screen would then need to decide which of two boxes an action deserves.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d2" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D2 · a button inside a warn Notice stays ink-toned</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex" style="flex-direction:column;align-items:flex-start;gap:4px;">
+            <span style="color:var(--a-warn);font-size:12px;font-family:var(--a-ui);">⚠ trawler is not responding</span>
+            <button class="bt" style="pointer-events:none;">retry</button>
+          </div>
+          <div class="fc-note"><strong>Ink-toned, unchanged.</strong> The warn belongs to the <em>message</em>; the button is the way out, not part of the problem. Keeping exactly one warn element per failure means the eye lands on the sentence first — which is the one that says what happened.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex" style="flex-direction:column;align-items:flex-start;gap:4px;">
+            <span style="color:var(--a-warn);font-size:12px;font-family:var(--a-ui);">⚠ trawler is not responding</span>
+            <button class="bt" style="pointer-events:none;color:var(--a-warn);border-color:var(--a-warn);">retry</button>
+          </div>
+          <div class="fc-note"><strong>Warn-toned inside a warn Notice.</strong> Tempting for cohesion, but it doubles the alarm and reads as "retrying is dangerous". Also collides with CopyButton's <code>s-error</code>, where warn on a button genuinely means <em>this button failed</em>.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d3" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D3 · label tone at rest — <code>ink-body</code>, one notch above CopyButton</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex"><button class="bt" style="pointer-events:none;">retry</button><span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">ink-body</span></div>
+          <div class="fc-note"><strong><code>ink-body</code>.</strong> A Button is usually the only way out of the zone it sits in; CopyButton is a convenience beside content that is already readable. <code>visual-weight-follows-goals</code> — weight follows what the zone is for.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex"><button class="bt" style="pointer-events:none;color:var(--a-mute);">retry</button><span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">ink-mute</span></div>
+          <div class="fc-note"><strong><code>ink-mute</code>, exact CopyButton parity.</strong> Simpler rule, and one fewer divergence to remember. Rejected because the panel's only recovery action would then be the quietest text in the zone.</div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="open-q" style="margin-top:16px;">
+      <strong>Open for W5:</strong> whether a <em>destructive</em> tone is needed later (clear the capture ring, delete a flow). Deliberately not designed here — the app has no destructive action today, and <code>zero-accent</code> means the answer would have to be a word ("clear all"), a confirm step, or a warn carve-out. Designing it against a hypothetical would settle it wrong; recorded so the first real tenant reopens it rather than inventing a variant.
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Required</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>children</code></td><td><code>ReactNode</code></td><td>✅ required</td><td>the label — one lowercase verb wherever a verb will do ("retry", "close"). It is also the accessible name, so no <code>aria-label</code> is needed</td></tr>
+        <tr><td><code>onClick</code></td><td><code>() =&gt; void</code></td><td>✅ required</td><td>caller-supplied handler; the component has no built-in effect and no result state</td></tr>
+        <tr><td><code>glyph</code></td><td><code>ReactNode</code></td><td>optional</td><td>leading glyph, <code>aria-hidden</code>. Rarely earned — omit unless it adds recognition the word lacks</td></tr>
+        <tr><td><code>disabled</code></td><td><code>boolean</code></td><td>optional (default: false)</td><td>sets HTML <code>disabled</code>, 38% opacity; the browser removes it from tab order</td></tr>
+        <tr><td><code>type</code></td><td><code>'button' | 'submit'</code></td><td>optional (default: <code>'button'</code>)</td><td>defaults to <code>button</code> so a Button inside a future form never submits it by accident</td></tr>
+        <tr><td><code>className</code></td><td><code>string</code></td><td>optional</td><td>pass-through for layout only (e.g. <code>ml-auto</code>) — never for colour, border or size</td></tr>
+      </tbody>
+    </table>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built (code-as-truth):</p>
+      <pre class="tsdoc">/**
+ * Button — plain labelled action button; the base case of the three button primitives.
+ * @tier T1 — generic action affordance, no business logic
+ * @anatomy CopyButton's box exactly (1px line border, radius 3, padding 3/9, min-height 24 for WCAG 2.5.8) · Inter 11.5px lowercase label at ink-body, one notch above CopyButton's ink-mute because a Button is usually its zone's only way out · optional leading glyph (aria-hidden, rarely earned) · no filled or primary variant — zero-accent leaves nothing to fill it with
+ * @use any action that needs a word and is not a copy: retry, close, save, submit — the component IconButton's @avoid means by "a plain button"
+ * @avoid copy actions (use CopyButton — it owns the clipboard write and its confirm) · actions whose glyph is unambiguous alone (use IconButton) · emphasis by styling: pick which actions to offer instead, a Button never carries a primary/filled variant · warn-toning it inside a warn Notice (the message owns the alarm, the button is the way out)
+ * @states rest (ink-body label, hairline border) · hover (ink label, mute border) · focus (1px mute outline, 2px offset) · active (12% mute wash) · disabled (38% opacity, no tab). No confirming and no loading state — the caller's zone owns the outcome
+ * @madeof —
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Any action that needs a word and is not a copy — retry, close, save, submit, and every form or dialog the app grows. This is the primitive <a href="icon-button.html">IconButton</a>'s <code>@avoid</code> already sends you to. Prefer one lowercase verb; the label is the accessible name.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>Copy actions — <a href="copy-button.html">CopyButton</a> owns the clipboard write and the confirm that follows it. Actions whose glyph is unambiguous in place (close ×, save ↓ in a dense bar) — <a href="icon-button.html">IconButton</a> is more compact and already the convention there. Reaching for emphasis: there is no primary variant, so express importance by offering fewer actions, not louder ones. And never warn-tone it inside a warn <a href="notice.html">Notice</a> (D2).</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part / state</th><th>Tailwind (build WU)</th></tr></thead>
+      <tbody>
+        <tr><td>box (base)</td><td><code>inline-flex items-center justify-center gap-[5px] px-[9px] py-[3px] min-h-6 rounded-button border border-line cursor-pointer select-none whitespace-nowrap bg-transparent</code></td></tr>
+        <tr><td>label at rest</td><td><code>font-sans text-[11.5px] text-ink-body</code></td></tr>
+        <tr><td>hover</td><td><code>hover:text-ink hover:border-ink-mute</code> — no background</td></tr>
+        <tr><td>focus ring</td><td><code>focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-ink-mute focus-visible:text-ink</code> — never chromatic</td></tr>
+        <tr><td>active</td><td><code>active:text-ink active:bg-ink-mute/12</code> — the wash <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 22</a> has no token for; the literal is CopyButton's, not a new one</td></tr>
+        <tr><td>disabled</td><td><code>disabled:opacity-38 disabled:pointer-events-none</code>; the <code>disabled</code> attr removes it from tab order</td></tr>
+        <tr><td>leading glyph</td><td><code>text-xs leading-none</code>, <code>aria-hidden="true"</code>, inherits the label tone</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="spacing-note">
+      <strong>Off-scale, disclosed:</strong> <code>py-[3px]</code>, <code>px-[9px]</code>, <code>gap-[5px]</code> and the 11.5px label are below <code>spacing-scale</code>'s 8px floor and off the type scale. They are <em>not</em> a new liberty — they are CopyButton's confirmed values, cloned deliberately per D1, and the same contradiction <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 14</a> already records. Named here so a new component does not quietly enlarge the breach: <strong>W6 settles the floor</strong>, and this file moves with CopyButton, never independently of it. The one value chosen rather than inherited is <code>min-h-6</code> (24px) — a WCAG floor, not a spacing choice.
+    </div>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="app" data-c="specimen">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Zone E — a failure with two ways out</div>
+          <div class="panel" style="max-width:330px;">
+            <div style="display:flex;gap:6px;align-items:flex-start;font-family:var(--a-ui);font-size:12px;color:var(--a-warn);line-height:1.5;">
+              <span>⚠</span><span>could not load this flow — 500</span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+              <button class="bt" id="spec-retry">retry</button>
+              <button class="bt" id="spec-close">close</button>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Both ink-toned beside warn text (D2). Tab, then Enter or Space.</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Beside its siblings</div>
+          <div class="panel" style="max-width:330px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button class="bt" id="spec-sib">retry</button>
+            <button class="cb"><span class="cb-icon">⧉</span>curl</button>
+            <button class="ib" title="close" aria-label="close">×</button>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Button · CopyButton · IconButton — one box shared by the two labelled ones (D1).</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Disabled</div>
+          <div class="panel" style="max-width:330px;display:flex;align-items:center;gap:10px;">
+            <button class="bt s-disabled" disabled>retry</button>
+            <span style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">already retrying</span>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Not reachable by Tab. 38% opacity — CopyButton's disabled value.</div>
+        </div>
+      </div>
+      <div id="spec-log" style="min-height:20px;"></div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — rendered in app Warp tokens, composed from <a href="specimen.css">specimen.css</a>. The CopyButton and IconButton beside it are their own drawings, unmodified; only <code>.bt*</code> is new.</div>
+    </div>
+  </main>
+  <script>
+    function logAction(msg) {
+      const el = document.getElementById('spec-log');
+      el.style.cssText = 'font-size:12px;font-family:Inter,system-ui,sans-serif;color:#4cc38a;margin-top:6px;';
+      el.textContent = msg;
+      clearTimeout(el._t);
+      el._t = setTimeout(() => { el.textContent = ''; }, 2000);
+    }
+    document.getElementById('spec-retry').addEventListener('click', () => logAction('retry handler fired — the zone owns what happens next, not the button'));
+    document.getElementById('spec-close').addEventListener('click', () => logAction('close handler fired'));
+    document.getElementById('spec-sib').addEventListener('click', () => logAction('same box as the copy beside it, different word'));
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

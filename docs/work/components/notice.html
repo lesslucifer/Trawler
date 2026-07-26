@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a659b149f34851f0dfa98e0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Notice component design</title>
+  <link rel="stylesheet" href="specimen.css">
+  <style>
+    /* Every component value below comes from specimen.css. This block is doc
+       scaffolding plus ONE new thing: Notice itself, which has no extraction
+       yet because it does not exist. Its rules are marked NEW and are the
+       proposal — everything else is composed. */
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);}
+
+    /* NEW — the proposed component. Absorbs .ht-none (HeaderTable, Inter 12px
+       upright) and .body-pane .notice (BodyViewer, mono italic): finding 24. */
+    .nt{display:flex;gap:6px;align-items:flex-start;font-family:var(--a-ui);font-size:12px;line-height:1.5;padding:4px 0;}
+    .nt-mute{color:var(--a-mute);}
+    .nt-warn{color:var(--a-warn);}
+    .nt .nt-glyph{flex:none;line-height:1.5;}
+    .nt .nt-body{min-width:0;}
+    .nt .nt-detail{display:block;color:var(--a-mute);font-size:11.5px;margin-top:2px;}
+    .nt .nt-action{display:flex;gap:8px;margin-top:8px;}
+    /* NEW — plain labelled button, proposed alongside; drawn in button.html.
+       Composed here so the action slot is not a stub. */
+    .bt{border:1px solid var(--a-line);border-radius:3px;padding:3px 10px;font-family:var(--a-ui);font-size:11.5px;color:var(--a-body);background:transparent;cursor:pointer;}
+    .bt:hover{color:var(--a-ink);border-color:var(--a-mute);}
+
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:var(--a-ui);}
+    .tsdoc{font-family:var(--a-mono);font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .app .fork-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;}
+    .app .fork-card{background:var(--a-soft);border:1px solid var(--a-line);border-radius:6px;padding:10px 12px;min-width:180px;flex:1;}
+    .app .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--a-mute);margin-bottom:6px;font-family:var(--a-ui);}
+    .app .fork-card .fc-ex{margin-bottom:6px;}
+    .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:var(--a-ui);}
+    .absorb td:first-child{white-space:nowrap;}
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Notice <span class="tier t1">T1</span></h1>
+      <p>One sentence explaining why there is nothing to show, or why something failed — with the action that actually helps, when one exists.</p>
+      <div class="meta">Component design · <strong>proposed</strong> · 2026-07-26 · E-DFLOW.W4 · T3 (docs/work/components/) · proposed by <a href="../2026-07-25-dflow-w4-run-2.html#proposals">run #2</a> · fixes <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 24</a> · owner W5</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> the roster has no absence/failure renderer, yet <em>two confirmed components already draw one privately and disagree about it</em> — HeaderTable's <code>.ht-none</code> is Inter 12px upright, BodyViewer's <code>.body-pane .notice</code> is mono italic. Every flow detail panel shows both at once. Run #2's failure state would have made a third private copy, which is what turned a styling wart into a component proposal: a third copy settles nothing, and the fourth is already implied.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — renders a sentence at a tone; owns no domain knowledge → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>HeaderTable empty + pending · BodyViewer's five absences · the flow detail panel's three load failures (zone E) · every future "nothing here / it broke" surface</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>twice, privately and inconsistently: <code>.ht-none</code> (<a href="header-table.html">HeaderTable</a>) and <code>.body-pane .notice</code> (<a href="body-viewer.html">BodyViewer</a>) — marked <code>CONFLICT:</code> in <a href="specimen.css">specimen.css</a></td></tr>
+      <tr><td><strong>Made of</strong></td><td><a href="button.html">Button</a> (T1) in the optional action slot — nothing else. Sibling of neither button primitive: Notice is a <em>message</em> that may carry an action, not an action.</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① one renderer, two tones</td><td><code>tone="mute"</code> (absence — normal, expected) · <code>tone="warn"</code> (failure — something broke). No third tone; <code>ok</code> is for outcomes, and a notice is never an outcome</td></tr>
+        <tr><td>② it renders a sentence, it does not decide which</td><td>no <code>reason</code> enum, no built-in copy. The caller passes words. A component that owned the wording would need a case per absence and would still be wrong for the next one</td></tr>
+        <tr><td>③ absence ≠ instruction (<code>empty-states-orient</code>, run #2 finding 16)</td><td>the action slot is <strong>optional</strong>. "not captured — too large" has no next action, and inventing one is a lie</td></tr>
+        <tr><td>④ tone is never the only channel (<code>colour-plus-text</code>)</td><td>warn carries a ⚠ glyph <em>and</em> warn-toned text; the sentence itself names the failure. Remove the colour and nothing is lost</td></tr>
+        <tr><td>⑤ it is a sentence, not a card (<code>data-ink-first</code>)</td><td>no border, no background, no panel chrome. It sits inside whatever zone already has an edge</td></tr>
+        <tr><td>⑥ calm, lowercase, blames nobody (<code>calm-microcopy</code>)</td><td>the component enforces nothing about wording, but the specimen is the reference the tenants copy</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="absorbs">What it absorbs — the two private copies</h2>
+    <p style="color:var(--muted);">The proposal is only worth its registry row if it <em>replaces</em> the drawings that disagree. This is the reconciliation W5 has to sign off, and the one design call this file makes that neither existing component can make alone.</p>
+    <table data-c="absorb" class="absorb">
+      <thead><tr><th>Aspect</th><th>HeaderTable <code>.ht-none</code></th><th>BodyViewer <code>.body-pane .notice</code></th><th>Notice — settled</th></tr></thead>
+      <tbody>
+        <tr><td>family</td><td>Inter (<code>--a-ui</code>)</td><td>mono, italic</td><td><span class="yes">Inter, upright</span> — <code>mono-for-wire-data</code> reserves mono for bytes that crossed the wire. A notice is chrome <em>about</em> missing data, not the data</td></tr>
+        <tr><td>size</td><td>12px</td><td>12px (inherits pane)</td><td><span class="yes">12px</span> — both agreed</td></tr>
+        <tr><td>tone</td><td><code>ink-mute</code></td><td><code>ink-mute</code></td><td><span class="yes">ink-mute</span> — both agreed; warn is the new second tone</td></tr>
+        <tr><td>italic</td><td>no</td><td>yes</td><td><span class="no">no</span> — italic was carrying "this is not payload"; the family change already carries it, and italic mono at 12px is the least legible combination in the panel</td></tr>
+        <tr><td>failure tone</td><td>—</td><td><code>.body-pane .warn</code>, a separate class</td><td><span class="yes">folded in</span> as <code>tone="warn"</code> — same component, not a sibling class</td></tr>
+        <tr><td>action</td><td>—</td><td>—</td><td><span class="yes">new</span> — neither could offer one; zone E and BodyViewer's fifth state both need it</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="absorb-cost">
+      <strong>The cost, stated:</strong> BodyViewer's body pane currently renders its absence in the pane's own mono voice, so the notice sits on the same baseline grid as the bytes it replaces. Switching to Inter breaks that alignment. Accepted — the alternative is that the panel shows two absence families three inches apart, which is the finding. <strong>W5 owns the call</strong>; if it goes the other way, it must go the other way in <em>both</em> places, and <code>mono-for-wire-data</code> needs the carve-out written down.
+    </div>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-hero">
+      <div class="panel" style="max-width:420px;">
+        <div class="lbl">response body</div>
+        <div class="nt nt-warn">
+          <span class="nt-glyph">⚠</span>
+          <span class="nt-body">body unavailable
+            <span class="nt-detail">the flow is no longer captured</span>
+            <span class="nt-action"><button class="bt">retry</button></span>
+          </span>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">BodyViewer's proposed fifth state — every optional part present at once</div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel"><div class="nt nt-mute"><span class="nt-body">no request body</span></div></div>
+          <div class="cap">the minimum Notice: one sentence, mute, no glyph, no action</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> the sentence</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>Inter 12px, <code>line-height:1.5</code>, tone <code>ink-mute</code> or <code>ink-warn</code>. The only required part. Wraps freely; never truncates (<code>wrap-not-truncate</code>).</span>
+            <span class="k">why</span><span>the absence has to say <em>which</em> absence it is, and that never fits a fixed width. One sentence, lowercase, no terminal period — matching every other string in the app.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">trawler is not responding</span></div></div>
+          <div class="cap">warn tone — the glyph appears with it, never alone</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> tone glyph</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>⚠ rendered <em>only</em> at <code>tone="warn"</code>, same tone as the text, <code>aria-hidden</code>. Mute notices have no glyph.</span>
+            <span class="k">why</span><span><code>colour-plus-text</code>: warn must not be signalled by colour alone. It is <code>aria-hidden</code> because the sentence already carries the meaning for a screen reader — announcing "warning sign" adds nothing. The mute tone needs no glyph because absence is not a signal, it is the default.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel"><div class="nt nt-mute"><span class="nt-body">not captured — too large<span class="nt-detail">the body exceeded the 10 MiB capture cap</span></span></div></div>
+          <div class="cap">optional second line — explains, does not instruct</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> detail line</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>optional. Always <code>ink-mute</code> even under a warn headline, 11.5px, 2px below. One line of cause or consequence.</span>
+            <span class="k">why</span><span>staying mute under a warn headline keeps exactly one warn element per notice — two would compete and neither would read as the point. The detail is context, and context is never the alarm.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">could not load this flow — 500<span class="nt-action"><button class="bt">retry</button><button class="bt">close</button></span></span></div></div>
+          <div class="cap">action slot — only the actions that can actually work</div>
+        </div>
+        <div>
+          <strong><span class="anno">4</span> action slot</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>optional <code>ReactNode</code>, 8px below the text, aligned to the sentence (not the glyph). Holds <a href="button.html">Button</a>s. Two is the practical maximum.</span>
+            <span class="k">why</span><span>a slot, not an <code>onRetry</code> prop: the panel's three failures need <em>close</em>, <em>retry</em>, and <em>retry + close</em> respectively, and a component that owned that logic would have to know why the fetch failed. Aligned to the sentence so the glyph column stays a single vertical rule.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="no-dismiss">
+      <strong>Not dismissible.</strong> A Notice explains the state of the zone it lives in — dismissing it would leave a blank zone, which is the thing every absence rule exists to prevent. Transient messages that should disappear are a different component (a toast), and the panel has none by design: <code>confirm-at-point</code> puts confirmations at their trigger instead.
+    </div>
+
+    <h2 id="states">States</h2>
+    <p style="color:var(--muted);">Notice is not interactive, so it has no rest/hover/focus set. Its states are its <em>two tones × the optional parts</em> — the full matrix a builder must render and a reviewer must check.</p>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel"><div class="nt nt-mute"><span class="nt-body">none</span></div></div>
+        <div class="cap"><strong>mute, bare</strong> — HeaderTable's empty set. The lexicon reserves "none" for exactly this.</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><div class="nt nt-mute"><span class="nt-body">awaiting response…</span></div></div>
+        <div class="cap"><strong>mute, bare</strong> — HeaderTable's proposed pending state. Not "none": the call has not finished.</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><div class="nt nt-mute"><span class="nt-body">not captured — too large<span class="nt-detail">the body exceeded the 10 MiB capture cap</span></span></div></div>
+        <div class="cap"><strong>mute + detail</strong> — the absence with no possible action (finding 16). No button, deliberately.</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">flow no longer captured<span class="nt-detail">the capture ring moved past it</span><span class="nt-action"><button class="bt">close</button></span></span></div></div>
+        <div class="cap"><strong>warn + detail + action</strong> — zone E, eviction. <em>close</em> only: retry can never succeed.</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">trawler is not responding<span class="nt-detail">check the proxy is running</span><span class="nt-action"><button class="bt">retry</button></span></span></div></div>
+        <div class="cap"><strong>warn + detail + action</strong> — zone E, unreachable. <em>retry</em> works here, so it is offered.</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">could not load this flow — 500<span class="nt-action"><button class="bt">retry</button><button class="bt">close</button></span></span></div></div>
+        <div class="cap"><strong>warn + two actions</strong> — the status code is the text channel beside the tone (<code>colour-plus-text</code>).</div>
+      </div>
+    </div>
+    <div class="callout" data-c="no-loading">
+      <strong>No loading state.</strong> "Awaiting response…" is passed <em>as a sentence</em> at mute tone — it is not a spinner and not a component state. Progress indication belongs to the zone that owns the fetch (BodyViewer has a spinner; HeaderTable renders this). Adding a <code>loading</code> prop would make Notice guess which of its tenants is waiting on what.
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app" data-c="d1">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D1 · family — Inter upright, not mono italic</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex"><div class="nt nt-mute"><span class="nt-body">no response yet</span></div></div>
+          <div class="fc-note"><strong>Inter, upright.</strong> <code>mono-for-wire-data</code> gives mono to bytes that crossed the wire; a notice is chrome about their absence. Inside a body pane the switch is also the clearest possible signal that what you are reading is <em>not</em> the body.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex"><div class="nt nt-mute" style="font-family:var(--a-mono);font-style:italic;"><span class="nt-body">no response yet</span></div></div>
+          <div class="fc-note"><strong>Mono italic</strong> (BodyViewer's current drawing). Keeps the pane's baseline grid, but makes the panel show two absence families at once and leans on italic mono at 12px — the least legible pairing on the surface.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d2" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D2 · scope — one component for absence AND failure, not two</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex">
+            <div class="nt nt-mute"><span class="nt-body">empty body</span></div>
+            <div class="nt nt-warn" style="margin-top:4px;"><span class="nt-glyph">⚠</span><span class="nt-body">body unavailable</span></div>
+          </div>
+          <div class="fc-note"><strong>One component, <code>tone</code> prop.</strong> They are the same shape — a sentence, an optional cause, an optional way out — and the boundary between them moves: "not captured" is an absence, "could not load" is a failure, and BodyViewer's fifth state sits between. Two components would force each tenant to pick, and finding 24 is what happens when tenants pick.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex"><span style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">EmptyState + ErrorState</span></div>
+          <div class="fc-note"><strong>Two components.</strong> Reads tidier in a roster and is how most systems do it. Rejected: it duplicates the entire anatomy for one changed colour, and the first component to need "absence, but you can retry" (BodyViewer's fifth state) has to choose a parent arbitrarily.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d3" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D3 · the action is a slot, not an <code>onRetry</code> prop</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">could not load this flow — 500<span class="nt-action"><button class="bt">retry</button><button class="bt">close</button></span></span></div></div>
+          <div class="fc-note"><strong><code>action?: ReactNode</code>.</strong> The three zone-E failures need close / retry / both, chosen by <em>why</em> the fetch failed — knowledge the panel has and this primitive must not. A slot also keeps Notice free of any Button-specific API.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex"><span style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">onRetry + onClose props</span></div>
+          <div class="fc-note"><strong>Named handlers.</strong> Guarantees consistent button order and wording, which is real. Rejected because it hard-codes the two actions we happen to need today, and the third tenant either adds a third prop or renders its own row anyway.</div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="open-q" style="margin-top:16px;">
+      <strong>Open for W5:</strong> whether the mute tone should also accept an <code>ok</code> variant for confirmations. This design says no — confirmations are inline at their trigger (<code>confirm-at-point</code>) and CopyButton already owns its own confirm — but the first component that wants a green "saved" sentence will reopen it, so the rejection is recorded rather than assumed.
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Required</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>children</code></td><td><code>ReactNode</code></td><td>✅ required</td><td>the sentence. Lowercase, terse, no terminal period, names the state and never blames the user (<code>calm-microcopy</code>)</td></tr>
+        <tr><td><code>tone</code></td><td><code>'mute' | 'warn'</code></td><td>optional (default: <code>'mute'</code>)</td><td><code>mute</code> = absence, normal operation · <code>warn</code> = failure, adds the ⚠ glyph. Defaulting to mute means the common case is the short call</td></tr>
+        <tr><td><code>detail</code></td><td><code>ReactNode</code></td><td>optional</td><td>second line — cause or consequence. Always rendered <code>ink-mute</code> regardless of <code>tone</code></td></tr>
+        <tr><td><code>action</code></td><td><code>ReactNode</code></td><td>optional</td><td>the way out, usually one or two <a href="button.html">Button</a>s. Omit when nothing the user can do would help — that is the honest rendering, not a missing feature</td></tr>
+        <tr><td><code>className</code></td><td><code>string</code></td><td>optional</td><td>pass-through for layout only (spacing within the host zone) — never for colour or family</td></tr>
+      </tbody>
+    </table>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built (code-as-truth):</p>
+      <pre class="tsdoc">/**
+ * Notice — one sentence explaining an absence or a failure, with the action that helps if one exists.
+ * @tier T1 — renders a sentence at a tone; owns no domain knowledge
+ * @anatomy Inter 12px sentence at ink-mute or ink-warn · ⚠ glyph at warn only (aria-hidden; colour is never the only channel) · optional detail line, always ink-mute, 11.5px · optional action slot 8px below, aligned to the sentence not the glyph · no border, no background, no panel chrome
+ * @use any zone that has nothing to show and must say which nothing it is (empty · pending · capped · not captured), and any zone whose load failed — HeaderTable empty/pending, BodyViewer's five absences, the detail panel's load failures
+ * @avoid transient confirmations (use confirm-at-point at the trigger — CopyButton owns its own) · a dismissible message (dismissing leaves the blank zone this component exists to prevent) · success/ok states · wrapping a notice in a card or panel of its own
+ * @states not interactive — no rest/hover/focus. Renders: mute bare · mute + detail · warn + glyph · warn + detail · either + action slot
+ * @madeof Button (T1) — in the action slot only
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Wherever a zone would otherwise be blank, and wherever a load failed. The sentence must name <em>which</em> state this is — "none" (empty set), "awaiting response…" (unfinished), "not captured — too large" (over cap), "no longer captured" (ring eviction) are four different sentences and must never collapse into one. Pass an action only when it can actually succeed.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>Confirmations — those are inline at their trigger (<code>confirm-at-point</code>), and <a href="copy-button.html">CopyButton</a> already owns its own. Anything dismissible or auto-hiding: Notice describes the zone's current state, so hiding it means lying about the zone. Success sentences (see the open question). And never wrap it in a bordered card — <code>data-ink-first</code>; it lives inside a zone that already has an edge.</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part / tone</th><th>Tailwind (build WU)</th></tr></thead>
+      <tbody>
+        <tr><td>container</td><td><code>flex items-start gap-1.5 py-1</code> — no border, no bg, no radius</td></tr>
+        <tr><td>sentence</td><td><code>font-sans text-xs leading-normal</code> (Inter 12px) — wraps, never truncates</td></tr>
+        <tr><td>tone <code>mute</code></td><td><code>text-ink-mute</code> (<code>#aea69c</code>)</td></tr>
+        <tr><td>tone <code>warn</code></td><td><code>text-warn</code> (<code>#e5484d</code>) on the sentence and the glyph only</td></tr>
+        <tr><td>glyph</td><td>⚠ inline, <code>shrink-0</code>, <code>aria-hidden="true"</code> — rendered at <code>tone="warn"</code> only</td></tr>
+        <tr><td>detail line</td><td><code>block text-ink-mute text-[11.5px] mt-0.5</code> — mute under both tones</td></tr>
+        <tr><td>action slot</td><td><code>flex gap-2 mt-2</code>, inside the sentence column (not under the glyph)</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="spacing-note">
+      <strong>Off-scale, disclosed:</strong> <code>gap-1.5</code> (6px), <code>py-1</code> (4px), <code>mt-0.5</code> (2px) and the 11.5px detail size all sit below <code>spacing-scale</code>'s 8px floor and outside the type scale. This is the same contradiction <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 14</a> records against three <em>confirmed</em> components — a new component should not silently join them, so it is named here instead. Notice adopts the density its neighbours already have; <strong>W6 settles the floor</strong> and this file follows whatever it decides.
+    </div>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="app" data-c="specimen">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">In HeaderTable (absence)</div>
+          <div class="sec-stack" style="max-width:320px;">
+            <div class="sec-block">
+              <div class="ht-bar"><span class="sec-hd">headers</span></div>
+              <div class="nt nt-mute"><span class="nt-body">awaiting response…</span></div>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Replaces <code>.ht-none</code> — same tone, same size, one owner.</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">In BodyViewer (absence → failure)</div>
+          <div class="sec-stack" style="max-width:320px;">
+            <div class="sec-block">
+              <div class="chrome-bar"><span class="sect-lbl">body</span></div>
+              <div class="body-pane" id="spec-pane"><div class="nt nt-mute"><span class="nt-body">empty body</span></div></div>
+            </div>
+          </div>
+          <div style="margin-top:6px;"><button class="bt" id="spec-toggle">show fetch-failed</button></div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Same component, both tones — the reason D2 keeps them together.</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Zone E (failure, full)</div>
+          <div class="panel" style="max-width:320px;">
+            <div class="nt nt-warn">
+              <span class="nt-glyph">⚠</span>
+              <span class="nt-body">flow no longer captured
+                <span class="nt-detail">the capture ring moved past it</span>
+                <span class="nt-action"><button class="bt" id="spec-close">close</button></span>
+              </span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">No retry: the flow is gone, and a button that can only fail is a lie.</div>
+        </div>
+      </div>
+      <div id="spec-log" style="min-height:20px;"></div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — rendered in app Warp tokens, composed from <a href="specimen.css">specimen.css</a>. Every host zone around the notices is a real component's drawing; only <code>.nt*</code> and <code>.bt</code> are new.</div>
+    </div>
+  </main>
+  <script>
+    const pane = document.getElementById('spec-pane');
+    const toggle = document.getElementById('spec-toggle');
+    const empty = '<div class="nt nt-mute"><span class="nt-body">empty body</span></div>';
+    const failed = '<div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">body unavailable<span class="nt-detail">the flow is no longer captured</span><span class="nt-action"><button class="bt">retry</button></span></span></div>';
+    let showingFailed = false;
+    toggle.addEventListener('click', () => {
+      showingFailed = !showingFailed;
+      pane.innerHTML = showingFailed ? failed : empty;
+      toggle.textContent = showingFailed ? 'show empty body' : 'show fetch-failed';
+    });
+    document.getElementById('spec-close').addEventListener('click', () => {
+      const el = document.getElementById('spec-log');
+      el.style.cssText = 'font-size:12px;font-family:Inter,system-ui,sans-serif;color:#4cc38a;margin-top:6px;';
+      el.textContent = 'close handler fired — the action slot is the caller’s';
+      clearTimeout(el._t);
+      el._t = setTimeout(() => { el.textContent = ''; }, 2000);
+    });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
