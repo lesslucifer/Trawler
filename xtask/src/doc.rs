@@ -373,6 +373,165 @@ fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) 
             fix: "every colour comes from components/specimen.css - write var(--a-…)".to_string(),
         });
     }
+    if let Some(frame) = item("frame") {
+        check_frame_density(failures, frame);
+    }
+}
+
+// "Every cell is a clause, not a sentence, and never a paragraph" — the Frame's
+// own form rule, mechanised. The mean is what bites: a per-cell cap alone is
+// gameable by splitting one paragraph across two rows, which keeps the prose and
+// passes the check. Calibrated on the accepted run #2 (mean 9.0, max 35).
+const FRAME_CELL_MEAN: usize = 12;
+const FRAME_CELL_MAX: usize = 40;
+// The `on this screen` cell is a ✓/✗ pair — two clauses by design, so it is
+// measured on its own budget instead of dragging the reasoning columns' mean up
+// to meet it. Calibrated on the rulebook's 14 DO/DON'T cells (mean 13.7, max 19),
+// widened for a screen-specific example naming real copy or a real component.
+const FRAME_EXAMPLE_MEAN: usize = 24;
+const FRAME_EXAMPLE_MAX: usize = 36;
+// purpose · given · not-given — the Frame's three named lines, nothing else
+const FRAME_PROSE_BLOCKS: usize = 3;
+const FRAME_PROSE_WORDS: usize = 60;
+
+fn is_example(cell: &str) -> bool {
+    cell.contains('✓') || cell.contains('✗')
+}
+
+fn words(fragment: &str) -> usize {
+    let mut count = 0;
+    let mut in_tag = false;
+    let mut in_word = false;
+    for c in fragment.chars() {
+        match c {
+            '<' => {
+                in_tag = true;
+                in_word = false;
+            }
+            '>' => in_tag = false,
+            _ if in_tag => {}
+            c if c.is_whitespace() => in_word = false,
+            _ => {
+                if !in_word {
+                    count += 1;
+                    in_word = true;
+                }
+            }
+        }
+    }
+    count
+}
+
+fn elements_of<'a>(fragment: &'a str, tag: &str) -> Vec<&'a str> {
+    let open = format!("<{tag}");
+    let close = format!("</{tag}>");
+    let mut out = Vec::new();
+    let mut rest = fragment;
+    while let Some(at) = rest.find(&open) {
+        rest = &rest[at + open.len()..];
+        let Some(body_start) = rest.find('>').map(|rel| rel + 1) else { break };
+        let Some(end) = rest[body_start..].find(&close) else { break };
+        out.push(&rest[body_start..body_start + end]);
+        rest = &rest[body_start + end + close.len()..];
+    }
+    out
+}
+
+fn mean_check(
+    failures: &mut Vec<Failure>,
+    cells: &[usize],
+    cap: usize,
+    check: &str,
+    label: &str,
+    fix: &str,
+) {
+    let total: usize = cells.iter().sum();
+    let count = cells.len();
+    if count > 0 && total > cap * count {
+        let over = cells.iter().filter(|w| **w > cap).count();
+        let (whole, tenth) = (total / count, total * 10 / count % 10);
+        failures.push(Failure {
+            check: check.to_string(),
+            what: format!(
+                "{label} average {whole}.{tenth} words (max {cap}); {over} of {count} are over"
+            ),
+            fix: fix.to_string(),
+        });
+    }
+}
+
+fn check_frame_density(failures: &mut Vec<Failure>, frame: &str) {
+    let rows = elements_of(frame, "tr");
+    let driver_rows: Vec<&&str> = rows.iter().filter(|r| elements_of(r, "td").len() >= 3).collect();
+    let unexampled = driver_rows.iter().filter(|r| !is_example(r)).count();
+    if unexampled > 0 {
+        failures.push(Failure {
+            check: "frame·example".to_string(),
+            what: format!("{unexampled} of {} driver rows carry no ✓/✗ pair", driver_rows.len()),
+            fix: "every driver lands on a concrete example: ✓ what honours it, ✗ the plausible thing that breaks it".to_string(),
+        });
+    }
+
+    let (examples, reasoning): (Vec<usize>, Vec<usize>) = elements_of(frame, "td")
+        .into_iter()
+        .filter(|c| words(c) > 0)
+        .map(|c| (words(c), is_example(c)))
+        .fold((Vec::new(), Vec::new()), |(mut ex, mut re), (w, is_ex)| {
+            if is_ex {
+                ex.push(w);
+            } else {
+                re.push(w);
+            }
+            (ex, re)
+        });
+
+    mean_check(
+        failures,
+        &reasoning,
+        FRAME_CELL_MEAN,
+        "frame·cell-density",
+        "driver cells",
+        "every cell is a clause, not a sentence, and never a paragraph - the row is the reasoning, not the cell",
+    );
+    if let Some(longest) = reasoning.iter().copied().max().filter(|w| *w > FRAME_CELL_MAX) {
+        failures.push(Failure {
+            check: "frame·cell-length".to_string(),
+            what: format!("a driver cell runs {longest} words (max {FRAME_CELL_MAX})"),
+            fix: "split the reasoning across the row's columns, or cut it to a clause".to_string(),
+        });
+    }
+
+    mean_check(
+        failures,
+        &examples,
+        FRAME_EXAMPLE_MEAN,
+        "frame·example-density",
+        "✓/✗ pairs",
+        "an example is two clauses - name the concrete thing, not the reasoning behind it",
+    );
+    if let Some(longest) = examples.iter().copied().max().filter(|w| *w > FRAME_EXAMPLE_MAX) {
+        failures.push(Failure {
+            check: "frame·example-length".to_string(),
+            what: format!("a ✓/✗ pair runs {longest} words (max {FRAME_EXAMPLE_MAX})"),
+            fix: "one concrete ✓ and one concrete ✗ - not a paragraph each".to_string(),
+        });
+    }
+
+    let prose: Vec<usize> = elements_of(frame, "p").into_iter().map(words).collect();
+    if prose.len() > FRAME_PROSE_BLOCKS {
+        failures.push(Failure {
+            check: "frame·prose-blocks".to_string(),
+            what: format!("{} prose blocks in the Frame (max {FRAME_PROSE_BLOCKS})", prose.len()),
+            fix: "the Frame is purpose + capabilities + the driver table - commentary about the run belongs in the findings table".to_string(),
+        });
+    }
+    if let Some(longest) = prose.iter().copied().max().filter(|w| *w > FRAME_PROSE_WORDS) {
+        failures.push(Failure {
+            check: "frame·prose-length".to_string(),
+            what: format!("a Frame prose block runs {longest} words (max {FRAME_PROSE_WORDS})"),
+            fix: "purpose is one sentence; capabilities are one ·-separated line".to_string(),
+        });
+    }
 }
 
 // A complete hex token only: `#mock` is an id selector, `#2b2622` is a colour.
@@ -644,8 +803,9 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        attr_positions, edit_distance, rules_from_rulebook, verify_html, verify_html_against,
-        Verdict,
+        attr_positions, check_frame_density, edit_distance, rules_from_rulebook, verify_html,
+        verify_html_against, Verdict, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX,
+        FRAME_PROSE_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -717,6 +877,155 @@ mod tests {
         design_run(&receipt(
             "  data-ink-first: satisfied — no card frames\n  calm-microcopy: inherited — lowercase\n",
         ))
+    }
+
+    fn frame_run(frame_body: &str) -> String {
+        green_run().replace("<p data-item=\"frame\">drivers</p>", frame_body)
+    }
+
+    fn cells(count: usize, words_each: usize) -> String {
+        format!("<td>{}</td>", "word ".repeat(words_each)).repeat(count)
+    }
+
+    #[test]
+    fn a_frame_of_clauses_passes_the_density_check() {
+        let body = format!(
+            "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
+            cells(20, FRAME_CELL_MEAN)
+        );
+        assert!(!verify_html_against(&frame_run(&body), Some(&rules())).red());
+    }
+
+    #[test]
+    fn a_frame_of_paragraphs_is_red_by_its_mean() {
+        let body = format!(
+            "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
+            cells(20, FRAME_CELL_MEAN + 6)
+        );
+        let v = verify_html_against(&frame_run(&body), Some(&rules()));
+        assert!(v.red());
+        assert!(
+            what(&v, "frame·cell-density").contains("average 18.0 words"),
+            "{:?}",
+            failures(&v)
+        );
+    }
+
+    // The mean is the load-bearing half: splitting a bloated cell across two rows
+    // keeps every cell under the ceiling while the prose survives intact.
+    #[test]
+    fn splitting_a_long_cell_across_rows_does_not_dodge_the_check() {
+        let split = format!(
+            "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
+            cells(20, FRAME_CELL_MAX / 2)
+        );
+        let v = verify_html_against(&frame_run(&split), Some(&rules()));
+        assert!(v.red(), "half-length cells still average over the mean");
+        let checks = failures(&v);
+        assert!(checks.contains(&"frame·cell-density".to_string()), "{checks:?}");
+        assert!(!checks.contains(&"frame·cell-length".to_string()), "no cell breaks the ceiling");
+    }
+
+    #[test]
+    fn one_runaway_cell_is_red_even_when_the_mean_holds() {
+        let body = format!(
+            "<div data-item=\"frame\"><p>purpose</p><table>{}<td>{}</td></table></div>",
+            cells(40, 1),
+            "word ".repeat(FRAME_CELL_MAX + 1)
+        );
+        let v = verify_html_against(&frame_run(&body), Some(&rules()));
+        assert!(v.red());
+        assert!(what(&v, "frame·cell-length").contains("41 words"), "{:?}", failures(&v));
+    }
+
+    #[test]
+    fn commentary_bolted_onto_the_frame_is_red() {
+        let body = "<div data-item=\"frame\"><p>purpose</p><p>given</p><p>not given</p>\
+                    <p>why this screen matters</p><table><td>clause</td></table></div>";
+        let v = verify_html_against(&frame_run(body), Some(&rules()));
+        assert!(v.red());
+        assert!(what(&v, "frame·prose-blocks").contains("4 prose blocks"), "{:?}", failures(&v));
+    }
+
+    #[test]
+    fn a_purpose_paragraph_is_red() {
+        let body = format!(
+            "<div data-item=\"frame\"><p>{}</p><table><td>clause</td></table></div>",
+            "word ".repeat(FRAME_PROSE_WORDS + 1)
+        );
+        let v = verify_html_against(&frame_run(&body), Some(&rules()));
+        assert!(v.red());
+        assert!(what(&v, "frame·prose-length").contains("61 words"), "{:?}", failures(&v));
+    }
+
+    fn frame_of(run: &str) -> &str {
+        run.split_once("data-item=\"frame\"")
+            .and_then(|(_, rest)| rest.split_once("data-item=\"layout\""))
+            .expect("a run carries a frame and a layout")
+            .0
+    }
+
+    fn density_of(frame: &str) -> Vec<String> {
+        let mut found = Vec::new();
+        check_frame_density(&mut found, frame);
+        found.into_iter().map(|f| f.check).collect()
+    }
+
+    // Calibration: the reasoning columns of the accepted run #2 Frame must pass
+    // untouched, or the thresholds measure the checker's taste, not the flow's
+    // rule. Run #2 predates the ✓/✗ column (added at run #3), so it is expected
+    // to fail frame·example and nothing else — the density limits still hold on a
+    // Frame written before them.
+    #[test]
+    fn the_accepted_run_2_frame_passes_every_density_limit() {
+        let reported =
+            density_of(frame_of(include_str!("../../docs/work/2026-07-25-dflow-w4-run-2.html")));
+        assert_eq!(reported, vec!["frame·example".to_string()], "{reported:?}");
+    }
+
+    // The example column exists to be filled: run #1 left 7 of 11 criteria cells
+    // blank and the column silently rotted. A ✓/✗ pair per driver is checked.
+    #[test]
+    fn a_driver_row_without_an_example_is_red() {
+        let body = "<div data-item=\"frame\"><table>\
+                    <tr><td>driver</td><td>why</td><td>therefore</td>\
+                    <td><span>✓ concrete</span><span>✗ concrete</span></td></tr>\
+                    <tr><td>driver</td><td>why</td><td>therefore</td><td>a criterion</td></tr>\
+                    </table></div>";
+        let v = verify_html_against(&frame_run(body), Some(&rules()));
+        assert!(v.red());
+        assert!(what(&v, "frame·example").contains("1 of 2"), "{:?}", failures(&v));
+    }
+
+    // A ✓/✗ pair is two clauses by design; measuring it against the one-clause
+    // cap would force the reasoning columns to pad or the examples to go vague.
+    #[test]
+    fn an_example_pair_is_measured_on_its_own_budget() {
+        let clause = FRAME_CELL_MEAN - 1; // each half a legal one-clause cell
+        let pair = format!(
+            "<td><span>✓ {}</span><span>✗ {}</span></td>",
+            "word ".repeat(clause),
+            "word ".repeat(clause)
+        );
+        let body = format!(
+            "<div data-item=\"frame\"><table><tr><td>driver</td><td>why</td><td>therefore</td>{pair}</tr></table></div>"
+        );
+        let reported = density_of(frame_of(&frame_run(&body)));
+        assert!(reported.is_empty(), "two legal clauses in one pair must pass: {reported:?}");
+    }
+
+    #[test]
+    fn a_bloated_example_pair_is_still_red() {
+        let pair = format!(
+            "<td><span>✓ {}</span><span>✗ {}</span></td>",
+            "word ".repeat(FRAME_EXAMPLE_MAX),
+            "word ".repeat(FRAME_EXAMPLE_MAX)
+        );
+        let body = format!(
+            "<div data-item=\"frame\"><table><tr><td>driver</td><td>why</td><td>therefore</td>{pair}</tr></table></div>"
+        );
+        let reported = density_of(frame_of(&frame_run(&body)));
+        assert!(reported.contains(&"frame·example-length".to_string()), "{reported:?}");
     }
 
     #[test]
