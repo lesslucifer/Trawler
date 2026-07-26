@@ -1,0 +1,45 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W4
+branch: wu/design-flow/integrated-run
+changes:
+  - path: docs/decisions/dec-15-design-run-enforcement.html
+    tier: T2
+    action: added
+    distills: "DEC-15 — the design-run enforcement model: a run is a governed artifact checked on every write; the receipt covers soft rules only because a rule with a Tier-1 predicate is judged by the predicate; coverage is read from the rulebook on disk; the unimplemented gap is printed rather than filed; and the gate proves a receipt complete and well-formed, never true"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-15 routed"
+  - path: docs/work-planning.html
+    tier: T1
+    action: updated
+    distills: "design-run registered as a fifth governed artifact — one row in the outputs table and the data-artifact enumeration; the item semantics stay in the T3 flow spec so the fact keeps one home"
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "flow template rev 3 — compose-the-artifacts and machine-checked principles, the verification-timeline diagram incl. the review-only lane, Frame cells are clauses, findings live in one staged table, receipt template becomes soft-only YAML with the seven-verdict enum, each stage names its data-item tag"
+  - path: docs/work/2026-07-25-dflow-w4-run-2.html
+    tier: T3
+    action: added
+    distills: "the second worked run — flow detail panel against the frozen substrate; governed design-run with a machine-read receipt; 31 findings, 12 proposals, 3 blocked-on (2 answered in review)"
+  - path: docs/work/2026-07-25-dflow-w4-plan.html
+    tier: T3
+    action: added
+    distills: "W4 plan; test levels rewritten from waived to the unit + integration tests the WU actually added"
+  - path: docs/work/2026-07-25-dflow-w4-result.html
+    tier: T3
+    action: added
+    distills: "W4 result report — outcome, deviations, evidence incl. the negative proof, distillation (DEC-15 + the T1 line) and follow-ups"
+  - path: docs/work/2026-07-26-dflow-w4-output-quality-plan.html
+    tier: T3
+    action: added
+    distills: "the output-quality round working doc — the three defects, the verification timeline, the checker contract and the calls made without asking"
+  - path: docs/work/components/specimen.css
+    tier: T3
+    action: added
+    distills: "verbatim extraction of all fourteen component design files (app tokens + one block per component); seven CONFLICT: markers left for W5, no design file modified"
+  - path: docs/work/components/specimen.js
+    tier: T3
+    action: added
+    distills: "the two design-doc behaviours declared in markup — keyed highlight map and mockup state switch; classic script so it loads over file://"
