@@ -1,0 +1,14 @@
+schema: cr/v2
+scope: "WU design-flow/integrated-run -> epic/design-flow (re-review after the FAIL on 2f7fa83)"
+epic: E-DFLOW
+wu: E-DFLOW.W4
+branch: wu/design-flow/integrated-run
+base: 31beb33ff4140b654abc8300b6dd5973a0b90cbc
+head: ef55ccd8a02940594ebce8c44bb018d5b90ecda5
+diff_sha256: cd87c5f1cfe3532c4c73c3b3ae0b35067ec91b217b421f7bfb098b52be1c832b
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-07-26
+notes: "Second review of this branch. The first (cr/v2 on 2f7fa83, 21 found / 9 verified) returned FAIL on three important findings; ef55ccd fixes all three and five nits. Five isolated finders re-derived independently rather than checking off the prior list; four returned empty. The one candidate — Verdict::Exempt(String) modelling a two-value vocabulary as a String — was refuted: its single construction site ends in .filter(|v| v == \"draft\" || v == \"archived\"), so no input can produce a value outside the set, and a two-variant enum would make this the only closed vocabulary in the file not modelled as parsed strings (VERDICTS, CAPABILITY_STATES). Finders independently confirmed the three fixes: CAPABILITY_STATES back to 3 with a regression test pinning it, run #3's cell reading `used` and passing the narrowed check, and archived runs printing their own message instead of `draft ... until ready`. The altitude finder also verified this tip's test/v2 claims against the diff — mutation-in-both-directions, the behaviour change, and the suite counts all hold. One out-of-scope drift noted by the correctness finder and deliberately not filed: docs/work/2026-07-26-dflow-w4-output-quality-plan.html lists 9 design-run data-items where DESIGN_RUN now has 10 (introduced at 7e54de4, a planning doc superseded by the run it planned)."
