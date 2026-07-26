@@ -1,5 +1,8 @@
+use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::path::Path;
+
+use serde::Deserialize;
 
 use crate::gate::Failure;
 
@@ -18,6 +21,30 @@ const WU_RESULT: &[&str] = &["outcome", "deviations", "evidence", "distillation"
 const EPIC_RESULT: &[&str] =
     &["outcome", "wu-rollup", "deviations", "evidence", "distillation", "follow-ups"];
 const WU_SUB: &[&str] = &["wu-summary", "wu-maps-to", "wu-expected", "wu-deps"];
+const DESIGN_RUN: &[&str] = &[
+    "frame",
+    "layout",
+    "elements",
+    "interaction",
+    "mockup",
+    "tune",
+    "receipt",
+    "proposals",
+    "blocked-on",
+];
+const VERDICTS: &[&str] = &[
+    "satisfied",
+    "inherited",
+    "satisfied-via-proposal",
+    "blocked",
+    "n/a",
+    "violated",
+    "violated-inherited",
+];
+// Hard rules whose Tier-1 predicate exists today. The rest are W7's, and the
+// tally line reports the gap on every run so it cannot be quietly forgotten.
+const HARD_PREDICATES: &[&str] = &["colour-tokens-only"];
+const RULEBOOK: &str = "docs/design-rules/design-rules-index.html";
 
 fn checklist(artifact: &str) -> Option<&'static [&'static str]> {
     match artifact {
@@ -25,14 +52,52 @@ fn checklist(artifact: &str) -> Option<&'static [&'static str]> {
         "wu-plan" => Some(WU_PLAN),
         "wu-result" => Some(WU_RESULT),
         "epic-result" => Some(EPIC_RESULT),
+        "design-run" => Some(DESIGN_RUN),
         _ => None,
     }
+}
+
+pub struct Rule {
+    pub slug: String,
+    pub hard: bool,
+}
+
+#[derive(Deserialize)]
+struct Receipt {
+    rulebook: String,
+    soft: BTreeMap<String, String>,
+}
+
+pub fn rules_from_rulebook(html: &str) -> Vec<Rule> {
+    let mut out = Vec::new();
+    for (table, hard) in [("hard-rules-table", true), ("soft-rules-table", false)] {
+        let Some((pos, _)) = attr_positions(html, "data-c").into_iter().find(|(_, v)| v == table)
+        else {
+            continue;
+        };
+        let ((start, end), _) = element_content(html, pos);
+        for row in html[start..end].split("<tr").skip(1) {
+            if let Some(slug) = row_slug(row) {
+                out.push(Rule { slug, hard });
+            }
+        }
+    }
+    out
+}
+
+fn row_slug(row: &str) -> Option<String> {
+    let open = row.find("<code>")? + "<code>".len();
+    let close = row[open..].find("</code>")? + open;
+    let slug = &row[open..close];
+    let shaped = !slug.is_empty()
+        && slug.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+    shaped.then(|| slug.to_string())
 }
 
 pub enum Verdict {
     Ungoverned,
     Draft,
-    Checked { artifacts: Vec<String>, failures: Vec<Failure> },
+    Checked { artifacts: Vec<String>, failures: Vec<Failure>, summary: Option<String> },
 }
 
 impl Verdict {
@@ -51,6 +116,10 @@ struct Occurrence {
 type Tagged = (usize, Occurrence);
 
 pub fn verify_html(html: &str) -> Verdict {
+    verify_html_against(html, None)
+}
+
+pub fn verify_html_against(html: &str, rules: Option<&[Rule]>) -> Verdict {
     let Some((artifact_pos, artifact_decl)) =
         attr_positions(html, "data-artifact").into_iter().next()
     else {
@@ -87,7 +156,7 @@ pub fn verify_html(html: &str) -> Verdict {
         }
     }
     if artifacts.is_empty() {
-        return Verdict::Checked { artifacts, failures };
+        return Verdict::Checked { artifacts, failures, summary: None };
     }
 
     let wu_blocks: Vec<Occurrence> = attr_positions(html, "data-wu")
@@ -135,7 +204,216 @@ pub fn verify_html(html: &str) -> Verdict {
         });
     }
 
-    Verdict::Checked { artifacts, failures }
+    let mut summary = None;
+    if artifacts.iter().any(|a| a == "design-run") {
+        let receipt = top_items.iter().find(|(_, o)| o.value == "receipt").map(|(_, o)| o);
+        summary = check_receipt(&mut failures, receipt, html, rules);
+        check_composition(&mut failures, html, &top_items);
+    }
+
+    Verdict::Checked { artifacts, failures, summary }
+}
+
+// The receipt is a YAML document, parsed as one: serde_yaml owns indentation,
+// quoting, duplicate keys and error positions, so this only splits the scalar.
+fn check_receipt(
+    failures: &mut Vec<Failure>,
+    receipt: Option<&Occurrence>,
+    html: &str,
+    rules: Option<&[Rule]>,
+) -> Option<String> {
+    let receipt = receipt?;
+    let parsed: Receipt = match serde_yaml::from_str(&inner_text(html, receipt.span)) {
+        Ok(parsed) => parsed,
+        Err(e) => {
+            failures.push(Failure {
+                check: "receipt·yaml".to_string(),
+                what: format!("the receipt block is not valid YAML: {e}"),
+                fix: "the receipt is `rulebook: <blob>` plus a `soft:` map of `<slug>: <verdict> — <why>`".to_string(),
+            });
+            return None;
+        }
+    };
+    if parsed.rulebook.trim().is_empty() {
+        failures.push(Failure {
+            check: "receipt·rulebook".to_string(),
+            what: "the receipt names no rulebook version".to_string(),
+            fix: "pin it: rulebook: <blob sha of docs/design-rules/design-rules-index.html>"
+                .to_string(),
+        });
+    }
+    let Some(rules) = rules else {
+        failures.push(Failure {
+            check: "receipt·rulebook-unreadable".to_string(),
+            what: format!("cannot read {RULEBOOK} - receipt coverage is unverifiable"),
+            fix: "run verify-doc from the repo root so the rulebook's slug list can be read"
+                .to_string(),
+        });
+        return None;
+    };
+
+    let soft: Vec<&str> = rules.iter().filter(|r| !r.hard).map(|r| r.slug.as_str()).collect();
+    let hard: Vec<&str> = rules.iter().filter(|r| r.hard).map(|r| r.slug.as_str()).collect();
+    let missing: Vec<&str> =
+        soft.iter().copied().filter(|s| !parsed.soft.contains_key(*s)).collect();
+    for slug in &missing {
+        failures.push(Failure {
+            check: format!("receipt·{slug}"),
+            what: format!("no row for soft rule \"{slug}\""),
+            fix: format!("add `{slug}: <verdict> — <why>` under soft:"),
+        });
+    }
+
+    let mut counts: Vec<usize> = vec![0; VERDICTS.len()];
+    for (slug, value) in &parsed.soft {
+        if hard.contains(&slug.as_str()) {
+            failures.push(Failure {
+                check: "receipt·unknown-slug".to_string(),
+                what: format!("\"{slug}\" is a hard rule"),
+                fix: "hard rules are machine-checked, not receipted - drop the row".to_string(),
+            });
+            continue;
+        }
+        if !soft.contains(&slug.as_str()) {
+            let nearest =
+                missing.iter().map(|m| (edit_distance(slug, m), *m)).min().filter(|(d, _)| *d <= 3);
+            failures.push(Failure {
+                check: "receipt·unknown-slug".to_string(),
+                what: nearest.map_or_else(
+                    || format!("\"{slug}\" is not a rulebook slug"),
+                    |(_, m)| format!("unknown slug \"{slug}\" / missing soft rule \"{m}\""),
+                ),
+                fix: nearest.map_or_else(
+                    || format!("drop the row, or add \"{slug}\" to the rulebook first"),
+                    |(_, m)| format!("rename the row to `{m}`"),
+                ),
+            });
+            continue;
+        }
+        let (verdict, why) = value
+            .split_once('—')
+            .map_or((value.trim(), ""), |(verdict, why)| (verdict.trim(), why.trim()));
+        match VERDICTS.iter().position(|v| *v == verdict) {
+            Some(i) => counts[i] += 1,
+            None => failures.push(Failure {
+                check: format!("receipt·{slug}"),
+                what: format!("verdict \"{verdict}\" is not one of the seven"),
+                fix: format!("use one of: {}", VERDICTS.join(" · ")),
+            }),
+        }
+        if why.is_empty() {
+            failures.push(Failure {
+                check: format!("receipt·{slug}"),
+                what: format!("\"{slug}\" carries no citation"),
+                fix: "every row cites its evidence: `<verdict> — <why>` (em dash)".to_string(),
+            });
+        }
+    }
+
+    Some(tally_line(&soft, &missing, &counts, &hard))
+}
+
+fn tally_line(soft: &[&str], missing: &[&str], counts: &[usize], hard: &[&str]) -> String {
+    let verdicts: Vec<String> = VERDICTS
+        .iter()
+        .zip(counts)
+        .filter(|(_, n)| **n > 0)
+        .map(|(v, n)| format!("{n} {v}"))
+        .collect();
+    let checked: Vec<&str> = hard.iter().copied().filter(|s| HARD_PREDICATES.contains(s)).collect();
+    format!(
+        "receipt {}/{} soft · {}\nhard rules: {}/{} machine-checked ({}) — {} unchecked, W7 Tier-1",
+        soft.len() - missing.len(),
+        soft.len(),
+        verdicts.join(" · "),
+        checked.len(),
+        hard.len(),
+        checked.join(" "),
+        hard.len() - checked.len(),
+    )
+}
+
+fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) {
+    let item = |name: &str| {
+        items.iter().find(|(_, o)| o.value == name).map(|(_, o)| &html[o.span.0..o.span.1])
+    };
+    if let Some(elements) = item("elements") {
+        if !elements.contains("data-map") || !elements.contains("data-key") {
+            failures.push(Failure {
+                check: "elements·map".to_string(),
+                what: "the catalog is not a keyed map".to_string(),
+                fix: "wrap tree + table in data-map and key every component mention data-key=\"<slug>\" (behaviour: components/specimen.js)".to_string(),
+            });
+        }
+    }
+    if let Some(mockup) = item("mockup") {
+        if !mockup.contains("data-state-toggle") {
+            failures.push(Failure {
+                check: "mockup·state".to_string(),
+                what: "the mockup is static - no state switch".to_string(),
+                fix: "add data-state-toggle for the states the Interaction table named".to_string(),
+            });
+        }
+    }
+    // the attribute, not the path: a prose link to the sheet composes nothing
+    for (attr, asset) in [("href", "components/specimen.css"), ("src", "components/specimen.js")] {
+        if !html.contains(&format!("{attr}=\"{asset}\"")) {
+            failures.push(Failure {
+                check: "assets·specimen".to_string(),
+                what: format!("the run does not load {asset}"),
+                fix: "compose the component design files' own rendering instead of re-typing it"
+                    .to_string(),
+            });
+        }
+    }
+    if let Some(literal) = colour_literal(html) {
+        failures.push(Failure {
+            check: "mockup·colour-literals".to_string(),
+            what: format!("colour literal {literal} in the doc's own CSS"),
+            fix: "every colour comes from components/specimen.css - write var(--a-…)".to_string(),
+        });
+    }
+}
+
+// A complete hex token only: `#mock` is an id selector, `#2b2622` is a colour.
+fn colour_literal(html: &str) -> Option<String> {
+    for block in html.split("<style").skip(1) {
+        let css = block.split("</style>").next().unwrap_or(block);
+        if let Some(func) = ["rgb(", "rgba(", "hsl(", "hsla("].iter().find(|f| css.contains(**f)) {
+            return Some((*func).to_string());
+        }
+        let mut rest = css;
+        while let Some(at) = rest.find('#') {
+            rest = &rest[at + 1..];
+            let hex: String = rest.chars().take_while(char::is_ascii_hexdigit).collect();
+            let after = rest[hex.len()..].chars().next();
+            if matches!(hex.len(), 3 | 4 | 6 | 8)
+                && after.is_none_or(|c| !c.is_ascii_alphanumeric() && c != '-' && c != '_')
+            {
+                return Some(format!("#{hex}"));
+            }
+        }
+    }
+    None
+}
+
+fn inner_text(html: &str, span: (usize, usize)) -> String {
+    let open_end = html[span.0..].find('>').map_or(span.0, |rel| span.0 + rel + 1);
+    let mut out = String::new();
+    let mut in_tag = false;
+    for c in html[open_end..span.1].chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            c if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    out.replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&amp;", "&")
 }
 
 fn check_items(
@@ -312,6 +590,10 @@ fn edit_distance(a: &str, b: &str) -> usize {
 
 pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
     let single = paths.len() == 1;
+    let rules = std::fs::read_to_string(repo.join(RULEBOOK))
+        .ok()
+        .map(|html| rules_from_rulebook(&html))
+        .filter(|rules| !rules.is_empty());
     let mut out = String::new();
     let mut any_red = false;
     for path in paths {
@@ -319,7 +601,7 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
             if Path::new(path).exists() { Path::new(path).to_path_buf() } else { repo.join(path) };
         let html =
             std::fs::read_to_string(&resolved).map_err(|e| format!("cannot read {path}: {e}"))?;
-        let verdict = verify_html(&html);
+        let verdict = verify_html_against(&html, rules.as_deref());
         if verdict.red() {
             any_red = true;
         }
@@ -339,8 +621,12 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
             format!("verify-doc ungoverned on {path} - no data-artifact, not checked")
         }
         Verdict::Draft => format!("verify-doc draft on {path} - checks silent until ready"),
-        Verdict::Checked { artifacts, failures } if failures.is_empty() => {
-            format!("verify-doc green on {path} ({})", artifacts.join(" "))
+        Verdict::Checked { artifacts, failures, summary } if failures.is_empty() => {
+            let head = format!("verify-doc green on {path} ({})", artifacts.join(" "));
+            match summary {
+                Some(s) => format!("{head}\n{s}"),
+                None => head,
+            }
         }
         Verdict::Checked { failures, .. } => {
             let mut out = String::new();
@@ -357,7 +643,10 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{attr_positions, edit_distance, verify_html, Verdict};
+    use super::{
+        attr_positions, edit_distance, rules_from_rulebook, verify_html, verify_html_against,
+        Verdict,
+    };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
         let status_attr =
@@ -376,6 +665,194 @@ mod tests {
             Verdict::Checked { failures, .. } => failures.iter().map(|f| f.check.clone()).collect(),
             _ => panic!("expected a checked verdict"),
         }
+    }
+
+    fn what(v: &Verdict, check: &str) -> String {
+        match v {
+            Verdict::Checked { failures, .. } => {
+                let names: Vec<&str> = failures.iter().map(|f| f.check.as_str()).collect();
+                let Some(hit) = failures.iter().find(|f| f.check == check) else {
+                    panic!("no {check} failure in {names:?}")
+                };
+                format!("{} | {}", hit.what, hit.fix)
+            }
+            _ => panic!("expected a checked verdict"),
+        }
+    }
+
+    const RULEBOOK: &str = "<table data-c=\"hard-rules-table\"><tbody>\
+         <tr><td><code>colour-tokens-only</code></td><td>no literals</td></tr>\
+         <tr><td><code>spacing-scale</code></td><td>from the scale</td></tr>\
+         </tbody></table>\
+         <table data-c=\"soft-rules-table\"><tbody>\
+         <tr><td><code>data-ink-first</code></td><td>ink</td><td><code>text-xs</code></td></tr>\
+         <tr><td><code>calm-microcopy</code></td><td>calm</td></tr>\
+         </tbody></table>";
+
+    fn rules() -> Vec<super::Rule> {
+        rules_from_rulebook(RULEBOOK)
+    }
+
+    fn receipt(rows: &str) -> String {
+        format!("<pre data-item=\"receipt\">rulebook: 28f5437\nsoft:\n{rows}</pre>")
+    }
+
+    fn design_run(receipt_block: &str) -> String {
+        let body = format!(
+            "<link rel=\"stylesheet\" href=\"components/specimen.css\">\
+             <script src=\"components/specimen.js\" defer></script>\
+             <style>.mock{{color:var(--a-ink);}}</style>\
+             <main data-artifact=\"design-run\">\
+             <p data-item=\"frame\">drivers</p><p data-item=\"layout\">zones</p>\
+             <div data-item=\"elements\" data-map><span data-key=\"section\">Section</span></div>\
+             <p data-item=\"interaction\">use cases</p>\
+             <div data-item=\"mockup\"><button data-state-toggle=\"mock\">flip</button></div>\
+             <p data-item=\"tune\">before/after</p>{receipt_block}\
+             <p data-item=\"proposals\">band</p><p data-item=\"blocked-on\">verb tokens</p></main>"
+        );
+        format!("<html><body>{body}</body></html>")
+    }
+
+    fn green_run() -> String {
+        design_run(&receipt(
+            "  data-ink-first: satisfied — no card frames\n  calm-microcopy: inherited — lowercase\n",
+        ))
+    }
+
+    #[test]
+    fn rulebook_slugs_are_read_from_the_rulebook_tables() {
+        let extracted: Vec<(String, bool)> =
+            rules().into_iter().map(|r| (r.slug, r.hard)).collect();
+        assert_eq!(
+            extracted,
+            vec![
+                ("colour-tokens-only".to_string(), true),
+                ("spacing-scale".to_string(), true),
+                ("data-ink-first".to_string(), false),
+                ("calm-microcopy".to_string(), false),
+            ],
+            "header rows and non-slug code spans must not become rules"
+        );
+    }
+
+    #[test]
+    fn conforming_design_run_is_green_with_a_computed_tally() {
+        let v = verify_html_against(&green_run(), Some(&rules()));
+        assert!(!v.red(), "{:?}", failures(&v));
+        let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
+        assert!(summary.contains("receipt 2/2 soft · 1 satisfied · 1 inherited"), "{summary}");
+        assert!(
+            summary.contains("hard rules: 1/2 machine-checked (colour-tokens-only) — 1 unchecked"),
+            "{summary}"
+        );
+    }
+
+    #[test]
+    fn a_missing_soft_slug_fails_by_name() {
+        let doc = design_run(&receipt("  data-ink-first: satisfied — no card frames\n"));
+        let v = verify_html_against(&doc, Some(&rules()));
+        assert_eq!(failures(&v), vec!["receipt·calm-microcopy"]);
+    }
+
+    #[test]
+    fn a_hard_slug_in_the_receipt_is_red() {
+        let doc = design_run(&receipt(
+            "  data-ink-first: satisfied — x\n  calm-microcopy: satisfied — y\n  spacing-scale: satisfied — z\n",
+        ));
+        let v = verify_html_against(&doc, Some(&rules()));
+        assert!(what(&v, "receipt·unknown-slug").contains("machine-checked, not receipted"));
+    }
+
+    #[test]
+    fn a_misspelled_slug_pairs_with_the_missing_one() {
+        let doc = design_run(&receipt(
+            "  data-ink-first: satisfied — x\n  calm-microcopi: satisfied — y\n",
+        ));
+        let v = verify_html_against(&doc, Some(&rules()));
+        let msg = what(&v, "receipt·unknown-slug");
+        assert!(msg.contains("calm-microcopi") && msg.contains("calm-microcopy"), "{msg}");
+    }
+
+    #[test]
+    fn a_verdict_outside_the_enum_and_a_missing_why_each_fail() {
+        let doc = design_run(&receipt(
+            "  data-ink-first: probably-fine — x\n  calm-microcopy: satisfied\n",
+        ));
+        let v = verify_html_against(&doc, Some(&rules()));
+        assert!(what(&v, "receipt·data-ink-first").contains("not one of the seven"));
+        assert!(what(&v, "receipt·calm-microcopy").contains("no citation"));
+    }
+
+    #[test]
+    fn malformed_receipt_yaml_reports_the_parser_position() {
+        let doc = design_run(
+            "<pre data-item=\"receipt\">rulebook: 28f5437\nsoft:\n  data-ink-first: ok\n   calm-microcopy: ok\n</pre>",
+        );
+        let v = verify_html_against(&doc, Some(&rules()));
+        let msg = what(&v, "receipt·yaml");
+        assert!(msg.contains("line"), "serde_yaml's own position is the error text: {msg}");
+    }
+
+    #[test]
+    fn an_unreadable_rulebook_is_red_never_silently_green() {
+        let v = verify_html(&green_run());
+        assert!(v.red(), "coverage that cannot be checked must not pass");
+        assert!(what(&v, "receipt·rulebook-unreadable").contains("unverifiable"));
+    }
+
+    #[test]
+    fn an_unpinned_rulebook_version_is_red() {
+        let doc = green_run().replace("rulebook: 28f5437", "rulebook: \"\"");
+        let v = verify_html_against(&doc, Some(&rules()));
+        assert!(failures(&v).contains(&"receipt·rulebook".to_string()));
+    }
+
+    #[test]
+    fn an_unkeyed_elements_catalog_is_red() {
+        let doc = green_run().replace(" data-map", "").replace("data-key=\"section\"", "");
+        let v = verify_html_against(&doc, Some(&rules()));
+        assert!(what(&v, "elements·map").contains("specimen.js"));
+    }
+
+    #[test]
+    fn a_static_mockup_is_red() {
+        let doc = green_run().replace("data-state-toggle=\"mock\"", "");
+        assert!(what(&doc_verdict(&doc), "mockup·state").contains("Interaction table"));
+    }
+
+    fn doc_verdict(html: &str) -> Verdict {
+        verify_html_against(html, Some(&rules()))
+    }
+
+    #[test]
+    fn a_run_that_does_not_link_the_shared_specimens_is_red() {
+        let doc =
+            green_run().replace("href=\"components/specimen.css\"", "href=\"own-styles.css\"");
+        assert!(what(&doc_verdict(&doc), "assets·specimen").contains("re-typing"));
+
+        let mentioned = doc.replace("<style>", "<a href=\"x\">components/specimen.css</a><style>");
+        assert!(
+            doc_verdict(&mentioned).red(),
+            "naming the sheet in prose composes nothing - the attribute is the proof"
+        );
+    }
+
+    #[test]
+    fn a_colour_literal_is_red_but_an_id_selector_is_not() {
+        let hex = green_run().replace("color:var(--a-ink)", "color:#f7f5f0");
+        assert!(what(&doc_verdict(&hex), "mockup·colour-literals").contains("#f7f5f0"));
+
+        let func = green_run().replace("color:var(--a-ink)", "color:rgba(0,0,0,.2)");
+        assert!(what(&doc_verdict(&func), "mockup·colour-literals").contains("rgba("));
+
+        let id_selector = green_run().replace(".mock{", "#mock{");
+        assert!(!doc_verdict(&id_selector).red(), "#mock is a selector, not a colour");
+
+        let tokens = green_run().replace(
+            "color:var(--a-ink)",
+            "background:color-mix(in srgb, var(--accent) 24%, transparent)",
+        );
+        assert!(!doc_verdict(&tokens).red(), "color-mix over tokens is not a literal");
     }
 
     #[test]

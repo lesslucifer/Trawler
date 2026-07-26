@@ -152,6 +152,73 @@ fn draft_and_ungoverned_docs_exit_zero() {
     assert!(out.status.success(), "{}", stdout(&out));
 }
 
+// The design-run contract: a run doc is checked against the rulebook that
+// actually sits on disk, so a rulebook change re-opens every receipt.
+#[test]
+fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
+    let dir = TempDir::new().unwrap();
+    let rulebook = dir.path().join("docs/design-rules");
+    std::fs::create_dir_all(&rulebook).unwrap();
+    std::fs::write(
+        rulebook.join("design-rules-index.html"),
+        "<table data-c=\"hard-rules-table\"><tbody>\
+         <tr><td><code>colour-tokens-only</code></td></tr>\
+         <tr><td><code>spacing-scale</code></td></tr></tbody></table>\
+         <table data-c=\"soft-rules-table\"><tbody>\
+         <tr><td><code>data-ink-first</code></td></tr>\
+         <tr><td><code>calm-microcopy</code></td></tr></tbody></table>",
+    )
+    .unwrap();
+
+    let receipt =
+        |rows: &str| format!("<pre data-item=\"receipt\">rulebook: abc1234\nsoft:\n{rows}</pre>");
+    let run = |rows: &str| {
+        format!(
+            "<html><body><link rel=\"stylesheet\" href=\"components/specimen.css\">\
+             <script src=\"components/specimen.js\" defer></script><style>.m{{color:var(--ink);}}</style>\
+             {}</body></html>",
+            doc_main(&format!(
+                "<p data-item=\"frame\">d</p><p data-item=\"layout\">z</p>\
+                 <div data-item=\"elements\" data-map><span data-key=\"section\">Section</span></div>\
+                 <p data-item=\"interaction\">u</p>\
+                 <div data-item=\"mockup\"><button data-state-toggle=\"m\">flip</button></div>\
+                 <p data-item=\"tune\">t</p>{}<p data-item=\"proposals\">band</p>\
+                 <p data-item=\"blocked-on\">tokens</p>",
+                receipt(rows)
+            ))
+        )
+    };
+
+    let out = run_verify(
+        &dir,
+        &[(
+            "run.html",
+            &run("  data-ink-first: satisfied — no card frames\n  calm-microcopy: inherited — lowercase\n"),
+        )],
+    );
+    let text = stdout(&out);
+    assert!(out.status.success(), "expected green: {text}");
+    assert!(text.contains("receipt 2/2 soft · 1 satisfied · 1 inherited"), "{text}");
+    assert!(text.contains("hard rules: 1/2 machine-checked"), "{text}");
+
+    let out = run_verify(
+        &dir,
+        &[(
+            "bad.html",
+            &run("  data-ink-first: definitely-fine — x\n  spacing-scale: satisfied — y\n"),
+        )],
+    );
+    assert_eq!(out.status.code(), Some(1));
+    let text = stdout(&out);
+    assert!(text.contains("receipt·calm-microcopy"), "uncovered soft rule: {text}");
+    assert!(text.contains("not one of the seven"), "bad verdict: {text}");
+    assert!(text.contains("machine-checked, not receipted"), "hard rule row: {text}");
+}
+
+fn doc_main(body: &str) -> String {
+    format!("<main data-artifact=\"design-run\">{body}</main>")
+}
+
 #[test]
 fn multi_path_output_reports_only_red_docs() {
     let dir = TempDir::new().unwrap();

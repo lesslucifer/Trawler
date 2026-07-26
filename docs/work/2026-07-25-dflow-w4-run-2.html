@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a64c2309f34851f0dfa9804">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W4 Run #2 (flow detail panel, integrated)</title>
+  <link rel="stylesheet" href="components/specimen.css">
+  <style>
+    /* Screen-level assembly ONLY. Every component value — colour, type, control
+       padding, radius, hit area — comes from components/specimen.css, which is
+       the extraction of the design files themselves. Nothing here restyles a
+       composed component. The three screen-owned exceptions are declared: the
+       ambient frame context, the proposed Section variant="band", and
+       ProtocolLine (T3, inline by the W2 verdict, no design file to compose). */
+    .mock{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:4px;max-width:440px;overflow:hidden;
+          font-family:var(--a-mono);font-size:12.5px;}  /* the ambient mono context .panel gives a specimen in its own design file */
+    .mock .bar{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--a-line);background:var(--a-canvas);}
+    .mock .bar .dur{margin-left:auto;}
+    .mock .scroll{max-height:560px;overflow-y:auto;}
+    .mock .sec-block:last-child{border-bottom:none;}
+    .mock .facts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;}
+    .mock .facts .cb{margin-left:auto;}
+    .mock .chrome-meta{margin-bottom:8px;}  /* proposed BodyViewer extension: the metadata leaves the one-line chrome bar */
+    /* proposed Section variant="band" — no design file yet, so the screen stubs it;
+       its label repeats the uppercase-mute pattern that Section, HeaderTable and
+       BodyViewer each declare separately (finding 24) */
+    .mock .band{border-top:1px solid var(--a-mute);padding-top:8px;}
+    .mock.failed{padding:0;}
+    .fail{display:flex;flex-direction:column;gap:8px;padding:24px 16px;}          /* proposed Notice + Button, screen-owned: nothing to compose yet */
+    .fail .nt{display:flex;gap:8px;font-family:var(--a-ui);font-size:12.5px;color:var(--a-warn);}
+    .fail .nt em{display:block;font-style:normal;color:var(--a-mute);font-size:11.5px;margin-top:2px;}
+    .fail .btn-row{display:flex;gap:8px;}
+    .fail .bt{border:1px solid var(--a-line);border-radius:3px;padding:3px 10px;font-family:var(--a-ui);font-size:11.5px;color:var(--a-body);background:transparent;cursor:pointer;}
+    .fail .bt:hover{color:var(--a-ink);border-color:var(--a-mute);}
+    .fails{display:flex;flex-direction:column;gap:12px;}
+    .mock .band>.legend{padding:0 16px 8px;}
+    .mock .band>.legend .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;font-family:var(--a-ui);}
+    .mock .proto{font-family:var(--a-mono);font-size:11px;color:var(--a-mute);}
+    .mock.inflight .complete-only{display:none;}
+    .mock:not(.inflight) .inflight-only{display:none;}
+    .statebtn{margin-top:12px;font-size:12px;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 12px;cursor:pointer;}
+    .stage{border-left:3px solid var(--line);padding-left:14px;margin-left:2px;}
+    .kd{color:var(--muted);}
+    .fr b{color:var(--accent);font-weight:600;}
+    .tag{display:inline-block;font-size:10px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:0 6px;color:var(--muted);white-space:nowrap;}
+    .tag.w5{color:var(--ok);border-color:var(--ok);} .tag.w6{color:var(--accent);border-color:var(--accent);}
+    .tag.w7{color:var(--warn);border-color:var(--warn);} .tag.fl{color:var(--ink);}
+    .v{font-weight:600;white-space:nowrap;} .v.sat{color:var(--ok);} .v.inh{color:var(--muted);} .v.na{color:var(--muted);}
+    .v.blk{color:var(--warn);} .v.prop{color:var(--accent);} .v.vio{color:var(--warn);}
+    table{font-size:13px;} pre{white-space:pre-wrap;}
+    .sketch{font-family:var(--mono,monospace);font-size:12px;line-height:1.45;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W4 Run #2 — flow detail panel, against the substrate</h1>
+      <p>The design flow run again on the same screen, designed from scratch — this time consuming the frozen component registry and design rulebook. Six stages, a machine-checked receipt over the 14 soft rules (the 13 hard ones are gate predicates, not claims), twelve proposals, three blocked-on items (two answered by the reviewer), and 31 findings that feed W5/W6/W7.</p>
+      <div class="meta">Design run · 2026-07-25 · Trawler · T3 (docs/work/) · wu/design-flow/integrated-run · flow: <a href="design-flow-base.html">design-flow-base.html</a> · plan: <a href="2026-07-25-dflow-w4-plan.html">W4 plan</a> · run #1: <a href="2026-07-16-dflow-run-1.html">dflow-run-1</a></div>
+    </div>
+  </header>
+  <main data-artifact="design-run" data-status="ready">
+
+    <h2 id="how-to-read">How to read this</h2>
+    <p>Each stage carries its <strong>artifact</strong> and nothing else — every place the substrate was wrong, missing or ambiguous is a row in the one <a href="#findings">findings table</a>, tagged by stage and owner: <span class="tag w5">W5 registry</span> <span class="tag w6">W6 rulebook</span> <span class="tag w7">W7 harness</span> <span class="tag fl">flow</span>. The panel is designed <em>fresh</em>: run #1's answers were not reused, and the two runs are compared only at the end (<a href="#cross-check">cross-check</a>) to measure what the substrate changed. The registry and rulebook were read once, before stage 1, and <strong>not edited during the run</strong>.</p>
+
+    <h2 id="substrate">Substrate loaded (frozen for this run)</h2>
+    <table data-c="substrate">
+      <thead><tr><th>Input</th><th>Version read</th><th>What it gives the run</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../design-rules/design-rules-index.html">Design rulebook</a> — 13 hard · 14 soft · 4 vocabularies</td><td>blob <code>28f5437</code></td><td>the rules each stage cites, and the 27-slug coverage list the <a href="#receipt">receipt</a> must fill</td></tr>
+        <tr><td><a href="2026-07-22-dflow-w2-registry-seed.html">Registry roster</a> + 13 <a href="components/copy-text.html">component design files</a></td><td>blob <code>56d6521</code> + <code>docs/work/components/*.html</code> (all confirmed 2026-07-23)</td><td>the component vocabulary every element resolves against (reuse · extend · propose)</td></tr>
+        <tr><td>Capabilities (functional input)</td><td><code>ui/src/api.ts</code> — <code>FlowView</code>, <code>BodyView</code>, <code>TrawlerApi</code></td><td>what the panel must be able to show and do — received, not designed</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">Per the user's direction for this WU: the collection is treated as <strong>built</strong> — each component's design file <em>is</em> its contract, exactly as its TSDoc would be once the build WU lands it. No <code>ui/</code> code was read to design (shipped code appears only where a component file cites it).</p>
+
+    <h2 id="s1">1 · Frame</h2>
+    <div class="stage" data-c="frame" data-item="frame">
+      <p><strong>Job.</strong> Confirm one captured flow and read what crossed the wire — the detail half of the list→detail shell (<code>GET /flows/{id}</code> + a lazy body fetch per leg).</p>
+      <p class="kd"><strong>Given capabilities</strong> (input, not designed): identity (method · uri · status · started_at · duration_ms · per-leg versions) · both header sets in wire order · both bodies, lazy, one of <em>captured / empty / streaming / not_captured</em>, 10 MiB cap, decoded or raw · copy as curl · save a body · dismiss.</p>
+      <table>
+        <thead><tr><th>Driver</th><th>…therefore</th><th>why</th><th>checked by</th></tr></thead>
+        <tbody>
+          <tr><td colspan="4"><strong>Goals</strong> — the ranking <em>is</em> the visual hierarchy</td></tr>
+          <tr><td><strong>Confirm the verdict</strong></td><td>identity strip pinned above the scroll, heaviest weight on screen</td><td>entered only from a list scan</td><td>verdict legible unscrolled, in every state</td></tr>
+          <tr><td><strong>Read a leg</strong></td><td>peer zones, identical grammar (headers → body); bodies get the space</td><td>the wire content is the work</td><td>response body ≤ one scroll gesture</td></tr>
+          <tr><td><strong>Compare the legs</strong></td><td>both legs on one axis; no mode hides one</td><td>half of debugging is a request/response mismatch</td><td>no interaction hides a leg</td></tr>
+          <tr><td><strong>Take it elsewhere</strong></td><td>a take affordance <em>at</em> each artifact; no export region</td><td>the wanted artifact is whatever is on screen</td><td>uri · header value · header set · body — one act each</td></tr>
+          <tr><td colspan="4"><strong>Constraints</strong> — hard boundaries</td></tr>
+          <tr><td><strong>Narrow column, shared with the list</strong></td><td>single column; no pairs, no horizontal scroll</td><td>the shell gives the list the width</td><td>nothing scrolls horizontally</td></tr>
+          <tr><td><strong>Request-first capture</strong></td><td>every response zone exists before the response and names its absence; skeleton identical before/after (a component hiding its own dead affordance is not a skeleton change)</td><td>the response streams in later; new zones move what is being read</td><td>in-flight vs complete differ in content only (failure is the declared exception, above)</td></tr>
+          <tr><td><strong>Bodies lazy, capped, sometimes absent</strong></td><td>the body zone owns fetch/limit/absence; the panel stays usable</td><td>bytes are outside the flow projection</td><td>no blank zone; every absence names its reason</td></tr>
+          <tr><td><strong>The flow can be gone, or unreachable</strong></td><td>a third top-level state that <em>replaces</em> zones A–D: one sentence naming the cause plus its next action. Failure is the one place the skeleton legitimately differs — there is no content to hold in place</td><td>the store is a ring, so eviction is normal operation, not a defect (<code>src/event.rs</code> makes <code>FlowEvicted</code> a first-class event); and the control API can simply be down</td><td>each failure names its cause and offers the action that actually helps — retry where retry works, close where it never will</td></tr>
+          <tr><td><strong>Substrate: <code>Section</code> must not nest</strong></td><td>leg → headers/body needs a second device, not a nested Section</td><td><a href="components/section.html">section.html</a> · no-nesting rule + fork F3</td><td>no Section inside a Section in <a href="#s3">Elements</a></td></tr>
+          <tr><td><strong>Substrate: <code>BodyViewer</code> labels itself per leg</strong></td><td>the leg level must not repeat the leg word at the pane</td><td><a href="components/body-viewer.html">body-viewer.html</a> anatomy ① assumes no leg grouping</td><td>the leg word appears once per leg (<code>labels-add-context</code>)</td></tr>
+          <tr><td colspan="4"><strong>Qualities</strong> — Tune's yardstick; only what the rulebook does <em>not</em> carry</td></tr>
+          <tr><td><strong>The leg seam is the panel's strongest boundary</strong></td><td>a leg's opening edge outweighs every other separator</td><td>names which instance of <code>grouping-by-relatedness</code> wins here</td><td>no separator heavier than the leg seam</td></tr>
+          <tr><td><strong>Absence is honest, never a defect</strong></td><td>each absence says <em>which</em> it is; "none" never means "not yet"</td><td>four distinct absences; <code>empty-states-orient</code> is generic</td><td>each absence renders its own wording</td></tr>
+          <tr><td colspan="4"><strong>Non-goals</strong>: no edit/replay · no flow diffing · no in-body search · no hi-fi polish</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="s2">2 · Layout</h2>
+    <div class="stage" data-c="layout" data-item="layout">
+      <pre class="sketch">┌──────────────────────────────────────────────┐
+│ A  identity    POST  201  ·  142 ms       ×  │ ← pinned; heaviest weight on screen (goal: verdict)
+╞══════════════════════════════════════════════╡
+│ B  target                                    │ ← the uri wraps and is grabbable whole;
+│      https://api.example.com/v1/users?…      │   versions · time · [⧉ curl] sit quiet beneath it
+│      https · HTTP/1.1 → HTTP/2 · 14:03:22    │
+╞══════════════════════════════════════════════╡
+│ C  REQUEST                                   │ ←═ the leg seam: the panel's heaviest boundary
+│   ┌ headers                            ⧉     │ ← rows region scroll-capped (~200 px)
+│   └ body       [raw|pretty]  ⧉  ↓            │ ← pane grows; never scrolls inside
+╞══════════════════════════════════════════════╡
+│ D  RESPONSE                                  │ ←═ mirror of C; identical skeleton in flight
+│   ┌ headers                            ⧉     │
+│   └ body       [raw|pretty]  ⧉  ↓            │
+└──────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────┐
+│                                           ×  │ ← E  failure — replaces A–D entirely
+│   ⚠ flow no longer captured                  │   A cannot render: no method, status or
+│     the capture ring moved past it           │   duration exists to pin
+│     [ close ]                                │ ← the action that helps, not a generic retry
+└──────────────────────────────────────────────┘
+
+scroll / overflow:  A pinned, never scrolls · B–D are the panel's single scroll region ·
+                    each headers rows region caps at ~200 px and scrolls itself
+                    (HeaderTable's own cap) · body panes never scroll internally
+                    (BodyViewer's no-inner-scroll rule) — so exactly two scroll
+                    owners exist in the column, and neither is a surprise</pre>
+      <p><strong>Derived decision — the leg band.</strong> Goal 3 (compare the legs) and the strongest-seam quality both demand a leg level <em>above</em> headers/body. <code>Section</code> must not nest, so the leg level is not a Section. Three candidates, judged against the substrate:</p>
+      <table>
+        <thead><tr><th>Candidate</th><th>What it costs</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Flat</strong> — four peer Sections: "request headers", "request body", "response headers", "response body"</td><td>zero new vocabulary; but the leg level then exists only inside the heading words — four equal seams and nothing for the eye to group on</td><td>rejected — fails goal 3 and the seam quality; and every heading repeats the leg word (<code>labels-add-context</code>)</td></tr>
+          <tr><td><strong>Leg band</strong> — a labelled band (uppercase-mute leg label + a tonally stronger rule + space) hosting two Sections</td><td>one registry entry that does not exist: a Section variant that groups Sections</td><td><strong>chosen</strong> — the only candidate that gives the seam its weight; drives the <a href="#proposals">Section variant proposal</a></td></tr>
+          <tr><td><strong>Leg as a Section</strong>, headers as a disclosure inside its slot</td><td>legal for Section (a disclosure may live in the slot) — but HeaderTable's hosting contract wants its own Section for the heading, and the body pane would sit unlabelled inside a leg Section</td><td>rejected — breaks a component contract to avoid a proposal; that is a silent fork, which is what reuse-or-propose exists to prevent</td></tr>
+        </tbody>
+      </table>
+      <p><strong>Two smaller calls.</strong> The uri stays out of the pinned strip (A): a wrapping uri in a pinned strip eats the panel at long URLs — the narrow-column constraint plus A's pinning force it into B, which scrolls. Headers before body inside a leg is wire reading order, not a preference; nothing needed to be decided.</p>
+    </div>
+
+    <h2 id="s3">3 · Elements</h2>
+    <div class="stage" data-c="elements" data-map data-item="elements">
+      <p class="kd" style="margin-bottom:6px"><strong>Click any component</strong> — in the tree or in the catalog — to light every place it appears. A component in two zones is a reuse; a component in one is a candidate for inlining.</p>
+      <pre class="sketch">panel
+├─ A identity ── <span data-key="method-label">MethodLabel</span> · <span data-key="status-pill">StatusPill</span> · <span data-key="duration-text">DurationText</span> · <span data-key="icon-button">IconButton(close ◆)</span>
+├─ E failure ─── <span data-key="notice">Notice ✦</span> · <span data-key="button">Button ✦</span> · <span data-key="icon-button">IconButton ◆</span>   (replaces A–D)
+├─ B target ──── <span data-key="copy-text">CopyText(uri)</span> · <span data-key="protocol-line">ProtocolLine</span> · <span data-key="timestamp-text">TimestampText</span> · <span data-key="copy-button">CopyButton(⧉ "curl" ◆)</span>
+├─ C REQUEST ─── <span data-key="section-band">Section(band ✦)</span> ─┬─ <span data-key="section">Section("headers")</span> ── <span data-key="header-table">HeaderTable ▣</span>
+│                                 └─ <span data-key="body-viewer">BodyViewer ▣</span>
+└─ D RESPONSE ── <span data-key="section-band">Section(band ✦)</span> ─┬─ <span data-key="section">Section("headers")</span> ── <span data-key="header-table">HeaderTable ▣</span>
+                                  └─ <span data-key="body-viewer">BodyViewer ▣</span>
+
+▣ <span data-key="header-table">HeaderTable</span> = <span data-key="key-value-row">KeyValueRow×</span>(→ <span data-key="copy-text">CopyText ◆</span>) · <span data-key="copy-button">CopyButton(⧉ icon form ◆)</span>
+▣ <span data-key="body-viewer">BodyViewer</span>  = <span data-key="segmented-control">SegmentedControl(raw|pretty)</span> · <span data-key="body-renderer">BodyRenderer family</span> · <span data-key="copy-button">CopyButton(⧉ ◆)</span> · <span data-key="icon-button">IconButton(↓ ◆)</span>
+◆ recurring    ✦ proposed extension    ▣ T4 composition, built local</pre>
+      <table>
+        <thead><tr><th>Component</th><th>Used in</th><th>Tier</th><th>Verdict</th><th>Fit — against <code>@use</code> / <code>@avoid</code></th><th>States</th></tr></thead>
+        <tbody>
+          <tr data-key="method-label"><td><a href="components/method-label.html">MethodLabel</a></td><td>A</td><td>T2</td><td><span class="v sat">reuse</span></td><td><code>@use</code> "anywhere a flow's method must be shown … pass the raw method string" — exact</td><td>per its file. <span class="v blk">blocked</span> its verb tokens do not exist yet</td></tr>
+          <tr data-key="status-pill"><td><a href="components/status-pill.html">StatusPill</a></td><td>A</td><td>T2</td><td><span class="v sat">reuse</span></td><td><code>@use</code> "anywhere a flow's HTTP outcome is shown" — status-in matches the raw <code>FlowView.status</code> field exactly</td><td>per its file</td></tr>
+          <tr data-key="duration-text"><td><a href="components/duration-text.html">DurationText</a></td><td>A</td><td>T1</td><td><span class="v sat">reuse</span></td><td><code>@use</code> "the detail header identity bar" — this panel is the named tenant</td><td>per its file — <em>pending = invisible fixed-width placeholder</em>, precisely what the in-flight constraint needs</td></tr>
+          <tr data-key="icon-button"><td><a href="components/icon-button.html">IconButton</a> <code>glyph="close"</code></td><td>A</td><td>T1</td><td><span class="v sat">reuse</span></td><td><code>@use</code> "close ×" — verbatim</td><td>per its file</td></tr>
+          <tr data-key="copy-text"><td><a href="components/copy-text.html">CopyText</a></td><td>B (uri) · every header value</td><td>T1</td><td><span class="v sat">reuse</span></td><td><code>@use</code> "the request URI … every KeyValueRow value" — verbatim</td><td>per its file</td></tr>
+          <tr data-key="protocol-line"><td>ProtocolLine</td><td>B</td><td>T3</td><td><span class="v sat">reuse</span> (inline, by design)</td><td>W2 verdict: appears once, inline markup, never extracted. This run is its second <em>sighting</em> but still one screen — the T3 verdict stands</td><td>per the <a href="2026-07-22-dflow-w2-registry-seed.html">seed's ProtocolLine block</a> — its in-flight form is what the no-layout-jump constraint leans on</td></tr>
+          <tr data-key="timestamp-text"><td><a href="components/timestamp-text.html">TimestampText</a></td><td>B</td><td>T1</td><td><span class="v sat">reuse</span></td><td><code>@use</code> "flow detail overview" — verbatim</td><td>per its file</td></tr>
+          <tr data-key="copy-button"><td><a href="components/copy-button.html">CopyButton</a> <code>⧉ label="curl"</code> · <code>icon form</code></td><td>B · C · D</td><td>T1</td><td><span class="v sat">reuse</span></td><td><code>@use</code> "copy-as-curl … copy all headers" — both are named tenants. <strong>Two forms, both in contract:</strong> zone B takes the optional leading icon with a bare payload noun (<code>@anatomy</code> "label names payload · optional leading icon"), so <code>⧉ curl</code> drops the redundant verb; zones C/D take the <em>icon-only</em> form, which <code>@anatomy</code> allows "only when the payload is rendered adjacent (fork D2)" — the header rows sit directly beneath their own sub-bar, the same condition BodyViewer cites for the body. The run first read the flat <code>@avoid</code> "icon-only form" and shipped a labelled copy-all: the two lines contradict each other (<a href="#findings">finding 27</a>)</td><td>per its file; the icon form confirms by swapping ⧉ → ✓ (stubbed here)</td></tr>
+          <tr data-key="section"><td><a href="components/section.html">Section</a></td><td>B · headers ×2</td><td>T1</td><td><span class="v sat">reuse</span></td><td><code>@use</code> "every labelled zone of a detail screen: request, response, headers, body panels"</td><td>per its file</td></tr>
+          <tr data-key="section-band"><td><strong>Section <code>variant="band"</code></strong></td><td>C · D</td><td>T1</td><td><span class="v prop">extend</span></td><td><code>@avoid</code> "nesting a Section inside another Section" blocks the leg level → the band is a Section <em>variant</em> that carries a leg label plus the seam and hosts Sections. Reopens fork F3</td><td>none of its own (chrome); the variant must add no padding that double-indents its children</td></tr>
+          <tr data-key="notice"><td><strong>Notice</strong> ✦ <em>proposed</em></td><td>E · C · D</td><td>T1</td><td><span class="v prop">propose</span></td><td>nothing in the roster renders an absence or failure sentence, yet two confirmed components already draw one privately and disagree (<a href="#findings">finding 24</a>): HeaderTable's <code>.ht-none</code> in Inter, BodyViewer's <code>.body-pane .notice</code> in mono italic. A third private copy for the panel's failure state would settle nothing. Proposed as the one renderer for both, tone-aware (<code>mute</code> for absence · <code>warn</code> for failure) with an optional action slot</td><td>must own: <em>absence</em> (mute, no action) · <em>failure</em> (warn, action required) — and nothing else; it renders a sentence, it does not decide which</td></tr>
+        <tr data-key="button"><td><strong>Button</strong> ✦ <em>proposed</em></td><td>E</td><td>T1</td><td><span class="v prop">propose</span></td><td>the retry/close actions need a labelled, non-copy button. CopyButton <code>@avoid</code>s "anything that is not a copy action"; IconButton <code>@avoid</code>s "actions with no fitting glyph" and redirects to <em>"CopyButton or a plain button"</em> — a component the roster does not contain (<a href="#findings">finding 30</a>)</td><td>must own: rest · hover · focus · active · disabled — IconButton's set without the glyph constraint</td></tr>
+        <tr data-key="header-table"><td><a href="components/header-table.html">HeaderTable</a></td><td>C · D</td><td>T4</td><td><span class="v prop">reuse + extend</span></td><td><code>@use</code> "request-headers zone (panel C) · response-headers zone (panel D)" — exact. But its states are populated / empty / long-set only, and an in-flight response has an <em>empty</em> header array → it would render "none", which the lexicon reserves for an empty set, not an unfinished call</td><td>extensions: <strong>pending</strong> ("awaiting response…"), mirroring BodyViewer's <em>no-response-yet</em>; <strong>sub-bar icon form</strong> — its spec hard-codes <code>label="copy all"</code> though its own hosted CopyButton meets fork D2 (rows rendered adjacent). W5 owns the line; the aria-label it already specs ("copy all request headers") carries the scope the word "all" used to</td></tr>
+          <tr data-key="body-viewer"><td><a href="components/body-viewer.html">BodyViewer</a></td><td>C · D</td><td>T4</td><td><span class="v prop">reuse + extend</span></td><td><code>@use</code> "zones C and D — one instance per leg" — exact (fork D3 Option A <em>is</em> this design). Extension: the leg label degrades to "body" when the host band already names the leg (<code>labels-add-context</code>)</td><td>per its file — it already owns all four absences the Frame demands (<em>empty</em> · <em>not-captured</em> · <em>streaming</em> · <em>no-response-yet</em>), each with its own notice. Second extension: a <strong>fifth</strong> state, <em>fetch-failed</em> — the lazy body request can 404 (the flow was evicted after the panel loaded) or not answer at all, which is none of the four absences: the bytes are not absent, they are unreachable</td></tr>
+          <tr data-key="key-value-row"><td><a href="components/key-value-row.html">KeyValueRow</a></td><td>in HeaderTable</td><td>T1</td><td><span class="v sat">reuse</span></td><td><code>@use</code> "request/response headers" — verbatim</td><td>per its file</td></tr>
+          <tr data-key="segmented-control"><td><a href="components/segmented-control.html">SegmentedControl</a></td><td>in BodyViewer ×2</td><td>T1</td><td><span class="v sat">reuse</span></td><td><code>@use</code> "any always-visible mutually exclusive view switch: decode (raw | decoded)"</td><td>per its file</td></tr>
+          <tr data-key="body-renderer"><td><a href="components/body-renderer.html">BodyRenderer</a> family</td><td>in BodyViewer</td><td>T2 each</td><td><span class="v sat">reuse</span> + <span class="v blk">gap</span></td><td><code>@use</code> "inside a body pane, chosen by <code>bodyKind()</code>" — exact for json · xml · image · form · hex</td><td><strong>gap:</strong> BodyViewer's dispatch sends <em>text/*</em> and every raw-view text body to a <code>TextRenderer</code> the family does not contain (five members, no design file)</td></tr>
+          <tr data-key="toned-text"><td>TonedText</td><td>— (not placed)</td><td>T1</td><td><span class="v blk">missing entry</span></td><td>StatusPill's <code>@madeof</code> and its <code>@avoid</code> ("a toned value that is not an HTTP status — use TonedText (T1)") both point at a collected T1 that has no roster row and no design file</td><td>— this panel never needs it directly; the gap surfaced only by reading StatusPill's file</td></tr>
+        </tbody>
+      </table>
+      <p><strong>T4 break-downs.</strong> <em>HeaderTable</em> → KeyValueRow× (T1) · CopyButton (T1); the wire-format serialisation stays HeaderTable's own logic. <em>BodyViewer</em> → SegmentedControl (T1) · BodyRenderer× (T2) · CopyButton (T1, icon form) · IconButton (T1). Both are assembled at screen level and stay out of the collection — unchanged from the W2 verdicts.</p>
+    </div>
+
+    <h2 id="s4">4 · Interaction</h2>
+    <div class="stage" data-c="interaction" data-item="interaction">
+      <table>
+        <thead><tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th><th>Keyboard path</th></tr></thead>
+        <tbody>
+          <tr><td>Confirm the pick</td><td>verdict</td><td>selects a row in the list</td><td>identity strip renders method · status · duration and stays pinned while everything else scrolls</td><td>↑/↓ then Enter in the list (existing)</td></tr>
+          <tr><td>Read a leg's headers</td><td>read a leg</td><td>scans the rows region</td><td>rows in wire order, names aligned, long values wrapped; the region scrolls inside its cap so the body below stays reachable</td><td>Tab into the region, native scroll keys</td></tr>
+          <tr><td>Take one header value</td><td>take elsewhere</td><td>clicks a value</td><td>the whole value goes to the clipboard verbatim; inline "copied" for ~2 s</td><td>Enter / Space on the focused value · partial take = native selection + ⌘C</td></tr>
+          <tr><td>Take a whole header set</td><td>take elsewhere</td><td>clicks the headers <code>⧉</code> (tooltip / accessible name: "copy all request headers")</td><td>HeaderTable serialises the set to wire format; the button confirms in place</td><td>Enter / Space</td></tr>
+          <tr><td>Read a body</td><td>read a leg</td><td>looks at the body pane</td><td>pretty by default; content-type and size named in the chrome bar; renderer chosen by type</td><td>Tab to the pane — the json/xml surface is keyboard-navigable (its own contract)</td></tr>
+          <tr><td>See it exactly as sent</td><td>read a leg</td><td>switches to raw</td><td>the decoded-raw body, no pretty-print — minified stays one line; the active segment always names which view is showing</td><td>Enter / Space on the segment</td></tr>
+          <tr><td>Compare the legs</td><td>compare</td><td>scrolls from the request band to the response band</td><td>both bands rendered, nothing hides a leg; the seam marks where one ends and the other starts</td><td>native scroll</td></tr>
+          <tr><td>Take a body</td><td>take elsewhere</td><td>clicks ⧉ or ↓</td><td>copy delivers exactly what the pane shows; save delivers the decoded-raw bytes, named by leg and type</td><td>Enter / Space</td></tr>
+          <tr><td>Reproduce the call</td><td>take elsewhere</td><td>clicks <code>⧉ curl</code></td><td>the screen serialises the flow to a runnable curl; the button confirms in place</td><td>Enter / Space</td></tr>
+          <tr><td><strong>Watch a live call</strong></td><td>verdict · read a leg</td><td>opens a flow before its response exists</td><td>status "…", duration blank with its width held; the response band is present with the <em>same</em> skeleton — headers "awaiting response…", body "no response yet", view switch disabled; content fills in on completion with no change to the zone skeleton — the body's copy/save affordances are absent until there is a body to act on, per BodyViewer's own hide rule</td><td>— (passive)</td></tr>
+          <tr><td>Dismiss</td><td>—</td><td>clicks ×</td><td>the panel closes; focus returns to the selected list row</td><td><span class="v prop">proposed: Esc</span> — the keyboard-conventions vocabulary has no dismiss entry</td></tr>
+          <tr><td>Meet a body that isn't there</td><td>read a leg</td><td>opens a flow whose body was empty, streamed, or over the capture cap</td><td>the pane names <em>which</em> absence, with the actual size where relevant — never a blank pane, never "none"</td><td>— (passive)</td></tr>
+          <tr><td><strong>Open a flow the ring has dropped</strong></td><td>verdict</td><td>opens a flow whose <code>GET /flows/{id}</code> returns 404</td><td>zones A–D are replaced by one <em>warn</em> Notice — "flow no longer captured · the capture ring moved past it" — and a single <strong>close</strong> action. <strong>No retry</strong>: the flow is gone, and a retry button that can only fail again is a lie about what the user can do</td><td>Enter / Space activates · <em>Esc</em> closes (the same proposed binding as dismiss)</td></tr>
+          <tr><td><strong>Open a flow while trawler is unreachable</strong></td><td>verdict</td><td>opens a flow and the control API does not answer</td><td>same region, different sentence and action — "trawler is not responding · check the proxy is running", with <strong>retry</strong>. Retry re-issues the one request; nothing else in the panel exists yet to disturb</td><td>Enter / Space</td></tr>
+          <tr><td><strong>Open a flow that errors</strong></td><td>verdict</td><td>opens a flow and the API answers 400 or 5xx</td><td>same region — "could not load this flow · <em>&lt;status&gt;</em>" with <strong>retry</strong> and <strong>close</strong>. The status code is the text channel beside the warn tone (<code>colour-plus-text</code>), the same pairing StatusPill uses for a failed call</td><td>Enter / Space · <em>Esc</em></td></tr>
+          <tr><td><strong>A body goes unreachable mid-read</strong></td><td>read a leg</td><td>expands or reloads a body after the flow has been evicted</td><td>the panel stays — what is on screen was captured and is still true. Only that pane changes, to BodyViewer's proposed fifth state: "body unavailable · the flow is no longer captured", with <strong>retry</strong>. The panel never yanks itself out from under a reader on an event it cannot even attribute (<a href="#blocked">blocked-on</a>)</td><td>Enter / Space</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="s5">5 · Draft mockup</h2>
+    <p>A real build, <strong>composed from the component design files' own specimen CSS</strong>: the run links <a href="components/specimen.css"><code>components/specimen.css</code></a> — the single extraction of all fourteen files — and assembles with their class names, so every colour, control padding, radius and hit area below is the value its design file draws, not a value this run re-typed. The first cut of this mockup re-typed them and drifted from five confirmed contracts (<a href="#findings">finding 23</a>). Lo-fi and structural: a component's internals stay stubbed, and the button toggles the two states the Interaction table demanded.</p>
+    <table data-c="mockup-boundary">
+      <thead><tr><th>Layer</th><th>Source</th><th>In this build</th></tr></thead>
+      <tbody>
+        <tr><td><strong>composed</strong></td><td><code>specimen.css</code>, by class name</td><td><code>.ml</code> · <code>.sp-ok</code>/<code>.sp-muted</code> · <code>.dur</code>/<code>.dur.blank</code> · <code>.ib</code> · <code>.ibtn</code> · <code>.ct</code> · <code>.ts</code> · <code>.cb</code>/<code>.cb-icon</code> · <code>.sec-block</code> + <code>.lbl</code>/<code>.body</code> · <code>.ht-bar</code>/<code>.sec-hd</code>/<code>.ht-scroll</code>/<code>.ht-none</code> · <code>.hr-table</code>/<code>.hr-key</code>/<code>.hr-val</code> · <code>.seg-group</code>/<code>.seg</code> · <code>.chrome-bar</code>/<code>.sect-lbl</code>/<code>.meta-tag</code> · <code>.body-pane</code> + <code>.jk</code>/<code>.js</code>/<code>.jn</code>/<code>.jp</code>/<code>.notice</code></td></tr>
+        <tr><td><strong>screen-owned</strong> (declared)</td><td>this doc's <code>&lt;style&gt;</code> — assembly only, zero component values</td><td>the panel shell and the ambient mono frame a design file gets from <code>.panel</code> · the pinned strip · the scroll cap · the fact row · the state-visibility rules. Two disclosed exceptions, both by verdict: the <em>proposed</em> band variant (nothing to compose yet) and ProtocolLine (T3, inline). One <strong>borrowed</strong> class, disclosed: every icon-form copy composes <code>.ibtn</code>, which lives in <em>BodyViewer's</em> block because CopyButton's specimen draws only its labelled form — fork D2 is specified in prose and drawn nowhere canonical (<a href="#findings">finding 28</a>)</td></tr>
+        <tr><td><strong>stubbed</strong></td><td>a component's internals</td><td>the CodeMirror surface and fold gutter · renderer dispatch · live clipboard and confirm timing · hover/focus/active transitions (the sheet carries them; nothing drives them here)</td></tr>
+      </tbody>
+    </table>
+    <div class="app" data-c="mockup" data-item="mockup">
+      <div class="mock" id="mock">
+        <div class="bar">
+          <span class="ml">POST</span>
+          <span class="sp-ok complete-only">201</span>
+          <span class="sp-muted inflight-only">…</span>
+          <span class="dur complete-only">142 ms</span>
+          <span class="dur blank inflight-only">142 ms</span>
+          <button class="ib" title="close" aria-label="close">×</button>
+        </div>
+        <div class="scroll">
+          <div class="sec-block">
+            <div class="lbl">target</div>
+            <div class="body">
+              <span class="ct">https://api.example.com/v1/users?notify=true&amp;source=onboarding-flow&amp;trace=8f3a91c2-4d3b-4e7f</span>
+              <div class="facts">
+                <span class="proto">https · HTTP/1.1<span class="complete-only"> → HTTP/2</span></span>
+                <span class="ts">14:03:22</span>
+                <button class="cb" aria-label="copy curl command"><span class="cb-icon">⧉</span>curl</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="band">
+            <div class="legend"><span class="lbl">request</span></div>
+            <div class="sec-block">
+              <div class="ht-bar"><span class="sec-hd">headers</span><button class="ibtn" title="copy all request headers" aria-label="copy all request headers">⧉</button></div>
+              <div class="ht-scroll">
+                <div class="hr-table">
+                  <span class="hr-key">host</span><span class="hr-val">api.example.com</span>
+                  <span class="hr-key">content-type</span><span class="hr-val">application/json; charset=utf-8</span>
+                  <span class="hr-key">authorization</span><span class="hr-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.sig</span>
+                  <span class="hr-key">accept</span><span class="hr-val">application/json</span>
+                  <span class="hr-key">x-request-id</span><span class="hr-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+                </div>
+              </div>
+            </div>
+            <div class="sec-block">
+              <div class="chrome-bar">
+                <span class="sect-lbl">body</span>
+                <span class="spacer"></span>
+                <span class="seg-group"><span class="seg">raw</span><span class="seg active">pretty</span></span>
+                <button class="ibtn" title="copy body" aria-label="copy body">⧉</button>
+                <button class="ibtn" title="save body to file" aria-label="save body to file">↓</button>
+              </div>
+              <div class="chrome-meta"><span class="meta-tag">application/json · 84 B</span></div>
+              <div class="body-pane">{
+  <span class="jk">"email"</span><span class="jp">:</span> <span class="js">"ada@example.com"</span><span class="jp">,</span>
+  <span class="jk">"plan"</span><span class="jp">:</span> <span class="js">"pro"</span><span class="jp">,</span>
+  <span class="jk">"seats"</span><span class="jp">:</span> <span class="jn">3</span>
+}</div>
+            </div>
+          </div>
+
+          <div class="band">
+            <div class="legend"><span class="lbl">response</span></div>
+            <div class="sec-block">
+              <div class="ht-bar"><span class="sec-hd">headers</span>
+                <button class="ibtn complete-only" title="copy all response headers" aria-label="copy all response headers">⧉</button>
+                <button class="ibtn s-disabled inflight-only" title="copy all response headers" aria-label="copy all response headers" disabled>⧉</button>
+              </div>
+              <div class="ht-scroll complete-only">
+                <div class="hr-table">
+                  <span class="hr-key">content-type</span><span class="hr-val">application/json; charset=utf-8</span>
+                  <span class="hr-key">content-length</span><span class="hr-val">1274</span>
+                  <span class="hr-key">location</span><span class="hr-val">/v1/users/8f3a91c2</span>
+                  <span class="hr-key">cache-control</span><span class="hr-val">no-store, max-age=0</span>
+                  <span class="hr-key">set-cookie</span><span class="hr-val">session=abc; Path=/; HttpOnly; Secure; SameSite=Strict</span>
+                  <span class="hr-key">x-ratelimit-remaining</span><span class="hr-val">47</span>
+                  <span class="hr-key">x-ratelimit-reset</span><span class="hr-val">1721649260</span>
+                  <span class="hr-key">strict-transport-security</span><span class="hr-val">max-age=31536000; includeSubDomains; preload</span>
+                  <span class="hr-key">x-trace-id</span><span class="hr-val">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
+                </div>
+              </div>
+              <div class="ht-none inflight-only">awaiting response…</div>
+            </div>
+            <div class="sec-block">
+              <div class="chrome-bar">
+                <span class="sect-lbl">body</span>
+                <span class="spacer"></span>
+                <span class="seg-group complete-only"><span class="seg">raw</span><span class="seg active">pretty</span></span>
+                <span class="seg-group disabled inflight-only"><span class="seg">raw</span><span class="seg active">pretty</span></span>
+                <button class="ibtn complete-only" title="copy body" aria-label="copy body">⧉</button>
+                <button class="ibtn complete-only" title="save body to file" aria-label="save body to file">↓</button>
+              </div>
+              <div class="chrome-meta complete-only"><span class="meta-tag">application/json · 1.2 KiB</span></div>
+              <div class="body-pane complete-only">{
+  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"8f3a91c2"</span><span class="jp">,</span>
+  <span class="jk">"email"</span><span class="jp">:</span> <span class="js">"ada@example.com"</span><span class="jp">,</span>
+  <span class="jk">"plan"</span><span class="jp">:</span> <span class="js">"pro"</span><span class="jp">,</span>
+  <span class="jk">"seats"</span><span class="jp">:</span> <span class="jn">3</span><span class="jp">,</span>
+  <span class="jk">"created_at"</span><span class="jp">:</span> <span class="js">"2026-07-25T14:03:22Z"</span>
+}</div>
+              <div class="body-pane inflight-only"><span class="notice">no response yet</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="fails" style="margin-top:16px;max-width:440px;">
+        <div class="mock failed">
+          <div class="bar"><span style="flex:1"></span><button class="ib" title="close" aria-label="close">×</button></div>
+          <div class="fail">
+            <div class="nt"><span>⚠</span><span>flow no longer captured<em>the capture ring moved past it</em></span></div>
+            <div class="btn-row"><button class="bt">close</button></div>
+          </div>
+        </div>
+        <div class="mock failed">
+          <div class="bar"><span style="flex:1"></span><button class="ib" title="close" aria-label="close">×</button></div>
+          <div class="fail">
+            <div class="nt"><span>⚠</span><span>trawler is not responding<em>check the proxy is running</em></span></div>
+            <div class="btn-row"><button class="bt">retry</button></div>
+          </div>
+        </div>
+        <div class="mock failed">
+          <div class="bar"><span style="flex:1"></span><button class="ib" title="close" aria-label="close">×</button></div>
+          <div class="fail">
+            <div class="nt"><span>⚠</span><span>could not load this flow — 500<em>the status is the text channel beside the tone</em></span></div>
+            <div class="btn-row"><button class="bt">retry</button><button class="bt">close</button></div>
+          </div>
+        </div>
+      </div>
+      <div class="fails" style="margin-top:12px;max-width:440px;">
+        <div class="mock">
+          <div class="sec-block">
+            <div class="chrome-bar"><span class="sect-lbl">body</span><span class="meta-tag">application/json</span><span style="flex:1"></span>
+              <span class="seg-group"><span class="seg">raw</span><span class="seg active">pretty</span></span></div>
+            <div class="body-pane"><span class="notice">body unavailable — the flow is no longer captured</span></div>
+            <div class="fail" style="padding:8px 0 0"><div class="btn-row"><button class="bt">retry</button></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="caption" style="font-size:12px;color:var(--muted);margin-top:8px;">BodyViewer's proposed <em>fifth</em> state — a lazy fetch that 404s after the panel loaded. The panel does not react: what is on screen was captured and is still true, so only the pane changes. Composed from BodyViewer's own notice family (mono italic), which is the wrong half of <a href="#findings">finding 24</a> and the reason <strong>Notice</strong> is proposed.</div>
+      <div class="caption" style="font-size:12px;color:var(--muted);margin-top:8px;">Zone E, the three load failures — each replaces A–D entirely, names its cause in one sentence, and offers only the action that helps: <strong>close</strong> where retry can never succeed, <strong>retry</strong> where it can. Notice and Button are <em>proposed</em>, so these are screen-owned styles over app tokens rather than composed classes; the ⚠ carries no meaning the sentence does not (<code>colour-plus-text</code>).</div>
+
+      <button class="statebtn" data-state-toggle="mock" data-state-class="inflight"
+              data-label-off="▶ show in-flight" data-label-on="◀ show complete">▶ show in-flight</button>
+      <div class="caption" style="font-size:12px;color:var(--muted);margin-top:8px;">Complete ↔ in-flight. Every zone is present in both and the skeleton does not move: status "…", duration blank with its width held, no response version, the response headers' pending notice and disabled copy-all, the response body's notice and disabled switch. The body's copy ⧉ and save ↓ are absent in flight rather than disabled — BodyViewer hides affordances that have nothing to act on, while controls that keep their meaning (the view switch, copy-all) stay visible and disabled.</div>
+    </div>
+    <p><strong>Detail decisions the build forced</strong> — each one impossible to see in a sketch:</p>
+    <table data-c="mockup-decisions">
+      <thead><tr><th>What the build exposed</th><th>Decision</th></tr></thead>
+      <tbody>
+        <tr><td>How to make the leg seam the heaviest boundary without a heavier <em>label</em> — <code>uppercase-mute-labels</code> forbids promoting the band label out of the mute pattern, and <code>data-ink-first</code> objects to a thicker rule</td><td>the seam is <strong>space plus tone</strong>: a rule in <code>ink-mute</code> instead of <code>hairline</code>, and 8 px of air above the leg label. No new ink, no new size, and it still reads as the strongest break</td></tr>
+        <tr><td>The body chrome bar does not fit one line at panel width (leg label + content-type + size + switch + two icons)</td><td>metadata drops to its own line under the chrome row. This contradicts BodyViewer's driver ⑦ ("the chrome bar is one compact line") — recorded as a <a href="#findings">W5 finding</a>, not silently absorbed</td></tr>
+        <tr><td>Spacing: composing the specimens means composing their spacing, and three of them sit below <code>spacing-scale</code>'s 8 px floor — Section's 10/14 px padding, HeaderTable's 4 px row gap, the controls' 2–3 px vertical padding</td><td>composed as drawn, and the contradiction is on the record as <a href="#findings">finding 14</a> instead of hidden. The first cut re-typed all three at 8 px, which made the old hand receipt read <em>satisfied</em> — the reason hard rules are now <a href="#hard-rules">judged by predicate</a>, never by the run. Visible consequence: the screen's on-scale 16 px strip padding no longer aligns with Section's 14 px, so the panel's left edge steps by 2 px. Nothing here is fixable at screen level</td></tr>
+        <tr><td>HeaderTable's own grid (<code>.ht-val</code>) draws value cells with no copy affordance, but its <code>@madeof</code> is KeyValueRow, whose value cell <em>is</em> click-to-copy — and the Interaction table has a use-case for it</td><td>built with KeyValueRow's classes inside HeaderTable's bar + scroll cap. Composing HeaderTable's drawing literally would have silently dropped a use-case; the two files disagree and the conflict is recorded (<a href="#findings">finding 24</a>) rather than resolved by whichever CSS was copied first</td></tr>
+        <tr><td>BodyViewer draws its own <code>.toggle</code>, <code>.btn</code> and 22 px <code>.ibtn</code> instead of the SegmentedControl, CopyButton and IconButton its <code>@madeof</code> declares</td><td>built from the <code>@madeof</code> components — so the view switch has real focus and disabled states and the chrome icons take IconButton's documented <code>size=24</code>. Consequence worth stating: the assembled panel does <em>not</em> look like BodyViewer's own specimen, and only a shared sheet makes that visible at all</td></tr>
+        <tr><td>MethodLabel's verb colour cannot be honoured — the named verb tokens do not exist</td><td>render MethodLabel's one documented fallback tone, <code>ink-body</code> (bare <code>.ml</code>) — the tone its fork D3 settles for <em>unmapped</em> verbs, reused here because nothing in the substrate says what a <em>mapped</em> verb with a missing token should look like. The sheet carries the five verb tones as <code>.ml-clr-*</code> and the build deliberately applies none: no rulebook token names them, and the substitution rides on <a href="#blocked">blocked-on</a></td></tr>
+        <tr><td>The body pane renders with BodyRenderer's real syntax tones instead of the achromatic stand-in the first cut invented</td><td>composed as drawn — and that is how <code>zero-accent</code> turned out to be <a href="#hard-rules">broken by a confirmed decision</a>: DEC-11's key/string/number tones are chromatic and the rule admits only <code>ok</code>/<code>warn</code>. A mockup that picks its own pane colours can never find this; the rule looked satisfied precisely because the build was guessing</td></tr>
+        <tr><td>Sticky leg bands were tempting (the leg label would survive scrolling)</td><td>rejected — the identity strip is the one pinned thing (goal 1); a second sticky layer competes with it and eats the narrow column</td></tr>
+        <tr><td>Where the header copy sits now that the heading is "headers" and not "request headers"</td><td>placement unchanged from HeaderTable's sub-bar contract (heading left, button right); the heading <em>text</em> shortens inside a band, and after review the button became the <em>icon</em> form — the word "all" moves into the accessible name the component already specs</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="s6">6 · Tune</h2>
+    <div class="stage" data-c="tune" data-item="tune">
+      <ol>
+        <li><strong>Leg seam weight.</strong> Before: every boundary the same hairline. After: the leg seam is a tonally stronger rule with air above it, and the leg label sits on it; header/body seams stay hairline. — <code>grouping-by-relatedness</code> · <code>visual-weight-follows-goals</code> · <code>data-ink-first</code> (space, not ink). <em>Loops back to Layout: no</em> — the band already existed; this is its weight, not its existence.</li>
+        <li><strong>Body label.</strong> Before: "request body", from BodyViewer's own chrome bar. After: "body" — the band already says which leg. — <code>labels-add-context</code>. Drove the BodyViewer extension.</li>
+        <li><strong>curl weight.</strong> Before: in the pinned identity strip, always reachable. After: quiet and right-aligned in the target zone — "take it elsewhere" is the lowest-ranked goal and the pinned strip is the highest-weight real estate in the panel. — <code>visual-weight-follows-goals</code> · <code>data-ink-first</code>.</li>
+        <li><strong>Target-zone facts order.</strong> Before: scheme · versions · time interleaved. After: the two version facts stay adjacent and the timestamp goes last. — <code>grouping-by-relatedness</code>.</li>
+        <li><strong>In-flight response wording.</strong> Before: HeaderTable's own empty state, "none". After: "awaiting response…" — "none" is the empty-set word, not the unfinished-call word. — <code>calm-microcopy</code> · <code>one-term-per-concept</code> · <code>empty-states-orient</code>. Drove the HeaderTable extension.</li>
+      </ol>
+    </div>
+
+    <h2 id="receipt">Receipt — the soft rules, against <code>28f5437</code></h2>
+    <p>Machine-read, not prose: <code>cargo xtask verify-doc</code> parses this block, checks every soft slug in the frozen rulebook is answered with a verdict from the fixed set and a citation, and computes the tally. <strong>Hard rules are not receipted</strong> — a rule with a predicate is judged by the predicate, never by this run's claim about itself (<a href="#hard-rules">below</a>).</p>
+    <pre data-item="receipt">rulebook: 28f5437
+soft:
+  visual-weight-follows-goals: satisfied — pinned strip → bands and bodies → curl last; tune 3 moved curl down to keep the order honest
+  grouping-by-relatedness: satisfied — the leg seam is the heaviest boundary; every hairline marks a real one, none decorative
+  ordering-by-priority: satisfied — verdict → target → request → response is the debugging read order; header rows exempt (wire-order-preserved)
+  progressive-disclosure: inherited — the panel is the list's depth level; raw is one act from pretty, full bytes one act from a capped render
+  data-ink-first: satisfied — no card borders (Section F1), no badges, no icon that is not the action; two labelled buttons became glyphs after review, which is the rule pushed one notch further
+  generous-targets: inherited — CopyText's whole-value target, IconButton's 28 px close. The screen now chooses icon-only twice more, and the only drawn icon-copy form is 22 px, under both IconButton's 28 and BodyViewer's own size=24 (findings 24, 28) — it still beats the 16 px labelled button it replaces
+  motion-informs: inherited — only the ~2 s copy confirm and BodyViewer's spinner; the screen decides no motion (binds components, finding 4)
+  empty-states-orient: satisfied — four absences and three failures, each with its own wording and only the action that helps; "not captured" still has none, and eviction's next action is to leave rather than to fix (finding 16)
+  familiar-idioms: n/a — a detail pane has no devtools idiom to follow; the rule bound run 1's list (finding 15)
+  display-equals-payload: satisfied — the view is always named and raw is one act away; the rule's own example is stale against BodyViewer D4 (finding 6)
+  labels-add-context: satisfied — "headers" not "request headers"; the copy affordances drop the words context already carries ("curl" not "copy curl"; ⧉ not "copy all") and keep them in the accessible name
+  calm-microcopy: satisfied — none · copied · awaiting response… · empty body · not captured — too large · flow no longer captured · trawler is not responding; lowercase, terse, and no failure blames the user
+  one-term-per-concept: satisfied-via-proposal — two coinages, both filed rather than slipped in · "no longer captured" for a ring eviction (a third kind of absence; "none" is reserved for the empty set) and the component's raw/pretty (findings 31, 9)
+  confirm-at-point: inherited — three confirms (uri · headers ⧉ · body ⧉), each inline at its trigger; the icon form confirms by glyph swap (⧉ → ✓) rather than by word; no toast anywhere</pre>
+
+    <h3 id="hard-rules">The 13 hard rules — checked, not claimed</h3>
+    <p>One predicate exists today; the run's verdict on the other twelve is recorded where it can act — as a finding with an owner, not as a row nobody can verify. Every <code>verify-doc</code> run on this doc prints the gap: <code>hard rules: 1/13 machine-checked (colour-tokens-only) — 12 unchecked, W7 Tier-1</code>.</p>
+    <table data-c="hard-rules">
+      <thead><tr><th>Hard rule</th><th>This run</th><th>Who checks it</th></tr></thead>
+      <tbody>
+        <tr><td><code>colour-tokens-only</code></td><td>the screen's own CSS holds <strong>zero</strong> colour values — every one composed from <a href="components/specimen.css"><code>specimen.css</code></a>. Still unsatisfiable in the substrate: IconButton's hover/active washes are unnamed <code>rgba</code> literals</td><td><strong>predicate, now</strong> — <code>mockup·colour-literals</code> reds any <code>#hex</code>/<code>rgb(</code>/<code>hsl(</code> in a run doc's own CSS. The missing token is <a href="#proposals">proposal</a> + finding 22</td></tr>
+        <tr><td><code>spacing-scale</code></td><td>the screen's own spacing is 8 · 12 · 16; three <em>composed</em> components sit below the floor — Section 10/14 px padding, HeaderTable a 4 px row gap, SegmentedControl and CopyButton 2–3 px. Composed as drawn</td><td>W6 settles the floor (finding 14), then a W7 predicate proves it on the composed sheet. A screen cannot fix it without forking the component</td></tr>
+        <tr><td><code>zero-accent</code></td><td>the JSON panes carry DEC-11's three syntax tones — chromatic, confirmed, and not <code>ok</code>/<code>warn</code>. MethodLabel's verb tokens were <a href="#blocked">answered on 2026-07-26</a> — "go with default" — so the fallback <em>is</em> the design and that half no longer blocks: the panel adds no verb colour at all. The failure states add <code>warn</code>, which is a listed exception</td><td>W6 adds DEC-11's syntax tokens to the colour vocabulary (finding 25); that is now the rule's only open breach</td></tr>
+        <tr><td><code>state-declarations</code></td><td>every catalog row carries states by citation; three cells name the states the screen itself coordinates</td><td>W7 — the predicate must read the registry verdict, or a correct by-citation cell reds (finding 12)</td></tr>
+        <tr><td><code>overflow-declared</code></td><td>declared once under the sketch: A pinned · B–D single scroll · headers cap ~200 px · panes never scroll inside</td><td>W7, after W6 restates the predicate to match where designs actually declare it (finding 17)</td></tr>
+        <tr><td><code>keyboard-parity</code></td><td>of 16 use-cases: 13 name an existing path (activate covers every retry and close), 2 are passive, and dismiss proposes <em>Esc</em> — which the failure states reuse rather than coining a second key. No row is left undefined now that the error UX exists</td><td>W6 adds <em>dismiss → Esc</em> to the conventions (finding 10); W7's predicate then checks the Interaction column</td></tr>
+        <tr><td>the remaining 7</td><td><code>type-tokens-only</code> · <code>radius-tokens</code> · <code>wrap-not-truncate</code> · <code>wire-order-preserved</code> · <code>mono-for-wire-data</code> · <code>uppercase-mute-labels</code> · <code>colour-plus-text</code> — all held, three of them by component contract. One wart: absence notices split families (HeaderTable's Inter vs BodyViewer's mono italic), which composing the sheet exposed and no rule forbids — the panel's failure state would have been a third, which is why <strong>Notice</strong> is proposed rather than drawn locally (finding 24)</td><td>W7 Tier-1 — each is a mechanical predicate over the mockup's composed CSS, which is exactly why hand verdicts on them were worthless</td></tr>
+      </tbody>
+    </table>
+    <p class="kd"><strong>What the split cost, honestly:</strong> the receipt no longer <em>demonstrates</em> the two substrate contradictions, it points at findings 14 and 25. The demonstration returns stronger when W7's predicate reds on the composed sheet — a machine proving it rather than a run claiming it. What the split bought: the first cut of this mockup re-typed component padding on-scale, which made <code>spacing-scale</code> read <span class="v sat">satisfied</span> and hid the contradiction. A hand-written verdict on a machine-checkable rule is the one row that can be wrong for free.</p>
+
+    <h2 id="proposals">Proposals — what the vocabulary lacked</h2>
+    <table data-c="proposals" data-item="proposals">
+      <thead><tr><th>Kind</th><th>Proposal</th><th>Why nothing existing fits</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>component extension</td><td><code>Section variant="band"</code> — a leg-level band: uppercase-mute label, a rule in <code>ink-mute</code> plus 8 px of air, no padding of its own, hosts Sections</td><td>the panel needs two grouping levels and Section must not nest; a parallel <code>LegBand</code> would fork heading typography into a second file. Reopens Section's fork F3, which rejected a level prop <em>because</em> nesting was forbidden</td><td>W5</td></tr>
+        <tr><td>component extension</td><td><code>HeaderTable</code> gains a <strong>pending</strong> state — "awaiting response…" when the leg's response has not arrived</td><td>its states are populated / empty / long-set, and it explicitly has "no loading / in-flight state" with the guidance "the Section simply isn't rendered" — which would make the panel's skeleton change when the response lands, breaking the in-flight constraint. Rendering "none" instead states something false</td><td>W5</td></tr>
+        <tr><td>component extension</td><td><code>BodyViewer</code>'s leg label degrades to "body" when the host already names the leg; the chrome bar's metadata may wrap to a second line</td><td>the label was designed to disambiguate two stacked viewers with no band above them; with a band it repeats the leg word. And the "one compact line" bar does not fit the panel's real width</td><td>W5</td></tr>
+        <tr><td>key binding</td><td><em>dismiss the focused transient surface → Esc</em></td><td>the keyboard-conventions vocabulary holds only "activate → Enter/Space" and "partial take → native selection + ⌘C"; the panel's × has no key at all without this entry</td><td>W6</td></tr>
+        <tr><td>token</td><td>a named <strong>hover-wash</strong> colour for the ink-on-canvas tint an interactive glyph takes on hover/active</td><td>IconButton's confirmed design specifies <code>rgba(247,245,240,.07)</code> / <code>.13</code> directly, and the colour vocabulary has no member for it — so every mockup containing an IconButton must write a literal, and <code>colour-tokens-only</code> cannot pass as written</td><td>W6 (vocabulary) · W5 (IconButton's token table cites it)</td></tr>
+        <tr><td>lexicon</td><td><em>pretty</em> = pretty-print a decoded body (a view operation, reversible) · <em>raw</em> = decoded but not pretty-printed</td><td>"decode" is the only entry, and it names the transport step; the body switch needs both new terms, and without them the next screen will coin "format" or "prettify" — the exact drift the lexicon exists to stop</td><td>W6</td></tr>
+        <tr><td>component extension</td><td><code>CopyButton</code> draws its <strong>icon form</strong> in its own specimen — ⧉ glyph, tooltip + accessible name, ⧉ → ✓ on confirm, at one agreed size</td><td>fork D2 already permits the form in prose, but only BodyViewer draws it (privately, at 22 px). Two tenants now need it and there is nothing canonical to compose (<a href="#findings">finding 28</a>)</td><td>W5</td></tr>
+        <tr><td>component extension</td><td><code>HeaderTable</code> sub-bar takes the <strong>icon form</strong> instead of <code>label="copy all"</code></td><td>its spec hard-codes the label, reasoning that "all" is the one fact not in context — but the rows it copies are rendered directly beneath, which is exactly fork D2's condition, and the aria-label it already specs ("copy all request headers") carries that fact. Reviewer instruction; the cost is that a bare ⧉ above individually-copyable rows must lean on its tooltip for scope</td><td>W5</td></tr>
+        <tr><td>component</td><td><strong><code>Notice</code></strong> (T1) — one absence/failure sentence renderer: tone <code>mute</code> (absence) or <code>warn</code> (failure), optional secondary line, optional action slot</td><td>the roster has none, yet two confirmed components already draw one privately and disagree on the family (<a href="#findings">finding 24</a>), and the panel's failure state would have made a third. Absorbing <code>.ht-none</code> and <code>.body-pane .notice</code> is the finding's fix, not a new surface</td><td>W5</td></tr>
+        <tr><td>component</td><td><strong><code>Button</code></strong> (T1) — plain labelled action button; IconButton's states without the glyph constraint</td><td>retry and close are neither copies nor glyphs. IconButton's <code>@avoid</code> already redirects such actions to "CopyButton or <em>a plain button</em>" — naming a component the registry does not have (<a href="#findings">finding 30</a>)</td><td>W5</td></tr>
+        <tr><td>component extension</td><td><code>BodyViewer</code> gains a <strong>fifth</strong> state — <em>fetch-failed</em>: "body unavailable — the flow is no longer captured", with retry</td><td>its four absences all describe bytes that are <em>absent</em>; a lazy fetch that 404s or times out describes bytes that are <em>unreachable</em>. Rendering "not captured" for it would state something false about the capture</td><td>W5</td></tr>
+        <tr><td>lexicon</td><td><strong>no longer captured</strong> = the capture ring moved past this flow (never "expired" · "deleted" · "gone" · "none")</td><td>the lexicon fixes "none" for the empty set and has no term for a flow the ring has dropped — a third kind of absence, and the one the panel must name most carefully because it is normal operation, not a fault (<a href="#findings">finding 31</a>)</td><td>W6</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="blocked">Blocked-on — what this design could not decide</h2>
+    <table data-c="blocked" data-item="blocked-on">
+      <thead><tr><th>Missing</th><th>Hit at</th><th>Whose call</th><th>What the run did meanwhile</th><th>Answer</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Named verb-colour tokens</strong> (GET/POST/PUT/DELETE/PATCH) that MethodLabel's confirmed T2 design requires</td><td>Elements · Draft mockup</td><td>the build WU (already its follow-up) — the rulebook's own "known gap"</td><td>rendered MethodLabel's documented unmapped-verb fallback (<code>ink-body</code>, fork D3) in place of the missing verb tone — the substrate has no rule for a mapped verb whose token is absent, so the nearest documented tone stands in; recorded <code>zero-accent</code> as <span class="v blk">blocked</span> rather than pretending either way</td><td><span class="v sat">answered</span> 2026-07-26 — <strong>"go with default"</strong>. The fallback <em>is</em> the design; the verb tokens are no longer a precondition. <code>zero-accent</code>'s MethodLabel half closes with it — the panel adds no chromatic value there at all. The DEC-11 syntax tones are a separate breach and stay open (<a href="#findings">finding 25</a>, W6)</td></tr>
+        <tr><td><strong>An error UX for a flow that fails to load</strong> — no component owns it, the domain has never designed it, and the shipped panel shows "loading…" forever</td><td>Interaction</td><td>domain / UX (a product decision, not a design-system one)</td><td>left the use-case row explicitly undefined instead of inventing a state; the panel ships with the gap visible rather than with a guessed error screen</td><td><span class="v sat">answered</span> 2026-07-26 — <strong>"add relevant error states"</strong>. Designed this round against the API's real failures (404 · unreachable · 4xx/5xx · a lazy body fetch that 404s after load), not invented ones: <a href="#s1">Frame</a> constraint · <a href="#s2">zone E</a> · two proposed components · <a href="#s4">four use-cases</a> · <a href="#s5">specimens</a></td></tr>
+        <tr><td><strong>The UI client cannot tell <em>which</em> flow was evicted</strong> — <code>src/event.rs</code> makes <code>FlowEvicted{flow_id}</code> a first-class event precisely so eviction is expressible, but <code>ui/src/api.ts</code>'s <code>StreamHandlers</code> collapses the whole stream to <code>onEvent()</code></td><td>Interaction (designing the answer to the row above)</td><td>API / UI client — a surface question, not a design one</td><td>designed the panel <em>not</em> to react to eviction while open: what is on screen was captured and is still true, so only the next fetch fails and only that pane changes. A panel that vanished mid-read would be worse than one that is briefly stale</td><td><span class="v blk">open</span> — if the client ever exposes the id, the panel could mark itself stale in place; it would not change any wording designed here</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="cross-check">Cross-check — what the substrate changed (run #1 → run #2)</h2>
+    <p>Same screen, same capabilities, designed twice: once with nothing to consume, once against the frozen substrate. The differences are the measurement.</p>
+    <table data-c="cross-check">
+      <thead><tr><th>Aspect</th><th>Run #1 (bare)</th><th>Run #2 (substrate)</th><th>What caused the change</th></tr></thead>
+      <tbody>
+        <tr><td>Frame size</td><td>5 qualities · 3 constraints; wrap / mono / tokens written out as consequences</td><td>2 qualities · 5 constraints (2 of them component contracts)</td><td>the rulebook absorbed the generics; the registry added new hard boundaries</td></tr>
+        <tr><td>Leg grouping</td><td>zones C/D, headers <em>collapsible</em></td><td>leg bands hosting Sections; headers <em>scroll-capped</em></td><td>HeaderTable's fork D1 overrode the W1 instinct (a cap beats a disclosure when the intent is inspection)</td></tr>
+        <tr><td>Body default</td><td>raw at rest, "trust"</td><td>pretty at rest, the view always named by the active segment</td><td>BodyViewer's fork D4 (manager decision) overrode it — and exposed a stale example in <code>display-equals-payload</code></td></tr>
+        <tr><td>curl placement</td><td>small right-aligned button — instinct, and openly at odds with the shipped panel</td><td>the same placement, now <em>derived</em>: goal-4 ranking plus CopyButton's <code>@avoid</code> on icon-only</td><td>rule + component contract replaced taste; the disagreement with shipped is now argued, not felt</td></tr>
+        <tr><td>Component work</td><td>11 invented rows, every tier a guess, every T1/T2 a propose</td><td>16 rows: 11 reuse · 3 extend · 2 registry gaps found</td><td>the registry — and it also caught two holes in itself</td></tr>
+        <tr><td>In-flight response</td><td>"awaiting response…" placeholder, invented ad hoc</td><td>the same wording, now forced by the lexicon + a component extension request, with the layout-jump constraint stated</td><td>the rulebook turned an instinct into a checkable requirement — and turned "none" into a bug</td></tr>
+        <tr><td>Unknowns</td><td>one flat findings list, no owners</td><td>31 findings each addressed to W5 / W6 / W7 / flow · 12 proposals · 3 blocked-on, 2 of them answered in review</td><td>the closing lists the flow now demands</td></tr>
+        <tr><td>Elements cost</td><td>11 invented rows, each a judgment</td><td>13 of 16 rows were one-line lookups; only 3 needed an argument</td><td>the registry — invention became citation, and the stage got cheaper <em>and</em> stricter</td></tr>
+        <tr><td>Tune's vocabulary</td><td>5 calls, reasons in prose ("feels heavy")</td><td>5 calls, 7 distinct slugs cited, nothing left over</td><td>the rulebook gave judgment calls a name — the single strongest result for the soft rules</td></tr>
+        <tr><td>Where the effort went</td><td>finding each stage's <em>form</em> (several rounds per artifact)</td><td>resolving <em>contracts</em> — the forms were given</td><td>the base flow: a stage's form is settled once, forever</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="findings">Findings — ranked, with owners</h2>
+    <p>What the seed got wrong, worst first. Severity is "what ships if nobody fixes it". Numbers are stable references, so review-round findings sit at the end rather than in severity order: #21–#22 came from reviewing the run, #23–#26 from the round that rejected its first mockup, and #27–#29 from the round that changed the two copy affordances, #30–#31 from designing the error states the reviewer unblocked (#22 belongs beside #7, #23 beside #1, #26 beside #11, #27 beside #5).</p>
+    <table data-c="findings">
+      <thead><tr><th>#</th><th>Owner</th><th>Stage</th><th>Finding</th><th>What ships if it stands</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><span class="tag w5">W5</span></td><td class="kd">Interaction</td><td><strong>HeaderTable has no pending state.</strong> An in-flight response's empty header array renders "none" — and its design explicitly declares "no loading / in-flight state", advising the Section not be rendered at all (which also breaks the no-layout-jump constraint)</td><td>a UI that states "this response had no headers" about a response that has not arrived — a false statement in a trust-critical tool</td></tr>
+        <tr><td>2</td><td><span class="tag w5">W5</span></td><td class="kd">Elements</td><td><strong><code>TextRenderer</code> is dispatched but never designed.</strong> BodyViewer's dispatch contract routes <em>text/*</em>, <em>application/javascript</em> and every raw-view text body to it; the BodyRenderer family is documented as five members (json · xml · image · form · hex) with no TextRenderer file</td><td>the most common body kind in the app (plain text, and every raw view) reaching a component nobody specified — decided ad hoc at build time</td></tr>
+        <tr><td>3</td><td><span class="tag w5">W5</span></td><td class="kd">Layout</td><td><strong>Section's fork F3 blocks every two-level screen.</strong> It rejected a level/variant prop <em>because</em> Sections must not nest; a two-leg screen needs two grouping levels without nesting. The band extension reopens it</td><td>either flat zoning with the leg level living only in repeated heading words, or a second heading-typography file forked off Section</td></tr>
+        <tr><td>4</td><td><span class="tag w6">W6</span></td><td class="kd">receipt</td><td><strong>Rules have two audiences and one list.</strong> <code>motion-informs</code> · <code>generous-targets</code> · <code>confirm-at-point</code> · <code>wrap-not-truncate</code> · <code>wire-order-preserved</code> bind <em>component</em> designs; a screen can only inherit them (6 of 27 rows this run). Add a <code>binds: screen · component · both</code> axis</td><td>every screen receipt is a quarter inherited noise, and a reviewer cannot tell a rule the screen ignored from a rule the screen could never carry</td></tr>
+        <tr><td>5</td><td><span class="tag w5">W5</span></td><td class="kd">Elements</td><td><strong>BodyViewer's self-labelling and one-line chrome bar both fail in this panel</strong> — the leg label repeats a band that names the leg, and the bar does not fit the real column width (metadata must wrap)</td><td>"request body" under a "REQUEST" band, and a chrome bar that overflows or squeezes the switch at panel width</td></tr>
+        <tr><td>6</td><td><span class="tag w6">W6</span></td><td class="kd">receipt</td><td><strong><code>display-equals-payload</code>'s DO example contradicts a confirmed component.</strong> The rule says "raw body at rest"; BodyViewer's D4 defaults to pretty (with the view always named). One of the two is wrong and the pair currently teaches both</td><td>the next screen cites the rule to justify a raw default, contradicting the shipped component — or cites the component to weaken the rule</td></tr>
+        <tr><td>7</td><td><span class="tag w7">W7</span></td><td class="kd">mockup</td><td><strong><code>colour-tokens-only</code>'s predicate fails every honest mockup.</strong> "No colour literals in mockup CSS" is violated by the one <code>.app</code> token block that makes the mockup render in app colours at all. <strong>Fixed in W4:</strong> with <a href="components/specimen.css">the shared sheet</a> the token block lives in exactly one path, so the predicate (<code>mockup·colour-literals</code>, now shipped) scans only the run doc's own CSS and needs no carve-out at all</td><td>a Tier-1 check that is red on correct work — the fastest way to teach agents to route around the gate</td></tr>
+        <tr><td>8</td><td><span class="tag w5">W5</span></td><td class="kd">Elements</td><td><strong>No record of a reopened fork.</strong> Three of the six proposals contradict a fork settled in the target component's own file, and those files read as final</td><td>the next screen silently forks a component, or accepts a decision made for a screen it has never seen</td></tr>
+        <tr><td>9</td><td><span class="tag w6">W6</span></td><td class="kd">receipt</td><td><strong>The lexicon is a term short</strong> — "pretty" and "raw" (as the body switch means them) have no entries, while "decode" names only the transport step</td><td>"prettify" / "format" / "beautify" appearing on the next screen — the drift the lexicon exists to prevent</td></tr>
+        <tr><td>10</td><td><span class="tag w6">W6</span></td><td class="kd">Interaction</td><td><strong>Keyboard conventions lack <em>dismiss → Esc</em></strong> — the first binding any panel, dialog or overlay needs</td><td>every screen coining its own dismiss key, and <code>keyboard-parity</code> being satisfiable only by a proposal</td></tr>
+        <tr><td>11</td><td><span class="tag w7">W7</span></td><td class="kd">receipt</td><td><strong>The receipt needs <code>inherited</code> and <code>blocked</code> as first-class verdicts</strong>, and a blocked row must not read as green. <strong>Landed in W4:</strong> a seven-verdict enum the checker enforces. W7 inherits it — including the harder half, that a blocked row is a design that <em>cannot</em> comply, not one that did</td><td>a receipt where "the design considered it" and "the design cannot comply yet" look identical — the gate's whole value gone</td></tr>
+        <tr><td>12</td><td><span class="tag w7">W7</span></td><td class="kd">Elements</td><td><strong><code>state-declarations</code>' predicate must read the verdict column.</strong> A citation is a complete States cell for a <em>reuse</em>, never for a <em>propose</em></td><td>a proposed component passing the state check with a pointer to a file that does not exist</td></tr>
+        <tr><td>13</td><td><span class="tag w6">W6</span></td><td class="kd">Frame · Interaction</td><td><strong>Two rule candidates the run generated:</strong> <em>absence-names-itself</em> (four distinct absences must not collapse into one wording — the source of finding 1) and <em>focus-returns-to-origin</em> (dismissing a surface returns focus where it came from)</td><td>finding 1 recurring on the next screen with nothing to cite against it</td></tr>
+        <tr><td>14</td><td><span class="tag w6">W6</span></td><td class="kd">mockup</td><td><strong><code>spacing-scale</code>'s floor is coarser than dense UI needs — including the registry's own contracts.</strong> Its smallest member is 8 px, while the shipped header grid uses 4 px and two <em>confirmed</em> component token maps specify off-scale control padding: SegmentedControl's <code>py-0.5</code> (2 px) and CopyButton's <code>py-1</code> (4 px), both valid Tailwind steps left untouched by the app's spacing extension. The mockup first obeyed the rule by re-typing all three on-scale — which made the old hand receipt read <em>satisfied</em> and hid this finding. Composing the components’ own CSS demonstrated it instead; W6 settles the floor, and a W7 predicate then proves it on the composed sheet rather than asking a run to confess it</td><td>either every dense grid and every control violating the scale, or a rule that the design system's own confirmed components cannot satisfy — the second is worse, because it is the vocabulary contradicting itself</td></tr>
+        <tr><td>15</td><td><span class="tag w6">W6</span></td><td class="kd">receipt</td><td><strong><code>familiar-idioms</code> pulled no weight</strong> on a detail pane (n/a — no idiom to follow); <code>progressive-disclosure</code> bound only by inheritance (the panel <em>is</em> the disclosure). Both are imports: retag to the surface they bind (list/table level) or kill</td><td>coverage rows that always read n/a — noise that trains reviewers to skim the receipt</td></tr>
+        <tr><td>16</td><td><span class="tag w6">W6</span></td><td class="kd">receipt</td><td><strong><code>empty-states-orient</code> assumes every empty state has a next action.</strong> "not captured — too large (12.0 MiB)" has none — the honest response is to explain, not to instruct</td><td>invented calls-to-action on absences the user cannot affect</td></tr>
+        <tr><td>17</td><td><span class="tag w6">W6</span></td><td class="kd">Layout</td><td><strong><code>overflow-declared</code>'s predicate is per-zone; designs declare overflow in one line under the sketch</strong> (and caps owned by components are declared by reference)</td><td>a mechanical check that forces annotation noise into every zone, or misses component-owned caps entirely</td></tr>
+        <tr><td>18</td><td><span class="tag fl">flow</span></td><td class="kd">Elements · Tune</td><td><strong>The live loop-back is Elements → Layout, not Tune → Layout.</strong> Component contracts break zoning before assembly ever happens; Tune made five calls this run and none was structural</td><td>a process doc describing a loop that does not fire and omitting the one that does — <em>already fixed in the flow</em></td></tr>
+        <tr><td>19</td><td><span class="tag fl">flow</span></td><td class="kd">Frame · Interaction</td><td><strong>Substrate-load-first is load-bearing</strong> — it is why two component contracts arrived as Frame constraints instead of Elements surprises; and <strong>the blocked-on list fired twice</strong>, closing run #1's "no escalation path" gap</td><td>nothing — this is the flow's revision validated by use, recorded so the T1 promotion keeps both</td></tr>
+        <tr><td>20</td><td><span class="tag fl">flow</span></td><td class="kd">Frame</td><td><strong>The Frame shrinks as the rulebook grows.</strong> Four of run #1's five qualities are now rules; the stage needs its explicit "if a rule says it, don't write it" instruction (added to the flow) or every run re-derives the rulebook as case-specific drivers</td><td>Frames that quietly restate the rulebook — and reviewers who cannot tell which drivers are actually about this screen</td></tr>
+        <tr><td>21</td><td><span class="tag w5">W5</span></td><td class="kd">Elements</td><td><strong><code>TonedText</code> is cited as a collected T1 but has no roster row and no design file.</strong> StatusPill's <code>@madeof</code> names it and its <code>@avoid</code> routes non-status toned values to it; the W2 seed's own StatusPill fork D4 promised "registry gains it under T1 on confirmation" and the confirmation landed without it. Invisible from this screen — found only by reading StatusPill's file</td><td>a component the vocabulary points at but does not define: the next screen that needs a toned non-status value either re-derives it or misuses StatusPill</td></tr>
+        <tr><td>22</td><td><span class="tag w6">W6</span></td><td class="kd">mockup</td><td><strong>No token names the hover wash.</strong> IconButton's confirmed design writes <code>rgba(247,245,240,.07)</code> / <code>.13</code> inline for its hover and active tints, and the colour vocabulary has no member for them — so <code>colour-tokens-only</code> is unsatisfiable for any screen containing an IconButton (this run's second <span class="v blk">blocked</span> row)</td><td>a hard rule that every real screen violates, teaching agents that the token vocabulary is advisory</td></tr>
+        <tr><td>23</td><td><span class="tag fl">flow</span></td><td class="kd">Elements · mockup</td><td><strong>Specimen CSS and doc interaction were re-authored per document.</strong> All fourteen design files declare their own copy of the token block and specimen frame, and this run's first mockup hand-typed a fifteenth set of component values instead of composing theirs; run #1's interactive element map was simply lost when this run built its Elements stage from scratch. Both are now shared assets — <a href="components/specimen.css"><code>components/specimen.css</code></a> and <a href="components/specimen.js"><code>components/specimen.js</code></a> — and the flow requires composing them. Wording alone was not the fix — <code>verify-doc</code> now reds a run doc that does not link both, whose Elements catalog is not a keyed <code>data-map</code>, whose mockup has no state toggle, or whose own CSS holds a colour literal. A rule an agent must remember is a rule an agent forgets</td><td>mockups that claim reuse and render something else. The hand-typed block broke five confirmed contracts at once — a 28 px chrome icon against <code>size=24</code>, MethodLabel in <code>ink-strong</code> against its <code>ink-body</code> fallback, notices in the wrong family, JSON coloured by eye instead of by DEC-11's tokens, and controls re-typed on-scale so a real <a href="#receipt">rulebook violation vanished from the receipt</a>. Review caught two of the five (the icon size, the verb tone), "fixed" a third against the wrong component (a body-pane notice is BodyViewer's mono italic, not BodyRenderer's Inter), and endorsed the other two — the JSON tones as a refuted candidate, the re-typed spacing as demonstrated compliance. Composing the sheet catches all five without asking anyone to notice</td></tr>
+        <tr><td>24</td><td><span class="tag w5">W5</span></td><td class="kd">mockup</td><td><strong>The design files draw what their own token tables do not say — and disagree with each other.</strong> Extracting one sheet surfaced five conflicts, none visible while each file rendered alone: Section's specimen padding 10/14 px vs its <code>px-4 py-3</code> contract · BodyViewer's chrome icon at 22 px vs its own <code>size=24</code> row · BodyViewer re-drawing <code>.toggle</code>/<code>.btn</code>/<code>.ibtn</code> rather than composing the SegmentedControl / CopyButton / IconButton it declares as <code>@madeof</code> · HeaderTable's <code>.ht-grid</code> value cells missing the click-to-copy affordance its <code>@madeof</code> KeyValueRow owns · absence notices in two families (HeaderTable Inter, BodyViewer mono italic). Each is marked <code>CONFLICT:</code> in the sheet; choosing a side is W5's call, not the extraction's</td><td>the built component looks like whichever artifact the build agent happened to read — and in HeaderTable's case, a use-case (take one header value) disappears with the CSS that was copied</td></tr>
+        <tr><td>25</td><td><span class="tag w6">W6</span></td><td class="kd">mockup</td><td><strong>DEC-11 never reached the rulebook, and it breaks two hard rules.</strong> Three syntax tokens — <code>text-syn-key</code> #8fb8de · <code>text-syn-str</code> #9ec99a · <code>text-syn-num</code> #d9a866 — were confirmed on 2026-07-23 (BodyRenderer, manager override) and never added to the colour vocabulary, so <code>colour-tokens-only</code> cannot be cited for any screen that renders a JSON or XML body; worse, <code>zero-accent</code>'s exception list is <code>ok</code>/<code>warn</code> only, so those three tones make every such screen <em>violate</em> a hard rule. One W6 fix (admit the body-pane syntax group and name it in both rules), two symptoms</td><td>a confirmed manager decision that every flow detail panel must break, and a vocabulary a reader cannot trust to be complete — the failure mode a frozen KB exists to prevent. It stayed invisible while mockups hand-picked achromatic stand-ins for the pane</td></tr>
+        <tr><td>26</td><td><span class="tag w7">W7</span></td><td class="kd">receipt</td><td><strong>The receipt cannot say whose violation it is.</strong> <code>spacing-scale</code> is broken by three confirmed components this screen composes and must not re-author, yet <em>violated</em> reads as the screen's failure. The verdict set needs to separate <em>the screen violates</em> from <em>the screen composes a violating component</em> — the latter is a substrate bug with a screen-level witness, and it is the only kind a design run can discover. <strong>Half-landed in W4:</strong> <code>violated-inherited</code> is in the enum, and the incentive is gone for hard rules, which no longer carry a hand verdict at all. W7 owns the other half — the same distinction inside a Tier-1 predicate</td><td>the incentive runs backwards: re-authoring a component's CSS turns a red row green, which hides the substrate bug and forks the component in one stroke — precisely what this run's first mockup did</td></tr>
+        <tr><td>27</td><td><span class="tag w5">W5</span></td><td class="kd">Elements · review</td><td><strong>CopyButton's <code>@avoid</code> and its <code>@anatomy</code> contradict each other on icon-only.</strong> <code>@avoid</code> reads "icon-only form" flat; <code>@anatomy</code>, four lines away in the same block, reads "icon-only allowed only when the payload is rendered adjacent, e.g. BodyViewer — fork D2". A run reading the <code>@avoid</code> line (as the flow instructs, fit is judged against <code>@use</code>/<code>@avoid</code>) ships the wrong form and can cite the file while doing it. This run did, twice, until review caught it. Fix: the <code>@avoid</code> line carries its own exception, or the carve-out is not in the contract</td><td>every future screen re-litigates icon-vs-label from whichever line it read first — and each one can prove itself right</td></tr>
+        <tr><td>28</td><td><span class="tag w5">W5</span></td><td class="kd">mockup</td><td><strong>Fork D2's icon form is specified in prose and drawn nowhere canonical.</strong> CopyButton's specimen draws only the labelled <code>.cb</code>; the icon form exists solely as BodyViewer's private <code>.ibtn</code> (22 px — under IconButton's 28 px and under BodyViewer's own documented <code>size=24</code>, already a marked <code>CONFLICT:</code>). With copy-all now taking the same form there are two tenants and one class, owned by the wrong file, so the mockup composes across a component boundary and discloses it. Fix: CopyButton's specimen draws its own D2 form and BodyViewer composes it</td><td>every tenant of the icon form draws its own; the 22/24/28 spread becomes three sizes for one affordance, and no file is wrong on its own terms</td></tr>
+        <tr><td>29</td><td><span class="tag fl">flow</span></td><td class="kd">flow</td><td><strong>A review-driven design change has nowhere to land.</strong> Two reviewer instructions ("icon + curl", "copy all icon only") moved the Layout sketch, two catalog rows, two use-cases, the mockup, four receipt rows, the cross-check and this table — but the run doc reads as if the stages produced it. Tune is the run's own stepping-back, not the reviewer's; the cross-check measures run #1 vs #2. Nothing records <em>what the reviewer changed and what it cost</em>. Candidate: a <code>review</code> item alongside receipt · proposals · blocked-on, machine-checked like the rest</td><td>design docs that silently rewrite their own history — the strongest signal in a run (a human overrode the design, and here is the contract it hit) is exactly the one the artifact drops</td></tr>
+        <tr><td>30</td><td><span class="tag w5">W5</span></td><td class="kd">Interaction · review</td><td><strong>The registry has no plain Button — and another component's contract already points at one.</strong> IconButton's <code>@avoid</code> redirects word-labelled actions to "CopyButton or <em>a plain button</em>", but the roster holds no such entry, and CopyButton <code>@avoid</code>s anything that is not a copy. The first non-copy action the collection meets (retry) therefore has nowhere to land. It went unnoticed for four zones because a read-only detail panel has almost no actions that are not copies</td><td>the next screen with a form, a dialog or a confirm invents its own button — and the registry's most reusable primitive is the one it does not have</td></tr>
+        <tr><td>31</td><td><span class="tag w6">W6</span></td><td class="kd">Interaction · receipt</td><td><strong>The lexicon has no term for a flow the ring has dropped.</strong> It fixes "none" for the empty set, but a ring eviction is a <em>third</em> kind of absence — not empty, not uncaptured, and above all <strong>not a fault</strong>: it is the store working as designed. The wording decides whether the user reads "the tool lost my data" or "the buffer moved on", so it is exactly the kind of term the lexicon exists to fix once. Proposed: <em>no longer captured</em></td><td>every screen invents its own phrasing for the most common way a flow disappears, and at least one of them will call it an error</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="verdict">Verdict</h2>
+    <p><strong>The substrate holds, and it earned its keep in one run.</strong> Two-thirds of the design was lookup and citation instead of invention: 11 components reused against their <code>@use</code> lines, 3 extended with a stated reason, every tune call backed by a slug, and every pixel of the mockup composed from the design files’ own CSS rather than re-typed. Two hard rules are broken by the substrate itself — <code>spacing-scale</code> by three <em>confirmed</em> components, <code>zero-accent</code> by a <em>confirmed manager decision</em> — both inherited by a screen that may not re-author either, and both read <em>satisfied</em> for as long as the mockup hand-typed the values instead of composing them. That is the whole argument for <a href="#hard-rules">judging hard rules by predicate</a>: the run was wrong about itself, in writing, and only the composed CSS caught it. The rulebook caught two real errors before the mockup existed (a "none" that would have lied about an in-flight response; a close button with no key) and the registry overrode two of run #1's judgments with better-argued ones (a scroll cap instead of a disclosure; pretty-by-default with the view always named).</p>
+    <p><strong>Its failures are concentrated and specific</strong>, which is the useful outcome: one missing component state that would have shipped a false statement, one component dispatched but never designed, one settled fork that blocks every two-level screen, a rulebook that does not yet separate rules for screens from rules for components, two Tier-1 predicates that would go red on correct work, and — surfaced only by composing all fourteen design files through one sheet — five places where a component’s own drawing contradicts its own contract. None of them is a reason to change the flow — all of them are exactly the W5 / W6 / W7 work the epic planned for. The flow itself needed only what this run has already folded back into it: the substrate load, the Elements → Layout loop, and the three closing lists.</p>
+
+  </main>
+  <script src="components/specimen.js" defer></script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

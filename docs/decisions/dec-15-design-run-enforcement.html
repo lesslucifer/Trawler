@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a6593cd9f34851f0dfa98db">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-15: design-run enforcement model</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-15 — a design run is a governed artifact; hard rules are predicates, not claims</h1>
+      <p>How a design run is enforced: what the machine checks, what stays human, and why the receipt covers only the rules a machine cannot judge.</p>
+      <div class="meta">DEC-15 · 2026-07-26 · Trawler · E-DFLOW.W4 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>The design flow's conventions were written down and then broken by the agent that wrote them — three times inside one Working Unit: the interactive element map was lost, component CSS was re-typed instead of composed, and a hand-written <em>satisfied</em> was recorded against a rule the same mockup was breaking. Each failure happened <strong>after</strong> the rule existed in the flow spec. A convention an agent must remember is a convention an agent forgets.</p>
+
+    <h2 id="choice">Choice</h2>
+    <p><strong>A design run is a fifth governed artifact</strong> (<code>data-artifact="design-run"</code>), checked by <code>cargo xtask verify-doc</code> on every write and at every turn end through the existing doc hooks. Three parts, each load-bearing:</p>
+    <table data-c="model">
+      <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The receipt covers <em>soft</em> rules only</strong>; a hard slug in a receipt is red</td><td>a rule with a Tier-1 predicate is judged by the predicate. The receipt exists for what a machine cannot judge — a hand verdict on a machine-checkable rule is the one row that can be wrong for free, and was: the run wrote <em>satisfied</em> against <code>spacing-scale</code> while its mockup re-typed three components' padding on-scale. Every hard verdict is instead a predicate, a finding with an owner, or a proposal</td></tr>
+        <tr><td><strong>Coverage is read from the rulebook on disk</strong>, never from a copy</td><td>adding, killing or retagging a rule re-opens every receipt automatically. The 27 slugs exist in exactly one place, and a receipt that <em>cannot</em> be checked (unreadable rulebook) is red, never silently green</td></tr>
+        <tr><td><strong>The unimplemented gap is printed, not filed</strong> — <code>hard rules: n/13 machine-checked</code> on every green run</td><td>a follow-up row rots; a computed line cannot. The denominator moves when the rulebook grows and the numerator moves as predicates land, so the worklist maintains itself</td></tr>
+      </tbody>
+    </table>
+    <p>The receipt is YAML parsed by <code>serde_yaml</code> — the same <code>#[derive(Deserialize)]</code> path every gate note already uses — with a fixed seven-verdict enum: <code>satisfied</code> · <code>inherited</code> · <code>satisfied-via-proposal</code> · <code>blocked</code> · <code>n/a</code> · <code>violated</code> · <code>violated-inherited</code>. The last exists because a screen that <em>composes</em> a violating component must not read as the violator: without it, re-authoring a component's CSS turns a red row green, hiding a substrate bug and forking the component in one stroke.</p>
+    <p>Composition is checked too, because reuse that is only asserted is not reuse: the Elements catalog must be a keyed <code>data-map</code>, the mockup must carry a state toggle, both shared specimens must actually be <em>loaded</em> (the attribute, not a prose mention), and the run doc's own CSS must hold no colour literal — which is <code>colour-tokens-only</code>'s own Tier-1 predicate, implemented.</p>
+
+    <h2 id="limit">What the gate does not prove</h2>
+    <div class="callout warn">
+      <p>The harness proves a receipt is <strong>complete and well-formed</strong> — never that it is <strong>true</strong>. Whether a verdict is honest, whether a fit judgment holds against a component's <code>@use</code>/<code>@avoid</code>, whether a violation was recorded or quietly fixed, whether a Frame driver is case-specific or a restated rule: all human, all in <code>cr/v2</code>. A green design run is not a good design.</p>
+      <p>What makes a false row expensive to write is <em>composition</em> — a mockup built from the design files' own specimen CSS renders what the registry actually agreed to, so a contradiction shows up as pixels instead of prose. The checker only makes an <em>absent</em> row impossible.</p>
+    </div>
+
+    <h2 id="options">Options rejected</h2>
+    <table data-c="options">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>Stronger wording in the flow spec</td><td>tried, and it is what failed. The two defects that produced this record both happened after the rule was written down.</td></tr>
+        <tr><td>Receipt over all 27 rules, hard included</td><td>13 of the rows would be hand verdicts on mechanically checkable properties — the rows most likely to be wrong and least likely to be caught, since a fluent citation reads like evidence.</td></tr>
+        <tr><td>Copy the slug list into the checker</td><td>a second home for the rulebook; W6 changes rules and the gate silently checks the old set.</td></tr>
+        <tr><td>Defer the whole harness to W7</td><td>the run that needed the gate is the run that exposed why. W7 keeps the twelve remaining hard-rule predicates, Tier-2 self-reflex, Tier-3 adversarial review and the flow e2e.</td></tr>
+        <tr><td>Block on unimplemented predicates</td><td>a gate red on work nobody has built yet is red forever, and teaches agents to route around it — the same failure <code>colour-tokens-only</code>'s original predicate had.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li><strong>W6</strong> settles four hard rules before they can have honest predicates: the spacing floor, DEC-11's syntax tokens, a hover-wash token name, and <code>overflow-declared</code>'s granularity.</li>
+      <li><strong>W7</strong> implements the remaining twelve predicates and must not rebuild what landed here — soft coverage, the enum, <code>colour-tokens-only</code>, the composition checks.</li>
+      <li><strong>Truth lives in <code>xtask/src/doc.rs</code></strong>. The flow spec describes the checks for a reader; where the two disagree, the code wins, and a run doc's tally line is generated so it cannot drift.</li>
+      <li>A design run that predates this model stays ungoverned rather than being retrofitted — <a href="../work/2026-07-16-dflow-run-1.html">run #1</a> has no receipt and never will.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

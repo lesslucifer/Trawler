@@ -20,33 +20,71 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>Design flow — base spec &amp; templates</h1>
-      <p>The staged flow an AI agent follows to design a screen, with a copy-paste artifact template per stage. Screen-agnostic: the reusable method, not one design. Worked example: the flow-detail panel in <a href="2026-07-16-dflow-run-1.html">dflow-run-1.html</a>.</p>
-      <div class="meta">Base flow · 2026-07-19 · Trawler · T3 (docs/work/) → promoted to a T1 process doc after W4 · from E-DFLOW.W1</div>
+      <p>The staged flow an AI agent follows to design a screen, with a copy-paste artifact template per stage. Screen-agnostic: the reusable method, not one design. Worked examples: <a href="2026-07-16-dflow-run-1.html">run #1</a> (bare flow, W1) · <a href="2026-07-25-dflow-w4-run-2.html">run #2</a> (against the registry + rulebook, W4).</p>
+      <div class="meta">Base flow · 2026-07-19 · <strong>rev 2026-07-25 (E-DFLOW.W4: consumes the registry + rulebook; revised again from run #2's findings)</strong> · Trawler · T3 (docs/work/) → promoted to a T1 process doc at epic distillation · from E-DFLOW.W1</div>
     </div>
   </header>
   <main>
     <h2 id="status">What this is</h2>
-    <p>The <strong>written base flow</strong> produced by E-DFLOW.W1: six stages, each with the concrete artifact <em>template</em> the hand-run converged on, plus the conventions that make an artifact reviewable. It is a <strong>first cut hardened by one real run</strong> — W4 re-runs it against the seeded registry (W2) + rulebook (W3) and revises; only then is it distilled into the T1 process doc. Until then it lives here in T3.</p>
+    <p>The <strong>written base flow</strong>: six stages, each with the concrete artifact <em>template</em> a real run converged on, plus the conventions that make an artifact reviewable. W1 produced the first cut from a bare hand-run; <strong>W4 wired it to the substrate</strong> — the design now <em>consumes</em> the <a href="2026-07-22-dflow-w2-registry-seed.html">component registry</a> (reuse-or-propose per element) and the <a href="../design-rules/design-rules-index.html">design rulebook</a> (rules cited per stage, all slugs receipted at the end) — and re-ran it on the flow detail panel (<a href="2026-07-25-dflow-w4-run-2.html">run #2</a>). It is distilled into the T1 process doc at epic distillation; until then it lives here in T3.</p>
 
     <h2 id="principles">Principles (apply to every stage)</h2>
     <ul data-c="principles">
+      <li><strong>Load the substrate before stage 1.</strong> The registry index (the whole component vocabulary in one file) and the rulebook are <em>inputs</em>, read once at the start and never edited mid-run — a run that changes the rules it is judged by proves nothing. The versions read are named in the receipt.</li>
       <li><strong>Representation is load-bearing — optimize for human perception.</strong> The reviewer is the bottleneck. Every artifact is picture- or table-first; prose is demoted to a compact reference. Walls of text and over-dense diagrams (mindmaps) failed review in the run. When a form isn't obvious, <em>pick it by comparison</em> (a throwaway side-by-side doc), don't assume.</li>
-      <li><strong>Cite by name, not coded ids.</strong> Drivers, rules, and components are referenced by name; the harness coverage-checks the named rows. Coded ids (G1/C2/…) were tried and dropped as noise.</li>
-      <li><strong>Reuse-or-propose.</strong> A design either reuses a registry component or proposes a new one — passing with a <em>spec</em> now, built + human-approved later. It never silently reinvents.</li>
-      <li><strong>One artifact per stage, cheapest commitment first.</strong> Each stage's artifact is the next stage's input. A stage may loop back (Tune → Layout); the loop is real, not decorative.</li>
+      <li><strong>Cite by name, not coded ids.</strong> Drivers are cited by driver name, rules by slug, components by component name; the harness coverage-checks the named rows. Coded ids (G1/C2/…) were tried and dropped as noise.</li>
+      <li><strong>Reuse-or-propose, fit-first.</strong> Every element resolves to <em>reuse</em> (cite the component), <em>extend</em> (the component grows — never fork a copy), or <em>propose</em> (a new design file, tiered). Fit is judged against the entry's <code>@use</code>/<code>@avoid</code>: forcing a component past its <code>@avoid</code> line is a propose, not a reuse.</li>
+      <li><strong>Never re-decide what a component owns.</strong> A component's states, tones, hover/focus, microcopy and internal layout are its design file's truth; the screen cites them and never restates them (restating is duplication down a tier — the doc-system rule). The screen decides only placement, composition, and the coordinated response across components.</li>
+      <li><strong>Compose the artifacts, not just the components.</strong> A design file's specimen CSS <em>is</em> the component's rendering, and a run doc links it (<code>components/specimen.css</code>) instead of re-typing its values; the doc behaviours a run needs — the keyed element map, the mockup's state switch — come from <code>components/specimen.js</code> instead of a fresh script per doc. Re-typing either is how a run silently forks the registry while claiming to reuse it, and it is invisible at review time because the copy looks deliberate.</li>
+      <li><strong>Every convention here is machine-checked — the checker is the truth, this page is the reading copy.</strong> A run doc declares <code>data-artifact="design-run"</code> and tags its nine items; <code>cargo xtask verify-doc</code> then reds it on every write (PostToolUse) and at every turn end (Stop). What it checks: the nine items non-empty · the receipt's soft-rule coverage against the <em>live</em> rulebook, verdict enum and citations · a keyed <code>data-map</code> at Elements · a state toggle in the mockup · both shared specimens linked · zero colour literals in the doc's own CSS. A rule an agent must remember is a rule an agent forgets — the two defects this flow has actually shipped (a lost element map, a re-typed component sheet) both happened <em>after</em> the wording existed.</li>
+      <li><strong>Findings live in one table, tagged by stage — never as prose inside a stage.</strong> A stage carries its artifact and stops. Per-stage commentary duplicates the findings roll-up in the most verbose form available, and the reviewer reads the same thing twice.</li>
+      <li><strong>Nothing rides on taste alone.</strong> Every structural call cites a Frame driver; every judgment call ("weight", "grouping", "hero") cites a soft-rule slug. A call that can cite neither is a finding — either the design is arbitrary or the rulebook has a hole.</li>
+      <li><strong>One artifact per stage, cheapest commitment first.</strong> Each stage's artifact is the next stage's input. Stages loop back — Elements → Layout (a component contract breaks the zoning) and Tune → Layout (the assembled whole reads wrong); both loops are real, not decorative.</li>
+      <li><strong>Gaps escalate, they are never invented.</strong> Anything the design cannot decide because something upstream is missing — an undesigned domain state, a token that does not exist, a capability the API lacks — goes on the run's <a href="#closing">blocked-on list</a> with its owner. The flow never quietly fills an upstream hole.</li>
     </ul>
 
     <div class="diagram" data-c="flow-diagram">
       <pre class="mermaid">
 flowchart LR
-  F[Frame] --> L[Layout] --> E[Elements] --> I[Interaction] --> D[Draft mockup] --> T[Tune]
-  T -. revise .-> L
+  S[["load substrate:
+registry index + rulebook
+(frozen for the run)"]] --> F[Frame]
+  F --> L[Layout] --> E[Elements] --> I[Interaction] --> D[Draft mockup] --> T[Tune] --> R[["receipt +
+proposals +
+blocked-on"]]
+  E -. contract breaks the zoning .-> L
+  T -. reads wrong assembled .-> L
       </pre>
-      <div class="caption">Six stages, single tune-back loop.</div>
+      <div class="caption">Six stages between a substrate load and the closing receipt; two real loop-backs into Layout.</div>
+    </div>
+
+    <div class="diagram" data-c="verify-timeline">
+      <pre class="mermaid">
+flowchart TB
+  W["write / edit a run doc"]
+  V1["verify-doc · this doc&lt;br/&gt;9 items present and non-empty&lt;br/&gt;receipt (YAML): every soft slug · verdict in enum · why&lt;br/&gt;elements: data-map + data-key&lt;br/&gt;mockup: state toggle · zero colour literals&lt;br/&gt;assets: specimen.css + specimen.js linked"]
+  E["end of turn"]
+  V2["verify-doc · every governed doc under docs/&lt;br/&gt;same checks — backstop for shell and script edits"]
+  C["commit"]
+  V3["gate0: fmt · clippy -D warnings · all tests&lt;br/&gt;commit-msg: docs carry an mr trailer"]
+  M["WU merge --no-ff"]
+  V4["verify-dod wu&lt;br/&gt;test/v2 · cr/v2 diff-bound PASS · doc/v1&lt;br/&gt;green writes dod/v1"]
+  EP["epic merge"]
+  V5["verify-dod epic&lt;br/&gt;re-walks every seam + e2e"]
+  R["review only — no gate proves these&lt;br/&gt;is a verdict true · does the fit hold against @use / @avoid&lt;br/&gt;is a violation honest or quietly fixed&lt;br/&gt;is a driver case-specific or a restated rule"]
+  W --&gt;|PostToolUse hook| V1
+  V1 --&gt;|red · exit 2, fed back| W
+  V1 --&gt;|green| E
+  E --&gt;|Stop hook| V2
+  V2 --&gt;|red · turn refused| W
+  V2 --&gt; C --&gt; V3 --&gt; M --&gt; V4 --&gt; EP --&gt; V5
+  R -.-&gt;|lives in cr/v2| V4
+      </pre>
+      <div class="caption">When what is verified. The harness proves a receipt is <em>complete and well-formed</em>, never that it is <em>true</em> — the right-hand lane stays human, and a green gate is not a good design.</div>
     </div>
 
     <h2 id="tiers">Component tier model (reference)</h2>
-    <p>Used at Elements. Defined in the direction doc; to be <strong>owned</strong> by the W2 registry + the E-DFLOW decision record — referenced here, not duplicated.</p>
+    <p>Used at Elements. <strong>Owned</strong> by the <a href="2026-07-22-dflow-w2-registry-seed.html">W2 registry</a> (tier = the membership decision) and the E-DFLOW decision record — referenced here, not duplicated.</p>
     <table data-c="tiers">
       <thead><tr><th>Tier</th><th>Example</th><th>In collection?</th><th>Contract</th></tr></thead>
       <tbody>
@@ -59,11 +97,13 @@ flowchart LR
     </table>
 
     <h2 id="stages">The stages</h2>
+    <p><strong>Which rules bind where</strong> is the rulebook's own <em>Binds at</em> column — read it there, per stage, and never copy the list into a run or into this spec (one fact, one home). Each stage below names only <em>how</em> it consumes the substrate.</p>
 
     <h3 id="s-frame">1 · Frame</h3>
+      <p class="kd"><code>data-item="frame"</code></p>
     <div class="stage">
       <p><strong>Question:</strong> who reads this screen and in what context, what job does it do, what are its ranked goals, hard constraints, and experience qualities? (The screen's <em>functional capabilities</em> — what it must be able to do — are an <em>input</em>, not the output.)</p>
-      <p><strong>Form:</strong> a <strong>driver table</strong> — each driver forces a design consequence; the row <em>is</em> the reasoning. Grouped Goals / Constraints / Qualities; no coded ids.</p>
+      <p><strong>Form:</strong> a <strong>driver table</strong> — each driver forces a design consequence; the row <em>is</em> the reasoning. Grouped Goals / Constraints / Qualities; no coded ids. <strong>Every cell is a clause, not a sentence, and never a paragraph</strong>: a Frame that reads as prose has stopped being a table and nobody reads it. The purpose line is one sentence; the capability list is one <code>·</code>-separated line.</p>
       <div class="tmpl" data-c="tmpl-frame">
         <pre><span class="ph">Purpose:</span> &lt;one paragraph — user, context, the job this screen does&gt;
 
@@ -82,10 +122,11 @@ flowchart LR
           </tbody>
         </table>
       </div>
-      <p class="kd"><strong>Key distinctions:</strong> functional requirements are the <em>input</em>; the Frame's output is the <em>design lens</em> (goals become hierarchy, qualities become Tune's yardstick). Each success criterion rides in the driver's "checked by" cell — it verifies that driver's consequence — rather than living in a separate list. General principles (a11y, spacing, state-handling) live in the rulebook, not here; the Frame holds only what is case-specific.</p>
+      <p class="kd"><strong>Key distinctions:</strong> functional requirements are the <em>input</em>; the Frame's output is the <em>design lens</em> (goals become hierarchy, qualities become Tune's yardstick). Each success criterion rides in the driver's "checked by" cell — it verifies that driver's consequence — rather than living in a separate list. <strong>Anything the rulebook already binds is not a driver</strong> (a11y, spacing, wrapping, state handling, calm microcopy, zero accent): the Frame holds only what is case-specific, and a quality that merely restates a soft rule is deleted, not written. A quality survives when it says <em>which</em> instance of a generic rule matters most here ("the leg boundary is this panel's strongest seam"). A <strong>substrate constraint</strong> is a first-class constraint row: a component contract the screen must design around (e.g. "Section must not nest") belongs in the table with the registry file as its "why".</p>
     </div>
 
     <h3 id="s-layout">2 · Layout</h3>
+      <p class="kd"><code>data-item="layout"</code></p>
     <div class="stage">
       <p><strong>Question:</strong> how is the frame divided into regions, and what is their priority/hierarchy? (Zones only — no content yet.)</p>
       <p><strong>Form:</strong> an <strong>annotated ASCII region sketch</strong> — labelled boxes with a one-line priority/behavior note per zone.</p>
@@ -97,15 +138,19 @@ flowchart LR
 │                               │
 ├───────────────────────────────┤
 │ C  &lt;zone name&gt;                 │  ← &lt;note&gt;
-└───────────────────────────────┘</pre>
+└───────────────────────────────┘
+
+scroll / overflow: &lt;which zone is pinned · which region scrolls · every
+                   unbounded zone's cap and who owns it&gt;</pre>
       </div>
-      <p class="kd"><strong>Key distinctions:</strong> draw.io was trialled and dropped — it added no value over ASCII for a region sketch (light-canvas island, static, poor diffs). Keep the sketch compact; a derived structural decision (e.g. "headers collapse") can ride as an annotation or a short callout.</p>
+      <p class="kd"><strong>Key distinctions:</strong> draw.io was trialled and dropped — it added no value over ASCII for a region sketch (light-canvas island, static, poor diffs). Keep the sketch compact; a derived structural decision (e.g. "headers scroll-cap so the body stays reachable") rides as an annotation or a short callout. The overflow line under the sketch is not decoration — it is what <code>overflow-declared</code> checks, and a cap owned by a component is declared here <em>by reference</em> ("HeaderTable's rows cap").</p>
     </div>
 
     <h3 id="s-elements">3 · Elements</h3>
+      <p class="kd"><code>data-item="elements"</code> — the same element carries <code>data-map</code></p>
     <div class="stage">
-      <p><strong>Question:</strong> what concrete components fill each region, which are shared, and what is each one's reusability tier?</p>
-      <p><strong>Form:</strong> a <strong>tiered component catalog</strong> — a placement/composition tree (ties back to Layout zones) plus a one-row-per-distinct-component table. Interactive linking (click a node → highlight its row) is nice-to-have; the columns are the substance.</p>
+      <p><strong>Question:</strong> what concrete components fill each region, and for each one — does the registry already have it?</p>
+      <p><strong>Form:</strong> a <strong>tiered component catalog</strong> — a placement/composition tree (ties back to Layout zones) plus a one-row-per-distinct-component table whose load-bearing column is the <strong>registry verdict</strong>: <em>reuse</em> · <em>extend</em> · <em>propose</em>. This is the reuse-or-propose pass; the registry index is read here, once, and every row resolves against it. The tree and the table are <strong>one keyed artifact</strong>, not two: wrap both in <code>data-map</code> and give every component mention <code>data-key="&lt;component-file-slug&gt;"</code>, so one click lights every appearance and a reuse is visible rather than asserted. The behaviour comes from <code>components/specimen.js</code> — <strong>never</strong> re-implemented per doc.</p>
       <div class="tmpl" data-c="tmpl-elements">
         <pre>Tree (placement + composition; mark recurring components):
   panel
@@ -113,68 +158,105 @@ flowchart LR
   └─ &lt;zone B&gt; ── &lt;shared component ◆&gt; · &lt;composition ▣&gt;
         &lt;▣ composition&gt; = &lt;part&gt; · &lt;part&gt; · &lt;shared component ◆&gt;</pre>
         <table>
-          <thead><tr><th>Component</th><th>What it is</th><th>Used in</th><th>Tier</th></tr></thead>
+          <thead><tr><th>Component</th><th>Used in</th><th>Tier</th><th>Verdict</th><th>Fit — against <code>@use</code>/<code>@avoid</code></th><th>States</th></tr></thead>
           <tbody>
-            <tr><td class="ph">&lt;name&gt;</td><td class="ph">&lt;role&gt;</td><td class="ph">&lt;zone(s) — two = shared&gt;</td><td class="ph">&lt;T0–T4&gt; — &lt;reuse note / customization / propose-new&gt;</td></tr>
+            <tr><td class="ph">&lt;name&gt;</td><td class="ph">&lt;zone(s) — two = shared&gt;</td><td class="ph">&lt;T0–T4&gt;</td><td class="ph">reuse | extend | propose</td><td class="ph">&lt;the @use line it lands in — or the @avoid line it hits, which forces extend/propose&gt;</td><td class="ph">&lt;per its design file (cite it) — or, for a propose, the states the new component must own&gt;</td></tr>
           </tbody>
         </table>
         <p class="ph" style="margin:6px 0 0">T4 break-down (per composition): &lt;composition&gt; → &lt;lower-tier part (tier)&gt; · &lt;part (tier)&gt; …</p>
+        <p class="ph" style="margin:6px 0 0">Proposals (each becomes a design file before the build): &lt;name (tier)&gt; — &lt;what it is&gt; · &lt;why no existing entry fits&gt;</p>
       </div>
-      <p class="kd"><strong>Key distinctions:</strong> the T1↔T2 split is exactly <em>business logic</em> (primitive = presentation only; widget = carries logic). A component in two zones is a reuse; "used in" surfaces it. A <span class="tier t4">T4</span> composition is built local and <strong>broken down</strong> — its lower-tier parts are the real registry seeds. With the collection empty (W1), every T1/T2 verdict is a <em>propose-new</em> proposal, not a lookup.</p>
+      <p class="kd"><strong>Key distinctions:</strong> the T1↔T2 split is exactly <em>business logic</em> (primitive = presentation only; widget = carries logic). A component in two zones is a reuse; "used in" surfaces it. A <span class="tier t4">T4</span> composition is built local and <strong>broken down</strong> — its lower-tier parts are the real registry entries. The <strong>States column is filled by reference</strong>, never by re-listing what the component's design file already owns — a bare citation is a complete cell, and the screen writes states only for a proposed component or for a state the screen itself coordinates. <strong>An <code>@avoid</code> hit is the stage's most valuable output</strong>: it means the design wants something the vocabulary does not have, so the verdict flips to extend/propose and the row carries the reason. This stage is also the most common source of a <strong>loop back to Layout</strong> — a component contract (nesting, self-labelling, an absent state) can make the zoning unbuildable, and the honest move is to re-zone, not to bend the contract silently.</p>
     </div>
 
     <h3 id="s-interaction">4 · Interaction</h3>
+      <p class="kd"><code>data-item="interaction"</code></p>
     <div class="stage">
       <p><strong>Question:</strong> what does the user actually <em>do</em> with this screen? (The use-cases — not each element's default states.)</p>
       <p><strong>Form:</strong> a <strong>use-case table</strong>, each row grounded in a Frame goal, giving the user's action and the screen's response.</p>
       <div class="tmpl" data-c="tmpl-interaction">
         <table>
-          <thead><tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th></tr></thead>
+          <thead><tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th><th>Keyboard path</th></tr></thead>
           <tbody>
-            <tr><td class="ph">&lt;task&gt;</td><td class="ph">&lt;Frame goal&gt;</td><td class="ph">&lt;trigger / action&gt;</td><td class="ph">&lt;coordinated response across elements&gt;</td></tr>
+            <tr><td class="ph">&lt;task&gt;</td><td class="ph">&lt;Frame goal&gt;</td><td class="ph">&lt;trigger / action&gt;</td><td class="ph">&lt;coordinated response across elements&gt;</td><td class="ph">&lt;the keys, from the rulebook's keyboard conventions — or "proposed: &lt;keys&gt;" when the vocabulary has no entry&gt;</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="kd"><strong>Key distinctions:</strong> per-element default interaction (hover/focus/confirm/tones) belongs to the <em>component</em> (the registry), <strong>not</strong> here — do not re-list it. State handling folds in as use-cases ("watch a live call" <em>is</em> the in-flight state); a state with no defined screen response (e.g. an error the domain never designed) surfaces as a use-case gap — a real finding, not something to invent.</p>
+      <p class="kd"><strong>Key distinctions:</strong> per-element default interaction (hover/focus/confirm/tones) belongs to the <em>component</em> (the registry), <strong>not</strong> here — do not re-list it. State handling folds in as use-cases ("watch a live call" <em>is</em> the in-flight state); a state with no defined screen response (e.g. an error the domain never designed) is a <a href="#closing">blocked-on</a> entry, never something to invent. The keyboard column exists because <code>keyboard-parity</code> is checked per row: a pointer-only row is a red row, and a key that the conventions vocabulary does not yet hold is a <em>proposal</em> — a design that silently coins a binding is exactly what the vocabulary exists to stop.</p>
     </div>
 
     <h3 id="s-mockup">5 · Draft mockup</h3>
+      <p class="kd"><code>data-item="mockup"</code> — the tagged element contains the state toggle</p>
     <div class="stage">
       <p><strong>Question:</strong> assembled, does it hold together as one screen?</p>
-      <p><strong>Form:</strong> a <strong>native HTML/CSS build</strong> — dark tokens, real widgets, and <em>stateful</em> (a toggle to show empty / in-flight / error). The finish line: lo-fi and structural, not hi-fi. It is a real build, so it is a truer test than a picture of one.</p>
+      <p><strong>Form:</strong> a <strong>native HTML/CSS build assembled from the component design files' own specimen CSS</strong> — link <code>components/specimen.css</code> (the single extraction of every design file: app tokens plus one block per component) and mark the build up with <em>their</em> class names. Real widgets, and <em>stateful</em> (a toggle across the states the Interaction table named, from <code>components/specimen.js</code>). The finish line: lo-fi and structural, not hi-fi. It is a real build, so it is a truer test than a picture of one.</p>
       <div class="tmpl" data-c="tmpl-mockup">
-        <pre>&lt;div class="mock"&gt;
-  &lt;div class="bar"&gt;&lt;!-- identity zone: primary outcome, fixed --&gt;&lt;/div&gt;
-  &lt;div class="sec"&gt;&lt;!-- zone: label + content --&gt;&lt;/div&gt;
-  &lt;div class="sec"&gt;
-    &lt;!-- use .complete-only / .inflight-only for state variants --&gt;
+        <pre>&lt;link rel="stylesheet" href="components/specimen.css"&gt;   &lt;!-- app tokens + every component --&gt;
+&lt;script src="components/specimen.js" defer&gt;&lt;/script&gt;    &lt;!-- state switch + keyed map --&gt;
+
+&lt;div class="app"&gt;
+  &lt;div class="mock" id="mock"&gt;      &lt;!-- screen-owned: shell, ambient frame, scroll cap --&gt;
+    &lt;div class="bar"&gt;&lt;!-- screen-owned zoning + &lt;component class&gt; per element --&gt;&lt;/div&gt;
+    &lt;div class="sec-block"&gt;&lt;!-- a composed Section: its own classes, its own padding --&gt;&lt;/div&gt;
+    &lt;!-- .complete-only / .inflight-only mark the state variants --&gt;
   &lt;/div&gt;
 &lt;/div&gt;
-&lt;button class="statebtn"&gt;toggle state&lt;/button&gt;
-&lt;!-- styles: var(--paper/--line/--ink/--muted/--ok); ~15-line JS toggles a class --&gt;</pre>
+&lt;button class="statebtn" data-state-toggle="mock" data-state-class="&lt;state&gt;"
+        data-label-off="▶ show &lt;state&gt;" data-label-on="◀ show &lt;base&gt;"&gt;▶ show &lt;state&gt;&lt;/button&gt;
+
+&lt;!-- the run doc's own &lt;style&gt; carries ASSEMBLY ONLY: shell, zoning, seams, caps,
+     state visibility. Zero component values — no colour, no control padding, no
+     radius, no hit area, no type. Declare each screen-owned exception inline. --&gt;</pre>
+        <table>
+          <thead><tr><th>Layer</th><th>Source</th><th>Rule</th></tr></thead>
+          <tbody>
+            <tr><td><strong>composed</strong></td><td><code>specimen.css</code>, by class name</td><td>anything with a <em>reuse</em> or <em>extend</em> verdict. Never restyled, never re-typed</td></tr>
+            <tr><td><strong>screen-owned</strong></td><td>the run doc's <code>&lt;style&gt;</code></td><td>assembly, plus each <em>propose</em>-verdict element (nothing to compose yet) and each T3 inline element — <strong>declared</strong>, one comment each</td></tr>
+            <tr><td><strong>stubbed</strong></td><td>—</td><td>a component's internals: code surfaces, live clipboard, renderer dispatch, transitions</td></tr>
+          </tbody>
+        </table>
       </div>
-      <p class="kd"><strong>Key distinctions:</strong> the mockup is a <em>decision</em> stage, not mere assembly — building it in real HTML forces details the earlier stages never surfaced (e.g. click-to-copy on long values, per-body copy affordances, raw-vs-decoded semantics, collapsible sections). A static picture (ASCII / draw.io) lets those slide. Prefer native <code>&lt;details&gt;</code>/inputs over hand-rolled widgets.</p>
+      <p class="kd"><strong>Key distinctions:</strong> the mockup is a <em>decision</em> stage, not mere assembly — building it in real HTML forces details the earlier stages never surfaced (click-to-copy on long values, per-body copy affordances, raw-vs-decoded semantics, where a cap bites). A static picture (ASCII / draw.io) lets those slide. Prefer native <code>&lt;details&gt;</code>/inputs over hand-rolled widgets. The hard token rules are checked <em>here</em>, which is why no value is ever typed twice: the tokens live in <code>specimen.css</code> and the mockup only ever writes <code>var(--a-…)</code>. <strong>Re-typing a component's values is not a shortcut, it is a silent fork</strong> — the mockup then looks compliant while rendering something the registry never agreed to, and a rule the component breaks turns green because the mockup quietly fixed it on the way in (both happened, once each, before this rule existed). When a component's specimen CSS contradicts its own token table, or two files draw the same thing differently, <strong>compose it as drawn and file the conflict</strong> — the mockup is not the place to pick a winner. A component whose design file demands a token that <em>does not exist yet</em> cannot be mocked honestly — render its documented fallback and put the missing token on the <a href="#closing">blocked-on list</a>. <strong>Build what the screen decides, stub what a component owns:</strong> zones, seams, labels, caps and every state the Interaction table named are real in the mockup; a component's internals (a code surface, a live clipboard, a renderer family) are a static stand-in — the same scale-down rule the component design format uses for its specimens. Reimplementing a component in the mockup wastes the run and invites the mockup to contradict the registry.</p>
     </div>
 
     <h3 id="s-tune">6 · Tune</h3>
+      <p class="kd"><code>data-item="tune"</code></p>
     <div class="stage">
       <p><strong>Question:</strong> stepping back from the whole, what grouping, hierarchy, or redundancy is off — and why?</p>
       <p><strong>Form:</strong> a short <strong>before/after list</strong>; may loop back to Layout.</p>
       <div class="tmpl" data-c="tmpl-tune">
-        <pre><span class="ph">&lt;aspect&gt;.</span> Before: &lt;what it was&gt;. After: &lt;the change&gt; — &lt;why&gt;.
-<span class="ph">&lt;aspect&gt;.</span> Before: … After: … (loops back to Layout: &lt;yes/no&gt;)</pre>
+        <pre><span class="ph">&lt;aspect&gt;.</span> Before: &lt;what it was&gt;. After: &lt;the change&gt; — &lt;why&gt;. <span class="ph">[&lt;soft-rule slug&gt;]</span>
+<span class="ph">&lt;aspect&gt;.</span> Before: … After: … [&lt;slug&gt;] (loops back to Layout: &lt;yes/no&gt;)</pre>
       </div>
-      <p class="kd"><strong>Key distinctions:</strong> Tune is load-bearing — in the run it genuinely sent design back to Layout, so it earns a distinct stage. Every tune call ("hero", "weight", "proximity") is a soft judgment that should cite a rulebook soft-rule, or it is pure vibes.</p>
+      <p class="kd"><strong>Key distinctions:</strong> Tune is load-bearing — it has genuinely sent design back to Layout, so it earns a distinct stage. <strong>Every tune call cites a soft-rule slug</strong> ("hero", "weight", "proximity" are not reasons); a call with no slug to cite is a rulebook hole and goes to the findings, not into the design. Conversely a soft rule that never gets cited across a whole run is a kill candidate — the receipt makes that visible.</p>
     </div>
 
+    <h2 id="closing">Closing artifacts — receipt · proposals · blocked-on</h2>
+    <p>A run ends with three lists, not with the mockup. They are what a reviewer and (from W7) the harness consume; the design itself is only the first half of the deliverable.</p>
+    <div class="tmpl" data-c="tmpl-closing">
+      <table>
+        <thead><tr><th>List</th><th>One row per…</th><th>Row shape</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Receipt</strong> — <code>data-item="receipt"</code>, a <code>&lt;pre&gt;</code> of YAML, <strong>machine-read</strong></td><td>every <strong>soft</strong> slug in the rulebook, in rulebook order. <strong>Hard rules are never receipted</strong> — a rule with a Tier-1 predicate is judged by the predicate; a hand verdict on it is the one row that can be wrong for free, and a hard slug in the receipt is a red</td><td><pre>rulebook: &lt;blob sha&gt;
+soft:
+  &lt;slug&gt;: &lt;verdict&gt; — &lt;one clause of evidence&gt;</pre>verdict ∈ <code>satisfied</code> · <code>inherited</code> (a component owns it — the citation is the proof) · <code>satisfied-via-proposal</code> (only an entry that does not exist yet closes it) · <code>n/a</code> · <code>blocked</code> (unsatisfiable as specified — name what is missing) · <code>violated</code> · <code>violated-inherited</code> (a component the screen composes and may not re-author breaks it). One line per slug; the why is a clause, and the tally is <em>computed</em>, never typed</td></tr>
+          <tr><td><strong>Proposals</strong></td><td>every entry the design needed and the vocabulary lacked</td><td>kind (component · component extension · token · lexicon term · key binding) · what · why nothing existing fits · owner</td></tr>
+          <tr><td><strong>Blocked-on</strong></td><td>every decision the design could not make because something upstream is missing</td><td>what is missing · which stage hit it · whose call it is (domain/UX · API · build WU) · what the run did meanwhile</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="kd"><strong>Why forced coverage:</strong> a receipt that only lists the rules the design happened to think about proves nothing — the value is the row that reads <em>n/a</em> or <em>violated</em>, because that is where the rulebook is wrong or the design is. <em>inherited</em> is a first-class verdict, not a dodge: most component-level rules are satisfied by reusing the component, and the citation is the proof. Coverage is checked against the rulebook <em>on disk</em>, so adding or killing a rule re-opens every receipt; a receipt that cannot be checked (unreadable rulebook) is red, never silently green.</p>
+    <p class="kd"><strong>Why the hard/soft split:</strong> the receipt exists for what a machine cannot judge. Run #2 wrote <em>satisfied</em> against <code>spacing-scale</code> while its mockup re-typed three components' padding on-scale — the claim was false, the citation was fluent, and only composing the real CSS caught it. Hard rules therefore leave the receipt and become predicates; each one still unimplemented is printed on every verify (<code>hard rules: n/13 machine-checked</code>) so the gap stays visible instead of becoming a forgotten follow-up.</p>
+
     <h2 id="provenance">Provenance &amp; what feeds the rest of the epic</h2>
-    <p>This spec was distilled from a single hand-run (<a href="2026-07-16-dflow-run-1.html">dflow-run-1.html</a>, the flow-detail panel). That run also produced two seed lists this doc deliberately does <em>not</em> hold — they belong downstream:</p>
-    <ul>
-      <li><strong>Component candidates → W2</strong> registry (the tiered catalog's rows + T4 break-downs).</li>
-      <li><strong>Rule candidates → W3</strong> rulebook (hard: state declarations, mono-for-wire-data, tokens-not-hex, spacing scale; soft: wording, visual-weight, grouping, ordering).</li>
-      <li><strong>Open flow gaps → W4</strong> (Layout/Elements boundary; no escalation path for upstream-undefined states).</li>
-    </ul>
-    <p>After W4 validates the flow against the seeded substrate, this becomes the T1 design-flow process doc (sibling to <code>workflow.html</code> / <code>testing-strategy.html</code>).</p>
+    <table data-c="provenance">
+      <thead><tr><th>Run</th><th>What it hardened</th><th>What it fed</th></tr></thead>
+      <tbody>
+        <tr><td><a href="2026-07-16-dflow-run-1.html">#1</a> — bare flow, W1 (flow detail panel)</td><td>the six stages and each stage's artifact form (driver table · ASCII zones · tiered catalog · use-case table · built mockup · before/after tune)</td><td>component candidates → W2 registry · rule candidates → W3 rulebook · flow gaps → this revision</td></tr>
+        <tr><td><a href="2026-07-25-dflow-w4-run-2.html">#2</a> — against the frozen substrate, W4 (same panel, designed fresh)</td><td>the substrate-consuming shape above: substrate load, registry-verdict column, states-by-reference, keyboard column, app-token mockup, slug-cited tune, and the three closing lists</td><td>registry findings → W5 · rulebook findings → W6 · harness findings → W7</td></tr>
+      </tbody>
+    </table>
+    <p>This becomes the T1 design-flow process doc at epic distillation (sibling to <code>workflow.html</code> / <code>testing-strategy.html</code>), after W5–W7 have settled the substrate and the harness.</p>
   </main>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
