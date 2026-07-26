@@ -338,13 +338,7 @@ fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) 
         items.iter().find(|(_, o)| o.value == name).map(|(_, o)| &html[o.span.0..o.span.1])
     };
     if let Some(elements) = item("elements") {
-        if !elements.contains("data-map") || !elements.contains("data-key") {
-            failures.push(Failure {
-                check: "elements·map".to_string(),
-                what: "the catalog is not a keyed map".to_string(),
-                fix: "wrap tree + table in data-map and key every component mention data-key=\"<slug>\" (behaviour: components/specimen.js)".to_string(),
-            });
-        }
+        check_elements_map(failures, elements);
     }
     if let Some(mockup) = item("mockup") {
         if !mockup.contains("data-state-toggle") {
@@ -375,6 +369,66 @@ fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) 
     }
     if let Some(frame) = item("frame") {
         check_frame_density(failures, frame);
+    }
+}
+
+// A highlight that lights one place traces nothing: the map's whole value is
+// clicking a component in the tree and seeing its catalog row light up too. The
+// old check passed on data-map plus any single data-key, so a keyed tree over an
+// unkeyed table — half the map dead — read as green.
+fn check_elements_map(failures: &mut Vec<Failure>, elements: &str) {
+    let mut fail = |what: String, fix: &str| {
+        failures.push(Failure { check: "elements·map".to_string(), what, fix: fix.to_string() });
+    };
+    if !elements.contains("data-map") {
+        fail(
+            "the catalog is not a keyed map".to_string(),
+            "wrap tree + table in data-map and key every component mention data-key=\"<slug>\" (behaviour: components/specimen.js)",
+        );
+        return;
+    }
+    // The tree half is what <pre> encloses; the catalog half is every key that isn't
+    // in it. A row's key rides its <tr> opening tag, which inner-text extraction
+    // drops, so the catalog is identified by exclusion rather than by its own tag.
+    let tree_spans: Vec<(usize, usize)> = elements_of(elements, "pre")
+        .into_iter()
+        .map(|body| {
+            let at = body.as_ptr() as usize - elements.as_ptr() as usize;
+            (at, at + body.len())
+        })
+        .collect();
+    let in_tree = |at: usize| tree_spans.iter().any(|&(s, e)| at >= s && at < e);
+    let (tree, catalog): (Vec<_>, Vec<_>) =
+        attr_positions(elements, "data-key").into_iter().partition(|&(at, _)| in_tree(at));
+    let keys = |half: Vec<(usize, String)>| -> Vec<String> {
+        half.into_iter().map(|(_, value)| value).collect()
+    };
+    let (tree_keys, row_keys) = (keys(tree), keys(catalog));
+    for (half, keys, fix) in [
+        (
+            "tree",
+            &tree_keys,
+            "key every component mention in the placement tree: data-key=\"<slug>\"",
+        ),
+        ("catalog", &row_keys, "key every catalog row: <tr data-key=\"<slug>\">"),
+    ] {
+        if keys.is_empty() {
+            fail(format!("the {half} half of the map carries no data-key"), fix);
+        }
+    }
+    let mut unpaired: Vec<&str> = tree_keys
+        .iter()
+        .filter(|k| !row_keys.contains(k) && !k.is_empty())
+        .map(String::as_str)
+        .collect();
+    unpaired.sort_unstable();
+    unpaired.dedup();
+    if !unpaired.is_empty() && !row_keys.is_empty() {
+        let names = unpaired;
+        fail(
+            format!("placed but not in the catalog: {}", names.join(" ")),
+            "every component in the tree resolves to a catalog row (reuse · extend · propose)",
+        );
     }
 }
 
@@ -864,7 +918,9 @@ mod tests {
              <style>.mock{{color:var(--a-ink);}}</style>\
              <main data-artifact=\"design-run\">\
              <p data-item=\"frame\">drivers</p><p data-item=\"layout\">zones</p>\
-             <div data-item=\"elements\" data-map><span data-key=\"section\">Section</span></div>\
+             <div data-item=\"elements\" data-map>\
+             <pre><span data-key=\"section\">Section</span></pre>\
+             <table><tr data-key=\"section\"><td>Section</td></tr></table></div>\
              <p data-item=\"interaction\">use cases</p>\
              <div data-item=\"mockup\"><button data-state-toggle=\"mock\">flip</button></div>\
              <p data-item=\"tune\">before/after</p>{receipt_block}\
@@ -1121,6 +1177,38 @@ mod tests {
         let doc = green_run().replace(" data-map", "").replace("data-key=\"section\"", "");
         let v = verify_html_against(&doc, Some(&rules()));
         assert!(what(&v, "elements·map").contains("specimen.js"));
+    }
+
+    // The hole run #3 fell through: data-map plus one data-key passed, so a keyed
+    // tree over an unkeyed table read as green while half the map did nothing.
+    #[test]
+    fn a_keyed_tree_over_an_unkeyed_catalog_is_red() {
+        let doc = green_run().replace("<tr data-key=\"section\">", "<tr>");
+        assert!(what(&doc_verdict(&doc), "elements·map").contains("catalog half"));
+    }
+
+    #[test]
+    fn a_keyed_catalog_under_an_unkeyed_tree_is_red() {
+        let doc = green_run().replace("<span data-key=\"section\">", "<span>");
+        assert!(what(&doc_verdict(&doc), "elements·map").contains("tree half"));
+    }
+
+    // A component drawn in the tree with no catalog row never faced the
+    // reuse-or-propose pass at all — the stage's one load-bearing question.
+    #[test]
+    fn a_placed_component_with_no_catalog_row_is_red() {
+        let doc = green_run().replace(
+            "<pre><span data-key=\"section\">Section</span></pre>",
+            "<pre><span data-key=\"section\">Section</span>\
+             <span data-key=\"notice\">Notice</span></pre>",
+        );
+        assert!(what(&doc_verdict(&doc), "elements·map").contains("notice"));
+    }
+
+    #[test]
+    fn the_run_3_elements_map_is_a_live_two_half_map() {
+        let doc = include_str!("../../docs/work/2026-07-26-dflow-w4-run-3.html");
+        assert!(!failures(&doc_verdict(doc)).contains(&"elements·map".to_string()));
     }
 
     #[test]

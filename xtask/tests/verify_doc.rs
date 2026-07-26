@@ -179,7 +179,9 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
              {}</body></html>",
             doc_main(&format!(
                 "<p data-item=\"frame\">d</p><p data-item=\"layout\">z</p>\
-                 <div data-item=\"elements\" data-map><span data-key=\"section\">Section</span></div>\
+                 <div data-item=\"elements\" data-map>\
+                 <pre><span data-key=\"section\">Section</span></pre>\
+                 <table><tr data-key=\"section\"><td>Section</td></tr></table></div>\
                  <p data-item=\"interaction\">u</p>\
                  <div data-item=\"mockup\"><button data-state-toggle=\"m\">flip</button></div>\
                  <p data-item=\"tune\">t</p>{}<p data-item=\"proposals\">band</p>\

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a65a85b9f34851f0dfa98f6">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W4 Run #3 (setup screen, integrated)</title>
+  <link rel="stylesheet" href="components/specimen.css">
+  <style>
+    .stage{border-left:3px solid var(--line);padding-left:14px;margin-left:2px;}
+    .kd{color:var(--muted);}
+    .fr b{color:var(--accent);font-weight:600;}
+    .tag{display:inline-block;font-size:10px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:0 6px;color:var(--muted);white-space:nowrap;}
+    .tag.w5{color:var(--ok);border-color:var(--ok);} .tag.w6{color:var(--accent);border-color:var(--accent);}
+    .tag.w7{color:var(--warn);border-color:var(--warn);} .tag.fl{color:var(--ink);}
+    table{font-size:13px;} pre{white-space:pre-wrap;}
+    .sketch{font-family:var(--mono,monospace);font-size:12px;line-height:1.45;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .pending{color:var(--muted);font-style:italic;}
+    .v{font-weight:600;white-space:nowrap;} .v.sat{color:var(--ok);} .v.prop{color:var(--accent);}
+    .v.blk{color:var(--warn);} .v.na{color:var(--muted);}
+    .place{white-space:nowrap;line-height:1.7;}
+    .place .zones{color:var(--muted);font-size:11.5px;}
+    .tier-b{display:inline-block;font-size:10px;font-weight:600;border:1px solid var(--line);
+        border-radius:3px;padding:0 4px;color:var(--muted);}
+    code.use{color:var(--ok);} code.avoid{color:var(--warn);}
+    .spec{font-family:var(--mono,monospace);font-size:11px;line-height:1.5;color:var(--muted);
+          background:var(--bg);border:1px dashed var(--line);border-radius:4px;
+          padding:6px 8px;margin:0 0 6px;white-space:pre;overflow-x:auto;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W4 Run #3 — the setup screen, against the substrate</h1>
+      <p>A third integrated run, on a screen the substrate has never seen. Runs #1 and #2 both designed the flow detail panel — the registry and rulebook were <em>extracted from</em> that panel, so they were being asked to fit their own source. The setup screen shares no element with it. This run is the generalization test.</p>
+      <div class="meta">Design run · 2026-07-26 · Trawler · T3 (docs/work/) · wu/design-flow/integrated-run · flow: <a href="design-flow-base.html">design-flow-base.html</a> · run #2: <a href="2026-07-25-dflow-w4-run-2.html">dflow-w4-run-2</a></div>
+    </div>
+  </header>
+  <main data-artifact="design-run" data-status="in-progress">
+
+    <h2 id="how-to-read">How to read this</h2>
+    <p>Each stage carries its <strong>artifact</strong> and nothing else — every place the substrate is wrong, missing or ambiguous is a row in the one <a href="#findings">findings table</a>, tagged by owner: <span class="tag w5">W5 registry</span> <span class="tag w6">W6 rulebook</span> <span class="tag w7">W7 harness</span> <span class="tag fl">flow</span>. The screen is designed <strong>fresh</strong>: <a href="../../ui/src/Onboarding.tsx">the shipped onboarding stepper</a> exists but is not an input — it was built by E-UISETUP before this flow existed, and reading it first would anchor the design to a layout nobody derived. It is compared against the result at the end (<a href="#cross-check">cross-check</a>). The registry and rulebook were read once, before stage 1, and are <strong>not edited during the run</strong>.</p>
+
+    <h2 id="substrate">Substrate loaded (frozen for this run)</h2>
+    <table data-c="substrate">
+      <thead><tr><th>Input</th><th>Version read</th><th>What it gives the run</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../design-rules/design-rules-index.html">Design rulebook</a> — 13 hard · 14 soft · 4 vocabularies</td><td>blob <code>28f5437</code></td><td>the rules each stage cites, and the 14-slug soft coverage list the <a href="#receipt">receipt</a> must fill</td></tr>
+        <tr><td><a href="2026-07-22-dflow-w2-registry-seed.html">Registry roster</a> + 16 <a href="components/copy-text.html">component design files</a></td><td>blob <code>56d6521</code> + <code>docs/work/components/*.html</code></td><td>the component vocabulary every element resolves against (reuse · extend · propose)</td></tr>
+        <tr><td>Capabilities (functional input)</td><td><code>ui/src/setup.ts</code> · <code>ui/src/onboardingMachine.ts</code> · <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a></td><td>what the screen must be able to do — received, not designed</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">Identical substrate versions to run #2 — the two runs are therefore directly comparable, and any difference in outcome is the screen, not a substrate revision.</p>
+
+    <h2 id="stages">The stages</h2>
+
+    <div class="stage" data-c="frame" data-item="frame">
+      <h3 id="frame">1 · Frame</h3>
+
+      <p class="fr"><b>Purpose.</b> A developer with no traffic on screen gets from "no flows" to a first decrypted HTTPS flow — from this machine or a device pointed at it — and is told the truth throughout about which preconditions hold.</p>
+
+      <p class="fr"><b>Given</b> <span class="kd">(received, not designed)</span>: CA install · proxy set · proxy unset, all elevated, macOS + Win only · probe <code>trusted·untrusted·unknown</code> · probe <code>ours·foreign·none·unknown</code> · observe a pre-decrypt connection · observe a decrypted flow · install/removal/set/unset steps ×7 targets · a copyable command where one exists · <code>/ca.crt</code> · a prove-it command · the configured address.</p>
+
+      <p class="fr"><b>Not given</b>: firing the prove-it request <span class="kd">(epic non-goal)</span> · any remote-device probe · per-device attribution <span class="kd">(a bare <code>u64</code>)</span> · why a handshake failed · undoing an install from the app.</p>
+
+      <table data-c="frame-table">
+        <thead><tr><th>Driver</th><th>why</th><th>…therefore</th><th>on this screen</th></tr></thead>
+        <tbody>
+          <tr><th colspan="4">Goals — the ranking <em>is</em> the visual hierarchy</th></tr>
+          <tr>
+            <td><b>Reach the first decrypted flow</b></td>
+            <td>one outcome, then the screen is gone forever</td>
+            <td>the three preconditions are the only top-level structure; the unmet one owns the weight</td>
+            <td><span style="color:var(--ok)">✓ landing cold, the one unmet precondition is the loudest thing on screen</span><br><span style="color:var(--warn)">✗ three equal-weight cards and a Next button</span></td>
+          </tr>
+          <tr>
+            <td><b>Say which preconditions hold</b></td>
+            <td>two of four probe results are <em>unknown</em>-shaped; a tick lies in most real states</td>
+            <td>a status per precondition, always present, never optimistic; "can't tell" renders distinctly from pass and fail</td>
+            <td><span style="color:var(--ok)">✓ "can't check from here — we'll confirm when traffic arrives"</span><br><span style="color:var(--warn)">✗ an unchecked checkbox for a CA that may well be installed</span></td>
+          </tr>
+          <tr>
+            <td><b>Do the work for me</b></td>
+            <td>2 targets automate, 5 cannot — hiding steps behind a disclosure with no automation behind it buries the only path there is</td>
+            <td>with a one-click path, the click leads and the steps are one act away; without one, the steps <em>are</em> the affordance</td>
+            <td><span style="color:var(--ok)">✓ on Android, the steps are open at rest</span><br><span style="color:var(--warn)">✗ "Set it up manually ▸" as the only path on every target</span></td>
+          </tr>
+          <tr>
+            <td><b>Undo what was done to my machine</b></td>
+            <td>a trust store and a network config; un-installable is un-trustworthy</td>
+            <td>each write publishes its reversal in the same place, at the same detail, before it is taken</td>
+            <td><span style="color:var(--ok)">✓ the removal command sits with the install command</span><br><span style="color:var(--warn)">✗ removal documented only in a support page</span></td>
+          </tr>
+          <tr><th colspan="4">Constraints — hard boundaries</th></tr>
+          <tr>
+            <td><b>Done is only a real decrypted flow</b></td>
+            <td>DEC-13's surviving invariant; store-trusted while a device fails to decrypt is common</td>
+            <td>no probe, click or self-report renders as completion; probe-green and proven look different</td>
+            <td><span style="color:var(--ok)">✓ probe-green reads "trusted on this machine", not "done"</span><br><span style="color:var(--warn)">✗ the install click ticks the step</span></td>
+          </tr>
+          <tr>
+            <td><b>Three cases, one screen</b> <span class="kd">this machine · remote device · return visit</span></td>
+            <td>the user knows what they are holding, not which case it is</td>
+            <td>the case is inferred, never asked; the screen degrades most-informed → least, no modes</td>
+            <td><span style="color:var(--ok)">✓ a phone's traffic arriving quietly switches the CA copy to "on the device you're capturing from"</span><br><span style="color:var(--warn)">✗ "Setting up: ( ) this Mac ( ) another device" on first paint</span></td>
+          </tr>
+          <tr>
+            <td><b>Preconditions order weakly</b></td>
+            <td>proxy-then-CA is how the remote case actually goes</td>
+            <td>order is a reading path, not a lock; none is disabled by an unmet predecessor</td>
+            <td><span style="color:var(--ok)">✓ the proxy command is copyable before the CA is trusted</span><br><span style="color:var(--warn)">✗ step 2 greyed out until step 1 is green</span></td>
+          </tr>
+          <tr>
+            <td><b>Each write hits the machine, with an OS prompt</b></td>
+            <td>the elevation prompt steals focus from outside the app — unexplained, it alarms</td>
+            <td>state the effect before invoking; own a visible in-flight state; survive a decline</td>
+            <td><span style="color:var(--ok)">✓ "adds Trawler's certificate to your system keychain — macOS will ask for your password"</span><br><span style="color:var(--warn)">✗ a bare "Install certificate" button</span></td>
+          </tr>
+          <tr>
+            <td><b>Instructions are shell commands, verbatim</b></td>
+            <td>a mangled command in a root shell is the worst outcome here; longest is ~330 chars</td>
+            <td>mono, wrapped whole, never truncated or re-flowed, carrying the configured address</td>
+            <td><span style="color:var(--ok)">✓ the 330-char Windows <code>reg add</code> wraps and copies whole</span><br><span style="color:var(--warn)">✗ a one-line box scrolling sideways, or an ellipsis mid-flag</span></td>
+          </tr>
+          <tr>
+            <td><b>Substrate: no component has an in-flight or disabled state</b></td>
+            <td>read-only roster: <a href="components/button.html">button.html</a> · <a href="components/icon-button.html">icon-button.html</a> assume an instant act</td>
+            <td>action lifecycle states must be proposed as extensions — nothing can be cited</td>
+            <td><span style="color:var(--ok)">✓ Elements carries "Button — extend: pending state"</span><br><span style="color:var(--warn)">✗ a spinner drawn in the mockup with no registry row</span></td>
+          </tr>
+          <tr>
+            <td><b>Substrate: <a href="components/section.html">Section</a> must not nest</b></td>
+            <td><a href="components/section.html">section.html</a> — the no-nesting rule</td>
+            <td>a precondition's sub-grouping <span class="kd">(auto · steps · reversal)</span> needs a second device</td>
+            <td><span style="color:var(--ok)">✓ a precondition is one Section; its parts use a lighter device</span><br><span style="color:var(--warn)">✗ a Section per precondition wrapping a Section per part</span></td>
+          </tr>
+          <tr><th colspan="4">Qualities — Tune's yardstick; only what the rulebook does <em>not</em> carry</th></tr>
+          <tr>
+            <td><b>Uncertainty is calm, never failure</b></td>
+            <td>which instance of <a href="../design-rules/design-rules-index.html">calm-microcopy</a>: remote is permanently unknown, and supported</td>
+            <td><code>unknown</code> and <code>foreign</code> take the neutral channel; only real failure earns warn</td>
+            <td><span style="color:var(--ok)">✓ a foreign proxy reads muted, as a fact</span><br><span style="color:var(--warn)">✗ a warn-tinted "⚠ proxy not configured" at every remote setup</span></td>
+          </tr>
+          <tr>
+            <td><b>A checklist, not a wizard</b></td>
+            <td>which instance of <a href="../design-rules/design-rules-index.html">progressive-disclosure</a>: the scan level is all three at once</td>
+            <td>all three statuses legible simultaneously; depth opens in place, never replaces</td>
+            <td><span style="color:var(--ok)">✓ opening the proxy steps leaves the CA status visible</span><br><span style="color:var(--warn)">✗ one step per screen with Back/Next</span></td>
+          </tr>
+          <tr>
+            <td><b>Reversal ranks with its action</b></td>
+            <td>frequency would rank an undo below its do; the trust goal inverts that here</td>
+            <td>an undo is never smaller, quieter or further away than the action it reverses</td>
+            <td><span style="color:var(--ok)">✓ "stop routing through Trawler" sits beside "set system proxy"</span><br><span style="color:var(--warn)">✗ the revert buried in a collapsed "advanced"</span></td>
+          </tr>
+          <tr>
+            <td><b>Waiting is doing something</b></td>
+            <td>which instance of <a href="../design-rules/design-rules-index.html">empty-states-orient</a>: the only state the app cannot act on</td>
+            <td>the wait state names what is being watched for and how to cause it</td>
+            <td><span style="color:var(--ok)">✓ "waiting for your first request" over a copyable <code>curl</code></span><br><span style="color:var(--warn)">✗ a bare spinner, or "Waiting…"</span></td>
+          </tr>
+          <tr>
+            <td colspan="4"><b>Non-goals</b>: traffic generation <span class="kd">(epic non-goal)</span> · remote pairing, QR, LAN discovery · per-device traffic breakdown · CA rotation · proxy port/bind config · hi-fi polish</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="stage" data-c="layout" data-item="layout">
+      <h3 id="layout">2 · Layout</h3>
+
+      <p class="kd">Full-window takeover, one column, capped at a reading measure and centred. The Frame's goal ranking is the zone order: <b>reach the first flow</b> owns C (the outcome), <b>say what holds</b> owns B, and the ranking within B is the unmet precondition, not a fixed 1-2-3.</p>
+
+      <pre class="sketch">┌──────────────────────────────────────────────────┐
+│ A  orientation                                   │  ← one line: what this screen is for. Static, never a step.
+├──────────────────────────────────────────────────┤
+│ B  preconditions          (the checklist)        │  ← all three legible at once — the Frame's "checklist, not wizard"
+│   ┌──────────────────────────────────────────┐   │
+│   │ B1  certificate      status ─ open?      │   │  ← each: status line always present · body opens in place
+│   ├──────────────────────────────────────────┤   │     open-at-rest iff unmet AND highest-ranked
+│   │ B2  proxy            status ─ open?      │   │     order = reading path only; none ever disabled
+│   ├──────────────────────────────────────────┤   │
+│   │ B3  first flow       status ─ open?      │   │  ← terminal; no action of its own, only the wait
+│   └──────────────────────────────────────────┘   │
+├──────────────────────────────────────────────────┤
+│ C  outcome                                       │  ← the only "done"; absent until a real decrypted flow
+├──────────────────────────────────────────────────┤
+│ D  reversal                                      │  ← peer of B, not a footnote; present iff something was written
+└──────────────────────────────────────────────────┘
+
+     B-open (one precondition, expanded — the sub-grouping Section cannot nest):
+     ┌──────────────────────────────────────────┐
+     │ ● certificate        can't check yet     │  ← status row: glyph · name · message
+     │   ─────────────────────────────────────  │
+     │   [target ▾]                             │  ← which machine these instructions are for
+     │   ( install for me )   ← only where automation exists
+     │   1. …  2. …  3. …     ← steps, always present, never behind a disclosure
+     │   $ security add-trusted-cert …          │  ← verbatim command, wraps whole
+     │   to undo: $ security remove-trusted-cert │  ← reversal, same detail, same place
+     └──────────────────────────────────────────┘
+
+scroll / overflow: the window scrolls as one — A·B·C·D all ride it, nothing is
+                   independently scrollable and nothing is pinned. Two unbounded
+                   zones: B's step list (bounded by data — max 6 steps across all
+                   7 targets, `guidedSteps`) and each command block (bounded by
+                   wrapping, never by scroll — `wrap-not-truncate`; longest is the
+                   ~330-char Windows `reg add`). D is bounded by B's cardinality.
+                   No zone declares a cap because no zone needs one; the page
+                   scroll is the cap, and it is owned here.</pre>
+
+      <table data-c="layout-zones">
+        <thead><tr><th>Zone</th><th>Holds</th><th>Why it sits here</th><th>Absent when</th></tr></thead>
+        <tbody>
+          <tr><td><b>A</b> orientation</td><td>one sentence</td><td>the screen must say what it is before it asks for a keychain password; it is not a step and never gets a status</td><td>never</td></tr>
+          <tr><td><b>B</b> preconditions</td><td>three status rows, each with an openable body</td><td>the Frame's second goal, and the only zone with weight at rest; all three legible at once is the "checklist, not wizard" quality made structural</td><td>never</td></tr>
+          <tr><td><b>C</b> outcome</td><td>the proven-decrypted statement</td><td>the top goal's landing place — its <em>absence</em> is what makes B loud, and its arrival is the screen's only completion</td><td>until a real decrypted flow — <span class="kd">no probe, no click</span></td></tr>
+          <tr><td><b>D</b> reversal</td><td>the undo for every write actually made</td><td>ranked as a peer of B, not a footnote — the Frame inverts frequency here on purpose</td><td>nothing has been written on this machine</td></tr>
+        </tbody>
+      </table>
+
+      <p class="kd"><b>Three structural calls, each traceable to a Frame row.</b> <b>(1) No mode picker.</b> "Three cases, one screen" forbids asking; the case is read off the probes and the observed traffic. This machine = probes answer; remote = probes say <code>unknown</code> and a target is picked; return visit = C is already true on paint, so B collapses to status lines. The zones do not change — only which one is loud. <b>(2) Weight is dynamic, order is static.</b> "Preconditions order weakly" bans disabling and bans a fixed 1-2-3 emphasis, so B renders in a stable reading order while <em>open-at-rest</em> follows the highest-ranked unmet one. A user landing with a trusted CA and no proxy sees B2 open and B1 as a satisfied line. <b>(3) Reversal is a zone, not a disclosure.</b> Putting D inside each precondition's body would hide it exactly when it matters most (after a successful install, when the body is collapsed) — so the undo appears in <em>both</em> places: inline with its command as the instruction's last line, and collected in D as the standing answer to "what did this app do to my machine".</p>
+
+      <p class="kd"><b>Loop back to Frame: none.</b> Every zone traces to a driver, and the Frame's two substrate constraints both landed structurally — Section-no-nesting forced B's sub-grouping onto a lighter device (the status row + hairline, drawn above), and the absent action-lifecycle state is what makes "install for me" a designed control rather than a cited one. Both resolve at Elements.</p>
+    </div>
+
+    <div class="stage" data-c="elements" data-map data-item="elements">
+      <h3 id="elements">3 · Elements</h3>
+
+      <p class="kd">The registry index was read once, here. Every row resolves to <span class="v sat">reuse</span> · <span class="v prop">extend</span> · <span class="v prop">propose</span> against the component's own <code class="use">@use</code>/<code class="avoid">@avoid</code>. Click any component to light every appearance.</p>
+
+      <pre class="sketch">Tree (placement + composition; ◆ = recurring · ▣ = composition):
+  setup screen
+  ├─ A orientation ─── <span data-key="notice">Notice(mute ◆)</span>
+  ├─ B preconditions ─ <span data-key="section">Section("set up capture")</span> ── <span data-key="precondition-row">PreconditionRow ▣</span> ×3
+  ├─ C outcome ─────── <span data-key="notice">Notice(mute ◆)</span> · <span data-key="copy-text">CopyText(the flow's uri ◆)</span>
+  └─ D reversal ────── <span data-key="section">Section("undo") ◆</span> ── <span data-key="command-block">CommandBlock ▣ ◆</span> ×n
+
+  ▣ <span data-key="precondition-row">PreconditionRow</span> = <span data-key="status-line">StatusLine ✦</span> · <span data-key="select">Select(targets ✦)</span> · <span data-key="button">Button(action ✦) ◆</span> · <span data-key="step-list">StepList ✦</span> · <span data-key="command-block">CommandBlock ▣ ◆</span>
+  ▣ <span data-key="command-block">CommandBlock</span>    = <span data-key="copy-text">CopyText(the command ◆)</span> · <span data-key="copy-button">CopyButton(⧉ icon form)</span>
+  ▣ <span data-key="status-line">StatusLine</span>      = <span data-key="toned-text">TonedText ✦</span>(glyph + message) · label</pre>
+
+      <table data-c="elements-catalog">
+        <thead><tr><th>Component</th><th>Placement · verdict</th><th>Fit — against <code class="use">@use</code> / <code class="avoid">@avoid</code></th><th>Shape <span class="kd">(reference only)</span> · States</th></tr></thead>
+        <tbody>
+          <tr data-key="section"><td><a href="components/section.html">Section</a></td><td class="place"><span class="tier-b">T1</span> <span class="v sat">reuse</span><br><span class="zones">B · D</span></td><td><code class="use">@use</code> "every labelled zone of a detail <em>or settings</em> screen" — this screen is the settings half of that clause, and the first to exercise it. <b>Its <code class="avoid">@avoid</code> "nesting a Section inside another Section" is the Frame's substrate constraint</b>, and it holds: B is one Section, its three preconditions are T3 rows inside the slot, not Sections</td><td><pre class="spec">SET UP CAPTURE
+─────────────
+  &lt;slot&gt;</pre>per its file</td></tr>
+          <tr data-key="notice"><td><a href="components/notice.html">Notice</a></td><td class="place"><span class="tier-b">T1</span> <span class="v sat">reuse</span><br><span class="zones">A · C · B (per-row absence)</span></td><td><code class="use">@use</code> "any zone that has nothing to show and must say which nothing it is (empty · pending · capped · not captured)". A and C are exactly that — C is the <em>waiting</em> nothing, A the orienting one. Landed as a W4 proposal from run #2; this run is its first independent tenant, and it fits without an extension</td><td><pre class="spec">waiting for your first request
+$ curl -x … https://example.com</pre>per its file — <code>mute bare</code> for A, <code>mute + detail + action slot</code> for C (the action slot takes the prove-it command)</td></tr>
+          <tr data-key="copy-text"><td><a href="components/copy-text.html">CopyText</a></td><td class="place"><span class="tier-b">T1</span> <span class="v sat">reuse</span><br><span class="zones">in CommandBlock · C</span></td><td><code class="use">@use</code> "full-value fields grabbed whole" — a shell command is the archetype. <code>@anatomy</code> "mono, wraps, never truncates" is <em>verbatim</em> the Frame's instructions-are-commands constraint, including the 330-char case. The <code class="avoid">@avoid</code> "prose" is what keeps the numbered steps out of it</td><td><pre class="spec">security add-trusted-cert -d …
+‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾ (wraps, never truncates)</pre>per its file</td></tr>
+          <tr data-key="copy-button"><td><a href="components/copy-button.html">CopyButton</a> <code>icon form</code></td><td class="place"><span class="tier-b">T1</span> <span class="v sat">reuse</span><br><span class="zones">in CommandBlock</span></td><td><code class="use">@use</code> "any one-click copy affordance where the payload is derived/invisible" — and the icon-only form is in contract here for the same reason run #2 established: <code>@anatomy</code> allows it "only when the payload is rendered adjacent", and the command sits immediately left of it</td><td><pre class="spec">[⧉]  →  [✓]  →  [⧉]     [failed]
+rest   confirm  revert   error</pre>per its file — its <code>error</code> state matters more here than on the flow panel: a failed copy of a root-shell command must not look like a success</td></tr>
+          <tr data-key="button"><td><a href="components/button.html">Button</a></td><td class="place"><span class="tier-b">T1</span> <span class="v prop">extend</span><br><span class="zones">B1 · B2 (automated targets only)</span></td><td><code class="use">@use</code> "any action that needs a word and is not a copy" — exact. But <code>@states</code> declares <b>"No confirming and no loading state — the caller's zone owns the outcome"</b>, and this screen's actions take seconds behind an OS password prompt. <b>The contract is not silent, it delegates</b> — so the extension is not a new Button state but a decision about <em>where</em> the in-flight state lives (<a href="#findings">finding 7</a>). The Frame called this "must be proposed"; reading the file says otherwise, and the honest verdict is a narrow extension: <code>disabled</code> while the caller is in flight, which Button already owns</td><td><pre class="spec">( install for me )   rest
+( install for me )   disabled ← while in flight</pre>per its file. The screen coordinates: in flight → Button <code>disabled</code> + StatusLine carries <code>⟳ Installing…</code> · declined → Button rest + StatusLine <code>⚠</code>, never a dead-end</td></tr>
+          <tr data-key="toned-text"><td><b>TonedText</b> ✦</td><td class="place"><span class="tier-b">T1</span> <span class="v prop">propose</span><br><span class="zones">in StatusLine ×3</span></td><td>a status glyph + message in one of three tones, and <em>not</em> an HTTP status. <a href="components/status-pill.html">StatusPill</a>'s <code class="avoid">@avoid</code> names this case and its remedy verbatim — "a toned value that is not an HTTP status — <b>use TonedText (T1)</b>" — and its <code class="use">@madeof</code> is TonedText. Run #2 found the same missing entry from the other side and never needed to place it; this run does. <b>Not a new proposal — a collected component with no design file</b> (<a href="#findings">finding 8</a>). <b>The dependency already runs that way, per review</b>: StatusPill is <em>built on</em> TonedText (<code class="use">@madeof TonedText</code>) — StatusPill is the T2 that knows HTTP semantics, TonedText the T1 that only knows tone + text. So this is not a second status component; it is the base the existing one already claims, written down at last. Once it lands, StatusPill's file needs no change — its <code class="use">@madeof</code> finally resolves</td><td><pre class="spec">✓ trusted     ok
+⚠ not decrypting   warn
+◐ can't check      muted</pre>must own: the three <code>StepTone</code> values <code>ok · warn · muted</code>, each with its text channel (<code>colour-plus-text</code>), and no interactivity</td></tr>
+          <tr data-key="status-line"><td><b>StatusLine</b> ✦</td><td class="place"><span class="tier-b">T2</span> <span class="v prop">propose</span><br><span class="zones">in PreconditionRow ×3</span></td><td>the precondition's always-present verdict: glyph · name · message, resolved from a probe plus what has actually been observed. Business logic (<code>trustStatus</code>/<code>proxyStatus</code>/<code>verifyStatus</code> already encode it) → T2, not T1. Nothing in the roster carries a non-HTTP status with a message; StatusPill is code-only and <code class="avoid">@avoid</code>s exactly this</td><td><pre class="spec">◐ certificate   can't check from here
+⟳ certificate   installing…
+✓ certificate   trusted on this machine</pre>must own: <code>ok · warn · muted</code> ×(with detail · without) and <code>in-flight</code> (<code>⟳</code>, muted). Never a checkbox — the Frame's "a tick lies in most real states"</td></tr>
+          <tr data-key="step-list"><td><b>StepList</b> ✦</td><td class="place"><span class="tier-b">T1</span> <span class="v prop">propose</span><br><span class="zones">in PreconditionRow</span></td><td>ordered manual instructions, prose lines interleaved with command blocks. <a href="components/key-value-row.html">KeyValueRow</a> is the nearest roster entry and misses on both axes (no name column, and its <code class="avoid">@avoid</code> targets wire data); <a href="components/copy-text.html">CopyText</a> <code class="avoid">@avoid</code>s "prose" explicitly. <b>The registry has no instructional component at all</b> — it was extracted from a read-only panel that never told the user to do anything (<a href="#findings">finding 9</a>)</td><td><pre class="spec">1. open Settings › Security
+2. tap the downloaded file
+   $ &lt;CommandBlock slot&gt;</pre>must own: the list only — <code>ordered</code>, with a slot per step. No empty state: a target with zero steps does not render a StepList (5 of 7 targets have steps; the 2 automated ones show them too, per the Frame's "the steps are one act away")</td></tr>
+          <tr data-key="select"><td><b>Select</b> ✦ <span class="kd">searchable</span></td><td class="place"><span class="tier-b">T1</span> <span class="v prop">propose</span><br><span class="zones">B1 · B2</span></td><td>picks which machine the instructions describe — 6 trust targets, 7 proxy targets, defaulted from <code>hostOs()</code>. <a href="components/segmented-control.html">SegmentedControl</a> is the roster's only switch and <code class="avoid">@avoid</code>s nothing that applies, but its <code>@anatomy</code> is an inline group of segments: at 6–7 options it stops being scannable and starts being a toolbar. <b>An <code class="avoid">@avoid</code> miss by scale rather than by kind</b> (<a href="#findings">finding 10</a>). <b>Proposed generic, per review</b>: not a setup-specific <em>TargetSelect</em> but the app's one searchable select, which every future dropdown builds on — so it is T1 (presentation only, options passed in) and its <code class="use">@use</code> claims the whole category, not this screen. The target list is then just data this screen passes</td><td><pre class="spec">[ macOS            ▾ ]   rest
+┌─────────────────────┐
+│ 🔍 fire             │   open + filter
+├─────────────────────┤
+│ Firefox             │ ← match
+└─────────────────────┘</pre>must own: rest · hover · focus · open · filtering · no-match · one selected (never zero — <code>defaultTarget(hostOs())</code> always resolves). Search appears above a threshold the design file sets, not per call site</td></tr>
+          <tr data-key="precondition-row"><td><b>PreconditionRow</b> ▣</td><td class="place"><span class="tier-b">T4</span> <span class="v prop">build local</span><br><span class="zones">B ×3</span></td><td>the screen's own composition — a status line over an openable body. Built local and broken down; the parts below are the registry entries. Its <em>openness</em> is not a component state: it is derived (highest-ranked unmet), which is screen logic, not row logic</td><td><pre class="spec">✓ proxy   receiving traffic          closed
+─────────────────────────────────
+◐ certificate  can't check from here open
+  [ macOS ▾ ]  ( install for me )
+  1. …   $ security add-trusted-cert
+  to undo: $ security remove-trusted-cert</pre>coordinated here: closed (status only) · open (status + body) · in-flight (body stays open, action disabled). Never <em>disabled</em> — the Frame bans an unmet predecessor locking a successor</td></tr>
+          <tr data-key="command-block"><td><b>CommandBlock</b> ▣</td><td class="place"><span class="tier-b">T3</span> <span class="v sat">build local</span> (inline)<br><span class="zones">in PreconditionRow · D</span></td><td>CopyText + an adjacent icon CopyButton. Two sightings, one screen — the same T3 verdict W2 gave ProtocolLine. Extract at its second <em>screen</em>, not its second use</td><td><pre class="spec">$ security add-trusted-cert -d …  [⧉]</pre>none of its own — both parts own theirs</td></tr>
+          <tr data-key="icon-button"><td><a href="components/icon-button.html">IconButton</a></td><td class="place"><span class="tier-b">T1</span> <span class="v sat">n/a</span><br><span class="zones">— (not placed)</span></td><td>considered for the precondition's open/close affordance and rejected by its own <code class="avoid">@avoid</code>: "actions with no fitting glyph". Disclosure here is the whole status row (<code>generous-targets</code>), not a chevron beside it</td><td>—</td></tr>
+        </tbody>
+      </table>
+
+      <p class="kd" style="margin:6px 0 0"><b>The Shape column is reference only</b> — a sketch so a reader can tell what a row <em>is</em> without opening its file. It is not a design baseline and binds nothing: the component's real design lives in its own file under <a href="components/copy-text.html"><code>components/</code></a>, and for a proposal that file does not exist yet. Where a sketch and a design file ever disagree, the file wins.</p>
+
+      <p style="margin:6px 0 0"><b>T4 break-down.</b> PreconditionRow → StatusLine (T2) · Select (T1) · Button (T1) · StepList (T1) · CommandBlock (T3) → CopyText (T1) · CopyButton (T1). StatusLine (T2) → TonedText (T1).</p>
+
+      <p style="margin:6px 0 0"><b>Proposals</b> (each becomes a design file before the build) — <b>TonedText</b> (T1) tone + text, the collected-but-undocumented entry StatusPill is already <code class="use">@madeof</code> · <b>StatusLine</b> (T2) a precondition's resolved verdict, built on TonedText · <b>StepList</b> (T1) ordered manual instructions · <b>Select</b> (T1) the app's one searchable dropdown, proposed generic so every later select inherits it. Plus one Button extension: <em>the caller owns in-flight</em>, made explicit rather than left to each caller to reinvent.</p>
+
+      <p class="kd" style="margin:6px 0 0"><b>Two T1 proposals are wider than this screen.</b> <a href="#findings">Review</a> pushed both up a level: TonedText is the base StatusPill already declares, and Select claims the whole dropdown category rather than this screen's target picker. Neither is a setup component — the setup screen is just the first tenant, which is the right way for a registry to grow (a component earns its file by being needed twice, and both are already cited twice). It does mean W5's scope grows: these two land as vocabulary, not as screen parts.</p>
+
+      <p class="kd"><b>The result is the finding.</b> Four of eleven placed components are reuses and four are proposals — against run #2's twelve reuses and two proposals on the same substrate. That ratio is the generalization test's answer: <b>the registry covers <em>showing captured data</em> and does not cover <em>telling a user to do something</em></b>. Every proposal here is in the second category (a status that is not an HTTP status, an instruction list, a target picker), and every reuse is a component whose job is rendering a value or a label. This is a breadth result about the registry, not a failure of the run — but it does mean a screen outside the flow-detail family currently costs four design files before it can be built.</p>
+    </div>
+
+    <div class="stage" data-c="interaction" data-item="interaction">
+      <h3 id="interaction">4 · Interaction</h3>
+      <p class="pending">Pending.</p>
+    </div>
+
+    <div class="stage" data-c="mockup" data-item="mockup">
+      <h3 id="mockup">5 · Draft mockup</h3>
+      <p class="pending">Pending.</p>
+    </div>
+
+    <div class="stage" data-c="tune" data-item="tune">
+      <h3 id="tune">6 · Tune</h3>
+      <p class="pending">Pending.</p>
+    </div>
+
+    <h2 id="receipt">Receipt</h2>
+    <pre data-item="receipt">pending — written after Tune, over all 14 soft slugs</pre>
+
+    <h2 id="proposals">Proposals</h2>
+    <p class="pending">Pending.</p>
+
+    <h2 id="blocked-on">Blocked-on</h2>
+    <p class="pending">Pending.</p>
+
+    <h2 id="findings">Findings</h2>
+    <table data-c="findings">
+      <thead><tr><th>#</th><th>Stage</th><th>Finding</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td><td>Frame</td>
+          <td>The registry holds no component with an <em>action</em> lifecycle — nothing can be pending, in-flight, or refused. <a href="components/button.html">Button</a> and <a href="components/icon-button.html">IconButton</a> both assume an act that completes instantly (a copy). Every write on this screen takes seconds and shows an OS prompt, so the state has to be designed rather than cited. <b>Narrowed at Elements</b>: Button's <code>@states</code> does not omit the lifecycle, it <em>delegates</em> it ("the caller's zone owns the outcome") — see <a href="#findings">finding 7</a>. The Frame overstated this by reading the roster, not the file.</td>
+          <td><span class="tag w5">W5 registry</span></td>
+        </tr>
+        <tr>
+          <td>2</td><td>Frame</td>
+          <td>The rulebook's chromatic vocabulary is binary — <code>ok</code> = success, <code>warn</code> = failure. This screen's most common status is neither: <em>unknown</em> is a permanent, supported state in the remote case. The Frame resolves it to the neutral channel as a case-specific quality, but a screen whose dominant status has no vocabulary entry suggests the fixed-meanings table needs a third.</td>
+          <td><span class="tag w6">W6 rulebook</span></td>
+        </tr>
+        <tr>
+          <td>3</td><td>Frame</td>
+          <td>Nothing in the rulebook binds a design that <em>modifies the user's machine</em> — no rule about announcing an effect before invoking it, about surviving a declined elevation, or about publishing a reversal. Three of this screen's drivers had to be written from scratch where a rule should have carried them. The flow-detail panel was read-only, so the gap was invisible until now.</td>
+          <td><span class="tag w6">W6 rulebook</span></td>
+        </tr>
+        <tr>
+          <td>4</td><td>Frame</td>
+          <td>The Frame template asked for "given capabilities" with no slot for <em>explicit non-capabilities</em> — half this screen's design pressure comes from what it cannot observe. <b>Fixed mid-run</b>: <code>Not given</code> is now a named template line, and <code>frame·prose-blocks</code> allows 3.</td>
+          <td><span class="tag fl">flow</span></td>
+        </tr>
+        <tr>
+          <td>5</td><td>Frame</td>
+          <td>The Frame's form rule ("every cell is a clause, never a paragraph") was written and ignored — this run's first Frame came in at mean 17.9 words per cell against run #2's 9.0, plus two commentary blocks that were not artifacts. <b>Fixed mid-run</b>: six Tier-1 predicates now check Frame density on every write.</td>
+          <td><span class="tag w7">W7 harness</span></td>
+        </tr>
+        <tr>
+          <td>6</td><td>Frame</td>
+          <td>A Frame at legal density was <em>still</em> hard to read: three abstraction columns in a row (driver · therefore · why) gave a reviewer nothing concrete to judge, and <code>checked by</code> stated the test abstractly rather than showing it. <b>Fixed mid-run</b>: the column order is now driver → why → therefore → <code>on this screen</code>, and the last column is a ✓/✗ pair — the <a href="../design-rules/design-rules-index.html">rulebook</a>'s own DO/DON'T pattern, which has held across 14 soft rules. The ✗ does work the criterion never did: it names the plausible failure the design is at risk of.</td>
+          <td><span class="tag fl">flow</span></td>
+        </tr>
+        <tr>
+          <td>7</td><td>Elements</td>
+          <td><strong>"The caller's zone owns the outcome" names no owner.</strong> <a href="components/button.html">Button</a> declares no loading and no confirming state and delegates both to the caller — a reasonable T1 boundary, but the contract stops at the delegation. Nothing says <em>what</em> the caller must render, so every screen with a slow action invents its own answer, and the two that exist already disagree in spirit (CopyButton owns its confirm inline; Button pushes it out). This screen resolves it as <em>Button disabled + the zone's status line carries <code>⟳</code></em>, which is a screen decision standing in for a vocabulary one.</td>
+          <td><span class="tag w6">W6 rulebook</span></td>
+        </tr>
+        <tr>
+          <td>8</td><td>Elements</td>
+          <td><strong>TonedText is cited by contract and does not exist</strong> — second sighting. <a href="components/status-pill.html">StatusPill</a>'s <code class="use">@madeof</code> is TonedText and its <code class="avoid">@avoid</code> redirects non-HTTP toned values to it by name and tier, but the roster has no row and there is no design file. Run #2 found it by reading StatusPill and never needed to place it; this run needs it three times in the one zone that carries the screen's whole verdict. A contract that names a component the vocabulary lacks is worse than a gap — it reads as available.</td>
+          <td><span class="tag w5">W5 registry</span></td>
+        </tr>
+        <tr>
+          <td>9</td><td>Elements</td>
+          <td><strong>The registry has no instructional component.</strong> Nothing renders an ordered list of things for the user to do — <a href="components/key-value-row.html">KeyValueRow</a> is wire data, <a href="components/copy-text.html">CopyText</a> <code class="avoid">@avoid</code>s prose outright, <a href="components/notice.html">Notice</a> is one sentence with at most one action. This is structural, not incidental: all 16 files were extracted from a read-only panel that never asked the user for anything. Any screen that instructs — setup, an error with a remedy, a migration — starts from zero.</td>
+          <td><span class="tag w5">W5 registry</span></td>
+        </tr>
+        <tr>
+          <td>10</td><td>Elements</td>
+          <td><strong>An <code class="avoid">@avoid</code> miss by scale, not by kind.</strong> <a href="components/segmented-control.html">SegmentedControl</a> is the roster's only mutually-exclusive switch and forbids nothing that applies here, yet at 6–7 targets its inline-group anatomy stops being a switch and becomes a toolbar. The contract language has no way to express "correct in kind, wrong at this cardinality", so the row reads as a clean reuse right up until the mockup. Component files may need a bound on their option count where one exists. <b>Resolved at review as a generic <code>Select</code> (T1)</b> rather than a setup-specific picker — the roster has no dropdown at all, so the gap is the category, not this screen.</td>
+          <td><span class="tag w6">W6 rulebook</span></td>
+        </tr>
+        <tr>
+          <td>11</td><td>Elements</td>
+          <td><strong>The generalization test has its answer, and it is a breadth result.</strong> Same substrate as run #2, different screen: 12 reuses / 2 proposals there, 4 reuses / 4 proposals here. The split is clean along one line — the registry covers <em>showing captured data</em> and not <em>telling a user to do something</em>. Every reuse this run is a value-or-label renderer; every proposal is instructional or status-with-a-message. The vocabulary is sound within its family and thin one step outside it. <b>Review widened two of the four</b>: TonedText and Select are proposed as general vocabulary, not setup parts — so the registry gains a status base and a dropdown it lacked entirely, and only StatusLine and StepList are really this screen's.</td>
+          <td><span class="tag w5">W5 registry</span></td>
+        </tr>
+        <tr>
+          <td>12</td><td>Elements</td>
+          <td><strong>The element map shipped inert, and two gates missed it.</strong> The Elements stage was written keyed and correct, but the run doc never linked <a href="components/specimen.css"><code>specimen.css</code></a> — which is where <code>.hl</code> lives. Every click fired and toggled a class that styled nothing. <code>verify-doc</code> <em>did</em> catch it as <code>assets·specimen</code>, and the run read that failure as "a downstream stage is still pending" and moved on: <b>a checker is only as good as the reading of its output</b>, and a red that names an asset is indistinguishable, at a glance, from a red that names a missing section. Separately, <code>elements·map</code> itself was too weak — it passed on <code>data-map</code> plus <em>any single</em> <code>data-key</code>, so a keyed tree over an unkeyed catalog (half the map dead) read as green; the flow's own green test fixture was exactly that shape. <b>Fixed mid-run</b>: the check now requires a key in <em>both</em> halves and reds any component placed in the tree with no catalog row — the last one is the valuable half, since a placed component with no row never faced the reuse-or-propose pass at all.</td>
+          <td><span class="tag w7">W7 harness</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="cross-check">Cross-check against the shipped screen</h2>
+    <p class="pending">Pending — run at the end, against <a href="../../ui/src/Onboarding.tsx">Onboarding.tsx</a>.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+  <script src="components/specimen.js" defer></script>
+</body>
+</html>
