@@ -181,10 +181,19 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
                 "<p data-item=\"frame\">d</p><p data-item=\"layout\">z</p>\
                  <div data-item=\"elements\" data-map>\
                  <pre><span data-key=\"section\">Section</span></pre>\
-                 <table><tr data-key=\"section\"><td>Section</td></tr></table></div>\
-                 <p data-item=\"interaction\">u</p>\
+                 <table><tr data-key=\"section\"><td>Section</td><td>reuse</td>\
+                 <td><div class=\"gist\">fits the labelled-zone use</div>\
+                 <details class=\"why\"><div>@use labelled zone · @avoid nesting</div></details></td>\
+                 </tr></table></div>\
+                 <table data-item=\"interaction\"><tr><td>land cold</td><td>orient</td>\
+                 <td><div class=\"gist\">B renders the real verdicts</div>\
+                 <details class=\"why\"><div>B -&gt; status</div></details></td></tr></table>\
                  <div data-item=\"mockup\"><button data-state-toggle=\"m\">flip</button></div>\
-                 <p data-item=\"tune\">t</p>{}<p data-item=\"proposals\">band</p>\
+                 <table data-item=\"tune\"><tr><td>weight</td><td><pre class=\"tb\">before</pre></td>\
+                 <td><pre class=\"tb\">after</pre></td><td><code>data-ink-first</code></td></tr></table>\
+                 {}<table data-item=\"capabilities\"><tr><td>CA install</td><td>used</td>\
+                 <td>B1 button</td></tr></table>\
+                 <p data-item=\"proposals\">band</p>\
                  <p data-item=\"blocked-on\">tokens</p>",
                 receipt(rows)
             ))

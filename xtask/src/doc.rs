@@ -29,6 +29,7 @@ const DESIGN_RUN: &[&str] = &[
     "mockup",
     "tune",
     "receipt",
+    "capabilities",
     "proposals",
     "blocked-on",
 ];
@@ -125,7 +126,7 @@ pub fn verify_html_against(html: &str, rules: Option<&[Rule]>) -> Verdict {
     else {
         return Verdict::Ungoverned;
     };
-    if draft_declared(html, artifact_pos) {
+    if exempt_declared(html, artifact_pos) {
         return Verdict::Draft;
     }
 
@@ -339,6 +340,29 @@ fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) 
     };
     if let Some(elements) = item("elements") {
         check_elements_map(failures, elements);
+        check_avoid_cited(failures, elements);
+        check_gist_and_collapse(
+            failures,
+            elements,
+            "elements·gist",
+            "catalog rows",
+            "the Fit column",
+        );
+    }
+    if let Some(interaction) = item("interaction") {
+        check_gist_and_collapse(
+            failures,
+            interaction,
+            "interaction·gist",
+            "use-case rows",
+            "the responds column",
+        );
+    }
+    if let Some(tune) = item("tune") {
+        check_tune_drawn(failures, tune);
+    }
+    if let Some(capabilities) = item("capabilities") {
+        check_capabilities(failures, capabilities);
     }
     if let Some(mockup) = item("mockup") {
         if !mockup.contains("data-state-toggle") {
@@ -376,6 +400,30 @@ fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) 
 // clicking a component in the tree and seeing its catalog row light up too. The
 // old check passed on data-map plus any single data-key, so a keyed tree over an
 // unkeyed table — half the map dead — read as green.
+// A reuse is a rejection test that passed, so the trace must show the rejection
+// half. Run #3 cited CopyButton's `@use` "any one-click copy affordance"
+// correctly and shipped a wrong reuse for a whole stage — both that component's
+// and CopyText's `@avoid` lines excluded it, and neither was consulted. The
+// reading ORDER is unobservable in the artifact; that the `@avoid` was consulted
+// at all is not.
+fn check_avoid_cited(failures: &mut Vec<Failure>, elements: &str) {
+    let claimed: Vec<&str> = elements_of(elements, "tr")
+        .into_iter()
+        .filter(|r| ["reuse", "extend"].iter().any(|v| r.contains(&format!(">{v}<"))))
+        .collect();
+    let silent = claimed.iter().filter(|r| !r.contains("@avoid")).count();
+    if silent > 0 {
+        failures.push(Failure {
+            check: "elements·avoid-cited".to_string(),
+            what: format!(
+                "{silent} of {} reuse/extend rows cite no @avoid",
+                claimed.len()
+            ),
+            fix: "a reuse names the @avoid it clears, not only the @use it matches - the @avoid is the half that discriminates".to_string(),
+        });
+    }
+}
+
 fn check_elements_map(failures: &mut Vec<Failure>, elements: &str) {
     let mut fail = |what: String, fix: &str| {
         failures.push(Failure { check: "elements·map".to_string(), what, fix: fix.to_string() });
@@ -447,9 +495,150 @@ const FRAME_EXAMPLE_MAX: usize = 36;
 // purpose · given · not-given — the Frame's three named lines, nothing else
 const FRAME_PROSE_BLOCKS: usize = 3;
 const FRAME_PROSE_WORDS: usize = 60;
+// A gist is the verdict alone — the trace lives in the collapsed half. Calibrated
+// on run #3's 30 gists (mean 9.6, max 13): a ceiling that holds today and reds
+// the failure it exists for, an agent writing the 900-char trace into the
+// visible column.
+const GIST_MAX_WORDS: usize = 14;
+
+// A run doc has two readers: an agent that needs the whole trace and a human who
+// needs the verdict. Both tables state the conclusion in a .gist and collapse the
+// proof behind <details>. What this catches is the regression, not the shape — an
+// agent writing the trace straight into the visible cell.
+fn check_gist_and_collapse(
+    failures: &mut Vec<Failure>,
+    fragment: &str,
+    check: &str,
+    unit: &str,
+    column: &str,
+) {
+    let rows: Vec<&str> = elements_of(fragment, "tr")
+        .into_iter()
+        .filter(|r| elements_of(r, "td").len() >= 3)
+        .collect();
+    if rows.is_empty() {
+        return;
+    }
+    let mut fail = |what: String, fix: String| {
+        failures.push(Failure { check: check.to_string(), what, fix });
+    };
+    let bare = rows.iter().filter(|r| !r.contains("class=\"gist\"")).count();
+    if bare > 0 {
+        fail(
+            format!("{bare} of {} {unit} carry no gist", rows.len()),
+            format!("{column} states the verdict in <div class=\"gist\">, one line"),
+        );
+    }
+    let uncollapsed = rows.iter().filter(|r| !r.contains("<details")).count();
+    if uncollapsed > 0 {
+        fail(
+            format!("{uncollapsed} of {} {unit} collapse nothing", rows.len()),
+            "the trace goes behind <details class=\"why\"> - written for the agent, not read by the reviewer".to_string(),
+        );
+    }
+    let longest = gists(fragment).into_iter().map(words).max();
+    if let Some(over) = longest.filter(|w| *w > GIST_MAX_WORDS) {
+        fail(
+            format!("a gist runs {over} words (max {GIST_MAX_WORDS})"),
+            "the gist is the verdict; the reasoning is what <details> is for".to_string(),
+        );
+    }
+}
+
+// Tune judges how the screen LOOKS, so its before/after is drawn, not described.
+// Run #3's prose version needed three sentences to say what a ragged column and
+// an aligned one show at a glance.
+fn check_tune_drawn(failures: &mut Vec<Failure>, tune: &str) {
+    let rows: Vec<&str> =
+        elements_of(tune, "tr").into_iter().filter(|r| elements_of(r, "td").len() >= 3).collect();
+    let mut fail = |what: String, fix: &str| {
+        failures.push(Failure { check: "tune·drawn".to_string(), what, fix: fix.to_string() });
+    };
+    if rows.is_empty() {
+        fail(
+            "Tune has no before/after table".to_string(),
+            "one row per call: what changed | before (drawn) | after (drawn) | the soft-rule slug",
+        );
+        return;
+    }
+    let undrawn = rows.iter().filter(|r| r.matches("class=\"tb\"").count() < 2).count();
+    if undrawn > 0 {
+        fail(
+            format!("{undrawn} of {} tune calls are not drawn", rows.len()),
+            "before and after are each a <pre class=\"tb\"> - a stage that judges appearance shows it",
+        );
+    }
+    let unslugged = rows
+        .iter()
+        .filter(|r| elements_of(r, "td").last().is_none_or(|last| !last.contains("<code>")))
+        .count();
+    if unslugged > 0 {
+        fail(
+            format!("{unslugged} of {} tune calls cite no soft-rule slug", rows.len()),
+            "a call with no slug to cite is a rulebook hole - it goes to the findings, not into the design",
+        );
+    }
+}
+
+// Every capability the Frame received is answered by the end of the run. Run #3
+// listed `proxy unset` as given, then designed its undo as commands only and
+// filed a blocked-on entry saying the app cannot reverse its own writes - the
+// shipped code disproved it. The receipt forces coverage of rules; nothing forced
+// coverage of capabilities.
+const CAPABILITY_STATES: [&str; 4] = ["used", "deliberately unused", "blocked", "dropped"];
+
+fn check_capabilities(failures: &mut Vec<Failure>, capabilities: &str) {
+    let rows: Vec<&str> = elements_of(capabilities, "tr")
+        .into_iter()
+        .filter(|r| elements_of(r, "td").len() >= 3)
+        .collect();
+    let mut fail = |what: String, fix: &str| {
+        failures.push(Failure {
+            check: "capabilities·answered".to_string(),
+            what,
+            fix: fix.to_string(),
+        });
+    };
+    if rows.is_empty() {
+        fail(
+            "no capability rows".to_string(),
+            "one row per Frame `Given`: what it is | used · deliberately unused · blocked | where / why",
+        );
+        return;
+    }
+    let unanswered: Vec<&str> = rows
+        .iter()
+        .filter(|r| {
+            elements_of(r, "td")
+                .get(1)
+                .is_none_or(|state| !CAPABILITY_STATES.iter().any(|known| state.contains(known)))
+        })
+        .copied()
+        .collect();
+    if !unanswered.is_empty() {
+        fail(
+            format!("{} of {} capabilities carry no state", unanswered.len(), rows.len()),
+            "each Given ends the run used · deliberately unused · blocked - an unmentioned one reads as correctly constrained rather than under-designed",
+        );
+    }
+}
 
 fn is_example(cell: &str) -> bool {
     cell.contains('✓') || cell.contains('✗')
+}
+
+// The gist bodies, found by their opening tag rather than by filtering every
+// <div>: a run doc's cells nest divs, and only the one carrying the marker class
+// is the gist.
+fn gists(fragment: &str) -> Vec<&str> {
+    const OPEN: &str = "<div class=\"gist\">";
+    fragment
+        .match_indices(OPEN)
+        .filter_map(|(at, _)| {
+            let body = &fragment[at + OPEN.len()..];
+            body.find("</div>").map(|end| &body[..end])
+        })
+        .collect()
 }
 
 fn words(fragment: &str) -> usize {
@@ -476,17 +665,42 @@ fn words(fragment: &str) -> usize {
     count
 }
 
+// Top-level elements of `tag`, nesting-aware: a <td> holding a <table> ends at
+// its own </td>, not the inner one. Naive first-close matching silently
+// truncated such a cell, so every word count over it was measured on a
+// fragment.
 fn elements_of<'a>(fragment: &'a str, tag: &str) -> Vec<&'a str> {
-    let open = format!("<{tag}");
-    let close = format!("</{tag}>");
+    let (open, close) = (format!("<{tag}"), format!("</{tag}>"));
     let mut out = Vec::new();
     let mut rest = fragment;
     while let Some(at) = rest.find(&open) {
         rest = &rest[at + open.len()..];
         let Some(body_start) = rest.find('>').map(|rel| rel + 1) else { break };
-        let Some(end) = rest[body_start..].find(&close) else { break };
-        out.push(&rest[body_start..body_start + end]);
-        rest = &rest[body_start + end + close.len()..];
+        let body = &rest[body_start..];
+        let mut depth = 1usize;
+        let mut scan = 0usize;
+        let end = loop {
+            let next_open = body[scan..].find(&open).map(|rel| scan + rel);
+            let Some(next_close) = body[scan..].find(&close).map(|rel| scan + rel) else {
+                break None;
+            };
+            match next_open {
+                Some(o) if o < next_close => {
+                    depth += 1;
+                    scan = o + open.len();
+                }
+                _ => {
+                    depth -= 1;
+                    if depth == 0 {
+                        break Some(next_close);
+                    }
+                    scan = next_close + close.len();
+                }
+            }
+        };
+        let Some(end) = end else { break };
+        out.push(&body[..end]);
+        rest = &body[end + close.len()..];
     }
     out
 }
@@ -692,15 +906,22 @@ fn check_unknown(
 }
 
 // the markup contract co-locates data-status with data-artifact - a draft
-// declaration anywhere else must not silence the checks
-fn draft_declared(html: &str, artifact_pos: usize) -> bool {
+// declaration anywhere else must not silence the checks.
+//
+// `archived` exempts a doc for the opposite reason to `draft`: not unfinished but
+// finished under an older contract. Every predicate reads the LIVE rule set, so
+// tightening a stage's form re-opens runs that closed before the rule existed -
+// run #3's checks red runs #1 and #2, which are records of what the flow was, not
+// artifacts anyone will fix. A run still open is never archived: that would hide
+// exactly the reds the flow exists to surface.
+fn exempt_declared(html: &str, artifact_pos: usize) -> bool {
     let start = html[..artifact_pos].rfind('<').unwrap_or(0);
     let Some(close) = html[start..].find('>') else {
         return false;
     };
     attr_positions(&html[start..start + close], "data-status")
         .first()
-        .is_some_and(|(_, v)| v == "draft")
+        .is_some_and(|(_, v)| v == "draft" || v == "archived")
 }
 
 fn attr_positions(html: &str, name: &str) -> Vec<(usize, String)> {
@@ -857,9 +1078,9 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        attr_positions, check_frame_density, edit_distance, rules_from_rulebook, verify_html,
-        verify_html_against, Verdict, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX,
-        FRAME_PROSE_WORDS,
+        attr_positions, check_frame_density, edit_distance, elements_of, rules_from_rulebook,
+        verify_html, verify_html_against, Verdict, FRAME_CELL_MAX, FRAME_CELL_MEAN,
+        FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -920,10 +1141,19 @@ mod tests {
              <p data-item=\"frame\">drivers</p><p data-item=\"layout\">zones</p>\
              <div data-item=\"elements\" data-map>\
              <pre><span data-key=\"section\">Section</span></pre>\
-             <table><tr data-key=\"section\"><td>Section</td></tr></table></div>\
-             <p data-item=\"interaction\">use cases</p>\
+             <table><tr data-key=\"section\"><td>Section</td><td>reuse</td>\
+             <td><div class=\"gist\">fits the labelled-zone use</div>\
+             <details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td></tr>\
+             </table></div>\
+             <table data-item=\"interaction\"><tr><td>land cold</td><td>orient</td>\
+             <td><div class=\"gist\">B renders the real verdicts</div>\
+             <details class=\"why\"><div>B → status</div></details></td></tr></table>\
              <div data-item=\"mockup\"><button data-state-toggle=\"mock\">flip</button></div>\
-             <p data-item=\"tune\">before/after</p>{receipt_block}\
+             <table data-item=\"tune\"><tr><td>weight</td><td><pre class=\"tb\">before</pre></td>\
+             <td><pre class=\"tb\">after</pre></td><td><code>data-ink-first</code></td></tr></table>\
+             {receipt_block}\
+             <table data-item=\"capabilities\"><tr><td>CA install</td><td>used</td>\
+             <td>B1's button</td></tr></table>\
              <p data-item=\"proposals\">band</p><p data-item=\"blocked-on\">verb tokens</p></main>"
         );
         format!("<html><body>{body}</body></html>")
@@ -1217,6 +1447,104 @@ mod tests {
         assert!(what(&doc_verdict(&doc), "mockup·state").contains("Interaction table"));
     }
 
+    #[test]
+    fn a_catalog_row_that_states_the_trace_instead_of_a_gist_is_red() {
+        let doc = green_run().replace("<div class=\"gist\">fits the labelled-zone use</div>", "");
+        assert!(what(&doc_verdict(&doc), "elements·gist").contains("carry no gist"));
+    }
+
+    #[test]
+    fn a_use_case_row_that_collapses_nothing_is_red() {
+        let doc = green_run()
+            .replace("<details class=\"why\"><div>B → status</div></details>", "B → status");
+        assert!(what(&doc_verdict(&doc), "interaction·gist").contains("collapse nothing"));
+    }
+
+    // The regression the pattern exists for: the trace written straight into the
+    // visible column instead of behind the toggle.
+    #[test]
+    fn a_gist_that_runs_long_is_red() {
+        let doc = green_run()
+            .replace("fits the labelled-zone use", &"clause ".repeat(GIST_MAX_WORDS + 1));
+        assert!(what(&doc_verdict(&doc), "elements·gist").contains("max 14"));
+    }
+
+    #[test]
+    fn a_reuse_that_cites_only_its_use_line_is_red() {
+        let doc = green_run().replace("@avoid nesting", "");
+        assert!(what(&doc_verdict(&doc), "elements·avoid-cited").contains("cite no @avoid"));
+    }
+
+    // A propose row has no @avoid to clear - the component does not exist yet.
+    #[test]
+    fn a_propose_row_owes_no_avoid_citation() {
+        let doc =
+            green_run().replace("<td>reuse</td>", "<td>propose</td>").replace("@avoid nesting", "");
+        assert!(!failures(&doc_verdict(&doc)).contains(&"elements·avoid-cited".to_string()));
+    }
+
+    #[test]
+    fn a_tune_call_described_instead_of_drawn_is_red() {
+        let doc = green_run().replace("<pre class=\"tb\">before</pre>", "it was cramped");
+        assert!(what(&doc_verdict(&doc), "tune·drawn").contains("not drawn"));
+    }
+
+    #[test]
+    fn a_tune_call_with_no_slug_is_red() {
+        let doc = green_run().replace("<code>data-ink-first</code>", "it reads better");
+        assert!(what(&doc_verdict(&doc), "tune·drawn").contains("no soft-rule slug"));
+    }
+
+    #[test]
+    fn a_prose_tune_stage_is_red() {
+        let doc = green_run().replace(
+            "<table data-item=\"tune\"><tr><td>weight</td><td><pre class=\"tb\">before</pre></td>\
+             <td><pre class=\"tb\">after</pre></td><td><code>data-ink-first</code></td></tr></table>",
+            "<p data-item=\"tune\">Before: cramped. After: roomier.</p>",
+        );
+        assert!(what(&doc_verdict(&doc), "tune·drawn").contains("no before/after table"));
+    }
+
+    // Run #3 designed a received capability away and only the cross-check caught
+    // it: the receipt forces coverage of rules, this forces coverage of capabilities.
+    #[test]
+    fn a_capability_with_no_state_is_red() {
+        let doc = green_run().replace("<td>used</td>", "<td>we'll see</td>");
+        assert!(what(&doc_verdict(&doc), "capabilities·answered").contains("carry no state"));
+    }
+
+    #[test]
+    fn a_run_that_never_answers_its_capabilities_is_red() {
+        let doc = green_run().replace(" data-item=\"capabilities\"", "");
+        assert!(failures(&doc_verdict(&doc)).contains(&"item·capabilities".to_string()));
+    }
+
+    // A cell holding a nested table ends at its OWN close tag: the naive scan
+    // stopped at the inner one and measured every word count on a fragment.
+    #[test]
+    fn elements_of_closes_on_the_matching_tag_not_the_first() {
+        let nested = "<td>outer <table><tr><td>inner</td></tr></table> tail</td>";
+        assert_eq!(
+            elements_of(nested, "td"),
+            vec!["outer <table><tr><td>inner</td></tr></table> tail"]
+        );
+    }
+
+    #[test]
+    fn the_run_3_form_rules_hold_on_the_real_doc() {
+        let doc = include_str!("../../docs/work/2026-07-26-dflow-w4-run-3.html");
+        let reds = failures(&doc_verdict(doc));
+        for check in [
+            "elements·gist",
+            "interaction·gist",
+            "tune·drawn",
+            "capabilities·answered",
+            "elements·avoid-cited",
+        ] {
+            assert!(!reds.contains(&check.to_string()), "{check} red on run #3: {reds:?}");
+        }
+    }
+
     fn doc_verdict(html: &str) -> Verdict {
         verify_html_against(html, Some(&rules()))
     }
@@ -1269,6 +1597,31 @@ mod tests {
     #[test]
     fn draft_is_silent() {
         assert!(matches!(verify_html(&doc("wu-result", "draft", "")), Verdict::Draft));
+    }
+
+    // Tightening a stage's form re-opens every run that closed before the rule
+    // existed. An archived run is a record of what the flow was, not work anyone
+    // will redo.
+    #[test]
+    fn an_archived_run_is_silent_but_a_ready_one_is_not() {
+        let stale = design_run(&receipt("  data-ink-first: satisfied — x\n"))
+            .replace("<div class=\"gist\">fits the labelled-zone use</div>", "");
+        assert!(!failures(&doc_verdict(&stale)).is_empty(), "a ready run is checked");
+        let archived = stale.replace(
+            "data-artifact=\"design-run\"",
+            "data-artifact=\"design-run\" data-status=\"archived\"",
+        );
+        assert!(matches!(verify_html(&archived), Verdict::Draft), "archived exempts");
+    }
+
+    #[test]
+    fn the_closed_runs_are_archived_so_a_new_rule_does_not_reopen_them() {
+        for run in [
+            include_str!("../../docs/work/2026-07-16-dflow-run-1.html"),
+            include_str!("../../docs/work/2026-07-25-dflow-w4-run-2.html"),
+        ] {
+            assert!(matches!(verify_html(run), Verdict::Draft), "a closed run must be archived");
+        }
     }
 
     #[test]
