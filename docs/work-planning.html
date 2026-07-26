@@ -32,6 +32,7 @@
         <tr><td>WU plan</td><td><code>wu-plan</code></td><td>its own doc, before that WU's code</td></tr>
         <tr><td>WU result report</td><td><code>wu-result</code></td><td>at the WU's completion, before its merge into the epic</td></tr>
         <tr><td>Epic result report</td><td><code>epic-result</code></td><td>at epic close, before the merge into <code>main</code></td></tr>
+        <tr><td>Design run</td><td><code>design-run</code></td><td>one per screen designed; items and their semantics are the <a href="work/design-flow-base.html">design flow</a>'s, not this standard's — the checker adds receipt, composition and keyed-map checks on top of the item list</td></tr>
       </tbody>
     </table>
 
@@ -68,7 +69,7 @@ flowchart LR
     <table data-c="markup-table">
       <thead><tr><th>Attribute</th><th>Where</th><th>Meaning</th></tr></thead>
       <tbody>
-        <tr><td><code>data-artifact</code></td><td>once per doc (the <code>&lt;html&gt;</code> or <code>&lt;body&gt;</code> tag, or any one element)</td><td>declares what the doc is: <code>epic-plan · wu-plan · wu-result · epic-result</code>, space-separated when combined. A doc with no <code>data-artifact</code> is not governed and is ignored — pre-standard docs are skipped, never retrofitted</td></tr>
+        <tr><td><code>data-artifact</code></td><td>once per doc (the <code>&lt;html&gt;</code> or <code>&lt;body&gt;</code> tag, or any one element)</td><td>declares what the doc is: <code>epic-plan · wu-plan · wu-result · epic-result · design-run</code>, space-separated when combined. A doc with no <code>data-artifact</code> is not governed and is ignored — pre-standard docs are skipped, never retrofitted</td></tr>
         <tr><td><code>data-status</code></td><td>next to <code>data-artifact</code></td><td><code>draft</code> while authoring — all checks silent; <code>ready</code> or absent = ready, verified on every write. The flip to ready is the checkpoint. Flipping back to draft to silence a red doc is visible to the reviews that read these docs</td></tr>
         <tr><td><code>data-item</code></td><td>the element holding a checklist item</td><td>exactly one of the type's tags below, non-empty content inside</td></tr>
         <tr><td><code>data-wu</code></td><td>epic plan only, inside the <code>wu-summaries</code> item</td><td>one block per WU, value = the WU id (e.g. <code>E-CAP.W2</code>); each block carries the four <code>data-item</code> sub-tags</td></tr>

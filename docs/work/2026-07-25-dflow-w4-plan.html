@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a64c22f9f34851f0dfa9802" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W4 plan (Integrated run)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W4 plan — Integrated run (verify the substrate)</h1>
+      <p>Teach the flow to consume the seeded registry + rulebook, then design the flow detail panel again — from scratch, substrate frozen — and record every place the seed got it wrong.</p>
+      <div class="meta">WU plan · 2026-07-25 · Trawler · T3 (docs/work/) · wu/design-flow/integrated-run → epic/design-flow · epic plan: <a href="2026-07-16-design-flow-plan.html">E-DFLOW</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">The base design flow, revised to consume the <a href="2026-07-22-dflow-w2-registry-seed.html">W2 component registry</a> (reuse-or-propose per element) and the <a href="../design-rules/design-rules-index.html">W3 rulebook</a> (every stage cites the rules that bind it, the run closes with a hand receipt covering every slug), is run end to end on the flow detail panel — designed fresh, not adapted from <a href="2026-07-16-dflow-run-1.html">run #1</a>, with the registry and rulebook frozen — and yields an explicit, ranked findings list of what the substrate got wrong, addressed to W5 (registry) and W6 (rulebook).</p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to">E-DFLOW's W4 summary block — "the flow (process) exercised against #1 + #2" — verifying requirement #1 (registry) and #2 (rules) in real work before W5/W6 revise them. No UC contract: process WU, app behavior unchanged (the epic's use-case section). Scope note taken at planning: the run's screen is the same guinea-pig as W1 (the flow detail panel) so the two runs are comparable and the substrate is exercised where it was seeded from; a fresh screen is W9's reuse proof, not this WU's.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <thead><tr><th>Observable</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>The flow consumes the substrate: Elements is a reuse-or-propose pass against the registry index (verdict per element: reuse · extend · propose), every stage names the rules that bind it, and the run's last artifact is a rule receipt — one row per slug, verdict + citation</td><td><code>docs/work/design-flow-base.html</code> (revised templates)</td></tr>
+          <tr><td>A second worked run: all six stages on the flow detail panel, designed from scratch against the frozen substrate — driver table, region sketch, tiered catalog with reuse verdicts, use-case table, a built lo-fi mockup in app tokens with a state toggle, tune notes citing soft rules</td><td><code>docs/work/2026-07-25-dflow-w4-run-2.html</code></td></tr>
+          <tr><td>The hand receipt: all 27 slugs (13 hard + 14 soft) carrying a verdict, its citation, and — where the rule could not be applied as written — the reason</td><td>same doc, receipt section</td></tr>
+          <tr><td>An explicit findings list, ranked, each addressed to <strong>W5</strong> (registry), <strong>W6</strong> (rulebook), <strong>W7</strong> (harness) or <strong>flow</strong>, each grounded in the stage that surfaced it</td><td>same doc, findings section</td></tr>
+          <tr><td>The flow revised from those findings (the flow-level ones only — registry/rulebook edits belong to W5/W6, the substrate stays frozen in this WU)</td><td><code>docs/work/design-flow-base.html</code></td></tr>
+        </tbody>
+      </table>
+      <p>Out of scope: editing the registry or the rulebook (frozen — W5/W6 apply the findings) · <a href="2026-07-16-dflow-run-1.html">run #1</a> and the W1/W2/W3 result docs (untouched; only the flow template is revised) · any <code>ui/</code> code — the components are treated as built, their design files are the contract · the Tier-1/2/3 harness and the receipt tool (W7) · the T1 promotion of the flow doc (epic distillation).</p>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table>
+        <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+        <tbody>
+          <tr><td><strong>integration</strong></td><td><code>xtask/tests/verify_doc.rs</code> · <em>a design run is receipted against the rulebook on disk</em> — writes a rulebook and a run doc into a TempDir and drives the real binary: green prints the coverage tally and the machine-checked hard-rule count; a receipt missing a soft rule, carrying a verdict outside the enum, or claiming a hard rule exits 1 naming each. That is the WU's contract — a design run cannot pass by asserting things about itself.</td></tr>
+          <tr><td><strong>unit</strong></td><td><code>xtask/src/doc.rs</code> · 13 tests over the checker: slug extraction from the rulebook's own tables (header rows and non-slug code spans excluded) · a conforming run green with the computed tally · missing slug · hard slug · misspelling paired with its nearest miss · bad verdict · absent citation · malformed YAML surfacing <code>serde_yaml</code>'s position · unreadable rulebook red rather than silently green · unkeyed catalog · static mockup · unlinked specimens (a prose mention does not count) · colour literal red while an id selector and <code>color-mix</code> over tokens stay green.</td></tr>
+          <tr><td><strong>e2e</strong></td><td><em>waived</em>: the scripted flow e2e (fake user + fake agent) is W7 per the epic plan.</td></tr>
+        </tbody>
+      </table>
+      <p>The design work itself remains review territory — no test asserts that a design is good. What the tests assert is that a run <em>cannot claim</em> to have followed the flow without having done so: the checker is wired into the doc hooks, so a red design run blocks the write and the turn.</p>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
