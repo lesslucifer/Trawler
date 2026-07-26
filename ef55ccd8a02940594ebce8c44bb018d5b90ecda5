@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-DFLOW
 wu: E-DFLOW.W4
-branch: wu/design-flow/integrated-run
 base: 31beb33ff4140b654abc8300b6dd5973a0b90cbc
 tip: ef55ccd8a02940594ebce8c44bb018d5b90ecda5
 diff_sha256: cd87c5f1cfe3532c4c73c3b3ae0b35067ec91b217b421f7bfb098b52be1c832b
