@@ -44,6 +44,10 @@ const VERDICTS: &[&str] = &[
 ];
 // Hard rules whose Tier-1 predicate exists today. The rest are W7's, and the
 // tally line reports the gap on every run so it cannot be quietly forgotten.
+// Hand-maintained: nothing derives "this slug has a predicate" from a function
+// name. Forgetting an entry undercounts the numerator, which reads as more work
+// remaining - the safe direction. A slug listed here without a predicate would
+// overclaim, so entries land with their check, never ahead of it.
 const HARD_PREDICATES: &[&str] = &["colour-tokens-only"];
 const RULEBOOK: &str = "docs/design-rules/design-rules-index.html";
 
@@ -97,7 +101,7 @@ fn row_slug(row: &str) -> Option<String> {
 
 pub enum Verdict {
     Ungoverned,
-    Draft,
+    Exempt(String),
     Checked { artifacts: Vec<String>, failures: Vec<Failure>, summary: Option<String> },
 }
 
@@ -126,8 +130,8 @@ pub fn verify_html_against(html: &str, rules: Option<&[Rule]>) -> Verdict {
     else {
         return Verdict::Ungoverned;
     };
-    if exempt_declared(html, artifact_pos) {
-        return Verdict::Draft;
+    if let Some(status) = exempt_declared(html, artifact_pos) {
+        return Verdict::Exempt(status);
     }
 
     let mut failures = Vec::new();
@@ -396,10 +400,6 @@ fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) 
     }
 }
 
-// A highlight that lights one place traces nothing: the map's whole value is
-// clicking a component in the tree and seeing its catalog row light up too. The
-// old check passed on data-map plus any single data-key, so a keyed tree over an
-// unkeyed table — half the map dead — read as green.
 // A reuse is a rejection test that passed, so the trace must show the rejection
 // half. Run #3 cited CopyButton's `@use` "any one-click copy affordance"
 // correctly and shipped a wrong reuse for a whole stage — both that component's
@@ -424,6 +424,10 @@ fn check_avoid_cited(failures: &mut Vec<Failure>, elements: &str) {
     }
 }
 
+// A highlight that lights one place traces nothing: the map's whole value is
+// clicking a component in the tree and seeing its catalog row light up too. The
+// old check passed on data-map plus any single data-key, so a keyed tree over an
+// unkeyed table — half the map dead — read as green.
 fn check_elements_map(failures: &mut Vec<Failure>, elements: &str) {
     let mut fail = |what: String, fix: &str| {
         failures.push(Failure { check: "elements·map".to_string(), what, fix: fix.to_string() });
@@ -512,10 +516,7 @@ fn check_gist_and_collapse(
     unit: &str,
     column: &str,
 ) {
-    let rows: Vec<&str> = elements_of(fragment, "tr")
-        .into_iter()
-        .filter(|r| elements_of(r, "td").len() >= 3)
-        .collect();
+    let rows = data_rows(fragment);
     if rows.is_empty() {
         return;
     }
@@ -549,8 +550,7 @@ fn check_gist_and_collapse(
 // Run #3's prose version needed three sentences to say what a ragged column and
 // an aligned one show at a glance.
 fn check_tune_drawn(failures: &mut Vec<Failure>, tune: &str) {
-    let rows: Vec<&str> =
-        elements_of(tune, "tr").into_iter().filter(|r| elements_of(r, "td").len() >= 3).collect();
+    let rows: Vec<&str> = data_rows(tune);
     let mut fail = |what: String, fix: &str| {
         failures.push(Failure { check: "tune·drawn".to_string(), what, fix: fix.to_string() });
     };
@@ -580,18 +580,10 @@ fn check_tune_drawn(failures: &mut Vec<Failure>, tune: &str) {
     }
 }
 
-// Every capability the Frame received is answered by the end of the run. Run #3
-// listed `proxy unset` as given, then designed its undo as commands only and
-// filed a blocked-on entry saying the app cannot reverse its own writes - the
-// shipped code disproved it. The receipt forces coverage of rules; nothing forced
-// coverage of capabilities.
-const CAPABILITY_STATES: [&str; 4] = ["used", "deliberately unused", "blocked", "dropped"];
+const CAPABILITY_STATES: [&str; 3] = ["used", "deliberately unused", "blocked"];
 
 fn check_capabilities(failures: &mut Vec<Failure>, capabilities: &str) {
-    let rows: Vec<&str> = elements_of(capabilities, "tr")
-        .into_iter()
-        .filter(|r| elements_of(r, "td").len() >= 3)
-        .collect();
+    let rows = data_rows(capabilities);
     let mut fail = |what: String, fix: &str| {
         failures.push(Failure {
             check: "capabilities·answered".to_string(),
@@ -606,18 +598,17 @@ fn check_capabilities(failures: &mut Vec<Failure>, capabilities: &str) {
         );
         return;
     }
-    let unanswered: Vec<&str> = rows
+    let unanswered = rows
         .iter()
         .filter(|r| {
             elements_of(r, "td")
                 .get(1)
                 .is_none_or(|state| !CAPABILITY_STATES.iter().any(|known| state.contains(known)))
         })
-        .copied()
-        .collect();
-    if !unanswered.is_empty() {
+        .count();
+    if unanswered > 0 {
         fail(
-            format!("{} of {} capabilities carry no state", unanswered.len(), rows.len()),
+            format!("{unanswered} of {} capabilities carry no state", rows.len()),
             "each Given ends the run used · deliberately unused · blocked - an unmentioned one reads as correctly constrained rather than under-designed",
         );
     }
@@ -663,6 +654,12 @@ fn words(fragment: &str) -> usize {
         }
     }
     count
+}
+
+// A stage table's data rows: three cells or more. The header (<th>) and any
+// two-cell legend row are not the stage's content.
+fn data_rows(fragment: &str) -> Vec<&str> {
+    elements_of(fragment, "tr").into_iter().filter(|r| elements_of(r, "td").len() >= 3).collect()
 }
 
 // Top-level elements of `tag`, nesting-aware: a <td> holding a <table> ends at
@@ -729,8 +726,7 @@ fn mean_check(
 }
 
 fn check_frame_density(failures: &mut Vec<Failure>, frame: &str) {
-    let rows = elements_of(frame, "tr");
-    let driver_rows: Vec<&&str> = rows.iter().filter(|r| elements_of(r, "td").len() >= 3).collect();
+    let driver_rows = data_rows(frame);
     let unexampled = driver_rows.iter().filter(|r| !is_example(r)).count();
     if unexampled > 0 {
         failures.push(Failure {
@@ -914,14 +910,14 @@ fn check_unknown(
 // run #3's checks red runs #1 and #2, which are records of what the flow was, not
 // artifacts anyone will fix. A run still open is never archived: that would hide
 // exactly the reds the flow exists to surface.
-fn exempt_declared(html: &str, artifact_pos: usize) -> bool {
+fn exempt_declared(html: &str, artifact_pos: usize) -> Option<String> {
     let start = html[..artifact_pos].rfind('<').unwrap_or(0);
-    let Some(close) = html[start..].find('>') else {
-        return false;
-    };
+    let close = html[start..].find('>')?;
     attr_positions(&html[start..start + close], "data-status")
-        .first()
-        .is_some_and(|(_, v)| v == "draft" || v == "archived")
+        .into_iter()
+        .next()
+        .map(|(_, v)| v)
+        .filter(|v| v == "draft" || v == "archived")
 }
 
 fn attr_positions(html: &str, name: &str) -> Vec<(usize, String)> {
@@ -1054,7 +1050,10 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
         Verdict::Ungoverned => {
             format!("verify-doc ungoverned on {path} - no data-artifact, not checked")
         }
-        Verdict::Draft => format!("verify-doc draft on {path} - checks silent until ready"),
+        Verdict::Exempt(status) if status == "archived" => {
+            format!("verify-doc archived on {path} - closed under an older contract, not reopened")
+        }
+        Verdict::Exempt(_) => format!("verify-doc draft on {path} - checks silent until ready"),
         Verdict::Checked { artifacts, failures, summary } if failures.is_empty() => {
             let head = format!("verify-doc green on {path} ({})", artifacts.join(" "));
             match summary {
@@ -1078,9 +1077,9 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        attr_positions, check_frame_density, edit_distance, elements_of, rules_from_rulebook,
-        verify_html, verify_html_against, Verdict, FRAME_CELL_MAX, FRAME_CELL_MEAN,
-        FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
+        attr_positions, check_frame_density, edit_distance, elements_of, format_verdict,
+        rules_from_rulebook, verify_html, verify_html_against, Verdict, CAPABILITY_STATES,
+        FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -1513,6 +1512,18 @@ mod tests {
         assert!(what(&doc_verdict(&doc), "capabilities·answered").contains("carry no state"));
     }
 
+    // The vocabulary is closed on purpose. Run #3 ended a capability "dropped,
+    // then recovered" and the state list was widened to accept it, so the gate
+    // rubber-stamped the very defect it exists to catch. A run whose outcome does
+    // not fit the three states is reporting an unfinished design, not a missing
+    // state.
+    #[test]
+    fn a_fourth_capability_state_is_not_admitted_by_widening_the_list() {
+        assert_eq!(CAPABILITY_STATES.len(), 3);
+        let doc = green_run().replace("<td>used</td>", "<td>dropped, then recovered</td>");
+        assert!(what(&doc_verdict(&doc), "capabilities·answered").contains("carry no state"));
+    }
+
     #[test]
     fn a_run_that_never_answers_its_capabilities_is_red() {
         let doc = green_run().replace(" data-item=\"capabilities\"", "");
@@ -1596,7 +1607,9 @@ mod tests {
 
     #[test]
     fn draft_is_silent() {
-        assert!(matches!(verify_html(&doc("wu-result", "draft", "")), Verdict::Draft));
+        let v = verify_html(&doc("wu-result", "draft", ""));
+        assert!(matches!(&v, Verdict::Exempt(s) if s == "draft"));
+        assert!(format_verdict("d.html", &v).contains("draft"));
     }
 
     // Tightening a stage's form re-opens every run that closed before the rule
@@ -1611,7 +1624,10 @@ mod tests {
             "data-artifact=\"design-run\"",
             "data-artifact=\"design-run\" data-status=\"archived\"",
         );
-        assert!(matches!(verify_html(&archived), Verdict::Draft), "archived exempts");
+        let v = verify_html(&archived);
+        assert!(matches!(&v, Verdict::Exempt(s) if s == "archived"), "archived exempts");
+        let line = format_verdict("run.html", &v);
+        assert!(line.contains("archived") && !line.contains("until ready"), "{line}");
     }
 
     #[test]
@@ -1620,7 +1636,10 @@ mod tests {
             include_str!("../../docs/work/2026-07-16-dflow-run-1.html"),
             include_str!("../../docs/work/2026-07-25-dflow-w4-run-2.html"),
         ] {
-            assert!(matches!(verify_html(run), Verdict::Draft), "a closed run must be archived");
+            assert!(
+                matches!(verify_html(run), Verdict::Exempt(s) if s == "archived"),
+                "a closed run must be archived"
+            );
         }
     }
 

@@ -724,7 +724,7 @@ soft:
       <tbody>
         <tr><td>CA install (elevated, macOS + Win)</td><td><span class="v sat">used</span></td><td>B1's <em>install for me</em> Button, with the extension's in-flight coordination</td></tr>
         <tr><td>proxy set (elevated, macOS + Win)</td><td><span class="v sat">used</span></td><td>B2's <em>set the proxy</em> Button, identically</td></tr>
-        <tr><td><b>proxy unset</b> (elevated, macOS + Win)</td><td><span class="v blk">dropped, then recovered</span></td><td><b>The finding.</b> Designed as a copyable command in D on the reasoning that the app cannot undo its own writes — true of the certificate, false here. <b>Corrected</b>: D offers a <em>Stop routing through Trawler</em> Button where the capability exists and the command where it does not, which also lets D's two halves differ honestly rather than uniformly</td></tr>
+        <tr><td><b>proxy unset</b> (elevated, macOS + Win)</td><td><span class="v sat">used</span> <span class="v blk">— recovered late</span></td><td><b>The finding.</b> Designed as a copyable command in D on the reasoning that the app cannot undo its own writes — true of the certificate, false here. <b>Corrected</b>: D offers a <em>Stop routing through Trawler</em> Button where the capability exists and the command where it does not, which also lets D's two halves differ honestly rather than uniformly</td></tr>
         <tr><td>probe <code>trusted·untrusted·unknown</code></td><td><span class="v sat">used</span></td><td>B1's StatusLine, all three values distinctly rendered — <code>unknown</code> in the neutral channel</td></tr>
         <tr><td>probe <code>ours·foreign·none·unknown</code></td><td><span class="v sat">used</span></td><td>B2's StatusLine; <code>foreign</code> gets its own neutral sentence with both ways forward</td></tr>
         <tr><td>observe a pre-decrypt connection</td><td><span class="v sat">used</span></td><td>the disagreement case — B2 <code>✓ receiving traffic</code> while B1 <code>⚠ not decrypting</code>, which is how the remote case is inferred</td></tr>
@@ -736,7 +736,7 @@ soft:
         <tr><td>the configured address</td><td><span class="v sat">used</span></td><td>interpolated into every proxy command and the prove-it curl; never re-typed as a literal</td></tr>
       </tbody>
     </table>
-    <p class="kd"><b>12 given, 11 used first time, 1 dropped and recovered by the cross-check.</b> That the recovery came from reading shipped code rather than from any stage of the flow is precisely why the check is now a Frame rule.</p>
+    <p class="kd"><b>12 given, 12 used — but one only after the cross-check recovered it.</b> That the recovery came from reading shipped code rather than from any stage of the flow is precisely why the check is now a Frame rule.</p>
 
     <h2 id="findings">Findings</h2>
     <table data-c="findings">
@@ -875,6 +875,11 @@ soft:
         <tr>
           <td>27</td><td>Review</td>
           <td><strong>The Interaction table's form failed a reader, and the fix was structural.</strong> Eighteen rows of prose in a "screen responds" column hid the thing the column exists to show — <em>which zones change together</em>. Rewritten as <code>zone → delta</code> lines, the coordination becomes the visible content and the cross-zone cases (traffic-arrives-without-decrypt changing B1's copy while B2 goes green) read at a glance instead of on the third sentence. <b>The template is at fault, not this run</b>: run #2's table was the same prose shape and got away with it because a read-only panel's responses are mostly single-zone. A screen that coordinates zones needs the delta form, and the flow's Interaction template should carry it.</td>
+          <td><span class="tag fl">flow</span></td>
+        </tr>
+        <tr>
+          <td>28</td><td>Review · harness</td>
+          <td><strong>The capabilities check was widened to admit the row it should have rejected.</strong> This run ended <code>proxy unset</code> as <em>"dropped, then recovered"</em>; the state vocabulary is <code>used · deliberately unused · blocked</code>, so the new predicate went red — and a fourth state, <code>dropped</code>, was added to the checker in the same commit that introduced the rule. The code then disagreed with every doc describing it (the flow spec and this run both say three states) and the gate rubber-stamped the exact defect it exists to catch. <b>Caught by code review, not by the author.</b> Fixed the other way: the cell reads <code>used</code>, which is the honest end-state since the correction shipped a Button, with <em>recovered late</em> as an annotation rather than a state. A run whose outcome does not fit the three states is reporting an under-designed capability, not a missing state — so the vocabulary is now pinned closed by <a href="#findings">its own regression test</a>. <b>The general rule: when an artifact fails a new predicate, the artifact is the suspect.</b></td>
           <td><span class="tag fl">flow</span></td>
         </tr>
       </tbody>
