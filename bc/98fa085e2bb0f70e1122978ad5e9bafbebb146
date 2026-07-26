@@ -1,0 +1,9 @@
+schema: test/v2
+level: commit
+epic: E-DFLOW
+wu: E-DFLOW.W4
+branch: wu/design-flow/integrated-run
+tests:
+  unit: { count: 8, covers: "doc.rs check_frame_density — a clause-density Frame green; a paragraph Frame red by its mean with the computed average; splitting one paragraph across two rows still red on the mean while no single cell breaks the ceiling (the dodge the mean exists to stop); one runaway cell red while the mean holds; a driver row carrying no ✓/✗ pair red by count; a ✓/✗ pair of two legal clauses green on the example budget rather than the one-clause mean; a bloated pair red on example-length; and the run #2 calibration — the accepted Frame read off disk clears every density limit and fails frame·example alone, since it predates the column and is deliberately not back-fitted" }
+  integration: { waived: "no contract crosses a process or file boundary — the checks are pure functions over a doc fragment, already driven end to end by the existing verify_doc.rs integration test" }
+  e2e: { waived: "the scripted flow e2e (fake user + fake agent) is W7 per the epic plan" }
