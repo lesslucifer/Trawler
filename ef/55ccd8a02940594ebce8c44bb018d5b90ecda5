@@ -1,5 +1,5 @@
 schema: test/v2
-level: commit
+level: working-unit
 epic: E-DFLOW
 wu: E-DFLOW.W4
 branch: wu/design-flow/integrated-run
