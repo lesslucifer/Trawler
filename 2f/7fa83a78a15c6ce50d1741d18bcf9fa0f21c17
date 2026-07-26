@@ -7,7 +7,7 @@ base: 31beb33ff4140b654abc8300b6dd5973a0b90cbc
 head: 2f7fa83a78a15c6ce50d1741d18bcf9fa0f21c17
 diff_sha256: d4e7cd476eb043e5803799d897c3c4f9684c3ac32b3f631de2b09f266c738dba
 dimensions: [correctness, reuse, simplification, efficiency, altitude]
-findings: { found: 21, verified: 8, waived: 0 }
+findings: { found: 21, verified: 9, waived: 0 }
 verified:
   - severity: important
     location: "xtask/src/doc.rs:588"
@@ -41,6 +41,10 @@ verified:
     location: "xtask/src/doc.rs:517,553,593,733"
     finding: "the >=3-td row filter is written four times with a bare magic 3"
     evidence: "True count is 4, not the 5 the finder claimed. A data_rows() helper would be a small clear win; each call site's follow-up handling differs enough that the shared part is small."
+  - severity: nit
+    location: "xtask/src/doc.rs:47"
+    finding: "HARD_PREDICATES is a second, hand-maintained home for which rulebook slug has a working predicate"
+    evidence: "Introduced by 7e54de4, the first commit of this branch, so in scope. Traced the tally: rename colour-tokens-only in the rulebook and `checked` becomes empty, printing `hard rules: 0/2 machine-checked` with nothing red — a silent understatement. Fails safe (undercounts, never overclaims) and no test covers a rename. Arguably inherent: which rule has a coded predicate is an implementation-status fact the rulebook HTML cannot express."
 refuted:
   - "elements_of's depth scan drops a safety property the older helpers had — the older helpers are fooled by the same input; the comparison baseline was wrong"
   - "gists() truncates on a nested div — unreachable: gists are inline-only by design, all 30 real ones use only b/em/code"
@@ -50,5 +54,6 @@ refuted:
   - "the <p vs <pre prefix collision defeats frame prose checks — root cause predates the diff and no governed doc has a <pre inside its Frame span"
   - "Verdict needs a variant separating draft from archived — zero callers branch on it today; speculative until the message fix needs it"
   - "check_elements_map's O(n^2) key comparison is important — needs 32k keys to bite; the largest real doc has 46, verifying in ~11ms"
+  - "doc.rs mixes three responsibilities and wants a module split — 1759 lines of which ~680 are tests; no name collision, wrong-helper reuse or cross-concern test found, so it is a structural preference with no defect attached"
 verdict: FAIL
 date: 2026-07-26
