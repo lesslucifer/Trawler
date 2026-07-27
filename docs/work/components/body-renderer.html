@@ -96,8 +96,8 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>BodyRenderer family <span class="tier t2">T2</span></h1>
-      <p>Five content-type-aware body renderers sharing one dispatch contract — BodyViewer picks one by type; the family never renders blank. <strong>Status: confirmed 2026-07-23.</strong></p>
-      <div class="meta">Component design · 2026-07-22 · <strong>confirmed 2026-07-23 · review rounds 1–2 addressed</strong> · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+      <p>Six content-type-aware body renderers sharing one dispatch contract — BodyViewer picks one by type; the family never renders blank. <strong>Status: confirmed 2026-07-23.</strong></p>
+      <div class="meta">Component design · 2026-07-22 · <strong>confirmed 2026-07-23 · review rounds 1–2 addressed</strong> · <strong>contract fix E-DFLOW.W5 2026-07-27</strong> (TextRenderer designed — the dispatched-but-unspecified sixth member; <a href="../2026-07-27-dflow-w5-plan.html">W5 plan</a>) · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
     </div>
   </header>
   <main>
@@ -107,10 +107,10 @@
       <strong>Why it exists:</strong> a plain <code>&lt;pre&gt;</code> fails for JSON (no structure), form-encoded (no decoding), image (wrong element), and binary (noise) — dispatching to a type-aware renderer is the unit that knows how to make a body readable, hence T2.
     </div>
     <table data-c="identity">
-      <tr><td><strong>Tier</strong></td><td><span class="tier t2">T2 Widget (all five)</span> — per-type render logic + dispatch + truncation policy = business logic → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tier</strong></td><td><span class="tier t2">T2 Widget (all six)</span> — per-type render logic + dispatch + truncation policy = business logic → <strong>in the collection</strong></td></tr>
       <tr><td><strong>Tenants</strong></td><td>Request body pane · response body pane (inside BodyViewer; extracted from inline functions in <code>BodyViewer.tsx</code> + <code>hexDump</code> in <code>body.ts:47</code>, W2 verdict)</td></tr>
       <tr><td><strong>Exists today</strong></td><td>Partial — <code>JsonTree</code>/<code>FormBody</code>/<code>ImageBody</code>/<code>TextBody</code> in <code>BodyViewer.tsx:16–99</code>; hex is <code>hexDump</code> in <code>body.ts:47</code>; dispatch in <code>body.ts:8</code> + <code>BodyViewer.tsx:101–113</code> → extract + rename</td></tr>
-      <tr><td><strong>Made of</strong></td><td>Json/Xml → read-only <strong>CodeMirror 6</strong> surface (→ <a href="#dec-13">DEC-13</a>) · Image/Hex — no sub-components · FormRenderer → <a href="key-value-row.html">KeyValueRow</a>×</td></tr>
+      <tr><td><strong>Made of</strong></td><td>Json/Xml → read-only <strong>CodeMirror 6</strong> surface (→ <a href="#dec-13">DEC-13</a>) · Image/Hex/Text — no sub-components (Text is a plain wrapping <code>&lt;pre&gt;</code>: no grammar, so no surface to navigate) · FormRenderer → <a href="key-value-row.html">KeyValueRow</a>×</td></tr>
     </table>
     <table data-c="frame-drivers">
       <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
@@ -118,7 +118,7 @@
         <tr><td>① content type determines readability</td><td>one renderer per content type, dispatched by family contract</td></tr>
         <tr><td>② trustworthy — never alters wire data</td><td>no silent transform; truncation always visible with cut marker + total size</td></tr>
         <tr><td>③ large bodies cap the DOM, not the data</td><td>hex capped at 4 KiB (<code>body.ts:40</code>); JSON tree over 128 KiB renders as text (<code>body.ts:44</code>); both show a cut marker</td></tr>
-        <tr><td>④ never a blank pane</td><td>unknown type or parse failure falls back to text or hex — never empty</td></tr>
+        <tr><td>④ never a blank pane</td><td>unknown type or parse failure falls back to <strong>TextRenderer</strong> (readable bytes) or HexRenderer (unreadable ones) — never empty. This is what makes TextRenderer the family's floor as well as one of its members</td></tr>
         <tr><td>⑤ syntax tokens speed scanning</td><td>color-coded tokens — muted key/string/number shades scoped to body panes (→ <a href="#dec-11">DEC-11</a>, flipped on review 2026-07-23)</td></tr>
         <tr><td>⑥ monospace discipline</td><td>all body text mono; image caption is UI text (Inter) — metadata, not payload</td></tr>
         <tr><td>⑦ navigate a body like a text file</td><td>Json/Xml render in a read-only CodeMirror 6 surface — real cursor + keyboard navigation, fold gutter to collapse/expand sections (→ <a href="#dec-13">DEC-13</a>, review round 2 2026-07-23)</td></tr>
@@ -127,7 +127,7 @@
 
     <h2 id="anatomy">Anatomy — family contract parts + per-member sub-blocks</h2>
     <div class="callout" data-c="anatomy-intro">
-      The family contract defines shared anatomy: every renderer occupies the same pane slot inside BodyViewer, obeys the same cut marker rule, and emits the same fallback shape. The five members then each have their own internal anatomy.
+      The family contract defines shared anatomy: every renderer occupies the same pane slot inside BodyViewer, obeys the same cut marker rule, and emits the same fallback shape. The six members then each have their own internal anatomy.
     </div>
 
     <!-- Annotated overview swatch -->
@@ -331,6 +331,47 @@
       </div>
     </div>
 
+    <div class="member app" data-c="member-text">
+      <h4>TextRenderer <span class="tier t2">T2</span> <span class="badge id">W5 · <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·2</a></span></h4>
+      <div class="callout warn" style="margin:0 0 10px;">
+        <strong>The family was documented as five members and dispatched to six.</strong> <code>bodyKind()</code> returns <code>"text"</code> for <code>text/*</code>, <code>application/javascript</code> and <code>application/ecmascript</code> (<code>body.ts:14–21</code>), <code>rawKind()</code> returns it for every UTF-8 raw body (<code>body.ts:25–32</code>), and <em>no file specified the component on the other end</em> — the most common body kind in the app, plus every raw view, reached a renderer nobody had designed. It also ships already, as <code>TextBody</code> (<code>BodyViewer.tsx:56–62</code>), doing three jobs at once. This block is the missing specification, written to what ships plus the family contract the others obey.
+      </div>
+      <div class="mspec">
+        <span class="k">input</span><span>UTF-8 text. Three dispatch paths reach it: decoded mode when <code>bodyKind</code> returns <code>"text"</code> and the type is not the XML/HTML sub-group (<code>text/plain</code>, <code>text/csv</code>, <code>application/javascript</code>, …); <strong>raw mode for every readable body</strong> when <code>rawKind</code> returns <code>"text"</code>; and as the <strong>fallback</strong> when JsonRenderer cannot parse or is over <code>TREE_MAX</code> (<code>BodyViewer.tsx:42, 47</code> — DEC-01's as-is fallback lands here)</span>
+        <span class="k">v1 form</span><span>the text verbatim in a <code>&lt;pre&gt;</code>: mono, 12 px, <code>whitespace-pre-wrap</code> + <code>break-all</code> so long lines wrap instead of scrolling the panel (<code>wrap-not-truncate</code>), body-ink. <strong>No syntax tokens, no line numbers, no fold gutter, no CodeMirror surface</strong> — this is the member that renders what it cannot interpret, and DEC-11's three tokens require a grammar to apply them to</span>
+        <span class="k">why not CodeMirror</span><span>DEC-13 gives the CodeMirror surface to JsonRenderer and XmlRenderer because a <em>parsed</em> document earns keyboard navigation and folding. Plain text has no structure to navigate or fold, so the surface would add a keymap, a theme and a mount cost for nothing. A <code>&lt;pre&gt;</code> is already selectable, already copyable, and already what ships</span>
+        <span class="k">cut marker</span><span><code>TEXT_MAX</code>: the same family rule — render the head, append the warn-tone cut marker with shown/total in human units, never truncate silently (DEC-12). <strong>Open for the build WU:</strong> the cap value, and whether it is shared with FORM_MAX. The shipped <code>TextBody</code> has <em>no</em> cap — it is the one member that can currently mount a 10 MiB body as DOM, which is a real defect this specification records rather than inherits</span>
+        <span class="k">copy</span><span>BodyViewer copies <code>bodyText(bytes)</code> — the full text, not the shown slice (<code>BodyViewer.tsx:173</code>). Consistent with the family: the cut is a render cap, never a payload cap</span>
+        <span class="k">exists today</span><span><code>TextBody</code>, <code>BodyViewer.tsx:56–62</code> — correct in form (mono, pre-wrap, break-all, body-ink; <code>data-testid="body-text"</code>) and doing three jobs under one name: the text member, the JSON fallback, and the host <code>&lt;pre&gt;</code> for HexRenderer's dump string. The build separates the third: HexRenderer owns its own surface</span>
+      </div>
+      <div class="member-swatches">
+        <div class="swatch">
+          <div class="panel">
+            <pre class="jsrc" style="margin:0;font-size:11px;white-space:pre-wrap;word-break:break-all;">Request failed: upstream timed out after 30000ms
+  at Gateway.forward (/srv/gateway/lib/forward.js:118:11)
+  at async Router.handle (/srv/gateway/lib/router.js:64:5)</pre>
+          </div>
+          <div class="cap"><strong>plain text</strong> — verbatim, mono, wrapping. No tokens: nothing here has a grammar to colour</div>
+        </div>
+        <div class="swatch">
+          <div class="panel">
+            <pre class="jsrc" style="margin:0;font-size:11px;white-space:pre-wrap;word-break:break-all;">{"id":"8f3a91c2","items":[{"sku":"p1","qty":2}],"total":89</pre>
+            <span class="cut">⚠ unparseable JSON — showing as text</span>
+          </div>
+          <div class="cap"><strong>as-is fallback</strong> — JsonRenderer could not parse (truncated body), so the bytes render here rather than as an error. DEC-01: <em>show what arrived</em></div>
+        </div>
+        <div class="swatch">
+          <div class="panel">
+            <pre class="jsrc" style="margin:0;font-size:11px;white-space:pre-wrap;word-break:break-all;">id,sku,qty,price
+1,p1,2,44.50
+2,p7,1,89.00</pre>
+            <span class="cut">⚠ showing 4.0 KiB of 220 KiB — save to see all</span>
+          </div>
+          <div class="cap"><strong>rendered + cut</strong> — the family cut marker, warn tone, human units. The shipped component has no cap; this specification gives it one</div>
+        </div>
+      </div>
+    </div>
+
     <div class="member app" data-c="member-hex">
       <h4>HexRenderer <span class="tier t2">T2</span></h4>
       <div class="mspec">
@@ -364,12 +405,18 @@
           <tr><td>application/json · *+json</td><td>JsonRenderer</td><td><code>body.ts:10–11</code></td></tr>
           <tr><td>image/*</td><td>ImageRenderer</td><td><code>body.ts:12</code></td></tr>
           <tr><td>application/x-www-form-urlencoded</td><td>FormRenderer</td><td><code>body.ts:13</code></td></tr>
-          <tr><td>text/* · application/xml · *+xml · application/javascript · application/ecmascript</td><td>XmlRenderer (for xml/html types) or plain text pre — both map to <code>"text"</code> kind today; XmlRenderer handles the XML/HTML sub-group using pretty-printed server output</td><td><code>body.ts:14–21</code></td></tr>
+          <tr><td>application/xml · *+xml · text/xml · text/html</td><td>XmlRenderer — the XML/HTML sub-group, using pretty-printed server output</td><td><code>body.ts:14–21</code></td></tr>
+          <tr><td>every other text/* · application/javascript · application/ecmascript</td><td>TextRenderer</td><td><code>body.ts:14–21</code></td></tr>
           <tr><td>anything else (binary, unknown)</td><td>HexRenderer</td><td><code>body.ts:22</code> default</td></tr>
         </tbody>
       </table>
       <div class="callout" style="margin-top:10px;" data-c="dispatch-raw">
-        <strong>Raw mode dispatch:</strong> <code>rawKind(bytes)</code> returns only <code>"text"</code> or <code>"hex"</code> — no JSON tree, no form decode, no image in raw mode. The distinction is intentional: raw bytes may be compressed; treating them as JSON or form would produce garbage. <code>BodyViewer.tsx:149</code>: <code>decode ? bodyKind(loaded.contentType) : rawKind(loaded.bytes)</code>.
+        <strong>Raw mode dispatch:</strong> <code>rawKind(bytes)</code> returns only <code>"text"</code> or <code>"hex"</code> — no JSON tree, no form decode, no image in raw mode. The distinction is intentional: raw bytes may be compressed; treating them as JSON or form would produce garbage. <code>BodyViewer.tsx:149</code>: <code>decode ? bodyKind(loaded.contentType) : rawKind(loaded.bytes)</code>. <strong>Every raw text body therefore lands on TextRenderer</strong> — which is the second reason it is the family's most-reached member and the one that had no file.
+      </div>
+      <div class="callout warn" style="margin-top:10px;" data-c="dispatch-text-split">
+        <strong><code>bodyKind</code> does not make the XML/Text split the table above states</strong> <span class="badge id">W5 · for the build WU</span>
+        <br><br>
+        The shipped function returns one flat <code>"text"</code> for <code>text/*</code>, <code>application/xml</code>, <code>*+xml</code> and <code>application/javascript</code> alike (<code>body.ts:14–21</code>), and the shipped <code>BodyViewer</code> renders all of them through <code>TextBody</code> (<code>BodyViewer.tsx:109–110</code>) — so XmlRenderer's own dispatch row has never been implemented either. Naming TextRenderer is what makes the gap visible: with six members, <code>BodyKind</code> needs six values (<code>"xml"</code> split from <code>"text"</code>), or the dispatch needs a second predicate over the mime. <strong>A dispatch contract that returns five kinds for six renderers cannot be satisfied</strong>, whatever the docs say. Recorded here for the build WU; it does not change any member's own contract.
       </div>
     </div>
 
@@ -467,7 +514,7 @@
       </div>
     </div>
     <div class="callout" data-c="non-states">
-      <strong>Non-states owned by BodyViewer, not the family:</strong> loading (spinner), empty body notice, not-captured notice, streaming notice, fetch error. The family receives a fully-loaded <code>BodyFetch</code> — it never renders a spinner or a "no body" message.
+      <strong>Non-states owned by BodyViewer, not the family:</strong> loading (spinner) and all five absences — empty · not-captured · streaming · no-response-yet · <code>fetch-failed</code> (the warn-toned unreachable case W5 added). The family receives a fully-loaded <code>BodyFetch</code> — it never renders a spinner or a "no body" message, which is why TextRenderer has no empty state either: a zero-byte body never reaches it.
     </div>
 
     <h2 id="decisions">Forks — settled here, confirm or push back</h2>
@@ -623,23 +670,24 @@
         <tr><td><strong>ImageRenderer</strong></td><td><code>bytes</code></td><td><code>Uint8Array</code></td><td>raw bytes; <code>contentType</code> for Blob MIME</td></tr>
         <tr><td><strong>ImageRenderer</strong></td><td><code>contentType</code></td><td><code>string | null</code></td><td>passed to Blob for browser MIME handling</td></tr>
         <tr><td><strong>FormRenderer</strong></td><td><code>text</code></td><td><code>string</code></td><td>raw URL-encoded string; member decodes</td></tr>
+        <tr><td><strong>TextRenderer</strong></td><td><code>text</code></td><td><code>string</code></td><td>UTF-8 decoded body text, rendered verbatim; no parse, no tokens</td></tr>
         <tr><td><strong>HexRenderer</strong></td><td><code>bytes</code></td><td><code>Uint8Array</code></td><td>raw bytes; member formats via hexDump</td></tr>
       </tbody>
     </table>
     <div data-c="tsdoc">
-      <p>Family contract TSDoc block — the build WU attaches this to the family barrel export or to each member; one per member when the five live in separate files:</p>
+      <p>Family contract TSDoc block — the build WU attaches this to the family barrel export or to each member; one per member when the six live in separate files:</p>
       <pre class="tsdoc">/**
- * BodyRenderer family — five content-type-aware body renderers; BodyViewer picks one by dispatch.
+ * BodyRenderer family — six content-type-aware body renderers; BodyViewer picks one by dispatch.
  * @tier T2 each — per-type render logic + dispatch + truncation policy = business logic
- * @anatomy rendered body (mono; json/xml = copy-exact pretty-printed source in a read-only CodeMirror 6 surface — keyboard nav, fold gutter, muted syntax tokens key/string/number) · cut marker when capped (warn tone, shown/total human-readable, save hint) · no spinner, no blank — BodyViewer gates on loaded
+ * @anatomy rendered body (mono; json/xml = copy-exact pretty-printed source in a read-only CodeMirror 6 surface — keyboard nav, fold gutter, muted syntax tokens key/string/number; text/hex = a plain wrapping pre, no tokens and no surface — nothing parsed means nothing to navigate or colour) · cut marker when capped (warn tone, shown/total human-readable, save hint) · no spinner, no blank — BodyViewer gates on loaded
  * @use inside a body pane, chosen by bodyKind(contentType) in decoded mode or rawKind(bytes) in raw mode
- * @avoid direct use outside BodyViewer · silently truncating without the cut marker · raw byte counts in the cut marker · syntax color beyond the three muted tokens
- * @states rendered · rendered+cut (body over cap) · as-is fallback (JsonRenderer: parse fail or over cap — raw text, no tokens)
- * @madeof JsonRenderer — CodeMirror 6 (read-only) · XmlRenderer — CodeMirror 6 (read-only) · ImageRenderer — none · FormRenderer — KeyValueRow× · HexRenderer — none
+ * @avoid direct use outside BodyViewer · silently truncating without the cut marker · raw byte counts in the cut marker · syntax color beyond the three muted tokens · giving TextRenderer a grammar it does not have (a text body that turns out to be JSON is JsonRenderer's dispatch, not TextRenderer's guess)
+ * @states rendered · rendered+cut (body over cap) · as-is fallback (JsonRenderer parse fail or over TREE_MAX → TextRenderer, no tokens)
+ * @madeof JsonRenderer — CodeMirror 6 (read-only) · XmlRenderer — CodeMirror 6 (read-only) · ImageRenderer — none · FormRenderer — KeyValueRow× · TextRenderer — none · HexRenderer — none
  */
 
 // Per-member naming for the build WU:
-// JsonRenderer, XmlRenderer, ImageRenderer, FormRenderer, HexRenderer</pre>
+// JsonRenderer, XmlRenderer, ImageRenderer, FormRenderer, TextRenderer, HexRenderer</pre>
     </div>
 
     <h2 id="fit">Use / avoid</h2>
@@ -659,6 +707,7 @@
       <thead><tr><th>Part</th><th>Tailwind (build WU)</th></tr></thead>
       <tbody>
         <tr><td>rendered body text</td><td><code>font-mono text-xs text-ink-body</code></td></tr>
+        <tr><td>text pane (Text · the pre hosting hex)</td><td><code>overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs text-ink-body</code> — exactly what ships (<code>BodyViewer.tsx:56–62</code>); no CodeMirror surface, no syntax tokens</td></tr>
         <tr><td>JSON key / XML tag name</td><td><code>text-syn-key</code> — new token, #8fb8de (DEC-11)</td></tr>
         <tr><td>JSON string / XML attr value</td><td><code>text-syn-str</code> — new token, #9ec99a</td></tr>
         <tr><td>JSON number</td><td><code>text-syn-num</code> — new token, #d9a866</td></tr>

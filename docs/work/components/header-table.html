@@ -69,7 +69,7 @@
     <div class="inner">
       <h1>HeaderTable <span class="tier t4">T4</span></h1>
       <p>One leg's full header set — <a href="key-value-row.html">KeyValueRow</a>× + a "copy all" <a href="copy-button.html">CopyButton</a> inside a <a href="section.html">Section</a>; wire order preserved, one source array, and the copy-all serialisation owned here.</p>
-      <div class="meta">Component design · <strong>confirmed 2026-07-23</strong> · 2026-07-22 · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+      <div class="meta">Component design · <strong>confirmed 2026-07-23</strong> · <strong>contract fix E-DFLOW.W5 2026-07-27</strong> (gains <code>pending</code> — <a href="../2026-07-27-dflow-w5-plan.html">W5 plan</a>; design only, not built in W5) · 2026-07-22 · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
     </div>
   </header>
   <main>
@@ -82,7 +82,7 @@
       <tr><td><strong>Tier</strong></td><td><span class="tier t4">T4 Composition</span> — assembles T1/T2 parts; designed so the build WU assembles correctly, <strong>not collected</strong> (promoted from inline <code>FlowDetail.tsx:16–30</code>)</td></tr>
       <tr><td><strong>Tenants</strong></td><td>"Request headers" zone (panel C) · "Response headers" zone (panel D)</td></tr>
       <tr><td><strong>Exists today</strong></td><td><code>FlowDetail.tsx:16–30</code> — local function, bare <code>&lt;dl&gt;</code> grid; no copy-all, no disclosure, no empty-state text</td></tr>
-      <tr><td><strong>Made of</strong></td><td><a href="key-value-row.html">KeyValueRow</a>× (one per pair) · <a href="copy-button.html">CopyButton</a> (T1, labelled "copy all" — payload serialised by HeaderTable) · hosted inside <a href="section.html">Section</a> at the call site</td></tr>
+      <tr><td><strong>Made of</strong></td><td><a href="key-value-row.html">KeyValueRow</a>× (one per pair) · <a href="copy-button.html">CopyButton</a> (T1 — payload serialised by HeaderTable) · <a href="notice.html">Notice</a> (T1 — the <code>pending</code> and <code>empty</code> sentences; it absorbs the private <code>.ht-none</code> drawing) · hosted inside <a href="section.html">Section</a> at the call site</td></tr>
     </table>
     <table data-c="frame-drivers">
       <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
@@ -90,7 +90,7 @@
         <tr><td>① copy-all placement consistent across both legs</td><td>the "copy all" CopyButton sits in the sub-bar, right-aligned against the section heading — Section hosts both</td></tr>
         <tr><td>② one source of truth for rows + serialisation</td><td><code>headers</code> array → KeyValueRow× AND → the copy-all payload; no secondary map, no derived state</td></tr>
         <tr><td>③ wire order as captured — never reordered</td><td>render <code>headers</code> in index order; no sort, no group-by (<code>FlowDetail.tsx:22–28</code> confirmed)</td></tr>
-        <tr><td>④ headers can be absent</td><td>empty set → "none" message; no grid rendered, copy-all CopyButton disabled</td></tr>
+        <tr><td>④ headers can be absent in <strong>two different ways</strong></td><td>empty set (<code>[]</code>) → "none"; response not arrived (<code>null</code>) → "awaiting response…". Both render a <a href="notice.html">Notice</a> instead of the grid with copy-all disabled, and they must never share a sentence (<code>absence-names-itself</code>)</td></tr>
         <tr><td>⑤ long header sets (30+ rows) must not push body off screen</td><td>rows region gets a scroll cap; Section slot stays transparent</td></tr>
         <tr><td>⑥ press logic belongs to the parent (review 2026-07-23)</td><td>HeaderTable serialises <code>headers</code> to wire format and passes it as CopyButton's <code>value</code>; the button stays a dumb T1</td></tr>
       </tbody>
@@ -215,13 +215,13 @@ authorization: Bearer ey…  <span class="o">authorization: Bearer eyJhbGciOiJSU
               <p class="ht-none">none</p>
             </div>
           </div>
-          <div class="cap">empty set: the "none" message replaces the grid; the copy-all CopyButton disabled</div>
+          <div class="cap">empty set: the "none" Notice replaces the grid; the copy-all CopyButton disabled</div>
         </div>
         <div>
-          <strong>Empty-set rule</strong>
+          <strong>Absence rule — two sentences, never one</strong>
           <div class="spec">
-            <span class="k">spec</span><span>when <code>headers.length === 0</code>: the grid is not rendered; a <span style="font-family:'DM Mono',monospace;">"none"</span> line in muted text fills the slot; the copy-all <a href="copy-button.html">CopyButton</a> gets <code>disabled</code> (kept visible — hiding it would shift the sub-bar layout)</span>
-            <span class="k">why</span><span>shipped: <code>FlowDetail.tsx:17–18</code> — <code>if (headers.length === 0) return &lt;p …&gt;none&lt;/p&gt;</code>. Keeps the section present (the slot is never invisible — the absence is legible) while making clear there is nothing to copy</span>
+            <span class="k">spec</span><span>the grid is replaced by a mute-tone <a href="notice.html">Notice</a> and the copy-all <a href="copy-button.html">CopyButton</a> is <code>disabled</code> (kept visible — hiding it would shift the sub-bar) in <em>both</em> absence cases, but the sentence differs: <code>headers === null</code> → "awaiting response…" (<code>pending</code>); <code>headers.length === 0</code> → "none" (<code>empty</code>). Null is checked first.</span>
+            <span class="k">why</span><span>shipped: <code>FlowDetail.tsx:17–18</code> — <code>if (headers.length === 0) return &lt;p …&gt;none&lt;/p&gt;</code>, which is correct only for a finished exchange; the null case reaches the same branch and lies (<a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·1</a>). Keeping the zone present in both cases satisfies <code>no-layout-jump</code>; naming which absence it is satisfies <code>absence-names-itself</code>.</span>
           </div>
         </div>
       </div>
@@ -288,9 +288,16 @@ authorization: Bearer ey…  <span class="o">authorization: Bearer eyJhbGciOiJSU
       <div class="swatch">
         <div class="panel">
           <div class="ht-bar"><span class="sec-hd">Response headers</span><button class="btn-copyall s-disabled" type="button">copy all</button></div>
+          <p class="ht-none">awaiting response…</p>
+        </div>
+        <div class="cap"><strong>pending</strong> <span class="badge id">W5 · r2·1</span> — the response has not arrived (<code>headers === null</code>). A <a href="notice.html">Notice</a> at mute tone reading "awaiting response…"; copy-all disabled. <strong>Never "none"</strong> — see the callout below.</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="ht-bar"><span class="sec-hd">Response headers</span><button class="btn-copyall s-disabled" type="button">copy all</button></div>
           <p class="ht-none">none</p>
         </div>
-        <div class="cap"><strong>empty</strong> — "none" replaces the grid; copy-all CopyButton disabled. Shipped: <code>FlowDetail.tsx:17–18</code></div>
+        <div class="cap"><strong>empty</strong> — the response arrived and carried no headers (<code>headers === []</code>): "none" replaces the grid; copy-all disabled. Shipped: <code>FlowDetail.tsx:17–18</code></div>
       </div>
       <div class="swatch">
         <div class="panel">
@@ -320,10 +327,24 @@ authorization: Bearer ey…  <span class="o">authorization: Bearer eyJhbGciOiJSU
         <div class="cap"><strong>after copy-all</strong> — CopyButton's confirming state (~2 s); rows unchanged. Button states (confirm, error, disabled) owned by <a href="copy-button.html">CopyButton</a></div>
       </div>
     </div>
+    <div class="callout warn" data-c="pending-vs-empty">
+      <strong>Why <code>pending</code> exists — the contract used to state something false</strong> <span class="badge id">W5 fix · <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·1</a></span>
+      <br><br>
+      An in-flight response has no headers <em>yet</em>. Before this fix the file declared "no loading / in-flight state" and advised the caller not to render the Section at all — so a screen that did render it (as the shipped panel does, and as <code>no-layout-jump</code> requires) fell through to <code>empty</code> and printed <strong>"none"</strong>. The lexicon reserves "none" for the empty set: <em>the response arrived and carried no headers</em>. Rendering it for a response that has not arrived is a false statement about the wire, in a tool whose only value is being trustworthy about the wire.
+      <table style="margin-top:10px;">
+        <thead><tr><th>caller passes</th><th>state</th><th>renders</th><th>means</th></tr></thead>
+        <tbody>
+          <tr><td><code>null</code></td><td>pending</td><td>"awaiting response…"</td><td>the exchange is unfinished; ask again later</td></tr>
+          <tr><td><code>[]</code></td><td>empty</td><td>"none"</td><td>the exchange is finished and this leg carried no headers</td></tr>
+          <tr><td><code>[…]</code></td><td>populated</td><td>the grid</td><td>these are the headers, in wire order</td></tr>
+        </tbody>
+      </table>
+      <p style="margin:8px 0 0;">The distinction is the caller's to make — HeaderTable only renders what the shape of <code>headers</code> tells it. The two sentences must never collapse into one (<code>absence-names-itself</code>, the rule candidate <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·13</a> proposes from this same finding). Not rendering the Section is also not an option: the zone would appear when the response lands and shift every zone below it.</p>
+    </div>
     <div class="callout" data-c="non-states">
       <strong>Deliberate non-states:</strong>
       <ul style="margin:.5em 0 0;padding-left:1.4em;">
-        <li><strong>No loading / in-flight state.</strong> The table receives a fully-resolved <code>headers</code> array from the parent; in-flight handling belongs to the screen (the panel waits for the flow to complete before rendering the detail). When headers have not yet arrived the Section simply isn't rendered.</li>
+        <li><strong>No spinner.</strong> <code>pending</code> is a sentence, not a progress indicator — see the state above. What HeaderTable still does not do is <em>decide</em> it is pending: the caller passes <code>headers={null}</code>, because only the screen knows whether a response is in flight, evicted, or simply absent.</li>
         <li><strong>No collapsed state.</strong> Fork D1 settles this: a scroll cap is used instead of a collapsible disclosure. HeaderTable has no open/closed state; it is always fully expanded.</li>
         <li><strong>No hover / focus state on the composition.</strong> These belong to KeyValueRow (value cell: CopyText's hover/focus/confirming — review 2026-07-23) and the copy-all CopyButton (its own states, incl. the error state); HeaderTable itself has no interactive states of its own.</li>
       </ul>
@@ -431,7 +452,7 @@ content-type: application/json
     <table data-c="props">
       <thead><tr><th>Prop</th><th>Type</th><th></th></tr></thead>
       <tbody>
-        <tr><td><code>headers</code></td><td><code>HeaderView[]</code></td><td>the full set as captured — rendered in index order as rows AND serialised by HeaderTable into the copy-all payload. <code>HeaderView = { name: string; value: string }</code> from <code>ui/src/api.ts</code></td></tr>
+        <tr><td><code>headers</code></td><td><code>HeaderView[] | null</code></td><td>the full set as captured — rendered in index order as rows AND serialised by HeaderTable into the copy-all payload. <code>HeaderView = { name: string; value: string }</code> from <code>ui/src/api.ts</code>. <strong><code>null</code> means the response has not arrived</strong> → the <code>pending</code> state; <code>[]</code> means it arrived with no headers → <code>empty</code>. The two render different sentences and the caller must not conflate them (see the states callout)</td></tr>
         <tr><td><code>label</code></td><td><code>string</code></td><td>the section heading text, e.g. "Request headers" — drives the sub-bar heading and the copy-all CopyButton's <code>aria-label</code> ("copy all request headers" — disambiguates the two identical buttons on screen)</td></tr>
       </tbody>
     </table>
@@ -441,10 +462,10 @@ content-type: application/json
  * HeaderTable — one leg's full header set; wire order preserved, single source for rows and copy-all,
  * owns the copy-all serialisation (name: value\n per pair, wire order, trailing \n).
  * @tier T4 — composition; assembled at screen level from collected parts; not in the registry
- * @anatomy sub-bar (section heading left · CopyButton "copy all" right) · KeyValueRow× in wire-order grid · scroll cap on rows region
+ * @anatomy sub-bar (section heading left · CopyButton "copy all" right) · KeyValueRow× in wire-order grid · Notice in place of the grid when headers are absent ("awaiting response…" if null, "none" if empty) · scroll cap on rows region
  * @use request-headers zone (panel C) · response-headers zone (panel D)
- * @avoid re-sorting or filtering headers before passing (breaks wire-order contract) · serialising anywhere else (press logic lives here, the button stays a dumb T1) · rendering without a Section wrapper at the call site
- * @states populated · empty (rows absent, "none" shown, copy-all disabled) · long-set (rows scroll within capped region)
+ * @avoid re-sorting or filtering headers before passing (breaks wire-order contract) · passing [] for a response that has not arrived (that is null — [] states "no headers", which would be false) · serialising anywhere else (press logic lives here, the button stays a dumb T1) · rendering without a Section wrapper at the call site
+ * @states populated · pending (headers null — the response has not arrived; "awaiting response…" via Notice, copy-all disabled; NEVER "none") · empty (headers [] — arrived with no headers; "none", copy-all disabled) · long-set (rows scroll within capped region)
  * @madeof KeyValueRow× · CopyButton (T1, label "copy all") · hosted inside Section at call site
  */</pre>
     </div>
@@ -452,7 +473,7 @@ content-type: application/json
     <h2 id="fit">Use / avoid</h2>
     <div class="cards" data-c="fit-cards">
       <div class="card"><strong>✅ Use</strong><p>Exactly two call sites: "Request headers" (panel zone C) and "Response headers" (panel zone D) in <code>FlowDetail.tsx</code>. Any future leg that exposes a named header set with a copy-all action follows the same pattern.</p></div>
-      <div class="card"><strong>🚫 Avoid</strong><p>Passing a pre-sorted or pre-filtered array — the composition contract requires the raw captured order. Rendering KeyValueRow× directly without HeaderTable when a copy-all action is also needed — that duplicates the sub-bar placement logic. Using HeaderTable for non-header name/value data that doesn't warrant a copy-all (a single decoded form field, for example — a bare KeyValueRow is sufficient).</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>Passing a pre-sorted or pre-filtered array — the composition contract requires the raw captured order. <strong>Passing <code>[]</code> for a response that has not arrived</strong> — that renders "none", which says the leg carried no headers; pass <code>null</code> and get "awaiting response…" instead. Rendering KeyValueRow× directly without HeaderTable when a copy-all action is also needed — that duplicates the sub-bar placement logic. Using HeaderTable for non-header name/value data that doesn't warrant a copy-all (a single decoded form field, for example — a bare KeyValueRow is sufficient).</p></div>
     </div>
 
     <h2 id="tokens">Token mapping (mockup → build)</h2>
@@ -463,7 +484,7 @@ content-type: application/json
         <tr><td>sub-bar heading text</td><td><code>text-xs uppercase tracking-wide text-ink-mute font-ui</code></td><td>identical to Section's heading style (<code>section.html § tokens</code>); do not render a Section heading separately — the sub-bar carries it</td></tr>
         <tr><td>rows grid</td><td><code>grid grid-cols-[auto_1fr] gap-x-3 gap-y-1</code></td><td>shipped: <code>FlowDetail.tsx:21</code> — extracted verbatim; each KeyValueRow is <code>display:contents</code></td></tr>
         <tr><td>rows scroll cap</td><td><code>max-h-[200px] overflow-y-auto</code></td><td>ponytail: 200 px cap; adjust if reviewer confirms a different threshold (Fork D1)</td></tr>
-        <tr><td>empty "none" text</td><td><code>text-xs text-ink-mute font-ui</code></td><td>shipped: <code>FlowDetail.tsx:18</code> — <code>text-ink-mute</code> class confirmed</td></tr>
+        <tr><td>absence sentence (<code>pending</code> · <code>empty</code>)</td><td>see <a href="notice.html">notice.html § tokens</a> — <code>&lt;Notice&gt;awaiting response…&lt;/Notice&gt;</code> / <code>&lt;Notice&gt;none&lt;/Notice&gt;</code>, mute tone</td><td>the private <code>.ht-none</code> drawing is absorbed by Notice (W5); shipped <code>FlowDetail.tsx:18</code> matched its Inter/mute values already, so this is the same rendering with one owner</td></tr>
         <tr><td>copy-all button</td><td>see <a href="copy-button.html">copy-button.html § tokens</a></td><td>plain CopyButton, no overrides; one fact per tier</td></tr>
         <tr><td>serialisation (no CSS)</td><td><code>headers.map(h =&gt; `${h.name}: ${h.value}`).join('\n') + '\n'</code></td><td>lives in HeaderTable, passed as CopyButton's <code>value</code> — one expression, no library</td></tr>
         <tr><td>KeyValueRow internals</td><td>see <a href="key-value-row.html">key-value-row.html § tokens</a></td><td>same — one fact per tier</td></tr>
