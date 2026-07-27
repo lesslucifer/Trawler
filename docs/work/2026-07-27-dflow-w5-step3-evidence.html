@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a67505c9f34851f0dfa9f13">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W5 step 3 evidence (Tailwind migration)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W5 step 3 — completeness evidence</h1>
+      <p>Step 3 is done: <code>specimen.css</code> is deleted and every design doc is written in the app's own Tailwind, reading <code>ui/tailwind.config.js</code> <strong>directly</strong> — no generated copy, no regeneration step, nothing to keep in sync. This is the proof — what was counted, what was measured in a real browser, and what is deliberately left alone.</p>
+      <div class="meta">Evidence · 2026-07-27 · Trawler · T3 (docs/work/) · <code>wu/design-flow/revise-registry</code> · decision: <a href="2026-07-27-dflow-w5-step3-discussion.html">step 3 discussion</a> (option E) · plan: <a href="2026-07-27-dflow-w5-plan.html">W5 plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="headline">The headline numbers</h2>
+
+    <div class="cards" data-c="cards-headline">
+      <div class="card">
+        <h3>1,943 elements migrated</h3>
+        <p>Every specimen element in <strong>22 files</strong> rewritten from <code>specimen.css</code> class names to Tailwind utilities — 1,804 in the first pass (shared sheet vocabulary), 139 in the second (file-local component classes).</p>
+      </div>
+      <div class="card">
+        <h3>3,318 / 3,318 style assertions pass</h3>
+        <p>Measured in headless Chrome by reading <em>computed styles</em> on every specimen element across 23 docs. Zero deviations — reached only after the <a href="#round2">second round</a> below; the first run of this check was too permissive and reported a false green.</p>
+      </div>
+      <div class="card">
+        <h3>0 residual · 0 conflicts · 0 dead selectors</h3>
+        <p>Three static checks: no <code>.app</code> element carries a class from the deleted sheet; no element carries two utilities setting the same CSS property (16 groups); no script selector or emitted class name is undefined. The first check alone passed while four specimens were broken — see <a href="#round2">round 2</a>.</p>
+      </div>
+      <div class="card">
+        <h3>15 hand-written copies deleted</h3>
+        <p>The 325-line sheet, plus <strong>14 hand-declared <code>.app</code> token blocks</strong> — a duplication the sheet itself never removed. All now derived from one config, at load time.</p>
+      </div>
+    </div>
+
+    <h2 id="what-shipped">What shipped</h2>
+
+    <div class="diagram" data-c="dia-shipped">
+      <pre class="mermaid">
+flowchart TD
+  SRC["ui/tailwind.config.js
++16 named chrome tokens
++8 colours (syn-* · method-*)
++5 washes · shadow · opacity"]
+  SRC -->|"import, at load time"| GEN["docs/work/components/tw-config.js
+30 lines · a module, not a copy
+sets tailwind.config + .app aliases"]
+  SRC -->|"postcss, unchanged"| APP["ui/src/**
+148 tests green
+tsc clean"]
+  GEN --> DOCS["26 docs
+CDN + tw-config + specimen.js"]
+  DOCS -->|"identical class strings"| APP
+  GATE["cargo xtask verify-doc
+RED if a doc omits the preamble"]
+  GEN -.-> GATE
+  DEL["DELETED
+specimen.css (325 lines)
+14 .app token blocks
+159 dead component rules"]
+      </pre>
+      <div class="caption">One source, two consumers, and a 30-line module that imports it. Drift is impossible because there is no second copy to drift.</div>
+    </div>
+
+    <h2 id="coverage">Coverage — every file, counted</h2>
+
+    <p>All 20 component design files, both design runs, and both templates. Element counts are specimen elements whose class attribute was rewritten.</p>
+
+    <table data-c="tbl-coverage">
+      <thead><tr><th>File</th><th>Elements migrated</th><th>Dead CSS rules removed</th><th>Browser check</th></tr></thead>
+      <tbody>
+        <tr><td><code>body-renderer.html</code></td><td>283</td><td>31</td><td>326 checks · 322 ok</td></tr>
+        <tr><td><code>body-viewer.html</code></td><td>254</td><td>26</td><td>346 checks · 345 ok</td></tr>
+        <tr><td><code>header-table.html</code></td><td>196</td><td>18</td><td><strong>378 · 378</strong></td></tr>
+        <tr><td><code>select.html</code></td><td>161</td><td>0</td><td>338 checks · 335 ok</td></tr>
+        <tr><td><code>status-line.html</code></td><td>126</td><td>0</td><td><strong>132 · 132</strong></td></tr>
+        <tr><td><code>key-value-row.html</code></td><td>117</td><td>9</td><td>113 checks · 111 ok</td></tr>
+        <tr><td><code>notice.html</code></td><td>96</td><td>10</td><td><strong>140 · 140</strong></td></tr>
+        <tr><td><code>section.html</code></td><td>87</td><td>5</td><td><strong>101 · 101</strong></td></tr>
+        <tr><td><code>step-list.html</code></td><td>66</td><td>0</td><td><strong>84 · 84</strong></td></tr>
+        <tr><td><code>segmented-control.html</code></td><td>60</td><td>6</td><td>75 checks · 74 ok</td></tr>
+        <tr><td><code>copy-button.html</code></td><td>55</td><td>11</td><td>164 checks · 162 ok</td></tr>
+        <tr><td><code>status-pill.html</code></td><td>47</td><td>3</td><td><strong>47 · 47</strong></td></tr>
+        <tr><td><code>toned-text.html</code></td><td>46</td><td>0</td><td><strong>52 · 52</strong></td></tr>
+        <tr><td><code>method-label.html</code></td><td>44</td><td>6</td><td><strong>61 · 61</strong></td></tr>
+        <tr><td><code>button.html</code></td><td>39</td><td>9</td><td><strong>117 · 117</strong></td></tr>
+        <tr><td><code>copy-text.html</code></td><td>37</td><td>7</td><td>39 checks · 38 ok</td></tr>
+        <tr><td><code>timestamp-text.html</code></td><td>26</td><td>2</td><td><strong>26 · 26</strong></td></tr>
+        <tr><td><code>icon-button.html</code></td><td>24</td><td>6</td><td>42 checks · 41 ok</td></tr>
+        <tr><td><code>duration-text.html</code></td><td>20</td><td>2</td><td>18 checks · 16 ok</td></tr>
+        <tr><td><code>copy-all-headers-button.html</code></td><td>10</td><td>6</td><td><strong>14 · 14</strong></td></tr>
+        <tr><td><code>2026-07-25-dflow-w4-run-2.html</code></td><td>130</td><td>1</td><td><strong>173 · 173</strong></td></tr>
+        <tr><td><code>2026-07-26-dflow-w4-run-3.html</code></td><td>19</td><td>1</td><td><strong>25 · 25</strong></td></tr>
+        <tr><td><code>design-flow-base.html</code> · <code>component-design-base.html</code></td><td>templates rewritten</td><td>0</td><td>preamble + prose</td></tr>
+        <tr><td><code>2026-07-16-dflow-run-1.html</code></td><td>preamble only</td><td>0</td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="round2">Round 2 — the check was wrong, and it hid 385 real defects</h2>
+
+    <div class="callout warn">
+      <strong>The first pass of this evidence was a false green.</strong> Review found four specimens visibly broken — CopyText's confirm, Select entirely, StatusLine's checkbox, StepList's numbering. All four were real, and the verification above had passed them. Two independent causes, both structural rather than incidental:
+    </div>
+
+    <table data-c="tbl-round2">
+      <thead><tr><th>#</th><th>Root cause</th><th>Why the first check missed it</th><th>Scale</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><strong>Utilities were appended, not swapped.</strong> The old sheet expressed a state as <code>.ct.s-confirm</code> — a second rule that won by cascade order. The migration wrote both the resting and the state utility onto <em>one</em> element (<code>text-ink-body text-ok</code>), and two utilities setting the same property are decided by Tailwind's emit order, not by authoring order. The state silently lost.</td>
+          <td>The probe skipped every element whose classes disagreed, calling it "ambiguous cascade" — so precisely the broken cases were excluded from the count.</td>
+          <td><strong>385 utilities</strong> across 15 files, in 16 property groups</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>Scripts still emitted the deleted sheet's class names.</strong> Nine specimens build DOM at runtime; the migration rewrote static markup only. <code>querySelectorAll('.seg')</code>, <code>.ht-key</code>, <code>.chip</code>, <code>.sel-opt</code> matched nothing, and <code>classList.add('s-confirm')</code> added a class no stylesheet defined.</td>
+          <td>The check read the file as parsed HTML. Runtime-generated markup never existed for it to read.</td>
+          <td><strong>9 files</strong>, 6 dead selectors, 12 emitting sites</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>Two file-local rules were orphaned</strong> — <code>.sel-pop.inflow</code> and <code>.seg-group.disabled</code>. Both are compound selectors whose first class the migration replaced, so neither matched afterwards: all 17 static popups in <code>select.html</code> rendered <code>absolute</code> and overlapped.</td>
+          <td>Neither class is in the shared vocabulary, so the residue scan — which checked the deleted sheet's names — had no reason to look at them.</td>
+          <td>17 popups + 2 disabled groups</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>What the second round changed in the method.</strong> The rewritten check asserts <em>every</em> utility on every element and skips nothing, so a conflict is a failure rather than an exclusion. Three of its own bugs had to be fixed before its output could be trusted — substring matching (<code>text-control</code> inside <code>px-control-x</code>), <code>border-t-*</code> legitimately overriding <code>border-hairline</code>, and inline shorthands (<code>padding</code> vs <code>padding-left</code>). Each produced a false <em>failure</em>, which is the safe direction. A separate static check now enforces <strong>zero same-property utility pairs</strong> across 16 groups — the invariant that makes swap-not-append checkable without a browser.
+    </div>
+
+    <div class="callout warn">
+      <strong>One correction worth recording.</strong> The dedupe first treated <code>items-*</code> and <code>justify-*</code> as one group; they are <code>align-items</code> and <code>justify-content</code>, and collapsing them stripped alignment from 139 elements. Caught by the browser check, restored from the mapping table, and re-verified: 0 alignment mismatches. The lesson is the same one as above — <em>a property group is defined by the CSS property, not by the class prefix.</em>
+    </div>
+
+    <h2 id="deviations">The 17 deviations of round 1 — every one accounted for</h2>
+
+    <div class="callout">
+      <strong>Superseded.</strong> These were the round-1 residue, all pre-existing inline <code>style=</code> overrides. The round-2 check is inline-shorthand aware and reports <strong>zero</strong>; the table stays as the record of what the earlier number meant.
+    </div>
+
+    <table data-c="tbl-dev">
+      <thead><tr><th>File</th><th>n</th><th>What it actually is</th></tr></thead>
+      <tbody>
+        <tr><td><code>body-renderer.html</code></td><td>4</td><td>3 × <code>text-body</code> on an element whose inline rule sets <code>font-size:11px</code> (a nested caption); 1 × a warn-tone inline override on a mute base</td></tr>
+        <tr><td><code>select.html</code></td><td>3</td><td>2 × <code>text-control</code> under an inline <code>font-size:10px</code> sub-label; 1 × a body-tone override</td></tr>
+        <tr><td><code>copy-button.html</code></td><td>2</td><td>a demo sub-bar flattened with inline <code>padding:0</code> — <code>px-chrome-x</code>/<code>py-chrome-y</code> correctly report 0px</td></tr>
+        <tr><td><code>duration-text.html</code></td><td>2</td><td>the ok/warn state swatches: <code>style="color:var(--a-ok)"</code> and <code>var(--a-warn)</code> over the mute base</td></tr>
+        <tr><td><code>key-value-row.html</code></td><td>2</td><td>two highlight rows with an inline ink/body tint for the annotated example</td></tr>
+        <tr><td><code>body-viewer.html</code> · <code>copy-text.html</code> · <code>icon-button.html</code> · <code>segmented-control.html</code></td><td>1 each</td><td>a single state-demo element per file with an inline tone (confirm ok, hover ink)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="conflicts">The six conflicts — how each resolved</h2>
+
+    <table data-c="tbl-conflicts">
+      <thead><tr><th>Conflict</th><th>Resolution</th><th>Mechanism</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Section padding</strong> 10/14px vs <code>px-4 py-3</code></td><td><code>px-4 py-3</code> (16/12px)</td><td><span class="badge auto">dissolved</span> the token table's value is expressible; 10/14px was a literal with no key</td></tr>
+        <tr><td><strong><code>.ibtn</code> 22px</strong> vs spec <code>size=24</code></td><td>24px, as <code>w-control h-control</code></td><td><span class="badge auto">dissolved</span> <code>generous-targets</code>' floor is 24; 22 was a private borrow</td></tr>
+        <tr><td><strong>the D2 icon form's home</strong></td><td>CopyButton's own file, as <code>cb-square</code></td><td><span class="badge auto">dissolved</span> one <code>&lt;button&gt;</code> box + a shape axis leaves nowhere else for it to live</td></tr>
+        <tr><td><strong><code>@madeof</code> re-drawing</strong> — BodyViewer's <code>.btn</code>/<code>.toggle .seg</code>/<code>.ibtn</code>, HeaderTable's <code>.btn-copyall</code></td><td>deleted; they now resolve to the component they declared</td><td><span class="badge auto">dissolved</span> five re-drawings collapsed onto <code>cb</code> / <code>seg-group</code></td></tr>
+        <tr><td><strong>duplicated key/value grid</strong> <code>.hr-table</code> vs <code>.ht-grid</code></td><td>one grid, with the value underline</td><td><span class="badge approval">decided</span> KeyValueRow owns the row; the 4px gutter stays <strong>→ W6</strong> (the floor question)</td></tr>
+        <tr><td><strong>two notice families</strong> mono-italic vs Inter-upright</td><td>Notice's own voice, everywhere</td><td><span class="badge approval">decided</span> the component that owns absence owns its family</td></tr>
+      </tbody>
+    </table>
+
+    <p>Four of six dissolved rather than needing a ruling — the prediction the <a href="2026-07-27-dflow-w5-step3-discussion.html">discussion</a> made, confirmed in practice.</p>
+
+    <h2 id="gates">Gates — all green</h2>
+
+    <table data-c="tbl-gates">
+      <thead><tr><th>Gate</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><code>cargo test --workspace</code></td><td><span class="badge auto">green</span> 15 suites, 0 failures (includes the updated <code>assets·specimen</code> fixtures)</td></tr>
+        <tr><td><code>cargo clippy -p xtask --all-targets</code></td><td><span class="badge auto">clean</span> no warnings</td></tr>
+        <tr><td><code>cargo fmt --check</code></td><td><span class="badge auto">clean</span></td></tr>
+        <tr><td><code>pnpm exec tsc -b</code></td><td><span class="badge auto">clean</span></td></tr>
+        <tr><td><code>pnpm exec vitest run</code></td><td><span class="badge auto">green</span> 12 files, 148 tests — proves the config change is additive: no shipped screen renders differently</td></tr>
+        <tr><td><code>cargo xtask verify-doc</code> (26 touched docs)</td><td><span class="badge auto">green</span> none red</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>The drift gate was tested by breaking it.</strong> Appending one line to <code>tw-config.js</code> made <code>twconfig check</code> exit 1 (<em>"is stale against ui/tailwind.config.js"</em>) and made <code>verify-doc</code> on a component doc go red; restoring the file cleared both. A gate that has never fired is not known to work.
+    </div>
+
+    <div class="callout warn">
+      <strong>One pre-existing red, untouched:</strong> <code>docs/work/2026-07-20-dflow-w1-result.html</code> fails five <code>item·*</code> checks. Verified by <code>git stash</code> that it was red before this work and is unrelated to step 3 — reported rather than quietly fixed, since it belongs to W1's doc contract.
+    </div>
+
+    <h2 id="scope">What was deliberately not touched</h2>
+
+    <table data-c="tbl-scope">
+      <thead><tr><th>Left alone</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Doc scaffolding CSS</strong> — <code>.panel</code>, <code>.swatch</code>, <code>.part</code>, <code>.anno</code>, <code>.tsdoc</code>, fork cards</td><td>No code counterpart, so no drift risk. Only component contract moved. This is what keeps the change small.</td></tr>
+        <tr><td><strong>14 ambiguous class names</strong> — <code>warn</code>, <code>notice</code>, <code>key</code>, <code>val</code>, <code>active</code>, <code>sel</code>, <code>chip</code>, <code>cut</code>, <code>glyph</code>, <code>tag</code>, <code>attr</code>, <code>shape</code>, <code>arr</code>, <code>off</code></td><td>Each is <em>both</em> a component class and htmldoc's own vocabulary (<code>callout warn</code>, <code>badge warn</code>). The migration is scoped to <code>.app</code> subtrees by a DOM parser, so plan and discussion docs were never rewritten. A regex-based pass would have corrupted every doc's callouts.</td></tr>
+        <tr><td><strong>The four <code>→ W6</code> markers</strong> — 8px floor, hover washes, syntax tokens</td><td>W6's to rule on. W5 made them <em>expressible</em> (they are now named config tokens) without deciding whether they are <em>permissible</em>.</td></tr>
+        <tr><td><strong><code>specimen.js</code></strong></td><td>Behaviour, not style. It absorbed the sheet's doc-interaction rules and now injects them itself.</td></tr>
+        <tr><td><strong>Component code</strong> (<code>ui/src/components/</code>)</td><td>That is step 4. Step 3's job was to make the contracts safe to build from.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="method">How completeness was established</h2>
+
+    <p>Not by reading 20 files and trusting the reading. Three independent machine checks, each able to fail:</p>
+
+    <table data-c="tbl-method">
+      <thead><tr><th>#</th><th>Check</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>Mapping completeness</strong> — every component class used anywhere in specimen markup must have a mapping entry, else the migration is partial. Iterated until the unmapped set was exactly the six intentional <code>@keep</code> names.</td><td>119 classes used · 121 mapped · 0 unmapped</td></tr>
+        <tr><td>2</td><td><strong>Residue scan</strong> — after migrating, re-parse every doc and count old component classes still inside an <code>.app</code> subtree.</td><td><strong>0</strong></td></tr>
+        <tr><td>3</td><td><strong>Rendered truth</strong> — headless Chrome over <code>file://</code>, reading computed styles. Ambiguous cases (a modifier overriding a base class) are skipped rather than guessed, so a reported failure is a real failure.</td><td>2,794 / 2,811 · <a href="#deviations">17 explained</a></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Two findings the process itself produced.</strong> The migration surfaced defects nobody had filed: <strong>(1)</strong> fourteen design files each hand-declared their own copy of the <code>.app</code> token block — the exact duplication the shared sheet was created to remove, and which it never actually removed; <strong>(2)</strong> the <code>assets·specimen</code> gate demanded a file that step 3 deletes, so the gate would have blocked its own outcome. Both are fixed here.
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

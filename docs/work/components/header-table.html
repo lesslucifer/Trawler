@@ -4,39 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — HeaderTable component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
     .t2{color:var(--ok);}
     .t4{color:var(--warn);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
     /* panel shell */
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:520px;}
-    /* section heading inside a panel (mirrors FlowDetail.tsx:10) */
-    .sec-hd{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:8px;font-family:Inter,system-ui,sans-serif;}
-    /* the header-table two-column grid (mirrors FlowDetail.tsx:21) */
-    .ht-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;}
-    .ht-key{color:var(--a-mute);white-space:nowrap;font-size:12.5px;}
-    .ht-val{color:var(--a-body);word-break:break-all;font-size:12.5px;}
-    /* the sub-bar holding the section heading + copy-all-button */
-    .ht-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
-    .ht-bar .sec-hd{margin-bottom:0;}
-    /* copy-all button (styled like shipped CopyButton at FlowDetail.tsx:97–101) */
-    .btn-copyall{border:1px solid var(--a-line);border-radius:3px;padding:2px 8px;font-size:10px;font-family:Inter,system-ui,sans-serif;color:var(--a-mute);background:transparent;cursor:pointer;white-space:nowrap;}
-    .btn-copyall:hover,.btn-copyall.s-hover{color:var(--a-ink);}
-    .btn-copyall.s-confirm{color:var(--a-ok);border-color:var(--a-ok);}
-    .btn-copyall.s-error{color:var(--a-warn);border-color:var(--a-warn);}
-    .btn-copyall.s-disabled{opacity:.38;cursor:default;}
-    /* disclosure summary row */
-    .ht-summary{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;list-style:none;margin-bottom:6px;}
-    .ht-summary .sec-hd{margin-bottom:0;}
-    .ht-chevron{color:var(--a-mute);font-size:9px;transition:transform .15s;}
-    .ht-summary.s-open .ht-chevron{transform:rotate(90deg);}
-    /* "none" empty state */
-    .ht-none{color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;}
-    /* scroll cap */
-    .ht-scroll{max-height:200px;overflow-y:auto;}
     /* annotation badge (shared with exemplar) */
     .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:Inter,system-ui,sans-serif;}
     /* part blocks (verbatim from exemplar) */
@@ -59,10 +36,7 @@
     /* timeline */
     .timeline{font-family:"DM Mono",ui-monospace,monospace;font-size:11px;color:var(--a-body);background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 10px;line-height:1.8;white-space:pre;overflow-x:auto;}
     .timeline .m{color:var(--a-mute);}
-    .timeline .o{color:var(--a-ok);}
-    /* chip */
-    .chip{display:inline-block;margin-left:8px;font-size:10px;line-height:16px;color:var(--a-ok);border:1px solid var(--a-ok);border-radius:999px;padding:0 6px;vertical-align:1px;font-family:Inter,system-ui,sans-serif;}
-  </style>
+    .timeline .o{color:var(--a-ok);}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -99,16 +73,16 @@
     <h2 id="anatomy">Anatomy — the assembled parts</h2>
     <div class="app" data-c="anatomy-specimen">
       <div class="panel">
-        <div class="ht-bar">
-          <span class="sec-hd">Request headers <span class="anno">1</span></span>
-          <button class="btn-copyall" type="button"><span class="anno">2</span> copy all</button>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Request headers <span class="anno">1</span></span>
+          <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button"><span class="anno">2</span> copy all</button>
         </div>
-        <div class="ht-grid">
-          <span class="ht-key">host <span class="anno">3</span></span><span class="ht-val">api.example.com <span class="anno">4</span></span>
-          <span class="ht-key">content-type</span><span class="ht-val">application/json; charset=utf-8</span>
-          <span class="ht-key">authorization</span><span class="ht-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.sig</span>
-          <span class="ht-key">accept</span><span class="ht-val">application/json</span>
-          <span class="ht-key">x-request-id</span><span class="ht-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+        <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
+          <span class="text-ink-mute whitespace-nowrap text-value">host <span class="anno">3</span></span><span class="text-ink-body break-all text-value">api.example.com <span class="anno">4</span></span>
+          <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json; charset=utf-8</span>
+          <span class="text-ink-mute whitespace-nowrap text-value">authorization</span><span class="text-ink-body break-all text-value">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.sig</span>
+          <span class="text-ink-mute whitespace-nowrap text-value">accept</span><span class="text-ink-body break-all text-value">application/json</span>
+          <span class="text-ink-mute whitespace-nowrap text-value">x-request-id</span><span class="text-ink-body break-all text-value">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
         </div>
       </div>
     </div>
@@ -116,9 +90,9 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="ht-bar">
-              <span class="sec-hd">Request headers</span>
-              <button class="btn-copyall" type="button">copy all</button>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Request headers</span>
+              <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button>
             </div>
           </div>
           <div class="cap">sub-bar: the Section heading sits left, the "copy all" CopyButton sits right — both in one flex row. Section itself does not render the heading here; the sub-bar replaces Section's own heading slot</div>
@@ -134,10 +108,10 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="ht-grid" style="max-width:none;">
-              <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
-              <span class="ht-key">authorization</span><span class="ht-val">Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig</span>
-              <span class="ht-key">accept</span><span class="ht-val">*/*</span>
+            <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y" style="max-width:none;">
+              <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json</span>
+              <span class="text-ink-mute whitespace-nowrap text-value">authorization</span><span class="text-ink-body break-all text-value">Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig</span>
+              <span class="text-ink-mute whitespace-nowrap text-value">accept</span><span class="text-ink-body break-all text-value">*/*</span>
             </div>
           </div>
           <div class="cap">the two-column grid: name column auto-width (widest name), value column fills remainder. One <a href="key-value-row.html">KeyValueRow</a> per pair</div>
@@ -211,8 +185,8 @@ authorization: Bearer ey…  <span class="o">authorization: Bearer eyJhbGciOiJSU
         <div class="ex">
           <div class="flow-ex">
             <div class="panel" style="max-width:160px;">
-              <div class="ht-bar"><span class="sec-hd">Request headers</span><button class="btn-copyall s-disabled" type="button">copy all</button></div>
-              <p class="ht-none">none</p>
+              <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Request headers</span><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none opacity-disabled pointer-events-none" type="button">copy all</button></div>
+              <p class="text-ink-mute text-body font-ui">none</p>
             </div>
           </div>
           <div class="cap">empty set: the "none" Notice replaces the grid; the copy-all CopyButton disabled</div>
@@ -228,16 +202,16 @@ authorization: Bearer ey…  <span class="o">authorization: Bearer eyJhbGciOiJSU
       <div class="part">
         <div class="ex">
           <div class="panel" style="max-width:none;">
-            <div class="ht-bar"><span class="sec-hd">Response headers</span><button class="btn-copyall" type="button">copy all</button></div>
-            <div class="ht-scroll ht-grid">
-              <span class="ht-key">content-type</span><span class="ht-val">application/json; charset=utf-8</span>
-              <span class="ht-key">content-length</span><span class="ht-val">14820</span>
-              <span class="ht-key">cache-control</span><span class="ht-val">no-store, max-age=0</span>
-              <span class="ht-key">set-cookie</span><span class="ht-val">session=abc; Path=/; HttpOnly; Secure; SameSite=Strict</span>
-              <span class="ht-key">x-trace-id</span><span class="ht-val">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
-              <span class="ht-key">x-ratelimit-remaining</span><span class="ht-val">47</span>
-              <span class="ht-key">x-ratelimit-reset</span><span class="ht-val">1721649260</span>
-              <span class="ht-key">strict-transport-security</span><span class="ht-val">max-age=31536000; includeSubDomains; preload</span>
+            <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Response headers</span><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button></div>
+            <div class="max-h-[200px] overflow-y-auto grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
+              <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json; charset=utf-8</span>
+              <span class="text-ink-mute whitespace-nowrap text-value">content-length</span><span class="text-ink-body break-all text-value">14820</span>
+              <span class="text-ink-mute whitespace-nowrap text-value">cache-control</span><span class="text-ink-body break-all text-value">no-store, max-age=0</span>
+              <span class="text-ink-mute whitespace-nowrap text-value">set-cookie</span><span class="text-ink-body break-all text-value">session=abc; Path=/; HttpOnly; Secure; SameSite=Strict</span>
+              <span class="text-ink-mute whitespace-nowrap text-value">x-trace-id</span><span class="text-ink-body break-all text-value">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
+              <span class="text-ink-mute whitespace-nowrap text-value">x-ratelimit-remaining</span><span class="text-ink-body break-all text-value">47</span>
+              <span class="text-ink-mute whitespace-nowrap text-value">x-ratelimit-reset</span><span class="text-ink-body break-all text-value">1721649260</span>
+              <span class="text-ink-mute whitespace-nowrap text-value">strict-transport-security</span><span class="text-ink-body break-all text-value">max-age=31536000; includeSubDomains; preload</span>
             </div>
             <div style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;margin-top:4px;">↓ scroll for more</div>
           </div>
@@ -276,41 +250,41 @@ authorization: Bearer ey…  <span class="o">authorization: Bearer eyJhbGciOiJSU
     <div class="app swatches" data-c="states">
       <div class="swatch">
         <div class="panel">
-          <div class="ht-bar"><span class="sec-hd">Request headers</span><button class="btn-copyall" type="button">copy all</button></div>
-          <div class="ht-grid">
-            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
-            <span class="ht-key">authorization</span><span class="ht-val">Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig</span>
-            <span class="ht-key">accept</span><span class="ht-val">*/*</span>
+          <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Request headers</span><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button></div>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
+            <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">authorization</span><span class="text-ink-body break-all text-value">Bearer eyJhbGciOiJSUzI1NiJ9.payload.sig</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">accept</span><span class="text-ink-body break-all text-value">*/*</span>
           </div>
         </div>
         <div class="cap"><strong>populated</strong> — rows in wire order; copy-all CopyButton enabled</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="ht-bar"><span class="sec-hd">Response headers</span><button class="btn-copyall s-disabled" type="button">copy all</button></div>
-          <p class="ht-none">awaiting response…</p>
+          <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Response headers</span><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none opacity-disabled pointer-events-none" type="button">copy all</button></div>
+          <p class="text-ink-mute text-body font-ui">awaiting response…</p>
         </div>
         <div class="cap"><strong>pending</strong> <span class="badge id">W5 · r2·1</span> — the response has not arrived (<code>headers === null</code>). A <a href="notice.html">Notice</a> at mute tone reading "awaiting response…"; copy-all disabled. <strong>Never "none"</strong> — see the callout below.</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="ht-bar"><span class="sec-hd">Response headers</span><button class="btn-copyall s-disabled" type="button">copy all</button></div>
-          <p class="ht-none">none</p>
+          <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Response headers</span><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none opacity-disabled pointer-events-none" type="button">copy all</button></div>
+          <p class="text-ink-mute text-body font-ui">none</p>
         </div>
         <div class="cap"><strong>empty</strong> — the response arrived and carried no headers (<code>headers === []</code>): "none" replaces the grid; copy-all disabled. Shipped: <code>FlowDetail.tsx:17–18</code></div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="ht-bar"><span class="sec-hd">Response headers</span><button class="btn-copyall" type="button">copy all</button></div>
-          <div class="ht-scroll ht-grid">
-            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
-            <span class="ht-key">content-length</span><span class="ht-val">14820</span>
-            <span class="ht-key">cache-control</span><span class="ht-val">no-store, max-age=0</span>
-            <span class="ht-key">set-cookie</span><span class="ht-val">session=abc; Path=/; HttpOnly</span>
-            <span class="ht-key">x-trace-id</span><span class="ht-val">00-4bf92f3577b34da6a3ce929d0e0e4736</span>
-            <span class="ht-key">x-ratelimit-remaining</span><span class="ht-val">47</span>
-            <span class="ht-key">strict-transport-security</span><span class="ht-val">max-age=31536000; includeSubDomains</span>
-            <span class="ht-key">x-ratelimit-reset</span><span class="ht-val">1721649260</span>
+          <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Response headers</span><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button></div>
+          <div class="max-h-[200px] overflow-y-auto grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
+            <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">content-length</span><span class="text-ink-body break-all text-value">14820</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">cache-control</span><span class="text-ink-body break-all text-value">no-store, max-age=0</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">set-cookie</span><span class="text-ink-body break-all text-value">session=abc; Path=/; HttpOnly</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">x-trace-id</span><span class="text-ink-body break-all text-value">00-4bf92f3577b34da6a3ce929d0e0e4736</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">x-ratelimit-remaining</span><span class="text-ink-body break-all text-value">47</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">strict-transport-security</span><span class="text-ink-body break-all text-value">max-age=31536000; includeSubDomains</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">x-ratelimit-reset</span><span class="text-ink-body break-all text-value">1721649260</span>
           </div>
           <div style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;margin-top:4px;">↓ scroll</div>
         </div>
@@ -318,10 +292,10 @@ authorization: Bearer ey…  <span class="o">authorization: Bearer eyJhbGciOiJSU
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="ht-bar"><span class="sec-hd">Request headers</span><button class="btn-copyall s-confirm" type="button">copied</button></div>
-          <div class="ht-grid">
-            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
-            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
+          <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Request headers</span><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ok border-ok" type="button">copied</button></div>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
+            <span class="text-ink-mute whitespace-nowrap text-value">host</span><span class="text-ink-body break-all text-value">api.example.com</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json</span>
           </div>
         </div>
         <div class="cap"><strong>after copy-all</strong> — CopyButton's confirming state (~2 s); rows unchanged. Button states (confirm, error, disabled) owned by <a href="copy-button.html">CopyButton</a></div>
@@ -355,27 +329,27 @@ authorization: Bearer ey…  <span class="o">authorization: Bearer eyJhbGciOiJSU
       <div class="card">
         <strong>D1 · space management for long sets</strong> <span class="badge auto">settled: scroll cap</span>
         <div class="panel" style="margin-top:8px;max-width:none;">
-          <div class="ht-bar"><span class="sec-hd">Response headers</span><button class="btn-copyall" type="button">copy all</button></div>
-          <div class="ht-scroll ht-grid">
-            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
-            <span class="ht-key">cache-control</span><span class="ht-val">no-store</span>
-            <span class="ht-key">set-cookie</span><span class="ht-val">session=abc; Path=/</span>
-            <span class="ht-key">x-trace-id</span><span class="ht-val">00-4bf92f3577b34da6a3ce929d0e</span>
-            <span class="ht-key">x-ratelimit-remaining</span><span class="ht-val">47</span>
+          <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Response headers</span><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button></div>
+          <div class="max-h-[200px] overflow-y-auto grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
+            <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">cache-control</span><span class="text-ink-body break-all text-value">no-store</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">set-cookie</span><span class="text-ink-body break-all text-value">session=abc; Path=/</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">x-trace-id</span><span class="text-ink-body break-all text-value">00-4bf92f3577b34da6a3ce929d0e</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">x-ratelimit-remaining</span><span class="text-ink-body break-all text-value">47</span>
           </div>
           <div style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;margin-top:4px;">↓ scroll for 12 more</div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>Scroll cap (settled).</strong> A fixed <code>max-height</code> + <code>overflow-y:auto</code> on the rows region keeps the body section reachable. Zero JS state, zero extra chrome. W2 roster seed says "collapsible" — but the disclosure interaction (click to open) is an extra step when the user's intent is inspection; the cap gives full access without the extra click. Simpler than a disclosure: no open/closed state, no animation, no aria-expanded. The cap value (~200 px) is a tunable in the token table.</p>
       </div>
       <div class="card">
-        <strong>alt: collapsible disclosure</strong> <span class="badge warn">rejected (by this file; reviewer may push back)</span>
+        <strong>alt: collapsible disclosure</strong> <span class="badge text-warn">rejected (by this file; reviewer may push back)</span>
         <div class="panel" style="margin-top:8px;max-width:none;">
-          <div class="ht-bar">
-            <span class="ht-summary" style="cursor:pointer;display:flex;align-items:center;gap:4px;">
-              <span class="ht-chevron">▶</span>
-              <span class="sec-hd" style="margin:0;">Response headers</span>
+          <div class="flex items-center justify-between mb-2">
+            <span class="flex items-center gap-chrome-gap cursor-pointer select-none list-none mb-chrome-gap" style="cursor:pointer;display:flex;align-items:center;gap:4px;">
+              <span class="text-ink-mute text-glyph transition-transform">▶</span>
+              <span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui" style="margin:0;">Response headers</span>
             </span>
-            <button class="btn-copyall" type="button">copy all</button>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:Inter,sans-serif;">(content hidden — click heading to expand)</div>
         </div>
@@ -386,24 +360,24 @@ authorization: Bearer ey…  <span class="o">authorization: Bearer eyJhbGciOiJSU
       <div class="card">
         <strong>D2 · ordering</strong> <span class="badge auto">settled: wire order</span>
         <div class="panel" style="margin-top:8px;max-width:none;">
-          <div class="ht-bar"><span class="sec-hd">Request headers</span><button class="btn-copyall" type="button">copy all</button></div>
-          <div class="ht-grid">
-            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
-            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
-            <span class="ht-key">authorization</span><span class="ht-val">Bearer …</span>
-            <span class="ht-key">x-forwarded-for</span><span class="ht-val">203.0.113.42</span>
+          <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Request headers</span><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button></div>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
+            <span class="text-ink-mute whitespace-nowrap text-value">host</span><span class="text-ink-body break-all text-value">api.example.com</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">authorization</span><span class="text-ink-body break-all text-value">Bearer …</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">x-forwarded-for</span><span class="text-ink-body break-all text-value">203.0.113.42</span>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>Wire order (settled).</strong> The array from the API is in capture order; that order is rendered verbatim. Shipped: <code>FlowDetail.tsx:22</code> uses <code>headers.map(…)</code> with no sort — confirmed. A proxy that reorders headers has altered the instrument of record; insertion order can be a bug signal.</p>
       </div>
       <div class="card">
-        <strong>alt: alphabetical sort</strong> <span class="badge warn">rejected</span>
+        <strong>alt: alphabetical sort</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;max-width:none;">
-          <div class="ht-grid">
-            <span class="ht-key">accept</span><span class="ht-val">*/*</span>
-            <span class="ht-key">authorization</span><span class="ht-val">Bearer …</span>
-            <span class="ht-key">content-type</span><span class="ht-val">application/json</span>
-            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
+            <span class="text-ink-mute whitespace-nowrap text-value">accept</span><span class="text-ink-body break-all text-value">*/*</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">authorization</span><span class="text-ink-body break-all text-value">Bearer …</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">host</span><span class="text-ink-body break-all text-value">api.example.com</span>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">Makes scanning for a known name easier, but silently destroys the wire order — a separate proxy-injected header that lands at an unusual position becomes invisible. The frame driver is trust, not convenience.</p>
@@ -413,22 +387,22 @@ authorization: Bearer ey…  <span class="o">authorization: Bearer eyJhbGciOiJSU
       <div class="card">
         <strong>D3 · copy-all button position</strong> <span class="badge auto">settled: top-right in sub-bar</span>
         <div class="panel" style="margin-top:8px;max-width:none;">
-          <div class="ht-bar"><span class="sec-hd">Request headers</span><button class="btn-copyall" type="button">copy all</button></div>
-          <div class="ht-grid">
-            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
-            <span class="ht-key">accept</span><span class="ht-val">*/*</span>
+          <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Request headers</span><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button></div>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
+            <span class="text-ink-mute whitespace-nowrap text-value">host</span><span class="text-ink-body break-all text-value">api.example.com</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">accept</span><span class="text-ink-body break-all text-value">*/*</span>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>Top-right in the sub-bar, against the heading (settled).</strong> The button's scope is the full set — pairing it with the heading that labels the set makes the scope unambiguous. Right-aligned keeps the reading flow undisturbed (heading reads left to right; action is at the far edge). Consistent with the shipped curl copy placement (<code>FlowDetail.tsx:89–103</code> — copy button right of the curl block label).</p>
       </div>
       <div class="card">
-        <strong>alt: below the rows</strong> <span class="badge warn">rejected</span>
+        <strong>alt: below the rows</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;max-width:none;">
-          <div class="ht-grid">
-            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
-            <span class="ht-key">accept</span><span class="ht-val">*/*</span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
+            <span class="text-ink-mute whitespace-nowrap text-value">host</span><span class="text-ink-body break-all text-value">api.example.com</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">accept</span><span class="text-ink-body break-all text-value">*/*</span>
           </div>
-          <div style="text-align:right;margin-top:6px;"><button class="btn-copyall" type="button">copy all</button></div>
+          <div style="text-align:right;margin-top:6px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button></div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">Placing the button below the rows means it scrolls out of view on a long set — the action disappears exactly when the set is largest. Also inconsistent with the scroll-cap design where the sub-bar sits above the scrollable region.</p>
       </div>
@@ -443,7 +417,7 @@ content-type: application/json
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>Wire format wins</strong> (moved here from the dissolved <a href="copy-all-headers-button.html">CopyAllHeadersButton</a> — HeaderTable owns the serialisation): <code>name: value\n</code> per pair is paste-ready everywhere (tickets, specs, curl), human-readable, and represents duplicates + order faithfully. The trailing newline lands the paste cursor on a fresh line — <code>join('\n') + '\n'</code>, one character.</p>
       </div>
       <div class="card">
-        <strong>alts: JSON · curl -H · tab-separated</strong> <span class="badge warn">rejected</span>
+        <strong>alts: JSON · curl -H · tab-separated</strong> <span class="badge text-warn">rejected</span>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:4px;"><strong>JSON object</strong> — needs transformation before use; cannot represent duplicate header names; key order implementation-dependent. <strong>curl -H flags</strong> — curl-only syntax; the full-request case is already served by copy-as-curl (<code>FlowDetail.tsx:51</code> / <code>toCurl</code>). <strong>Tab-separated</strong> — no ecosystem reads tabs as headers; pastes as broken text in most editors.</p>
       </div>
     </div>
@@ -499,46 +473,46 @@ content-type: application/json
       <div style="display:flex;gap:16px;flex-wrap:wrap;">
         <!-- Request leg -->
         <div class="panel" style="max-width:420px;flex:1;min-width:280px;">
-          <div class="ht-bar">
-            <span class="sec-hd">Request headers</span>
-            <button id="req-copyall" class="btn-copyall" type="button">copy all</button>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Request headers</span>
+            <button id="req-copyall" class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button>
           </div>
-          <div class="ht-grid" id="req-rows">
-            <span class="ht-key">host</span><span class="ht-val">api.example.com</span>
-            <span class="ht-key">content-type</span><span class="ht-val">application/json; charset=utf-8</span>
-            <span class="ht-key">authorization</span><span class="ht-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.dummysig</span>
-            <span class="ht-key">accept</span><span class="ht-val">application/json</span>
-            <span class="ht-key">x-request-id</span><span class="ht-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y" id="req-rows">
+            <span class="text-ink-mute whitespace-nowrap text-value">host</span><span class="text-ink-body break-all text-value">api.example.com</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json; charset=utf-8</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">authorization</span><span class="text-ink-body break-all text-value">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.dummysig</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">accept</span><span class="text-ink-body break-all text-value">application/json</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">x-request-id</span><span class="text-ink-body break-all text-value">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
           </div>
         </div>
         <!-- Response leg (long-set, scroll) -->
         <div class="panel" style="max-width:420px;flex:1;min-width:280px;">
-          <div class="ht-bar">
-            <span class="sec-hd">Response headers</span>
-            <button id="resp-copyall" class="btn-copyall" type="button">copy all</button>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Response headers</span>
+            <button id="resp-copyall" class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button>
           </div>
-          <div class="ht-scroll ht-grid" id="resp-rows">
-            <span class="ht-key">content-type</span><span class="ht-val">application/json; charset=utf-8</span>
-            <span class="ht-key">content-length</span><span class="ht-val">14820</span>
-            <span class="ht-key">cache-control</span><span class="ht-val">no-store, no-cache, must-revalidate, proxy-revalidate</span>
-            <span class="ht-key">set-cookie</span><span class="ht-val">session=eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.sig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
-            <span class="ht-key">x-trace-id</span><span class="ht-val">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
-            <span class="ht-key">x-ratelimit-limit</span><span class="ht-val">100</span>
-            <span class="ht-key">x-ratelimit-remaining</span><span class="ht-val">47</span>
-            <span class="ht-key">x-ratelimit-reset</span><span class="ht-val">1721649260</span>
-            <span class="ht-key">strict-transport-security</span><span class="ht-val">max-age=31536000; includeSubDomains; preload</span>
-            <span class="ht-key">access-control-allow-origin</span><span class="ht-val">https://app.example.com</span>
-            <span class="ht-key">vary</span><span class="ht-val">Accept-Encoding, Accept-Language</span>
+          <div class="max-h-[200px] overflow-y-auto grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y" id="resp-rows">
+            <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json; charset=utf-8</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">content-length</span><span class="text-ink-body break-all text-value">14820</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">cache-control</span><span class="text-ink-body break-all text-value">no-store, no-cache, must-revalidate, proxy-revalidate</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">set-cookie</span><span class="text-ink-body break-all text-value">session=eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.sig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">x-trace-id</span><span class="text-ink-body break-all text-value">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">x-ratelimit-limit</span><span class="text-ink-body break-all text-value">100</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">x-ratelimit-remaining</span><span class="text-ink-body break-all text-value">47</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">x-ratelimit-reset</span><span class="text-ink-body break-all text-value">1721649260</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">strict-transport-security</span><span class="text-ink-body break-all text-value">max-age=31536000; includeSubDomains; preload</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">access-control-allow-origin</span><span class="text-ink-body break-all text-value">https://app.example.com</span>
+            <span class="text-ink-mute whitespace-nowrap text-value">vary</span><span class="text-ink-body break-all text-value">Accept-Encoding, Accept-Language</span>
           </div>
           <div style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;margin-top:4px;">↓ scroll for more rows</div>
         </div>
         <!-- Empty leg -->
         <div class="panel" style="max-width:260px;flex:0 0 auto;">
-          <div class="ht-bar">
-            <span class="sec-hd">Trailer headers</span>
-            <button class="btn-copyall s-disabled" type="button" disabled>copy all</button>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Trailer headers</span>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none opacity-disabled pointer-events-none" type="button" disabled>copy all</button>
           </div>
-          <p class="ht-none">none</p>
+          <p class="text-ink-mute text-body font-ui">none</p>
         </div>
       </div>
       <div class="caption" style="color:var(--muted);font-size:12px;margin-top:8px;">Interactive specimen — "copy all" buttons are live (click to copy wire-format text to clipboard, ~2 s confirmation). Response leg shows the scroll cap. Trailer leg shows the empty state. Drag-select any value for native partial-take. Rendered in the app's Warp tokens.</div>
@@ -552,19 +526,30 @@ content-type: application/json
       const rows = document.getElementById(rowsId);
       if (!btn || !rows) return;
       let timer;
-      function flash(label, cls) {
+      // A tone class and the resting class set the same property, so the state
+      // swaps them — appending would lose to whichever Tailwind emits last.
+      const REST = ['text-ink-mute', 'border-hairline'];
+      const CONFIRM = ['text-ok', 'border-ok'];
+      const ERROR = ['text-warn', 'border-warn'];
+      function flash(label, tone) {
         btn.textContent = label;
-        btn.classList.add(cls);
+        btn.classList.remove(...REST);
+        btn.classList.add(...tone);
         clearTimeout(timer);
-        timer = setTimeout(() => { btn.textContent = 'copy all'; btn.classList.remove('s-confirm', 's-error'); }, 2000);
+        timer = setTimeout(() => {
+          btn.textContent = 'copy all';
+          btn.classList.remove(...CONFIRM, ...ERROR);
+          btn.classList.add(...REST);
+        }, 2000);
       }
       btn.addEventListener('click', () => {
-        const keys = rows.querySelectorAll('.ht-key');
-        const vals = rows.querySelectorAll('.ht-val');
+        // The grid is strictly key, value, key, value — the two-column contract is the selector.
+        const keys = rows.querySelectorAll(':scope > :nth-child(odd)');
+        const vals = rows.querySelectorAll(':scope > :nth-child(even)');
         const lines = [];
         keys.forEach((k, i) => lines.push(k.textContent.trim() + ': ' + (vals[i]?.textContent.trim() ?? '')));
         const text = lines.join('\n') + '\n';
-        navigator.clipboard?.writeText(text).then(() => flash('copied', 's-confirm'), () => flash('failed', 's-error'));
+        navigator.clipboard?.writeText(text).then(() => flash('copied', CONFIRM), () => flash('failed', ERROR));
       });
     }
     makeCopyAll('req-copyall', 'req-rows');

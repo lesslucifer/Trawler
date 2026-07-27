@@ -4,19 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — Section component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-strong:#dad2c1;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
     /* panel shells */
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
     .panel .sec-title{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:8px;font-family:Inter,system-ui,sans-serif;}
     .panel .sec-content{color:var(--a-body);}
-    /* stack of Sections */
-    .sec-stack{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;overflow:hidden;max-width:460px;}
-    .sec-block{border-bottom:1px solid var(--a-line);padding:10px 14px;}
-    .sec-block:last-child{border-bottom:none;}
     .sec-block .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:8px;font-family:Inter,system-ui,sans-serif;}
     .sec-block .body{color:var(--a-body);font-family:"DM Mono",ui-monospace,monospace;font-size:12px;}
     /* part grid */
@@ -38,13 +35,9 @@
     .fork-row{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
     .fork-card{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
     .fork-card .cap{font-size:12px;color:var(--muted);margin-top:8px;}
-    /* placeholder content lines inside specimens */
-    .pl{color:var(--a-body);font-family:"DM Mono",ui-monospace,monospace;font-size:11px;}
-    .pl-mute{color:var(--a-mute);font-family:"DM Mono",ui-monospace,monospace;font-size:11px;}
     /* flow-ex */
     .flow-ex{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;}
-    .flow-ex .arr{color:var(--muted);font-size:11px;white-space:nowrap;padding-top:4px;}
-  </style>
+    .flow-ex .arr{color:var(--muted);font-size:11px;white-space:nowrap;padding-top:4px;}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -79,20 +72,20 @@
 
     <h2 id="anatomy">Anatomy — the parts you see</h2>
     <div class="app" data-c="anatomy-specimen">
-      <div class="sec-stack">
-        <div class="sec-block">
+      <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]">
+        <div class="border-b border-hairline px-4 py-3 last:border-b-0">
           <div class="lbl">Request <span class="anno">1</span></div>
-          <div class="body"><span class="pl">https://api.example.com/v2/orders/8f3a91c2</span></div>
+          <div class="body"><span class="text-ink-body font-mono text-chrome">https://api.example.com/v2/orders/8f3a91c2</span></div>
           <!-- hairline shown as border-bottom on sec-block ↑ -->
           <!-- padding annotation: anno 2 (horizontal) and anno 3 (vertical) handled in part blocks below -->
         </div>
-        <div class="sec-block">
+        <div class="border-b border-hairline px-4 py-3 last:border-b-0">
           <div class="lbl">Response headers <span class="anno">1</span></div>
-          <div class="body"><span class="pl-mute">content-type</span>&nbsp;&nbsp;<span class="pl">application/json</span></div>
+          <div class="body"><span class="text-ink-mute font-mono text-chrome">content-type</span>&nbsp;&nbsp;<span class="text-ink-body font-mono text-chrome">application/json</span></div>
         </div>
-        <div class="sec-block" style="border-bottom:none;">
+        <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
           <div class="lbl">Body</div>
-          <div class="body"><span class="pl">{"status":"ok"}</span></div>
+          <div class="body"><span class="text-ink-body font-mono text-chrome">{"status":"ok"}</span></div>
         </div>
       </div>
       <div style="margin-top:8px;font-size:11px;color:var(--muted);">Three Sections stacked — the hairline <span class="anno">3</span> between them is Section's own bottom border; the last one carries none.</div>
@@ -100,8 +93,8 @@
     <div class="app parts" data-c="anatomy-parts">
       <div class="part">
         <div class="ex">
-          <div class="sec-stack">
-            <div class="sec-block" style="border-bottom:none;">
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
               <div class="lbl">Request headers</div>
             </div>
           </div>
@@ -117,10 +110,10 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="sec-stack" style="max-width:none;">
-            <div class="sec-block" style="border-bottom:none;background:rgba(174,166,156,.07);">
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="max-width:none;">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;background:rgba(174,166,156,.07);">
               <div class="lbl" style="opacity:0.3;">Request</div>
-              <div class="body"><span class="pl">…content slot…</span></div>
+              <div class="body"><span class="text-ink-body font-mono text-chrome">…content slot…</span></div>
             </div>
           </div>
           <div class="cap">content slot: fully transparent — Section contributes nothing to how its children lay out</div>
@@ -135,14 +128,14 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="sec-stack">
-            <div class="sec-block">
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
               <div class="lbl">Request</div>
-              <div class="body"><span class="pl">…content…</span></div>
+              <div class="body"><span class="text-ink-body font-mono text-chrome">…content…</span></div>
             </div>
-            <div class="sec-block" style="border-bottom:none;">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
               <div class="lbl">Response</div>
-              <div class="body"><span class="pl">…content…</span></div>
+              <div class="body"><span class="text-ink-body font-mono text-chrome">…content…</span></div>
             </div>
           </div>
           <div class="cap">hairline between zones — a 1 px bottom border on every Section except the last in its stack</div>
@@ -157,10 +150,10 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="sec-stack">
-            <div class="sec-block" style="border-bottom:none;">
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
               <div class="lbl">Body</div>
-              <div class="body" style="padding:6px 0;"><span class="pl">…content…</span></div>
+              <div class="body" style="padding:6px 0;"><span class="text-ink-body font-mono text-chrome">…content…</span></div>
             </div>
           </div>
           <div class="cap">horizontal: 16 px, vertical: 12 px — matches the shipped <code>px-4 py-3</code></div>
@@ -181,13 +174,13 @@
       <div class="part">
         <div class="ex">
           <div class="flow-ex">
-            <div class="sec-stack" style="width:160px;">
-              <div class="sec-block" style="border-bottom:none;">
+            <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="width:160px;">
+              <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
                 <div class="lbl">Body</div>
-                <div class="body" style="height:60px;overflow:auto;font-size:10px;"><span class="pl">{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7}</span></div>
+                <div class="body" style="height:60px;overflow:auto;font-size:10px;"><span class="text-ink-body font-mono text-chrome">{"a":1,"b":2,"c":3,"d":4,"e":5,"f":6,"g":7}</span></div>
               </div>
             </div>
-            <span class="arr">content scrolls ▸ Section does not</span>
+            <span class="text-ink-mute text-chrome">content scrolls ▸ Section does not</span>
           </div>
           <div class="cap">the BodyViewer inside scrolls; Section's border stays fixed — the scroll bubble belongs to the content, not the container</div>
         </div>
@@ -201,14 +194,14 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="sec-stack" style="max-width:none;">
-            <div class="sec-block" style="border-bottom:none;">
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="max-width:none;">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
               <div class="lbl">Request headers</div>
               <div class="body" style="font-size:10px;">
                 <div style="display:grid;grid-template-columns:auto 1fr;gap:2px 8px;">
-                  <span class="pl-mute">content-type</span><span class="pl">application/json</span>
-                  <span class="pl-mute">authorization</span><span class="pl">Bearer eyJhbGc…</span>
-                  <span class="pl-mute">x-request-id</span><span class="pl">8f3a91c2-4d3b</span>
+                  <span class="text-ink-mute font-mono text-chrome">content-type</span><span class="text-ink-body font-mono text-chrome">application/json</span>
+                  <span class="text-ink-mute font-mono text-chrome">authorization</span><span class="text-ink-body font-mono text-chrome">Bearer eyJhbGc…</span>
+                  <span class="text-ink-mute font-mono text-chrome">x-request-id</span><span class="text-ink-body font-mono text-chrome">8f3a91c2-4d3b</span>
                 </div>
               </div>
             </div>
@@ -225,14 +218,14 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="sec-stack">
-            <div class="sec-block">
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
               <div class="lbl">Request</div>
-              <div class="body"><span class="pl">…</span></div>
+              <div class="body"><span class="text-ink-body font-mono text-chrome">…</span></div>
             </div>
-            <div class="sec-block" style="border-bottom:none;">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
               <div class="lbl">Response</div>
-              <div class="body"><span class="pl">…</span></div>
+              <div class="body"><span class="text-ink-body font-mono text-chrome">…</span></div>
             </div>
           </div>
           <div class="cap">two Sections — each owned by the parent stack, never nested inside each other</div>
@@ -250,17 +243,17 @@
     <h2 id="states">States</h2>
     <div class="app swatches" data-c="states">
       <div class="swatch">
-        <div class="sec-stack">
-          <div class="sec-block" style="border-bottom:none;">
+        <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]">
+          <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
             <div class="lbl">Request</div>
-            <div class="body"><span class="pl">https://api.example.com/v2/orders/8f3a91c2</span></div>
+            <div class="body"><span class="text-ink-body font-mono text-chrome">https://api.example.com/v2/orders/8f3a91c2</span></div>
           </div>
         </div>
         <div class="cap"><strong>default (only state)</strong> — heading muted, content slot open, hairline below</div>
       </div>
       <div class="swatch">
-        <div class="sec-stack">
-          <div class="sec-block" style="border-bottom:none;">
+        <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]">
+          <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
             <div class="lbl">Body</div>
             <div class="body" style="color:var(--a-mute);font-family:'DM Mono',monospace;font-size:11px;">awaiting response…</div>
           </div>
@@ -279,26 +272,26 @@
     <div class="fork-row app" data-c="f1">
       <div class="fork-card">
         <strong>F1 · decoration model</strong> <span class="badge auto">settled: hairline only</span>
-        <div class="sec-stack" style="margin-top:8px;">
-          <div class="sec-block">
+        <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="margin-top:8px;">
+          <div class="border-b border-hairline px-4 py-3 last:border-b-0">
             <div class="lbl">Request</div>
-            <div class="body"><span class="pl">…content…</span></div>
+            <div class="body"><span class="text-ink-body font-mono text-chrome">…content…</span></div>
           </div>
-          <div class="sec-block" style="border-bottom:none;">
+          <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
             <div class="lbl">Response</div>
-            <div class="body"><span class="pl">…content…</span></div>
+            <div class="body"><span class="text-ink-body font-mono text-chrome">…content…</span></div>
           </div>
         </div>
         <p class="cap"><strong>Hairline only.</strong> The <code>border-b border-hairline</code> on the bottom edge of each zone is the seam; no background fill, no card border, no shadow. Frame driver ⑤ + the shipped code (<code>FlowDetail.tsx:9</code>) both confirm this. The panel already has an outer shell; adding per-zone card borders would nest boxes.</p>
       </div>
       <div class="fork-card">
-        <strong>alt: card per zone</strong> <span class="badge warn">rejected</span>
-        <div class="sec-stack" style="margin-top:8px;padding:8px;gap:8px;display:flex;flex-direction:column;border-radius:8px;">
+        <strong>alt: card per zone</strong> <span class="badge text-warn">rejected</span>
+        <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="margin-top:8px;padding:8px;gap:8px;display:flex;flex-direction:column;border-radius:8px;">
           <div style="background:var(--a-soft);border-radius:6px;padding:8px 10px;border:1px solid var(--a-line);">
-            <div class="lbl">Request</div><div class="body"><span class="pl">…content…</span></div>
+            <div class="lbl">Request</div><div class="body"><span class="text-ink-body font-mono text-chrome">…content…</span></div>
           </div>
           <div style="background:var(--a-soft);border-radius:6px;padding:8px 10px;border:1px solid var(--a-line);">
-            <div class="lbl">Response</div><div class="body"><span class="pl">…content…</span></div>
+            <div class="lbl">Response</div><div class="body"><span class="text-ink-body font-mono text-chrome">…content…</span></div>
           </div>
         </div>
         <p class="cap">Each zone as a rounded card with a soft fill. Heavier chrome, nested boxes — the panel outer frame already provides the card boundary. The shipped code never uses this form.</p>
@@ -307,20 +300,20 @@
     <div class="fork-row app" data-c="f2">
       <div class="fork-card">
         <strong>F2 · last-Section hairline</strong> <span class="badge auto">settled: consumer removes it</span>
-        <div class="sec-stack" style="margin-top:8px;">
-          <div class="sec-block">
+        <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="margin-top:8px;">
+          <div class="border-b border-hairline px-4 py-3 last:border-b-0">
             <div class="lbl">Request</div>
-            <div class="body"><span class="pl">…content…</span></div>
+            <div class="body"><span class="text-ink-body font-mono text-chrome">…content…</span></div>
           </div>
-          <div class="sec-block" style="border-bottom:2px dashed var(--a-warn);">
+          <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:2px dashed var(--a-warn);">
             <div class="lbl">Body</div>
-            <div class="body"><span class="pl">…content…</span></div>
+            <div class="body"><span class="text-ink-body font-mono text-chrome">…content…</span></div>
           </div>
         </div>
         <p class="cap"><strong>Every Section carries <code>border-b</code>; the consumer (the scroll-container parent) uses <code>overflow:hidden</code> on the outer shell to clip the last hairline, or the last Section is passed a prop or class override.</strong> The simplest contract: Section always has the separator, and the outer panel clips or the last child overrides. The shipped code's outer <code>overflow-auto</code> div serves as the clip boundary; the last <code>border-b</code> disappears at the scroll edge.</p>
       </div>
       <div class="fork-card">
-        <strong>alt: Section auto-detects last sibling</strong> <span class="badge warn">rejected</span>
+        <strong>alt: Section auto-detects last sibling</strong> <span class="badge text-warn">rejected</span>
         <p class="cap">Using <code>:last-child</code> CSS or JS to suppress the bottom border internally. Fragile if a sibling is conditionally rendered and becomes last; the component would need to know about its siblings' rendering — that is coupling that belongs outside.</p>
       </div>
     </div>
@@ -330,30 +323,30 @@
         <span class="badge id">reopened W5 · <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·3</a> · <a href="../2026-07-26-dflow-w4-run-3.html#findings">r3·16</a></span>
         <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">
           <div>
-            <div class="sec-stack" style="max-width:210px;">
-              <div class="sec-block">
+            <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="max-width:210px;">
+              <div class="border-b border-hairline px-4 py-3 last:border-b-0">
                 <div class="lbl">Request</div>
-                <div class="body"><span class="pl">…</span></div>
+                <div class="body"><span class="text-ink-body font-mono text-chrome">…</span></div>
               </div>
-              <div class="sec-block" style="border-bottom:none;">
+              <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
                 <div class="lbl">Response</div>
-                <div class="body"><span class="pl">…</span></div>
+                <div class="body"><span class="text-ink-body font-mono text-chrome">…</span></div>
               </div>
             </div>
             <div style="font-size:10px;color:var(--a-mute);margin-top:4px;font-family:Inter,system-ui,sans-serif;">default — one level, <code>h2</code> each</div>
           </div>
           <div>
-            <div class="sec-stack" style="max-width:210px;">
-              <div class="sec-block" style="padding-bottom:0;">
+            <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="max-width:210px;">
+              <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="padding-bottom:0;">
                 <div class="lbl" style="color:var(--a-strong,#dad2c1);">Request</div>
                 <div style="margin:0 -14px;">
-                  <div class="sec-block" style="padding-left:14px;">
+                  <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="padding-left:14px;">
                     <div class="lbl">headers</div>
-                    <div class="body"><span class="pl">…</span></div>
+                    <div class="body"><span class="text-ink-body font-mono text-chrome">…</span></div>
                   </div>
-                  <div class="sec-block" style="padding-left:14px;border-bottom:none;">
+                  <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="padding-left:14px;border-bottom:none;">
                     <div class="lbl">body</div>
-                    <div class="body"><span class="pl">…</span></div>
+                    <div class="body"><span class="text-ink-body font-mono text-chrome">…</span></div>
                   </div>
                 </div>
               </div>
@@ -366,11 +359,11 @@
         <strong>Second form: <code>variant="band"</code>.</strong> A band renders its label as the group's <code>&lt;h2&gt;</code> and the Sections it contains as <code>&lt;h3&gt;</code>. Two grouping levels, and <em>still no nesting</em> — the No-nesting rule bans a Section inside another Section's <strong>content slot</strong>, which is where the padding doubles and the heading levels collapse. A band's members sit in a dedicated group slot that carries no padding of its own: the band contributes the label and the outer hairline, the members contribute their own. <strong>Exactly two levels exist. A band inside a band is still forbidden</strong>, and that is what keeps the heading hierarchy finite.</p>
       </div>
       <div class="fork-card">
-        <strong>alt: free <code>level</code> prop (h2/h3/h4)</strong> <span class="badge warn">rejected — still</span>
+        <strong>alt: free <code>level</code> prop (h2/h3/h4)</strong> <span class="badge text-warn">rejected — still</span>
         <p class="cap">An open-ended heading level is what the original F3 rejected, and it stays rejected: it makes every call site decide a level, which is how heading hierarchies drift, and it implies arbitrary nesting depth. <code>variant="band"</code> gives the two levels a real screen needs and refuses the third — the level is derived from the variant, never passed.</p>
       </div>
       <div class="fork-card">
-        <strong>alt: the screen renders the band itself</strong> <span class="badge warn">rejected</span>
+        <strong>alt: the screen renders the band itself</strong> <span class="badge text-warn">rejected</span>
         <p class="cap">What run #3 actually did — its zone label became screen-owned markup above the Section stack (<a href="../2026-07-26-dflow-w4-run-3.html#findings">r3·16</a>), and run #2's two-leg panel would have needed the same. Rejected because it makes group-level heading typography a per-screen decision, which is the exact drift <strong>this component exists to prevent</strong> (frame driver ①). A label that every stacking screen must draw itself is a component gap, not a screen responsibility.</p>
       </div>
     </div>
@@ -432,28 +425,28 @@
     <h2 id="specimen">Live specimen — the closing example</h2>
     <div class="app" data-c="specimen">
       <div style="background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;overflow:hidden;max-width:500px;font-family:Inter,system-ui,sans-serif;font-size:13px;color:var(--a-ink);">
-        <div class="sec-block">
+        <div class="border-b border-hairline px-4 py-3 last:border-b-0">
           <div class="lbl">Request</div>
           <div class="body">
-            <span class="pl">GET&nbsp;</span><span class="pl">https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing</span>
+            <span class="text-ink-body font-mono text-chrome">GET&nbsp;</span><span class="text-ink-body font-mono text-chrome">https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing</span>
           </div>
         </div>
-        <div class="sec-block">
+        <div class="border-b border-hairline px-4 py-3 last:border-b-0">
           <div class="lbl">Request headers</div>
           <div class="body" style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:11px;">
-            <span class="pl-mute">accept</span><span class="pl">application/json</span>
-            <span class="pl-mute">authorization</span><span class="pl">Bearer eyJhbGciOiJIUzI1NiJ9…</span>
-            <span class="pl-mute">x-request-id</span><span class="pl">8f3a91c2-4d3b-41a2-bc7e</span>
+            <span class="text-ink-mute font-mono text-chrome">accept</span><span class="text-ink-body font-mono text-chrome">application/json</span>
+            <span class="text-ink-mute font-mono text-chrome">authorization</span><span class="text-ink-body font-mono text-chrome">Bearer eyJhbGciOiJIUzI1NiJ9…</span>
+            <span class="text-ink-mute font-mono text-chrome">x-request-id</span><span class="text-ink-body font-mono text-chrome">8f3a91c2-4d3b-41a2-bc7e</span>
           </div>
         </div>
-        <div class="sec-block">
+        <div class="border-b border-hairline px-4 py-3 last:border-b-0">
           <div class="lbl">Response headers</div>
           <div class="body" style="display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:11px;">
-            <span class="pl-mute">content-type</span><span class="pl">application/json; charset=utf-8</span>
-            <span class="pl-mute">content-length</span><span class="pl">4218</span>
+            <span class="text-ink-mute font-mono text-chrome">content-type</span><span class="text-ink-body font-mono text-chrome">application/json; charset=utf-8</span>
+            <span class="text-ink-mute font-mono text-chrome">content-length</span><span class="text-ink-body font-mono text-chrome">4218</span>
           </div>
         </div>
-        <div class="sec-block" style="border-bottom:none;">
+        <div class="border-b border-hairline px-4 py-3 last:border-b-0" style="border-bottom:none;">
           <div class="lbl">Body</div>
           <div class="body" style="font-size:11px;color:var(--a-ok);">{"items":[{"id":"p1","qty":2},{"id":"p7","qty":1}],"total":89.00}</div>
         </div>

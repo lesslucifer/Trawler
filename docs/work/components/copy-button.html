@@ -4,28 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — CopyButton component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
     .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
-    /* CopyButton styles */
-    .cb{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--a-line);border-radius:3px;font-family:Inter,system-ui,sans-serif;font-size:11.5px;color:var(--a-mute);cursor:pointer;background:transparent;user-select:none;white-space:nowrap;}
-    .cb:hover,.cb.s-hover{color:var(--a-ink);border-color:var(--a-mute);}
-    .cb:focus-visible,.cb.s-focus{outline:1px solid var(--a-mute);outline-offset:2px;color:var(--a-ink);}
-    .cb.s-active{color:var(--a-ink);background:rgba(174,166,156,.12);}
-    .cb.s-confirm{color:var(--a-ok);border-color:var(--a-ok);}
-    .cb.s-error{color:var(--a-warn);border-color:var(--a-warn);}
-    .cb:disabled,.cb.s-disabled{opacity:.38;pointer-events:none;}
-    .cb .cb-icon{font-size:12px;line-height:1;}
-    /* Button's box, drawn here only to show the shell CopyButton composes (D4) */
-    .bt-like{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:3px 9px;min-height:24px;border:1px solid var(--a-line);border-radius:3px;font-family:Inter,system-ui,sans-serif;font-size:11.5px;color:var(--a-body);background:transparent;cursor:pointer;}
-    /* icon-only form — fork D2b. 24px square: generous-targets' floor, and BodyViewer's own size=24 spec row */
-    .cb-icon-only{width:24px;height:24px;padding:0;gap:0;justify-content:center;font-size:13px;}
-    /* subbar context strip */
-    .subbar{display:flex;align-items:center;gap:8px;padding:4px 8px;border-bottom:1px solid var(--a-line);font-family:Inter,system-ui,sans-serif;}
     .subbar .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--a-mute);}
     /* shared swatch/part grid from exemplar */
     .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
@@ -48,8 +34,7 @@
     /* contrast comparison strip used in fork D2 */
     .contrast-strip{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
     .contrast-strip .item{flex:1;min-width:120px;}
-    .contrast-strip .item .lbl2{font-size:10px;color:var(--muted);margin-bottom:4px;}
-  </style>
+    .contrast-strip .item .lbl2{font-size:10px;color:var(--muted);margin-bottom:4px;}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -84,10 +69,10 @@
 
     <h2 id="anatomy">Anatomy — the parts you see</h2>
     <div class="app" data-c="anatomy-specimen">
-      <div class="subbar">
+      <div class="flex items-center gap-2 px-chrome-x py-chrome-y border-b border-hairline font-ui">
         <span class="lbl">Copy as curl</span>
-        <button class="cb s-confirm" type="button" aria-label="copy curl command">
-          <span class="cb-icon">⧉</span> copied<span class="anno">3</span>
+        <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ok border-ok" type="button" aria-label="copy curl command">
+          <span class="text-body leading-none">⧉</span> copied<span class="anno">3</span>
         </button>
         <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">← label<span class="anno">1</span> + icon<span class="anno">2</span> in confirming state</span>
       </div>
@@ -96,9 +81,9 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="subbar" style="border-bottom:none;padding:0;gap:6px;">
-              <button class="cb" type="button">copy curl</button>
-              <button class="cb" type="button">copy body</button>
+            <div class="flex items-center gap-2 px-chrome-x py-chrome-y border-b border-hairline font-ui" style="border-bottom:none;padding:0;gap:6px;">
+              <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
+              <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy body</button>
             </div>
           </div>
           <div class="cap">two CopyButtons in the same sub-bar: label names the payload — "curl", "body"</div>
@@ -114,9 +99,9 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="padding:8px;display:flex;gap:8px;align-items:center;">
-            <button class="cb" type="button"><span class="cb-icon">⧉</span> copy curl</button>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button"><span class="text-body leading-none">⧉</span> copy curl</button>
             <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">← with icon</span>
-            <button class="cb" type="button">copy curl</button>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
             <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">← label-only</span>
           </div>
           <div class="cap">in the labelled form the icon is optional and label-only is the minimum. Icon-only is a separate form, gated on adjacency (D2b).</div>
@@ -132,7 +117,7 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="padding:8px;display:flex;gap:8px;align-items:center;">
-            <button class="cb s-confirm" type="button"><span class="cb-icon">⧉</span> copied</button>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ok border-ok" type="button"><span class="text-body leading-none">⧉</span> copied</button>
           </div>
           <div class="cap">confirming: label swapped, border + text go ok-tone for ~2 s</div>
         </div>
@@ -152,9 +137,9 @@
       <div class="part">
         <div class="ex">
           <div class="flow-ex">
-            <div class="panel" style="padding:6px 10px;"><button class="cb" type="button">copy curl</button></div>
-            <span class="arr">click / Enter ▸</span>
-            <div class="panel" style="padding:6px 10px;"><button class="cb s-confirm" type="button">copied</button></div>
+            <div class="panel" style="padding:6px 10px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button></div>
+            <span class="text-ink-mute text-chrome">click / Enter ▸</span>
+            <div class="panel" style="padding:6px 10px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ok border-ok" type="button">copied</button></div>
           </div>
           <div class="cap">one click writes the payload and immediately shows "copied" (if write succeeds)</div>
         </div>
@@ -183,11 +168,11 @@
       <div class="part">
         <div class="ex">
           <div class="flow-ex">
-            <div class="panel" style="padding:6px 10px;"><button class="cb" type="button">copy curl</button></div>
-            <span class="arr">OS denies ▸</span>
-            <div class="panel" style="padding:6px 10px;"><button class="cb s-error" type="button">failed</button></div>
-            <span class="arr">~2 s ▸</span>
-            <div class="panel" style="padding:6px 10px;"><button class="cb" type="button">copy curl</button></div>
+            <div class="panel" style="padding:6px 10px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button></div>
+            <span class="text-ink-mute text-chrome">OS denies ▸</span>
+            <div class="panel" style="padding:6px 10px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-warn border-warn" type="button">failed</button></div>
+            <span class="text-ink-mute text-chrome">~2 s ▸</span>
+            <div class="panel" style="padding:6px 10px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button></div>
           </div>
           <div class="cap">write fails → label swaps to "failed", warn tone, ~2 s, then auto-reverts — same rhythm as confirm</div>
         </div>
@@ -220,7 +205,7 @@
             <div class="panel" style="padding:6px 10px;display:flex;gap:8px;align-items:center;">
               <span style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;">curl:</span>
               <pre style="font-size:10.5px;font-family:'DM Mono',monospace;color:var(--a-body);margin:0;white-space:pre-wrap;word-break:break-all;flex:1;">curl -x http://127.0.0.1:7420 -i 'https://api.example.com/v2/orders/…'</pre>
-              <button class="cb" type="button">copy curl</button>
+              <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
             </div>
           </div>
           <div class="cap">curl display + CopyButton side by side: the payload description lives in the section, the button copies it</div>
@@ -238,46 +223,46 @@
     <h2 id="states">States</h2>
     <div class="app swatches" data-c="states">
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb" type="button">copy curl</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button></div>
         <div class="cap"><strong>rest</strong> — muted text, hairline border</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-hover" type="button">copy curl</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink border-ink-mute" type="button">copy curl</button></div>
         <div class="cap"><strong>hover</strong> — ink text, mute border (strengthens, ink-toned — zero chromatic accent)</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-focus" type="button">copy curl</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none outline outline-1 outline-ink-mute outline-offset-2 text-ink" type="button">copy curl</button></div>
         <div class="cap"><strong>focus</strong> — 1 px mute outline (ink-toned, not colored — zero-accent rule)</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-active" type="button">copy curl</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink bg-wash-tint" type="button">copy curl</button></div>
         <div class="cap"><strong>active</strong> — tinted fill, ink text (press-down acknowledgment; brief)</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-confirm" type="button">copied</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ok border-ok" type="button">copied</button></div>
         <div class="cap"><strong>confirming</strong> — ok-tone text + border, label "copied", ~2 s then reverts. Only on successful write.</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-error" type="button">failed</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-warn border-warn" type="button">failed</button></div>
         <div class="cap"><strong>error</strong> — warn-tone text + border, label "failed", ~2 s then reverts. Only on failed write (review 2026-07-23).</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-disabled" type="button" disabled>copy curl</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none opacity-disabled pointer-events-none" type="button" disabled>copy curl</button></div>
         <div class="cap"><strong>disabled</strong> — 38% opacity. Only when there is nothing to copy (e.g. body not yet captured).</div>
       </div>
     </div>
     <p style="color:var(--muted);font-size:12px;margin-top:4px;">The icon-only form (D2b) carries the same seven states at 24 px square. Only the two transient ones look different, because there is no label to swap:</p>
     <div class="app swatches" data-c="states-icon">
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb cb-icon-only" type="button" title="copy body" aria-label="copy body">⧉</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" type="button" title="copy body" aria-label="copy body">⧉</button></div>
         <div class="cap"><strong>rest</strong> — ⧉ glyph, muted, hairline border. The payload is the pane below it; <code>title</code> + <code>aria-label</code> carry the name the label would.</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb cb-icon-only s-confirm" type="button" title="copied" aria-label="copied">✓</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg text-ok border-ok" type="button" title="copied" aria-label="copied">✓</button></div>
         <div class="cap"><strong>confirming</strong> — glyph swaps ⧉ → ✓ at ok tone, ~2 s, same timer rules as the label swap. No width change: the box was already square.</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb cb-icon-only s-error" type="button" title="copy failed" aria-label="copy failed">⚠</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg text-warn border-warn" type="button" title="copy failed" aria-label="copy failed">⚠</button></div>
         <div class="cap"><strong>error</strong> — glyph swaps to ⚠ at warn tone, ~2 s. The <code>aria-live</code> announcement is what carries "failed" to a screen reader — the glyph alone never states the outcome.</div>
       </div>
     </div>
@@ -292,11 +277,11 @@
         <strong>D1 · confirm form: label-swap vs chip</strong> <span class="badge auto">settled: label-swap</span>
         <div class="panel" style="margin-top:8px;padding:6px 10px;">
           <div class="flow-ex">
-            <button class="cb" type="button">copy curl</button>
-            <span class="arr">click ▸</span>
-            <button class="cb s-confirm" type="button">copied</button>
-            <span class="arr">~2 s ▸</span>
-            <button class="cb" type="button">copy curl</button>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
+            <span class="text-ink-mute text-chrome">click ▸</span>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ok border-ok" type="button">copied</button>
+            <span class="text-ink-mute text-chrome">~2 s ▸</span>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
@@ -306,15 +291,15 @@
         </p>
       </div>
       <div class="card">
-        <strong>alt: chip after the button</strong> <span class="badge warn">rejected</span>
+        <strong>alt: chip after the button</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;">
-          <button class="cb" type="button">copy curl</button>
+          <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
           <span style="display:inline-block;font-size:10px;line-height:16px;color:var(--a-ok);border:1px solid var(--a-ok);border-radius:999px;padding:0 6px;font-family:Inter,sans-serif;">copied</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">Appending a chip outside the button is DOM outside the hit zone — reflows the sub-bar, adds a second element to manage, and makes the button narrower than needed while the chip floats. The label-swap keeps everything inside the button.</p>
       </div>
       <div class="card">
-        <strong>alt: toast</strong> <span class="badge warn">rejected</span>
+        <strong>alt: toast</strong> <span class="badge text-warn">rejected</span>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:4px;">A distant toast breaks the "verify without looking away" frame driver. Not considered further.</p>
       </div>
     </div>
@@ -324,8 +309,8 @@
         <strong>D2 · which forms exist</strong> <span class="badge auto">settled: two forms — labelled (default) · icon-only under the adjacency test</span>
         <span class="badge id">reopened W5 · r2·27 · r2·28 · r3·17 · r3·21</span>
         <div class="panel" style="margin-top:8px;padding:6px 10px;display:flex;gap:8px;align-items:center;">
-          <button class="cb" type="button"><span class="cb-icon">⧉</span> copy curl</button>
-          <button class="cb" type="button">copy curl</button>
+          <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button"><span class="text-body leading-none">⧉</span> copy curl</button>
+          <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
           <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">labelled — icon optional</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
@@ -335,8 +320,8 @@
       <div class="card">
         <strong>D2b · icon-only form</strong> <span class="badge auto">settled: allowed when the payload is adjacent</span>
         <div class="panel" style="margin-top:8px;padding:6px 10px;display:flex;gap:8px;align-items:center;">
-          <button class="cb cb-icon-only" type="button" title="copy body" aria-label="copy body">⧉</button>
-          <button class="cb cb-icon-only s-confirm" type="button" title="copied" aria-label="copied">✓</button>
+          <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" type="button" title="copy body" aria-label="copy body">⧉</button>
+          <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg text-ok border-ok" type="button" title="copied" aria-label="copied">✓</button>
           <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">24 px square · tooltip + aria-label mandatory · ✓ confirm</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
@@ -348,8 +333,8 @@
         </p>
       </div>
       <div class="card">
-        <strong>alt: icon-only anywhere</strong> <span class="badge warn">rejected</span>
-        <div class="panel" style="margin-top:8px;padding:6px 10px;"><button class="cb cb-icon-only" type="button">⧉</button><span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-left:8px;">payload nowhere on screen</span></div>
+        <strong>alt: icon-only anywhere</strong> <span class="badge text-warn">rejected</span>
+        <div class="panel" style="margin-top:8px;padding:6px 10px;"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" type="button">⧉</button><span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-left:8px;">payload nowhere on screen</span></div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">When the payload is <em>not</em> rendered — copy-as-curl, where the curl string is assembled and never shown — the label is the only payload identifier and icon-only collapses that identity. W1 lesson: "actions with no fitting glyph — the word carries it instead". This is the case the flat <code>@avoid</code> line was written for, and it stays rejected.</p>
       </div>
     </div>
@@ -373,9 +358,9 @@
         <strong>D4 · scope: copy-specific behaviour on a shared shell</strong> <span class="badge auto">settled: copy-specific contract · the box is Button · the timer is the shared hook</span>
         <span class="badge id">reopened W5 — the deferred lift, resolving as this card predicted</span>
         <div class="panel" style="margin-top:8px;padding:6px 10px;display:flex;gap:8px;align-items:center;">
-          <button class="bt-like" type="button">retry</button>
+          <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center" type="button">retry</button>
           <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">Button</span>
-          <button class="cb" type="button">copy curl</button>
+          <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
           <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">= the same box + a clipboard</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
@@ -469,7 +454,7 @@
   -H 'Accept: application/json' \
   'https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&amp;currency=USD'</pre>
           <button id="live-cb" type="button"
-            class="cb"
+            class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none"
             aria-label="copy curl command"
             style="flex-shrink:0;">copy curl</button>
           <span id="live-announce" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"></span>
@@ -482,7 +467,7 @@
         <div class="lbl">Disabled example</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
           <span style="font-size:11.5px;font-family:Inter,sans-serif;color:var(--a-mute);">body not captured</span>
-          <button type="button" class="cb s-disabled" disabled>copy body</button>
+          <button type="button" class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none opacity-disabled pointer-events-none" disabled>copy body</button>
         </div>
       </div>
     </div>
@@ -494,14 +479,22 @@
     const payload = document.getElementById('live-curl').textContent;
     let timer;
 
-    function flash(label, cls, announcement) {
+    // A tone class and the resting class set the same property, so the state
+    // swaps them — appending would lose to whichever Tailwind emits last.
+    const REST = ['text-ink-mute', 'border-hairline'];
+    const CONFIRM = ['text-ok', 'border-ok'];
+    const ERROR = ['text-warn', 'border-warn'];
+
+    function flash(label, tone, announcement) {
       btn.textContent = label;
-      btn.classList.add(cls);
+      btn.classList.remove(...REST);
+      btn.classList.add(...tone);
       announce.textContent = announcement;
       clearTimeout(timer);
       timer = setTimeout(() => {
         btn.textContent = 'copy curl';
-        btn.classList.remove('s-confirm', 's-error');
+        btn.classList.remove(...CONFIRM, ...ERROR);
+        btn.classList.add(...REST);
         announce.textContent = '';
       }, 2000);
     }
@@ -516,8 +509,8 @@
     function doCopy() {
       lockWidth();
       navigator.clipboard?.writeText(payload).then(
-        () => flash('copied', 's-confirm', 'copied'),
-        () => flash('failed', 's-error', 'copy failed'),
+        () => flash('copied', CONFIRM, 'copied'),
+        () => flash('failed', ERROR, 'copy failed'),
       );
     }
 

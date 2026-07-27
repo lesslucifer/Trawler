@@ -4,20 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — BodyRenderer family (component design)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
     .t2{color:var(--ok);}
     /* app-token scope: specimens in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;--a-key:#8fb8de;--a-str:#9ec99a;--a-num:#d9a866;}
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12px;max-width:560px;}
     .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
-    /* body text styles */
-    .bink{color:var(--a-ink);}
-    .bmute{color:var(--a-mute);}
-    .bbody{color:var(--a-body);}
-    .bok{color:var(--a-ok);}
-    .bwarn{color:var(--a-warn);}
     /* json tree */
     .jtree details{margin:0;padding:0;}
     .jtree summary{list-style:none;cursor:pointer;outline:none;}
@@ -27,40 +22,6 @@
     .jtree .val{color:var(--a-str);}
     .jtree .shape{color:var(--a-ink);font-size:11px;}
     .jtree .arr{color:var(--a-mute);font-size:11px;}
-    /* json source (pretty-printed, copy-exact, syntax tokens) */
-    .jsrc{white-space:pre;overflow-x:auto;line-height:1.6;margin:0;font-size:12px;}
-    .jsrc .jk{color:var(--a-key);}
-    .jsrc .js{color:var(--a-str);}
-    .jsrc .jn{color:var(--a-num);}
-    .jsrc .jp{color:var(--a-mute);}
-    /* editor-surface mockup bits: fold gutter, folded placeholder, cursor */
-    .jsrc .gut{display:inline-block;width:16px;color:var(--a-mute);user-select:none;font-size:10px;}
-    .jsrc .fold{display:inline-block;background:var(--a-soft);border:1px solid var(--a-line);border-radius:4px;padding:0 6px;color:var(--a-mute);font-size:11px;line-height:1.3;cursor:pointer;}
-    .jsrc .cur{display:inline-block;width:1px;height:13px;background:var(--a-ink);vertical-align:-2px;animation:blink 1s steps(1) infinite;}
-    @keyframes blink{50%{opacity:0;}}
-    /* cut marker */
-    .cut{display:block;margin-top:6px;color:var(--a-warn);font-size:11px;border-top:1px dashed var(--a-line);padding-top:5px;}
-    /* hex dump */
-    .hex{white-space:pre;overflow-x:auto;line-height:1.7;}
-    .hex .off{color:var(--a-mute);}
-    .hex .hx{color:var(--a-body);}
-    .hex .asc{color:var(--a-ink);}
-    /* form pairs — mirror KeyValueRow: value cell is a CopyText (dotted hairline underline) */
-    .fpairs{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;}
-    .fpairs dt{color:var(--a-mute);white-space:nowrap;}
-    .fpairs dd{color:var(--a-body);word-break:break-all;margin:0;text-decoration:underline dotted var(--a-line);text-underline-offset:3px;cursor:text;}
-    /* image */
-    .imgbox{display:flex;flex-direction:column;gap:6px;}
-    .imgbox .thumb{border:1px solid var(--a-line);border-radius:4px;max-width:100%;background:repeating-conic-gradient(#383330 0% 25%, #2b2622 0% 50%) 0 0 / 12px 12px;}
-    .imgbox .dim{color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;}
-    /* notice / fallback */
-    .notice{color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;padding:4px 0;}
-    .fallback-warn{color:var(--a-warn);font-size:12px;font-family:Inter,system-ui,sans-serif;padding:4px 0;}
-    /* xml */
-    .xml{white-space:pre-wrap;overflow-x:auto;line-height:1.6;}
-    .xml .tag{color:var(--a-key);}
-    .xml .attr{color:var(--a-mute);}
-    .xml .val2{color:var(--a-str);}
     /* dispatch table */
     .dispatch td:first-child{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;}
     /* part blocks */
@@ -89,8 +50,7 @@
     .fork-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:8px;}
     .fork-card{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
     .fork-card .panel{margin-top:8px;}
-    .fork-card .fcap{font-size:12px;color:var(--muted);margin-top:6px;}
-  </style>
+    .fork-card .fcap{font-size:12px;color:var(--muted);margin-top:6px;}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -134,23 +94,23 @@
     <div class="app" data-c="anatomy-overview">
       <div class="panel">
         <div class="lbl">Response body — JSON</div>
-        <pre class="jsrc" style="padding-top:4px;"><span class="gut">▾</span><span class="jp">{</span>
-<span class="gut"></span>  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"ord_8f3a91c2"</span><span class="jp">,</span><span class="anno">1</span>
-<span class="gut"></span>  <span class="jk">"status"</span><span class="jp">:</span> <span class="cur"></span><span class="js">"pending"</span><span class="jp">,</span><span class="anno">4</span>
-<span class="gut">▸</span>  <span class="jk">"items"</span><span class="jp">:</span> <span class="jp">[</span><span class="fold">…</span><span class="jp">]</span><span class="jp">,</span>
-<span class="gut"></span>  <span class="jk">"total"</span><span class="jp">:</span> <span class="jn">49.99</span><span class="anno">2</span>
-<span class="gut"></span><span class="jp">}</span></pre>
-        <span class="cut"><span class="anno">3</span> ⚠ showing 4.0 KiB of 135 KiB — save to see all</span>
+        <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body" style="padding-top:4px;"><span class="inline-block w-4 text-ink-mute select-none text-label">▾</span><span class="text-ink-mute">{</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span>  <span class="text-syn-key">"id"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"ord_8f3a91c2"</span><span class="text-ink-mute">,</span><span class="anno">1</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span>  <span class="text-syn-key">"status"</span><span class="text-ink-mute">:</span> <span class="inline-block w-px h-[13px] bg-ink align-[-2px] animate-pulse"></span><span class="text-syn-str">"pending"</span><span class="text-ink-mute">,</span><span class="anno">4</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label">▸</span>  <span class="text-syn-key">"items"</span><span class="text-ink-mute">:</span> <span class="text-ink-mute">[</span><span class="inline-block bg-canvas-soft border border-hairline rounded-card px-[6px] text-ink-mute text-chrome leading-[1.3] cursor-pointer">…</span><span class="text-ink-mute">]</span><span class="text-ink-mute">,</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span>  <span class="text-syn-key">"total"</span><span class="text-ink-mute">:</span> <span class="text-syn-num">49.99</span><span class="anno">2</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span><span class="text-ink-mute">}</span></pre>
+        <span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]"><span class="anno">3</span> ⚠ showing 4.0 KiB of 135 KiB — save to see all</span>
       </div>
     </div>
     <div class="app parts" data-c="anatomy-parts">
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <pre class="jsrc"><span class="jp">{</span>
-  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"ord_8f3a91c2"</span><span class="jp">,</span>
-  <span class="jk">"status"</span><span class="jp">:</span> <span class="js">"pending"</span>
-<span class="jp">}</span></pre>
+            <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="text-ink-mute">{</span>
+  <span class="text-syn-key">"id"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"ord_8f3a91c2"</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"status"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"pending"</span>
+<span class="text-ink-mute">}</span></pre>
           </div>
           <div class="cap">the pane IS the pretty-printed source — select or copy anywhere and you get valid JSON</div>
         </div>
@@ -165,7 +125,7 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <pre class="jsrc"><span class="jk">"count"</span><span class="jp">:</span> <span class="jn">42</span><span class="jp">,</span> <span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span></pre>
+            <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="text-syn-key">"count"</span><span class="text-ink-mute">:</span> <span class="text-syn-num">42</span><span class="text-ink-mute">,</span> <span class="text-syn-key">"name"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"Alice"</span></pre>
           </div>
           <div class="cap">three muted syntax tokens: key blue, string green, number amber; punctuation mute</div>
         </div>
@@ -180,7 +140,7 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <span class="cut">⚠ showing 4.0 KiB of 135 KiB — save to see all</span>
+            <span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 4.0 KiB of 135 KiB — save to see all</span>
           </div>
           <div class="cap">cut marker: always visible, always states total; sizes human-readable; save is the escape hatch</div>
         </div>
@@ -195,10 +155,10 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <pre class="jsrc"><span class="gut">▾</span><span class="jp">{</span>
-<span class="gut">▸</span>  <span class="jk">"items"</span><span class="jp">:</span> <span class="jp">[</span><span class="fold">…</span><span class="jp">]</span><span class="jp">,</span>
-<span class="gut"></span>  <span class="jk">"status"</span><span class="jp">:</span> <span class="cur"></span><span class="js">"pending"</span>
-<span class="gut"></span><span class="jp">}</span></pre>
+            <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="inline-block w-4 text-ink-mute select-none text-label">▾</span><span class="text-ink-mute">{</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label">▸</span>  <span class="text-syn-key">"items"</span><span class="text-ink-mute">:</span> <span class="text-ink-mute">[</span><span class="inline-block bg-canvas-soft border border-hairline rounded-card px-[6px] text-ink-mute text-chrome leading-[1.3] cursor-pointer">…</span><span class="text-ink-mute">]</span><span class="text-ink-mute">,</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span>  <span class="text-syn-key">"status"</span><span class="text-ink-mute">:</span> <span class="inline-block w-px h-[13px] bg-ink align-[-2px] animate-pulse"></span><span class="text-syn-str">"pending"</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span><span class="text-ink-mute">}</span></pre>
           </div>
           <div class="cap">fold gutter (▾ open / ▸ folded, "…" placeholder re-expands on click) + a real blinking cursor — arrow keys, Home/End, PageUp/Down all work</div>
         </div>
@@ -227,31 +187,31 @@
       <div class="member-swatches">
         <div class="swatch">
           <div class="panel">
-            <pre class="jsrc"><span class="jp">{</span>
-  <span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span><span class="jp">,</span>
-  <span class="jk">"roles"</span><span class="jp">:</span> <span class="jp">[</span>
-    <span class="js">"admin"</span><span class="jp">,</span>
-    <span class="js">"viewer"</span>
-  <span class="jp">]</span><span class="jp">,</span>
-  <span class="jk">"count"</span><span class="jp">:</span> <span class="jn">2</span>
-<span class="jp">}</span></pre>
+            <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="text-ink-mute">{</span>
+  <span class="text-syn-key">"name"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"Alice"</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"roles"</span><span class="text-ink-mute">:</span> <span class="text-ink-mute">[</span>
+    <span class="text-syn-str">"admin"</span><span class="text-ink-mute">,</span>
+    <span class="text-syn-str">"viewer"</span>
+  <span class="text-ink-mute">]</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"count"</span><span class="text-ink-mute">:</span> <span class="text-syn-num">2</span>
+<span class="text-ink-mute">}</span></pre>
           </div>
           <div class="cap"><strong>pretty-printed source</strong> — exact copyable JSON; key blue, string green, number amber, punctuation mute</div>
         </div>
         <div class="swatch">
           <div class="panel">
-            <pre class="jsrc"><span class="gut">▾</span><span class="jp">{</span>
-<span class="gut"></span>  <span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span><span class="jp">,</span>
-<span class="gut">▸</span>  <span class="jk">"roles"</span><span class="jp">:</span> <span class="jp">[</span><span class="fold">…</span><span class="jp">]</span><span class="jp">,</span>
-<span class="gut"></span>  <span class="jk">"count"</span><span class="jp">:</span> <span class="jn">2</span>
-<span class="gut"></span><span class="jp">}</span></pre>
+            <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="inline-block w-4 text-ink-mute select-none text-label">▾</span><span class="text-ink-mute">{</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span>  <span class="text-syn-key">"name"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"Alice"</span><span class="text-ink-mute">,</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label">▸</span>  <span class="text-syn-key">"roles"</span><span class="text-ink-mute">:</span> <span class="text-ink-mute">[</span><span class="inline-block bg-canvas-soft border border-hairline rounded-card px-[6px] text-ink-mute text-chrome leading-[1.3] cursor-pointer">…</span><span class="text-ink-mute">]</span><span class="text-ink-mute">,</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span>  <span class="text-syn-key">"count"</span><span class="text-ink-mute">:</span> <span class="text-syn-num">2</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span><span class="text-ink-mute">}</span></pre>
           </div>
           <div class="cap"><strong>folded</strong> — gutter ▸ collapses an object/array to a "…" placeholder; click either to re-expand; view-state only, copy still yields the full source</div>
         </div>
         <div class="swatch">
           <div class="panel">
             <pre style="margin:0;color:var(--a-body);white-space:pre-wrap;font-size:12px;">{"name":"Alice","roles":["admin","viewer"]}</pre>
-            <span class="cut">⚠ showing 128 KiB of 1.0 MiB — save to see all</span>
+            <span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 128 KiB of 1.0 MiB — save to see all</span>
           </div>
           <div class="cap"><strong>as-is fallback</strong> — unparseable or over the render cap; raw text, no tokens; cut marker appended when capped</div>
         </div>
@@ -269,18 +229,18 @@
       <div class="member-swatches">
         <div class="swatch">
           <div class="panel">
-            <pre class="xml" style="margin:0;font-size:12px;"><span class="tag">&lt;order</span> <span class="attr">id=</span><span class="val2">"8f3a91c2"</span><span class="tag">&gt;</span>
-  <span class="tag">&lt;status&gt;</span><span class="bbody">pending</span><span class="tag">&lt;/status&gt;</span>
-  <span class="tag">&lt;items&gt;</span>
-    <span class="tag">&lt;item&gt;</span><span class="bbody">SKU-001</span><span class="tag">&lt;/item&gt;</span>
-  <span class="tag">&lt;/items&gt;</span>
-<span class="tag">&lt;/order&gt;</span></pre>
+            <pre class="whitespace-pre-wrap overflow-x-auto leading-relaxed" style="margin:0;font-size:12px;"><span class="text-syn-key">&lt;order</span> <span class="text-ink-mute">id=</span><span class="text-syn-str">"8f3a91c2"</span><span class="text-syn-key">&gt;</span>
+  <span class="text-syn-key">&lt;status&gt;</span><span class="text-ink-body">pending</span><span class="text-syn-key">&lt;/status&gt;</span>
+  <span class="text-syn-key">&lt;items&gt;</span>
+    <span class="text-syn-key">&lt;item&gt;</span><span class="text-ink-body">SKU-001</span><span class="text-syn-key">&lt;/item&gt;</span>
+  <span class="text-syn-key">&lt;/items&gt;</span>
+<span class="text-syn-key">&lt;/order&gt;</span></pre>
           </div>
           <div class="cap"><strong>pretty-printed XML</strong> — server-side indent (decode.rs); the exact copyable source; tags in the key token, attribute names mute, attribute values in the string token (→ <a href="#dec-11">DEC-11</a>); element text stays body tone</div>
         </div>
         <div class="swatch">
           <div class="panel">
-            <pre class="xml" style="margin:0;font-size:12px;"><span class="bbody">&lt;div&gt;&lt;p&gt;Order confirmed&lt;/p&gt;&lt;/div&gt;</span></pre>
+            <pre class="whitespace-pre-wrap overflow-x-auto leading-relaxed" style="margin:0;font-size:12px;"><span class="text-ink-body">&lt;div&gt;&lt;p&gt;Order confirmed&lt;/p&gt;&lt;/div&gt;</span></pre>
           </div>
           <div class="cap"><strong>HTML body (text/html)</strong> — same path: pretty-printed by decode.rs, rendered as text in XmlRenderer</div>
         </div>
@@ -298,9 +258,9 @@
       <div class="member-swatches">
         <div class="swatch">
           <div class="panel">
-            <div class="imgbox">
-              <div class="thumb" style="width:120px;height:80px;"></div>
-              <div class="dim">320 × 240 · image/png · 14.5 KiB</div>
+            <div class="flex flex-col gap-chrome-gap">
+              <div class="border border-hairline rounded-card max-w-full" style="width:120px;height:80px;"></div>
+              <div class="text-ink-mute text-chrome font-ui">320 × 240 · image/png · 14.5 KiB</div>
             </div>
           </div>
           <div class="cap"><strong>letterboxed preview</strong> — checkerboard (transparency) background; dimensions + MIME + human-readable size caption in muted UI text; no copy button in BodyViewer's sub-bar</div>
@@ -319,7 +279,7 @@
       <div class="member-swatches">
         <div class="swatch">
           <div class="panel">
-            <dl class="fpairs">
+            <dl class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
               <dt>grant_type</dt><dd>authorization_code</dd>
               <dt>client_id</dt><dd>app_8f3a91c2</dd>
               <dt>redirect_uri</dt><dd>https://example.com/callback</dd>
@@ -333,7 +293,7 @@
 
     <div class="member app" data-c="member-text">
       <h4>TextRenderer <span class="tier t2">T2</span> <span class="badge id">W5 · <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·2</a></span></h4>
-      <div class="callout warn" style="margin:0 0 10px;">
+      <div class="callout text-warn" style="margin:0 0 10px;">
         <strong>The family was documented as five members and dispatched to six.</strong> <code>bodyKind()</code> returns <code>"text"</code> for <code>text/*</code>, <code>application/javascript</code> and <code>application/ecmascript</code> (<code>body.ts:14–21</code>), <code>rawKind()</code> returns it for every UTF-8 raw body (<code>body.ts:25–32</code>), and <em>no file specified the component on the other end</em> — the most common body kind in the app, plus every raw view, reached a renderer nobody had designed. It also ships already, as <code>TextBody</code> (<code>BodyViewer.tsx:56–62</code>), doing three jobs at once. This block is the missing specification, written to what ships plus the family contract the others obey.
       </div>
       <div class="mspec">
@@ -347,7 +307,7 @@
       <div class="member-swatches">
         <div class="swatch">
           <div class="panel">
-            <pre class="jsrc" style="margin:0;font-size:11px;white-space:pre-wrap;word-break:break-all;">Request failed: upstream timed out after 30000ms
+            <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body" style="margin:0;font-size:11px;white-space:pre-wrap;word-break:break-all;">Request failed: upstream timed out after 30000ms
   at Gateway.forward (/srv/gateway/lib/forward.js:118:11)
   at async Router.handle (/srv/gateway/lib/router.js:64:5)</pre>
           </div>
@@ -355,17 +315,17 @@
         </div>
         <div class="swatch">
           <div class="panel">
-            <pre class="jsrc" style="margin:0;font-size:11px;white-space:pre-wrap;word-break:break-all;">{"id":"8f3a91c2","items":[{"sku":"p1","qty":2}],"total":89</pre>
-            <span class="cut">⚠ unparseable JSON — showing as text</span>
+            <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body" style="margin:0;font-size:11px;white-space:pre-wrap;word-break:break-all;">{"id":"8f3a91c2","items":[{"sku":"p1","qty":2}],"total":89</pre>
+            <span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ unparseable JSON — showing as text</span>
           </div>
           <div class="cap"><strong>as-is fallback</strong> — JsonRenderer could not parse (truncated body), so the bytes render here rather than as an error. DEC-01: <em>show what arrived</em></div>
         </div>
         <div class="swatch">
           <div class="panel">
-            <pre class="jsrc" style="margin:0;font-size:11px;white-space:pre-wrap;word-break:break-all;">id,sku,qty,price
+            <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body" style="margin:0;font-size:11px;white-space:pre-wrap;word-break:break-all;">id,sku,qty,price
 1,p1,2,44.50
 2,p7,1,89.00</pre>
-            <span class="cut">⚠ showing 4.0 KiB of 220 KiB — save to see all</span>
+            <span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 4.0 KiB of 220 KiB — save to see all</span>
           </div>
           <div class="cap"><strong>rendered + cut</strong> — the family cut marker, warn tone, human units. The shipped component has no cap; this specification gives it one</div>
         </div>
@@ -383,10 +343,10 @@
       <div class="member-swatches">
         <div class="swatch">
           <div class="panel">
-            <pre class="hex" style="margin:0;font-size:11px;"><span class="off">00000000</span>  <span class="hx">89 50 4e 47 0d 0a 1a 0a  00 00 00 0d 49 48 44 52</span>  <span class="asc">|.PNG........IHDR|</span>
-<span class="off">00000010</span>  <span class="hx">00 00 00 10 00 00 00 10  08 02 00 00 00 90 91 68</span>  <span class="asc">|...............h|</span>
-<span class="off">00000020</span>  <span class="hx">36 00 00 00 01 73 52 47  42 00 ae ce 1c e9 00 00</span>  <span class="asc">|6....sRGB.......|</span></pre>
-            <span class="cut">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
+            <pre class="whitespace-pre overflow-x-auto leading-[1.7]" style="margin:0;font-size:11px;"><span class="text-ink-mute">00000000</span>  <span class="text-ink-body">89 50 4e 47 0d 0a 1a 0a  00 00 00 0d 49 48 44 52</span>  <span class="text-ink">|.PNG........IHDR|</span>
+<span class="text-ink-mute">00000010</span>  <span class="text-ink-body">00 00 00 10 00 00 00 10  08 02 00 00 00 90 91 68</span>  <span class="text-ink">|...............h|</span>
+<span class="text-ink-mute">00000020</span>  <span class="text-ink-body">36 00 00 00 01 73 52 47  42 00 ae ce 1c e9 00 00</span>  <span class="text-ink">|6....sRGB.......|</span></pre>
+            <span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
           </div>
           <div class="cap"><strong>hex grid</strong> — offset (mute), hex bytes (body), ASCII gutter (ink); 16 bytes/line; non-printable → dot; cut marker in warn tone</div>
         </div>
@@ -424,7 +384,7 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <span class="cut">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
+            <span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
           </div>
           <div class="cap">every truncation is visible — total size always shown alongside the shown slice, in human units</div>
         </div>
@@ -439,7 +399,7 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <span class="notice">empty body</span>
+            <span class="text-ink-mute text-body font-ui py-chrome-y">empty body</span>
           </div>
           <div class="cap">the renderer is not shown for empty / not-captured / streaming bodies — BodyViewer shows a notice instead (<code>BodyViewer.tsx:215–227</code>)</div>
         </div>
@@ -469,7 +429,7 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <pre class="hex" style="margin:0;font-size:11px;"><span class="off">00000000</span>  <span class="hx">1f 8b 08 00 00 00 00 00</span>  <span class="asc">|........|</span></pre>
+            <pre class="whitespace-pre overflow-x-auto leading-[1.7]" style="margin:0;font-size:11px;"><span class="text-ink-mute">00000000</span>  <span class="text-ink-body">1f 8b 08 00 00 00 00 00</span>  <span class="text-ink">|........|</span></pre>
           </div>
           <div class="cap">raw mode: gzip bytes dispatch to hex regardless of content-type</div>
         </div>
@@ -488,14 +448,14 @@
     <div class="app swatches" data-c="states-grid">
       <div class="swatch">
         <div class="panel">
-          <pre class="jsrc"><span class="jp">{</span> <span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span> <span class="jp">}</span></pre>
+          <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="text-ink-mute">{</span> <span class="text-syn-key">"name"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"Alice"</span> <span class="text-ink-mute">}</span></pre>
         </div>
         <div class="cap"><strong>rendered</strong> — member renders successfully; full body within cap; no cut marker</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <pre class="jsrc"><span class="jp">{</span> <span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span><span class="jp">,</span> …</pre>
-          <span class="cut">⚠ showing 128 KiB of 512 KiB — save to see all</span>
+          <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="text-ink-mute">{</span> <span class="text-syn-key">"name"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"Alice"</span><span class="text-ink-mute">,</span> …</pre>
+          <span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 128 KiB of 512 KiB — save to see all</span>
         </div>
         <div class="cap"><strong>rendered + cut</strong> — member renders up to the cap; cut marker always appended; shown/total in human units</div>
       </div>
@@ -507,8 +467,8 @@
       </div>
       <div class="swatch">
         <div class="panel">
-          <pre class="hex" style="margin:0;font-size:11px;"><span class="off">00000000</span>  <span class="hx">89 50 4e 47 0d 0a 1a 0a</span>  <span class="asc">|.PNG....|</span></pre>
-          <span class="cut">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
+          <pre class="whitespace-pre overflow-x-auto leading-[1.7]" style="margin:0;font-size:11px;"><span class="text-ink-mute">00000000</span>  <span class="text-ink-body">89 50 4e 47 0d 0a 1a 0a</span>  <span class="text-ink">|.PNG....|</span></pre>
+          <span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
         </div>
         <div class="cap"><strong>hex fallback</strong> — unknown binary or raw-mode non-UTF-8; always with cut marker when over HEX_MAX</div>
       </div>
@@ -533,22 +493,22 @@
       <div class="fork-card">
         <strong>DEC-01 · JsonRenderer v1 form</strong> <span class="badge auto">settled: pretty-printed copy-exact source — review override 2026-07-23</span>
         <div class="panel">
-          <pre class="jsrc"><span class="jp">{</span>
-  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"abc"</span><span class="jp">,</span>
-  <span class="jk">"roles"</span><span class="jp">:</span> <span class="jp">[</span>
-    <span class="js">"admin"</span>
-  <span class="jp">]</span>
-<span class="jp">}</span></pre>
+          <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="text-ink-mute">{</span>
+  <span class="text-syn-key">"id"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"abc"</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"roles"</span><span class="text-ink-mute">:</span> <span class="text-ink-mute">[</span>
+    <span class="text-syn-str">"admin"</span>
+  <span class="text-ink-mute">]</span>
+<span class="text-ink-mute">}</span></pre>
         </div>
         <div class="fcap"><strong>Pretty-printed source (settled on review).</strong> The API already pretty-prints JSON server-side (<code>decode.rs:106–111</code>, serde_json — no prettier dependency needed); the pane shows that exact string with syntax-token spans. Selecting any part — or copying via BodyViewer — yields valid JSON in the displayed format.</div>
       </div>
       <div class="fork-card">
-        <strong>alt: collapsible tree</strong> <span class="badge warn">rejected on review</span>
+        <strong>alt: collapsible tree</strong> <span class="badge text-warn">rejected on review</span>
         <div class="panel">
           <div class="jtree">
             <details open>
-              <summary><span class="arr">▾ </span><span class="key">$ </span><span class="shape">{2}</span></summary>
-              <div class="indent"><div><span class="key">id: </span><span class="val">"abc"</span></div></div>
+              <summary><span class="text-ink-mute text-chrome">▾ </span><span class="text-syn-key">$ </span><span class="text-ink text-chrome">{2}</span></summary>
+              <div class="border-l border-hairline pl-3 ml-1"><div><span class="text-syn-key">id: </span><span class="text-syn-str">"abc"</span></div></div>
             </details>
           </div>
         </div>
@@ -560,20 +520,20 @@
       <div class="fork-card">
         <strong>DEC-02 · XmlRenderer v1 form</strong> <span class="badge auto">settled: pretty-printed source, folding via the editor surface — updated round 2</span>
         <div class="panel">
-          <pre class="jsrc"><span class="gut">▾</span><span class="jk">&lt;order&gt;</span>
-<span class="gut">▸</span>  <span class="jk">&lt;items&gt;</span><span class="fold">…</span><span class="jk">&lt;/items&gt;</span>
-<span class="gut"></span>  <span class="jk">&lt;status&gt;</span><span class="bbody">ok</span><span class="jk">&lt;/status&gt;</span>
-<span class="gut"></span><span class="jk">&lt;/order&gt;</span></pre>
+          <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="inline-block w-4 text-ink-mute select-none text-label">▾</span><span class="text-syn-key">&lt;order&gt;</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label">▸</span>  <span class="text-syn-key">&lt;items&gt;</span><span class="inline-block bg-canvas-soft border border-hairline rounded-card px-[6px] text-ink-mute text-chrome leading-[1.3] cursor-pointer">…</span><span class="text-syn-key">&lt;/items&gt;</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span>  <span class="text-syn-key">&lt;status&gt;</span><span class="text-ink-body">ok</span><span class="text-syn-key">&lt;/status&gt;</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span><span class="text-syn-key">&lt;/order&gt;</span></pre>
         </div>
         <div class="fcap">Server-side pretty-print (decode.rs) stays the source of truth. Round 1 settled "no collapse — promote if users request it"; round 2 requested it, and DEC-13's shared CodeMirror surface gives element folding for free (<code>lang-xml</code> + fold gutter) — no custom DOM-parse renderer needed.</div>
       </div>
       <div class="fork-card">
-        <strong>alt: custom collapsible XML tree</strong> <span class="badge warn">subsumed by DEC-13</span>
+        <strong>alt: custom collapsible XML tree</strong> <span class="badge text-warn">subsumed by DEC-13</span>
         <div class="panel">
           <div class="jtree">
             <details open>
-              <summary><span class="arr">▾ </span><span class="key">order</span></summary>
-              <div class="indent"><div><span class="key">status: </span><span class="val">ok</span></div></div>
+              <summary><span class="text-ink-mute text-chrome">▾ </span><span class="text-syn-key">order</span></summary>
+              <div class="border-l border-hairline pl-3 ml-1"><div><span class="text-syn-key">status: </span><span class="text-syn-str">ok</span></div></div>
             </details>
           </div>
         </div>
@@ -586,15 +546,15 @@
         <strong>DEC-10 · sniff vs trust content-type</strong> <span class="badge auto">settled: trust the header; manual override deferred</span>
         <div class="panel">
           <pre style="margin:0;color:var(--a-body);font-size:12px;">&#123;"name":"Alice"&#125;</pre>
-          <div class="notice">text/plain → rendered as text (trust header)</div>
+          <div class="text-ink-mute text-body font-ui py-chrome-y">text/plain → rendered as text (trust header)</div>
         </div>
         <div class="fcap"><strong>Trust:</strong> dispatch uses the served content-type verbatim. A JSON body with <code>text/plain</code> renders as text — that is what the server declared. Manual override (a "view as JSON" button) is a later WU, explicitly user-initiated, not a silent sniff.</div>
       </div>
       <div class="fork-card">
-        <strong>alt: sniff + auto-promote</strong> <span class="badge warn">rejected</span>
+        <strong>alt: sniff + auto-promote</strong> <span class="badge text-warn">rejected</span>
         <div class="panel">
           <pre style="margin:0;color:var(--a-body);font-size:12px;">&#123;"name":"Alice"&#125;</pre>
-          <div class="notice" style="color:var(--a-warn);">text/plain sniffed → rendered as JSON tree</div>
+          <div class="text-ink-mute text-body font-ui py-chrome-y" style="color:var(--a-warn);">text/plain sniffed → rendered as JSON tree</div>
         </div>
         <div class="fcap">Silently contradicts what the server declared. A proxy tool's primary trust is the wire; silent sniff is an interpretation, not a display.</div>
       </div>
@@ -604,13 +564,13 @@
       <div class="fork-card">
         <strong>DEC-11 · syntax coloring</strong> <span class="badge auto">settled: muted color-coded tokens — review override 2026-07-23</span>
         <div class="panel">
-          <pre class="jsrc"><span class="jk">"name"</span><span class="jp">:</span> <span class="js">"Alice"</span><span class="jp">,</span>
-<span class="jk">"count"</span><span class="jp">:</span> <span class="jn">42</span></pre>
+          <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="text-syn-key">"name"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"Alice"</span><span class="text-ink-mute">,</span>
+<span class="text-syn-key">"count"</span><span class="text-ink-mute">:</span> <span class="text-syn-num">42</span></pre>
         </div>
         <div class="fcap"><strong>Three muted tokens (settled on review).</strong> Key <code>--a-key</code> #8fb8de · string <code>--a-str</code> #9ec99a · number <code>--a-num</code> #d9a866 · punctuation mute — new palette tokens, desaturated to sit calmly against the Warp canvas and scoped to body panes only, never UI chrome. Indentation still carries structure, so the pane stays readable without color (color-blind safe). The manager review overrode the original zero-chromatic settle: token color speeds scanning large payloads.</div>
       </div>
       <div class="fork-card">
-        <strong>alt: zero-chromatic tone-only</strong> <span class="badge warn">rejected on review</span>
+        <strong>alt: zero-chromatic tone-only</strong> <span class="badge text-warn">rejected on review</span>
         <div class="panel">
           <div class="jtree" style="font-size:12px;">
             <div><span style="color:var(--a-mute);">name: </span><span style="color:var(--a-body);">"Alice"</span></div>
@@ -625,12 +585,12 @@
       <div class="fork-card">
         <strong>DEC-12 · hex cut marker form</strong> <span class="badge auto">settled: warn-tone line with total size</span>
         <div class="panel">
-          <span class="cut">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
+          <span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
         </div>
         <div class="fcap"><code>hexDump</code> today appends <code>… N more bytes</code> (<code>body.ts:55–56</code>). The design replaces this with the warn-tone family cut marker form (⚠ + shown/total in human-readable units + save hint), consistent across all members.</div>
       </div>
       <div class="fork-card">
-        <strong>alt: silent ellipsis</strong> <span class="badge warn">rejected</span>
+        <strong>alt: silent ellipsis</strong> <span class="badge text-warn">rejected</span>
         <div class="panel"><span style="color:var(--a-mute);font-size:12px;">… 10724 more bytes</span></div>
         <div class="fcap">The muted ellipsis form from <code>body.ts:55</code> is easy to miss. Trust rule: truncation must be obvious. Warn tone + save hint is the family standard.</div>
       </div>
@@ -640,23 +600,23 @@
       <div class="fork-card">
         <strong>DEC-13 · Json/Xml viewer engine</strong> <span class="badge auto">settled: CodeMirror 6, read-only — review round 2 2026-07-23</span>
         <div class="panel">
-          <pre class="jsrc"><span class="gut">▾</span><span class="jp">{</span>
-<span class="gut">▸</span>  <span class="jk">"items"</span><span class="jp">:</span> <span class="jp">[</span><span class="fold">…</span><span class="jp">]</span><span class="jp">,</span>
-<span class="gut"></span>  <span class="jk">"status"</span><span class="jp">:</span> <span class="cur"></span><span class="js">"pending"</span>
-<span class="gut"></span><span class="jp">}</span></pre>
+          <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="inline-block w-4 text-ink-mute select-none text-label">▾</span><span class="text-ink-mute">{</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label">▸</span>  <span class="text-syn-key">"items"</span><span class="text-ink-mute">:</span> <span class="text-ink-mute">[</span><span class="inline-block bg-canvas-soft border border-hairline rounded-card px-[6px] text-ink-mute text-chrome leading-[1.3] cursor-pointer">…</span><span class="text-ink-mute">]</span><span class="text-ink-mute">,</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span>  <span class="text-syn-key">"status"</span><span class="text-ink-mute">:</span> <span class="inline-block w-px h-[13px] bg-ink align-[-2px] animate-pulse"></span><span class="text-syn-str">"pending"</span>
+<span class="inline-block w-4 text-ink-mute select-none text-label"></span><span class="text-ink-mute">}</span></pre>
         </div>
         <div class="fcap"><strong>CodeMirror 6 (new dependency, requested round 2).</strong> <code>@codemirror/state</code>+<code>view</code>+<code>language</code>+<code>lang-json</code>/<code>lang-xml</code>, ~300 KB — <code>EditorState.readOnly</code> gives textarea UX without editability: real cursor, arrow/Home/End/PageUp navigation, native selection; foldGutter collapses objects/arrays/elements; a custom <code>HighlightStyle</code> maps tags to the three DEC-11 tokens so the Warp palette holds; document virtualization handles large bodies (caps + cut marker still apply). One shared surface serves both members.</div>
       </div>
       <div class="fork-card">
-        <strong>alt: hand-rolled pre + spans</strong> <span class="badge warn">rejected on round 2</span>
+        <strong>alt: hand-rolled pre + spans</strong> <span class="badge text-warn">rejected on round 2</span>
         <div class="panel">
-          <pre class="jsrc"><span class="jp">{</span> <span class="jk">"status"</span><span class="jp">:</span> <span class="js">"pending"</span> <span class="jp">}</span></pre>
+          <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="text-ink-mute">{</span> <span class="text-syn-key">"status"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"pending"</span> <span class="text-ink-mute">}</span></pre>
         </div>
         <div class="fcap">The round-1 form (and the shipped <code>BodyViewer.tsx</code> approach): zero dependencies, but no cursor, no keyboard navigation, no folding — a scrollbar is the only way through a 100 KB body. Rejected once navigation became a requirement.</div>
       </div>
       <div class="fork-card">
-        <strong>alt: Monaco · JSON-tree libs</strong> <span class="badge warn">rejected</span>
-        <div class="panel"><span class="notice">monaco-editor ≈ 3 MB+ · react-json-view ≈ tree, not source</span></div>
+        <strong>alt: Monaco · JSON-tree libs</strong> <span class="badge text-warn">rejected</span>
+        <div class="panel"><span class="text-ink-mute text-body font-ui py-chrome-y">monaco-editor ≈ 3 MB+ · react-json-view ≈ tree, not source</span></div>
         <div class="fcap">Monaco brings a full IDE runtime (multi-MB, its own workers) for a read-only pane — far too heavy. JSON tree-view libs (react-json-view etc.) fail both round-1 rulings: not textarea UX and not copy-exact source. CodeMirror is the smallest thing that satisfies every settled decision.</div>
       </div>
     </div>
@@ -733,35 +693,35 @@
         <div>
           <div class="panel">
             <div class="lbl">JsonRenderer</div>
-            <pre class="jsrc"><span class="jp">{</span>
-  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"ord_8f3a91c2"</span><span class="jp">,</span>
-  <span class="jk">"total"</span><span class="jp">:</span> <span class="jn">49.99</span><span class="jp">,</span>
-  <span class="jk">"tags"</span><span class="jp">:</span> <span class="jp">[</span><span class="js">"rush"</span><span class="jp">,</span> <span class="js">"gift"</span><span class="jp">]</span>
-<span class="jp">}</span></pre>
+            <pre class="whitespace-pre overflow-x-auto leading-relaxed m-0 text-body"><span class="text-ink-mute">{</span>
+  <span class="text-syn-key">"id"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"ord_8f3a91c2"</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"total"</span><span class="text-ink-mute">:</span> <span class="text-syn-num">49.99</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"tags"</span><span class="text-ink-mute">:</span> <span class="text-ink-mute">[</span><span class="text-syn-str">"rush"</span><span class="text-ink-mute">,</span> <span class="text-syn-str">"gift"</span><span class="text-ink-mute">]</span>
+<span class="text-ink-mute">}</span></pre>
           </div>
         </div>
         <div>
           <div class="panel">
             <div class="lbl">XmlRenderer</div>
-            <pre class="xml" style="margin:0;font-size:12px;"><span class="tag">&lt;order&gt;</span>
-  <span class="tag">&lt;id&gt;</span><span class="bbody">8f3a91c2</span><span class="tag">&lt;/id&gt;</span>
-  <span class="tag">&lt;status&gt;</span><span class="bbody">pending</span><span class="tag">&lt;/status&gt;</span>
-<span class="tag">&lt;/order&gt;</span></pre>
+            <pre class="whitespace-pre-wrap overflow-x-auto leading-relaxed" style="margin:0;font-size:12px;"><span class="text-syn-key">&lt;order&gt;</span>
+  <span class="text-syn-key">&lt;id&gt;</span><span class="text-ink-body">8f3a91c2</span><span class="text-syn-key">&lt;/id&gt;</span>
+  <span class="text-syn-key">&lt;status&gt;</span><span class="text-ink-body">pending</span><span class="text-syn-key">&lt;/status&gt;</span>
+<span class="text-syn-key">&lt;/order&gt;</span></pre>
           </div>
         </div>
         <div>
           <div class="panel">
             <div class="lbl">ImageRenderer</div>
-            <div class="imgbox">
-              <div class="thumb" style="width:100%;height:64px;"></div>
-              <div class="dim">128 × 64 · image/png · 2.0 KiB</div>
+            <div class="flex flex-col gap-chrome-gap">
+              <div class="border border-hairline rounded-card max-w-full" style="width:100%;height:64px;"></div>
+              <div class="text-ink-mute text-chrome font-ui">128 × 64 · image/png · 2.0 KiB</div>
             </div>
           </div>
         </div>
         <div>
           <div class="panel">
             <div class="lbl">FormRenderer</div>
-            <dl class="fpairs" style="font-size:12px;">
+            <dl class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y" style="font-size:12px;">
               <dt>grant_type</dt><dd>authorization_code</dd>
               <dt>client_id</dt><dd>app_8f3a91c2</dd>
               <dt>code</dt><dd>SplxlOBeZQQYbYS6</dd>
@@ -771,16 +731,16 @@
         <div>
           <div class="panel">
             <div class="lbl">HexRenderer</div>
-            <pre class="hex" style="margin:0;font-size:11px;"><span class="off">00000000</span>  <span class="hx">89 50 4e 47 0d 0a 1a 0a</span>  <span class="asc">|.PNG....|</span>
-<span class="off">00000008</span>  <span class="hx">00 00 00 0d 49 48 44 52</span>  <span class="asc">|....IHDR|</span></pre>
-            <span class="cut">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
+            <pre class="whitespace-pre overflow-x-auto leading-[1.7]" style="margin:0;font-size:11px;"><span class="text-ink-mute">00000000</span>  <span class="text-ink-body">89 50 4e 47 0d 0a 1a 0a</span>  <span class="text-ink">|.PNG....|</span>
+<span class="text-ink-mute">00000008</span>  <span class="text-ink-body">00 00 00 0d 49 48 44 52</span>  <span class="text-ink">|....IHDR|</span></pre>
+            <span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 4.0 KiB of 14.5 KiB — save to see all</span>
           </div>
         </div>
         <div>
           <div class="panel">
             <div class="lbl">As-is fallback (JSON parse fail)</div>
             <pre style="margin:0;color:var(--a-body);font-size:12px;white-space:pre-wrap;">&#123;"broken":true,</pre>
-            <span class="notice">parse failed — displaying as-is</span>
+            <span class="text-ink-mute text-body font-ui py-chrome-y">parse failed — displaying as-is</span>
           </div>
         </div>
       </div>

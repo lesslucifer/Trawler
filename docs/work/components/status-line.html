@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — StatusLine component design</title>
-  <link rel="stylesheet" href="specimen.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="tw-config.js"></script>
   <style>
     /* Component values come from specimen.css — .sl* is this component's block
        there, and the glyph/message tones are TonedText's (.sp-*), which this
@@ -32,8 +33,7 @@
     .prec td,.prec th{vertical-align:top;font-size:12.5px;}
     .prec code{font-size:11.5px;}
     .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
-    .callout.ok{border-color:var(--ok);}
-  </style>
+    .callout.ok{border-color:var(--ok);}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -72,13 +72,13 @@
     <table data-c="precedence" class="prec">
       <thead><tr><th>#</th><th>Condition</th><th>Verdict</th><th>Why it ranks here</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td>an action is running</td><td><span class="app"><span class="sl-glyph sp-muted">⟳</span></span> muted · "Installing…"</td><td>the truest thing about right now is that we are working. Suppresses every stale reading beneath it, including a previous error (driver ④)</td></tr>
-        <tr><td>2</td><td>the probe says yes</td><td><span class="app"><span class="sl-glyph sp-ok">✓</span></span> ok</td><td><strong>an authoritative positive beats a stale error</strong> — the machine trusts the CA whatever the last click did (driver ③, <code>setup.ts:214</code>)</td></tr>
-        <tr><td>3</td><td>observed evidence proves it</td><td><span class="app"><span class="sl-glyph sp-ok">✓</span></span> ok · "confirmed by captured traffic"</td><td>a decrypted flow is proof the probe could not obtain — evidence outranks an unavailable check, and still outranks the error</td></tr>
-        <tr><td>4</td><td>the last action failed</td><td><span class="app"><span class="sl-glyph sp-warn">⚠</span></span> warn · "Install failed — …"</td><td>only reached when nothing above proved success. Below both positives by design: an error that has since been overtaken is noise</td></tr>
-        <tr><td>5</td><td>partial evidence contradicts</td><td><span class="app"><span class="sl-glyph sp-warn">⚠</span></span> warn · "arriving but not decrypting"</td><td>traffic without decryption points at the sending device — a warning, not a red error (<code>setup.ts:219</code>)</td></tr>
-        <tr><td>6</td><td>the probe cannot run here</td><td><span class="app"><span class="sl-glyph sp-muted">◐</span></span> muted · "can't check automatically"</td><td>a resolved verdict, not a failure and not a blank (driver ②). The half-glyph is the shape of "unknown", distinct from "no"</td></tr>
-        <tr><td>7</td><td>nothing yet</td><td><span class="app"><span class="sl-glyph sp-muted">○</span></span> muted · "not … yet"</td><td>the honest floor. "Yet" is load-bearing microcopy — the state is pending, not broken</td></tr>
+        <tr><td>1</td><td>an action is running</td><td><span class="app"><span class="text-body leading-none font-ui text-ink-mute">⟳</span></span> muted · "Installing…"</td><td>the truest thing about right now is that we are working. Suppresses every stale reading beneath it, including a previous error (driver ④)</td></tr>
+        <tr><td>2</td><td>the probe says yes</td><td><span class="app"><span class="text-body leading-none font-ui text-ok">✓</span></span> ok</td><td><strong>an authoritative positive beats a stale error</strong> — the machine trusts the CA whatever the last click did (driver ③, <code>setup.ts:214</code>)</td></tr>
+        <tr><td>3</td><td>observed evidence proves it</td><td><span class="app"><span class="text-body leading-none font-ui text-ok">✓</span></span> ok · "confirmed by captured traffic"</td><td>a decrypted flow is proof the probe could not obtain — evidence outranks an unavailable check, and still outranks the error</td></tr>
+        <tr><td>4</td><td>the last action failed</td><td><span class="app"><span class="text-body leading-none font-ui text-warn">⚠</span></span> warn · "Install failed — …"</td><td>only reached when nothing above proved success. Below both positives by design: an error that has since been overtaken is noise</td></tr>
+        <tr><td>5</td><td>partial evidence contradicts</td><td><span class="app"><span class="text-body leading-none font-ui text-warn">⚠</span></span> warn · "arriving but not decrypting"</td><td>traffic without decryption points at the sending device — a warning, not a red error (<code>setup.ts:219</code>)</td></tr>
+        <tr><td>6</td><td>the probe cannot run here</td><td><span class="app"><span class="text-body leading-none font-ui text-ink-mute">◐</span></span> muted · "can't check automatically"</td><td>a resolved verdict, not a failure and not a blank (driver ②). The half-glyph is the shape of "unknown", distinct from "no"</td></tr>
+        <tr><td>7</td><td>nothing yet</td><td><span class="app"><span class="text-body leading-none font-ui text-ink-mute">○</span></span> muted · "not … yet"</td><td>the honest floor. "Yet" is load-bearing microcopy — the state is pending, not broken</td></tr>
       </tbody>
     </table>
     <div class="callout ok" data-c="prec-boundary">
@@ -88,9 +88,9 @@
     <h2 id="anatomy">Anatomy — the parts you see</h2>
     <div class="app" data-c="anatomy-hero">
       <div class="panel" style="max-width:430px;">
-        <div class="sl">
-          <span class="sl-verdict"><span class="sl-glyph sp-muted">◐<span class="anno" style="position:absolute;transform:translate(0,-14px);z-index:1;">1</span></span><span class="sl-name">certificate<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">2</span></span></span>
-          <span class="sl-msg">can't check from here<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">3</span></span>
+        <div class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]">
+          <span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">◐<span class="anno" style="position:absolute;transform:translate(0,-14px);z-index:1;">1</span></span><span class="text-ink-body font-ui shrink-0">certificate<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">2</span></span></span>
+          <span class="text-ink-mute font-ui min-w-0">can't check from here<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">3</span></span>
         </div>
       </div>
       <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">Glyph · name · short message — the whole component, on one line</div>
@@ -99,11 +99,11 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="display:flex;flex-direction:column;gap:5px;">
-            <span class="sl"><span class="sl-glyph sp-ok">✓</span><span class="sl-msg">resolved yes</span></span>
-            <span class="sl"><span class="sl-glyph sp-warn">⚠</span><span class="sl-msg">needs attention</span></span>
-            <span class="sl"><span class="sl-glyph sp-muted">◐</span><span class="sl-msg">can't determine</span></span>
-            <span class="sl"><span class="sl-glyph sp-muted">○</span><span class="sl-msg">not yet</span></span>
-            <span class="sl"><span class="sl-spin"></span><span class="sl-msg">working</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-mute font-ui min-w-0">resolved yes</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-mute font-ui min-w-0">needs attention</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="text-body leading-none font-ui text-ink-mute">◐</span><span class="text-ink-mute font-ui min-w-0">can't determine</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="text-body leading-none font-ui text-ink-mute">○</span><span class="text-ink-mute font-ui min-w-0">not yet</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-block w-spinner h-spinner border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px]"></span><span class="text-ink-mute font-ui min-w-0">working</span></span>
           </div>
           <div class="cap">five shapes, three tones — the glyph is the greyscale channel</div>
         </div>
@@ -118,8 +118,8 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="display:flex;flex-direction:column;gap:5px;">
-            <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-ok">✓</span><span class="sl-name">proxy</span></span><span class="sl-msg">receiving traffic</span></span>
-            <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-ok">✓</span></span><span class="sl-msg">receiving traffic</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-body font-ui shrink-0">proxy</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span>
           </div>
           <div class="cap">with a name · without — the name is optional</div>
         </div>
@@ -134,7 +134,7 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="max-width:none;">
-            <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-warn">⚠</span><span class="sl-name">certificate</span></span><span class="sl-msg">not decrypting</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">not decrypting</span></span>
             <div style="margin-top:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);border-top:1px solid var(--a-line);padding-top:6px;">Traffic is arriving but not decrypting — install the certificate on the device you're capturing from.</div>
           </div>
           <div class="cap">short on the line, the long sentence in the body below</div>
@@ -158,27 +158,27 @@
     <h2 id="states">States</h2>
     <div class="app swatches" data-c="states">
       <div class="swatch">
-        <div class="panel"><span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-ok">✓</span><span class="sl-name">certificate</span></span><span class="sl-msg">trusted on this machine</span></span></div>
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">trusted on this machine</span></span></div>
         <div class="cap"><strong>ok</strong> — resolved yes. <code>✓</code> in <code>text-ok</code>; reached by precedence 2 or 3</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-warn">⚠</span><span class="sl-name">certificate</span></span><span class="sl-msg">not decrypting</span></span></div>
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">not decrypting</span></span></div>
         <div class="cap"><strong>warn</strong> — needs attention. <code>⚠</code> in <code>text-warn</code>; precedence 4 or 5</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-muted">◐</span><span class="sl-name">certificate</span></span><span class="sl-msg">can't check from here</span></span></div>
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">◐</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">can't check from here</span></span></div>
         <div class="cap"><strong>muted · can't determine</strong> — <code>◐</code>. A resolved verdict, not a failure (driver ②)</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-muted">○</span><span class="sl-name">proxy</span></span><span class="sl-msg">no traffic reaching trawler yet</span></span></div>
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">○</span><span class="text-ink-body font-ui shrink-0">proxy</span></span><span class="text-ink-mute font-ui min-w-0">no traffic reaching trawler yet</span></span></div>
         <div class="cap"><strong>muted · not yet</strong> — <code>○</code>. Same tone as above, different shape: the glyph carries it</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="sl"><span class="sl-verdict"><span class="sl-spin"></span><span class="sl-name">certificate</span></span><span class="sl-msg">installing…</span></span></div>
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="inline-block w-spinner h-spinner border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px]"></span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">installing…</span></span></div>
         <div class="cap"><strong>in-flight</strong> — spinner, muted, ellipsis. Precedence 1: outranks everything, including a previous error</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-ok">✓</span></span><span class="sl-msg">receiving traffic</span></span></div>
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span></div>
         <div class="cap"><strong>no name</strong> — the optional-name variant of any of the five, for a host that labels its own row</div>
       </div>
     </div>
@@ -201,7 +201,7 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-ok">✓</span><span class="sl-name">proxy</span></span><span class="sl-msg">receiving traffic</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-body font-ui shrink-0">proxy</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">&lt;StatusLine name="proxy" verdict={proxyStatus(…)} /&gt;</span>
           </div>
           <div class="fc-note"><strong><code>{glyph, tone, message}</code> in — the shipped <code>StepStatusView</code> exactly</strong> (<code>setup.ts:191</code>). The resolvers are pure, unit-tested, and read probes plus observations this component must not know. StatusLine owns the <em>shape and the promise of the order</em>; the domain owns which verdict is true. Zero duplication: the struct already exists and already has tests.</div>
@@ -222,7 +222,7 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-warn">⚠</span><span class="sl-name">certificate</span></span><span class="sl-msg">not decrypting</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">not decrypting</span></span>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);border-top:1px solid var(--a-line);padding-top:4px;">…install the certificate on the device you're capturing from. ← the body's</span>
           </div>
           <div class="fc-note"><strong>A fragment, ≤ ~40 chars.</strong> Three lines are scanned as a column (driver ①); a sentence per line makes the column a paragraph and the glyphs stop lining up. The remedy belongs where the user acts on it. Cost, disclosed: the domain does not return the short form yet — hence the <code>[UI_DEFER]</code> marker, not a silent shortening.</div>
@@ -230,7 +230,7 @@
         <div class="fork-card">
           <div class="fc-lbl">rejected</div>
           <div class="fc-ex">
-            <span class="sl" style="max-width:250px;"><span class="sl-verdict"><span class="sl-glyph sp-warn">⚠</span><span class="sl-name">certificate</span></span><span class="sl-msg">Traffic is arriving but not decrypting — install the certificate on the device you're capturing from.</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]" style="max-width:250px;"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">Traffic is arriving but not decrypting — install the certificate on the device you're capturing from.</span></span>
           </div>
           <div class="fc-note"><strong>Render whatever the domain returns, full sentence and all.</strong> Honest today and needs no domain change. Rejected: it makes the component's spec "however long the caller's string is", so three preconditions become three wrapped paragraphs and the scan column is gone. The contract should describe the design, and the gap should be visible.</div>
         </div>
@@ -242,7 +242,7 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <span class="sl"><span class="sl-verdict"><span class="sl-spin"></span><span class="sl-name">certificate</span></span><span class="sl-msg">installing…</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="inline-block w-spinner h-spinner border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px]"></span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">installing…</span></span>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">domain sends glyph "⟳" → the component animates it</span>
           </div>
           <div class="fc-note"><strong>The <code>⟳</code> the resolvers return renders as <a href="body-viewer.html">BodyViewer</a>'s existing spinner</strong> (<code>.spin</code>, already in the sheet), same slot, same width. Motion is the one honest signal that a multi-second privileged action is still running (driver ④) — a static glyph beside "installing…" is indistinguishable from a hang. Reuses a drawing rather than adding one.</div>
@@ -250,7 +250,7 @@
         <div class="fork-card">
           <div class="fc-lbl">rejected</div>
           <div class="fc-ex">
-            <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-muted">⟳</span><span class="sl-name">certificate</span></span><span class="sl-msg">installing…</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">⟳</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">installing…</span></span>
           </div>
           <div class="fc-note"><strong>Static <code>⟳</code>, verbatim.</strong> Simplest, and consistent with rendering the glyph as given. Rejected: <a href="duration-text.html">DurationText</a>'s ban on live animation is about a <em>scan column of resting values</em>, and this is the opposite case — the only element on screen that is genuinely mid-flight, during an OS password prompt where the user needs to know we are still waiting too.</div>
         </div>
@@ -312,13 +312,13 @@
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">The precedence, driven</div>
           <div class="panel" style="max-width:340px;">
             <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input type="checkbox" id="sl-running"> an action is running</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input type="checkbox" id="sl-probe"> the probe says trusted</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input type="checkbox" id="sl-decrypted"> a decrypted flow was seen</label>
-              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input type="checkbox" id="sl-error" checked> the last install failed</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input class="accent-ink-mute w-3 h-3 cursor-pointer" type="checkbox" id="sl-running"> an action is running</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input class="accent-ink-mute w-3 h-3 cursor-pointer" type="checkbox" id="sl-probe"> the probe says trusted</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input class="accent-ink-mute w-3 h-3 cursor-pointer" type="checkbox" id="sl-decrypted"> a decrypted flow was seen</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input class="accent-ink-mute w-3 h-3 cursor-pointer" type="checkbox" id="sl-error" checked> the last install failed</label>
             </div>
             <div style="border-top:1px solid var(--a-line);padding-top:10px;">
-              <div class="sl" id="sl-out"></div>
+              <div class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]" id="sl-out"></div>
             </div>
             <div id="sl-rank" style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);margin-top:8px;"></div>
           </div>
@@ -328,9 +328,9 @@
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Three, scanned together</div>
           <div class="panel" style="max-width:330px;">
             <div style="display:flex;flex-direction:column;gap:9px;">
-              <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-ok">✓</span><span class="sl-name">proxy</span></span><span class="sl-msg">receiving traffic</span></span>
-              <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-muted">◐</span><span class="sl-name">certificate</span></span><span class="sl-msg">can't check from here</span></span>
-              <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-muted">○</span><span class="sl-name">capture</span></span><span class="sl-msg">waiting for your first request</span></span>
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-body font-ui shrink-0">proxy</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span>
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">◐</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">can't check from here</span></span>
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">○</span><span class="text-ink-body font-ui shrink-0">capture</span></span><span class="text-ink-mute font-ui min-w-0">waiting for your first request</span></span>
             </div>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">The glyph column is the scan target (driver ①). Two of the three are muted — the shapes separate them.</div>
@@ -339,15 +339,15 @@
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Greyscale — colour removed</div>
           <div class="panel" style="max-width:330px;filter:grayscale(1);">
             <div style="display:flex;flex-direction:column;gap:9px;">
-              <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-ok">✓</span><span class="sl-name">proxy</span></span><span class="sl-msg">receiving traffic</span></span>
-              <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-warn">⚠</span><span class="sl-name">certificate</span></span><span class="sl-msg">not decrypting</span></span>
-              <span class="sl"><span class="sl-verdict"><span class="sl-glyph sp-muted">◐</span><span class="sl-name">capture</span></span><span class="sl-msg">can't check from here</span></span>
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-body font-ui shrink-0">proxy</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span>
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">not decrypting</span></span>
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">◐</span><span class="text-ink-body font-ui shrink-0">capture</span></span><span class="text-ink-mute font-ui min-w-0">can't check from here</span></span>
             </div>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Still readable — <code>colour-plus-text</code> discharged by the glyph (driver ⑤), which TonedText can only state.</div>
         </div>
       </div>
-      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — the left panel runs the precedence table verbatim. Rendered in app Warp tokens from <a href="specimen.css">specimen.css</a>; the tone classes are <a href="toned-text.html">TonedText</a>'s, only <code>.sl*</code> (layout) is new.</div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — the left panel runs the precedence table verbatim. Rendered in app Warp tokens from specimen.css; the tone classes are <a href="toned-text.html">TonedText</a>'s, only <code>.sl*</code> (layout) is new.</div>
     </div>
   </main>
   <script>
@@ -359,13 +359,20 @@
     ];
     const FLOOR = { glyph: '○', tone: 'muted', msg: 'not trusted on this machine yet', note: '7 · nothing yet — the honest floor' };
 
+    const SL_VERDICT = 'inline-flex items-baseline gap-control-gap shrink-0';
+    const SL_GLYPH = 'text-body leading-none font-ui';
+    const SL_NAME = 'text-ink-body font-ui shrink-0';
+    const SL_MSG = 'text-ink-mute font-ui min-w-0';
+    const SL_SPIN = 'inline-block w-spinner h-spinner border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px]';
+    const TONE = { ok: 'text-ok', warn: 'text-warn', muted: 'text-ink-mute' };
+
     function render() {
       const hit = VERDICTS.find((v) => document.getElementById(v.id).checked) || FLOOR;
       const glyph = hit.glyph === 'spin'
-        ? '<span class="sl-spin"></span>'
-        : `<span class="sl-glyph sp-${hit.tone}">${hit.glyph}</span>`;
+        ? `<span class="${SL_SPIN}"></span>`
+        : `<span class="${SL_GLYPH} ${TONE[hit.tone]}">${hit.glyph}</span>`;
       document.getElementById('sl-out').innerHTML =
-        `<span class="sl-verdict">${glyph}<span class="sl-name">certificate</span></span><span class="sl-msg">${hit.msg}</span>`;
+        `<span class="${SL_VERDICT}">${glyph}<span class="${SL_NAME}">certificate</span></span><span class="${SL_MSG}">${hit.msg}</span>`;
       document.getElementById('sl-rank').textContent = 'precedence ' + hit.note;
     }
     VERDICTS.forEach((v) => document.getElementById(v.id).addEventListener('change', render));

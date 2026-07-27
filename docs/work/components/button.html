@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — Button component design</title>
-  <link rel="stylesheet" href="specimen.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="tw-config.js"></script>
   <style>
     /* Every component value below comes from specimen.css. This block is doc
        scaffolding plus ONE new thing: Button itself, which has no extraction
@@ -12,21 +13,6 @@
        proposal — everything else is composed. */
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
-
-    /* NEW — the proposed component, and the collection's only button element.
-       Its two siblings compose it and pass only their deltas on three axes:
-       frame (border|bare) · shape (label|square) · tone (body|mute). Everything
-       else here — focus ring, disabled, radius, hit floor — is inherited. */
-    .bt{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:3px 9px;min-height:24px;border:1px solid var(--a-line);border-radius:3px;font-family:var(--a-ui);font-size:11.5px;color:var(--a-body);cursor:pointer;background:transparent;user-select:none;white-space:nowrap;transition:color .1s,border-color .1s,background .1s;}
-    .bt:hover,.bt.s-hover{color:var(--a-ink);border-color:var(--a-mute);}
-    .bt:focus-visible,.bt.s-focus{outline:1px solid var(--a-mute);outline-offset:2px;color:var(--a-ink);}
-    .bt:active,.bt.s-active{color:var(--a-ink);background:rgba(174,166,156,.12);}
-    .bt:disabled,.bt.s-disabled{opacity:.38;pointer-events:none;}
-    .bt-square{width:24px;height:24px;padding:0;gap:0;justify-content:center;font-size:13px;}
-    /* frame="bare" — no border; the hover signal moves to a background wash */
-    .bt-bare{border-color:transparent;width:28px;height:28px;color:var(--a-mute);}
-    .bt-bare:hover,.bt-bare.s-hover{border-color:transparent;background:rgba(247,245,240,.07);color:var(--a-ink);}
-    .bt-ghost{display:inline-flex;align-items:center;justify-content:center;min-height:24px;padding:3px 9px;border:1px dashed var(--a-mute);border-radius:3px;background:rgba(174,166,156,.06);font-family:var(--a-ui);font-size:11.5px;color:var(--a-mute);}
 
     .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;}
     .swatch .panel{max-width:none;display:flex;align-items:center;gap:10px;padding:10px 12px;}
@@ -46,8 +32,7 @@
     .app .fork-card .fc-ex{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;}
     .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:var(--a-ui);}
     .sib th,.sib td{vertical-align:top;}
-    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
-  </style>
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -134,8 +119,8 @@ flowchart TD
     <div class="app" data-c="anatomy-hero">
       <div class="panel" style="max-width:380px;">
         <div style="display:flex;gap:8px;align-items:center;">
-          <button class="bt"><span class="anno" style="position:absolute;transform:translate(24px,-14px);z-index:1;">1</span>retry</button>
-          <button class="bt">close</button>
+          <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors"><span class="anno" style="position:absolute;transform:translate(24px,-14px);z-index:1;">1</span>retry</button>
+          <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">close</button>
         </div>
       </div>
       <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">Zone E's action row — two peers, no primary</div>
@@ -144,7 +129,7 @@ flowchart TD
       <div class="part">
         <div class="ex">
           <div class="panel" style="display:flex;align-items:center;gap:12px;">
-            <span class="bt-ghost">retry</span>
+            <span class="inline-flex items-center justify-center min-h-control px-control-x py-control-y border border-dashed border-ink-mute rounded-button bg-wash-ghost font-ui text-control text-ink-mute">retry</span>
             <span style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">dashed = the full hit box</span>
           </div>
           <div class="cap">3px/9px padding around the label, 24px minimum height</div>
@@ -160,9 +145,9 @@ flowchart TD
       <div class="part">
         <div class="ex">
           <div class="panel" style="display:flex;align-items:center;gap:12px;">
-            <button class="bt" style="pointer-events:none;">retry</button>
-            <button class="bt" style="pointer-events:none;">close</button>
-            <button class="bt s-hover" style="pointer-events:none;">retry</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;">retry</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;">close</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none items-center justify-center transition-colors text-ink border-ink-mute" style="pointer-events:none;">retry</button>
           </div>
           <div class="cap">rest · rest · hover — body → ink, line → mute</div>
         </div>
@@ -177,7 +162,7 @@ flowchart TD
       <div class="part">
         <div class="ex">
           <div class="panel" style="display:flex;align-items:center;gap:12px;">
-            <button class="bt" style="pointer-events:none;"><span style="font-size:12px;line-height:1;">↻</span>retry</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;"><span style="font-size:12px;line-height:1;">↻</span>retry</button>
             <span style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">optional, rarely earned</span>
           </div>
           <div class="cap">leading glyph — the same slot CopyButton's ⧉ uses</div>
@@ -193,9 +178,9 @@ flowchart TD
       <div class="part">
         <div class="ex">
           <div class="panel" style="display:flex;align-items:center;gap:12px;">
-            <button class="bt" style="pointer-events:none;">retry</button>
-            <button class="bt bt-square" style="pointer-events:none;" title="copy body" aria-label="copy body">⧉</button>
-            <button class="bt bt-square bt-bare" style="pointer-events:none;" title="close" aria-label="close">×</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;">retry</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors w-control h-control p-0 gap-0 text-glyph-lg" style="pointer-events:none;" title="copy body" aria-label="copy body">⧉</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors p-0 gap-0 text-glyph-lg border-transparent w-control-lg h-control-lg hover:border-transparent hover:bg-wash-hover" style="pointer-events:none;" title="close" aria-label="close">×</button>
             <span style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">one element, three settings</span>
           </div>
           <div class="cap">left to right: the defaults · <code>shape="square"</code> (CopyButton's icon form) · <code>+ frame="bare"</code> (IconButton). Same focus ring, same radius, same hit floor throughout</div>
@@ -226,23 +211,23 @@ flowchart TD
     <h2 id="states">States</h2>
     <div class="app swatches" data-c="states">
       <div class="swatch">
-        <div class="panel"><button class="bt" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">rest</span></div>
+        <div class="panel"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">rest</span></div>
         <div class="cap"><strong>rest</strong> — <code>ink-body</code> label, hairline <code>line</code> border, transparent background</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="bt s-hover" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">hover</span></div>
+        <div class="panel"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none items-center justify-center transition-colors text-ink border-ink-mute" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">hover</span></div>
         <div class="cap"><strong>hover</strong> — label to <code>ink</code>, border to <code>ink-mute</code>. No background (that is active's job)</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="bt s-focus" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">focus</span></div>
+        <div class="panel"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none items-center justify-center transition-colors outline outline-1 outline-ink-mute outline-offset-2 text-ink" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">focus</span></div>
         <div class="cap"><strong>focus</strong> — 1px mute outline at 2px offset, ink label. Ink-toned, never chromatic</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="bt s-active" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">active</span></div>
+        <div class="panel"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none items-center justify-center transition-colors text-ink bg-wash-tint" style="pointer-events:none;">retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">active</span></div>
         <div class="cap"><strong>active</strong> — 12% mute background wash, ink label (pressed feel)</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="bt s-disabled" disabled>retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">disabled</span></div>
+        <div class="panel"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors opacity-disabled pointer-events-none" disabled>retry</button><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">disabled</span></div>
         <div class="cap"><strong>disabled</strong> — 38% opacity, no pointer events, removed from tab order</div>
       </div>
     </div>
@@ -256,14 +241,14 @@ flowchart TD
       <div class="fork-row">
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
-          <div class="fc-ex"><button class="cb" style="pointer-events:none;"><span class="cb-icon">⧉</span>curl</button><button class="bt" style="pointer-events:none;">retry</button></div>
+          <div class="fc-ex"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" style="pointer-events:none;"><span class="text-body leading-none">⧉</span>curl</button><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;">retry</button></div>
           <div class="fc-note"><strong>Identical border, radius, padding, family and size — and since W5, identical <em>by composition</em>.</strong> Side by side, the only difference is the word, which is correct, because the only difference <em>is</em> the word. A second button box would teach that copies and non-copies are different kinds of thing.
           <br><br>
           W4 settled this as "clone CopyButton's box". W5 finished it: <a href="copy-button.html">CopyButton</a> renders a Button, so there is one box and one token table. The reason the wording had to change is that <strong>cloning did not hold</strong> — three values had already drifted while both files claimed identity (see § tokens). A rule that two files must match is only as good as the next edit; a shared shell needs no rule.</div>
         </div>
         <div class="fork-card">
           <div class="fc-lbl">rejected</div>
-          <div class="fc-ex"><button class="bt" style="pointer-events:none;background:var(--a-soft);border-color:var(--a-mute);color:var(--a-ink);">retry</button></div>
+          <div class="fc-ex"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;background:var(--a-soft);border-color:var(--a-mute);color:var(--a-ink);">retry</button></div>
           <div class="fc-note"><strong>A distinct, slightly heavier box</strong> so actions read as more consequential than copies. Rejected: it invents a weight hierarchy the rulebook does not have, and every screen would then need to decide which of two boxes an action deserves.</div>
         </div>
       </div>
@@ -275,7 +260,7 @@ flowchart TD
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex" style="flex-direction:column;align-items:flex-start;gap:4px;">
             <span style="color:var(--a-warn);font-size:12px;font-family:var(--a-ui);">⚠ trawler is not responding</span>
-            <button class="bt" style="pointer-events:none;">retry</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;">retry</button>
           </div>
           <div class="fc-note"><strong>Ink-toned, unchanged.</strong> The warn belongs to the <em>message</em>; the button is the way out, not part of the problem. Keeping exactly one warn element per failure means the eye lands on the sentence first — which is the one that says what happened.</div>
         </div>
@@ -283,7 +268,7 @@ flowchart TD
           <div class="fc-lbl">rejected</div>
           <div class="fc-ex" style="flex-direction:column;align-items:flex-start;gap:4px;">
             <span style="color:var(--a-warn);font-size:12px;font-family:var(--a-ui);">⚠ trawler is not responding</span>
-            <button class="bt" style="pointer-events:none;color:var(--a-warn);border-color:var(--a-warn);">retry</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;color:var(--a-warn);border-color:var(--a-warn);">retry</button>
           </div>
           <div class="fc-note"><strong>Warn-toned inside a warn Notice.</strong> Tempting for cohesion, but it doubles the alarm and reads as "retrying is dangerous". Also collides with CopyButton's <code>s-error</code>, where warn on a button genuinely means <em>this button failed</em>.</div>
         </div>
@@ -294,12 +279,12 @@ flowchart TD
       <div class="fork-row">
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
-          <div class="fc-ex"><button class="bt" style="pointer-events:none;">retry</button><span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">ink-body</span></div>
+          <div class="fc-ex"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;">retry</button><span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">ink-body</span></div>
           <div class="fc-note"><strong><code>ink-body</code>.</strong> A Button is usually the only way out of the zone it sits in; CopyButton is a convenience beside content that is already readable. <code>visual-weight-follows-goals</code> — weight follows what the zone is for.</div>
         </div>
         <div class="fork-card">
           <div class="fc-lbl">rejected</div>
-          <div class="fc-ex"><button class="bt" style="pointer-events:none;color:var(--a-mute);">retry</button><span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">ink-mute</span></div>
+          <div class="fc-ex"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;color:var(--a-mute);">retry</button><span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">ink-mute</span></div>
           <div class="fc-note"><strong><code>ink-mute</code>, exact CopyButton parity.</strong> Simpler rule, and one fewer divergence to remember. Rejected because the panel's only recovery action would then be the quietest text in the zone.</div>
         </div>
       </div>
@@ -310,14 +295,14 @@ flowchart TD
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex" style="flex-direction:column;align-items:flex-start;gap:4px;">
-            <button class="bt s-disabled" disabled style="pointer-events:none;">trust the certificate</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors opacity-disabled pointer-events-none" disabled style="pointer-events:none;">trust the certificate</button>
             <span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">⟳ waiting for the system prompt…</span>
           </div>
           <div class="fc-note"><strong>The button goes <code>disabled</code>; the zone renders the progress sentence.</strong> Button gains no <code>loading</code> prop and no spinner — but the delegation is no longer open-ended. <strong>The caller must render both halves:</strong> ① the Button <code>disabled</code> for the whole in-flight window, so it cannot be pressed twice, and ② a progress line <em>in the same zone</em>, adjacent to the button, naming what is being waited on. Neither half is optional: a disabled button with no sentence is a dead control, and a sentence with a live button invites a double-press.</div>
         </div>
         <div class="fork-card">
           <div class="fc-lbl">rejected</div>
-          <div class="fc-ex"><button class="bt" style="pointer-events:none;"><span style="display:inline-block;width:9px;height:9px;border:1.5px solid var(--a-line);border-top-color:var(--a-mute);border-radius:50%;margin-right:5px;vertical-align:-1px;"></span>saving…</button></div>
+          <div class="fc-ex"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;"><span style="display:inline-block;width:9px;height:9px;border:1.5px solid var(--a-line);border-top-color:var(--a-mute);border-radius:50%;margin-right:5px;vertical-align:-1px;"></span>saving…</button></div>
           <div class="fc-note"><strong>A <code>loading</code> prop with an in-button spinner</strong> (what CopyButton does in spirit — it owns its own confirm). Rejected: the label would have to change to a progress word, so the caller supplies two strings for one action; the box would resize; and the button becomes the only place the progress is stated, which fails as soon as the action takes long enough that the user has looked elsewhere. A zone-level line survives that; a glyph inside a disabled control does not.</div>
         </div>
       </div>
@@ -389,7 +374,7 @@ flowchart TD
         <tr><td>disabled</td><td><code>disabled:opacity-38 disabled:pointer-events-none</code>; the <code>disabled</code> attr removes it from tab order</td></tr>
         <tr><td>leading glyph</td><td><code>text-xs leading-none</code>, <code>aria-hidden="true"</code>, inherits the label tone</td></tr>
         <tr><td><code>shape="square"</code></td><td><code>p-0 gap-0 justify-center text-[13px]</code> replacing <code>px-[9px] py-[3px]</code>, with <code>w-/h-</code> from <code>size</code> (<code>w-6 h-6</code> at the 24 default, <code>w-7 h-7</code> at IconButton's 28). Every other class above is unchanged. Requires <code>aria-label</code></td></tr>
-        <tr><td><code>frame="bare"</code></td><td>drops <code>border border-line</code>; <code>hover:border-ink-mute</code> is replaced by <code>hover:bg-ink/7</code> and <code>active:bg-ink/[.13]</code> — the wash <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 22</a> has no token for (W6 owes one; <a href="specimen.css">specimen.css</a> conflict #8). Everything else, focus ring included, is unchanged</td></tr>
+        <tr><td><code>frame="bare"</code></td><td>drops <code>border border-line</code>; <code>hover:border-ink-mute</code> is replaced by <code>hover:bg-ink/7</code> and <code>active:bg-ink/[.13]</code> — the wash <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 22</a> has no token for (W6 owes one; specimen.css conflict #8). Everything else, focus ring included, is unchanged</td></tr>
         <tr><td><code>tone="mute"</code></td><td><code>text-ink-mute</code> replacing <code>text-ink-body</code> at rest. <code>hover:text-ink</code> is unchanged — the two tones converge on hover</td></tr>
       </tbody>
     </table>
@@ -421,8 +406,8 @@ flowchart TD
               <span>⚠</span><span>could not load this flow — 500</span>
             </div>
             <div style="display:flex;gap:8px;margin-top:8px;">
-              <button class="bt" id="spec-retry">retry</button>
-              <button class="bt" id="spec-close">close</button>
+              <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" id="spec-retry">retry</button>
+              <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" id="spec-close">close</button>
             </div>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Both ink-toned beside warn text (D2). Tab, then Enter or Space.</div>
@@ -430,23 +415,23 @@ flowchart TD
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Beside its siblings</div>
           <div class="panel" style="max-width:330px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button class="bt" id="spec-sib">retry</button>
-            <button class="cb"><span class="cb-icon">⧉</span>curl</button>
-            <button class="ib" title="close" aria-label="close">×</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" id="spec-sib">retry</button>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none"><span class="text-body leading-none">⧉</span>curl</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" title="close" aria-label="close">×</button>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Button · CopyButton · IconButton — one box shared by the two labelled ones (D1).</div>
         </div>
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Disabled</div>
           <div class="panel" style="max-width:330px;display:flex;align-items:center;gap:10px;">
-            <button class="bt s-disabled" disabled>retry</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors opacity-disabled pointer-events-none" disabled>retry</button>
             <span style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">already retrying</span>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Not reachable by Tab. 38% opacity — CopyButton's disabled value.</div>
         </div>
       </div>
       <div id="spec-log" style="min-height:20px;"></div>
-      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — rendered in app Warp tokens, composed from <a href="specimen.css">specimen.css</a>. The CopyButton and IconButton beside it are their own drawings, unmodified; only <code>.bt*</code> is new.</div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — rendered in app Warp tokens, composed from specimen.css. The CopyButton and IconButton beside it are their own drawings, unmodified; only <code>.bt*</code> is new.</div>
     </div>
   </main>
   <script>

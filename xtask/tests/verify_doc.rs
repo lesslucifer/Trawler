@@ -174,7 +174,8 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
         |rows: &str| format!("<pre data-item=\"receipt\">rulebook: abc1234\nsoft:\n{rows}</pre>");
     let run = |rows: &str| {
         format!(
-            "<html><body><link rel=\"stylesheet\" href=\"components/specimen.css\">\
+            "<html><body><script src=\"https://cdn.tailwindcss.com\"></script>\
+             <script src=\"components/tw-config.js\"></script>\
              <script src=\"components/specimen.js\" defer></script><style>.m{{color:var(--ink);}}</style>\
              {}</body></html>",
             doc_main(&format!(

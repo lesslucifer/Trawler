@@ -377,8 +377,12 @@ fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) 
             });
         }
     }
-    // the attribute, not the path: a prose link to the sheet composes nothing
-    for (attr, asset) in [("href", "components/specimen.css"), ("src", "components/specimen.js")] {
+    // the attribute, not the path: a prose mention of an asset composes nothing
+    for (attr, asset) in [
+        ("src", "https://cdn.tailwindcss.com"),
+        ("src", "components/tw-config.js"),
+        ("src", "components/specimen.js"),
+    ] {
         if !html.contains(&format!("{attr}=\"{asset}\"")) {
             failures.push(Failure {
                 check: "assets·specimen".to_string(),
@@ -392,7 +396,8 @@ fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) 
         failures.push(Failure {
             check: "mockup·colour-literals".to_string(),
             what: format!("colour literal {literal} in the doc's own CSS"),
-            fix: "every colour comes from components/specimen.css - write var(--a-…)".to_string(),
+            fix: "every colour is a token from ui/tailwind.config.js - write its utility class"
+                .to_string(),
         });
     }
     if let Some(frame) = item("frame") {
@@ -1133,7 +1138,8 @@ mod tests {
 
     fn design_run(receipt_block: &str) -> String {
         let body = format!(
-            "<link rel=\"stylesheet\" href=\"components/specimen.css\">\
+            "<script src=\"https://cdn.tailwindcss.com\"></script>\
+             <script src=\"components/tw-config.js\"></script>\
              <script src=\"components/specimen.js\" defer></script>\
              <style>.mock{{color:var(--a-ink);}}</style>\
              <main data-artifact=\"design-run\">\
@@ -1562,14 +1568,13 @@ mod tests {
 
     #[test]
     fn a_run_that_does_not_link_the_shared_specimens_is_red() {
-        let doc =
-            green_run().replace("href=\"components/specimen.css\"", "href=\"own-styles.css\"");
+        let doc = green_run().replace("src=\"components/tw-config.js\"", "src=\"own-theme.js\"");
         assert!(what(&doc_verdict(&doc), "assets·specimen").contains("re-typing"));
 
-        let mentioned = doc.replace("<style>", "<a href=\"x\">components/specimen.css</a><style>");
+        let mentioned = doc.replace("<style>", "<a href=\"x\">components/tw-config.js</a><style>");
         assert!(
             doc_verdict(&mentioned).red(),
-            "naming the sheet in prose composes nothing - the attribute is the proof"
+            "naming the theme in prose composes nothing - the attribute is the proof"
         );
     }
 

@@ -18,8 +18,24 @@
  *
  * Visibility inside a switched mockup is CSS, not script: .<class> .x-only
  * hides what the other state owns (see the run doc's assembly block).
+ *
+ * The highlight-map styling below came from specimen.css, deleted in W5 step 3
+ * when the specimens moved to Tailwind. It is doc interaction, not component
+ * contract, so it travels with the behaviour it belongs to instead.
  */
 (function () {
+  const DOC_STYLE = `
+[data-map] [data-key]{cursor:pointer;border-radius:3px;transition:background .1s;}
+[data-map] pre [data-key]{padding:0 3px;}
+[data-map] pre [data-key]:hover{background:var(--line);}
+[data-map] pre [data-key].hl{background:color-mix(in srgb, var(--accent) 24%, transparent);color:var(--ink);font-weight:600;}
+[data-map] tbody tr[data-key]:hover td{background:var(--line);}
+[data-map] tbody tr[data-key].hl td{background:color-mix(in srgb, var(--accent) 16%, transparent);}
+`;
+  const style = document.createElement('style');
+  style.textContent = DOC_STYLE;
+  document.head.appendChild(style);
+
   document.querySelectorAll('[data-map]').forEach((map) => {
     const keyed = map.querySelectorAll('[data-key]');
     const clear = () => keyed.forEach((el) => el.classList.remove('hl'));

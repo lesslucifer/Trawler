@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — Notice component design</title>
-  <link rel="stylesheet" href="specimen.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="tw-config.js"></script>
   <style>
     /* Every component value below comes from specimen.css. This block is doc
        scaffolding plus ONE new thing: Notice itself, which has no extraction
@@ -12,21 +13,6 @@
        proposal — everything else is composed. */
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
-
-    /* NEW — the proposed component. Absorbs .ht-none (HeaderTable, Inter 12px
-       upright) and .body-pane .notice (BodyViewer, mono italic): finding 24. */
-    .nt{display:flex;gap:6px;align-items:flex-start;font-family:var(--a-ui);font-size:12px;line-height:1.5;padding:4px 0;}
-    .nt-mute{color:var(--a-mute);}
-    .nt-warn{color:var(--a-warn);}
-    .nt-ok{color:var(--a-ok);}
-    .nt .nt-glyph{flex:none;line-height:1.5;}
-    .nt .nt-body{min-width:0;}
-    .nt .nt-detail{display:block;color:var(--a-mute);font-size:11.5px;margin-top:2px;}
-    .nt .nt-action{display:flex;gap:8px;margin-top:8px;}
-    /* NEW — plain labelled button, proposed alongside; drawn in button.html.
-       Composed here so the action slot is not a stub. */
-    .bt{border:1px solid var(--a-line);border-radius:3px;padding:3px 10px;font-family:var(--a-ui);font-size:11.5px;color:var(--a-body);background:transparent;cursor:pointer;}
-    .bt:hover{color:var(--a-ink);border-color:var(--a-mute);}
 
     .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;}
     .swatch .panel{max-width:none;}
@@ -46,8 +32,7 @@
     .app .fork-card .fc-ex{margin-bottom:6px;}
     .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:var(--a-ui);}
     .absorb td:first-child{white-space:nowrap;}
-    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
-  </style>
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -65,7 +50,7 @@
     <table data-c="identity">
       <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — renders a sentence at a tone; owns no domain knowledge → <strong>in the collection</strong></td></tr>
       <tr><td><strong>Tenants</strong></td><td>HeaderTable empty + pending · BodyViewer's five absences (incl. the W5 <code>fetch-failed</code> state) · the flow detail panel's three load failures (zone E) · the setup screen's capture-is-working zone (<code>tone="ok"</code>, D4) · every future "nothing here / it broke / it is working" surface</td></tr>
-      <tr><td><strong>Exists today</strong></td><td>twice, privately and inconsistently: <code>.ht-none</code> (<a href="header-table.html">HeaderTable</a>) and <code>.body-pane .notice</code> (<a href="body-viewer.html">BodyViewer</a>) — marked <code>CONFLICT:</code> in <a href="specimen.css">specimen.css</a></td></tr>
+      <tr><td><strong>Exists today</strong></td><td>twice, privately and inconsistently: <code>.ht-none</code> (<a href="header-table.html">HeaderTable</a>) and <code>.body-pane .notice</code> (<a href="body-viewer.html">BodyViewer</a>) — marked <code>CONFLICT:</code> in specimen.css</td></tr>
       <tr><td><strong>Made of</strong></td><td><a href="button.html">Button</a> (T1) in the optional action slot — nothing else. Sibling of neither button primitive: Notice is a <em>message</em> that may carry an action, not an action.</td></tr>
     </table>
     <table data-c="frame-drivers">
@@ -101,11 +86,11 @@
     <div class="app" data-c="anatomy-hero">
       <div class="panel" style="max-width:420px;">
         <div class="lbl">response body</div>
-        <div class="nt nt-warn">
-          <span class="nt-glyph">⚠</span>
-          <span class="nt-body">body unavailable
-            <span class="nt-detail">the flow is no longer captured</span>
-            <span class="nt-action"><button class="bt">retry</button></span>
+        <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn">
+          <span class="flex-none leading-normal">⚠</span>
+          <span class="min-w-0">body unavailable
+            <span class="block text-ink-mute text-control mt-[2px]">the flow is no longer captured</span>
+            <span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">retry</button></span>
           </span>
         </div>
       </div>
@@ -114,7 +99,7 @@
     <div class="app parts" data-c="anatomy-parts">
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="nt nt-mute"><span class="nt-body">no request body</span></div></div>
+          <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">no request body</span></div></div>
           <div class="cap">the minimum Notice: one sentence, mute, no glyph, no action</div>
         </div>
         <div>
@@ -127,7 +112,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">trawler is not responding</span></div></div>
+          <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">trawler is not responding</span></div></div>
           <div class="cap">warn tone — the glyph appears with it, never alone</div>
         </div>
         <div>
@@ -140,7 +125,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="nt nt-mute"><span class="nt-body">not captured — too large<span class="nt-detail">the body exceeded the 10 MiB capture cap</span></span></div></div>
+          <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">not captured — too large<span class="block text-ink-mute text-control mt-[2px]">the body exceeded the 10 MiB capture cap</span></span></div></div>
           <div class="cap">optional second line — explains, does not instruct</div>
         </div>
         <div>
@@ -153,7 +138,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">could not load this flow — 500<span class="nt-action"><button class="bt">retry</button><button class="bt">close</button></span></span></div></div>
+          <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">could not load this flow — 500<span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">retry</button><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">close</button></span></span></div></div>
           <div class="cap">action slot — only the actions that can actually work</div>
         </div>
         <div>
@@ -173,35 +158,35 @@
     <p style="color:var(--muted);">Notice is not interactive, so it has no rest/hover/focus set. Its states are its <em>three tones × the optional parts</em> — the full matrix a builder must render and a reviewer must check.</p>
     <div class="app swatches" data-c="states">
       <div class="swatch">
-        <div class="panel"><div class="nt nt-mute"><span class="nt-body">none</span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">none</span></div></div>
         <div class="cap"><strong>mute, bare</strong> — HeaderTable's empty set. The lexicon reserves "none" for exactly this.</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-mute"><span class="nt-body">awaiting response…</span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">awaiting response…</span></div></div>
         <div class="cap"><strong>mute, bare</strong> — HeaderTable's proposed pending state. Not "none": the call has not finished.</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-mute"><span class="nt-body">not captured — too large<span class="nt-detail">the body exceeded the 10 MiB capture cap</span></span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">not captured — too large<span class="block text-ink-mute text-control mt-[2px]">the body exceeded the 10 MiB capture cap</span></span></div></div>
         <div class="cap"><strong>mute + detail</strong> — the absence with no possible action (finding 16). No button, deliberately.</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">flow no longer captured<span class="nt-detail">the capture ring moved past it</span><span class="nt-action"><button class="bt">close</button></span></span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">flow no longer captured<span class="block text-ink-mute text-control mt-[2px]">the capture ring moved past it</span><span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">close</button></span></span></div></div>
         <div class="cap"><strong>warn + detail + action</strong> — zone E, eviction. <em>close</em> only: retry can never succeed.</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">trawler is not responding<span class="nt-detail">check the proxy is running</span><span class="nt-action"><button class="bt">retry</button></span></span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">trawler is not responding<span class="block text-ink-mute text-control mt-[2px]">check the proxy is running</span><span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">retry</button></span></span></div></div>
         <div class="cap"><strong>warn + detail + action</strong> — zone E, unreachable. <em>retry</em> works here, so it is offered.</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">could not load this flow — 500<span class="nt-action"><button class="bt">retry</button><button class="bt">close</button></span></span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">could not load this flow — 500<span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">retry</button><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">close</button></span></span></div></div>
         <div class="cap"><strong>warn + two actions</strong> — the status code is the text channel beside the tone (<code>colour-plus-text</code>).</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-ok"><span class="nt-glyph">✓</span><span class="nt-body">trawler is capturing</span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ok"><span class="flex-none leading-normal">✓</span><span class="min-w-0">trawler is capturing</span></div></div>
         <div class="cap"><strong>ok + glyph</strong> <span class="badge id">W5 · D4</span> — a standing positive outcome, the run #3 zone the old <code>@avoid</code> forbade. ✓ carries what the colour carries.</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-ok"><span class="nt-glyph">✓</span><span class="nt-body">trawler is capturing<span class="nt-detail">traffic is being decrypted and recorded</span></span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ok"><span class="flex-none leading-normal">✓</span><span class="min-w-0">trawler is capturing<span class="block text-ink-mute text-control mt-[2px]">traffic is being decrypted and recorded</span></span></div></div>
         <div class="cap"><strong>ok + detail</strong> — the detail stays mute, exactly as under a warn headline: one toned element per notice.</div>
       </div>
     </div>
@@ -215,12 +200,12 @@
       <div class="fork-row">
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
-          <div class="fc-ex"><div class="nt nt-mute"><span class="nt-body">no response yet</span></div></div>
+          <div class="fc-ex"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">no response yet</span></div></div>
           <div class="fc-note"><strong>Inter, upright.</strong> <code>mono-for-wire-data</code> gives mono to bytes that crossed the wire; a notice is chrome about their absence. Inside a body pane the switch is also the clearest possible signal that what you are reading is <em>not</em> the body.</div>
         </div>
         <div class="fork-card">
           <div class="fc-lbl">rejected</div>
-          <div class="fc-ex"><div class="nt nt-mute" style="font-family:var(--a-mono);font-style:italic;"><span class="nt-body">no response yet</span></div></div>
+          <div class="fc-ex"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute" style="font-family:var(--a-mono);font-style:italic;"><span class="min-w-0">no response yet</span></div></div>
           <div class="fc-note"><strong>Mono italic</strong> (BodyViewer's current drawing). Keeps the pane's baseline grid, but makes the panel show two absence families at once and leans on italic mono at 12px — the least legible pairing on the surface.</div>
         </div>
       </div>
@@ -231,8 +216,8 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <div class="nt nt-mute"><span class="nt-body">empty body</span></div>
-            <div class="nt nt-warn" style="margin-top:4px;"><span class="nt-glyph">⚠</span><span class="nt-body">body unavailable</span></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">empty body</span></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn" style="margin-top:4px;"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">body unavailable</span></div>
           </div>
           <div class="fc-note"><strong>One component, <code>tone</code> prop.</strong> They are the same shape — a sentence, an optional cause, an optional way out — and the boundary between them moves: "not captured" is an absence, "could not load" is a failure, and BodyViewer's fifth state sits between. Two components would force each tenant to pick, and finding 24 is what happens when tenants pick.</div>
         </div>
@@ -248,7 +233,7 @@
       <div class="fork-row">
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
-          <div class="fc-ex"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">could not load this flow — 500<span class="nt-action"><button class="bt">retry</button><button class="bt">close</button></span></span></div></div>
+          <div class="fc-ex"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">could not load this flow — 500<span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">retry</button><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">close</button></span></span></div></div>
           <div class="fc-note"><strong><code>action?: ReactNode</code>.</strong> The three zone-E failures need close / retry / both, chosen by <em>why</em> the fetch failed — knowledge the panel has and this primitive must not. A slot also keeps Notice free of any Button-specific API.</div>
         </div>
         <div class="fork-card">
@@ -264,9 +249,9 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex" style="flex-direction:column;align-items:flex-start;gap:4px;">
-            <div class="nt nt-ok"><span class="nt-glyph">✓</span><span class="nt-body">trawler is capturing<span class="nt-detail">traffic is being decrypted and recorded</span></span></div>
-            <div class="nt nt-mute" style="margin-top:2px;"><span class="nt-body">none</span></div>
-            <div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">trawler is not responding</span></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ok"><span class="flex-none leading-normal">✓</span><span class="min-w-0">trawler is capturing<span class="block text-ink-mute text-control mt-[2px]">traffic is being decrypted and recorded</span></span></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute" style="margin-top:2px;"><span class="min-w-0">none</span></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">trawler is not responding</span></div>
           </div>
           <div class="fc-note"><strong>Three tones: <code>ok</code> · <code>mute</code> · <code>warn</code>.</strong> <code>ok</code> carries a ✓ glyph on the same rules as warn's ⚠ (same tone as the text, <code>aria-hidden</code>, the sentence carries the meaning). Everything else is unchanged — no border, no background, optional detail, optional action.
           <br><br>
@@ -345,33 +330,33 @@
       <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">In HeaderTable (absence)</div>
-          <div class="sec-stack" style="max-width:320px;">
-            <div class="sec-block">
-              <div class="ht-bar"><span class="sec-hd">headers</span></div>
-              <div class="nt nt-mute"><span class="nt-body">awaiting response…</span></div>
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="max-width:320px;">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
+              <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">headers</span></div>
+              <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">awaiting response…</span></div>
             </div>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Replaces <code>.ht-none</code> — same tone, same size, one owner.</div>
         </div>
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">In BodyViewer (absence → failure)</div>
-          <div class="sec-stack" style="max-width:320px;">
-            <div class="sec-block">
-              <div class="chrome-bar"><span class="sect-lbl">body</span></div>
-              <div class="body-pane" id="spec-pane"><div class="nt nt-mute"><span class="nt-body">empty body</span></div></div>
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="max-width:320px;">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
+              <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">body</span></div>
+              <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]" id="spec-pane"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">empty body</span></div></div>
             </div>
           </div>
-          <div style="margin-top:6px;"><button class="bt" id="spec-toggle">show fetch-failed</button></div>
+          <div style="margin-top:6px;"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" id="spec-toggle">show fetch-failed</button></div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Same component, both tones — the reason D2 keeps them together.</div>
         </div>
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Zone E (failure, full)</div>
           <div class="panel" style="max-width:320px;">
-            <div class="nt nt-warn">
-              <span class="nt-glyph">⚠</span>
-              <span class="nt-body">flow no longer captured
-                <span class="nt-detail">the capture ring moved past it</span>
-                <span class="nt-action"><button class="bt" id="spec-close">close</button></span>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn">
+              <span class="flex-none leading-normal">⚠</span>
+              <span class="min-w-0">flow no longer captured
+                <span class="block text-ink-mute text-control mt-[2px]">the capture ring moved past it</span>
+                <span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" id="spec-close">close</button></span>
               </span>
             </div>
           </div>
@@ -379,14 +364,20 @@
         </div>
       </div>
       <div id="spec-log" style="min-height:20px;"></div>
-      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — rendered in app Warp tokens, composed from <a href="specimen.css">specimen.css</a>. Every host zone around the notices is a real component's drawing; only <code>.nt*</code> and <code>.bt</code> are new.</div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — rendered in app Warp tokens, composed from specimen.css. Every host zone around the notices is a real component's drawing; only <code>.nt*</code> and <code>.bt</code> are new.</div>
     </div>
   </main>
   <script>
     const pane = document.getElementById('spec-pane');
     const toggle = document.getElementById('spec-toggle');
-    const empty = '<div class="nt nt-mute"><span class="nt-body">empty body</span></div>';
-    const failed = '<div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">body unavailable<span class="nt-detail">the flow is no longer captured</span><span class="nt-action"><button class="bt">retry</button></span></span></div>';
+    const NT = 'flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y';
+    const NT_BODY = 'min-w-0';
+    const NT_GLYPH = 'flex-none leading-normal';
+    const NT_DETAIL = 'block text-ink-mute text-control mt-[2px]';
+    const NT_ACTION = 'flex gap-2 mt-2';
+    const BT = 'inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body justify-center transition-colors';
+    const empty = `<div class="${NT} text-ink-mute"><span class="${NT_BODY}">empty body</span></div>`;
+    const failed = `<div class="${NT} text-warn"><span class="${NT_GLYPH}">⚠</span><span class="${NT_BODY}">body unavailable<span class="${NT_DETAIL}">the flow is no longer captured</span><span class="${NT_ACTION}"><button class="${BT}">retry</button></span></span></div>`;
     let showingFailed = false;
     toggle.addEventListener('click', () => {
       showingFailed = !showingFailed;

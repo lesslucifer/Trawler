@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — E-DFLOW.W4 Run #2 (flow detail panel, integrated)</title>
-  <link rel="stylesheet" href="components/specimen.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="components/tw-config.js"></script>
   <style>
     /* Screen-level assembly ONLY. Every component value — colour, type, control
        padding, radius, hit area — comes from components/specimen.css, which is
@@ -42,14 +43,12 @@
     .stage{border-left:3px solid var(--line);padding-left:14px;margin-left:2px;}
     .kd{color:var(--muted);}
     .fr b{color:var(--accent);font-weight:600;}
-    .tag{display:inline-block;font-size:10px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:0 6px;color:var(--muted);white-space:nowrap;}
     .tag.w5{color:var(--ok);border-color:var(--ok);} .tag.w6{color:var(--accent);border-color:var(--accent);}
     .tag.w7{color:var(--warn);border-color:var(--warn);} .tag.fl{color:var(--ink);}
     .v{font-weight:600;white-space:nowrap;} .v.sat{color:var(--ok);} .v.inh{color:var(--muted);} .v.na{color:var(--muted);}
     .v.blk{color:var(--warn);} .v.prop{color:var(--accent);} .v.vio{color:var(--warn);}
     table{font-size:13px;} pre{white-space:pre-wrap;}
-    .sketch{font-family:var(--mono,monospace);font-size:12px;line-height:1.45;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
-  </style>
+    .sketch{font-family:var(--mono,monospace);font-size:12px;line-height:1.45;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -211,7 +210,7 @@ scroll / overflow:  A pinned, never scrolls · B–D are the panel's single scro
     </div>
 
     <h2 id="s5">5 · Draft mockup</h2>
-    <p>A real build, <strong>composed from the component design files' own specimen CSS</strong>: the run links <a href="components/specimen.css"><code>components/specimen.css</code></a> — the single extraction of all fourteen files — and assembles with their class names, so every colour, control padding, radius and hit area below is the value its design file draws, not a value this run re-typed. The first cut of this mockup re-typed them and drifted from five confirmed contracts (<a href="#findings">finding 23</a>). Lo-fi and structural: a component's internals stay stubbed, and the button toggles the two states the Interaction table demanded.</p>
+    <p>A real build, <strong>composed from the component design files' own specimen CSS</strong>: the run links <code>components/specimen.css</code> — the single extraction of all fourteen files — and assembles with their class names, so every colour, control padding, radius and hit area below is the value its design file draws, not a value this run re-typed. The first cut of this mockup re-typed them and drifted from five confirmed contracts (<a href="#findings">finding 23</a>). Lo-fi and structural: a component's internals stay stubbed, and the button toggles the two states the Interaction table demanded.</p>
     <table data-c="mockup-boundary">
       <thead><tr><th>Layer</th><th>Source</th><th>In this build</th></tr></thead>
       <tbody>
@@ -223,131 +222,131 @@ scroll / overflow:  A pinned, never scrolls · B–D are the panel's single scro
     <div class="app" data-c="mockup" data-item="mockup">
       <div class="mock" id="mock">
         <div class="bar">
-          <span class="ml">POST</span>
-          <span class="sp-ok complete-only">201</span>
-          <span class="sp-muted inflight-only">…</span>
-          <span class="dur complete-only">142 ms</span>
-          <span class="dur blank inflight-only">142 ms</span>
-          <button class="ib" title="close" aria-label="close">×</button>
+          <span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">POST</span>
+          <span class="text-ok complete-only">201</span>
+          <span class="text-ink-mute inflight-only">…</span>
+          <span class="text-ink-mute tabular-nums text-right whitespace-nowrap complete-only">142 ms</span>
+          <span class="tabular-nums text-right whitespace-nowrap text-transparent select-none inflight-only">142 ms</span>
+          <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" title="close" aria-label="close">×</button>
         </div>
         <div class="scroll">
-          <div class="sec-block">
+          <div class="border-b border-hairline px-4 py-3 last:border-b-0">
             <div class="lbl">target</div>
             <div class="body">
-              <span class="ct">https://api.example.com/v1/users?notify=true&amp;source=onboarding-flow&amp;trace=8f3a91c2-4d3b-4e7f</span>
+              <span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">https://api.example.com/v1/users?notify=true&amp;source=onboarding-flow&amp;trace=8f3a91c2-4d3b-4e7f</span>
               <div class="facts">
                 <span class="proto">https · HTTP/1.1<span class="complete-only"> → HTTP/2</span></span>
-                <span class="ts">14:03:22</span>
-                <button class="cb" aria-label="copy curl command"><span class="cb-icon">⧉</span>curl</button>
+                <span class="text-ink-mute tabular-nums">14:03:22</span>
+                <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" aria-label="copy curl command"><span class="text-body leading-none">⧉</span>curl</button>
               </div>
             </div>
           </div>
 
           <div class="band">
             <div class="legend"><span class="lbl">request</span></div>
-            <div class="sec-block">
-              <div class="ht-bar"><span class="sec-hd">headers</span><button class="ibtn" title="copy all request headers" aria-label="copy all request headers">⧉</button></div>
-              <div class="ht-scroll">
-                <div class="hr-table">
-                  <span class="hr-key">host</span><span class="hr-val">api.example.com</span>
-                  <span class="hr-key">content-type</span><span class="hr-val">application/json; charset=utf-8</span>
-                  <span class="hr-key">authorization</span><span class="hr-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.sig</span>
-                  <span class="hr-key">accept</span><span class="hr-val">application/json</span>
-                  <span class="hr-key">x-request-id</span><span class="hr-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
+              <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">headers</span><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 justify-center text-glyph-lg" title="copy all request headers" aria-label="copy all request headers">⧉</button></div>
+              <div class="max-h-[200px] overflow-y-auto">
+                <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+                  <span class="text-ink-mute whitespace-nowrap">host</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">api.example.com</span>
+                  <span class="text-ink-mute whitespace-nowrap">content-type</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">application/json; charset=utf-8</span>
+                  <span class="text-ink-mute whitespace-nowrap">authorization</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.sig</span>
+                  <span class="text-ink-mute whitespace-nowrap">accept</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">application/json</span>
+                  <span class="text-ink-mute whitespace-nowrap">x-request-id</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
                 </div>
               </div>
             </div>
-            <div class="sec-block">
-              <div class="chrome-bar">
-                <span class="sect-lbl">body</span>
-                <span class="spacer"></span>
-                <span class="seg-group"><span class="seg">raw</span><span class="seg active">pretty</span></span>
-                <button class="ibtn" title="copy body" aria-label="copy body">⧉</button>
-                <button class="ibtn" title="save body to file" aria-label="save body to file">↓</button>
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
+              <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2">
+                <span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">body</span>
+                <span class="flex-1"></span>
+                <span class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></span>
+                <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 justify-center text-glyph-lg" title="copy body" aria-label="copy body">⧉</button>
+                <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 justify-center text-glyph-lg" title="save body to file" aria-label="save body to file">↓</button>
               </div>
-              <div class="chrome-meta"><span class="meta-tag">application/json · 84 B</span></div>
-              <div class="body-pane">{
-  <span class="jk">"email"</span><span class="jp">:</span> <span class="js">"ada@example.com"</span><span class="jp">,</span>
-  <span class="jk">"plan"</span><span class="jp">:</span> <span class="js">"pro"</span><span class="jp">,</span>
-  <span class="jk">"seats"</span><span class="jp">:</span> <span class="jn">3</span>
+              <div class="chrome-meta"><span class="text-ink-mute text-chrome font-mono">application/json · 84 B</span></div>
+              <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]">{
+  <span class="text-syn-key">"email"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"ada@example.com"</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"plan"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"pro"</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"seats"</span><span class="text-ink-mute">:</span> <span class="text-syn-num">3</span>
 }</div>
             </div>
           </div>
 
           <div class="band">
             <div class="legend"><span class="lbl">response</span></div>
-            <div class="sec-block">
-              <div class="ht-bar"><span class="sec-hd">headers</span>
-                <button class="ibtn complete-only" title="copy all response headers" aria-label="copy all response headers">⧉</button>
-                <button class="ibtn s-disabled inflight-only" title="copy all response headers" aria-label="copy all response headers" disabled>⧉</button>
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
+              <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">headers</span>
+                <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 justify-center text-glyph-lg complete-only" title="copy all response headers" aria-label="copy all response headers">⧉</button>
+                <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 justify-center text-glyph-lg opacity-disabled pointer-events-none inflight-only" title="copy all response headers" aria-label="copy all response headers" disabled>⧉</button>
               </div>
-              <div class="ht-scroll complete-only">
-                <div class="hr-table">
-                  <span class="hr-key">content-type</span><span class="hr-val">application/json; charset=utf-8</span>
-                  <span class="hr-key">content-length</span><span class="hr-val">1274</span>
-                  <span class="hr-key">location</span><span class="hr-val">/v1/users/8f3a91c2</span>
-                  <span class="hr-key">cache-control</span><span class="hr-val">no-store, max-age=0</span>
-                  <span class="hr-key">set-cookie</span><span class="hr-val">session=abc; Path=/; HttpOnly; Secure; SameSite=Strict</span>
-                  <span class="hr-key">x-ratelimit-remaining</span><span class="hr-val">47</span>
-                  <span class="hr-key">x-ratelimit-reset</span><span class="hr-val">1721649260</span>
-                  <span class="hr-key">strict-transport-security</span><span class="hr-val">max-age=31536000; includeSubDomains; preload</span>
-                  <span class="hr-key">x-trace-id</span><span class="hr-val">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
+              <div class="max-h-[200px] overflow-y-auto complete-only">
+                <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+                  <span class="text-ink-mute whitespace-nowrap">content-type</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">application/json; charset=utf-8</span>
+                  <span class="text-ink-mute whitespace-nowrap">content-length</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">1274</span>
+                  <span class="text-ink-mute whitespace-nowrap">location</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">/v1/users/8f3a91c2</span>
+                  <span class="text-ink-mute whitespace-nowrap">cache-control</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">no-store, max-age=0</span>
+                  <span class="text-ink-mute whitespace-nowrap">set-cookie</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">session=abc; Path=/; HttpOnly; Secure; SameSite=Strict</span>
+                  <span class="text-ink-mute whitespace-nowrap">x-ratelimit-remaining</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">47</span>
+                  <span class="text-ink-mute whitespace-nowrap">x-ratelimit-reset</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">1721649260</span>
+                  <span class="text-ink-mute whitespace-nowrap">strict-transport-security</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">max-age=31536000; includeSubDomains; preload</span>
+                  <span class="text-ink-mute whitespace-nowrap">x-trace-id</span><span class="text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
                 </div>
               </div>
-              <div class="ht-none inflight-only">awaiting response…</div>
+              <div class="text-ink-mute text-body font-ui inflight-only">awaiting response…</div>
             </div>
-            <div class="sec-block">
-              <div class="chrome-bar">
-                <span class="sect-lbl">body</span>
-                <span class="spacer"></span>
-                <span class="seg-group complete-only"><span class="seg">raw</span><span class="seg active">pretty</span></span>
-                <span class="seg-group disabled inflight-only"><span class="seg">raw</span><span class="seg active">pretty</span></span>
-                <button class="ibtn complete-only" title="copy body" aria-label="copy body">⧉</button>
-                <button class="ibtn complete-only" title="save body to file" aria-label="save body to file">↓</button>
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
+              <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2">
+                <span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">body</span>
+                <span class="flex-1"></span>
+                <span class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome complete-only"><span class="px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></span>
+                <span class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome disabled inflight-only"><span class="px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></span>
+                <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 justify-center text-glyph-lg complete-only" title="copy body" aria-label="copy body">⧉</button>
+                <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 justify-center text-glyph-lg complete-only" title="save body to file" aria-label="save body to file">↓</button>
               </div>
-              <div class="chrome-meta complete-only"><span class="meta-tag">application/json · 1.2 KiB</span></div>
-              <div class="body-pane complete-only">{
-  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"8f3a91c2"</span><span class="jp">,</span>
-  <span class="jk">"email"</span><span class="jp">:</span> <span class="js">"ada@example.com"</span><span class="jp">,</span>
-  <span class="jk">"plan"</span><span class="jp">:</span> <span class="js">"pro"</span><span class="jp">,</span>
-  <span class="jk">"seats"</span><span class="jp">:</span> <span class="jn">3</span><span class="jp">,</span>
-  <span class="jk">"created_at"</span><span class="jp">:</span> <span class="js">"2026-07-25T14:03:22Z"</span>
+              <div class="chrome-meta complete-only"><span class="text-ink-mute text-chrome font-mono">application/json · 1.2 KiB</span></div>
+              <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px] complete-only">{
+  <span class="text-syn-key">"id"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"8f3a91c2"</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"email"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"ada@example.com"</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"plan"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"pro"</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"seats"</span><span class="text-ink-mute">:</span> <span class="text-syn-num">3</span><span class="text-ink-mute">,</span>
+  <span class="text-syn-key">"created_at"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"2026-07-25T14:03:22Z"</span>
 }</div>
-              <div class="body-pane inflight-only"><span class="notice">no response yet</span></div>
+              <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px] inflight-only"><span class="text-ink-mute text-body font-ui py-chrome-y">no response yet</span></div>
             </div>
           </div>
         </div>
       </div>
       <div class="fails" style="margin-top:16px;max-width:440px;">
         <div class="mock failed">
-          <div class="bar"><span style="flex:1"></span><button class="ib" title="close" aria-label="close">×</button></div>
+          <div class="bar"><span style="flex:1"></span><button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" title="close" aria-label="close">×</button></div>
           <div class="fail">
-            <div class="nt"><span>⚠</span><span>flow no longer captured<em>the capture ring moved past it</em></span></div>
-            <div class="btn-row"><button class="bt">close</button></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y"><span>⚠</span><span>flow no longer captured<em>the capture ring moved past it</em></span></div>
+            <div class="btn-row"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body justify-center transition-colors">close</button></div>
           </div>
         </div>
         <div class="mock failed">
-          <div class="bar"><span style="flex:1"></span><button class="ib" title="close" aria-label="close">×</button></div>
+          <div class="bar"><span style="flex:1"></span><button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" title="close" aria-label="close">×</button></div>
           <div class="fail">
-            <div class="nt"><span>⚠</span><span>trawler is not responding<em>check the proxy is running</em></span></div>
-            <div class="btn-row"><button class="bt">retry</button></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y"><span>⚠</span><span>trawler is not responding<em>check the proxy is running</em></span></div>
+            <div class="btn-row"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body justify-center transition-colors">retry</button></div>
           </div>
         </div>
         <div class="mock failed">
-          <div class="bar"><span style="flex:1"></span><button class="ib" title="close" aria-label="close">×</button></div>
+          <div class="bar"><span style="flex:1"></span><button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" title="close" aria-label="close">×</button></div>
           <div class="fail">
-            <div class="nt"><span>⚠</span><span>could not load this flow — 500<em>the status is the text channel beside the tone</em></span></div>
-            <div class="btn-row"><button class="bt">retry</button><button class="bt">close</button></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y"><span>⚠</span><span>could not load this flow — 500<em>the status is the text channel beside the tone</em></span></div>
+            <div class="btn-row"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body justify-center transition-colors">retry</button><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body justify-center transition-colors">close</button></div>
           </div>
         </div>
       </div>
       <div class="fails" style="margin-top:12px;max-width:440px;">
         <div class="mock">
-          <div class="sec-block">
-            <div class="chrome-bar"><span class="sect-lbl">body</span><span class="meta-tag">application/json</span><span style="flex:1"></span>
-              <span class="seg-group"><span class="seg">raw</span><span class="seg active">pretty</span></span></div>
-            <div class="body-pane"><span class="notice">body unavailable — the flow is no longer captured</span></div>
-            <div class="fail" style="padding:8px 0 0"><div class="btn-row"><button class="bt">retry</button></div></div>
+          <div class="border-b border-hairline px-4 py-3 last:border-b-0">
+            <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">body</span><span class="text-ink-mute text-chrome font-mono">application/json</span><span style="flex:1"></span>
+              <span class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></span></div>
+            <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute text-body font-ui py-chrome-y">body unavailable — the flow is no longer captured</span></div>
+            <div class="fail" style="padding:8px 0 0"><div class="btn-row"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body justify-center transition-colors">retry</button></div></div>
           </div>
         </div>
       </div>
@@ -409,7 +408,7 @@ soft:
     <table data-c="hard-rules">
       <thead><tr><th>Hard rule</th><th>This run</th><th>Who checks it</th></tr></thead>
       <tbody>
-        <tr><td><code>colour-tokens-only</code></td><td>the screen's own CSS holds <strong>zero</strong> colour values — every one composed from <a href="components/specimen.css"><code>specimen.css</code></a>. Still unsatisfiable in the substrate: IconButton's hover/active washes are unnamed <code>rgba</code> literals</td><td><strong>predicate, now</strong> — <code>mockup·colour-literals</code> reds any <code>#hex</code>/<code>rgb(</code>/<code>hsl(</code> in a run doc's own CSS. The missing token is <a href="#proposals">proposal</a> + finding 22</td></tr>
+        <tr><td><code>colour-tokens-only</code></td><td>the screen's own CSS holds <strong>zero</strong> colour values — every one composed from <code>specimen.css</code>. Still unsatisfiable in the substrate: IconButton's hover/active washes are unnamed <code>rgba</code> literals</td><td><strong>predicate, now</strong> — <code>mockup·colour-literals</code> reds any <code>#hex</code>/<code>rgb(</code>/<code>hsl(</code> in a run doc's own CSS. The missing token is <a href="#proposals">proposal</a> + finding 22</td></tr>
         <tr><td><code>spacing-scale</code></td><td>the screen's own spacing is 8 · 12 · 16; three <em>composed</em> components sit below the floor — Section 10/14 px padding, HeaderTable a 4 px row gap, SegmentedControl and CopyButton 2–3 px. Composed as drawn</td><td>W6 settles the floor (finding 14), then a W7 predicate proves it on the composed sheet. A screen cannot fix it without forking the component</td></tr>
         <tr><td><code>zero-accent</code></td><td>the JSON panes carry DEC-11's three syntax tones — chromatic, confirmed, and not <code>ok</code>/<code>warn</code>. MethodLabel's verb tokens were <a href="#blocked">answered on 2026-07-26</a> — "go with default" — so the fallback <em>is</em> the design and that half no longer blocks: the panel adds no verb colour at all. The failure states add <code>warn</code>, which is a listed exception</td><td>W6 adds DEC-11's syntax tokens to the colour vocabulary (finding 25); that is now the rule's only open breach</td></tr>
         <tr><td><code>state-declarations</code></td><td>every catalog row carries states by citation; three cells name the states the screen itself coordinates</td><td>W7 — the predicate must read the registry verdict, or a correct by-citation cell reds (finding 12)</td></tr>
@@ -478,7 +477,7 @@ soft:
         <tr><td>4</td><td><span class="tag w6">W6</span></td><td class="kd">receipt</td><td><strong>Rules have two audiences and one list.</strong> <code>motion-informs</code> · <code>generous-targets</code> · <code>confirm-at-point</code> · <code>wrap-not-truncate</code> · <code>wire-order-preserved</code> bind <em>component</em> designs; a screen can only inherit them (6 of 27 rows this run). Add a <code>binds: screen · component · both</code> axis</td><td>every screen receipt is a quarter inherited noise, and a reviewer cannot tell a rule the screen ignored from a rule the screen could never carry</td></tr>
         <tr><td>5</td><td><span class="tag w5">W5</span></td><td class="kd">Elements</td><td><strong>BodyViewer's self-labelling and one-line chrome bar both fail in this panel</strong> — the leg label repeats a band that names the leg, and the bar does not fit the real column width (metadata must wrap)</td><td>"request body" under a "REQUEST" band, and a chrome bar that overflows or squeezes the switch at panel width</td></tr>
         <tr><td>6</td><td><span class="tag w6">W6</span></td><td class="kd">receipt</td><td><strong><code>display-equals-payload</code>'s DO example contradicts a confirmed component.</strong> The rule says "raw body at rest"; BodyViewer's D4 defaults to pretty (with the view always named). One of the two is wrong and the pair currently teaches both</td><td>the next screen cites the rule to justify a raw default, contradicting the shipped component — or cites the component to weaken the rule</td></tr>
-        <tr><td>7</td><td><span class="tag w7">W7</span></td><td class="kd">mockup</td><td><strong><code>colour-tokens-only</code>'s predicate fails every honest mockup.</strong> "No colour literals in mockup CSS" is violated by the one <code>.app</code> token block that makes the mockup render in app colours at all. <strong>Fixed in W4:</strong> with <a href="components/specimen.css">the shared sheet</a> the token block lives in exactly one path, so the predicate (<code>mockup·colour-literals</code>, now shipped) scans only the run doc's own CSS and needs no carve-out at all</td><td>a Tier-1 check that is red on correct work — the fastest way to teach agents to route around the gate</td></tr>
+        <tr><td>7</td><td><span class="tag w7">W7</span></td><td class="kd">mockup</td><td><strong><code>colour-tokens-only</code>'s predicate fails every honest mockup.</strong> "No colour literals in mockup CSS" is violated by the one <code>.app</code> token block that makes the mockup render in app colours at all. <strong>Fixed in W4:</strong> with the shared sheet the token block lives in exactly one path, so the predicate (<code>mockup·colour-literals</code>, now shipped) scans only the run doc's own CSS and needs no carve-out at all</td><td>a Tier-1 check that is red on correct work — the fastest way to teach agents to route around the gate</td></tr>
         <tr><td>8</td><td><span class="tag w5">W5</span></td><td class="kd">Elements</td><td><strong>No record of a reopened fork.</strong> Three of the six proposals contradict a fork settled in the target component's own file, and those files read as final</td><td>the next screen silently forks a component, or accepts a decision made for a screen it has never seen</td></tr>
         <tr><td>9</td><td><span class="tag w6">W6</span></td><td class="kd">receipt</td><td><strong>The lexicon is a term short</strong> — "pretty" and "raw" (as the body switch means them) have no entries, while "decode" names only the transport step</td><td>"prettify" / "format" / "beautify" appearing on the next screen — the drift the lexicon exists to prevent</td></tr>
         <tr><td>10</td><td><span class="tag w6">W6</span></td><td class="kd">Interaction</td><td><strong>Keyboard conventions lack <em>dismiss → Esc</em></strong> — the first binding any panel, dialog or overlay needs</td><td>every screen coining its own dismiss key, and <code>keyboard-parity</code> being satisfiable only by a proposal</td></tr>
@@ -494,7 +493,7 @@ soft:
         <tr><td>20</td><td><span class="tag fl">flow</span></td><td class="kd">Frame</td><td><strong>The Frame shrinks as the rulebook grows.</strong> Four of run #1's five qualities are now rules; the stage needs its explicit "if a rule says it, don't write it" instruction (added to the flow) or every run re-derives the rulebook as case-specific drivers</td><td>Frames that quietly restate the rulebook — and reviewers who cannot tell which drivers are actually about this screen</td></tr>
         <tr><td>21</td><td><span class="tag w5">W5</span></td><td class="kd">Elements</td><td><strong><code>TonedText</code> is cited as a collected T1 but has no roster row and no design file.</strong> StatusPill's <code>@madeof</code> names it and its <code>@avoid</code> routes non-status toned values to it; the W2 seed's own StatusPill fork D4 promised "registry gains it under T1 on confirmation" and the confirmation landed without it. Invisible from this screen — found only by reading StatusPill's file</td><td>a component the vocabulary points at but does not define: the next screen that needs a toned non-status value either re-derives it or misuses StatusPill</td></tr>
         <tr><td>22</td><td><span class="tag w6">W6</span></td><td class="kd">mockup</td><td><strong>No token names the hover wash.</strong> IconButton's confirmed design writes <code>rgba(247,245,240,.07)</code> / <code>.13</code> inline for its hover and active tints, and the colour vocabulary has no member for them — so <code>colour-tokens-only</code> is unsatisfiable for any screen containing an IconButton (this run's second <span class="v blk">blocked</span> row)</td><td>a hard rule that every real screen violates, teaching agents that the token vocabulary is advisory</td></tr>
-        <tr><td>23</td><td><span class="tag fl">flow</span></td><td class="kd">Elements · mockup</td><td><strong>Specimen CSS and doc interaction were re-authored per document.</strong> All fourteen design files declare their own copy of the token block and specimen frame, and this run's first mockup hand-typed a fifteenth set of component values instead of composing theirs; run #1's interactive element map was simply lost when this run built its Elements stage from scratch. Both are now shared assets — <a href="components/specimen.css"><code>components/specimen.css</code></a> and <a href="components/specimen.js"><code>components/specimen.js</code></a> — and the flow requires composing them. Wording alone was not the fix — <code>verify-doc</code> now reds a run doc that does not link both, whose Elements catalog is not a keyed <code>data-map</code>, whose mockup has no state toggle, or whose own CSS holds a colour literal. A rule an agent must remember is a rule an agent forgets</td><td>mockups that claim reuse and render something else. The hand-typed block broke five confirmed contracts at once — a 28 px chrome icon against <code>size=24</code>, MethodLabel in <code>ink-strong</code> against its <code>ink-body</code> fallback, notices in the wrong family, JSON coloured by eye instead of by DEC-11's tokens, and controls re-typed on-scale so a real <a href="#receipt">rulebook violation vanished from the receipt</a>. Review caught two of the five (the icon size, the verb tone), "fixed" a third against the wrong component (a body-pane notice is BodyViewer's mono italic, not BodyRenderer's Inter), and endorsed the other two — the JSON tones as a refuted candidate, the re-typed spacing as demonstrated compliance. Composing the sheet catches all five without asking anyone to notice</td></tr>
+        <tr><td>23</td><td><span class="tag fl">flow</span></td><td class="kd">Elements · mockup</td><td><strong>Specimen CSS and doc interaction were re-authored per document.</strong> All fourteen design files declare their own copy of the token block and specimen frame, and this run's first mockup hand-typed a fifteenth set of component values instead of composing theirs; run #1's interactive element map was simply lost when this run built its Elements stage from scratch. Both are now shared assets — <code>components/specimen.css</code> and <a href="components/specimen.js"><code>components/specimen.js</code></a> — and the flow requires composing them. Wording alone was not the fix — <code>verify-doc</code> now reds a run doc that does not link both, whose Elements catalog is not a keyed <code>data-map</code>, whose mockup has no state toggle, or whose own CSS holds a colour literal. A rule an agent must remember is a rule an agent forgets</td><td>mockups that claim reuse and render something else. The hand-typed block broke five confirmed contracts at once — a 28 px chrome icon against <code>size=24</code>, MethodLabel in <code>ink-strong</code> against its <code>ink-body</code> fallback, notices in the wrong family, JSON coloured by eye instead of by DEC-11's tokens, and controls re-typed on-scale so a real <a href="#receipt">rulebook violation vanished from the receipt</a>. Review caught two of the five (the icon size, the verb tone), "fixed" a third against the wrong component (a body-pane notice is BodyViewer's mono italic, not BodyRenderer's Inter), and endorsed the other two — the JSON tones as a refuted candidate, the re-typed spacing as demonstrated compliance. Composing the sheet catches all five without asking anyone to notice</td></tr>
         <tr><td>24</td><td><span class="tag w5">W5</span></td><td class="kd">mockup</td><td><strong>The design files draw what their own token tables do not say — and disagree with each other.</strong> Extracting one sheet surfaced five conflicts, none visible while each file rendered alone: Section's specimen padding 10/14 px vs its <code>px-4 py-3</code> contract · BodyViewer's chrome icon at 22 px vs its own <code>size=24</code> row · BodyViewer re-drawing <code>.toggle</code>/<code>.btn</code>/<code>.ibtn</code> rather than composing the SegmentedControl / CopyButton / IconButton it declares as <code>@madeof</code> · HeaderTable's <code>.ht-grid</code> value cells missing the click-to-copy affordance its <code>@madeof</code> KeyValueRow owns · absence notices in two families (HeaderTable Inter, BodyViewer mono italic). Each is marked <code>CONFLICT:</code> in the sheet; choosing a side is W5's call, not the extraction's</td><td>the built component looks like whichever artifact the build agent happened to read — and in HeaderTable's case, a use-case (take one header value) disappears with the CSS that was copied</td></tr>
         <tr><td>25</td><td><span class="tag w6">W6</span></td><td class="kd">mockup</td><td><strong>DEC-11 never reached the rulebook, and it breaks two hard rules.</strong> Three syntax tokens — <code>text-syn-key</code> #8fb8de · <code>text-syn-str</code> #9ec99a · <code>text-syn-num</code> #d9a866 — were confirmed on 2026-07-23 (BodyRenderer, manager override) and never added to the colour vocabulary, so <code>colour-tokens-only</code> cannot be cited for any screen that renders a JSON or XML body; worse, <code>zero-accent</code>'s exception list is <code>ok</code>/<code>warn</code> only, so those three tones make every such screen <em>violate</em> a hard rule. One W6 fix (admit the body-pane syntax group and name it in both rules), two symptoms</td><td>a confirmed manager decision that every flow detail panel must break, and a vocabulary a reader cannot trust to be complete — the failure mode a frozen KB exists to prevent. It stayed invisible while mockups hand-picked achromatic stand-ins for the pane</td></tr>
         <tr><td>26</td><td><span class="tag w7">W7</span></td><td class="kd">receipt</td><td><strong>The receipt cannot say whose violation it is.</strong> <code>spacing-scale</code> is broken by three confirmed components this screen composes and must not re-author, yet <em>violated</em> reads as the screen's failure. The verdict set needs to separate <em>the screen violates</em> from <em>the screen composes a violating component</em> — the latter is a substrate bug with a screen-level witness, and it is the only kind a design run can discover. <strong>Half-landed in W4:</strong> <code>violated-inherited</code> is in the enum, and the incentive is gone for hard rules, which no longer carry a hand verdict at all. W7 owns the other half — the same distinction inside a Tier-1 predicate</td><td>the incentive runs backwards: re-authoring a component's CSS turns a red row green, which hides the substrate bug and forks the component in one stroke — precisely what this run's first mockup did</td></tr>

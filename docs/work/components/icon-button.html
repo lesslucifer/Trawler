@@ -4,22 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — IconButton component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
     .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
-
-    /* IconButton specimen styles */
-    .ib{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:3px;cursor:pointer;border:none;background:transparent;font-size:14px;line-height:1;padding:0;color:var(--a-mute);transition:color .1s,background .1s;}
-    .ib:hover,.ib.s-hover{color:var(--a-ink);background:rgba(247,245,240,.07);}
-    .ib:focus-visible,.ib.s-focus{outline:1px solid var(--a-mute);outline-offset:2px;color:var(--a-ink);}
-    .ib:active,.ib.s-active{color:var(--a-ink);background:rgba(247,245,240,.13);}
-    .ib.s-disabled{color:rgba(174,166,156,.35);cursor:not-allowed;background:transparent;}
-    /* hit-target ghost used in anatomy diagram */
-    .ib-ghost{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:3px;border:1px dashed var(--a-mute);background:rgba(174,166,156,.06);font-size:14px;color:var(--a-mute);}
     /* sub-bar panel: realistic placement */
     .sub-bar{display:flex;align-items:center;gap:6px;background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:6px 10px;font-family:Inter,system-ui,sans-serif;}
     .sub-bar .lbl{color:var(--a-mute);font-size:11px;text-transform:uppercase;letter-spacing:.05em;flex:1;}
@@ -49,8 +41,7 @@
     .app .fork-card{background:var(--a-soft);border:1px solid var(--a-line);border-radius:6px;padding:10px 12px;min-width:160px;flex:1;}
     .app .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--a-mute);margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
     .app .fork-card .fc-ex{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
-    .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:Inter,system-ui,sans-serif;}
-  </style>
+    .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:Inter,system-ui,sans-serif;}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -104,7 +95,7 @@
         <span class="lbl">Body</span>
         <span style="color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;">[raw | decoded]</span>
         <span style="flex:1;"></span>
-        <button class="ib" title="save to file" aria-label="save body to file"><span class="anno" style="position:absolute;transform:translate(10px,-10px);z-index:1;">1</span>↓</button>
+        <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" title="save to file" aria-label="save body to file"><span class="anno" style="position:absolute;transform:translate(10px,-10px);z-index:1;">1</span>↓</button>
       </div>
       <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">BodyViewer sub-bar: the glyph is the only visible element at rest</div>
     </div>
@@ -113,7 +104,7 @@
         <div class="ex">
           <div class="panel" style="display:flex;align-items:center;gap:12px;">
             <span style="position:relative;display:inline-flex;">
-              <span class="ib-ghost">↓</span>
+              <span class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button border border-dashed border-ink-mute bg-wash-ghost text-[14px] text-ink-mute">↓</span>
             </span>
             <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">dashed = 28×28 hit area; glyph is smaller</span>
           </div>
@@ -130,9 +121,9 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="display:flex;align-items:center;gap:14px;">
-            <button class="ib" style="pointer-events:none;">×</button>
-            <button class="ib" style="pointer-events:none;">↓</button>
-            <button class="ib s-hover" style="pointer-events:none;">×</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" style="pointer-events:none;">×</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" style="pointer-events:none;">↓</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active text-ink border-ink-mute" style="pointer-events:none;">×</button>
           </div>
           <div class="cap">rest (muted glyph, no bg) → hover (ink + soft bg wash)</div>
         </div>
@@ -148,7 +139,7 @@
         <div class="ex">
           <div class="panel" style="padding:0;overflow:hidden;border:none;background:transparent;">
             <div class="tooltip">
-              <button class="ib s-hover" style="pointer-events:none;">↓</button>
+              <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active text-ink border-ink-mute" style="pointer-events:none;">↓</button>
               <div class="tip">save to file</div>
             </div>
           </div>
@@ -170,8 +161,8 @@
       <div class="part">
         <div class="ex">
           <div class="flow-ex">
-            <button class="ib" id="demo-trigger" title="save to file" aria-label="save body to file">↓</button>
-            <span class="arr">click / Enter ▸</span>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" id="demo-trigger" title="save to file" aria-label="save body to file">↓</button>
+            <span class="text-ink-mute text-chrome">click / Enter ▸</span>
             <span style="font-size:12px;color:var(--a-body);font-family:Inter,system-ui,sans-serif;" id="demo-out">handler fires</span>
           </div>
           <div class="cap">caller-supplied <code>onClick</code> — the component has no built-in effect</div>
@@ -201,8 +192,8 @@
       <div class="part">
         <div class="ex">
           <div class="flow-ex">
-            <button class="ib s-disabled" disabled title="">↓</button>
-            <span class="arr">tab ▸</span>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active opacity-disabled pointer-events-none" disabled title="">↓</button>
+            <span class="text-ink-mute text-chrome">tab ▸</span>
             <span style="font-size:12px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">skipped (tabIndex −1)</span>
           </div>
           <div class="cap">disabled: glyph fades to 35% opacity, not reachable by keyboard or click</div>
@@ -220,23 +211,23 @@
     <h2 id="states">States</h2>
     <div class="app swatches" data-c="states">
       <div class="swatch">
-        <div class="panel"><button class="ib" style="pointer-events:none;" title="save to file">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">rest</span></div>
+        <div class="panel"><button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" style="pointer-events:none;" title="save to file">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">rest</span></div>
         <div class="cap"><strong>rest</strong> — muted glyph, no background, no border</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="ib s-hover" style="pointer-events:none;" title="save to file">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">hover</span></div>
+        <div class="panel"><button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active text-ink border-ink-mute" style="pointer-events:none;" title="save to file">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">hover</span></div>
         <div class="cap"><strong>hover</strong> — ink glyph + 7% ink background wash. Tooltip appears (native <code>title</code>).</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="ib s-focus" style="pointer-events:none;">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">focus</span></div>
+        <div class="panel"><button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active outline outline-1 outline-ink-mute outline-offset-2 text-ink" style="pointer-events:none;">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">focus</span></div>
         <div class="cap"><strong>focus</strong> — 1 px mute outline at 2 px offset (zero-chromatic-accent rule)</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="ib s-active" style="pointer-events:none;">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">active</span></div>
+        <div class="panel"><button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none text-[14px] leading-none p-0 transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active text-ink bg-wash-tint" style="pointer-events:none;">↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">active</span></div>
         <div class="cap"><strong>active</strong> — ink glyph + 13% ink background (pressed feel)</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="ib s-disabled" disabled>↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">disabled</span></div>
+        <div class="panel"><button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active opacity-disabled pointer-events-none" disabled>↓</button><span style="color:var(--a-mute);font-size:12px;font-family:Inter,system-ui,sans-serif;">disabled</span></div>
         <div class="cap"><strong>disabled</strong> — 35% mute opacity, not-allowed cursor, removed from tab order</div>
       </div>
     </div>
@@ -258,16 +249,16 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <button class="ib" style="pointer-events:none;">↓</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" style="pointer-events:none;">↓</button>
             <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">→</span>
-            <button class="ib s-hover" style="pointer-events:none;">↓</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active text-ink border-ink-mute" style="pointer-events:none;">↓</button>
           </div>
           <div class="fc-note"><strong>mute → ink + soft bg wash.</strong> Rest is muted, hover shifts to full ink + 7% ink bg — no ring, no color. Consistent with the zero-chromatic-accent rule (<code>tailwind.config.js:5</code>): ok/warn are status colors only.</div>
         </div>
         <div class="fork-card">
           <div class="fc-lbl">rejected</div>
           <div class="fc-ex">
-            <button class="ib" style="pointer-events:none;color:var(--a-ink);">↓</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" style="pointer-events:none;color:var(--a-ink);">↓</button>
           </div>
           <div class="fc-note"><strong>ink at rest + accent ring on hover.</strong> Introduces chromatic accent that Warp DEC-11 deliberately excludes. The rest-ink approach also makes the glyph always prominent — removes the calm/dense benefit.</div>
         </div>
@@ -279,7 +270,7 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <button class="ib" style="pointer-events:none;">↓</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" style="pointer-events:none;">↓</button>
             <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">no border at rest</span>
           </div>
           <div class="fc-note"><strong>Borderless at rest.</strong> Background and border appear only on hover/focus. Matches the close × in the shipped header (<code>FlowDetail.tsx:69–76</code>): no border, muted glyph only at rest.</div>
@@ -287,7 +278,7 @@
         <div class="fork-card">
           <div class="fc-lbl">rejected</div>
           <div class="fc-ex">
-            <button class="ib" style="pointer-events:none;border:1px solid var(--a-line);">↓</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" style="pointer-events:none;border:1px solid var(--a-line);">↓</button>
           </div>
           <div class="fc-note"><strong>Hairline border at rest (CopyButton style).</strong> CopyButton carries a visible border because its label ("copy") needs the button frame to read as a button. IconButton's glyph is self-contained — the border adds chrome without aiding recognition.</div>
         </div>
@@ -299,7 +290,7 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <div class="ib-ghost">↓</div>
+            <div class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button border border-dashed border-ink-mute bg-wash-ghost text-[14px] text-ink-mute">↓</div>
             <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">28×28</span>
           </div>
           <div class="fc-note"><strong>28 × 28 px default, optional <code>size</code> prop overrides.</strong> 28 exceeds WCAG 2.5.8 minimum (24×24) and fits naturally in the sub-bar height — no row height change needed. Overrides must stay ≥ 24 px (the WCAG floor).</div>
@@ -370,7 +361,7 @@
             <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--a-body);">GET</span>
             <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--a-ok);">200</span>
             <span style="font-family:Inter,system-ui,sans-serif;font-size:11px;color:var(--a-mute);margin-left:auto;">142 ms</span>
-            <button class="ib" id="spec-close" title="close panel" aria-label="close panel">×</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" id="spec-close" title="close panel" aria-label="close panel">×</button>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-top:5px;">Click × to close (fires handler); Tab + Enter also works.</div>
         </div>
@@ -380,14 +371,14 @@
             <span class="lbl">Body</span>
             <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">[raw]</span>
             <span style="flex:1;"></span>
-            <button class="ib" id="spec-save" title="save to file" aria-label="save body to file">↓</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active" id="spec-save" title="save to file" aria-label="save body to file">↓</button>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-top:5px;">Click ↓ to save. Hover to see tooltip. Tab + Enter also works. Disabled toggle below.</div>
         </div>
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:Inter,system-ui,sans-serif;">Disabled state</div>
           <div style="display:flex;align-items:center;gap:8px;background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 12px;">
-            <button class="ib s-disabled" id="spec-disabled" disabled title="" aria-label="save body to file (unavailable)">↓</button>
+            <button class="inline-flex items-center justify-center w-control-lg h-control-lg rounded-button cursor-pointer border-none bg-transparent text-[14px] leading-none p-0 text-ink-mute transition-colors hover:text-ink hover:bg-wash-hover focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink active:text-ink active:bg-wash-active opacity-disabled pointer-events-none" id="spec-disabled" disabled title="" aria-label="save body to file (unavailable)">↓</button>
             <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">save (no body)</span>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-top:5px;">Not reachable by Tab. Glyph at 35% opacity.</div>

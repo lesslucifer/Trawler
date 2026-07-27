@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — StepList component design</title>
-  <link rel="stylesheet" href="specimen.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="tw-config.js"></script>
   <style>
     /* Component values come from specimen.css — .stl* is this component's block
        there, and the command blocks inside its steps are CopyText's .ct,
@@ -31,8 +32,7 @@
     .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:var(--a-ui);}
     .gap td,.gap th{vertical-align:top;font-size:12.5px;}
     .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
-    .callout.ok{border-color:var(--ok);}
-  </style>
+    .callout.ok{border-color:var(--ok);}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -81,10 +81,10 @@
     <h2 id="anatomy">Anatomy — the parts you see</h2>
     <div class="app" data-c="anatomy-hero">
       <div class="panel" style="max-width:440px;">
-        <ol class="stl">
-          <li><div class="stl-body">Save Trawler's certificate as trawler-ca.pem.<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">2</span></div></li>
-          <li><div class="stl-body">Run:<span class="ct">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem</span></div></li>
-          <li><div class="stl-body">Or double-click the file to add it in Keychain Access, then set the Trawler CA to Always Trust.</div></li>
+        <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]">
+          <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Save Trawler's certificate as trawler-ca.pem.<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">2</span></div></li>
+          <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Run:<span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem</span></div></li>
+          <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Or double-click the file to add it in Keychain Access, then set the Trawler CA to Always Trust.</div></li>
         </ol>
         <span class="anno" style="position:absolute;transform:translate(-32px,-84px);z-index:1;">1</span>
       </div>
@@ -94,10 +94,10 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <ol class="stl">
-              <li><div class="stl-body">first</div></li>
-              <li><div class="stl-body">second</div></li>
-              <li><div class="stl-body">third</div></li>
+            <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]">
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">first</div></li>
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">second</div></li>
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">third</div></li>
             </ol>
           </div>
           <div class="cap">18px column, right-aligned, tabular — "10." stays in line with "1."</div>
@@ -113,9 +113,9 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <ol class="stl">
-              <li><div class="stl-body">Push it to the device:<span class="ct">adb push trawler-ca.pem /sdcard/Download/</span></div></li>
-              <li><div class="stl-body">Settings → Security → Encryption &amp; credentials → Install a certificate → CA certificate.</div></li>
+            <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]">
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Push it to the device:<span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">adb push trawler-ca.pem /sdcard/Download/</span></div></li>
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Settings → Security → Encryption &amp; credentials → Install a certificate → CA certificate.</div></li>
             </ol>
           </div>
           <div class="cap">one slot per step — prose, a CopyText, or both stacked</div>
@@ -131,10 +131,10 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <ol class="stl">
-              <li><div class="stl-body">Firefox keeps its own certificate store, separate from the operating system's.</div></li>
-              <li><div class="stl-body">Save Trawler's certificate as trawler-ca.pem.</div></li>
-              <li><div class="stl-body">Settings → Privacy &amp; Security → Certificates → View Certificates → Authorities → Import.</div></li>
+            <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]">
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Firefox keeps its own certificate store, separate from the operating system's.</div></li>
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Save Trawler's certificate as trawler-ca.pem.</div></li>
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Settings → Privacy &amp; Security → Certificates → View Certificates → Authorities → Import.</div></li>
             </ol>
           </div>
           <div class="cap">10px between steps — the gap is the component's only spacing decision</div>
@@ -159,17 +159,17 @@
     <div class="app swatches" data-c="states">
       <div class="swatch">
         <div class="panel">
-          <ol class="stl">
-            <li><div class="stl-body">In an elevated terminal run:<span class="ct">certutil -addstore -f ROOT trawler-ca.pem</span></div></li>
-            <li><div class="stl-body">Save Trawler's certificate as trawler-ca.pem.</div></li>
+          <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]">
+            <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">In an elevated terminal run:<span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">certutil -addstore -f ROOT trawler-ca.pem</span></div></li>
+            <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Save Trawler's certificate as trawler-ca.pem.</div></li>
           </ol>
         </div>
         <div class="cap"><strong>rendered</strong> — the only state. Two steps, one carrying a command</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <ol class="stl">
-            <li><div class="stl-body">The iOS Simulator uses the host Mac's trust store — the macOS install already covers it.</div></li>
+          <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]">
+            <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">The iOS Simulator uses the host Mac's trust store — the macOS install already covers it.</div></li>
           </ol>
         </div>
         <div class="cap"><strong>one step</strong> — still numbered "1.", still an <code>&lt;ol&gt;</code>: a single instruction is a sequence of one (D3)</div>
@@ -195,9 +195,9 @@
           <div class="fc-ex">
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">steps={[&lt;&gt;Run:&lt;CopyText …/&gt;&lt;/&gt;, "Or double-click…"]}</span>
             <div class="panel" style="padding:6px 8px;">
-              <ol class="stl" style="gap:6px;">
-                <li><div class="stl-body">Run:<span class="ct">certutil -addstore …</span></div></li>
-                <li><div class="stl-body">Or double-click the file.</div></li>
+              <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]" style="gap:6px;">
+                <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Run:<span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">certutil -addstore …</span></div></li>
+                <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Or double-click the file.</div></li>
               </ol>
             </div>
           </div>
@@ -219,11 +219,11 @@
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
             <div class="panel" style="padding:6px 8px;">
-              <ol class="stl" style="gap:6px;">
-                <li><div class="stl-body">Save the certificate.</div></li>
-                <li><div class="stl-body">Run the trust command.</div></li>
+              <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]" style="gap:6px;">
+                <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Save the certificate.</div></li>
+                <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Run the trust command.</div></li>
               </ol>
-              <div class="sl" style="margin-top:8px;border-top:1px solid var(--a-line);padding-top:6px;"><span class="sl-glyph sp-ok">✓</span><span class="sl-msg">trusted — the goal, probed</span></div>
+              <div class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]" style="margin-top:8px;border-top:1px solid var(--a-line);padding-top:6px;"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-mute font-ui min-w-0">trusted — the goal, probed</span></div>
             </div>
           </div>
           <div class="fc-note"><strong>Plain steps; the verdict lives above in <a href="status-line.html">StatusLine</a>.</strong> The app cannot observe which step you did — only whether the CA is now trusted. One honest probed verdict beats four unverifiable ticks, and run #3's Frame already ruled that <em>a tick lies in most real states</em>.</div>
@@ -232,9 +232,9 @@
           <div class="fc-lbl">rejected</div>
           <div class="fc-ex">
             <div class="panel" style="padding:6px 8px;">
-              <ol class="stl" style="gap:6px;list-style:none;">
-                <li style="grid-template-columns:18px 1fr;"><div class="stl-body"><span class="sp-ok">✓</span> Save the certificate.</div></li>
-                <li><div class="stl-body">Run the trust command.</div></li>
+              <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]" style="gap:6px;list-style:none;">
+                <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right" style="grid-template-columns:18px 1fr;"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap"><span class="text-ok">✓</span> Save the certificate.</div></li>
+                <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Run the trust command.</div></li>
               </ol>
             </div>
           </div>
@@ -249,7 +249,7 @@
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
             <div class="panel" style="padding:6px 8px;">
-              <ol class="stl" style="gap:6px;"><li><div class="stl-body">The iOS Simulator uses the host Mac's trust store.</div></li></ol>
+              <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]" style="gap:6px;"><li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">The iOS Simulator uses the host Mac's trust store.</div></li></ol>
             </div>
           </div>
           <div class="fc-note"><strong>Always an <code>&lt;ol&gt;</code>, always visible numbers.</strong> A one-step list still reads "1." — it is a sequence of one, and the ordinal tells the reader nothing is missing above it. Keeps the component's contract exactly one sentence long, which is why it stays a primitive.</div>
@@ -258,7 +258,7 @@
           <div class="fc-lbl">rejected</div>
           <div class="fc-ex">
             <div class="panel" style="padding:6px 8px;">
-              <ol class="stl" style="gap:6px;"><li style="grid-template-columns:0 1fr;gap:0;"><div class="stl-body">The iOS Simulator uses the host Mac's trust store.</div></li></ol>
+              <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]" style="gap:6px;"><li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right" style="grid-template-columns:0 1fr;gap:0;"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">The iOS Simulator uses the host Mac's trust store.</div></li></ol>
             </div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">ordered={false} · or drop the number at length 1</span>
           </div>
@@ -319,22 +319,22 @@
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Real content — switch the target</div>
           <div class="panel" style="max-width:400px;">
-            <div class="seg-group" id="stl-targets" style="margin-bottom:10px;flex-wrap:wrap;">
-              <button class="seg active" data-t="macos">macOS</button><span class="seg-divider"></span>
-              <button class="seg" data-t="windows">Windows</button><span class="seg-divider"></span>
-              <button class="seg" data-t="firefox">Firefox</button><span class="seg-divider"></span>
-              <button class="seg" data-t="android">Android</button><span class="seg-divider"></span>
-              <button class="seg" data-t="ios-sim">iOS Sim</button>
+            <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome" id="stl-targets" style="margin-bottom:10px;flex-wrap:wrap;">
+              <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink" data-t="macos">macOS</button><span class="w-px bg-hairline shrink-0"></span>
+              <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" data-t="windows">Windows</button><span class="w-px bg-hairline shrink-0"></span>
+              <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" data-t="firefox">Firefox</button><span class="w-px bg-hairline shrink-0"></span>
+              <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" data-t="android">Android</button><span class="w-px bg-hairline shrink-0"></span>
+              <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" data-t="ios-sim">iOS Sim</button>
             </div>
-            <ol class="stl" id="stl-out"></ol>
+            <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]" id="stl-out"></ol>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Steps verbatim from <code>setup.ts:36–67</code> — 1 to 4 per target, commands as CopyText. Click a command to copy it.</div>
         </div>
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">The long-command case (driver ③)</div>
           <div class="panel" style="max-width:320px;">
-            <ol class="stl">
-              <li><div class="stl-body">Chrome reads the NSS store instead:<span class="ct">certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem</span></div></li>
+            <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]">
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Chrome reads the NSS store instead:<span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem</span></div></li>
             </ol>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Wraps whole. No truncation, no ellipsis, no horizontal scroll — a cut command is a broken command.</div>
@@ -342,17 +342,17 @@
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">In its real host</div>
           <div class="panel" style="max-width:340px;">
-            <div class="sl" style="margin-bottom:8px;"><span class="sl-verdict"><span class="sl-glyph sp-muted">◐</span><span class="sl-name">certificate</span></span><span class="sl-msg">can't check from here</span></div>
-            <div style="margin-bottom:8px;"><button class="sel-trigger" style="pointer-events:none;min-width:auto;"><span>macOS</span><span class="sel-caret">▾</span></button></div>
-            <ol class="stl">
-              <li><div class="stl-body">Save Trawler's certificate as trawler-ca.pem.</div></li>
-              <li><div class="stl-body">Run:<span class="ct">sudo security add-trusted-cert -d …</span></div></li>
+            <div class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]" style="margin-bottom:8px;"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">◐</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">can't check from here</span></div>
+            <div style="margin-bottom:8px;"><button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border border-hairline rounded-button font-ui text-control text-ink-body cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" style="pointer-events:none;min-width:auto;"><span>macOS</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button></div>
+            <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]">
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Save Trawler's certificate as trawler-ca.pem.</div></li>
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Run:<span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">sudo security add-trusted-cert -d …</span></div></li>
             </ol>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Inside <code>PreconditionRow</code>: <a href="status-line.html">StatusLine</a> · <a href="select.html">Select</a> · StepList. The list brings no box — the row's is the only frame.</div>
         </div>
       </div>
-      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — target switching and click-to-copy are live. Rendered in app Warp tokens from <a href="specimen.css">specimen.css</a>; commands use <a href="copy-text.html">CopyText</a>'s <code>.ct</code> unmodified, only <code>.stl*</code> (list + marker) is new.</div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — target switching and click-to-copy are live. Rendered in app Warp tokens from specimen.css; commands use <a href="copy-text.html">CopyText</a>'s <code>.ct</code> unmodified, only <code>.stl*</code> (list + marker) is new.</div>
     </div>
   </main>
   <script>
@@ -385,26 +385,40 @@
       ],
     };
 
+    const STL_BODY = 'text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap';
+    const CT = 'text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]';
+    const SEG_REST = ['text-ink-mute', 'bg-transparent'];
+    const SEG_ACTIVE = ['bg-canvas-soft', 'text-ink'];
+
     function render(target) {
       const out = document.getElementById('stl-out');
       out.innerHTML = STEPS[target].map(([prose, cmd]) => {
-        const command = cmd ? `<span class="ct" data-copy="${cmd.replace(/"/g, '&quot;')}">${cmd}</span>` : '';
-        return `<li><div class="stl-body">${prose}${command}</div></li>`;
+        const command = cmd ? `<span class="${CT}" data-copy="${cmd.replace(/"/g, '&quot;')}">${cmd}</span>` : '';
+        return `<li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="${STL_BODY}">${prose}${command}</div></li>`;
       }).join('');
     }
     document.querySelectorAll('#stl-targets .seg').forEach((btn) => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('#stl-targets .seg').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
+        document.querySelectorAll('#stl-targets .seg').forEach((b) => {
+          b.classList.remove(...SEG_ACTIVE);
+          b.classList.add(...SEG_REST);
+        });
+        btn.classList.remove(...SEG_REST);
+        btn.classList.add(...SEG_ACTIVE);
         render(btn.dataset.t);
       });
     });
     document.addEventListener('click', (e) => {
-      const el = e.target.closest('.ct[data-copy]');
+      const el = e.target.closest('[data-copy]');
       if (!el || !window.getSelection().isCollapsed) return;
       navigator.clipboard?.writeText(el.dataset.copy);
-      el.classList.add('s-confirm');
-      setTimeout(() => el.classList.remove('s-confirm'), 1200);
+      // The confirm swaps the underline tone; text-ink-body would otherwise win.
+      el.classList.remove('decoration-hairline');
+      el.classList.add('decoration-ok');
+      setTimeout(() => {
+        el.classList.remove('decoration-ok');
+        el.classList.add('decoration-hairline');
+      }, 1200);
     });
     render('macos');
   </script>

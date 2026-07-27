@@ -4,22 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — SegmentedControl component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
     .t2{color:var(--ok);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
     .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
-    /* segment group */
-    .seg-group{display:inline-flex;border:1px solid var(--a-line);border-radius:4px;overflow:hidden;font-family:Inter,system-ui,sans-serif;font-size:11px;}
-    .seg{padding:2px 8px;cursor:pointer;color:var(--a-mute);background:transparent;border:none;line-height:1.6;user-select:none;}
-    .seg:hover{color:var(--a-ink);}
-    .seg.active{background:var(--a-soft);color:var(--a-ink);}
-    .seg:focus-visible{outline:1px solid var(--a-mute);outline-offset:-1px;}
-    .seg-group.disabled .seg{opacity:.4;cursor:default;pointer-events:none;}
-    .seg-divider{width:1px;background:var(--a-line);flex-shrink:0;}
     /* body preview (specimen only) */
     .body-preview{font-family:"DM Mono",ui-monospace,monospace;font-size:11px;line-height:1.6;color:var(--a-body);background:var(--a-canvas);border:1px solid var(--a-line);border-radius:6px;padding:8px 10px;margin-top:6px;white-space:pre;overflow-x:auto;}
     .body-preview .k{color:var(--a-mute);}
@@ -49,8 +42,7 @@
     .timeline{font-family:"DM Mono",ui-monospace,monospace;font-size:11px;color:var(--a-body);background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 10px;line-height:1.8;white-space:pre;overflow-x:auto;}
     .timeline .m{color:var(--a-mute);}
     .timeline .o{color:var(--a-ok);}
-    .timeline .w{color:var(--a-warn);}
-  </style>
+    .timeline .w{color:var(--a-warn);}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -88,10 +80,10 @@
       <div class="panel">
         <div class="lbl">Response body</div>
         <div class="sub-bar">
-          <div class="seg-group" role="radiogroup" aria-label="body view">
-            <button class="seg active" role="radio" aria-checked="true"><span class="anno">1</span> raw</button>
-            <div class="seg-divider"></div>
-            <button class="seg" role="radio" aria-checked="false">decoded <span class="anno">2</span></button>
+          <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome" role="radiogroup" aria-label="body view">
+            <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink" role="radio" aria-checked="true"><span class="anno">1</span> raw</button>
+            <div class="w-px bg-hairline shrink-0"></div>
+            <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" role="radio" aria-checked="false">decoded <span class="anno">2</span></button>
           </div>
           <span class="anno">3</span>
         </div>
@@ -101,10 +93,10 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="seg-group">
-              <button class="seg active">raw</button>
-              <div class="seg-divider"></div>
-              <button class="seg">decoded</button>
+            <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome">
+              <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</button>
+              <div class="w-px bg-hairline shrink-0"></div>
+              <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">decoded</button>
             </div>
           </div>
           <div class="cap">the active segment filled soft; the state is always legible without reading anything else</div>
@@ -120,10 +112,10 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="seg-group">
-              <button class="seg">req</button>
-              <div class="seg-divider"></div>
-              <button class="seg active">resp</button>
+            <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome">
+              <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">req</button>
+              <div class="w-px bg-hairline shrink-0"></div>
+              <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">resp</button>
             </div>
           </div>
           <div class="cap">the second tenant, same anatomy: the leg switch — nothing about the control changes</div>
@@ -141,10 +133,10 @@
           <div class="panel">
             <div class="sub-bar">
               <span class="zone-lbl">body</span>
-              <div class="seg-group">
-                <button class="seg active">raw</button>
-                <div class="seg-divider"></div>
-                <button class="seg">decoded</button>
+              <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome">
+                <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</button>
+                <div class="w-px bg-hairline shrink-0"></div>
+                <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">decoded</button>
               </div>
             </div>
           </div>
@@ -167,18 +159,18 @@
         <div class="ex">
           <div class="flow-ex">
             <div class="panel" style="padding:6px 8px;">
-              <div class="seg-group">
-                <button class="seg active">raw</button>
-                <div class="seg-divider"></div>
-                <button class="seg">decoded</button>
+              <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome">
+                <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</button>
+                <div class="w-px bg-hairline shrink-0"></div>
+                <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">decoded</button>
               </div>
             </div>
-            <span class="arr">click "decoded" ▸ onChange("decoded")</span>
+            <span class="text-ink-mute text-chrome">click "decoded" ▸ onChange("decoded")</span>
             <div class="panel" style="padding:6px 8px;">
-              <div class="seg-group">
-                <button class="seg">raw</button>
-                <div class="seg-divider"></div>
-                <button class="seg active">decoded</button>
+              <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome">
+                <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</button>
+                <div class="w-px bg-hairline shrink-0"></div>
+                <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">decoded</button>
               </div>
             </div>
           </div>
@@ -210,10 +202,10 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="padding:6px 8px;">
-            <div class="seg-group disabled">
-              <button class="seg active">raw</button>
-              <div class="seg-divider"></div>
-              <button class="seg">decoded</button>
+            <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome opacity-40 pointer-events-none cursor-default">
+              <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</button>
+              <div class="w-px bg-hairline shrink-0"></div>
+              <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">decoded</button>
             </div>
           </div>
           <div class="cap">whole-group disabled: BodyViewer uses it while the body is absent or loading</div>
@@ -232,40 +224,40 @@
     <div class="app swatches" data-c="states">
       <div class="swatch">
         <div class="panel" style="padding:8px 10px;">
-          <div class="seg-group">
-            <button class="seg active">raw</button>
-            <div class="seg-divider"></div>
-            <button class="seg">decoded</button>
+          <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome">
+            <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</button>
+            <div class="w-px bg-hairline shrink-0"></div>
+            <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">decoded</button>
           </div>
         </div>
         <div class="cap"><strong>value-active</strong> — exactly one segment filled at all times; which one is purely the <code>value</code> prop</div>
       </div>
       <div class="swatch">
         <div class="panel" style="padding:8px 10px;">
-          <div class="seg-group">
-            <button class="seg active">raw</button>
-            <div class="seg-divider"></div>
-            <button class="seg" style="color:var(--a-ink);">decoded</button>
+          <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome">
+            <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</button>
+            <div class="w-px bg-hairline shrink-0"></div>
+            <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" style="color:var(--a-ink);">decoded</button>
           </div>
         </div>
         <div class="cap"><strong>hover (inactive segment)</strong> — muted → ink; fill does not appear until clicked</div>
       </div>
       <div class="swatch">
         <div class="panel" style="padding:8px 10px;">
-          <div class="seg-group">
-            <button class="seg active" style="outline:1px solid var(--a-mute);outline-offset:-1px;">raw</button>
-            <div class="seg-divider"></div>
-            <button class="seg">decoded</button>
+          <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome">
+            <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink" style="outline:1px solid var(--a-mute);outline-offset:-1px;">raw</button>
+            <div class="w-px bg-hairline shrink-0"></div>
+            <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">decoded</button>
           </div>
         </div>
         <div class="cap"><strong>focus</strong> — 1 px mute outline on the focused segment. Zero-chromatic-accent rule: never colored</div>
       </div>
       <div class="swatch">
         <div class="panel" style="padding:8px 10px;">
-          <div class="seg-group disabled">
-            <button class="seg active">raw</button>
-            <div class="seg-divider"></div>
-            <button class="seg">decoded</button>
+          <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome opacity-40 pointer-events-none cursor-default">
+            <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</button>
+            <div class="w-px bg-hairline shrink-0"></div>
+            <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">decoded</button>
           </div>
         </div>
         <div class="cap"><strong>disabled (whole group)</strong> — muted, non-interactive, value still visible. E.g. BodyViewer while the body is absent/loading</div>
@@ -283,17 +275,17 @@
       <div class="card">
         <strong>D1 · control form</strong> <span class="badge auto">settled: segment group</span>
         <div style="margin-top:8px;display:flex;gap:10px;align-items:center;">
-          <div class="seg-group">
-            <button class="seg active">raw</button>
-            <div class="seg-divider"></div>
-            <button class="seg">decoded</button>
+          <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome">
+            <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</button>
+            <div class="w-px bg-hairline shrink-0"></div>
+            <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">decoded</button>
           </div>
           <span style="color:var(--a-mute);font-size:11px;">← settled</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">All options visible in a single group makes the choice structurally explicit — the current state is unambiguous at a glance (driver ①). A cycling button only names one side and forces the user to read the label to infer the state.</p>
       </div>
       <div class="card">
-        <strong>alt: single cycling button</strong> <span class="badge warn">rejected</span>
+        <strong>alt: single cycling button</strong> <span class="badge text-warn">rejected</span>
         <div style="margin-top:8px;">
           <button style="border:1px solid var(--a-line);border-radius:4px;padding:2px 8px;background:transparent;color:var(--a-ink);font-size:11px;font-family:Inter,sans-serif;">raw ↔ decoded</button>
         </div>
@@ -306,7 +298,7 @@
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">Both known tenants (decode, leg) are mutually exclusive views. Single-select is what "one segment always filled" and the radiogroup pattern mean; the contract stays one prop (<code>value</code>), one event (<code>onChange</code>).</p>
       </div>
       <div class="card">
-        <strong>alt: multi-select variant</strong> <span class="badge warn">rejected — no tenant</span>
+        <strong>alt: multi-select variant</strong> <span class="badge text-warn">rejected — no tenant</span>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">A <code>type="multiple"</code> mode (as Radix ToggleGroup offers) would change the value shape to a set and the ARIA pattern to independent <code>aria-pressed</code> toggles — a different component wearing the same clothes. Add as a sibling when a real tenant appears, not before.</p>
       </div>
     </div>
@@ -319,7 +311,7 @@
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;"><code>role="radiogroup"</code> + <code>role="radio"</code> gives the 1-of-N positional context and the roving tabindex model. Screen readers announce selection without extra markup.</p>
       </div>
       <div class="card">
-        <strong>alt: aria-pressed on each segment</strong> <span class="badge warn">rejected</span>
+        <strong>alt: aria-pressed on each segment</strong> <span class="badge text-warn">rejected</span>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;"><code>aria-pressed</code> implies independent toggles — a screen reader would not convey that selecting one deselects the others. The radiogroup pattern exists precisely for this case.</p>
       </div>
     </div>
@@ -381,15 +373,15 @@
       <div class="panel">
         <div class="lbl">Body</div>
         <div class="sub-bar" style="margin-bottom:8px;">
-          <div id="live-leg" class="seg-group" role="radiogroup" aria-label="leg">
-            <button class="seg" role="radio" aria-checked="false" tabindex="-1" data-v="req">req</button>
-            <div class="seg-divider"></div>
-            <button class="seg active" role="radio" aria-checked="true" tabindex="0" data-v="resp">resp</button>
+          <div id="live-leg" class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome" role="radiogroup" aria-label="leg">
+            <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" role="radio" aria-checked="false" tabindex="-1" data-v="req">req</button>
+            <div class="w-px bg-hairline shrink-0"></div>
+            <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink" role="radio" aria-checked="true" tabindex="0" data-v="resp">resp</button>
           </div>
-          <div id="live-toggle" class="seg-group" role="radiogroup" aria-label="body view">
-            <button class="seg active" role="radio" aria-checked="true" tabindex="0" data-v="raw">raw</button>
-            <div class="seg-divider"></div>
-            <button class="seg" role="radio" aria-checked="false" tabindex="-1" data-v="decoded">decoded</button>
+          <div id="live-toggle" class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome" role="radiogroup" aria-label="body view">
+            <button class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink" role="radio" aria-checked="true" tabindex="0" data-v="raw">raw</button>
+            <div class="w-px bg-hairline shrink-0"></div>
+            <button class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" role="radio" aria-checked="false" tabindex="-1" data-v="decoded">decoded</button>
           </div>
         </div>
         <div id="live-body" class="body-preview"></div>
@@ -438,6 +430,8 @@ qty:     3`,
 
     const bodyEl = document.getElementById('live-body');
     const state = { leg: 'resp', mode: 'raw' };
+    const SEG_REST = ['text-ink-mute', 'bg-transparent'];
+    const SEG_ACTIVE = ['bg-canvas-soft', 'text-ink'];
 
     function render() {
       bodyEl.textContent = BODIES[state.leg][state.mode];
@@ -452,7 +446,10 @@ qty:     3`,
         state[key] = value;
         segs.forEach((s) => {
           const active = s.dataset.v === value;
-          s.classList.toggle('active', active);
+          // Swap rather than toggle one class: the active and resting utilities
+          // set the same properties, so both present means Tailwind's order wins.
+          s.classList.remove(...(active ? SEG_REST : SEG_ACTIVE));
+          s.classList.add(...(active ? SEG_ACTIVE : SEG_REST));
           s.setAttribute('aria-checked', String(active));
           s.tabIndex = active ? 0 : -1;
         });

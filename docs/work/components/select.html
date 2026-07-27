@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — Select component design</title>
-  <link rel="stylesheet" href="specimen.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="tw-config.js"></script>
   <style>
     /* Component values come from specimen.css — .sel-* is this component's block
        there, and the trigger's box values are CopyButton's (.cb), cloned per
@@ -34,9 +35,7 @@
     .cmp td,.cmp th{vertical-align:top;font-size:12.5px;}
     .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
     .callout.ok{border-color:var(--ok);}
-    /* Static popup illustrations sit in flow rather than absolutely. */
-    .sel-pop.inflow{position:static;top:auto;box-shadow:none;margin-top:4px;}
-  </style>
+</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -107,17 +106,17 @@
     <h2 id="anatomy">Anatomy — the parts you see</h2>
     <div class="app" data-c="anatomy-hero">
       <div class="panel" style="max-width:400px;">
-        <div class="sel-wrap">
-          <button class="sel-trigger s-open"><span>macOS<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">1</span></span><span class="sel-caret">▾</span></button>
-          <div class="sel-pop inflow">
-            <div class="sel-search"><span class="mag">⌕</span><input placeholder="filter…" value="" readonly><span class="anno" style="position:absolute;transform:translate(-14px,-2px);z-index:1;">2</span></div>
-            <div class="sel-list">
-              <div class="sel-opt s-selected s-active"><span class="tick">✓</span>macOS<span class="anno" style="position:absolute;transform:translate(4px,-2px);z-index:1;">3</span></div>
-              <div class="sel-opt"><span class="tick"></span>Windows</div>
-              <div class="sel-opt"><span class="tick"></span>Linux</div>
-              <div class="sel-opt"><span class="tick"></span>Firefox</div>
-              <div class="sel-opt"><span class="tick"></span>iOS Simulator</div>
-              <div class="sel-opt"><span class="tick"></span>Android</div>
+        <div class="relative inline-block">
+          <button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink border-ink-mute"><span>macOS<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">1</span></span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button>
+          <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1">
+            <div class="flex items-center gap-chrome-gap px-chrome-x py-chrome-y border-b border-hairline"><span class="text-ink-mute text-chrome shrink-0">⌕</span><input class="flex-1 min-w-0 border-none bg-transparent [outline:none] font-ui text-control text-ink p-0 placeholder:text-ink-mute" placeholder="filter…" value="" readonly><span class="anno" style="position:absolute;transform:translate(-14px,-2px);z-index:1;">2</span></div>
+            <div class="max-h-[184px] overflow-y-auto py-[2px]">
+              <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span>macOS<span class="anno" style="position:absolute;transform:translate(4px,-2px);z-index:1;">3</span></div>
+              <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div>
+              <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Linux</div>
+              <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Firefox</div>
+              <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>iOS Simulator</div>
+              <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Android</div>
             </div>
           </div>
         </div>
@@ -128,8 +127,8 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <button class="sel-trigger" style="pointer-events:none;"><span>macOS</span><span class="sel-caret">▾</span></button>
-            <button class="cb" style="pointer-events:none;"><span class="cb-icon">⧉</span>curl</button>
+            <button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border border-hairline rounded-button font-ui text-control text-ink-body cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" style="pointer-events:none;"><span>macOS</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" style="pointer-events:none;"><span class="text-body leading-none">⧉</span>curl</button>
           </div>
           <div class="cap">Select beside CopyButton — same box, plus a caret</div>
         </div>
@@ -144,10 +143,10 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="sel-pop inflow" style="min-width:180px;">
-              <div class="sel-search"><span class="mag">⌕</span><input value="fire" readonly></div>
-              <div class="sel-list">
-                <div class="sel-opt s-active"><span class="tick"></span><span class="hit">Fire</span>fox</div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:180px;">
+              <div class="flex items-center gap-chrome-gap px-chrome-x py-chrome-y border-b border-hairline"><span class="text-ink-mute text-chrome shrink-0">⌕</span><input class="flex-1 min-w-0 border-none bg-transparent [outline:none] font-ui text-control text-ink p-0 placeholder:text-ink-mute" value="fire" readonly></div>
+              <div class="max-h-[184px] overflow-y-auto py-[2px]">
+                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0"></span><span class="text-ink underline decoration-ink-mute underline-offset-2">Fire</span>fox</div>
               </div>
             </div>
           </div>
@@ -164,11 +163,11 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="sel-pop inflow" style="min-width:170px;">
-              <div class="sel-list">
-                <div class="sel-opt s-selected"><span class="tick">✓</span>macOS</div>
-                <div class="sel-opt s-active"><span class="tick"></span>Windows</div>
-                <div class="sel-opt"><span class="tick"></span>Linux</div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:170px;">
+              <div class="max-h-[184px] overflow-y-auto py-[2px]">
+                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span>macOS</div>
+                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div>
+                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Linux</div>
               </div>
             </div>
           </div>
@@ -185,15 +184,15 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="sel-pop inflow" style="min-width:180px;">
-              <div class="sel-search"><span class="mag">⌕</span><input value="chrome" readonly></div>
-              <div class="sel-none">no match</div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:180px;">
+              <div class="flex items-center gap-chrome-gap px-chrome-x py-chrome-y border-b border-hairline"><span class="text-ink-mute text-chrome shrink-0">⌕</span><input class="flex-1 min-w-0 border-none bg-transparent [outline:none] font-ui text-control text-ink p-0 placeholder:text-ink-mute" value="chrome" readonly></div>
+              <div class="px-control-x py-[5px] font-ui text-control text-ink-mute italic">no match</div>
             </div>
-            <div class="sel-pop inflow" style="min-width:180px;">
-              <div class="sel-none"><span class="sel-spin"></span>loading…</div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:180px;">
+              <div class="px-control-x py-[5px] font-ui text-control text-ink-mute italic"><span class="inline-block w-glyph h-glyph border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px]"></span>loading…</div>
             </div>
-            <div class="sel-pop inflow" style="min-width:180px;">
-              <div class="sel-none">nothing to choose from</div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:180px;">
+              <div class="px-control-x py-[5px] font-ui text-control text-ink-mute italic">nothing to choose from</div>
             </div>
           </div>
           <div class="cap">one slot, three outcomes — no match · loading · empty</div>
@@ -235,23 +234,23 @@
     <h2 id="states">States</h2>
     <div class="app swatches" data-c="states">
       <div class="swatch">
-        <div class="panel"><button class="sel-trigger" style="pointer-events:none;"><span>macOS</span><span class="sel-caret">▾</span></button></div>
+        <div class="panel"><button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border border-hairline rounded-button font-ui text-control text-ink-body cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" style="pointer-events:none;"><span>macOS</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button></div>
         <div class="cap"><strong>rest</strong> — <code>ink-body</code> label, hairline border, muted caret</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="sel-trigger s-hover" style="pointer-events:none;"><span>macOS</span><span class="sel-caret">▾</span></button></div>
+        <div class="panel"><button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink border-ink-mute" style="pointer-events:none;"><span>macOS</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button></div>
         <div class="cap"><strong>hover</strong> — label to <code>ink</code>, border to <code>ink-mute</code>. CopyButton's values</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="sel-trigger s-focus" style="pointer-events:none;"><span>macOS</span><span class="sel-caret">▾</span></button></div>
+        <div class="panel"><button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none outline outline-1 outline-ink-mute outline-offset-2 text-ink" style="pointer-events:none;"><span>macOS</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button></div>
         <div class="cap"><strong>focus</strong> — 1px mute outline at 2px offset. Ink-toned, never chromatic</div>
       </div>
       <div class="swatch">
         <div class="panel" style="min-height:120px;">
-          <div class="sel-wrap">
-            <button class="sel-trigger s-open" style="pointer-events:none;"><span>macOS</span><span class="sel-caret">▾</span></button>
-            <div class="sel-pop inflow" style="min-width:150px;">
-              <div class="sel-list"><div class="sel-opt s-selected s-active"><span class="tick">✓</span>macOS</div><div class="sel-opt"><span class="tick"></span>Windows</div></div>
+          <div class="relative inline-block">
+            <button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink border-ink-mute" style="pointer-events:none;"><span>macOS</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:150px;">
+              <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span>macOS</div><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div></div>
             </div>
           </div>
         </div>
@@ -259,44 +258,44 @@
       </div>
       <div class="swatch">
         <div class="panel" style="min-height:120px;">
-          <div class="sel-pop inflow" style="min-width:170px;">
-            <div class="sel-search"><span class="mag">⌕</span><input value="fire" readonly></div>
-            <div class="sel-list"><div class="sel-opt s-active"><span class="tick"></span><span class="hit">Fire</span>fox</div></div>
+          <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:170px;">
+            <div class="flex items-center gap-chrome-gap px-chrome-x py-chrome-y border-b border-hairline"><span class="text-ink-mute text-chrome shrink-0">⌕</span><input class="flex-1 min-w-0 border-none bg-transparent [outline:none] font-ui text-control text-ink p-0 placeholder:text-ink-mute" value="fire" readonly></div>
+            <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0"></span><span class="text-ink underline decoration-ink-mute underline-offset-2">Fire</span>fox</div></div>
           </div>
         </div>
         <div class="cap"><strong>filtering</strong> — matched run underlined; active resets to the first match</div>
       </div>
       <div class="swatch">
         <div class="panel" style="min-height:120px;">
-          <div class="sel-pop inflow" style="min-width:170px;">
-            <div class="sel-search"><span class="mag">⌕</span><input value="chrome" readonly></div>
-            <div class="sel-none">no match</div>
+          <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:170px;">
+            <div class="flex items-center gap-chrome-gap px-chrome-x py-chrome-y border-b border-hairline"><span class="text-ink-mute text-chrome shrink-0">⌕</span><input class="flex-1 min-w-0 border-none bg-transparent [outline:none] font-ui text-control text-ink p-0 placeholder:text-ink-mute" value="chrome" readonly></div>
+            <div class="px-control-x py-[5px] font-ui text-control text-ink-mute italic">no match</div>
           </div>
         </div>
         <div class="cap"><strong>no match</strong> — muted italic; selection and filter both untouched</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="sel-trigger s-disabled" disabled><span>macOS</span><span class="sel-caret">▾</span></button></div>
+        <div class="panel"><button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border border-hairline rounded-button font-ui text-control text-ink-body cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none opacity-disabled pointer-events-none" disabled><span>macOS</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button></div>
         <div class="cap"><strong>disabled</strong> — 38% opacity, out of tab order. Button's value; for a caller mid-action</div>
       </div>
       <div class="swatch">
-        <div class="panel"><button class="sel-trigger" style="pointer-events:none;"><span class="sel-ph">select a target</span><span class="sel-caret">▾</span></button></div>
+        <div class="panel"><button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border border-hairline rounded-button font-ui text-control text-ink-body cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" style="pointer-events:none;"><span class="text-ink-mute">select a target</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button></div>
         <div class="cap"><strong>nothing selected</strong> (round 2) — <code>value === undefined</code>: the placeholder in <code>ink-mute</code>, one tone below a real selection, and no tick in the list</div>
       </div>
       <div class="swatch">
         <div class="panel" style="min-height:110px;">
-          <div class="sel-wrap">
-            <button class="sel-trigger s-open" style="pointer-events:none;"><span class="sel-ph">select a target</span><span class="sel-caret">▾</span></button>
-            <div class="sel-pop inflow" style="min-width:150px;"><div class="sel-none"><span class="sel-spin"></span>loading…</div></div>
+          <div class="relative inline-block">
+            <button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink border-ink-mute" style="pointer-events:none;"><span class="text-ink-mute">select a target</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:150px;"><div class="px-control-x py-[5px] font-ui text-control text-ink-mute italic"><span class="inline-block w-glyph h-glyph border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px]"></span>loading…</div></div>
           </div>
         </div>
         <div class="cap"><strong>loading</strong> (round 2) — <code>isLoading</code>: spinner + "loading…" where the list would be. Outranks empty, and <span class="kbd">Enter</span> is a no-op</div>
       </div>
       <div class="swatch">
         <div class="panel" style="min-height:110px;">
-          <div class="sel-wrap">
-            <button class="sel-trigger s-open" style="pointer-events:none;"><span class="sel-ph">select a target</span><span class="sel-caret">▾</span></button>
-            <div class="sel-pop inflow" style="min-width:170px;"><div class="sel-none">nothing to choose from</div></div>
+          <div class="relative inline-block">
+            <button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink border-ink-mute" style="pointer-events:none;"><span class="text-ink-mute">select a target</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:170px;"><div class="px-control-x py-[5px] font-ui text-control text-ink-mute italic">nothing to choose from</div></div>
           </div>
         </div>
         <div class="cap"><strong>empty</strong> (round 2) — loaded, and there is genuinely nothing. A different sentence from both "loading…" and "no match"</div>
@@ -321,8 +320,8 @@
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
             <div style="display:flex;gap:6px;align-items:center;">
-              <button class="sel-trigger" style="pointer-events:none;min-width:auto;"><span>macOS</span><span class="sel-caret">▾</span></button>
-              <button class="bt" style="pointer-events:none;display:inline-flex;align-items:center;padding:3px 9px;min-height:24px;border:1px solid var(--a-line);border-radius:3px;font-family:var(--a-ui);font-size:11.5px;color:var(--a-body);background:transparent;">install for me</button>
+              <button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border border-hairline rounded-button font-ui text-control text-ink-body cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" style="pointer-events:none;min-width:auto;"><span>macOS</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button>
+              <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" style="pointer-events:none;display:inline-flex;align-items:center;padding:3px 9px;min-height:24px;border:1px solid var(--a-line);border-radius:3px;font-family:var(--a-ui);font-size:11.5px;color:var(--a-body);background:transparent;">install for me</button>
             </div>
           </div>
           <div class="fc-note"><strong>The shared small-control box.</strong> Its real host puts a Select and a <a href="button.html">Button</a> side by side in one row — with one box, that row reads as two controls of the same weight, which is what they are. Button's fork D1 already made this call for the same reason; a third box would make the collection teach that picking and acting are different kinds of thing.</div>
@@ -345,9 +344,9 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span> <span style="color:var(--a-mute);">(round 2)</span></div>
           <div class="fc-ex">
-            <div class="sel-pop inflow" style="min-width:170px;">
-              <div class="sel-search"><span class="mag">⌕</span><input placeholder="filter…" readonly></div>
-              <div class="sel-list"><div class="sel-opt s-selected s-active"><span class="tick">✓</span>macOS</div><div class="sel-opt"><span class="tick"></span>Windows</div></div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:170px;">
+              <div class="flex items-center gap-chrome-gap px-chrome-x py-chrome-y border-b border-hairline"><span class="text-ink-mute text-chrome shrink-0">⌕</span><input class="flex-1 min-w-0 border-none bg-transparent [outline:none] font-ui text-control text-ink p-0 placeholder:text-ink-mute" placeholder="filter…" readonly></div>
+              <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span>macOS</div><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div></div>
             </div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">searchable defaults true — the 6-option picker shows it too</span>
           </div>
@@ -356,8 +355,8 @@
         <div class="fork-card">
           <div class="fc-lbl">rejected <span style="color:var(--a-mute);">(was draft 1's settled)</span></div>
           <div class="fc-ex">
-            <div class="sel-pop inflow" style="min-width:160px;">
-              <div class="sel-list"><div class="sel-opt s-selected s-active"><span class="tick">✓</span>macOS</div><div class="sel-opt"><span class="tick"></span>Windows</div><div class="sel-opt"><span class="tick"></span>Linux</div></div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:160px;">
+              <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span>macOS</div><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Linux</div></div>
             </div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">6 options → no search row (threshold &gt; 8)</span>
           </div>
@@ -372,8 +371,8 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <div class="sel-pop inflow" style="min-width:160px;">
-              <div class="sel-list"><div class="sel-opt s-selected"><span class="tick">✓</span>macOS</div><div class="sel-opt s-active"><span class="tick"></span>Windows</div></div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:160px;">
+              <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span>macOS</div><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div></div>
             </div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">tick = the value · wash = Enter picks this</span>
           </div>
@@ -382,8 +381,8 @@
         <div class="fork-card">
           <div class="fc-lbl">rejected</div>
           <div class="fc-ex">
-            <div class="sel-pop inflow" style="min-width:160px;">
-              <div class="sel-list"><div class="sel-opt"><span class="tick"></span>macOS</div><div class="sel-opt s-active"><span class="tick"></span>Windows</div></div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:160px;">
+              <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>macOS</div><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div></div>
             </div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">one wash, moved by ↑↓</span>
           </div>
@@ -397,10 +396,10 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <div class="sel-pop inflow" style="min-width:190px;">
-              <div class="sel-list">
-                <div class="sel-opt s-selected s-active"><span class="tick">✓</span><span class="ml ml-clr-get" style="width:auto;">get</span><span style="color:var(--a-mute);">/v1/flows</span></div>
-                <div class="sel-opt"><span class="tick"></span><span class="ml ml-clr-post" style="width:auto;">post</span><span style="color:var(--a-mute);">/v1/upload</span></div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:190px;">
+              <div class="max-h-[184px] overflow-y-auto py-[2px]">
+                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-get" style="width:auto;">get</span><span style="color:var(--a-mute);">/v1/flows</span></div>
+                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-post" style="width:auto;">post</span><span style="color:var(--a-mute);">/v1/upload</span></div>
               </div>
             </div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">{ id, label: "get /v1/flows", element: &lt;…&gt; }</span>
@@ -411,8 +410,8 @@
           <div class="fc-lbl">rejected</div>
           <div class="fc-ex">
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">{ id, element } — element instead of label</span>
-            <div class="sel-pop inflow" style="min-width:150px;">
-              <div class="sel-list"><div class="sel-opt s-selected"><span class="tick">✓</span><span style="color:var(--a-warn);">?</span></div></div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:150px;">
+              <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span><span style="color:var(--a-warn);">?</span></div></div>
             </div>
           </div>
           <div class="fc-note"><strong>An element <em>replacing</em> the label.</strong> Fewer fields, and the caller controls everything. Rejected: the trigger would have nothing to render but a duplicated element (it is a single 24px line, not a row), and the filter would have no text to match — so the component would need <code>searchText</code> anyway, which is <code>label</code> with a worse name. It also silently breaks the accessible name.</div>
@@ -492,11 +491,11 @@
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Live — 6 real targets, keyboard-complete</div>
           <div class="panel" style="max-width:330px;min-height:150px;">
-            <div class="sel-wrap" id="sel-demo">
-              <button class="sel-trigger" id="sel-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="trust target"><span id="sel-label">macOS</span><span class="sel-caret" aria-hidden="true">▾</span></button>
-              <div class="sel-pop hidden" id="sel-pop" role="listbox">
-                <div class="sel-search hidden" id="sel-search"><span class="mag" aria-hidden="true">⌕</span><input id="sel-input" placeholder="filter…" aria-label="filter options"></div>
-                <div class="sel-list" id="sel-list"></div>
+            <div class="relative inline-block" id="sel-demo">
+              <button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border border-hairline rounded-button font-ui text-control text-ink-body cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" id="sel-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="trust target"><span id="sel-label">macOS</span><span class="text-ink-mute text-glyph leading-none shrink-0" aria-hidden="true">▾</span></button>
+              <div class="absolute top-[calc(100%+4px)] left-0 min-w-full z-20 bg-canvas border border-hairline rounded-card shadow-pop overflow-hidden hidden" id="sel-pop" role="listbox">
+                <div class="items-center gap-chrome-gap px-chrome-x py-chrome-y border-b border-hairline hidden" id="sel-search" data-flex><span class="text-ink-mute text-chrome shrink-0" aria-hidden="true">⌕</span><input class="flex-1 min-w-0 border-none bg-transparent [outline:none] font-ui text-control text-ink p-0 placeholder:text-ink-mute" id="sel-input" placeholder="filter…" aria-label="filter options"></div>
+                <div class="max-h-[184px] overflow-y-auto py-[2px]" id="sel-list"></div>
               </div>
             </div>
             <div id="sel-echo" style="margin-top:10px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"></div>
@@ -506,16 +505,16 @@
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Round 2 — a fetched, initially-unselected list</div>
           <div class="panel" style="max-width:310px;min-height:150px;">
-            <div class="sel-wrap">
-              <button class="sel-trigger" id="sel-trigger-2" aria-haspopup="listbox" aria-expanded="false" aria-label="content type"><span id="sel-label-2" class="sel-ph">select a content type</span><span class="sel-caret" aria-hidden="true">▾</span></button>
-              <div class="sel-pop hidden" id="sel-pop-2" role="listbox">
-                <div class="sel-search" id="sel-search-2"><span class="mag" aria-hidden="true">⌕</span><input id="sel-input-2" placeholder="filter…" aria-label="filter options"></div>
-                <div class="sel-list" id="sel-list-2"></div>
+            <div class="relative inline-block">
+              <button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border border-hairline rounded-button font-ui text-control text-ink-body cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" id="sel-trigger-2" aria-haspopup="listbox" aria-expanded="false" aria-label="content type"><span id="sel-label-2" class="text-ink-mute">select a content type</span><span class="text-ink-mute text-glyph leading-none shrink-0" aria-hidden="true">▾</span></button>
+              <div class="absolute top-[calc(100%+4px)] left-0 min-w-full z-20 bg-canvas border border-hairline rounded-card shadow-pop overflow-hidden hidden" id="sel-pop-2" role="listbox">
+                <div class="items-center gap-chrome-gap px-chrome-x py-chrome-y border-b border-hairline hidden" id="sel-search-2"><span class="text-ink-mute text-chrome shrink-0" aria-hidden="true">⌕</span><input class="flex-1 min-w-0 border-none bg-transparent [outline:none] font-ui text-control text-ink p-0 placeholder:text-ink-mute" id="sel-input-2" placeholder="filter…" aria-label="filter options"></div>
+                <div class="max-h-[184px] overflow-y-auto py-[2px]" id="sel-list-2"></div>
               </div>
             </div>
             <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-              <button class="cb" id="sel-refetch" style="font-size:10px;">re-fetch (1.2s)</button>
-              <button class="cb" id="sel-empty" style="font-size:10px;">return nothing</button>
+              <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" id="sel-refetch" style="font-size:10px;">re-fetch (1.2s)</button>
+              <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" id="sel-empty" style="font-size:10px;">return nothing</button>
             </div>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Starts <code>undefined</code> with a muted placeholder, loads for 1.2s, then lists 9 — each row an <code>element</code> (muted family, ink subtype) over the plain <code>label</code> the trigger and filter use (D4). "Return nothing" shows the empty state; type "xyz" for no-match — three different sentences.</div>
@@ -523,19 +522,19 @@
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">In its real host</div>
           <div class="panel" style="max-width:330px;">
-            <div class="sl" style="margin-bottom:8px;"><span class="sl-verdict"><span class="sl-glyph sp-muted">◐</span><span class="sl-name">certificate</span></span><span class="sl-msg">can't check from here</span></div>
+            <div class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]" style="margin-bottom:8px;"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">◐</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">can't check from here</span></div>
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
-              <button class="sel-trigger" style="pointer-events:none;min-width:auto;"><span>macOS</span><span class="sel-caret">▾</span></button>
-              <button class="cb" style="pointer-events:none;color:var(--a-body);">install for me</button>
+              <button class="inline-flex items-center justify-between gap-2 px-control-x py-control-y min-h-control min-w-[132px] border border-hairline rounded-button font-ui text-control text-ink-body cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" style="pointer-events:none;min-width:auto;"><span>macOS</span><span class="text-ink-mute text-glyph leading-none shrink-0">▾</span></button>
+              <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" style="pointer-events:none;color:var(--a-body);">install for me</button>
             </div>
-            <ol class="stl">
-              <li><div class="stl-body">Save Trawler's certificate…</div></li>
+            <ol class="list-none m-0 p-0 flex flex-col gap-step-gap [counter-reset:stl]">
+              <li class="[counter-increment:stl] grid grid-cols-[18px_1fr] gap-2 items-baseline before:content-[counter(stl)_'._'] before:text-ink-mute before:font-ui before:text-chrome before:tabular-nums before:text-right"><div class="text-ink-body font-ui text-body leading-[1.55] min-w-0 flex flex-col gap-chrome-gap">Save Trawler's certificate…</div></li>
             </ol>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">One box shared with the Button beside it (D1). The popup would overlay the <a href="step-list.html">StepList</a>, not push it (driver ⑥).</div>
         </div>
       </div>
-      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — the full keyboard contract is live in both pickers. Rendered in app Warp tokens from <a href="specimen.css">specimen.css</a>; the trigger reuses CopyButton's box values and <code>.sel-*</code> (caret, popup, search, option rows) is new.</div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — the full keyboard contract is live in both pickers. Rendered in app Warp tokens from specimen.css; the trigger reuses CopyButton's box values and <code>.sel-*</code> (caret, popup, search, option rows) is new.</div>
     </div>
   </main>
   <script>
@@ -553,6 +552,18 @@
       const [family, subtype] = label.split('/');
       return { id, label, element: `<span style="color:var(--a-mute);">${family}/</span>${subtype}` };
     });
+    // The specimen's classes are the app's Tailwind utilities, so a state and its
+    // resting counterpart set the same property — every state swaps, never appends.
+    const SEL_OPT = 'sel-opt flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink';
+    const OPT_REST = 'text-ink-body';
+    const OPT_ACTIVE = 'text-ink bg-wash-tint';
+    const SEL_NONE = 'px-control-x py-[5px] font-ui text-control text-ink-mute italic';
+    const SEL_SPIN = 'inline-block w-glyph h-glyph border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px] mr-chrome-gap';
+    const TICK = 'text-label w-glyph shrink-0';
+    const HIT = 'text-ink underline decoration-ink-mute underline-offset-2';
+    const TRIGGER_REST = ['text-ink-body', 'border-hairline'];
+    const TRIGGER_OPEN = ['text-ink', 'border-ink-mute'];
+
     function makeSelect({ options, ids, onChange, value: initial, placeholder = 'select…', searchable = true, isLoading = false }) {
       const trigger = document.getElementById(ids.trigger);
       const pop = document.getElementById(ids.pop);
@@ -564,32 +575,43 @@
 
       const visible = () => options.filter((o) => o.label.toLowerCase().includes(filter.toLowerCase()));
 
+      // `hidden` and `flex` both set display, so the search bar owns neither at
+      // rest: showing it adds flex, hiding it adds hidden. Never both.
+      function showSearch(on) {
+        search.classList.toggle('hidden', !on);
+        search.classList.toggle('flex', on);
+      }
+      const searchHidden = () => search.classList.contains('hidden');
+
       function paintTrigger() {
         const sel = options.find((o) => o.id === value);
         label.textContent = sel ? sel.label : placeholder;
-        label.classList.toggle('sel-ph', !sel);
+        label.classList.toggle('text-ink-mute', !sel);
       }
 
       function mark(text) {
         if (!filter) return text;
         const i = text.toLowerCase().indexOf(filter.toLowerCase());
         if (i < 0) return text;
-        return text.slice(0, i) + '<span class="hit">' + text.slice(i, i + filter.length) + '</span>' + text.slice(i + filter.length);
+        return text.slice(0, i) + `<span class="${HIT}">` + text.slice(i, i + filter.length) + '</span>' + text.slice(i + filter.length);
       }
 
       function draw() {
         const rows = visible();
         // Precedence: loading outranks empty — an empty list mid-fetch is not yet
         // a fact. Empty outranks no-match: there is nothing to have missed.
-        if (loading) list.innerHTML = '<div class="sel-none"><span class="sel-spin"></span>loading…</div>';
-        else if (!options.length) list.innerHTML = '<div class="sel-none">nothing to choose from</div>';
-        else if (!rows.length) list.innerHTML = '<div class="sel-none">no match</div>';
-        else list.innerHTML = rows.map((o, i) =>
-          `<div class="sel-opt${o.id === value ? ' s-selected' : ''}${i === active ? ' s-active' : ''}" role="option" data-id="${o.id}"><span class="tick">${o.id === value ? '✓' : ''}</span>${o.element && !filter ? o.element : mark(o.label)}</div>`).join('');
-        const activeEl = list.querySelector('.s-active');
+        if (loading) list.innerHTML = `<div class="${SEL_NONE}"><span class="${SEL_SPIN}"></span>loading…</div>`;
+        else if (!options.length) list.innerHTML = `<div class="${SEL_NONE}">nothing to choose from</div>`;
+        else if (!rows.length) list.innerHTML = `<div class="${SEL_NONE}">no match</div>`;
+        else list.innerHTML = rows.map((o, i) => {
+          const isActive = i === active;
+          const tickTone = o.id === value ? 'text-ink' : 'text-ink-mute';
+          return `<div class="${SEL_OPT} ${isActive ? OPT_ACTIVE : OPT_REST}" role="option" data-id="${o.id}" ${isActive ? 'data-active' : ''}><span class="${TICK} ${tickTone}">${o.id === value ? '✓' : ''}</span>${o.element && !filter ? o.element : mark(o.label)}</div>`;
+        }).join('');
+        const activeEl = list.querySelector('[data-active]');
         if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
         // searchable hides the chrome, never the capability: typing reveals it.
-        search.classList.toggle('hidden', (!searchable && !filter) || loading || !options.length);
+        showSearch(!((!searchable && !filter) || loading || !options.length));
       }
 
       function setLoading(next, nextOptions) {
@@ -602,7 +624,8 @@
       function setOpen(next) {
         open = next;
         pop.classList.toggle('hidden', !open);
-        trigger.classList.toggle('s-open', open);
+        trigger.classList.remove(...(open ? TRIGGER_REST : TRIGGER_OPEN));
+        trigger.classList.add(...(open ? TRIGGER_OPEN : TRIGGER_REST));
         trigger.setAttribute('aria-expanded', String(open));
         if (open) {
           filter = '';
@@ -610,7 +633,7 @@
           // Nothing selected → land on the first row, not on -1.
           active = Math.max(0, options.findIndex((o) => o.id === value));
           draw();
-          if (!search.classList.contains('hidden')) input.focus();
+          if (!searchHidden()) input.focus();
         } else {
           trigger.focus();
         }
@@ -650,7 +673,7 @@
         else if (e.key === 'Enter') { e.preventDefault(); if (!loading && rows[active]) commit(rows[active].id); }
         else if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !loading && options.length) {
           // Typing filters even when searchable is false: the input appears when used.
-          if (search.classList.contains('hidden')) { search.classList.remove('hidden'); input.focus(); }
+          if (searchHidden()) { showSearch(true); input.focus(); }
         }
       }
       trigger.addEventListener('keydown', onKey);
