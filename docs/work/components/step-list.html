@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a66c3ea9f34851f0dfa9a77">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — StepList component design</title>
+  <link rel="stylesheet" href="specimen.css">
+  <style>
+    /* Component values come from specimen.css — .stl* is this component's block
+       there, and the command blocks inside its steps are CopyText's .ct,
+       unmodified. Doc scaffolding only below. */
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);}
+
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;padding:10px 12px;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:var(--a-ui);}
+    .tsdoc{font-family:var(--a-mono);font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:310px 1fr;gap:16px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .app .fork-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;}
+    .app .fork-card{background:var(--a-soft);border:1px solid var(--a-line);border-radius:6px;padding:10px 12px;min-width:190px;flex:1;}
+    .app .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--a-mute);margin-bottom:6px;font-family:var(--a-ui);}
+    .app .fork-card .fc-ex{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:6px;}
+    .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:var(--a-ui);}
+    .gap td,.gap th{vertical-align:top;font-size:12.5px;}
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
+    .callout.ok{border-color:var(--ok);}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>StepList <span class="tier t1">T1</span></h1>
+      <p>Ordered manual instructions — a numbered list with a free slot per step. The registry's first instructional component, and it exists because the collection had none at all.</p>
+      <div class="meta">Component design · <strong>draft — awaiting confirmation</strong> · 2026-07-27 · E-DFLOW.W5 · T3 (docs/work/components/) · proposed by <a href="../2026-07-26-dflow-w4-run-3.html#elements">run #3</a> (in <code>PreconditionRow</code>) · fixes <a href="../2026-07-26-dflow-w4-run-3.html#findings">findings 3 · 9</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> <a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 9</a> — <em>the registry has no instructional component at all</em>, and the gap is structural rather than incidental. All 16 files were extracted from a read-only detail panel that never asked the user to do anything, so the vocabulary can render wire data in six ways and cannot render "do this, then this". <a href="key-value-row.html">KeyValueRow</a> misses on both axes (no ordinal, and its <code>@avoid</code> targets wire data); <a href="copy-text.html">CopyText</a> <code>@avoid</code>s prose outright; <a href="notice.html">Notice</a> is one sentence with at most one action. <strong>Any screen that instructs — setup, an error with a remedy, a migration — starts from zero.</strong> This is the file that stops that.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — an ordered list with a slot per step. It renders what it is handed, in order, and decides nothing → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>the setup screen's manual instructions per target — 6 trust targets × 2–4 steps (<code>guidedSteps</code>, <code>setup.ts:69</code>) and the proxy-off reversal steps (<code>proxyOffSteps</code>) · any future remedy, migration, or "do this on your device" sequence</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>the <em>content</em> ships as <code>string[]</code> per target (<code>setup.ts:36–67</code>); the <em>rendering</em> is inline in <code>Onboarding.tsx</code>. This component is the render side, and the data feeding it is already there and unit-tested</td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (T1 primitive). Deliberately <em>not</em> <code>@madeof</code> <a href="copy-text.html">CopyText</a>: a step's content is a caller slot, and a command inside one is a CopyText the <em>caller</em> composes (fork D1). What the component owns is the ordering and the marker column</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① the order is the meaning — a certificate install done out of order fails</td><td>a real <code>&lt;ol&gt;</code> with visible numbers. Not bullets, not a bare stack: the ordinal is content, so it belongs in the markup a screen reader announces</td></tr>
+        <tr><td>② a step is prose <em>or</em> a command <em>or</em> both — run #3's steps interleave them</td><td>one free <code>ReactNode</code> slot per step, no shape imposed. The component never decides what a step contains, which is exactly what keeps it T1 (fork D1)</td></tr>
+        <tr><td>③ commands must never be truncated or reflowed (<code>instructions-are-commands</code>)</td><td>the step body is <code>min-w-0</code> and wraps; nothing in the component sets <code>truncate</code>, <code>white-space:nowrap</code>, or a max-height. Run #3's longest is 330 characters and it must survive whole</td></tr>
+        <tr><td>④ these are read while the user looks away at another window</td><td>generous 10px between steps, 1.55 line-height, and the marker column aligned right against the text — the reader loses their place and must find it again. Density loses to re-findability here, unlike the panel the other 16 components came from</td></tr>
+        <tr><td>⑤ calm, ink-first (<code>data-ink-first</code>, <code>zero-accent</code>)</td><td>numbers in <code>ink-mute</code>, body in <code>ink-body</code>, no box, no background, no rule between steps. Two ink tones and nothing else — the instructions are the content, not a card</td></tr>
+        <tr><td>⑥ the user is following, not being told off</td><td>no state per step: no checkmarks, no "current step" highlight, no progress. <a href="status-line.html">StatusLine</a> above owns whether the goal is met; the list is a reference, and the app cannot observe which step you are on (fork D2)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="gap">Why no existing component fits</h2>
+    <p style="color:var(--muted);">Run #3 checked the roster before proposing — this table is that check, and it is also the proof that finding 9 is structural. Every near-miss fails on the same axis: <em>nothing in the vocabulary has an ordinal.</em></p>
+    <table data-c="gap" class="gap">
+      <thead><tr><th>Candidate</th><th>Nearest fit</th><th>Why it misses</th></tr></thead>
+      <tbody>
+        <tr><td><a href="key-value-row.html">KeyValueRow</a></td><td>a two-column list of pairs</td><td>no ordinal, and its <code>@avoid</code> names wire data as its subject. "1." is not a key, and a step is not a value</td></tr>
+        <tr><td><a href="copy-text.html">CopyText</a></td><td>the command inside a step</td><td><code>@avoid</code>s prose <em>explicitly</em>. It is the right component for one step's command — which is why it appears <em>inside</em> this one's slot (D1), not instead of it</td></tr>
+        <tr><td><a href="notice.html">Notice</a></td><td>a message with an action</td><td>one sentence, at most one action, and about a <em>zone's</em> state. Four ordered instructions is not a notice about anything</td></tr>
+        <tr><td><a href="section.html">Section</a></td><td>a labelled group</td><td>groups zones, imposes no order, and must not nest — wrapping each step in one would be four zones where there is one list</td></tr>
+        <tr><td><a href="segmented-control.html">SegmentedControl</a></td><td>—</td><td>mutually-exclusive selection. Steps are neither exclusive nor selectable</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-hero">
+      <div class="panel" style="max-width:440px;">
+        <ol class="stl">
+          <li><div class="stl-body">Save Trawler's certificate as trawler-ca.pem.<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">2</span></div></li>
+          <li><div class="stl-body">Run:<span class="ct">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem</span></div></li>
+          <li><div class="stl-body">Or double-click the file to add it in Keychain Access, then set the Trawler CA to Always Trust.</div></li>
+        </ol>
+        <span class="anno" style="position:absolute;transform:translate(-32px,-84px);z-index:1;">1</span>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">macOS trust steps, verbatim from <code>setup.ts:37–41</code> — prose, a command, an alternative</div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <ol class="stl">
+              <li><div class="stl-body">first</div></li>
+              <li><div class="stl-body">second</div></li>
+              <li><div class="stl-body">third</div></li>
+            </ol>
+          </div>
+          <div class="cap">18px column, right-aligned, tabular — "10." stays in line with "1."</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> the marker column</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>18px fixed column, <code>text-align:right</code>, Inter 11px in <code>ink-mute</code>, <code>tabular-nums</code>, rendered as <code>1.</code> · <code>2.</code> · <code>3.</code> The list is a real <code>&lt;ol&gt;</code>; the visible number comes from a CSS counter, and the ordinal is also in the markup.</span>
+            <span class="k">why</span><span>right-aligned against the text so the body's left edge is one straight line whatever the digit count (driver ④) — the reader returning from another window finds the column, not the words. <code>ink-mute</code> and one size down: the number is a locator, not content (driver ⑤). A real <code>&lt;ol&gt;</code> rather than styled divs because the order <em>is</em> the meaning (driver ①) and a screen reader must announce it.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <ol class="stl">
+              <li><div class="stl-body">Push it to the device:<span class="ct">adb push trawler-ca.pem /sdcard/Download/</span></div></li>
+              <li><div class="stl-body">Settings → Security → Encryption &amp; credentials → Install a certificate → CA certificate.</div></li>
+            </ol>
+          </div>
+          <div class="cap">one slot per step — prose, a CopyText, or both stacked</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> the step slot</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>one <code>ReactNode</code> per step, rendered as given. Inter 12px <code>ink-body</code>, line-height 1.55, <code>min-width:0</code> so long content wraps inside the grid. A column with 6px between stacked children, so prose-then-command needs no wrapper from the caller. Never truncated, never clamped, never scrolled.</span>
+            <span class="k">why</span><span>the component cannot know whether a step is a sentence, a command, a path with arrows, or a sentence <em>and</em> a command (driver ②) — imposing a shape would either exclude run #3's real content or push the component to T2. <code>min-w-0</code> and no truncation is <code>instructions-are-commands</code> (driver ③): a truncated command is a command that fails, and the longest real step is 330 characters. The 6px inner gap exists so the most common shape — "Run:" plus the command — is free rather than a per-call-site flex wrapper.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <ol class="stl">
+              <li><div class="stl-body">Firefox keeps its own certificate store, separate from the operating system's.</div></li>
+              <li><div class="stl-body">Save Trawler's certificate as trawler-ca.pem.</div></li>
+              <li><div class="stl-body">Settings → Privacy &amp; Security → Certificates → View Certificates → Authorities → Import.</div></li>
+            </ol>
+          </div>
+          <div class="cap">10px between steps — the gap is the component's only spacing decision</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> the rhythm between steps</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>10px vertical gap, uniform. No rule, no divider, no zebra, no background, no border, no padding around the list. The list contributes no box of its own.</span>
+            <span class="k">why</span><span>10px rather than the panel's usual tight rhythm because these are read while looking at another window (driver ④): the gap is what makes "which one was I on" answerable at a glance. Uniform rather than proportional to content length, so the column reads as a sequence of equals. No box because the host already provides one — a card around instructions inside a <code>PreconditionRow</code> inside a <a href="section.html">Section</a> is three nested frames for one list (driver ⑤).</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="no-affordance">
+      <strong>No copy affordance of its own.</strong> A command in a step is a <a href="copy-text.html">CopyText</a> the caller passes in — that component owns click-to-copy and its confirm chip, and run #3 confirmed that pairing (<a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 21</a>: no command on the setup screen carries a separate copy button, because CopyText <em>is</em> the affordance). If StepList also offered copying, two components would own the same gesture on the same text.
+    </div>
+    <div class="callout" data-c="no-nesting">
+      <strong>No nested StepLists, no sub-steps.</strong> A step whose content is a StepList produces "2." followed by "1.", which is unreadable and unspeakable. If a step needs sub-parts they are prose within the one slot, or the sequence is wrong and needs flattening — every real tenant in <code>setup.ts</code> is flat. <em>Stated in <code>@avoid</code>; nothing in the component prevents it, and nothing should need to.</em>
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel">
+          <ol class="stl">
+            <li><div class="stl-body">In an elevated terminal run:<span class="ct">certutil -addstore -f ROOT trawler-ca.pem</span></div></li>
+            <li><div class="stl-body">Save Trawler's certificate as trawler-ca.pem.</div></li>
+          </ol>
+        </div>
+        <div class="cap"><strong>rendered</strong> — the only state. Two steps, one carrying a command</div>
+      </div>
+      <div class="swatch">
+        <div class="panel">
+          <ol class="stl">
+            <li><div class="stl-body">The iOS Simulator uses the host Mac's trust store — the macOS install already covers it.</div></li>
+          </ol>
+        </div>
+        <div class="cap"><strong>one step</strong> — still numbered "1.", still an <code>&lt;ol&gt;</code>: a single instruction is a sequence of one (D3)</div>
+      </div>
+    </div>
+    <div class="callout warn" data-c="non-states">
+      <strong>One state, and the absences are the design:</strong>
+      <ul style="margin:6px 0 0 0;">
+        <li><strong>no empty state</strong> — a target with zero steps does not render a StepList; the host omits it. Run #3: 5 of 7 targets have steps and the 2 automated ones show them too ("the steps are one act away"). An empty-list placeholder would be a component apologising for a call the caller should not have made.</li>
+        <li><strong>no per-step done/current state</strong> — the app cannot observe whether you opened Keychain Access, so a checkmark would be a claim it cannot support, and a "current step" highlight would be a guess (driver ⑥, fork D2). Whether the <em>goal</em> is met is <a href="status-line.html">StatusLine</a>'s, from a real probe.</li>
+        <li><strong>no progress indicator, no step count</strong> — "step 2 of 4" adds a number that the numbers already say.</li>
+        <li><strong>no interaction states</strong> — the list is not focusable and owns no handler. Interactive content inside a step brings its own states (CopyText's, Button's).</li>
+        <li><strong>no collapsed/expanded state</strong> — disclosure belongs to the host (<code>PreconditionRow</code> decides whether its body is open, from which precondition is unmet). A list that could hide itself would compete with that.</li>
+      </ul>
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app" data-c="d1">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D1 · a free slot per step, not a <code>{text, command}</code> shape</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex">
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">steps={[&lt;&gt;Run:&lt;CopyText …/&gt;&lt;/&gt;, "Or double-click…"]}</span>
+            <div class="panel" style="padding:6px 8px;">
+              <ol class="stl" style="gap:6px;">
+                <li><div class="stl-body">Run:<span class="ct">certutil -addstore …</span></div></li>
+                <li><div class="stl-body">Or double-click the file.</div></li>
+              </ol>
+            </div>
+          </div>
+          <div class="fc-note"><strong><code>ReactNode[]</code>.</strong> Run #3's real steps are prose, prose-plus-command, a path with arrows, and a caveat about Android 7+ — four shapes in one target's list. A free slot fits all four and keeps the component T1: it renders children in order and inspects nothing. <a href="section.html">Section</a>'s content slot works exactly this way.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">steps={[{text:"Run:", command:"certutil …"}]}</span>
+          </div>
+          <div class="fc-note"><strong>A structured step — <code>{text, command?}</code>.</strong> Tempting: it would let StepList render the CopyText itself, so no call site could forget the copy affordance. Rejected — it makes the component own which parts a step has, so the first step that is neither (a Settings path, a caveat) needs a third field or an escape hatch, and owning "commands get CopyText" is business logic. That is a T2, and the screen would still need the free case.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d2" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D2 · no per-step completion — not even optional</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex">
+            <div class="panel" style="padding:6px 8px;">
+              <ol class="stl" style="gap:6px;">
+                <li><div class="stl-body">Save the certificate.</div></li>
+                <li><div class="stl-body">Run the trust command.</div></li>
+              </ol>
+              <div class="sl" style="margin-top:8px;border-top:1px solid var(--a-line);padding-top:6px;"><span class="sl-glyph sp-ok">✓</span><span class="sl-msg">trusted — the goal, probed</span></div>
+            </div>
+          </div>
+          <div class="fc-note"><strong>Plain steps; the verdict lives above in <a href="status-line.html">StatusLine</a>.</strong> The app cannot observe which step you did — only whether the CA is now trusted. One honest probed verdict beats four unverifiable ticks, and run #3's Frame already ruled that <em>a tick lies in most real states</em>.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <div class="panel" style="padding:6px 8px;">
+              <ol class="stl" style="gap:6px;list-style:none;">
+                <li style="grid-template-columns:18px 1fr;"><div class="stl-body"><span class="sp-ok">✓</span> Save the certificate.</div></li>
+                <li><div class="stl-body">Run the trust command.</div></li>
+              </ol>
+            </div>
+          </div>
+          <div class="fc-note"><strong>An optional <code>done</code> flag per step.</strong> Familiar, and free when unused. Rejected: the flag has no truthful source — nothing in <code>setup.ts</code> observes per-step progress — so the first caller would drive it from a click, which records "I read this", not "this is done". A component whose prop can only be filled with a guess should not have the prop.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d3" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D3 · always numbered — no unordered variant, no auto-unnumbering at one step</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex">
+            <div class="panel" style="padding:6px 8px;">
+              <ol class="stl" style="gap:6px;"><li><div class="stl-body">The iOS Simulator uses the host Mac's trust store.</div></li></ol>
+            </div>
+          </div>
+          <div class="fc-note"><strong>Always an <code>&lt;ol&gt;</code>, always visible numbers.</strong> A one-step list still reads "1." — it is a sequence of one, and the ordinal tells the reader nothing is missing above it. Keeps the component's contract exactly one sentence long, which is why it stays a primitive.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <div class="panel" style="padding:6px 8px;">
+              <ol class="stl" style="gap:6px;"><li style="grid-template-columns:0 1fr;gap:0;"><div class="stl-body">The iOS Simulator uses the host Mac's trust store.</div></li></ol>
+            </div>
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">ordered={false} · or drop the number at length 1</span>
+          </div>
+          <div class="fc-note"><strong>An <code>ordered</code> prop, or hide the number when there is one step.</strong> A lone "1." can look pedantic. Rejected: an unordered variant makes this the app's generic list component, competing with plain markup for something no tenant asked for; and length-dependent rendering means the same data shows a number or not depending on the target — the surprise costs more than the pedantry. A single step with no ordinal is prose, and a caller wanting that renders prose.</div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="open-q" style="margin-top:16px;">
+      <strong>Open for review — the reversal case.</strong> <code>proxyOffSteps</code> (<code>setup.ts</code>) is the "to undo:" sequence, and run #3 placed it in zone D as instructions too. Whether an undo sequence wants a visually quieter treatment (smaller numbers, muted body) or is simply a StepList in a differently-labelled <a href="section.html">Section</a> is not settled here: run #3 rendered it as an ordinary list and nothing broke, so a variant would be speculative. Recorded because the second tenant is the right place to answer it, and because a <code>variant</code> prop added later is cheaper than one added now and unused.
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Required</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>steps</code></td><td><code>ReactNode[]</code></td><td>✅ required</td><td>one entry per step, rendered in array order — prose, a <a href="copy-text.html">CopyText</a>, or both stacked (the slot is a column with a 6px inner gap). Never inspected; never truncated. An empty array is a caller error: the host omits the list instead</td></tr>
+        <tr><td><code>className</code></td><td><code>string</code></td><td>optional</td><td>pass-through for layout only — never for colour, family, size, or the step gap</td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--muted);font-size:12px;">Two props, one of them required, and no variants: no <code>ordered</code> (D3), no <code>done</code> (D2), no <code>start</code>, no <code>compact</code>. The array index is the key and the ordinal — steps are static content, never reordered or filtered at runtime.</p>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built (code-as-truth):</p>
+      <pre class="tsdoc">/**
+ * StepList — ordered manual instructions: a numbered list with a free slot per step.
+ * @tier T1 — renders the steps it is handed, in order, and decides nothing about their content
+ * @anatomy a real &lt;ol&gt; · 18px right-aligned marker column, Inter 11px ink-mute tabular ("1." · "2.") so every step body shares one left edge · one ReactNode slot per step, Inter 12px ink-body at 1.55, min-w-0 and wrapping (never truncated — a cut command is a broken command), stacking its children with a 6px gap · 10px between steps · no box, background, rule or padding of its own
+ * @use any ordered sequence the user performs by hand — a certificate install, a device setting, a remedy, a migration. Pass a command step as a CopyText inside the slot
+ * @avoid a single unordered statement (that is prose, or Notice if it is about a zone's state) · wire data key/value pairs (use KeyValueRow) · nesting a StepList inside a step, or sub-steps of any kind — flatten instead · adding a copy affordance: a command step is a CopyText, which already owns click-to-copy and its confirm · rendering per-step completion or a current-step highlight — the app cannot observe it; the probed verdict belongs to StatusLine above · truncating, clamping or scrolling a step
+ * @states rendered — the only state. No empty state (a host with no steps renders no list) · no per-step done/current, no progress count, no interaction states, no collapsed state (disclosure is the host's)
+ * @madeof —
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Any sequence the user performs by hand where order matters: installing a certificate on a device, changing an OS setting, undoing a proxy, following a remedy after a failure. Pass each step as a node — prose, a <a href="copy-text.html">CopyText</a> for a command, or prose then command stacked. This is the component <a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 9</a> says the registry lacked, so it claims the whole instructional category, not just setup.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>A single unordered statement — that is prose, or <a href="notice.html">Notice</a> if it is about a zone's state. Wire data pairs — <a href="key-value-row.html">KeyValueRow</a>. Nesting, or sub-steps: flatten the sequence. Adding your own copy button beside a command — CopyText <em>is</em> the affordance (<a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 21</a>). Showing per-step completion or a current step — the app cannot observe either, and the goal's real verdict belongs to <a href="status-line.html">StatusLine</a>. And never truncate or clamp a step: <code>instructions-are-commands</code>, and the longest real one is 330 characters.</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part</th><th>Tailwind (build WU)</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>list</td><td><code>list-none m-0 p-0 flex flex-col gap-2.5</code></td><td>an <code>&lt;ol&gt;</code> element — the ordinal is in the markup even though the marker is drawn by CSS (driver ①)</td></tr>
+        <tr><td>step row</td><td><code>grid grid-cols-[18px_1fr] gap-2 items-baseline</code></td><td><code>items-baseline</code> so the number sits on the body's first line, not centred against a multi-line step</td></tr>
+        <tr><td>marker</td><td><code>before:content-[counter(step)_'.'] font-ui text-[11px] text-ink-mute tabular-nums text-right</code></td><td>a CSS counter (<code>counter-reset</code> on the list, <code>counter-increment</code> per item) — no number in the DOM to drift from the <code>&lt;ol&gt;</code></td></tr>
+        <tr><td>step body</td><td><code>font-ui text-xs text-ink-body leading-relaxed min-w-0 flex flex-col gap-1.5</code></td><td><code>min-w-0</code> is what lets a 330-char command wrap inside the grid track instead of overflowing it</td></tr>
+        <tr><td>box</td><td>— (none)</td><td>no background, border, radius, padding, divider or hover. The host's frame is the only frame</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="scale-note">
+      <strong>Off-scale, disclosed:</strong> <code>gap-2.5</code> (10px between steps), <code>gap-2</code> (8px marker→body), <code>gap-1.5</code> (6px inside a step), the 18px column and the 11px marker are all off <code>spacing-scale</code>'s 8px grid or the type scale — except the 8px one, which is exactly on it. The same contradiction <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 14</a> records across the collection; <strong>W6 settles the floor</strong> and this file moves with the sheet. Two values are argued rather than inherited and should be reviewed as design, not drift: <strong>10px between steps</strong> (driver ④ — deliberately looser than the panel's rhythm because these are read while looking away) and the <strong>18px marker column</strong> (fits "10." at 11px tabular, so a ten-step list does not reflow).
+    </div>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="app" data-c="specimen">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Real content — switch the target</div>
+          <div class="panel" style="max-width:400px;">
+            <div class="seg-group" id="stl-targets" style="margin-bottom:10px;flex-wrap:wrap;">
+              <button class="seg active" data-t="macos">macOS</button><span class="seg-divider"></span>
+              <button class="seg" data-t="windows">Windows</button><span class="seg-divider"></span>
+              <button class="seg" data-t="firefox">Firefox</button><span class="seg-divider"></span>
+              <button class="seg" data-t="android">Android</button><span class="seg-divider"></span>
+              <button class="seg" data-t="ios-sim">iOS Sim</button>
+            </div>
+            <ol class="stl" id="stl-out"></ol>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Steps verbatim from <code>setup.ts:36–67</code> — 1 to 4 per target, commands as CopyText. Click a command to copy it.</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">The long-command case (driver ③)</div>
+          <div class="panel" style="max-width:320px;">
+            <ol class="stl">
+              <li><div class="stl-body">Chrome reads the NSS store instead:<span class="ct">certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem</span></div></li>
+            </ol>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Wraps whole. No truncation, no ellipsis, no horizontal scroll — a cut command is a broken command.</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">In its real host</div>
+          <div class="panel" style="max-width:340px;">
+            <div class="sl" style="margin-bottom:8px;"><span class="sl-verdict"><span class="sl-glyph sp-muted">◐</span><span class="sl-name">certificate</span></span><span class="sl-msg">can't check from here</span></div>
+            <div style="margin-bottom:8px;"><button class="sel-trigger" style="pointer-events:none;min-width:auto;"><span>macOS</span><span class="sel-caret">▾</span></button></div>
+            <ol class="stl">
+              <li><div class="stl-body">Save Trawler's certificate as trawler-ca.pem.</div></li>
+              <li><div class="stl-body">Run:<span class="ct">sudo security add-trusted-cert -d …</span></div></li>
+            </ol>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Inside <code>PreconditionRow</code>: <a href="status-line.html">StatusLine</a> · <a href="select.html">Select</a> · StepList. The list brings no box — the row's is the only frame.</div>
+        </div>
+      </div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — target switching and click-to-copy are live. Rendered in app Warp tokens from <a href="specimen.css">specimen.css</a>; commands use <a href="copy-text.html">CopyText</a>'s <code>.ct</code> unmodified, only <code>.stl*</code> (list + marker) is new.</div>
+    </div>
+  </main>
+  <script>
+    // Verbatim from setup.ts:36-67 — a command step is [prose, command].
+    const STEPS = {
+      macos: [
+        ["Save Trawler's certificate as trawler-ca.pem."],
+        ["Run:", "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem"],
+        ["Or double-click the file to add it in Keychain Access, then set the Trawler CA to Always Trust."],
+      ],
+      windows: [
+        ["Save Trawler's certificate as trawler-ca.pem."],
+        ["In an elevated terminal run:", "certutil -addstore -f ROOT trawler-ca.pem"],
+      ],
+      firefox: [
+        ["Firefox keeps its own certificate store, separate from the operating system's."],
+        ["Save Trawler's certificate as trawler-ca.pem."],
+        ["Settings → Privacy & Security → Certificates → View Certificates → Authorities → Import."],
+        ["Select trawler-ca.pem and check \"Trust this CA to identify websites\"."],
+      ],
+      android: [
+        ["Save Trawler's certificate as trawler-ca.pem."],
+        ["Push it to the device:", "adb push trawler-ca.pem /sdcard/Download/"],
+        ["Settings → Security → Encryption & credentials → Install a certificate → CA certificate."],
+        ["Apps targeting Android 7+ only trust user CAs when their network security config opts in."],
+      ],
+      "ios-sim": [
+        ["The iOS Simulator uses the host Mac's trust store — the macOS install already covers it."],
+        ["If the Simulator was running during the install, restart it to pick up the new trust."],
+      ],
+    };
+
+    function render(target) {
+      const out = document.getElementById('stl-out');
+      out.innerHTML = STEPS[target].map(([prose, cmd]) => {
+        const command = cmd ? `<span class="ct" data-copy="${cmd.replace(/"/g, '&quot;')}">${cmd}</span>` : '';
+        return `<li><div class="stl-body">${prose}${command}</div></li>`;
+      }).join('');
+    }
+    document.querySelectorAll('#stl-targets .seg').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#stl-targets .seg').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        render(btn.dataset.t);
+      });
+    });
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('.ct[data-copy]');
+      if (!el || !window.getSelection().isCollapsed) return;
+      navigator.clipboard?.writeText(el.dataset.copy);
+      el.classList.add('s-confirm');
+      setTimeout(() => el.classList.remove('s-confirm'), 1200);
+    });
+    render('macos');
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

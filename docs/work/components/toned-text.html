@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a66c3e89f34851f0dfa9a73">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — TonedText component design</title>
+  <link rel="stylesheet" href="specimen.css">
+  <style>
+    /* Every component value comes from specimen.css — .tt and .sp-ok/warn/muted
+       are this component's own block there. Nothing below is a component value;
+       this is doc scaffolding only. */
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);}
+
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;display:flex;align-items:center;gap:10px;padding:10px 12px;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:var(--a-ui);}
+    .tsdoc{font-family:var(--a-mono);font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .app .fork-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;}
+    .app .fork-card{background:var(--a-soft);border:1px solid var(--a-line);border-radius:6px;padding:10px 12px;min-width:170px;flex:1;}
+    .app .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--a-mute);margin-bottom:6px;font-family:var(--a-ui);}
+    .app .fork-card .fc-ex{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;}
+    .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:var(--a-ui);}
+    .split th,.split td{vertical-align:top;}
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
+    .callout.ok{border-color:var(--ok);}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>TonedText <span class="tier t1">T1</span></h1>
+      <p>A short value or message carried in one of three semantic tones — the primitive two contracts already name, the roster never had, and the app has been shipping under another component's name.</p>
+      <div class="meta">Component design · <strong>draft — awaiting confirmation</strong> · 2026-07-27 · E-DFLOW.W5 · T3 (docs/work/components/) · cited by <a href="status-pill.html">StatusPill</a>'s <code>@madeof</code> · sighted by <a href="../2026-07-25-dflow-w4-run-2.html#findings">run #2 · finding 21</a> and <a href="../2026-07-26-dflow-w4-run-3.html#findings">run #3 · finding 8</a> · fork <a href="status-pill.html#decisions">StatusPill D4</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> this is not a proposal — it is a <em>dangling contract</em>. <a href="status-pill.html">StatusPill</a>'s <code>@madeof</code> line reads <code>TonedText</code>, and its <code>@avoid</code> routes callers away by name and tier: <em>"a toned value that is not an HTTP status — use TonedText (T1)"</em>. Fork D4 recorded the split and promised <em>"registry follow-up on confirmation: add TonedText under T1"</em>. The confirmation landed; the row did not. Two independent runs then hit it from opposite directions — run #2 by reading StatusPill, run #3 by needing it three times in the zone that carries a screen's whole verdict. <strong>A contract that names a component the vocabulary lacks is worse than a gap: it reads as available.</strong>
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — tone comes in as a prop, text comes in as children; the component resolves nothing → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td><a href="status-pill.html">StatusPill</a> (its <code>@madeof</code>, every flow-list row and detail identity bar) · <a href="status-line.html">StatusLine</a>'s glyph + message, ×3 on the setup screen (<a href="../2026-07-26-dflow-w4-run-3.html#elements">run #3</a>) · every future non-HTTP toned value the app grows</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>✅ <strong>shipped — under the wrong name.</strong> <code>ui/src/components.tsx:24</code> is <code>{tone, children}</code> over a <code>font-mono tabular-nums</code> span with a three-key tone map. That is this component, exactly. The build WU renames it and gives <a href="status-pill.html">StatusPill</a> the <code>{status}</code> API its own file specifies</td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (T1 primitive). The base of <a href="status-pill.html">StatusPill</a> (T2, adds HTTP semantics) and of <a href="status-line.html">StatusLine</a> (T2, adds verdict precedence). <strong>TonedText is the tone channel with the meaning removed</strong></td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① it must know nothing (T1, and the whole point of D4's split)</td><td>no mapping, no formatting, no <code>null</code> handling, no default tone. Tone is required and passed in; children render as given. Every branch a caller might want belongs in the T2 above it</td></tr>
+        <tr><td>② the three tones are the app's existing vocabulary, not a new one</td><td><code>ok</code> · <code>warn</code> · <code>muted</code> — the same <code>StatusTone</code> the shipped code declares (<code>flow.ts</code>) and the same <code>StepTone</code> the setup domain returns (<code>setup.ts:189</code>). One union, three members, already in two places; this component does not widen it</td></tr>
+        <tr><td>③ zero chromatic accent (Warp DEC-11, <code>zero-accent</code>)</td><td><code>ok</code> and <code>warn</code> are the scheme's two sanctioned exceptions; <code>muted</code> is ink-family, not chromatic. Three tones is the ceiling — a fourth would need DEC-11 reopened, not a prop added</td></tr>
+        <tr><td>④ colour is never the only channel (<code>colour-plus-text</code>)</td><td>the component <strong>cannot satisfy this alone</strong> — it renders whatever text it is handed, in a tone. The second channel is the caller's: StatusPill's text is the status code, StatusLine's is a glyph + words. Stated in <code>@avoid</code> rather than enforced, because a T1 that inspects its children is not a T1 (fork D2)</td></tr>
+        <tr><td>⑤ its tenants sit in dense scan columns</td><td><code>font-mono</code> + <code>tabular-nums</code>, inherited size. Tabular figures keep a status column's digits aligned down a list; mono keeps a value from reflowing when it changes. Both are shipped values (<code>components.tsx:25</code>), not new choices</td></tr>
+        <tr><td>⑥ pure display — it is never the interactive thing</td><td>a <code>&lt;span&gt;</code>. No hover, focus, or active states; no handler prop. When a toned value must be clickable, the affordance wraps it (<a href="copy-text.html">CopyText</a>, <a href="button.html">Button</a>) — the tone does not become a button</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="split">The split — what moved where (fork D4, landing)</h2>
+    <p style="color:var(--muted);">One shipped component becomes two. This table is the reconciliation the build WU performs; it is why TonedText leads the build order even though it is the simplest file in the collection.</p>
+    <table data-c="split" class="split">
+      <thead><tr><th></th><th>shipped today <code>components.tsx:24</code></th><th>TonedText <em>(this)</em></th><th><a href="status-pill.html">StatusPill</a> after the split</th></tr></thead>
+      <tbody>
+        <tr><td><strong>API</strong></td><td><code>{tone, children}</code></td><td><code>{tone, children}</code> — unchanged</td><td><code>{status: number | null}</code></td></tr>
+        <tr><td><strong>tier</strong></td><td>listed T2</td><td><span class="tier t1">T1</span></td><td><span class="tier t2">T2</span></td></tr>
+        <tr><td><strong>knows HTTP</strong></td><td><span class="no">no</span> — the caller resolved it (<code>flow.ts:7</code>, <code>flow.ts:48</code>)</td><td><span class="no">no</span> — and never will</td><td><span class="yes">yes</span> — owns 2xx/4xx/5xx, "…", reason phrase</td></tr>
+        <tr><td><strong>renders</strong></td><td>mono tabular span</td><td>mono tabular span — <em>the same DOM</em></td><td>a TonedText</td></tr>
+        <tr><td><strong>what the build does</strong></td><td>—</td><td>takes the implementation verbatim</td><td>gets written new, per its own file</td></tr>
+      </tbody>
+    </table>
+    <div class="callout ok" data-c="rename-note">
+      <strong>The diff is a rename plus a new component, not a rewrite.</strong> <code>components.tsx:24</code> already <em>is</em> TonedText — same props, same classes, same span. So the risky half of this split is StatusPill's new <code>{status}</code> API, and the safe half is this file. Sequencing TonedText first means StatusPill is written against a component that already exists and already ships, rather than two new things landing at once. Call sites (<code>FlowList.tsx:84</code>, <code>FlowDetail.tsx:63</code>) keep their inline copies for now — <a href="../2026-07-27-dflow-w5-plan.html">W5's Q2</a> leaves rewiring to screen work.
+    </div>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-hero">
+      <div class="panel" style="max-width:400px;">
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span class="tt sp-ok">200<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">1</span></span>
+          <span class="tt sp-warn">404</span>
+          <span class="tt sp-muted">301</span>
+          <span class="tt sp-ok">✓ trusted</span>
+          <span class="tt sp-muted">◐ can't check</span>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">The same primitive under both its T2s — StatusPill's codes (left) and StatusLine's verdicts (right)</div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;align-items:center;gap:14px;">
+            <span class="tt sp-ok">ok</span>
+            <span class="tt sp-warn">warn</span>
+            <span class="tt sp-muted">muted</span>
+          </div>
+          <div class="cap">the three tones — and there is no fourth</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> the tone</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>required prop, one of <code>'ok' | 'warn' | 'muted'</code> → <code>text-ok</code> (#4cc38a) · <code>text-warn</code> (#e5484d) · <code>text-ink-mute</code> (#aea69c). A three-key lookup, shipped at <code>components.tsx:18–22</code>. No default: an omitted tone is a type error, not a muted fallback.</span>
+            <span class="k">why</span><span>required rather than defaulted because "which tone" is the one decision the caller is <em>for</em> (driver ①) — a default would let a T2 forget to resolve and still render. The three values are the union that already exists twice in the codebase (driver ②), and the two chromatic ones are DEC-11's sanctioned exceptions (driver ③): <code>muted</code> is deliberately ink-family so the calm case costs no colour.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;flex-direction:column;gap:6px;">
+            <span class="tt sp-warn">404</span>
+            <span class="tt sp-ok">✓ trusted on this machine</span>
+            <span class="tt sp-muted">◐ can't check from here</span>
+          </div>
+          <div class="cap">children — a code, a glyph + words, anything short</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> the children</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>required <code>ReactNode</code>, rendered as given. Never inspected, never parsed, never truncated, never given a fallback. Short by convention — a code, a word, a glyph plus a fragment; the component sets no length limit and its tenants do.</span>
+            <span class="k">why</span><span>a T1 that reads its children has business logic (driver ①) — the moment it special-cases <code>null</code> or a numeric range it has become StatusPill. Rendered <em>as given</em> is also what lets <a href="status-line.html">StatusLine</a> pass a glyph and a message through one span and keep them one colour: the pairing is the caller's composition, not a slot this component owns (fork D1).</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;flex-direction:column;gap:2px;">
+            <span class="tt sp-muted">200 &nbsp;18ms</span>
+            <span class="tt sp-warn">404 &nbsp;7ms</span>
+            <span class="tt sp-muted">101 &nbsp;—</span>
+          </div>
+          <div class="cap">mono + tabular — digits line up down a column</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> the text frame</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>font-mono tabular-nums</code>, size and weight <strong>inherited</strong> from the host. An inline <code>&lt;span&gt;</code> — no display change, no padding, no margin, no background, no border, no radius.</span>
+            <span class="k">why</span><span>verbatim from the shipped span (<code>components.tsx:25</code>), so the split changes no pixels. Tabular figures are the reason a status column scans (driver ⑤): proportional digits make <code>200</code> and <code>404</code> different widths and the column ragged. Inherited size is what makes one primitive serve a 12.5px list row and a 12px status line without a <code>size</code> prop.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="no-chrome">
+      <strong>No background, no border, no pill.</strong> The name is inherited from <a href="status-pill.html">StatusPill</a>, whose fork D1 already dropped the W1 mockup's chrome in favour of tinted text — and this is the primitive underneath that decision. A filled or outlined tone would put three coloured boxes in every list row, which is exactly the alarm budget <code>zero-accent</code> exists to protect. <em>Tone is a text colour here, and nothing else.</em>
+    </div>
+    <div class="callout" data-c="no-semantics">
+      <strong>No <code>role</code>, no <code>aria-live</code>, no <code>title</code>.</strong> This component cannot know whether its text is an announcement, a label, or a value — so it adds no semantics and lets the host add the right ones. <a href="status-pill.html">StatusPill</a> supplies <code>title</code> + <code>aria-label</code> from the reason phrase; <a href="status-line.html">StatusLine</a> owns whether a verdict change is announced. A helpful default here would be wrong in one of the two tenants and unremovable in both.
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel"><span class="tt sp-ok">200</span><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">tone: ok</span></div>
+        <div class="cap"><strong>ok</strong> — <code>text-ok</code> #4cc38a. The positive outcome; DEC-11's first sanctioned exception</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><span class="tt sp-warn">404</span><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">tone: warn</span></div>
+        <div class="cap"><strong>warn</strong> — <code>text-warn</code> #e5484d. Something needs attention; DEC-11's second</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><span class="tt sp-muted">301</span><span style="color:var(--a-mute);font-size:12px;font-family:var(--a-ui);">tone: muted</span></div>
+        <div class="cap"><strong>muted</strong> — <code>text-ink-mute</code> #aea69c. Neutral, unknown, or in-flight. Ink-family: costs no colour</div>
+      </div>
+    </div>
+    <div class="callout warn" data-c="non-states">
+      <strong>Three states, and every one of them is its tone prop — that is the whole state machine.</strong> Deliberately absent:
+      <ul style="margin:6px 0 0 0;">
+        <li><strong>no interaction states</strong> (hover · focus · active · disabled) — a <code>&lt;span&gt;</code> is not focusable and owns no handler (driver ⑥). A toned value that must be clicked is wrapped by <a href="copy-text.html">CopyText</a> or <a href="button.html">Button</a>, which bring their own five states.</li>
+        <li><strong>no empty state</strong> — children are required. A caller with nothing to show renders nothing, or renders its own placeholder: StatusPill's <code>"…"</code> for a pending status is <em>StatusPill's</em> text, passed in as children.</li>
+        <li><strong>no in-flight state</strong> — "waiting" is a <code>muted</code> tone plus whatever the caller writes (<code>"…"</code>, <code>⟳ Installing…</code>). Giving the primitive a spinner would put timing logic in a T1.</li>
+        <li><strong>no transition</strong> — the tone switches instantly. A fading status is a status you can misread mid-fade, and <a href="duration-text.html">DurationText</a>'s <code>@avoid</code> already bans live animation in a scan column for the same reason.</li>
+      </ul>
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app" data-c="d1">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D1 · one children slot, not <code>glyph</code> + <code>text</code></strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex"><span class="tt sp-ok">✓ trusted</span><span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">&lt;TonedText tone="ok"&gt;✓ trusted&lt;/TonedText&gt;</span></div>
+          <div class="fc-note"><strong>One <code>children</code>.</strong> The glyph is text in the same tone; splitting it into a prop would make the primitive responsible for the gap between them, and <a href="status-line.html">StatusLine</a>'s layout is StatusLine's job. Keeps the API identical to the shipped span (<code>components.tsx:24</code>), so the split is a rename.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex"><span class="tt sp-ok">✓&nbsp; trusted</span><span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">glyph="✓" · children</span></div>
+          <div class="fc-note"><strong>A dedicated <code>glyph</code> prop.</strong> Tempting because both T2 tenants pair a glyph with words. Rejected: it changes the shipped API for no rendering gain, and it invites the primitive to own glyph spacing, <code>aria-hidden</code>, and eventually a default glyph <em>per tone</em> — which is the mapping D4 just took out.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d2" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D2 · <code>colour-plus-text</code> is stated, not enforced</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex" style="flex-direction:column;align-items:flex-start;gap:3px;">
+            <span class="tt sp-warn">404</span>
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">the code IS the second channel — the caller's doing</span>
+          </div>
+          <div class="fc-note"><strong>An <code>@avoid</code> line, checked by review.</strong> The rule is real and binds every tenant, but a T1 can only satisfy it by inspecting its children — which makes it not a T1 (driver ①). So the primitive states the obligation and the T2s discharge it: StatusPill's text is the code, StatusLine's is a glyph plus words.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex"><span class="tt sp-warn">⚠ 404</span><span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">auto-prefixed per tone</span></div>
+          <div class="fc-note"><strong>Enforce it — a per-tone default glyph.</strong> Guarantees the second channel. Rejected: it puts a tone→glyph map back in the primitive (the exact mapping D4 removed), and it would prefix StatusPill's <code>404</code> with a <code>⚠</code> the flow list has never shown and does not have room for.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d3" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D3 · mono + tabular always, with no <code>ui</code> escape hatch</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex" style="flex-direction:column;align-items:flex-start;gap:2px;">
+            <span class="tt sp-muted">200 18ms</span><span class="tt sp-warn">404 &nbsp;7ms</span>
+          </div>
+          <div class="fc-note"><strong>Always <code>font-mono tabular-nums</code>.</strong> Shipped value, and the reason a status column scans (driver ⑤). Prose in a warn tone is not this component — it is <a href="notice.html">Notice</a>, which owns Inter, a message, and an action slot. Keeping the frame fixed is what keeps the boundary between them legible.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex"><span class="sp-warn" style="font-family:var(--a-ui);font-size:12px;">not decrypting</span><span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">family="ui"</span></div>
+          <div class="fc-note"><strong>A <code>family</code> prop</strong> so a sentence-shaped verdict can be Inter. Rejected: it makes the primitive the app's general toned-text-anything, competing with Notice, and it means two components can render the same warn sentence in two families — the drift <a href="specimen.css">specimen.css</a>'s <code>.notice</code> conflict already records.</div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="open-q" style="margin-top:16px;">
+      <strong>Open, deliberately not settled here:</strong> a fourth tone. <a href="status-pill.html#states">StatusPill's own open question</a> asks whether an aborted/failed flow needs one, and <a href="status-line.html">StatusLine</a>'s in-flight case uses <code>muted</code> rather than asking for one. Both are answered above their T1: a new tone is a DEC-11 amendment plus a token, and it would arrive in <code>StatusTone</code> — this file gains a value, not a design. Recorded so the first real tenant reopens DEC-11 instead of adding a prop here.
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Required</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>tone</code></td><td><code>'ok' | 'warn' | 'muted'</code></td><td>✅ required</td><td>the semantic tone, resolved by the caller. No default — the three values are the shipped <code>StatusTone</code> / <code>StepTone</code> union (<code>flow.ts</code>, <code>setup.ts:189</code>), reused rather than redeclared</td></tr>
+        <tr><td><code>children</code></td><td><code>ReactNode</code></td><td>✅ required</td><td>the text, rendered as given. Never inspected or formatted; the caller also owns the non-colour channel that makes the tone legible without colour</td></tr>
+        <tr><td><code>className</code></td><td><code>string</code></td><td>optional</td><td>pass-through for layout only (e.g. <code>text-right</code>, <code>ml-auto</code>) — never for colour, family, or size</td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--muted);font-size:12px;">Three props, two of them required, and the pair is byte-identical to what ships today. There is no <code>size</code> (inherited), no <code>glyph</code> (D1), no <code>family</code> (D3), and no <code>title</code> (the host's).</p>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built (code-as-truth):</p>
+      <pre class="tsdoc">/**
+ * TonedText — a short value or message in one of the app's three semantic tones; the tone channel with the meaning removed.
+ * @tier T1 — tone in, text in, span out: no mapping, no formatting, no state. The base StatusPill and StatusLine are made of
+ * @anatomy inline mono span with tabular-nums at inherited size (components.tsx:25) · tone → text-ok / text-warn / text-ink-mute, a three-key lookup and nothing else · children rendered as given · no background, border, radius, padding, role or title
+ * @use any short value whose meaning is carried by tone and that is not an HTTP status — a verdict glyph + phrase, a toned count, a health word. Pass the resolved tone; the tone union is StatusTone / StepTone, already shipped
+ * @avoid an HTTP status (use StatusPill — it owns the status→tone mapping) · a toned sentence or prose with an action (use Notice — Inter, message, action slot) · relying on colour alone: the caller must carry a second channel (glyph or word), which this component states but cannot enforce · resolving tone inside a call site that already has a T2 for it · making it interactive — wrap it in CopyText or Button instead
+ * @states tone:ok · tone:warn · tone:muted — the tone prop is the whole state machine. No interaction, empty, in-flight or transition states; a pending value is a muted tone plus the caller's own placeholder text
+ * @madeof —
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Any short value whose meaning is carried by tone and which is <em>not</em> an HTTP status: a precondition verdict (<a href="status-line.html">StatusLine</a>'s glyph + phrase), a toned count, a health word. Pass a resolved tone and the text; the component adds a colour and a mono frame, nothing more. Also use it as the base when building a new T2 that owns a mapping — that is what <a href="status-pill.html">StatusPill</a> does, and the reason this primitive exists.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>An HTTP status — <a href="status-pill.html">StatusPill</a> owns 2xx/4xx/5xx, the <code>"…"</code> for pending, and the reason phrase. A toned <em>sentence</em>, especially with an action beside it — that is <a href="notice.html">Notice</a> (Inter, secondary line, action slot). Colour as the only signal: pair the tone with a glyph or a word, per <code>colour-plus-text</code> (D2 — stated here, enforced by review). Anything interactive: wrap it in <a href="copy-text.html">CopyText</a> or <a href="button.html">Button</a> rather than growing states here. And never re-resolve a tone at a call site that already has a T2 for it.</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part / state</th><th>Tailwind (build WU)</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>text frame</td><td><code>font-mono tabular-nums</code></td><td>verbatim from <code>components.tsx:25</code> — unchanged by the split</td></tr>
+        <tr><td>tone: ok</td><td><code>text-ok</code></td><td>#4cc38a — DEC-11's sanctioned ok exception (<code>tailwind.config.js:17</code>)</td></tr>
+        <tr><td>tone: warn</td><td><code>text-warn</code></td><td>#e5484d — DEC-11's sanctioned warn exception (<code>tailwind.config.js:18</code>)</td></tr>
+        <tr><td>tone: muted</td><td><code>text-ink-mute</code></td><td>#aea69c — ink-family, not chromatic; the calm case costs no colour</td></tr>
+        <tr><td>size / weight</td><td>— (inherited)</td><td>no class. 12.5px in a list row, 12px in a StatusLine — one primitive, no <code>size</code> prop (D3)</td></tr>
+        <tr><td>box</td><td>— (none)</td><td>no <code>display</code>, padding, margin, background, border or radius. An inline span</td></tr>
+      </tbody>
+    </table>
+    <div class="callout ok" data-c="scale-note">
+      <strong>Nothing off-scale, nothing new.</strong> Rare for a component in this collection: every value is a token that exists, the frame is two shipped utility classes, and there is no spacing at all to breach <code>spacing-scale</code>'s floor. The <a href="specimen.css">specimen sheet</a> already carries the three tone classes — under StatusPill's heading, because the span they describe is this component. <strong>W5 moves that heading to TonedText and has StatusPill's block reference it; no value changes</strong>, which is what makes this the one specimen conflict the sheet resolves by renaming rather than by choosing.
+    </div>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="app" data-c="specimen">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Tone switch — the whole state machine</div>
+          <div class="panel" style="max-width:300px;">
+            <div class="seg-group" id="tt-tones" style="margin-bottom:10px;">
+              <button class="seg active" data-tone="ok">ok</button><span class="seg-divider"></span>
+              <button class="seg" data-tone="warn">warn</button><span class="seg-divider"></span>
+              <button class="seg" data-tone="muted">muted</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <span class="tt sp-ok" id="tt-live-a">200</span>
+              <span class="tt sp-ok" id="tt-live-b">✓ trusted on this machine</span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">One class swap, instantly — no transition (see non-states).</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Why tabular — a real status column</div>
+          <div class="panel" style="max-width:290px;">
+            <div class="hr-table" style="gap:3px 12px;">
+              <span class="tt sp-ok">200</span><span class="pl-mute">GET /v1/flows</span>
+              <span class="tt sp-warn">404</span><span class="pl-mute">GET /v1/missing</span>
+              <span class="tt sp-warn">500</span><span class="pl-mute">POST /v1/upload</span>
+              <span class="tt sp-muted">301</span><span class="pl-mute">GET /old</span>
+              <span class="tt sp-muted">…</span><span class="pl-mute">GET /v1/slow</span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Same width per digit, so the column edge is straight. The <code>…</code> is StatusPill's text, not a TonedText state.</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Under both its T2s</div>
+          <div class="panel" style="max-width:300px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="ml ml-clr-get">get</span><span class="tt sp-ok">200</span>
+              <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">← StatusPill</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="tt sp-muted">◐ certificate</span><span style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">can't check from here</span>
+              <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">← StatusLine</span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Same primitive, two owners of meaning (<a href="status-pill.html">D4</a>).</div>
+        </div>
+      </div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — rendered in app Warp tokens from <a href="specimen.css">specimen.css</a>. <code>.sp-ok/.sp-warn/.sp-muted</code> are the sheet's existing tone classes; only <code>.tt</code> (the mono/tabular frame, extracted from <code>components.tsx:25</code>) is new to the sheet.</div>
+    </div>
+  </main>
+  <script>
+    document.querySelectorAll('#tt-tones .seg').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#tt-tones .seg').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const cls = 'sp-' + btn.dataset.tone;
+        ['tt-live-a', 'tt-live-b'].forEach((id) => {
+          const el = document.getElementById(id);
+          el.classList.remove('sp-ok', 'sp-warn', 'sp-muted');
+          el.classList.add(cls);
+        });
+      });
+    });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
