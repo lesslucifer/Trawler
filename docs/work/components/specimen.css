@@ -127,7 +127,17 @@
 .sel-opt .tick{color:var(--a-mute);font-size:10px;width:9px;flex-shrink:0;}
 .sel-opt.s-selected .tick{color:var(--a-ink);}
 .sel-opt .hit{color:var(--a-ink);text-decoration:underline;text-decoration-color:var(--a-mute);text-underline-offset:2px;}
+/* One muted-italic line where the list would be, for all three non-list
+ * outcomes: no-match (filter), loading and empty (round 2). Same slot, same
+ * tone — none of them is an error, so none of them is warn.
+ */
 .sel-none{padding:5px 9px;font-family:var(--a-ui);font-size:11.5px;color:var(--a-mute);font-style:italic;}
+.sel-none .sel-spin{margin-right:6px;}
+.sel-spin{display:inline-block;width:9px;height:9px;border:1.5px solid var(--a-line);border-top-color:var(--a-mute);border-radius:50%;animation:sel-spin .8s linear infinite;vertical-align:-1px;}
+@keyframes sel-spin{to{transform:rotate(360deg)}}
+/* Trigger with value === undefined: the placeholder is muted, so an unmade
+ * choice never reads as a made one. */
+.sel-trigger .sel-ph{color:var(--a-mute);}
 
 /* ── DurationText — duration-text.html ─────────────────────────────────────
  * .blank holds its width while showing nothing: the in-flight placeholder.
