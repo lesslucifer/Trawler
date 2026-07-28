@@ -6,6 +6,7 @@ import {
   formEntries,
   hexDump,
   hexRows,
+  humanBytePair,
   humanBytes,
   rawKind,
   saveFilename,
@@ -42,6 +43,23 @@ test("humanBytes reads at a glance: one decimal below 10, integer above", () => 
   expect(humanBytes(138_240)).toBe("135 KiB");
   expect(humanBytes(1_048_576)).toBe("1.0 MiB");
   expect(humanBytes(15_728_640)).toBe("15 MiB");
+});
+
+test("humanBytePair never renders a real cut as two identical sizes", () => {
+  for (const [shown, total] of [
+    [131_072, 131_083],
+    [131_072, 131_073],
+    [4096, 4097],
+    [1_048_576, 1_048_580],
+  ]) {
+    const [left, right] = humanBytePair(shown, total);
+    expect(left).not.toBe(right);
+  }
+});
+
+test("humanBytePair borrows no precision when the sizes already differ", () => {
+  expect(humanBytePair(4096, 148_480)).toEqual(["4.0 KiB", "145 KiB"]);
+  expect(humanBytePair(512, 4096)).toEqual(["512 B", "4.0 KiB"]);
 });
 
 test("byteLength counts bytes, not characters — what a cut marker must state", () => {
