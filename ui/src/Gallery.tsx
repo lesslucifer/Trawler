@@ -3,18 +3,28 @@ import {
   Button,
   CopyButton,
   CopyText,
+  CutMarker,
   DurationText,
+  FormRenderer,
+  HexRenderer,
   IconButton,
+  ImageRenderer,
+  JsonRenderer,
   KeyValueRow,
+  MethodLabel,
   Notice,
   Section,
   SegmentedControl,
   Select,
+  StatusLine,
   StatusPill,
   StepList,
+  TextRenderer,
   TimestampText,
   TonedText,
+  XmlRenderer,
 } from "./components/index";
+import { proxyStatus, trustStatus } from "./setup";
 
 // ponytail: throwaway verification screen for E-DFLOW.W5 step 4 — every T1
 // component in every state its design file names, so a human can eyeball what
@@ -44,6 +54,19 @@ const TARGETS = [
 ];
 
 const URI = "https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&currency=USD";
+
+const JSON_BODY =
+  '{"id":"ord_8f3a91c2","status":"pending","total":49.99,"paid":false,"items":[{"sku":"p1","qty":2},{"sku":"p7","qty":1}],"tags":["rush","gift"]}';
+
+const XML_BODY =
+  '<order id="8f3a91c2">\n  <status>pending</status>\n  <items>\n    <item sku="p1">SKU-001</item>\n  </items>\n</order>';
+
+// A 16×16 RGBA PNG, half its squares fully transparent — so the checkerboard
+// behind ImageRenderer's preview is actually visible.
+const PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAI0lEQVR42mPwOdz1HxkzoAFC8gzDwIBh6CWSDRhNB6PpAIgBE45MEJeL5NUAAAAASUVORK5CYII=";
+
+const PNG_BYTES = Uint8Array.from(atob(PNG_BASE64), (c) => c.charCodeAt(0));
 
 export function Gallery() {
   const [leg, setLeg] = useState("request");
@@ -446,6 +469,117 @@ export function Gallery() {
               both halves: disabled button + a progress line, never one alone
             </span>
           )}
+        </Row>
+      </Section>
+
+      <Section title="MethodLabel — verb → token (T2)">
+        <Row label="mapped verbs">
+          {["GET", "POST", "PUT", "DELETE", "PATCH"].map((m) => (
+            <MethodLabel key={m} method={m} />
+          ))}
+        </Row>
+        <Row label="unmapped — body tone">
+          {["HEAD", "OPTIONS", "CONNECT", "TRACE", "PROPFIND"].map((m) => (
+            <MethodLabel key={m} method={m} />
+          ))}
+        </Row>
+        <Row label="the alignment contract">
+          <div className="flex flex-col gap-1">
+            {["GET", "OPTIONS", "PUT", "CONNECT"].map((m) => (
+              <span key={m} className="flex gap-3">
+                <MethodLabel method={m} />
+                <span className="font-mono text-body text-ink-mute">/v2/orders/8f3a91c2</span>
+              </span>
+            ))}
+          </div>
+        </Row>
+        <Row label="lowercase in, uppercase out">
+          <MethodLabel method="get" />
+        </Row>
+      </Section>
+
+      <Section title="StatusLine — a resolved verdict (T2)">
+        <Row label="the four settled glyphs">
+          <div className="flex flex-col gap-1">
+            <StatusLine status={{ glyph: "✓", tone: "ok", message: "Trusted on this machine" }} />
+            <StatusLine status={{ glyph: "⚠", tone: "warn", message: "Install failed — declined" }} />
+            <StatusLine status={{ glyph: "◐", tone: "muted", message: "Can't check automatically" }} />
+            <StatusLine status={{ glyph: "○", tone: "muted", message: "Not trusted yet" }} />
+          </div>
+        </Row>
+        <Row label="in-flight — a spinner">
+          <StatusLine status={{ glyph: "⟳", tone: "muted", message: "Installing…" }} />
+        </Row>
+        <Row label="with the name slot">
+          <div className="flex flex-col gap-1">
+            <StatusLine name="Certificate" status={{ glyph: "✓", tone: "ok", message: "Trusted" }} />
+            <StatusLine name="System proxy" status={{ glyph: "○", tone: "muted", message: "Not set" }} />
+          </div>
+        </Row>
+        <Row label="a long message wraps">
+          <StatusLine
+            name="Certificate"
+            status={trustStatus("untrusted", { decrypted: false, trafficSeen: true }, null)}
+          />
+        </Row>
+        <Row label="precedence — ✓ beats a stale error">
+          <div className="flex flex-col gap-1">
+            <StatusLine
+              name="probe says trusted"
+              status={trustStatus("trusted", { decrypted: false, trafficSeen: false }, null, "install exploded")}
+            />
+            <StatusLine
+              name="traffic proves it"
+              status={proxyStatus("unknown", { decrypted: true, trafficSeen: true }, null, "set failed")}
+            />
+          </div>
+        </Row>
+      </Section>
+
+      <Section title="BodyRenderer family — Json + Xml (the CodeMirror surface)">
+        <Row label="JsonRenderer">
+          <div className="min-w-0 flex-1">
+            <JsonRenderer text={JSON.stringify(JSON.parse(JSON_BODY), null, 2)} />
+          </div>
+        </Row>
+        <Row label="unparseable → as-is">
+          <div className="min-w-0 flex-1">
+            <JsonRenderer text={'{"broken":true,'} />
+          </div>
+        </Row>
+        <Row label="XmlRenderer">
+          <div className="min-w-0 flex-1">
+            <XmlRenderer text={XML_BODY} />
+          </div>
+        </Row>
+        <Row label="html down the same path">
+          <div className="min-w-0 flex-1">
+            <XmlRenderer text={"<div>\n  <p>Order confirmed</p>\n</div>"} />
+          </div>
+        </Row>
+      </Section>
+
+      <Section title="BodyRenderer family — Text · Form · Hex · Image">
+        <Row label="TextRenderer">
+          <div className="min-w-0 flex-1">
+            <TextRenderer text={"Request failed: upstream timed out after 30000ms\n  at Gateway.forward (/srv/gateway/lib/forward.js:118:11)\n  at async Router.handle (/srv/gateway/lib/router.js:64:5)"} />
+          </div>
+        </Row>
+        <Row label="FormRenderer — KeyValueRow×">
+          <div className="min-w-0 flex-1">
+            <FormRenderer text="grant_type=authorization_code&client_id=app_8f3a91c2&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback&code=SplxlOBeZQQYbYS6WxSbIA" />
+          </div>
+        </Row>
+        <Row label="HexRenderer">
+          <div className="min-w-0 flex-1">
+            <HexRenderer bytes={PNG_BYTES} />
+          </div>
+        </Row>
+        <Row label="ImageRenderer">
+          <ImageRenderer bytes={PNG_BYTES} contentType="image/png" />
+        </Row>
+        <Row label="CutMarker, alone">
+          <CutMarker shown={4096} total={148_480} />
         </Row>
       </Section>
 

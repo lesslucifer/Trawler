@@ -1,0 +1,54 @@
+import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { TEXT_MAX } from "../body";
+import { TextRenderer } from "./TextRenderer";
+
+describe("TextRenderer", () => {
+  it("renders the text verbatim — no reformatting of what arrived", () => {
+    const text = 'Request failed: upstream timed out\n  at Gateway.forward (forward.js:118:11)';
+    render(<TextRenderer text={text} />);
+
+    expect(screen.getByTestId("body-text").textContent).toBe(text);
+  });
+
+  it("wraps long lines instead of scrolling the panel away", () => {
+    render(<TextRenderer text={"x".repeat(500)} />);
+
+    const pre = screen.getByTestId("body-text");
+    expect(pre.className).toContain("whitespace-pre-wrap");
+    expect(pre.className).toContain("break-all");
+    expect(pre.className).not.toContain("truncate");
+  });
+
+  it("applies no syntax tokens — it has no grammar to apply them to", () => {
+    const { container } = render(<TextRenderer text='{"looks":"like json"}' />);
+
+    expect(container.querySelector("[class*=text-syn-]")).toBeNull();
+  });
+
+  it("mounts no editor surface: plain text has nothing to navigate or fold", () => {
+    const { container } = render(<TextRenderer text="plain" />);
+
+    expect(container.querySelector(".cm-editor")).toBeNull();
+    expect(container.querySelector(".cm-gutters")).toBeNull();
+  });
+
+  it("renders a body at the cap whole, with no marker", () => {
+    render(<TextRenderer text={"a".repeat(TEXT_MAX)} />);
+
+    expect(screen.getByTestId("body-text").textContent).toHaveLength(TEXT_MAX);
+    expect(screen.queryByText(/showing/)).not.toBeInTheDocument();
+  });
+
+  it("caps an over-large body and says so — the defect this component's spec fixes", () => {
+    render(<TextRenderer text={"a".repeat(TEXT_MAX + 5000)} />);
+
+    expect(screen.getByText(/⚠ showing 128 KiB of 133 KiB — save to see all/)).toBeInTheDocument();
+  });
+
+  it("states the cut in warn tone, never a silent ellipsis", () => {
+    render(<TextRenderer text={"a".repeat(TEXT_MAX + 1)} />);
+
+    expect(screen.getByText(/showing/).className).toContain("text-warn");
+  });
+});
