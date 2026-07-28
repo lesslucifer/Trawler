@@ -1,0 +1,9 @@
+schema: test/v2
+level: commit
+epic: E-DFLOW
+wu: E-DFLOW.W5
+branch: wu/design-flow/revise-registry
+tests:
+  unit: { count: 4, covers: "humanBytePair's no-false-negative rule — a real cut never renders as two identical sizes, and no precision is borrowed when the sizes already differ — plus CutMarker rendering the collision that shipped (TREE_MAX vs TREE_MAX+11) as 128.00 of 128.01 KiB. The gallery's own smoke test gains the nine new T2 section titles." }
+  integration: { waived: "the collection's bounded contract — barrel exports, @madeof compositions, @avoid reachability — is step 6's ui/src/components/collection.test.tsx; this commit is one step inside the WU, not its boundary" }
+  e2e: { waived: "no screen consumes the collection (Q2 leaves it unused); the gallery is a throwaway verification screen behind ?gallery, deleted before the epic closes. E-DFLOW e2e is waived to W7 per the plan" }
