@@ -1,0 +1,9 @@
+schema: test/v2
+level: commit
+epic: E-DFLOW
+wu: E-DFLOW.W5
+branch: wu/design-flow/revise-registry
+tests:
+  unit: { count: 1, covers: "the gallery mounts and renders all 13 component sections — a smoke test, since every component it renders owns its own contract test" }
+  integration: { waived: "throwaway verification scaffolding deleted in step 7; it crosses no boundary and no screen consumes it" }
+  e2e: { waived: "developer-only screen behind ?gallery, never a user flow" }
