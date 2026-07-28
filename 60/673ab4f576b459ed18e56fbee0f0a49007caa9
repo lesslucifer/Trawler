@@ -1,0 +1,9 @@
+schema: test/v2
+level: commit
+epic: E-DFLOW
+wu: E-DFLOW.W5
+branch: wu/design-flow/revise-registry
+tests:
+  unit: { count: 117, covers: "each of the 14 components against its own design-file contract — every @states value, every documented keyboard path, the @avoid boundaries expressible in code" }
+  integration: { waived: "the collection's bounded contract — barrel exports, @madeof compositions, @avoid reachability — is step 6's ui/src/components/collection.test.tsx; this commit is one step inside the WU, not its boundary" }
+  e2e: { waived: "no screen consumes the collection (Q2 leaves it unused), so there is no user-visible flow to drive; E-DFLOW e2e is waived to W7 per the plan" }
