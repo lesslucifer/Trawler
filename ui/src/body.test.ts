@@ -2,8 +2,11 @@ import {
   bodyKind,
   bodyNotice,
   bodyText,
+  byteLength,
   formEntries,
   hexDump,
+  hexRows,
+  humanBytes,
   rawKind,
   saveFilename,
 } from "./body";
@@ -14,13 +17,46 @@ test("bodyKind dispatches on the mime type, ignoring parameters", () => {
   expect(bodyKind("application/problem+json")).toBe("json");
   expect(bodyKind("image/png")).toBe("image");
   expect(bodyKind("application/x-www-form-urlencoded")).toBe("form");
-  expect(bodyKind("text/html")).toBe("text");
   expect(bodyKind("text/plain; charset=iso-8859-1")).toBe("text");
-  expect(bodyKind("application/xml")).toBe("text");
-  expect(bodyKind("application/soap+xml")).toBe("text");
   expect(bodyKind("application/javascript")).toBe("text");
   expect(bodyKind("application/octet-stream")).toBe("hex");
   expect(bodyKind(null)).toBe("hex");
+});
+
+// Six renderers need six kinds: the flat "text" the five-kind contract returned
+// for markup left XmlRenderer's dispatch row unimplementable.
+test("bodyKind splits the markup sub-group from plain text", () => {
+  expect(bodyKind("application/xml")).toBe("xml");
+  expect(bodyKind("text/xml")).toBe("xml");
+  expect(bodyKind("text/html")).toBe("xml");
+  expect(bodyKind("application/soap+xml")).toBe("xml");
+  expect(bodyKind("text/html; charset=utf-8")).toBe("xml");
+  expect(bodyKind("text/csv")).toBe("text");
+});
+
+test("humanBytes reads at a glance: one decimal below 10, integer above", () => {
+  expect(humanBytes(0)).toBe("0 B");
+  expect(humanBytes(512)).toBe("512 B");
+  expect(humanBytes(4096)).toBe("4.0 KiB");
+  expect(humanBytes(14_336)).toBe("14 KiB");
+  expect(humanBytes(138_240)).toBe("135 KiB");
+  expect(humanBytes(1_048_576)).toBe("1.0 MiB");
+  expect(humanBytes(15_728_640)).toBe("15 MiB");
+});
+
+test("byteLength counts bytes, not characters — what a cut marker must state", () => {
+  expect(byteLength("abc")).toBe(3);
+  expect(byteLength("héllo")).toBe(6);
+  expect(byteLength("日本")).toBe(6);
+});
+
+test("hexRows and hexDump agree — the pane and the clipboard cannot drift", () => {
+  const bytes = new TextEncoder().encode("PNG\r\n");
+  const [row] = hexRows(bytes);
+
+  expect(hexDump(bytes)).toBe(`${row.offset}  ${row.hex}  ${row.ascii}`);
+  expect(row.offset).toBe("00000000");
+  expect(row.ascii).toBe("|PNG..|");
 });
 
 test("rawKind sniffs stored bytes: printable UTF-8 is text, anything else hex", () => {

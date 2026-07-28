@@ -106,7 +106,12 @@ function Rendered({ fetched, kind }: { fetched: BodyFetch; kind: BodyKind }) {
       return <ImageBody bytes={fetched.bytes} contentType={fetched.contentType} />;
     case "form":
       return <FormBody text={bodyText(fetched.bytes)} />;
+    // The screen keeps its inline renderers until a later WU rewires it to the
+    // collection (E-DFLOW.W5 Q2), so xml renders as text here exactly as before
+    // bodyKind gained its sixth kind — XmlRenderer's surface arrives with that
+    // rewiring, not with the dispatch split.
     case "text":
+    case "xml":
       return <TextBody text={bodyText(fetched.bytes)} />;
     case "hex":
       return <TextBody text={hexDump(fetched.bytes)} />;

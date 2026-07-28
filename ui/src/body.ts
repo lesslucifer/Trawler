@@ -3,7 +3,7 @@ import type { BodyView, Leg } from "./api";
 // Content-type → renderer dispatch, the core UC-5 contract. Decoded bodies
 // dispatch on the served content type; raw bodies sniff bytes (rawKind),
 // because stored bytes may be compressed regardless of what the type claims.
-export type BodyKind = "json" | "image" | "form" | "text" | "hex";
+export type BodyKind = "json" | "xml" | "image" | "form" | "text" | "hex";
 
 export function bodyKind(contentType: string | null): BodyKind {
   const mime = (contentType ?? "").split(";")[0].trim().toLowerCase();
@@ -11,9 +11,15 @@ export function bodyKind(contentType: string | null): BodyKind {
   if (mime.startsWith("image/")) return "image";
   if (mime === "application/x-www-form-urlencoded") return "form";
   if (
-    mime.startsWith("text/") ||
     mime === "application/xml" ||
-    mime.endsWith("+xml") ||
+    mime === "text/xml" ||
+    mime === "text/html" ||
+    mime.endsWith("+xml")
+  ) {
+    return "xml";
+  }
+  if (
+    mime.startsWith("text/") ||
     mime === "application/javascript" ||
     mime === "application/ecmascript"
   ) {
@@ -44,15 +50,56 @@ export const HEX_MAX = 4096;
 // with @tanstack/react-virtual (already a dep) if tree-view of huge JSON matters.
 export const TREE_MAX = 131_072;
 
-export function hexDump(bytes: Uint8Array, max: number = HEX_MAX): string {
+// The text/xml/form render cap the BodyRenderer family left open at design time.
+// Shares TREE_MAX's order of magnitude: one cap for every character-rendered
+// member, so a body's cut point never depends on which member drew it.
+export const TEXT_MAX = TREE_MAX;
+
+// Cut markers state sizes the way a human reads them — raw byte counts mean
+// nothing at a glance (body-renderer.html DEC-12).
+export function humanBytes(bytes: number): string {
+  const units = ["B", "KiB", "MiB", "GiB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const digits = unit > 0 && value < 10 ? 1 : 0;
+  return `${value.toFixed(digits)} ${units[unit]}`;
+}
+
+// Caps count characters (a rendered line is characters), but a cut marker states
+// bytes — the size the user would save. For non-ASCII the two differ.
+export function byteLength(text: string): number {
+  return new TextEncoder().encode(text).length;
+}
+
+// One dump, two consumers: HexRenderer tones the three parts separately, while
+// copy-to-clipboard needs the flat text. Both read the same rows, so the pane
+// and the clipboard cannot disagree.
+export interface HexRow {
+  offset: string;
+  hex: string;
+  ascii: string;
+}
+
+export function hexRows(bytes: Uint8Array, max: number = HEX_MAX): HexRow[] {
   const shown = bytes.subarray(0, max);
-  const lines: string[] = [];
+  const rows: HexRow[] = [];
   for (let off = 0; off < shown.length; off += 16) {
     const chunk = Array.from(shown.subarray(off, off + 16));
-    const hex = chunk.map((b) => b.toString(16).padStart(2, "0")).join(" ");
-    const ascii = chunk.map((b) => (b >= 0x20 && b < 0x7f ? String.fromCharCode(b) : ".")).join("");
-    lines.push(`${off.toString(16).padStart(8, "0")}  ${hex.padEnd(47)}  |${ascii}|`);
+    rows.push({
+      offset: off.toString(16).padStart(8, "0"),
+      hex: chunk.map((b) => b.toString(16).padStart(2, "0")).join(" ").padEnd(47),
+      ascii: `|${chunk.map((b) => (b >= 0x20 && b < 0x7f ? String.fromCharCode(b) : ".")).join("")}|`,
+    });
   }
+  return rows;
+}
+
+export function hexDump(bytes: Uint8Array, max: number = HEX_MAX): string {
+  const lines = hexRows(bytes, max).map((r) => `${r.offset}  ${r.hex}  ${r.ascii}`);
   if (bytes.length > max) lines.push(`… ${bytes.length - max} more bytes`);
   return lines.join("\n");
 }
