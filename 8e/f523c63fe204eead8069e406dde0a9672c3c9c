@@ -1,0 +1,9 @@
+schema: test/v2
+level: commit
+epic: E-DFLOW
+wu: E-DFLOW.W5
+branch: wu/design-flow/revise-registry
+tests:
+  unit: { count: 88, covers: "the nine T2 components against their own design-file contracts — MethodLabel's verb→token mapping and fixed-width slot, StatusLine's five verdict states plus the precedence driven through setup.ts's real resolvers, each BodyRenderer member's rendered/cut/fallback states, SourceSurface's read-only guarantee and three-token limit; plus body.ts's newly answered policy: the sixth BodyKind, humanBytes, byteLength, and hexRows/hexDump agreement" }
+  integration: { waived: "the collection's bounded contract — barrel exports, @madeof compositions, @avoid reachability — is step 6's ui/src/components/collection.test.tsx; this commit is one step inside the WU, not its boundary" }
+  e2e: { waived: "no screen consumes the collection (Q2 leaves it unused), so there is no user-visible flow to drive; E-DFLOW e2e is waived to W7 per the plan" }
