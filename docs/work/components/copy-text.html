@@ -337,7 +337,7 @@
     /* `confirming` is internal to useConfirm with no prop, so the swatch enters it
        the way a user does: a real click, via the shared specimen.js helper. */
     const clickToConfirm = (id) =>
-      specimenReach(mount(id, <CopyText value={SHORT} label="request URI" />) ?? document.getElementById(id));
+      specimenReach(mount(id, <CopyText value={SHORT} label="request URI" />));
 
     clickToConfirm('spec-anat-confirm');
     clickToConfirm('spec-flow-after');
