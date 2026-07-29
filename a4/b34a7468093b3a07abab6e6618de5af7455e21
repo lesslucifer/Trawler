@@ -5,4 +5,4 @@ level: working-unit
 tests:
   unit: { count: 1 }
   integration: { count: 1 }
-  e2e: { waived: "no user-facing app flow: the WU changes design-doc tooling and the doc gate. Its own bounded contract is the render gate, which opens every migrated doc over file:// with no flags and asserts zero console errors plus non-empty mounts - run on all 6 migrated docs" }
+  e2e: { waived: "no user-facing app flow - the WU changes design-doc tooling and the doc gate. Its render gate (cargo xtask ui specimens --check) covers all 6 migrated docs over file:// and is run by hand: it drives headless Chrome, so wiring it into Gate::verify would make every merge on every machine require a browser. That wiring is deferred to W7 (harness), where verify-doc - never wired into the merge gate either, pre-existing - is being taken up too." }
