@@ -1,0 +1,129 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W5
+changes:
+  - path: doc-assets/components/specimen.js
+    tier: T3
+    action: added
+    distills: "runtime assets a doc loads over file://, plus the shared specimenReach helper that drives a state no prop exposes"
+  - path: doc-assets/components/tw-config.js
+    tier: T3
+    action: added
+    distills: "runtime assets a doc loads over file://, plus the shared specimenReach helper that drives a state no prop exposes"
+  - path: docs/work/2026-07-16-dflow-run-1.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/2026-07-25-dflow-w4-run-2.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/2026-07-26-dflow-w4-run-3.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/2026-07-27-dflow-w5-specimens-in-react.html
+    tier: T3
+    action: added
+    distills: "the feasibility proof, the author-time compile that makes file:// work, and the W7 deferrals: distil-then-remove ordering, gate-at-merge wiring, stale-bundle freshness"
+  - path: docs/work/2026-07-27-dflow-w5-step3-discussion.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/component-design-base.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/body-renderer.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/body-viewer.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/button.html
+    tier: T3
+    action: updated
+    distills: "specimens render the real Button instead of hand-drawn copies"
+  - path: docs/work/components/copy-all-headers-button.html
+    tier: T3
+    action: updated
+    distills: "the dissolved-component record renders the real components it points to"
+  - path: docs/work/components/copy-button.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/copy-text.html
+    tier: T3
+    action: updated
+    distills: "every settled specimen renders the real CopyText; only the 4 rejected fork legs stay drawn"
+  - path: docs/work/components/duration-text.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/header-table.html
+    tier: T3
+    action: updated
+    distills: "main specimen composes real CopyButton + KeyValueRow; the 36-line stand-in deleted"
+  - path: docs/work/components/icon-button.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/key-value-row.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/method-label.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/notice.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/section.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/segmented-control.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/select.html
+    tier: T3
+    action: updated
+    distills: "the 3 settled fork legs render the real popup; 5 annotated diagrams and 3 rejected legs stay drawn"
+  - path: docs/work/components/specimen.js
+    tier: T3
+    action: moved
+    distilled_to: [docs/work/design-flow-base.html]
+  - path: docs/work/components/status-line.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/status-pill.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/step-list.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/timestamp-text.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/toned-text.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/tw-config.js
+    tier: T3
+    action: moved
+    distilled_to: [docs/work/design-flow-base.html]
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "shared-asset paths now live outside docs/"
+t2_waived: "the WU is design-doc tooling: it changes how a specimen renders, not what any use case or decision says. The fork content that WOULD become T2 (docs/decisions/) is the deferred distillation this WU records as gating the design-file removals."
