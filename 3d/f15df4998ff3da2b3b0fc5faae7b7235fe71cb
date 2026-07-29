@@ -1,0 +1,119 @@
+schema: doc/v1
+changes:
+  - path: doc-assets/components/specimen.js
+    tier: T3
+    action: moved
+    distilled_to: [docs/work/design-flow-base.html]
+  - path: doc-assets/components/tw-config.js
+    tier: T3
+    action: moved
+    distilled_to: [docs/work/design-flow-base.html]
+  - path: docs/work/2026-07-16-dflow-run-1.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/2026-07-25-dflow-w4-run-2.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/2026-07-26-dflow-w4-run-3.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/2026-07-27-dflow-w5-specimens-in-react.html
+    tier: T3
+    action: updated
+    distills: "asset layout after the move"
+  - path: docs/work/2026-07-27-dflow-w5-step3-discussion.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/component-design-base.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/body-renderer.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/body-viewer.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/button.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/copy-all-headers-button.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/copy-button.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/copy-text.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/duration-text.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/header-table.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/icon-button.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/key-value-row.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/method-label.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/notice.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/section.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/segmented-control.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/select.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/status-line.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/status-pill.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/step-list.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/timestamp-text.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/toned-text.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "the shared-asset paths a design run composes now live outside docs/"
+t2_waived: "in-progress T3 work of this WU; the T2 landing point is the component-design-base format rule (step 2) and the epic cleanup WU, neither reached yet"
