@@ -1,0 +1,13 @@
+schema: test/v2
+epic: E-DFLOW
+wu: E-DFLOW.W5
+level: commit
+tests:
+  unit: { waived: "the diff adds no production logic - one test file, one roster doc, one deferral comment; the [UI_DEFER] marker is a comment and the roster table is T3 prose" }
+  integration:
+    files: ["ui/src/components/collection.test.tsx"]
+    asserts: "the collection's bounded contract, the part no per-component test reaches: (1) the barrel exports exactly the 24 T1/T2 roster names - a set equality, so a component that skips the barrel reds - and each mounts standalone with no screen around it; (2) every @madeof edge composes rather than re-draws - StatusPill and StatusLine each render exactly one TonedText, KeyValueRow and FormRenderer render CopyText's copy affordance, Button/CopyButton/IconButton are three <button> elements with no nesting and one shared shell, JsonRenderer falls back through TextRenderer, Notice's action slot takes a Button; (3) all 29 @avoid redirects resolve to a real export that the roster also mounts"
+    count: 62
+  e2e: { waived: "flow e2e is W7 per the epic plan - no screen consumes the collection yet (Q2), so there is no user-visible flow to drive" }
+gate0: "green (cached d66b20c824) - cargo fmt + clippy -D warnings + workspace tests; the diff touches no Rust"
+ui: "npx tsc -b clean - it caught five wrong prop names the jsdom mount test had accepted silently; npx vitest run 439 passed across 38 files"
