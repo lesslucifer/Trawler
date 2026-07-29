@@ -1,6 +1,6 @@
 /* Trawler — compile the app's collection into what a design doc can load (E-DFLOW)
  *
- *   cargo xtask ui specimens        (or: node docs/work/components/build-specimens.mjs)
+ *   cargo xtask ui specimens        (or: node scripts/build-specimens.mjs)
  *
  * Writes ONE generated, git-ignored classic script beside this file:
  *
@@ -39,7 +39,9 @@ import { promisify } from 'node:util';
 
 const run = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
-const UI = resolve(HERE, '../../../ui');
+const REPO = resolve(HERE, '..');
+const UI = join(REPO, 'ui');
+const ASSETS = join(REPO, 'doc-assets/components');
 const ESBUILD = join(UI, 'node_modules/.bin/esbuild');
 
 /* Order is the reason these share one entry:
@@ -69,7 +71,7 @@ style.textContent = \`.app{
 }\`;
 document.head.appendChild(style);
 
-import "../../docs/work/components/specimen.js";
+import "../../doc-assets/components/specimen.js";
 
 export * from "../src/components/index";
 export * as React from "react";
@@ -94,7 +96,7 @@ async function build(entrySource, extension, outfile, extra = []) {
   }
 }
 
-const bundle = join(HERE, 'specimens.bundle.js');
+const bundle = join(ASSETS, 'specimens.bundle.js');
 
 console.log('bundle →', await build(BUNDLE_ENTRY, '.tsx', bundle, ['--global-name=Trawler']));
-console.log('\nwrote docs/work/components/specimens.bundle.js — re-run after changing ui/src/components/ or specimen.js');
+console.log('\nwrote doc-assets/components/specimens.bundle.js — re-run after changing ui/src/components/ or specimen.js');

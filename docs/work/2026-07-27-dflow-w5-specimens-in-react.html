@@ -8,7 +8,7 @@
   <!-- Classic scripts only: this doc opens by double-click, and a file:// page
        may not read local files or execute module scripts. The bundle carries the
        theme, the specimen behaviours and the collection in one ordered file. -->
-  <script src="components/specimens.bundle.js"></script>
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
   <style>
     .ok{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
@@ -255,7 +255,7 @@ flowchart TD
     <div class="probe" data-c="doc-head">
 <span class="c">&lt;!-- what a migrated design file carries --&gt;</span>
 &lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;
-&lt;script src="specimens.bundle.js"&gt;&lt;/script&gt;       <span class="c">// theme + specimen.js + window.Trawler, in order</span>
+&lt;script src="../../doc-assets/components/specimens.bundle.js"&gt;&lt;/script&gt;       <span class="c">// theme + specimen.js + window.Trawler, in order</span>
 &lt;script src="https://…/babel.min.js"&gt;&lt;/script&gt;    <span class="c">// only if the doc has an inline block</span>
 
 &lt;script type="text/babel" data-presets="react"&gt;
@@ -352,7 +352,7 @@ flowchart TD
         <tr><td>Rewriting app components to suit the loader</td><td>the loader adapts to the app, never the reverse. It reads <code>ui/src/</code> unmodified; if that ever stops being true, the loader is wrong.</td></tr>
         <tr><td>Vendoring React/Babel into the repo</td><td>the docs already depend on three CDNs; a fourth is not a new failure mode</td></tr>
         <tr><td>Migrating T3/T4 files now</td><td>largest effort, smallest payoff, no built counterpart (step 5)</td></tr>
-        <tr><td>Retiring <code>tw-config.js</code></td><td><strong>deferred to this epic's final review/cleanup WU.</strong> <code>verify-doc</code> requires <code>src="components/tw-config.js"</code> as a hard asset check (<code>xtask/src/doc.rs</code>), and every unmigrated design run still loads it. Folding it into the bundle before the last doc migrates would mean two asset contracts at once; flipping the gate once, at the end, is the cheaper move.</td></tr>
+        <tr><td>Retiring <code>tw-config.js</code></td><td><strong>deferred to this epic's final review/cleanup WU.</strong> <code>verify-doc</code> requires <code>src="../../doc-assets/components/tw-config.js"</code> as a hard asset check (<code>xtask/src/doc.rs</code>), and every unmigrated design run still loads it. Folding it into the bundle before the last doc migrates would mean two asset contracts at once; flipping the gate once, at the end, is the cheaper move.</td></tr>
         <tr><td>Closing the stale-bundle hole</td><td><strong>deferred to W7 (harness).</strong> Editing a component without re-running the build renders the previous version, and <code>--check</code> does not catch it. The fix is a freshness comparison (bundle mtime vs newest <code>ui/src/components/</code> mtime) and it belongs with the rest of the harness work.</td></tr>
       </tbody>
     </table>

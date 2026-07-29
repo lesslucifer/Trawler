@@ -4,7 +4,7 @@
  * re-implemented per doc. Classic script (not a module) so it loads over
  * file:// like the rest of the doc assets:
  *
- *   design run   <script src="components/specimen.js" defer></script>
+ *   design run   <script src="../../doc-assets/components/specimen.js" defer></script>
  *   design file  folded into specimens.bundle.js (build-specimens.mjs imports
  *                this file for its side effects -- one source, no copy)
  *

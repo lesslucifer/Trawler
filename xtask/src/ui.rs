@@ -27,7 +27,7 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
 // time. Node owns that (esbuild, headless Chrome); xtask is the entry point, the
 // same way `ui build` fronts pnpm.
 fn specimens(repo: &Path, script: &str) -> Result<(i32, String), String> {
-    let script_path = repo.join("docs/work/components").join(script);
+    let script_path = repo.join("scripts").join(script);
     let status = Command::new("node")
         .arg(&script_path)
         .current_dir(repo)

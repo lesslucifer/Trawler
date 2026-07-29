@@ -1,7 +1,7 @@
 /* Trawler — the render gate for migrated design files (E-DFLOW)
  *
  *   cargo xtask ui specimens --check
- *   node docs/work/components/check-render.mjs [file.html …]   (single file)
+ *   node scripts/check-render.mjs [file.html …]   (single file)
  *
  * A migrated specimen fails SILENTLY: the component throws, the mount stays
  * empty, and an empty div beside correct prose reads as "no specimen here"
@@ -26,6 +26,7 @@ import { promisify } from 'node:util';
 
 const run = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
+const DOCS = join(HERE, '../docs');
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
 const PROBE = `<script>
@@ -91,7 +92,17 @@ async function check(file) {
 const args = process.argv.slice(2);
 const files = args.length
   ? args
-  : (await readdir(HERE)).filter((f) => f.endsWith('.html')).map((f) => join(HERE, f)).sort();
+  : await htmlFilesUnder(DOCS);
+
+async function htmlFilesUnder(dir) {
+  const found = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) found.push(...(await htmlFilesUnder(full)));
+    else if (entry.name.endsWith('.html')) found.push(full);
+  }
+  return found.sort();
+}
 
 let failed = 0;
 for (const file of files) {

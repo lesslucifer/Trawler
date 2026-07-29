@@ -22,4 +22,4 @@
 *.swp
 
 # Generated from ui/src/ by `cargo xtask ui specimens` — never edited
-docs/work/components/specimens.bundle.js
+doc-assets/components/specimens.bundle.js
