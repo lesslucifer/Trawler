@@ -1,0 +1,8 @@
+schema: test/v2
+epic: E-DFLOW
+wu: E-DFLOW.W5
+level: commit
+tests:
+  unit: { waived: "a package.json dependency declaration plus two comment corrections - no code logic to unit test" }
+  integration: { waived: "same" }
+  e2e: { waived: "covered by the thing that found it: the render gate was run in a SECOND worktree after pnpm install, failing before the fix and green after, all 6 docs" }
