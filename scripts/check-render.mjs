@@ -20,6 +20,7 @@
  * itself privileges the reader does not have.
  */
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { readdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,7 +29,15 @@ import { promisify } from 'node:util';
 const run = promisify(execFile);
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DOCS = join(HERE, '../docs');
-const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+/* macOS-primary, like the rest of the UI tooling (docs/testing-strategy.html),
+   but overridable: without CHROME the default path is another "works on the
+   author's machine" trap, and a bare spawn ENOENT does not say what to install. */
+const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+
+if (!existsSync(CHROME)) {
+  console.error(`no Chrome at ${CHROME}\nset CHROME=/path/to/chrome (any Chromium with --headless works)`);
+  process.exit(1);
+}
 
 const PROBE = `<script>
   (function poll(tries) {

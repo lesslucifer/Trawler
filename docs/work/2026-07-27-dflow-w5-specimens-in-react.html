@@ -100,7 +100,7 @@
     <div class="callout" data-c="origin-fix">
       <strong>The exception that makes it work: a classic <code>&lt;script src&gt;</code> is not CORS-restricted, and does execute from <code>file://</code>.</strong> Verified directly — a local <code>.js</code> file loaded by a plain script tag ran and set its globals.
       <br><br>
-      That is the whole workaround: <strong>move the compile from load time to author time.</strong> <code>esbuild</code> (already present via Vite — no new dependency) bundles <code>ui/src/components/index.ts</code> plus React into <code>specimens.bundle.js</code>, exposed as <code>window.Trawler</code>, together with the app's Tailwind theme and the shared <code>specimen.js</code> behaviours. The doc loads it with one ordinary script tag and needs nothing at run time.
+      That is the whole workaround: <strong>move the compile from load time to author time.</strong> <code>esbuild</code> (a declared <code>ui/</code> devDependency — see the note below) bundles <code>ui/src/components/index.ts</code> plus React into <code>specimens.bundle.js</code>, exposed as <code>window.Trawler</code>, together with the app's Tailwind theme and the shared <code>specimen.js</code> behaviours. The doc loads it with one ordinary script tag and needs nothing at run time.
       <table style="margin-top:10px;">
         <thead><tr><th>Probe</th><th>Result over bare <code>file://</code></th></tr></thead>
         <tbody>
@@ -347,7 +347,7 @@ flowchart TD
       <thead><tr><th>Not doing</th><th>Why</th></tr></thead>
       <tbody>
         <tr><td>Rewriting prose/tables/diagrams as JSX</td><td>no code counterpart to drift from; costs the diff layer its segments (§ scope)</td></tr>
-        <tr><td>A build step, bundler, or <code>node_modules</code> for docs</td><td><strong>overtaken — a build step is what shipped.</strong> <code>file://</code> forbids reading local files at run time, so the compile moved to author time (§ <a href="#origin">the constraint</a>). No new dependency: <code>esbuild</code> already ships with Vite.</td></tr>
+        <tr><td>A build step, bundler, or <code>node_modules</code> for docs</td><td><strong>overtaken — a build step is what shipped.</strong> <code>file://</code> forbids reading local files at run time, so the compile moved to author time (§ <a href="#origin">the constraint</a>). It does cost <strong>one declared dependency</strong>: <code>esbuild</code> ships inside Vite, but only npm's hoisting exposes its binary, and this project installs with <strong>pnpm</strong>, which does not hoist. Relying on the transitive made the build work in the authoring worktree and fail in every other — caught by running it after the merge. It is now an explicit devDependency.</td></tr>
         <tr><td>A doc-side <code>specimens.tsx</code></td><td><strong>the discarded first draft.</strong> It was a second implementation of every component — the loader removes the copy instead of testing it (§ <a href="#loader">no copies</a>)</td></tr>
         <tr><td>Rewriting app components to suit the loader</td><td>the loader adapts to the app, never the reverse. It reads <code>ui/src/</code> unmodified; if that ever stops being true, the loader is wrong.</td></tr>
         <tr><td>Vendoring React/Babel into the repo</td><td>the docs already depend on three CDNs; a fourth is not a new failure mode</td></tr>

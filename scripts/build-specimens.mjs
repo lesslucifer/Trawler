@@ -29,7 +29,10 @@
  * a review: a stale bundle is a re-run, never a divergence to reconcile. The
  * invariant holds -- the specimen IS the component -- with "when" changed.
  *
- * esbuild comes with Vite, already in ui/package.json. No new dependency.
+ * esbuild is a declared devDependency of ui/. It ships inside Vite too, but only
+ * npm's hoisting exposes the binary at node_modules/.bin/esbuild -- this project
+ * installs with pnpm, which does not hoist, so relying on the transitive made the
+ * build work in one worktree and fail in every other. Declared, not inherited.
  */
 import { execFile } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
