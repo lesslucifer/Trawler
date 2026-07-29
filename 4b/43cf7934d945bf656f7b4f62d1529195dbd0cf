@@ -1,0 +1,47 @@
+schema: cr/v2
+scope: "WU design-flow/revise-registry-react-design-doc -> wu/design-flow/revise-registry"
+epic: E-DFLOW
+wu: E-DFLOW.W5
+branch: wu/design-flow/revise-registry-react-design-doc
+base: 93ee0befb16fb68267fb9824d47069967cdf852f
+head: 4b43cf7934d945bf656f7b4f62d1529195dbd0cf
+diff_sha256: adb6a777f3bab7659250804259c2ae38ad44d83e45595ff075b377446dfd3d6f
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 24, verified: 9, waived: 0 }
+history:
+  - pass: 1
+    tip: a4b34a7468093b3a07abab6e6618de5af7455e21
+    verdict: FAIL
+    verified: 5
+    note: "gate claimed zero console errors but never hooked console.error; the gate never runs at merge and the test note overstated it; copy-text.html hand-drew CopyText in 5 places, already drifted (missing font-mono/text-body); 3 settled fork legs in select.html; build() generality left after its callers went 2 -> 1"
+    fixed_in: 2da6d9a
+  - pass: 2
+    tip: 2da6d9a31ab776954c43541ba218d0d6ec673c05
+    verdict: FAIL
+    verified: 3
+    note: "all three were introduced or left BY the pass-1 fix: the real popup overflowed its fork card by a measured 33px/29px; clickToConfirm's poll was unbounded; the poll-then-click helper was written twice, against design-flow-base's never-re-implement-per-doc rule"
+    fixed_in: df35e39
+  - pass: 3
+    tip: df35e39
+    verdict: FAIL
+    verified: 1
+    note: "a dead ?? fallback left while patching pass 2"
+    fixed_in: 4b43cf7
+verified_now: []
+resolved_this_run:
+  - "shared helper needs no ready-guard: it only assigns window.specimenReach, every DOM reference is lazy inside a callback"
+  - "the bundle's blocking <script> in <head> defines specimenReach before Babel parses the body's text/babel blocks - no ReferenceError window"
+  - "the two nested polls are each independently capped at 60 x 50ms; the inner one is unreachable if the outer times out"
+  - "the 200px popup reserve holds against a measured 184px popup, which is the component's own max-h cap and cannot grow"
+  - "only select.html mounts an overlay component, so the popup-overflow defect class is contained to the file fixed"
+refuted:
+  - "native .focus() for the focus swatch - swatches are simultaneous DOM siblings, only one element holds focus, and :focus-visible is modality-gated"
+  - "the 8s poll schedule is a magic number - both adaptive alternatives were empirically tried and failed; the count is deliberately not asserted"
+  - "header-table.html still hand-draws - HeaderTable is not implemented, so it remains a design doc for an unbuilt component"
+  - "select.html's Anatomy section hand-draws settled popup internals - all 5 carry class=anno callout badges a live component cannot host; classified mechanically: 5 annotated, 3 rejected, 0 settled leftovers"
+  - "doc.rs hard-codes ../../ depth - check_composition is gated behind data-artifact=design-run, which no component file declares; pre-existing in kind"
+  - "CLAUDE.md / documentation-system layout stale - scripts/ predates BASE and CLAUDE.md is byte-identical, honouring its own T0 never-edit-as-a-side-effect rule"
+  - "BUNDLE_ENTRY duplicates tw-config.js theme logic - predates BASE, one source of truth so values cannot drift, retirement deliberately deferred"
+  - "doc/v1 distills field materially incomplete - the field is terse by design; the commit body carries the disclosure"
+verdict: PASS
+date: 2026-07-29
