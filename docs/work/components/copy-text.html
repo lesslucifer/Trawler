@@ -7,13 +7,14 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- No import map, no module scripts, no fetch: a design file must open by
        double-click, and a file:// page may not read local files or run module
-       scripts. These are plain classic scripts, which do both. Regenerate with
-       `node docs/work/components/build-specimens.mjs` after changing the
-       collection; both files are generated and git-ignored. -->
-  <script src="specimens.theme.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+       scripts. These are plain classic scripts, which do both.
+       specimens.bundle.js carries the app theme, the shared specimen behaviours
+       and the real collection, in that order -- one tag cannot be misordered.
+       Generated and git-ignored: regenerate with `cargo xtask ui specimens`
+       after changing ui/src/components/ or specimen.js. Babel stays a separate
+       tag because the text/babel block below is compiled in the browser. -->
   <script src="specimens.bundle.js"></script>
-  <script src="specimen.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}

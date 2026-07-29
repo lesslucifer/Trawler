@@ -21,6 +21,5 @@
 .vscode/
 *.swp
 
-# Generated from ui/src/ by docs/work/components/build-specimens.mjs — never edited
+# Generated from ui/src/ by `cargo xtask ui specimens` — never edited
 docs/work/components/specimens.bundle.js
-docs/work/components/specimens.theme.js

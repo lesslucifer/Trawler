@@ -5,7 +5,12 @@
  * file:// like the rest of the doc assets:
  *
  *   design run   <script src="components/specimen.js" defer></script>
- *   design file  <script src="specimen.js" defer></script>
+ *   design file  folded into specimens.bundle.js (build-specimens.mjs imports
+ *                this file for its side effects -- one source, no copy)
+ *
+ * Both entry points reach the same code at different times: `defer` runs after
+ * the DOM, the bundle runs in <head> before it. Hence the ready-guard below --
+ * without it the bundled path queries an empty document and binds nothing.
  *
  * Keyed highlight map — trace one component across a tree and a catalog:
  *   <div data-map>… <span data-key="body-viewer">BodyViewer</span> …
@@ -23,7 +28,7 @@
  * when the specimens moved to Tailwind. It is doc interaction, not component
  * contract, so it travels with the behaviour it belongs to instead.
  */
-(function () {
+function installSpecimenBehaviours() {
   const DOC_STYLE = `
 [data-map] [data-key]{cursor:pointer;border-radius:3px;transition:background .1s;}
 [data-map] pre [data-key]{padding:0 3px;}
@@ -127,4 +132,10 @@
     };
     tick();
   }
-})();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', installSpecimenBehaviours, { once: true });
+} else {
+  installSpecimenBehaviours();
+}

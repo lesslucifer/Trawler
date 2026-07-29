@@ -6,10 +6,10 @@
   <title>Trawler — Specimens in React: feasibility + migration plan</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Classic scripts only: this doc opens by double-click, and a file:// page
-       may not read local files or execute module scripts. -->
-  <script src="components/specimens.theme.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+       may not read local files or execute module scripts. The bundle carries the
+       theme, the specimen behaviours and the collection in one ordered file. -->
   <script src="components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
   <style>
     .ok{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
     .probe{font-family:var(--a-mono),monospace;font-size:12px;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
@@ -44,7 +44,7 @@
     <div class="callout" data-c="pilot-box">
       <strong>W5 steps 4 and 5 landed the collection, so the loader had something to load.</strong> Merged <code>wu/design-flow/revise-registry</code>, then migrated <a href="components/button.html">button.html</a> · <a href="components/copy-text.html">copy-text.html</a> · <a href="components/select.html">select.html</a>. Every specimen in all three now renders <code>ui/src/components/*.tsx</code> — no doc-side copy exists.
       <br><br>
-      <strong>Gate green:</strong> <code>node docs/work/components/check-render.mjs</code> → 3 ok, 37 mounts, zero console errors. <code>tsc -b</code> clean · 373 unit tests across 37 files pass (the loader ships in <code>docs/</code> and changes no app code).
+      <strong>Gate green:</strong> <code>cargo xtask ui specimens --check</code> → 3 ok, 37 mounts, zero console errors. <code>tsc -b</code> clean · 373 unit tests across 37 files pass (the loader ships in <code>docs/</code> and changes no app code).
     </div>
 
     <table data-c="tbl-pilot">
@@ -100,7 +100,7 @@
     <div class="callout" data-c="origin-fix">
       <strong>The exception that makes it work: a classic <code>&lt;script src&gt;</code> is not CORS-restricted, and does execute from <code>file://</code>.</strong> Verified directly — a local <code>.js</code> file loaded by a plain script tag ran and set its globals.
       <br><br>
-      That is the whole workaround: <strong>move the compile from load time to author time.</strong> <code>esbuild</code> (already present via Vite — no new dependency) bundles <code>ui/src/components/index.ts</code> plus React into <code>specimens.bundle.js</code>, exposed as <code>window.Trawler</code>; the theme becomes <code>specimens.theme.js</code>. The doc loads both with ordinary script tags and needs nothing at run time.
+      That is the whole workaround: <strong>move the compile from load time to author time.</strong> <code>esbuild</code> (already present via Vite — no new dependency) bundles <code>ui/src/components/index.ts</code> plus React into <code>specimens.bundle.js</code>, exposed as <code>window.Trawler</code>, together with the app's Tailwind theme and the shared <code>specimen.js</code> behaviours. The doc loads it with one ordinary script tag and needs nothing at run time.
       <table style="margin-top:10px;">
         <thead><tr><th>Probe</th><th>Result over bare <code>file://</code></th></tr></thead>
         <tbody>
@@ -117,10 +117,10 @@
     <div class="callout" data-c="origin-invariant">
       <strong>A build step, but still not a copy — the distinction that matters.</strong> Nobody writes or edits the generated files; they are derived from <code>ui/src/</code> by one command, and they are <strong>git-ignored</strong>, so a stale bundle is a re-run rather than a divergence to reconcile in review. The invariant is unchanged — the specimen <em>is</em> the component — only <em>when</em> the compile happens moved.
       <br><br>
-      <strong>What it costs:</strong> one command after editing a component (<code>node docs/work/components/build-specimens.mjs</code>, ~50 ms), and a 711 kB generated file on disk that is never committed. What it buys back is the htmldoc double-click rule, intact.
+      <strong>What it costs:</strong> one command after editing a component (<code>cargo xtask ui specimens</code>, ~60 ms), and a 732 kB generated file on disk that is never committed. What it buys back is the htmldoc double-click rule, intact.
       <div class="probe" style="margin-top:10px;">
 <span class="c"># after changing anything under ui/src/components/</span>
-node docs/work/components/build-specimens.mjs
+cargo xtask ui specimens
 <span class="c"># then just open the file — no server, no flags</span>
 open docs/work/components/button.html
       </div>
@@ -129,7 +129,7 @@ open docs/work/components/button.html
     <div class="callout" data-c="origin-mistake">
       <strong>How the first two attempts got this wrong, stated plainly.</strong> Every early verification passed <code>--allow-file-access-from-files</code>, granting the gate a permission no reader's browser has; the docs "passed" while blank when opened normally. The second gate served over HTTP — the same mistake in a different costume. <strong>The gate now opens each doc over <code>file://</code> with no flags</strong>, exactly as a reader does.
       <br><br>
-      <strong>Pre-existing, and why nobody noticed:</strong> <code>tw-config.js</code> is also a module script, so on <code>file://</code> the app's Tailwind theme has <em>never</em> loaded — since W5 step 3 every design file has rendered its specimens unstyled when double-clicked. The migration did not cause it; it turned a partial silent failure into a total one, which is what finally surfaced it. <code>specimens.theme.js</code> fixes it for the migrated files.
+      <strong>Pre-existing, and why nobody noticed:</strong> <code>tw-config.js</code> is also a module script, so on <code>file://</code> the app's Tailwind theme has <em>never</em> loaded — since W5 step 3 every design file has rendered its specimens unstyled when double-clicked. The migration did not cause it; it turned a partial silent failure into a total one, which is what finally surfaced it. The bundle carries the theme now, which fixes it for the migrated files.
     </div>
 
     <h2 id="problem">The problem, measured</h2>
@@ -237,8 +237,8 @@ borderColor        → rgba(0, 0, 0, 0)     <span class="c">transparent         
 flowchart TD
   CFG["ui/tailwind.config.js<br/><i>the theme</i>"]
   SRC["ui/src/components/*.tsx<br/><b>the built collection — the only definition</b>"]
-  BUILD["build-specimens.mjs<br/><i>esbuild, ~50 ms, on demand</i>"]
-  GEN["specimens.bundle.js + specimens.theme.js<br/><i>generated · git-ignored · never edited</i>"]
+  BUILD["cargo xtask ui specimens<br/><i>esbuild, ~60 ms, on demand</i>"]
+  GEN["specimens.bundle.js<br/><i>generated · git-ignored · never edited</i>"]
   D1["button.html"]
   D2["copy-text.html"]
   D3["select.html"]
@@ -255,10 +255,8 @@ flowchart TD
     <div class="probe" data-c="doc-head">
 <span class="c">&lt;!-- what a migrated design file carries --&gt;</span>
 &lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;
-&lt;script src="specimens.theme.js"&gt;&lt;/script&gt;        <span class="c">// AFTER the CDN — it replaces window.tailwind</span>
-&lt;script src="https://…/babel.min.js"&gt;&lt;/script&gt;
-&lt;script src="specimens.bundle.js"&gt;&lt;/script&gt;       <span class="c">// → window.Trawler</span>
-&lt;script src="specimen.js" defer&gt;&lt;/script&gt;
+&lt;script src="specimens.bundle.js"&gt;&lt;/script&gt;       <span class="c">// theme + specimen.js + window.Trawler, in order</span>
+&lt;script src="https://…/babel.min.js"&gt;&lt;/script&gt;    <span class="c">// only if the doc has an inline block</span>
 
 &lt;script type="text/babel" data-presets="react"&gt;
   const { React, createRoot, Button, CopyButton, IconButton } = window.Trawler;
@@ -270,8 +268,8 @@ flowchart TD
       <thead><tr><th>Concern</th><th>Answer</th></tr></thead>
       <tbody>
         <tr><td>No import map, no <code>esm.sh</code></td><td>React is bundled and re-exported as <code>window.Trawler.React</code> — exactly one React instance, and nothing to keep in sync with a CDN pin. The nine bare specifiers the collection gained in step 5 (<code>statuses</code>, <code>moment</code>, six CodeMirror packages, <code>@lezer/highlight</code>) are simply bundled; a new dependency needs no doc change at all.</td></tr>
-        <tr><td>Bundle size</td><td>711 kB minified, ~60% of it CodeMirror and <code>moment</code> pulled in by the body renderers. Irrelevant on a local file, and it is never committed. Could be trimmed per-doc later; not worth doing before a doc feels slow.</td></tr>
-        <tr><td>Script order</td><td><code>specimens.theme.js</code> must come <em>after</em> the Play CDN tag — the CDN replaces <code>window.tailwind</code> on load, discarding a config set before it. Same ordering <code>tw-config.js</code> always relied on.</td></tr>
+        <tr><td>Bundle size</td><td>732 kB minified, ~60% of it CodeMirror and <code>moment</code> pulled in by the body renderers. Irrelevant on a local file, and it is never committed. Could be trimmed per-doc later; not worth doing before a doc feels slow.</td></tr>
+        <tr><td>Script order</td><td>Was the sharpest footgun: the theme must be set <em>after</em> the Play CDN tag, which replaces <code>window.tailwind</code> on load. Now <strong>unfalsifiable by a doc author</strong> — theme, specimen behaviours and collection share one generated file in that fixed order, so the only remaining rule is that the bundle follows the CDN tag.</td></tr>
         <tr><td>Babel is still needed</td><td>Only to transpile the JSX <em>in the doc's own mount block</em> — the components arrive pre-compiled. <code>data-presets="react"</code> (classic transform), so the block needs <code>React</code> in scope, which it destructures from the bundle.</td></tr>
         <tr><td>Staleness</td><td>The generated files are git-ignored, so they never appear in a diff and cannot be reviewed as truth. Forgetting to rebuild shows a previous version of a component — which the render gate does not catch. <strong>Called out as the real cost of author-time compilation</strong>; the honest mitigation is that the rebuild is one command in the same session as the component edit.</td></tr>
       </tbody>
@@ -349,12 +347,13 @@ flowchart TD
       <thead><tr><th>Not doing</th><th>Why</th></tr></thead>
       <tbody>
         <tr><td>Rewriting prose/tables/diagrams as JSX</td><td>no code counterpart to drift from; costs the diff layer its segments (§ scope)</td></tr>
-        <tr><td>A build step, bundler, or <code>node_modules</code> for docs</td><td><code>file://</code> double-click is the htmldoc constraint; CDN + Babel keeps it</td></tr>
+        <tr><td>A build step, bundler, or <code>node_modules</code> for docs</td><td><strong>overtaken — a build step is what shipped.</strong> <code>file://</code> forbids reading local files at run time, so the compile moved to author time (§ <a href="#origin">the constraint</a>). No new dependency: <code>esbuild</code> already ships with Vite.</td></tr>
         <tr><td>A doc-side <code>specimens.tsx</code></td><td><strong>the discarded first draft.</strong> It was a second implementation of every component — the loader removes the copy instead of testing it (§ <a href="#loader">no copies</a>)</td></tr>
         <tr><td>Rewriting app components to suit the loader</td><td>the loader adapts to the app, never the reverse. It reads <code>ui/src/</code> unmodified; if that ever stops being true, the loader is wrong.</td></tr>
         <tr><td>Vendoring React/Babel into the repo</td><td>the docs already depend on three CDNs; a fourth is not a new failure mode</td></tr>
         <tr><td>Migrating T3/T4 files now</td><td>largest effort, smallest payoff, no built counterpart (step 5)</td></tr>
-        <tr><td>Touching <code>specimen.js</code> / <code>tw-config.js</code></td><td>both already do exactly one right thing</td></tr>
+        <tr><td>Retiring <code>tw-config.js</code></td><td><strong>deferred to this epic's final review/cleanup WU.</strong> <code>verify-doc</code> requires <code>src="components/tw-config.js"</code> as a hard asset check (<code>xtask/src/doc.rs</code>), and every unmigrated design run still loads it. Folding it into the bundle before the last doc migrates would mean two asset contracts at once; flipping the gate once, at the end, is the cheaper move.</td></tr>
+        <tr><td>Closing the stale-bundle hole</td><td><strong>deferred to W7 (harness).</strong> Editing a component without re-running the build renders the previous version, and <code>--check</code> does not catch it. The fix is a freshness comparison (bundle mtime vs newest <code>ui/src/components/</code> mtime) and it belongs with the rest of the harness work.</td></tr>
       </tbody>
     </table>
 
@@ -363,15 +362,13 @@ flowchart TD
     <p>The block below is <strong>not a mockup and defines no component</strong>. It runs the loader against <code>../../ui/src/components.tsx</code> — the file the app actually ships — and renders what that file exports. Edit <code>StatusPill</code> in the app and reload this page: it changes here. That is the entire proposal, executing.</p>
 
     <div class="app" data-c="live-demo">
-      <div id="live-demo" class="font-ui" style="padding:4px 0;font-size:12px;color:var(--a-mute);">loading ui/src/components.tsx…</div>
+      <div id="live-demo" class="font-ui"></div>
     </div>
 
     <script type="text/babel" data-presets="react">
       const { React, createRoot, Button, StatusPill, CopyText } = window.Trawler;
       const mount = document.getElementById('live-demo');
 
-      mount.className = '';
-      mount.removeAttribute('style');
       createRoot(mount).render(
         <div className="flex items-center gap-3 rounded-button border border-hairline bg-canvas p-3 flex-wrap">
           <Button onClick={() => {}}>retry</Button>

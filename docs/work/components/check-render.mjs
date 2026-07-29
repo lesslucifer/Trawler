@@ -1,6 +1,7 @@
 /* Trawler — the render gate for migrated design files (E-DFLOW)
  *
- *   node docs/work/components/check-render.mjs [file.html …]
+ *   cargo xtask ui specimens --check
+ *   node docs/work/components/check-render.mjs [file.html …]   (single file)
  *
  * A migrated specimen fails SILENTLY: the component throws, the mount stays
  * empty, and an empty div beside correct prose reads as "no specimen here"
