@@ -175,8 +175,9 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
     let run = |rows: &str| {
         format!(
             "<html><body><script src=\"https://cdn.tailwindcss.com\"></script>\
-             <script src=\"components/tw-config.js\"></script>\
-             <script src=\"components/specimen.js\" defer></script><style>.m{{color:var(--ink);}}</style>\
+             <script src=\"../../doc-assets/components/tw-config.js\"></script>\
+             <script src=\"../../doc-assets/components/specimen.js\" defer></script>\
+             <style>.m{{color:var(--ink);}}</style>\
              {}</body></html>",
             doc_main(&format!(
                 "<p data-item=\"frame\">d</p><p data-item=\"layout\">z</p>\

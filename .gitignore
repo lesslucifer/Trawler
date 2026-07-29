@@ -20,3 +20,6 @@
 .idea/
 .vscode/
 *.swp
+
+# Generated from ui/src/ by `cargo xtask ui specimens` — never edited
+doc-assets/components/specimens.bundle.js

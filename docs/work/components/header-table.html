@@ -5,7 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — HeaderTable component design</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module" src="tw-config.js"></script>
+  <!-- specimens.bundle.js carries the app theme, the shared specimen behaviours
+       and the real collection, in that order. Regenerate with
+       `cargo xtask ui specimens`. Babel is separate: the blocks below are
+       compiled in the browser. -->
+  <script src="../../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
@@ -470,90 +475,63 @@ content-type: application/json
       The composition's behavior is cheap to approximate in a doc: the sub-bar is static HTML, the rows are static HTML, and the copy-all button is live JavaScript (same pattern as CopyText's specimen). The specimen below is functional: HeaderTable's serialisation builds the <code>name: value\n</code> wire-format payload (trailing newline included) and the CopyButton writes it — "copied" for ~2 s on success, "failed" (warn tone) on clipboard denial. KeyValueRow's value copy (CopyText) is live in <code>key-value-row.html</code>'s own specimen; here the rows are static and selection remains fully native.
     </div>
     <div class="app" data-c="specimen">
-      <div style="display:flex;gap:16px;flex-wrap:wrap;">
-        <!-- Request leg -->
-        <div class="panel" style="max-width:420px;flex:1;min-width:280px;">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Request headers</span>
-            <button id="req-copyall" class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button>
-          </div>
-          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y" id="req-rows">
-            <span class="text-ink-mute whitespace-nowrap text-value">host</span><span class="text-ink-body break-all text-value">api.example.com</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json; charset=utf-8</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">authorization</span><span class="text-ink-body break-all text-value">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.dummysig</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">accept</span><span class="text-ink-body break-all text-value">application/json</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">x-request-id</span><span class="text-ink-body break-all text-value">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
-          </div>
-        </div>
-        <!-- Response leg (long-set, scroll) -->
-        <div class="panel" style="max-width:420px;flex:1;min-width:280px;">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Response headers</span>
-            <button id="resp-copyall" class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy all</button>
-          </div>
-          <div class="max-h-[200px] overflow-y-auto grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y" id="resp-rows">
-            <span class="text-ink-mute whitespace-nowrap text-value">content-type</span><span class="text-ink-body break-all text-value">application/json; charset=utf-8</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">content-length</span><span class="text-ink-body break-all text-value">14820</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">cache-control</span><span class="text-ink-body break-all text-value">no-store, no-cache, must-revalidate, proxy-revalidate</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">set-cookie</span><span class="text-ink-body break-all text-value">session=eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.sig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">x-trace-id</span><span class="text-ink-body break-all text-value">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">x-ratelimit-limit</span><span class="text-ink-body break-all text-value">100</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">x-ratelimit-remaining</span><span class="text-ink-body break-all text-value">47</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">x-ratelimit-reset</span><span class="text-ink-body break-all text-value">1721649260</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">strict-transport-security</span><span class="text-ink-body break-all text-value">max-age=31536000; includeSubDomains; preload</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">access-control-allow-origin</span><span class="text-ink-body break-all text-value">https://app.example.com</span>
-            <span class="text-ink-mute whitespace-nowrap text-value">vary</span><span class="text-ink-body break-all text-value">Accept-Encoding, Accept-Language</span>
-          </div>
-          <div style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;margin-top:4px;">↓ scroll for more rows</div>
-        </div>
-        <!-- Empty leg -->
-        <div class="panel" style="max-width:260px;flex:0 0 auto;">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">Trailer headers</span>
-            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none opacity-disabled pointer-events-none" type="button" disabled>copy all</button>
-          </div>
-          <p class="text-ink-mute text-body font-ui">none</p>
-        </div>
-      </div>
-      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:8px;">Interactive specimen — "copy all" buttons are live (click to copy wire-format text to clipboard, ~2 s confirmation). Response leg shows the scroll cap. Trailer leg shows the empty state. Drag-select any value for native partial-take. Rendered in the app's Warp tokens.</div>
+      <div id="spec-main"></div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:8px;">Interactive specimen, and every control in it <em>is</em> the real component — <code>CopyButton</code> owns the click, the clipboard write and the ~2 s confirm; <code>KeyValueRow</code> owns each row and its guarded click-copy. HeaderTable's own contribution is the part it will actually own: the section frame, the wire-format serialisation, and the empty/scroll legs. Drag-select any value for native partial-take.</div>
     </div>
   </main>
 
-  <script>
-    // ponytail: minimal demo — HeaderTable serialises, the button (CopyButton stand-in) shows the state
-    function makeCopyAll(btnId, rowsId) {
-      const btn = document.getElementById(btnId);
-      const rows = document.getElementById(rowsId);
-      if (!btn || !rows) return;
-      let timer;
-      // A tone class and the resting class set the same property, so the state
-      // swaps them — appending would lose to whichever Tailwind emits last.
-      const REST = ['text-ink-mute', 'border-hairline'];
-      const CONFIRM = ['text-ok', 'border-ok'];
-      const ERROR = ['text-warn', 'border-warn'];
-      function flash(label, tone) {
-        btn.textContent = label;
-        btn.classList.remove(...REST);
-        btn.classList.add(...tone);
-        clearTimeout(timer);
-        timer = setTimeout(() => {
-          btn.textContent = 'copy all';
-          btn.classList.remove(...CONFIRM, ...ERROR);
-          btn.classList.add(...REST);
-        }, 2000);
-      }
-      btn.addEventListener('click', () => {
-        // The grid is strictly key, value, key, value — the two-column contract is the selector.
-        const keys = rows.querySelectorAll(':scope > :nth-child(odd)');
-        const vals = rows.querySelectorAll(':scope > :nth-child(even)');
-        const lines = [];
-        keys.forEach((k, i) => lines.push(k.textContent.trim() + ': ' + (vals[i]?.textContent.trim() ?? '')));
-        const text = lines.join('\n') + '\n';
-        navigator.clipboard?.writeText(text).then(() => flash('copied', CONFIRM), () => flash('failed', ERROR));
-      });
+  <script type="text/babel" data-presets="react">
+    const { React, createRoot, CopyButton, KeyValueRow } = window.Trawler;
+
+    const REQUEST = [
+      { name: 'accept', value: 'application/json' },
+      { name: 'accept-encoding', value: 'gzip, deflate, br' },
+      { name: 'authorization', value: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' },
+      { name: 'content-type', value: 'application/json' },
+      { name: 'user-agent', value: 'Trawler/0.1 (macOS)' },
+    ];
+    const RESPONSE = [
+      { name: 'content-type', value: 'application/json' },
+      { name: 'cache-control', value: 'no-store' },
+      { name: 'set-cookie', value: 'session=abc; Path=/; HttpOnly' },
+      { name: 'x-trace-id', value: '00-4bf92f3577b34da6a3ce929d0e' },
+      { name: 'x-ratelimit-limit', value: '100' },
+      { name: 'x-ratelimit-remaining', value: '47' },
+      { name: 'x-ratelimit-reset', value: '1721649260' },
+      { name: 'strict-transport-security', value: 'max-age=31536000; includeSubDomains; preload' },
+      { name: 'access-control-allow-origin', value: 'https://app.example.com' },
+      { name: 'vary', value: 'Accept-Encoding, Accept-Language' },
+    ];
+
+    /* The serialisation HeaderTable owns: wire order, never sorted, trailing
+       newline (fork D2 / D4). CopyButton owns everything after the click. */
+    const wire = (headers) => headers.map((h) => `${h.name}: ${h.value}`).join('\n') + '\n';
+
+    function Leg({ title, headers, scroll, note }) {
+      const rows = 'grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y';
+      return (
+        <div className="panel" style={{ maxWidth: scroll ? 420 : 260, flex: scroll ? 1 : '0 0 auto', minWidth: scroll ? 280 : undefined }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">{title}</span>
+            <CopyButton label="copy all" value={wire(headers)} disabled={headers.length === 0} />
+          </div>
+          {headers.length === 0
+            ? <p className="text-ink-mute text-body font-ui">none</p>
+            : <div className={scroll ? `max-h-[200px] overflow-y-auto ${rows}` : rows}>
+                {headers.map((h) => <KeyValueRow key={h.name} name={h.name} value={h.value} />)}
+              </div>}
+          {note && <div style={{ fontSize: 10, color: 'var(--a-mute)', fontFamily: 'Inter,sans-serif', marginTop: 4 }}>{note}</div>}
+        </div>
+      );
     }
-    makeCopyAll('req-copyall', 'req-rows');
-    makeCopyAll('resp-copyall', 'resp-rows');
+
+    createRoot(document.getElementById('spec-main')).render(
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <Leg title="Request headers" headers={REQUEST} scroll />
+        <Leg title="Response headers" headers={RESPONSE} scroll note="↓ scroll for more rows" />
+        <Leg title="Trailer headers" headers={[]} />
+      </div>
+    );
   </script>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
