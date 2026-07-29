@@ -1,0 +1,17 @@
+schema: test/v2
+epic: E-DFLOW
+wu: E-DFLOW.W5
+level: commit
+tests:
+  unit: { waived: "docs-only diff - one T3 result report, no production code" }
+  integration: { waived: "same" }
+  e2e: { waived: "same" }
+render:
+  method: "headless Chrome over file://, the way a reader double-clicks it - the same discipline as scripts/check-render.mjs (no --allow-file-access-from-files, no HTTP server)"
+  asserts: "all 3 mermaid diagrams render with their expected node counts (7/10/4), zero console errors/warnings, every .diagram keeps data-mermaid-src for the diff layer, no leftover pre.mermaid"
+  result: "green after the init fix; before it the third diagram rendered 0 nodes with no viewBox and no error"
+finding:
+  what: "mermaid 11 startOnLoad silently drops the 3rd+ diagram on a page - the 2nd absorbs their nodes"
+  evidence: "minimal repro: three trivial blocks render node counts [7,9,0]; content-independent; mermaid.run({nodes}) identical; per-block mermaid.render(id,src) gives [2,2,2]"
+  blast_radius: "8 docs in this project carry the broken skeleton init, incl. T1 docs/architecture.html (3rd diagram blank, verified) and docs/core-technical-design.html (5 diagrams, 3 blank)"
+  disposition: "fixed in this report only; the skeleton lives in the htmldoc skill + its server repo - deliberately NOT fixed across T1 docs inside a registry WU"
