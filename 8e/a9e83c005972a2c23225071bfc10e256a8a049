@@ -1,0 +1,15 @@
+schema: doc/v1
+changes:
+  - path: docs/work/2026-07-27-dflow-w5-specimens-in-react.html
+    tier: T3
+    action: updated
+    distills: "two W7 harness deferrals: enforce code-is-the-only-doc, and preserve rejected forks before deleting a design file"
+  - path: docs/work/components/copy-all-headers-button.html
+    tier: T3
+    action: updated
+    distills: "the dissolved-component record now renders the real CopyButton + KeyValueRow it points to"
+  - path: docs/work/components/header-table.html
+    tier: T3
+    action: updated
+    distills: "main specimen composes real components; the 36-line CopyButton stand-in deleted"
+t2_waived: "in-progress T3 work of this WU; the fork content still needs distilling to docs/decisions/ before the 16 files can be removed"
