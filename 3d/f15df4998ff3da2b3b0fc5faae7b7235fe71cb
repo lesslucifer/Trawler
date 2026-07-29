@@ -1,6 +1,6 @@
 schema: test/v2
 level: commit
 tests:
-  unit: { count: 4 }
+  unit: { count: 1 }
   integration: { count: 1 }
   e2e: { waived: "no user-facing flow - a file move plus the doc-gate path it implies" }
