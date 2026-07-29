@@ -1,0 +1,7 @@
+schema: doc/v1
+changes:
+  - path: docs/work/2026-07-27-dflow-w5-specimens-in-react.html
+    tier: T3
+    action: updated
+    distills: "the ordered distil-then-remove flow for retiring an implemented component design file, deferred to W7"
+t2_waived: "in-progress T3 work of this WU; the fork distillation to docs/decisions/ is itself the deferred W7 step"
