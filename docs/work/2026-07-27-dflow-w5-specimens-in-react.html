@@ -361,6 +361,7 @@ flowchart TD
           <li><strong>Then remove the design file</strong> — the component's code is its documentation from that point on.</li>
         </ol>
         <p style="margin:6px 0 0;">A removal that skips step 1 is silent data loss: the file looks redundant precisely because the part only it holds is the part nobody re-reads. The check must refuse step 3 until step 1 has landed.</p></td></tr>
+        <tr><td>Running the render gate at merge time</td><td><strong>deferred to W7 (harness).</strong> <code>cargo xtask ui specimens --check</code> drives headless Chrome, so wiring it into <code>Gate::verify</code> would make every merge on every machine require a browser. Note <code>verify-doc</code> is not wired into the merge gate either — pre-existing, and the same W7 decision covers both: which doc checks are cheap enough to gate a merge, and which stay author-invoked.</td></tr>
         <tr><td>Closing the stale-bundle hole</td><td><strong>deferred to W7 (harness).</strong> Editing a component without re-running the build renders the previous version, and <code>--check</code> does not catch it. The fix is a freshness comparison (bundle mtime vs newest <code>ui/src/components/</code> mtime) and it belongs with the rest of the harness work.</td></tr>
       </tbody>
     </table>

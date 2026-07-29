@@ -267,10 +267,7 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span> <span style="color:var(--a-mute);">(round 2)</span></div>
           <div class="fc-ex">
-            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:170px;">
-              <div class="flex items-center gap-chrome-gap px-chrome-x py-chrome-y border-b border-hairline"><span class="text-ink-mute text-chrome shrink-0">⌕</span><input class="flex-1 min-w-0 border-none bg-transparent [outline:none] font-ui text-control text-ink p-0 placeholder:text-ink-mute" placeholder="filter…" readonly></div>
-              <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span>macOS</div><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div></div>
-            </div>
+            <div id="spec-d2-settled"></div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">searchable defaults true — the 6-option picker shows it too</span>
           </div>
           <div class="fc-note"><strong><code>searchable?: boolean</code>, default <code>true</code>.</strong> Review: <em>"a prop and default to true"</em>. Filtering is the default way through a list of any length, and a caller with two obvious options opts out — <strong>nobody has to opt in</strong>, so the failure mode is a redundant filter box rather than a missing one. That asymmetry is the argument: an unnecessary search row costs one line of chrome, while a missing one on a list that grew costs the user the ability to find their option at all.</div>
@@ -294,9 +291,7 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:160px;">
-              <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span>macOS</div><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div></div>
-            </div>
+            <div id="spec-d3-settled"></div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">tick = the value · wash = Enter picks this</span>
           </div>
           <div class="fc-note"><strong>Tick for selected, wash for active.</strong> While arrowing you can see both what the value <em>is</em> and what <span class="kbd">Enter</span> would make it — which is the whole information a keyboard user needs mid-navigation. Two channels also means <span class="kbd">Esc</span> is obviously non-destructive: the tick never moved.</div>
@@ -319,12 +314,7 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:190px;">
-              <div class="max-h-[184px] overflow-y-auto py-[2px]">
-                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-get" style="width:auto;">get</span><span style="color:var(--a-mute);">/v1/flows</span></div>
-                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-post" style="width:auto;">post</span><span style="color:var(--a-mute);">/v1/upload</span></div>
-              </div>
-            </div>
+            <div id="spec-d4-settled"></div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">{ id, label: "get /v1/flows", element: &lt;…&gt; }</span>
           </div>
           <div class="fc-note"><strong><code>{ id, label, element? }</code>.</strong> Review: <em>"should allow optional item element"</em> — so a row can be richer than a string. <code>label</code> remains required because two other places need text and neither can use an element: <strong>the trigger</strong> renders one line, and <strong>the filter</strong> matches characters. Keeping the string mandatory is what makes those two work for free on every option, however the row draws.</div>
@@ -508,6 +498,14 @@
     };
 
     openIt(mount('spec-hero', <Demo />));
+
+    /* The three SETTLED fork legs (D2 search row, D3 tick-vs-wash, D4 option
+       element) used to hand-draw the popup's internals. They render the real
+       popup now, opened the only way it opens -- a real click. The rejected legs
+       beside them stay drawn: they describe designs that were never built. */
+    openIt(mount('spec-d2-settled', <Demo />));
+    openIt(mount('spec-d3-settled', <Demo />));
+    openIt(mount('spec-d4-settled', <Demo />));
 
     mount('spec-st-rest', <Demo />);
     mount('spec-st-hover', <Demo />);

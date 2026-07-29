@@ -8,7 +8,8 @@
  * rather than "broken". Every real failure found while building this looked
  * exactly like that — a TS `as` cast Babel rejects, a wrong module path, a
  * file:// origin that blocks every read. So the gate asserts the two things a
- * reader cannot: zero console errors, and every specimen mount non-empty.
+ * reader cannot: a clean console -- thrown errors, rejected promises AND anything
+ * console.error/warn reports -- and every specimen mount non-empty.
  *
  * Drives the user's own Chrome headless (no Playwright dependency).
  *
@@ -51,6 +52,11 @@ const PROBE = `<script>
   })(0);
 </script>`;
 
+/* console.error must be wrapped, not just listened for: React reports a bad key,
+   a failed prop type and a caught-then-logged render error through console.error
+   alone, which fires no 'error' event. A gate that only listens sees errors: []
+   on a doc whose console is full -- that gap let a drifted hand-drawn specimen
+   sit in copy-text.html through a green run. */
 const CAPTURE = `<script>
   window.__gateErrors = [];
   window.addEventListener('error', (e) => {
@@ -59,6 +65,22 @@ const CAPTURE = `<script>
   window.addEventListener('unhandledrejection', (e) => {
     window.__gateErrors.push('rejection: ' + (e.reason?.message ?? e.reason));
   });
+  /* The Play CDN and the in-browser Babel transformer each greet every load with
+     a "not for production" banner. Both are deliberate here -- a design file is
+     the one place they are correct -- so they are named exactly and ignored;
+     anything else on console.error/warn fails the gate. */
+  const EXPECTED = ['cdn.tailwindcss.com should not be used in production',
+                    'You are using the in-browser Babel transformer'];
+  for (const level of ['error', 'warn']) {
+    const original = console[level].bind(console);
+    console[level] = (...args) => {
+      const text = args.map((a) => a?.message ?? String(a)).join(' ');
+      if (!EXPECTED.some((allowed) => text.includes(allowed))) {
+        window.__gateErrors.push(level + ': ' + text);
+      }
+      original(...args);
+    };
+  }
 </script>`;
 
 async function check(file) {

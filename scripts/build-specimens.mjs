@@ -78,17 +78,17 @@ export * as React from "react";
 export { createRoot } from "react-dom/client";
 `;
 
-async function build(entrySource, extension, outfile, extra = []) {
+async function build(outfile) {
   /* The entry must sit inside ui/ so bare imports resolve against its
      node_modules; a temp dir elsewhere cannot see react. */
   const scratch = await mkdtemp(join(UI, '.specimens-'));
-  const entry = join(scratch, `entry${extension}`);
-  await writeFile(entry, entrySource);
+  const entry = join(scratch, 'entry.tsx');
+  await writeFile(entry, BUNDLE_ENTRY);
   try {
     const { stderr } = await run(ESBUILD, [
       entry, '--bundle', '--format=iife', '--jsx=automatic', '--minify',
       `--define:process.env.NODE_ENV="development"`,
-      `--outfile=${outfile}`, ...extra,
+      '--global-name=Trawler', `--outfile=${outfile}`,
     ], { cwd: UI });
     return stderr.trim().split('\n').pop();
   } finally {
@@ -96,7 +96,5 @@ async function build(entrySource, extension, outfile, extra = []) {
   }
 }
 
-const bundle = join(ASSETS, 'specimens.bundle.js');
-
-console.log('bundle →', await build(BUNDLE_ENTRY, '.tsx', bundle, ['--global-name=Trawler']));
+console.log('bundle →', await build(join(ASSETS, 'specimens.bundle.js')));
 console.log('\nwrote doc-assets/components/specimens.bundle.js — re-run after changing ui/src/components/ or specimen.js');

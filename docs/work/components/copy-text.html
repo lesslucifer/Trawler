@@ -93,7 +93,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">…orders/8f3a91c2/items</span></div>
+        <div class="panel"><div id="spec-anat-rest"></div></div>
           <div class="cap">the only hint at rest: a dotted hairline underline — no button, no icon, no background</div>
         </div>
         <div>
@@ -106,7 +106,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><span class="cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px] text-ok border-ok">…orders/8f3a91c2/items</span><span class="inline-block ml-2 text-label leading-4 text-ok border border-ok rounded-full px-[6px] align-[1px] font-ui">copied</span></div>
+        <div class="panel"><div id="spec-anat-confirm"></div></div>
           <div class="cap">just clicked: chip + ok underline — both gone after ~2 s</div>
         </div>
         <div>
@@ -124,7 +124,7 @@
     <div class="app parts" data-c="behavior-table">
       <div class="part">
         <div class="ex">
-          <div class="flow-ex"><div class="panel"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">…/items</span></div><span class="text-ink-mute text-chrome">click ▸</span><div class="panel"><span class="cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px] text-ok border-ok">…/items</span><span class="inline-block ml-2 text-label leading-4 text-ok border border-ok rounded-full px-[6px] align-[1px] font-ui">copied</span></div></div>
+      <div class="flow-ex"><div class="panel"><div id="spec-flow-before"></div></div><span class="text-ink-mute text-chrome">click ▸</span><div class="panel"><div id="spec-flow-after"></div></div></div>
           <div class="cap">one click (or Enter when focused) — the full URI is now on the clipboard</div>
         </div>
         <div>
@@ -137,7 +137,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="flow-ex"><div class="panel"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">…orders/<span class="bg-wash-select text-ink">8f3a91c2</span>/items</span></div><span class="text-ink-mute text-chrome">release ▸ nothing</span></div>
+      <div class="flow-ex"><div class="panel"><div id="spec-flow-select"></div></div><span class="text-ink-mute text-chrome">release ▸ nothing</span></div>
           <div class="cap">drag "8f3a91c2", release: no chip, clipboard untouched — ⌘C now copies just the selection</div>
         </div>
         <div>
@@ -179,7 +179,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="flow-ex"><div class="panel"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">…/items</span></div><span class="text-ink-mute text-chrome">click, OS denies ▸</span><div class="panel"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">…/items</span></div></div>
+      <div class="flow-ex"><div class="panel"><div id="spec-flow-fail-before"></div></div><span class="text-ink-mute text-chrome">click, OS denies ▸</span><div class="panel"><div id="spec-flow-fail-after"></div></div></div>
           <div class="cap">write fails → screen unchanged: no chip, no error message</div>
         </div>
         <div>
@@ -222,7 +222,7 @@
     <div class="app cards" data-c="d1">
       <div class="card">
         <strong>D1 · trigger model</strong> <span class="badge auto">settled: A + cursor: copy</span>
-        <div class="panel" style="margin-top:8px;"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">…/orders/8f3a91c2</span></div>
+        <div class="panel" style="margin-top:8px;"><div id="spec-d1-settled"></div></div>
         <p class="cap" style="font-size:12px;color:var(--muted);"><strong>A — the value is the button</strong> (+ selection guard). Zero extra chrome; the biggest possible hit target; drag-select still native. Cursor sub-fork, review-driven: <code>pointer</code> read as a link ("click to open") ✗ · <code>copy</code> is macOS's arrow + green plus — drag-drop connotation, visually clunky ✗ · <strong><code>text</code> (I-beam) ✓</strong> — honest for selectable text; the dotted underline, hover strengthening and tooltip carry the copy signal. Custom image cursors rejected: platform-inconsistent, scale badly.</p>
       </div>
       <div class="card">
@@ -239,7 +239,7 @@
     <div class="app cards" data-c="d2">
       <div class="card">
         <strong>D2 · confirm form</strong> <span class="badge auto">settled: chip</span>
-        <div class="panel" style="margin-top:8px;"><span class="cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px] text-ok border-ok">…/orders/8f3a91c2</span><span class="inline-block ml-2 text-label leading-4 text-ok border border-ok rounded-full px-[6px] align-[1px] font-ui">copied</span></div>
+        <div class="panel" style="margin-top:8px;"><div id="spec-d2-settled"></div></div>
         <p class="cap" style="font-size:12px;color:var(--muted);"><strong>Inline chip after the value.</strong> Confirms where you clicked; the value stays fully visible (trust — never hide what was copied).</p>
       </div>
       <div class="card">
@@ -324,6 +324,34 @@
     }
 
     mount('spec-live', <CopyText value={URI} label="request URI" />);
+
+    /* Anatomy and the behaviour flows used to paste CopyText's class string. They
+       drifted -- every copy was missing font-mono and text-body, so the specimen
+       rendered in the wrong face and size. These mount the component instead. */
+    for (const id of ['spec-anat-rest', 'spec-flow-before', 'spec-flow-select',
+                      'spec-flow-fail-before', 'spec-flow-fail-after']) {
+      mount(id, <CopyText value={SHORT} label="request URI" />);
+    }
+
+    /* `confirming` is internal to useConfirm with no prop, so the swatch enters it
+       the way a user does: a real click on the real element. */
+    const clickToConfirm = (id) => {
+      mount(id, <CopyText value={SHORT} label="request URI" />);
+      const poll = setInterval(() => {
+        const target = document.querySelector(`#${id} [role="button"]`);
+        if (!target) return;
+        clearInterval(poll);
+        target.click();
+      }, 50);
+    };
+    clickToConfirm('spec-anat-confirm');
+    clickToConfirm('spec-flow-after');
+
+    /* The two SETTLED fork legs describe what was actually built, so they render it.
+       The rejected legs beside them stay hand-drawn: they describe designs that do
+       not exist and cannot be instantiated. */
+    mount('spec-d1-settled', <CopyText value={SHORT} label="request URI" />);
+    clickToConfirm('spec-d2-settled');
   </script>
 
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
