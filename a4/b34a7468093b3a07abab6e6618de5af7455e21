@@ -1,6 +1,6 @@
 schema: test/v2
-level: commit
+level: working-unit
 tests:
-  unit: { waived: "docs-only diff" }
-  integration: { waived: "docs-only diff" }
-  e2e: { waived: "docs-only diff; render gate covers the doc" }
+  unit: { count: 1 }
+  integration: { count: 1 }
+  e2e: { waived: "no user-facing app flow: the WU changes design-doc tooling and the doc gate. Its own bounded contract is the render gate, which opens every migrated doc over file:// with no flags and asserts zero console errors plus non-empty mounts - run on all 6 migrated docs" }
