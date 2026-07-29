@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+tests:
+  unit: { waived: "docs-only diff - no src/ or xtask/ code changed" }
+  integration: { waived: "docs-only diff" }
+  e2e: { waived: "docs-only diff; the render gate covers every migrated doc over file://" }
