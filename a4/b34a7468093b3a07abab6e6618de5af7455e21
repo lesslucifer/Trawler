@@ -1,4 +1,6 @@
 schema: test/v2
+epic: E-DFLOW
+wu: E-DFLOW.W5
 level: working-unit
 tests:
   unit: { count: 1 }
