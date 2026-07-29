@@ -1,6 +1,4 @@
 schema: doc/v1
-epic: E-DFLOW
-wu: E-DFLOW.W5
 changes:
   - path: docs/work/2026-07-27-dflow-w5-specimens-in-react.html
     tier: T3
@@ -18,4 +16,16 @@ changes:
     tier: T3
     action: updated
     distills: "head block: five script tags to three"
+  - path: docs/work/components/build-specimens.mjs
+    tier: T3
+    action: updated
+    distills: "one entry, one output: theme + specimen.js + collection in the order their correctness requires"
+  - path: docs/work/components/check-render.mjs
+    tier: T3
+    action: updated
+    distills: "documents the xtask entry point"
+  - path: docs/work/components/specimen.js
+    tier: T3
+    action: updated
+    distills: "ready-guard so the same source serves both entry points - defer for unmigrated runs, in-head via the bundle for migrated files"
 t2_waived: "specimens-in-react is an in-progress T3 investigation of this WU; its T2 landing point is the component-design-base format rule (step 2) and the epic's final cleanup WU, neither reached yet"
