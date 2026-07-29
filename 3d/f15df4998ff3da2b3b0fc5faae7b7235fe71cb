@@ -1,13 +1,5 @@
 schema: doc/v1
 changes:
-  - path: doc-assets/components/specimen.js
-    tier: T3
-    action: added
-    distills: "runtime assets a doc loads over file://, moved out of docs/"
-  - path: doc-assets/components/tw-config.js
-    tier: T3
-    action: added
-    distills: "runtime assets a doc loads over file://, moved out of docs/"
   - path: docs/work/2026-07-16-dflow-run-1.html
     tier: T3
     action: updated
