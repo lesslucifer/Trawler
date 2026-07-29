@@ -60,4 +60,71 @@
       button.textContent = on ? button.dataset.labelOn : button.dataset.labelOff;
     });
   });
+
+  /* Forced interaction states, for state swatches of a LIVE component.
+   *
+   *   <div class="swatch force-hover">…a real <Button>…</Button>…</div>
+   *
+   * A swatch cannot hold a pointer, and hand-writing `color:var(--a-ink)` to
+   * fake one re-introduces exactly the copy this migration removes. So instead
+   * of declaring anything, this copies the rules Tailwind ALREADY generated for
+   * the component's own hover:/focus-visible:/active: utilities and re-targets
+   * them at .force-* wrappers. Values come from the component's class string in
+   * both paths, so a forced swatch cannot disagree with a real hover.
+   *
+   * Runs after the CDN's first pass; harmless if a doc uses no .force-* class.
+   */
+  const FORCED = { 'force-hover': ':hover', 'force-focus': ':focus-visible', 'force-active': ':active' };
+
+  let mirrored = document.createElement('style');
+
+  function mirrorStateRules() {
+    const seen = new Set();
+    const out = [];
+    for (const sheet of document.styleSheets) {
+      let rules;
+      try { rules = sheet.cssRules; } catch { continue; }
+      for (const rule of rules) {
+        if (!rule.selectorText || rule.parentStyleSheet?.ownerNode === mirrored) continue;
+        for (const [wrapper, pseudo] of Object.entries(FORCED)) {
+          /* Only a Tailwind state utility qualifies: its class name literally
+             contains the variant prefix (`.active\:bg-wash-tint:active`). A rule
+             that merely ends in :hover — the doc's own highlight-map styling
+             above, say — is not a component state and must not be forced on. */
+          if (!rule.selectorText.endsWith(pseudo)) continue;
+          const base = rule.selectorText.slice(0, -pseudo.length);
+          if (!base.includes(`.${pseudo.slice(1)}\\:`)) continue;
+          const forced = `.${wrapper} ${base}{${rule.style.cssText}}`;
+          if (seen.has(forced)) continue;
+          seen.add(forced);
+          out.push(forced);
+        }
+      }
+    }
+    if (!out.length) return false;
+    mirrored.dataset.forcedStates = String(out.length);
+    mirrored.textContent = out.join('\n');
+    if (!mirrored.isConnected) document.head.appendChild(mirrored);
+    return true;
+  }
+
+  if (document.querySelector('.force-hover, .force-focus, .force-active')) {
+    /* The Play CDN regenerates its sheet on every DOM mutation, so the rules for
+       a React-rendered component exist only after a later pass. Poll a bounded
+       number of times rather than observing: an observer on <head> or the tree
+       sees its OWN inserted <style> and re-triggers itself forever. */
+    /* Re-mirror on a fixed schedule for ~8s. The Play CDN rebuilds its sheet in
+       several passes as React mounts — measured on this page: 105 rules at 1s,
+       183 (the `active:` variants among them) only at ~5s. Any "settled" check
+       finishes during the plateau before that second pass and permanently misses
+       them, so wall-clock coverage is what matters, not stability. Mirroring is
+       idempotent and deduped, so extra passes cost nothing. */
+    let elapsed = 0;
+    const tick = () => {
+      mirrorStateRules();
+      elapsed += 500;
+      if (elapsed <= 8000) setTimeout(tick, 500);
+    };
+    tick();
+  }
 })();

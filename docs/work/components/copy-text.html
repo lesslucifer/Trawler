@@ -5,7 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — CopyText component design</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module" src="tw-config.js"></script>
+  <!-- No import map, no module scripts, no fetch: a design file must open by
+       double-click, and a file:// page may not read local files or run module
+       scripts. These are plain classic scripts, which do both. Regenerate with
+       `node docs/work/components/build-specimens.mjs` after changing the
+       collection; both files are generated and git-ignored. -->
+  <script src="specimens.theme.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <script src="specimens.bundle.js"></script>
+  <script src="specimen.js" defer></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
@@ -64,13 +72,14 @@
     <div class="app" data-c="anatomy">
       <div class="panel">
         <div class="lbl">Request</div>
-        <span class="cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px] text-ok border-ok">https://api.example.com/v2/orders/8f3a91c2<span class="anno">1</span>…?expand=pricing<span class="anno">2</span></span><span class="inline-block ml-2 text-label leading-4 text-ok border border-ok rounded-full px-[6px] align-[1px] font-ui">copied</span><span class="anno">3</span>
+        <div id="spec-anatomy"></div>
       </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">The real component, mid-confirm. <span class="anno">1</span> value · <span class="anno">2</span> wraps, never truncates · <span class="anno">3</span> the copied chip</div>
     </div>
     <div class="app parts" data-c="anatomy-parts">
       <div class="part">
         <div class="ex">
-          <div class="panel"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&amp;currency=USD</span></div>
+          <div class="panel" style="max-width:300px;"><div id="spec-wrap"></div></div>
           <div class="cap">a long URI: wrapped over several lines, all of it visible — the column never widens, the string never shortens</div>
         </div>
         <div>
@@ -198,11 +207,11 @@
 
     <h2 id="states">States</h2>
     <div class="app swatches" data-c="states">
-      <div class="swatch"><div class="panel"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">…orders/8f3a91c2/items</span></div><div class="cap"><strong>rest</strong> — body tone, hairline dotted underline</div></div>
-      <div class="swatch"><div class="panel"><span class="cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px] text-ink border-ink-mute">…orders/8f3a91c2/items</span></div><div class="cap"><strong>hover</strong> — ink, underline strengthens to mute · native tooltip "click to copy" · cursor stays the I-beam (honest: the text is selectable; never pointer — not a link)</div></div>
-      <div class="swatch"><div class="panel"><span class="cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px] outline outline-1 outline-ink-mute outline-offset-2 text-ink">…orders/8f3a91c2/items</span></div><div class="cap"><strong>focus</strong> — 1 px mute outline (zero-chromatic-accent rule: focus is ink-toned, never colored)</div></div>
-      <div class="swatch"><div class="panel"><span class="cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px] text-ok border-ok">…orders/8f3a91c2/items</span><span class="inline-block ml-2 text-label leading-4 text-ok border border-ok rounded-full px-[6px] align-[1px] font-ui">copied</span></div><div class="cap"><strong>confirming</strong> — ~2 s; re-click restarts; value change resets instantly (CopyButton convention)</div></div>
-      <div class="swatch"><div class="panel"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">…orders/<span class="bg-wash-select text-ink">8f3a91c2</span>/items</span></div><div class="cap"><strong>drag-selecting</strong> — native selection wins; releasing a non-collapsed selection fires <em>no</em> copy</div></div>
+      <div class="swatch"><div class="panel"><div id="spec-st-rest"></div></div><div class="cap"><strong>rest</strong> — body tone, hairline dotted underline</div></div>
+      <div class="swatch force-hover"><div class="panel"><div id="spec-st-hover"></div></div><div class="cap"><strong>hover</strong> — ink, underline strengthens to mute · native tooltip "click to copy" · cursor stays the I-beam (honest: the text is selectable; never pointer — not a link)</div></div>
+      <div class="swatch force-focus"><div class="panel"><div id="spec-st-focus"></div></div><div class="cap"><strong>focus</strong> — 1 px mute outline (zero-chromatic-accent rule: focus is ink-toned, never colored)</div></div>
+      <div class="swatch"><div class="panel"><div id="spec-st-confirm"></div></div><div class="cap"><strong>confirming</strong> — ~2 s; re-click restarts; value change resets instantly (CopyButton convention). <em>Click it</em> — this swatch is the live component, so the state is entered the way a user enters it, not painted on</div></div>
+      <div class="swatch"><div class="panel"><div id="spec-st-select"></div></div><div class="cap"><strong>drag-selecting</strong> — native selection wins; releasing a non-collapsed selection fires <em>no</em> copy. <em>Try it</em> — drag across part of the value</div></div>
     </div>
     <div class="callout" data-c="no-empty">
       <strong>No empty / disabled state.</strong> A value that is absent isn't rendered as a CopyText — the screen omits the field. Nothing to copy → the component doesn't exist.
@@ -286,50 +295,36 @@
     <div class="app" data-c="specimen">
       <div class="panel">
         <div class="lbl">Request</div>
-        <span id="live-ct" class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]" role="button" tabindex="0" title="click to copy"
-              data-value="https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&amp;currency=USD">https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&amp;currency=USD</span><span id="live-chip"></span>
+        <div id="spec-live"></div>
       </div>
-      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — click the URI (copies for real), drag-select a substring (no copy fires), Tab + Enter (keyboard copy). Rendered in the app's Warp tokens, not the doc palette.</div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — click the URI (copies for real), drag-select a substring (no copy fires), Tab + Enter (keyboard copy). <strong>This is <code>ui/src/components/CopyText.tsx</code></strong>, fetched from disk and transpiled in your browser.</div>
     </div>
     <div class="callout" data-c="specimen-rule">
-      <strong>Template rule — the specimen scales down, never away.</strong> A fully live specimen is the ideal when the behavior is cheap to re-implement in a doc (this one is ~20 lines). When it isn't — a collapsible JSON tree, a hex grid — a simplified sample stands in: static swatches, explanation text, diagrams or visualizations of the hard part. The states section stays visual either way; only the <em>interactivity</em> is negotiable.
+      <strong>Template rule — the specimen no longer scales down, because it is no longer re-implemented.</strong> This file used to carry ~30 lines of vanilla JS re-doing the confirm flash, the selection guard and the keyboard path — a second implementation whose only job was to look like the first. It is deleted: the specimen imports the component, so the 2 s timeout, the <code>ok</code> tone swap and the selection guard you exercise above are <em>the shipped ones</em>. The scale-down rule still applies to a component too expensive to instantiate in a doc (a hex grid over a large body), but it is no longer about cost of re-implementation — nothing is re-implemented.
     </div>
   </main>
-  <script>
-    const ct = document.getElementById('live-ct');
-    const chipSlot = document.getElementById('live-chip');
-    let timer;
-    const CHIP = 'inline-block ml-2 text-label leading-4 text-ok border border-ok rounded-full px-[6px] align-[1px] font-ui';
-    // The confirm swaps both tones: text-ink-body and decoration-hairline set the
-    // same properties as their ok counterparts, so adding alone would be a no-op.
-    const REST = ['text-ink-body', 'decoration-hairline'];
-    const CONFIRM = ['text-ok', 'decoration-ok'];
 
-    function confirmCopy() {
-      ct.classList.remove(...REST);
-      ct.classList.add(...CONFIRM);
-      chipSlot.innerHTML = `<span class="${CHIP}" role="status" aria-live="polite">copied</span>`;
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        ct.classList.remove(...CONFIRM);
-        ct.classList.add(...REST);
-        chipSlot.innerHTML = '';
-      }, 2000);
+  <script type="text/babel" data-presets="react">
+    const { React, createRoot, CopyText } = window.Trawler;
+
+    const URI = 'https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&currency=USD';
+    const SHORT = '…orders/8f3a91c2/items';
+
+    const mount = (id, node) => {
+      const host = document.getElementById(id);
+      if (host) createRoot(host).render(node);
+    };
+
+    mount('spec-anatomy', <CopyText value={URI} label="request URI" />);
+    mount('spec-wrap', <CopyText value={URI} label="request URI" />);
+
+    for (const state of ['rest', 'hover', 'focus', 'confirm', 'select']) {
+      mount(`spec-st-${state}`, <CopyText value={SHORT} label="request URI" />);
     }
-    function copy() {
-      navigator.clipboard?.writeText(ct.dataset.value).then(confirmCopy, () => {});
-    }
-    ct.addEventListener('click', () => {
-      const sel = window.getSelection();
-      if (sel && !sel.isCollapsed) return;
-      copy();
-    });
-    ct.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      copy();
-    });
+
+    mount('spec-live', <CopyText value={URI} label="request URI" />);
   </script>
+
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
 </html>
