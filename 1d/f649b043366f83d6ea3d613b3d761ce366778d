@@ -1,0 +1,21 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W5
+changes:
+  - path: docs/work/2026-07-27-dflow-w5-specimens-in-react.html
+    tier: T3
+    action: updated
+    distills: "the build/load contract after the merge: one bundle, one xtask command, why Babel and the Tailwind CDN cannot fold in, and the two deferrals (tw-config.js retirement, stale-bundle freshness check)"
+  - path: docs/work/components/button.html
+    tier: T3
+    action: updated
+    distills: "head block: five script tags to three"
+  - path: docs/work/components/copy-text.html
+    tier: T3
+    action: updated
+    distills: "head block: five script tags to three"
+  - path: docs/work/components/select.html
+    tier: T3
+    action: updated
+    distills: "head block: five script tags to three"
+t2_waived: "specimens-in-react is an in-progress T3 investigation of this WU; its T2 landing point is the component-design-base format rule (step 2) and the epic's final cleanup WU, neither reached yet"
