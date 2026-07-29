@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+tests:
+  unit: { count: 1 }
+  integration: { waived: "no bounded contract crossed - the subcommand shells to an existing script; its behaviour is the gate run itself, exercised directly on all four docs" }
+  e2e: { waived: "no user-facing flow - a developer build command for design docs" }
