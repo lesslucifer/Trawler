@@ -2,14 +2,6 @@ schema: doc/v1
 epic: E-DFLOW
 wu: E-DFLOW.W5
 changes:
-  - path: doc-assets/components/specimen.js
-    tier: T3
-    action: added
-    distills: "runtime assets a doc loads over file://, plus the shared specimenReach helper that drives a state no prop exposes"
-  - path: doc-assets/components/tw-config.js
-    tier: T3
-    action: added
-    distills: "runtime assets a doc loads over file://, plus the shared specimenReach helper that drives a state no prop exposes"
   - path: docs/work/2026-07-16-dflow-run-1.html
     tier: T3
     action: updated
