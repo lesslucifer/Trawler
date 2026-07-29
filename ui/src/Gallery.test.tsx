@@ -31,8 +31,13 @@ describe("Gallery", () => {
       /Select/,
       /MethodLabel/,
       /StatusLine/,
-      /Json \+ Xml/,
-      /Text · Form · Hex · Image/,
+      /JsonRenderer/,
+      /XmlRenderer/,
+      /TextRenderer/,
+      /FormRenderer/,
+      /HexRenderer/,
+      /ImageRenderer/,
+      /CutMarker/,
     ]) {
       expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
     }

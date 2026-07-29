@@ -16,6 +16,23 @@ describe("CutMarker", () => {
     expect(screen.getByText(/showing/).className).toContain("text-warn");
   });
 
+  // Found in the gallery: TREE_MAX vs TREE_MAX+11 both rounded to "128 KiB", so
+  // a real truncation read as none — the precise failure this line prevents.
+  it("never reads as showing everything when it is not", () => {
+    render(<CutMarker shown={131_072} total={131_083} />);
+
+    const [, shown, total] =
+      screen.getByText(/showing/).textContent!.match(/showing (.+) of (.+) — save/)!;
+    expect(shown).not.toBe(total);
+    expect(shown).toBe("128.00 KiB");
+    expect(total).toBe("128.01 KiB");
+  });
+
+  it("borrows only as much precision as it needs to tell them apart", () => {
+    render(<CutMarker shown={4096} total={148_480} />);
+    expect(screen.getByText(/showing 4.0 KiB of 145 KiB/)).toBeInTheDocument();
+  });
+
   it("never states raw byte counts", () => {
     render(<CutMarker shown={138_240} total={1_048_576} />);
 

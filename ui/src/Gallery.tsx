@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button,
   CopyButton,
@@ -24,7 +24,8 @@ import {
   TonedText,
   XmlRenderer,
 } from "./components/index";
-import { proxyStatus, trustStatus } from "./setup";
+import { HEX_MAX, TEXT_MAX, TREE_MAX } from "./body";
+import { proxyStatus, trustStatus, verifyStatus } from "./setup";
 
 // ponytail: throwaway verification screen for E-DFLOW.W5 step 4 — every T1
 // component in every state its design file names, so a human can eyeball what
@@ -38,6 +39,27 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
         {label}
       </span>
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{children}</div>
+    </div>
+  );
+}
+
+// Body panes get a bounded, scrollable box — a capped body is thousands of
+// lines, and an unbounded one would bury every section below it. `tail` starts
+// the box scrolled to the bottom, which is the only way a cut marker sitting
+// after 128 KB of text is visible without hand-scrolling every one.
+function Pane({ children, tail = false }: { children: React.ReactNode; tail?: boolean }) {
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (tail && box.current) box.current.scrollTop = box.current.scrollHeight;
+  }, [tail]);
+
+  return (
+    <div
+      ref={box}
+      className="min-w-0 max-h-64 flex-1 overflow-auto rounded-card border border-hairline bg-canvas-soft/30 p-2"
+    >
+      {children}
     </div>
   );
 }
@@ -66,7 +88,25 @@ const XML_BODY =
 const PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAI0lEQVR42mPwOdz1HxkzoAFC8gzDwIBh6CWSDRhNB6PpAIgBE45MEJeL5NUAAAAASUVORK5CYII=";
 
-const PNG_BYTES = Uint8Array.from(atob(PNG_BASE64), (c) => c.charCodeAt(0));
+// Fully opaque, so the checkerboard is hidden — the contrast that shows the
+// transparency case above is doing something.
+const OPAQUE_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAJ0lEQVR42mPwOdz1Hxn377iHggnJMwwDA0jVgC4/HAwYTQej6QCIAXXe3h8PphyMAAAAAElFTkSuQmCC";
+
+const bytesFrom = (base64: string) => Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+
+const PNG_BYTES = bytesFrom(PNG_BASE64);
+const OPAQUE_PNG_BYTES = bytesFrom(OPAQUE_PNG_BASE64);
+
+// Over TEXT_MAX / TREE_MAX / HEX_MAX, so each member draws its rendered+cut
+// state — the family's second state, and the one no fixture above reaches.
+const OVERSIZE_TEXT = `id,sku,qty,price\n${"1,p1,2,44.50\n".repeat(Math.ceil(TEXT_MAX / 13) + 1)}`;
+const OVERSIZE_JSON = `{"pad":"${"a".repeat(TREE_MAX)}"}`;
+const OVERSIZE_XML = `<order>\n  <note>${"x".repeat(TEXT_MAX)}</note>\n</order>`;
+const OVERSIZE_FORM = `token=${"z".repeat(TEXT_MAX)}&trailing=cut`;
+const OVERSIZE_BYTES = new Uint8Array(HEX_MAX + 10_240).map((_, i) => (i * 7) % 256);
+
+const NOTHING_SEEN = { decrypted: false, trafficSeen: false };
 
 export function Gallery() {
   const [leg, setLeg] = useState("request");
@@ -86,7 +126,8 @@ export function Gallery() {
       <header className="sticky top-0 z-10 border-b border-hairline bg-canvas px-4 py-3">
         <h1 className="font-serif text-lg italic">Component gallery</h1>
         <p className="mt-1 text-chrome text-ink-mute">
-          E-DFLOW.W5 step 4 — every T1 component, every state. Throwaway screen.
+          E-DFLOW.W5 steps 4 + 5 — every T1 and T2 component, every state its
+          design file names. Throwaway screen.
         </p>
         {fired && (
           <p className="mt-1 font-mono text-chrome text-ok">handler fired → {fired}</p>
@@ -483,18 +524,28 @@ export function Gallery() {
             <MethodLabel key={m} method={m} />
           ))}
         </Row>
-        <Row label="the alignment contract">
+        <Row label="the alignment contract — all nine, left edges align">
           <div className="flex flex-col gap-1">
-            {["GET", "OPTIONS", "PUT", "CONNECT"].map((m) => (
-              <span key={m} className="flex gap-3">
-                <MethodLabel method={m} />
-                <span className="font-mono text-body text-ink-mute">/v2/orders/8f3a91c2</span>
-              </span>
-            ))}
+            {["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"].map(
+              (m) => (
+                <span key={m} className="flex gap-3">
+                  <MethodLabel method={m} />
+                  <span className="font-mono text-body text-ink-mute">/v2/orders/8f3a91c2</span>
+                </span>
+              ),
+            )}
           </div>
         </Row>
         <Row label="lowercase in, uppercase out">
           <MethodLabel method="get" />
+          <MethodLabel method="Post" />
+          <MethodLabel method="dElEtE" />
+        </Row>
+        <Row label="a long non-standard verb overflows rather than truncating">
+          <span className="flex gap-3">
+            <MethodLabel method="PROPPATCH" />
+            <span className="font-mono text-body text-ink-mute">/dav/calendar</span>
+          </span>
         </Row>
       </Section>
 
@@ -507,8 +558,36 @@ export function Gallery() {
             <StatusLine status={{ glyph: "○", tone: "muted", message: "Not trusted yet" }} />
           </div>
         </Row>
-        <Row label="in-flight — a spinner">
-          <StatusLine status={{ glyph: "⟳", tone: "muted", message: "Installing…" }} />
+        <Row label="in-flight — a spinner, and it outranks everything">
+          <div className="flex flex-col gap-1">
+            <StatusLine status={{ glyph: "⟳", tone: "muted", message: "Installing…" }} />
+            <StatusLine
+              name="over a stale error"
+              status={trustStatus("untrusted", NOTHING_SEEN, "installing", "the last install failed")}
+            />
+            <StatusLine
+              name="over a proven positive"
+              status={proxyStatus("ours", { decrypted: true, trafficSeen: true }, "setting")}
+            />
+          </div>
+        </Row>
+        <Row label="the two muted glyphs are different verdicts">
+          <div className="flex flex-col gap-1">
+            <StatusLine
+              name="◐ can't determine"
+              status={trustStatus("unknown", NOTHING_SEEN, null)}
+            />
+            <StatusLine name="○ not yet" status={trustStatus("untrusted", NOTHING_SEEN, null)} />
+          </div>
+        </Row>
+        <Row label="verifyStatus — the third resolver">
+          <div className="flex flex-col gap-1">
+            <StatusLine name="Capture" status={verifyStatus({ decrypted: true, trafficSeen: true })} />
+            <StatusLine name="Capture" status={verifyStatus(NOTHING_SEEN)} />
+          </div>
+        </Row>
+        <Row label="a foreign proxy — the longest real message in the app">
+          <StatusLine name="System proxy" status={proxyStatus("foreign", NOTHING_SEEN, null)} />
         </Row>
         <Row label="with the name slot">
           <div className="flex flex-col gap-1">
@@ -526,7 +605,7 @@ export function Gallery() {
           <div className="flex flex-col gap-1">
             <StatusLine
               name="probe says trusted"
-              status={trustStatus("trusted", { decrypted: false, trafficSeen: false }, null, "install exploded")}
+              status={trustStatus("trusted", NOTHING_SEEN, null, "install exploded")}
             />
             <StatusLine
               name="traffic proves it"
@@ -536,50 +615,132 @@ export function Gallery() {
         </Row>
       </Section>
 
-      <Section title="BodyRenderer family — Json + Xml (the CodeMirror surface)">
-        <Row label="JsonRenderer">
-          <div className="min-w-0 flex-1">
+      <Section title="JsonRenderer — the CodeMirror surface (T2)">
+        <Row label="rendered — click the ▾ gutter, arrow around, select and copy">
+          <Pane>
             <JsonRenderer text={JSON.stringify(JSON.parse(JSON_BODY), null, 2)} />
-          </div>
+          </Pane>
         </Row>
-        <Row label="unparseable → as-is">
-          <div className="min-w-0 flex-1">
-            <JsonRenderer text={'{"broken":true,'} />
-          </div>
+        <Row label="every token: key · string · number · punctuation">
+          <Pane>
+            <JsonRenderer
+              text={'{\n  "key": "string",\n  "number": 42,\n  "float": 49.99,\n  "yes": true,\n  "nothing": null\n}'}
+            />
+          </Pane>
         </Row>
-        <Row label="XmlRenderer">
-          <div className="min-w-0 flex-1">
-            <XmlRenderer text={XML_BODY} />
-          </div>
+        <Row label="as-is fallback — unparseable, so no tokens and no surface">
+          <Pane>
+            <JsonRenderer text={'{"id":"8f3a91c2","items":[{"sku":"p1","qty":2}],"total":89'} />
+          </Pane>
         </Row>
-        <Row label="html down the same path">
-          <div className="min-w-0 flex-1">
-            <XmlRenderer text={"<div>\n  <p>Order confirmed</p>\n</div>"} />
-          </div>
+        <Row label="as-is fallback — over TREE_MAX, with the cut marker">
+          <Pane tail>
+            <JsonRenderer text={OVERSIZE_JSON} />
+          </Pane>
         </Row>
       </Section>
 
-      <Section title="BodyRenderer family — Text · Form · Hex · Image">
-        <Row label="TextRenderer">
-          <div className="min-w-0 flex-1">
+      <Section title="XmlRenderer — the same surface, folded by element (T2)">
+        <Row label="rendered — tag · attr name · attr value · element text">
+          <Pane>
+            <XmlRenderer text={XML_BODY} />
+          </Pane>
+        </Row>
+        <Row label="html down the same path (text/html)">
+          <Pane>
+            <XmlRenderer text={"<div class=\"card\">\n  <p>Order confirmed</p>\n</div>"} />
+          </Pane>
+        </Row>
+        <Row label="rendered + cut — over TEXT_MAX, falls back to text">
+          <Pane tail>
+            <XmlRenderer text={OVERSIZE_XML} />
+          </Pane>
+        </Row>
+      </Section>
+
+      <Section title="TextRenderer — the family's floor (T2)">
+        <Row label="rendered — verbatim, wrapping, no tokens">
+          <Pane>
             <TextRenderer text={"Request failed: upstream timed out after 30000ms\n  at Gateway.forward (/srv/gateway/lib/forward.js:118:11)\n  at async Router.handle (/srv/gateway/lib/router.js:64:5)"} />
-          </div>
+          </Pane>
         </Row>
-        <Row label="FormRenderer — KeyValueRow×">
-          <div className="min-w-0 flex-1">
+        <Row label="a long unbroken line wraps rather than scrolling the panel">
+          <Pane>
+            <TextRenderer text={"eyJhbGciOiJIUzI1NiJ9.".repeat(24)} />
+          </Pane>
+        </Row>
+        <Row label="rendered + cut — the cap this component's spec added">
+          <Pane tail>
+            <TextRenderer text={OVERSIZE_TEXT} />
+          </Pane>
+        </Row>
+      </Section>
+
+      <Section title="FormRenderer — decoded pairs, composed (T2)">
+        <Row label="rendered — click any value to copy it whole">
+          <Pane>
             <FormRenderer text="grant_type=authorization_code&client_id=app_8f3a91c2&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback&code=SplxlOBeZQQYbYS6WxSbIA" />
-          </div>
+          </Pane>
         </Row>
-        <Row label="HexRenderer">
-          <div className="min-w-0 flex-1">
+        <Row label="percent- and plus-decoding">
+          <Pane>
+            <FormRenderer text="q=two+words&path=%2Fv2%2Forders&note=50%25+off" />
+          </Pane>
+        </Row>
+        <Row label="a repeated key appears once per occurrence">
+          <Pane>
+            <FormRenderer text="tag=rush&tag=gift&tag=fragile" />
+          </Pane>
+        </Row>
+        <Row label="rendered + cut">
+          <Pane tail>
+            <FormRenderer text={OVERSIZE_FORM} />
+          </Pane>
+        </Row>
+      </Section>
+
+      <Section title="HexRenderer — offset · bytes · ASCII (T2)">
+        <Row label="rendered — a real PNG header">
+          <Pane>
             <HexRenderer bytes={PNG_BYTES} />
-          </div>
+          </Pane>
         </Row>
-        <Row label="ImageRenderer">
+        <Row label="non-printable bytes become dots">
+          <Pane>
+            <HexRenderer bytes={new Uint8Array([0x00, 0x01, 0x1f, 0x7f, 0x41, 0x42, 0x43])} />
+          </Pane>
+        </Row>
+        <Row label="rendered + cut — over HEX_MAX">
+          <Pane tail>
+            <HexRenderer bytes={OVERSIZE_BYTES} />
+          </Pane>
+        </Row>
+      </Section>
+
+      <Section title="ImageRenderer — letterboxed preview (T2)">
+        <Row label="transparent — the checkerboard shows through">
           <ImageRenderer bytes={PNG_BYTES} contentType="image/png" />
         </Row>
-        <Row label="CutMarker, alone">
-          <CutMarker shown={4096} total={148_480} />
+        <Row label="opaque — the same checkerboard, hidden">
+          <ImageRenderer bytes={OPAQUE_PNG_BYTES} contentType="image/png" />
+        </Row>
+        <Row label="no content type — the caption drops the MIME, nothing breaks">
+          <ImageRenderer bytes={PNG_BYTES} contentType={null} />
+        </Row>
+        <Row label="never a cut marker — the element renders every byte">
+          <ImageRenderer bytes={PNG_BYTES} contentType="image/svg+xml" />
+        </Row>
+      </Section>
+
+      <Section title="CutMarker — the family's truncation statement (T2)">
+        <Row label="B → KiB → MiB, one decimal below 10">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <CutMarker shown={512} total={4096} />
+            <CutMarker shown={4096} total={14_848} />
+            <CutMarker shown={4096} total={148_480} />
+            <CutMarker shown={131_072} total={1_048_576} />
+            <CutMarker shown={131_072} total={15_728_640} />
+          </div>
         </Row>
       </Section>
 

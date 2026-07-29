@@ -57,7 +57,7 @@ export const TEXT_MAX = TREE_MAX;
 
 // Cut markers state sizes the way a human reads them — raw byte counts mean
 // nothing at a glance (body-renderer.html DEC-12).
-export function humanBytes(bytes: number): string {
+export function humanBytes(bytes: number, extraDigits = 0): string {
   const units = ["B", "KiB", "MiB", "GiB"];
   let value = bytes;
   let unit = 0;
@@ -65,8 +65,21 @@ export function humanBytes(bytes: number): string {
     value /= 1024;
     unit += 1;
   }
-  const digits = unit > 0 && value < 10 ? 1 : 0;
+  const digits = unit === 0 ? 0 : (value < 10 ? 1 : 0) + extraDigits;
   return `${value.toFixed(digits)} ${units[unit]}`;
+}
+
+// A cut marker must never read "showing 128 KiB of 128 KiB": rounding can make a
+// real truncation look like none, which is the exact false statement the
+// never-truncate-silently rule exists to prevent. Borrow precision until the two
+// sizes differ, and fall back to exact bytes if even that collides.
+export function humanBytePair(shown: number, total: number): [string, string] {
+  for (let extra = 0; extra <= 3; extra += 1) {
+    const left = humanBytes(shown, extra);
+    const right = humanBytes(total, extra);
+    if (left !== right) return [left, right];
+  }
+  return [`${shown} B`, `${total} B`];
 }
 
 // Caps count characters (a rendered line is characters), but a cut marker states
