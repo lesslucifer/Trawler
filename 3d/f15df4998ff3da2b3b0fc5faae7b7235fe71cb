@@ -2,12 +2,12 @@ schema: doc/v1
 changes:
   - path: doc-assets/components/specimen.js
     tier: T3
-    action: moved
-    distilled_to: [docs/work/design-flow-base.html]
+    action: added
+    distills: "runtime assets a doc loads over file://, moved out of docs/"
   - path: doc-assets/components/tw-config.js
     tier: T3
-    action: moved
-    distilled_to: [docs/work/design-flow-base.html]
+    action: added
+    distills: "runtime assets a doc loads over file://, moved out of docs/"
   - path: docs/work/2026-07-16-dflow-run-1.html
     tier: T3
     action: updated
@@ -23,7 +23,7 @@ changes:
   - path: docs/work/2026-07-27-dflow-w5-specimens-in-react.html
     tier: T3
     action: updated
-    distills: "asset layout after the move"
+    distills: "relative asset paths follow the move out of docs/"
   - path: docs/work/2026-07-27-dflow-w5-step3-discussion.html
     tier: T3
     action: updated
@@ -40,7 +40,15 @@ changes:
     tier: T3
     action: updated
     distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/build-specimens.mjs
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
   - path: docs/work/components/button.html
+    tier: T3
+    action: updated
+    distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/check-render.mjs
     tier: T3
     action: updated
     distills: "relative asset paths follow the move out of docs/"
@@ -92,6 +100,10 @@ changes:
     tier: T3
     action: updated
     distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/specimen.js
+    tier: T3
+    action: moved
+    distilled_to: [docs/work/design-flow-base.html]
   - path: docs/work/components/status-line.html
     tier: T3
     action: updated
@@ -112,6 +124,10 @@ changes:
     tier: T3
     action: updated
     distills: "relative asset paths follow the move out of docs/"
+  - path: docs/work/components/tw-config.js
+    tier: T3
+    action: moved
+    distilled_to: [docs/work/design-flow-base.html]
   - path: docs/work/design-flow-base.html
     tier: T3
     action: updated
