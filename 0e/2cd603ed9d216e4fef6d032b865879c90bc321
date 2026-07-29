@@ -1,0 +1,8 @@
+schema: test/v2
+epic: E-DFLOW
+wu: E-DFLOW.W5
+level: commit
+tests:
+  unit: { waived: "an env override plus an existence guard in an author-time script; both branches exercised directly - CHROME=/nope/chrome exits 1 with guidance, the default path runs the gate green on 6 docs" }
+  integration: { waived: "same" }
+  e2e: { waived: "the render gate IS the e2e layer here and it was run both ways" }
