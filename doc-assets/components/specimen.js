@@ -27,7 +27,43 @@
  * The highlight-map styling below came from specimen.css, deleted in W5 step 3
  * when the specimens moved to Tailwind. It is doc interaction, not component
  * contract, so it travels with the behaviour it belongs to instead.
+ *
+ * Driving a state that has no prop — window.specimenReach(host, {type}):
+ *   a swatch cannot set `open` or `confirming` from outside, because both are
+ *   internal useState. So it does what a user does: wait for React to commit,
+ *   then really click, and optionally really type. Shared because copy-text and
+ *   select each grew their own copy of this poll-then-click loop.
  */
+(function () {
+  const TICK = 50;
+  const LIMIT = 60;
+
+  function pollFor(selector, host, then) {
+    let tries = 0;
+    const timer = setInterval(() => {
+      const found = host.querySelector(selector);
+      if (!found && ++tries < LIMIT) return;
+      clearInterval(timer);
+      if (found) then(found);
+    }, TICK);
+  }
+
+  /* React commits asynchronously, so the element is absent on the first tick;
+     the poll is bounded so a wrong id cannot spin forever. */
+  window.specimenReach = (host, { type } = {}) => {
+    if (!host) return host;
+    pollFor('button, [role="button"]', host, (target) => {
+      target.click();
+      if (type === undefined) return;
+      pollFor('input', host, (field) => {
+        const native = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value');
+        native.set.call(field, type);
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
+    return host;
+  };
+})();
 function installSpecimenBehaviours() {
   const DOC_STYLE = `
 [data-map] [data-key]{cursor:pointer;border-radius:3px;transition:background .1s;}

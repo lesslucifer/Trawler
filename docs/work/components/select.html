@@ -39,6 +39,10 @@
     .app .fork-card{background:var(--a-soft);border:1px solid var(--a-line);border-radius:6px;padding:10px 12px;min-width:190px;flex:1;}
     .app .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--a-mute);margin-bottom:6px;font-family:var(--a-ui);}
     .app .fork-card .fc-ex{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:6px;}
+    /* A settled leg renders the real Select, whose popup is absolutely positioned
+       over the page. The card has to reserve that height or the popup spills past
+       its own border onto whatever follows -- measured at 33px before this. */
+    .app .fork-card .fc-ex.has-popup{padding-bottom:200px;}
     .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:var(--a-ui);}
     .kbd{display:inline-block;border:1px solid var(--line);border-radius:3px;padding:0 4px;font-family:var(--a-mono);font-size:11px;color:var(--ink);background:var(--paper);}
     .cmp td,.cmp th{vertical-align:top;font-size:12.5px;}
@@ -266,7 +270,7 @@
       <div class="fork-row">
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span> <span style="color:var(--a-mute);">(round 2)</span></div>
-          <div class="fc-ex">
+          <div class="fc-ex has-popup">
             <div id="spec-d2-settled"></div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">searchable defaults true — the 6-option picker shows it too</span>
           </div>
@@ -290,7 +294,7 @@
       <div class="fork-row">
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
-          <div class="fc-ex">
+          <div class="fc-ex has-popup">
             <div id="spec-d3-settled"></div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">tick = the value · wash = Enter picks this</span>
           </div>
@@ -313,7 +317,7 @@
       <div class="fork-row">
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
-          <div class="fc-ex">
+          <div class="fc-ex has-popup">
             <div id="spec-d4-settled"></div>
             <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">{ id, label: "get /v1/flows", element: &lt;…&gt; }</span>
           </div>
@@ -465,37 +469,7 @@
       return host;
     };
 
-    /* Open the component the way a user does: click its trigger. `open` is
-       internal useState with no prop, so a drawn-open specimen would be a
-       drawing again — this is the real popup. Poll for the trigger rather than
-       using requestAnimationFrame: React commits asynchronously, so one frame
-       after render() the button may not exist yet. */
-    const openIt = (host, typed) => {
-      if (!host) return;
-      let tries = 0;
-      const attempt = () => {
-        const trigger = host.querySelector('button');
-        if (!trigger) {
-          if (++tries < 60) setTimeout(attempt, 50);
-          return;
-        }
-        trigger.click();
-        if (!typed) return;
-        let fieldTries = 0;
-        const type = () => {
-          const field = host.querySelector('input');
-          if (!field) {
-            if (++fieldTries < 60) setTimeout(type, 50);
-            return;
-          }
-          const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-          setter.call(field, typed);
-          field.dispatchEvent(new Event('input', { bubbles: true }));
-        };
-        setTimeout(type, 50);
-      };
-      setTimeout(attempt, 50);
-    };
+    const openIt = (host, typed) => specimenReach(host, { type: typed });
 
     openIt(mount('spec-hero', <Demo />));
 

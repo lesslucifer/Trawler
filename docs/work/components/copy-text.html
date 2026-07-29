@@ -314,6 +314,7 @@
     const mount = (id, node) => {
       const host = document.getElementById(id);
       if (host) createRoot(host).render(node);
+      return host;
     };
 
     mount('spec-anatomy', <CopyText value={URI} label="request URI" />);
@@ -334,16 +335,10 @@
     }
 
     /* `confirming` is internal to useConfirm with no prop, so the swatch enters it
-       the way a user does: a real click on the real element. */
-    const clickToConfirm = (id) => {
-      mount(id, <CopyText value={SHORT} label="request URI" />);
-      const poll = setInterval(() => {
-        const target = document.querySelector(`#${id} [role="button"]`);
-        if (!target) return;
-        clearInterval(poll);
-        target.click();
-      }, 50);
-    };
+       the way a user does: a real click, via the shared specimen.js helper. */
+    const clickToConfirm = (id) =>
+      specimenReach(mount(id, <CopyText value={SHORT} label="request URI" />) ?? document.getElementById(id));
+
     clickToConfirm('spec-anat-confirm');
     clickToConfirm('spec-flow-after');
 
