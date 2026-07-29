@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+tests:
+  unit: { waived: "docs-only diff" }
+  integration: { waived: "docs-only diff" }
+  e2e: { waived: "docs-only diff; render gate covers the doc" }
