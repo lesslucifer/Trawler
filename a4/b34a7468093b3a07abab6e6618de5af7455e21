@@ -1,0 +1,41 @@
+schema: cr/v2
+scope: "WU design-flow/revise-registry-react-design-doc -> wu/design-flow/revise-registry"
+epic: E-DFLOW
+wu: E-DFLOW.W5
+branch: wu/design-flow/revise-registry-react-design-doc
+base: 93ee0befb16fb68267fb9824d47069967cdf852f
+head: a4b34a7468093b3a07abab6e6618de5af7455e21
+diff_sha256: a03856a6a7de933bc5f6be6e695f3a74872d595c991565db5dc25315f8b5f36a
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 15, verified: 5, waived: 0 }
+verified:
+  - location: "scripts/check-render.mjs:54-62"
+    claim: "the gate claims 'zero console errors' but CAPTURE hooks only window error/unhandledrejection, never console.error, so React dev-mode warnings pass silently"
+    severity: important
+    evidence: "proven empirically: a page calling console.error yields errors: [] from the gate's own capture logic"
+  - location: "xtask/src/gate.rs / xtask/src/gate0.rs"
+    claim: "the new render gate is never invoked from Gate::verify or gate0, so a doc with a broken bundle can still earn a green dod/v1 receipt"
+    severity: important
+    evidence: "grep -c specimens = 0 in both files; the gate runs only when invoked by hand"
+  - location: "docs/work/components/copy-text.html:96,109,127,140,182"
+    claim: "hand-pasted CopyText spans survive the migration outside any rejected-fork context, duplicating an implemented component"
+    severity: important
+    evidence: "not rejected legs, not annotated diagrams, not prose; line 96 has ALREADY DRIFTED - missing font-mono text-body and focus-visible:* that CopyText.tsx:46 emits"
+  - location: "docs/work/components/select.html:270,296,322"
+    claim: "three SETTLED fork legs hand-draw popup internals the real Select could render"
+    severity: nit
+    evidence: "all three verified 'settled' not 'rejected'; the file already has a working openIt click/type helper at line 483 used for spec-hero/spec-st-open"
+  - location: "scripts/build-specimens.mjs:81"
+    claim: "build() keeps parameterization for extension/extra/outfile after the diff cut its two callers to one"
+    severity: nit
+    evidence: "had two real callers at birth (23f4187, .tsx/.ts with differing extra); commit 1df649b folded them and left the signature"
+refuted:
+  - ":focus-visible could use native .focus() - impossible, swatches are simultaneous DOM siblings and only one element holds focus"
+  - "the 8s poll schedule is a magic number - the two adaptive alternatives were empirically tried and failed; the count is deliberately not asserted"
+  - "header-table.html still hand-draws - HeaderTable is not implemented, so it remains a design doc; the note never claimed a wholesale swap"
+  - "doc.rs hard-codes ../../ depth - check_composition is gated behind data-artifact=design-run, which no component file declares; pre-existing in kind"
+  - "CLAUDE.md/documentation-system layout stale - scripts/ predates BASE; CLAUDE.md is byte-identical, honouring its own T0 never-edit-as-a-side-effect rule"
+  - "BUNDLE_ENTRY duplicates tw-config.js theme logic - predates BASE, values cannot drift (one source of truth), retirement deliberately deferred"
+  - "doc/v1 distills field materially incomplete - the field is terse by design; the commit body carries the full disclosure"
+verdict: FAIL
+date: 2026-07-29
