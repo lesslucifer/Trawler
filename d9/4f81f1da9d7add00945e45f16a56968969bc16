@@ -1,0 +1,9 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W5
+changes:
+  - path: docs/work/2026-07-27-dflow-w5-specimens-in-react.html
+    tier: T3
+    action: updated
+    distills: "esbuild is a declared dependency, not one inherited from Vite - npm hoists it, pnpm does not, so the transitive only worked in the authoring worktree"
+t2_waived: "in-progress T3 work of this WU; no use case or decision changes"
