@@ -226,4 +226,28 @@ describe("Select", () => {
     setup();
     expect(trigger().className).toContain("min-w-[132px]");
   });
+
+  it("never selects a row the options changed underneath — remote options arrive while open", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <Select options={OPTIONS} value={undefined} onChange={onChange} label="trust target" />,
+    );
+    fireEvent.click(trigger());
+    fireEvent.keyDown(trigger(), { key: "ArrowDown" });
+    fireEvent.keyDown(trigger(), { key: "ArrowDown" });
+
+    const refetched: SelectOption[] = [
+      { id: "edge", label: "Edge" },
+      { id: "safari", label: "Safari" },
+      { id: "opera", label: "Opera" },
+      { id: "brave", label: "Brave" },
+      { id: "vivaldi", label: "Vivaldi" },
+    ];
+    rerender(
+      <Select options={refetched} value={undefined} onChange={onChange} label="trust target" />,
+    );
+    fireEvent.keyDown(trigger(), { key: "Enter" });
+
+    expect(onChange).not.toHaveBeenCalledWith("opera");
+  });
 });

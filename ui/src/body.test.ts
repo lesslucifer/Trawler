@@ -4,6 +4,7 @@ import {
   bodyText,
   byteLength,
   formEntries,
+  formPairCut,
   hexDump,
   hexRows,
   humanBytePair,
@@ -103,6 +104,20 @@ test("formEntries parses url-encoded pairs, decoding and keeping duplicates", ()
     ["b", "two words"],
     ["a", "2"],
   ]);
+});
+
+test("formPairCut lands on a pair boundary, never inside a percent-escape", () => {
+  const body = "a=1&price=%E2%82%AC99&b=2";
+
+  for (let at = 0; at <= body.length; at += 1) {
+    const kept = body.slice(0, formPairCut(body, at));
+    expect(kept).not.toMatch(/%[0-9A-Fa-f]?$/);
+    expect(formEntries(kept).map(([, v]) => v).join("")).not.toContain("�");
+  }
+});
+
+test("formPairCut keeps the key of a first pair that alone exceeds the cap", () => {
+  expect("k=".slice(0, formPairCut("k=%E2%82%ACvalue", 4))).toBe("k=");
 });
 
 test("bodyNotice maps every non-captured state to a notice, captured to null", () => {

@@ -121,6 +121,19 @@ export function formEntries(text: string): [string, string][] {
   return [...new URLSearchParams(text)];
 }
 
+// A form body is cut on a pair boundary, never at a character offset: an offset
+// can land mid-%XX (decodes to a stray literal) or mid-escape-run (a truncated
+// multi-byte character decodes to U+FFFD), and that half-decoded value is what
+// the row hands to the clipboard. A first pair that alone exceeds the cap keeps
+// its key with an empty value — the field stays named, and no partial value can
+// be copied as if it were whole.
+export function formPairCut(text: string, at: number): number {
+  const boundary = text.lastIndexOf("&", at);
+  if (boundary > 0) return boundary;
+  const key = text.indexOf("=");
+  return key > 0 ? key + 1 : 0;
+}
+
 // null = the body is captured and viewable; a string is the notice to show
 // instead of a viewer — states never render blank.
 export function bodyNotice(body: BodyView | null): string | null {

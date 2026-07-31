@@ -59,4 +59,16 @@ describe("FormRenderer", () => {
     render(<FormRenderer text={BODY} />);
     expect(screen.queryByText(/showing/)).not.toBeInTheDocument();
   });
+
+  it("never decodes a half-escape into the value it copies — the cut is a render cap, not a payload cap", () => {
+    const head = "pad=";
+    const tail = "&price=%E2%82%AC99";
+    const straddling = `${head}${"v".repeat(TEXT_MAX - head.length - "&price=%E2".length)}${tail}`;
+    render(<FormRenderer text={straddling} />);
+
+    for (const cell of screen.getByTestId("body-form").querySelectorAll("dd")) {
+      expect(cell.textContent).not.toContain("�");
+      expect(cell.textContent).not.toMatch(/%[0-9A-Fa-f]?$/);
+    }
+  });
 });

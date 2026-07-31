@@ -82,6 +82,13 @@ export function Select({
     if (open) rows.current[active]?.scrollIntoView?.({ block: "nearest" });
   }, [open, active]);
 
+  // Options can change under an open popup (remote options arriving, a re-fetch
+  // reordering them). A surviving index silently points at a different row, so
+  // Enter would select an option the user never looked at.
+  useEffect(() => {
+    setActive(0);
+  }, [options]);
+
   const selectable = !isLoading && visible.length > 0;
 
   const onKeyDown = (e: React.KeyboardEvent) => {

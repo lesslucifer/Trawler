@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
-import { Gallery } from "./Gallery"; // ponytail: W5 step 4 verification screen — delete with Gallery.tsx
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
 import "@fontsource/dm-mono/400.css";
@@ -14,8 +13,16 @@ if (import.meta.env.VITE_E2E) {
   void import("@wdio/tauri-plugin");
 }
 
-const gallery = new URLSearchParams(location.search).has("gallery");
+const root = ReactDOM.createRoot(document.getElementById("root")!);
+const mount = (screen: React.ReactNode) =>
+  root.render(<React.StrictMode>{screen}</React.StrictMode>);
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>{gallery ? <Gallery /> : <App />}</React.StrictMode>,
-);
+// ponytail: W5 step 4 verification screen — delete with Gallery.tsx. Lazily
+// imported under a dev-only guard so release builds tree-shake it out, the way
+// the wdio plugin above is: a static import pulls the whole collection into the
+// shipped bundle for a screen no user can reach.
+if (import.meta.env.DEV && new URLSearchParams(location.search).has("gallery")) {
+  void import("./Gallery").then(({ Gallery }) => mount(<Gallery />));
+} else {
+  mount(<App />);
+}

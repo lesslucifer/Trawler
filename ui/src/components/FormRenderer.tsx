@@ -1,4 +1,4 @@
-import { byteLength, formEntries, TEXT_MAX } from "../body";
+import { byteLength, formEntries, formPairCut, TEXT_MAX } from "../body";
 import { CutMarker } from "./CutMarker";
 import { KeyValueRow } from "./KeyValueRow";
 
@@ -12,8 +12,11 @@ import { KeyValueRow } from "./KeyValueRow";
  * @madeof KeyValueRow×
  */
 export function FormRenderer({ text }: { text: string }) {
+  // Cut on a pair boundary, never at a character offset into the raw text: an
+  // offset can land mid-%XX or inside an escape run, and the half-decoded value
+  // — a stray "%E" or U+FFFD — is what CopyText hands to the clipboard.
   const cut = text.length > TEXT_MAX;
-  const shown = cut ? text.slice(0, TEXT_MAX) : text;
+  const shown = cut ? text.slice(0, formPairCut(text, TEXT_MAX)) : text;
 
   return (
     <>
