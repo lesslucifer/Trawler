@@ -1,0 +1,38 @@
+schema: cr/v2
+scope: "WU E-DFLOW.W5 (wu/design-flow/revise-registry) -> epic/design-flow"
+epic: E-DFLOW
+wu: E-DFLOW.W5
+branch: wu/design-flow/revise-registry
+base: 989f4bfacdee1d433b5b385d5227fd5e36a3281d
+head: a28dd0675d48ac83208944ee2f21202f798439f5
+diff_sha256: 133282dd8c207fc3ad07ba84f7c3ee163b161a5841324f4a0f3eedb054c24403
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 5, waived: 0 }
+verified:
+  - location: "ui/src/components/FormRenderer.tsx:15-16"
+    severity: important
+    claim: "truncate-then-decode: the raw form-encoded text is sliced at TEXT_MAX BEFORE URLSearchParams decodes it, so a cut landing inside a %XX escape yields a decoded value ending in U+FFFD or a stray literal fragment - and that corrupted value is what CopyText displays and copies"
+    evidence: "reproduced in node, not reasoned: a body with %E2%82%AC straddling the boundary decodes to a value ending U+FFFD; URLSearchParams never throws on malformed escapes (unlike decodeURIComponent), so it is silent corruption with no error path. CutMarker states sizes only, never that the boundary value is mangled. Reachable: body_cap defaults to 10 MiB (src/config.rs:28) against TEXT_MAX's 128 KiB. Breaks the family's own documented rule - 'the cut is a render cap, never a payload cap' (body-renderer.html) - because here the cut changes the payload. FormRenderer.test.tsx:53-56 caps with pure ASCII only, so no test covers the interaction"
+  - location: "ui/src/components/Select.tsx:41"
+    severity: important
+    claim: "`active` is never reclamped when the `options` prop changes while the popup is open, so a same-length reorder or re-fetch silently moves the highlight to a different row and Enter calls onChange with an option the user never looked at"
+    evidence: "reproduced with a real RTL render+rerender: opened [Alpha,Beta,Gamma], ArrowDown twice (active=2, on Gamma id 'c'), re-rendered with [Xray,Yankee,Zeta], Enter -> onChange fired with 'z'. A wrong-value-selected bug, not a crash: the shrink case is a safe no-op, the same-length case is the damaging one. Inside the component's OWN documented contract - select.html round 2 put remote data in scope and isLoading exists for options still on their way - so this is the supported path, not a hypothetical. None of Select.test.tsx's 20 tests re-render with changed options while open"
+  - location: "ui/src/main.tsx:4"
+    severity: important
+    claim: "Gallery is imported statically and unconditionally, so the dev-only verification screen and all 24 components it pulls in ship into the production Tauri bundle - while the wdio plugin 7 lines below uses a VITE_E2E-guarded dynamic import for exactly this reason"
+    evidence: "measured with a fresh npx vite build (no VITE_E2E): the production chunk contains the has(\"gallery\") check and Gallery-only identifiers SegmentedControl/CutMarker, reachable only via Gallery's import of ./components/index; the wdio plugin is absent from all output JS. Gallery.tsx:30-33 is ponytail-marked as scaffolding to delete along with its main.tsx lines, and the result report's follow-ups table tracks other deferred cleanup but not this one - so it is an unremoved leftover, not an accepted tradeoff"
+  - location: "ui/src/components/TextRenderer.tsx:32"
+    severity: nit
+    claim: "byteLength(text) re-encodes the full untruncated body per render to size the CutMarker caption"
+    evidence: "real but narrow: the call is in the render body, not a memo, and the TSDoc cites a 10 MiB cap. Downgraded - no shipping path feeds it a multi-MB string today (BodyViewer does not import the collection), the byte total is load-bearing for DEC-12's never-round-to-equal rule, and the proposed fix is unreachable at this layer since the contract is {text: string} with no byte length in scope"
+  - location: "scripts/check-render.mjs:105-120"
+    severity: nit
+    claim: "check() has no catch around the execFile call, so a Chrome-level rejection aborts the sweep and every later file goes unchecked in that run"
+    evidence: "real but diagnostics-only: the process still exits non-zero, so the gate never fails open - which is the one thing its header warns about. maxBuffer is 64MB against small specimen docs so overflow is implausible, and xtask/src/ui.rs only reads the exit status, never per-file stdout, so a crash and a clean FAIL are identical to the sole automated caller"
+refuted:
+  - "FormRenderer byteLength per render - gated behind `cut &&`, so it only runs on already-truncated bodies; the proposed bytes.length fix is not in scope at this layer"
+  - "lone unpaired surrogate at TextRenderer's slice boundary - real mechanism, cosmetic consequence: no throw, no DOM corruption, the cut is announced by CutMarker, and the clipboard path uses bodyText(bytes) - the full payload - not the sliced value"
+  - "duplicated clipboard mock across the new test suites - the idiom predates this diff (App/BodyViewer/FlowDetail test files at BASE do the same), so the rubric's pre-existing exclusion forbids reporting it"
+  - "className declared but never passed - it is an explicitly documented API prop in six confirmed design files and is correctly wired in all seven components; zero callers is the expected state of a library built before its screens, per Q2"
+verdict: FAIL
+date: 2026-07-31
