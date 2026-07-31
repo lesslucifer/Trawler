@@ -71,4 +71,15 @@ describe("FormRenderer", () => {
       expect(cell.textContent).not.toMatch(/%[0-9A-Fa-f]?$/);
     }
   });
+
+  // A key longer than the cap leaves no boundary to keep, so the pane shows
+  // nothing and says so. "showing 0 B" is a true statement with a way out; a
+  // marker whose two sizes matched would be the false one.
+  it("states an honest 0 B rather than rendering a pair it cannot cut safely", () => {
+    render(<FormRenderer text={`${"k".repeat(TEXT_MAX + 10)}=v`} />);
+
+    const [shown, total] = screen.getByText(/⚠ showing/).textContent!.match(/showing (.+) of (.+) —/)!.slice(1);
+    expect(shown).not.toBe(total);
+    expect(screen.getByTestId("body-form").querySelectorAll("dd")).toHaveLength(0);
+  });
 });

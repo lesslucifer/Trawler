@@ -121,11 +121,15 @@ test("formPairCut keeps the key of a first pair that alone exceeds the cap", () 
 });
 
 // A cut that returns more than it was asked for defeats the cap it exists to
-// enforce — a key longer than the cap is the case that does it.
+// enforce — a key longer than the cap is the case that does it. Returning the
+// whole length is the worse shape: the caller then draws a marker claiming a
+// truncation that did not happen.
 test("formPairCut never returns past the cap it was given", () => {
   for (const body of ["averyveryverylongkey=v", "noequalsnoamp", "&a=1", "k=v", "", "a=1&b=2"]) {
     for (let at = 0; at <= body.length + 2; at += 1) {
-      expect(formPairCut(body, at)).toBeLessThanOrEqual(at);
+      const cut = formPairCut(body, at);
+      expect(cut).toBeLessThanOrEqual(at);
+      if (body.length > at) expect(body.slice(0, cut)).not.toBe(body);
     }
   }
 });
