@@ -86,15 +86,16 @@ export function Select({
   // reordering them). An index that survives that points at a different row, so
   // Enter would select an option the user never looked at — while a parent that
   // rebuilds an unchanged array every render must NOT move the highlight, which
-  // is the commoner case. Reconciling by id satisfies both: the highlight follows
-  // its own option, and an unchanged list reconciles to the same index.
-  const ids = visible.map((o) => o.id).join("\u0000");
-  const shownIds = useRef(ids);
+  // is the commoner case. Reconciling by id satisfies both. Keyed on OPTIONS, not
+  // on the filtered list: narrowing by filter deliberately resets to the first
+  // match, and reconciling there would override that.
+  const optionIds = options.map((o) => o.id).join("\u0000");
+  const knownIds = useRef(optionIds);
   const activeId = useRef(visible[active]?.id);
-  if (shownIds.current === ids) {
+  if (knownIds.current === optionIds) {
     activeId.current = visible[active]?.id;
   } else {
-    shownIds.current = ids;
+    knownIds.current = optionIds;
     const moved = visible.findIndex((o) => o.id === activeId.current);
     if (moved !== active) setActive(moved < 0 ? 0 : moved);
   }

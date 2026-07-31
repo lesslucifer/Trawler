@@ -270,4 +270,18 @@ describe("Select", () => {
 
     expect(onChange).toHaveBeenCalledWith("chrome");
   });
+
+  // The reconcile above must not fight the filter: narrowing the list resets the
+  // highlight to the first match on purpose, so keying it on the filtered list
+  // instead of on options silently reverts that.
+  it("narrowing by filter highlights the first match, not the previously active row", () => {
+    const { onChange } = setup();
+    fireEvent.click(trigger());
+    fireEvent.keyDown(trigger(), { key: "ArrowDown" });
+    fireEvent.keyDown(trigger(), { key: "ArrowDown" });
+    fireEvent.keyDown(trigger(), { key: "e" });
+    fireEvent.keyDown(trigger(), { key: "Enter" });
+
+    expect(onChange).toHaveBeenCalledWith("android");
+  });
 });
