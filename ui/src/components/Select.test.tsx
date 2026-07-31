@@ -250,4 +250,24 @@ describe("Select", () => {
 
     expect(onChange).not.toHaveBeenCalledWith("opera");
   });
+
+  // The costlier half of the same rule: a parent that rebuilds its options array
+  // every render is the common React case, and resetting the highlight there
+  // would break arrow-key navigation for every such caller.
+  it("keeps the highlight when a re-render rebuilds an unchanged options array", () => {
+    const onChange = vi.fn();
+    const fresh = () => OPTIONS.map((o) => ({ ...o }));
+    const { rerender } = render(
+      <Select options={fresh()} value={undefined} onChange={onChange} label="trust target" />,
+    );
+    fireEvent.click(trigger());
+    fireEvent.keyDown(trigger(), { key: "ArrowDown" });
+    fireEvent.keyDown(trigger(), { key: "ArrowDown" });
+    rerender(
+      <Select options={fresh()} value={undefined} onChange={onChange} label="trust target" />,
+    );
+    fireEvent.keyDown(trigger(), { key: "Enter" });
+
+    expect(onChange).toHaveBeenCalledWith("chrome");
+  });
 });

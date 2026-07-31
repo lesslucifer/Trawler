@@ -117,7 +117,17 @@ test("formPairCut lands on a pair boundary, never inside a percent-escape", () =
 });
 
 test("formPairCut keeps the key of a first pair that alone exceeds the cap", () => {
-  expect("k=".slice(0, formPairCut("k=%E2%82%ACvalue", 4))).toBe("k=");
+  expect("k=%E2%82%ACvalue".slice(0, formPairCut("k=%E2%82%ACvalue", 4))).toBe("k=");
+});
+
+// A cut that returns more than it was asked for defeats the cap it exists to
+// enforce — a key longer than the cap is the case that does it.
+test("formPairCut never returns past the cap it was given", () => {
+  for (const body of ["averyveryverylongkey=v", "noequalsnoamp", "&a=1", "k=v", "", "a=1&b=2"]) {
+    for (let at = 0; at <= body.length + 2; at += 1) {
+      expect(formPairCut(body, at)).toBeLessThanOrEqual(at);
+    }
+  }
 });
 
 test("bodyNotice maps every non-captured state to a notice, captured to null", () => {

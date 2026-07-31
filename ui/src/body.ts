@@ -131,7 +131,7 @@ export function formPairCut(text: string, at: number): number {
   const boundary = text.lastIndexOf("&", at);
   if (boundary > 0) return boundary;
   const key = text.indexOf("=");
-  return key > 0 ? key + 1 : 0;
+  return key > 0 && key < at ? key + 1 : 0;
 }
 
 // null = the body is captured and viewable; a string is the notice to show
