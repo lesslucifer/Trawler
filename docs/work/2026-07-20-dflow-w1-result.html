@@ -15,7 +15,7 @@
   </header>
   <main>
     <h2 id="delivered">What W1 delivered</h2>
-    <p>The deliverable is the <strong>method</strong>, not the panel. The flow-detail-panel run is proof the flow works.</p>
+    <p data-item="outcome">The deliverable is the <strong>method</strong>, not the panel. The flow-detail-panel run is proof the flow works.</p>
     <ul>
       <li><strong>Base flow spec + templates</strong> — <a href="design-flow-base.html">design-flow-base.html</a>: the six stages, a copy-paste artifact template per stage, and the cross-cutting conventions. The reusable W1 product. T3 now → promoted to the T1 design-flow process doc after W4 validates it.</li>
       <li><strong>Worked example</strong> — <a href="2026-07-16-dflow-run-1.html">2026-07-16-dflow-run-1.html</a>: all six stages run on the flow-detail panel, a cross-check against the shipped panel, and the distilled findings.</li>
@@ -23,8 +23,8 @@
       <li><strong>Representation scratch</strong> (provenance for the form decisions) — Frame / Elements / Draft-mockup comparison docs.</li>
     </ul>
 
-    <h2 id="learned">What the run hardened</h2>
-    <ul>
+    <h2 id="learned">What the run hardened <span class="hint">(stage definitions that moved from the plan's first cut)</span></h2>
+    <ul data-item="deviations">
       <li><strong>Frame</strong> → a driver table (driver → consequence → why → checked by); functional requirements are input, the design lens is output; no coded ids.</li>
       <li><strong>Layout</strong> → an annotated ASCII region sketch (draw.io trialled, no added value).</li>
       <li><strong>Elements</strong> → a tiered component catalog (T0–T4; T1↔T2 = business logic; "used in" surfaces reuse; T4 → break down).</li>
@@ -35,15 +35,18 @@
     </ul>
 
     <h2 id="seeds">Seed lists (feed the rest of the epic)</h2>
-    <ul>
+    <ul data-item="follow-ups">
       <li><strong>→ W2 registry:</strong> the catalog rows + T4 break-downs (status pill, header table, body viewer, copy button, icon button, section container, …).</li>
       <li><strong>→ W3 rulebook:</strong> hard (state declarations, mono-for-wire-data, tokens-not-hex, spacing scale) and soft (wording, visual-weight, grouping, ordering).</li>
       <li><strong>→ W4 flow revision:</strong> Layout/Elements boundary; no escalation path for upstream-undefined states; the two stage redefinitions (Elements → tiered catalog, Interaction → use-cases).</li>
     </ul>
 
     <h2 id="gate">Gate</h2>
-    <ul>
+    <ul data-item="evidence">
       <li><strong>Tests:</strong> waived — process/docs-only WU; no app code. The flow's scripted e2e (fake user + fake agent) is W7; the receipted acceptance run is W4/W7.</li>
+      <li><strong>Artifacts:</strong> the three deliverables above — <a href="design-flow-base.html">design-flow-base.html</a> (spec + templates), <a href="2026-07-16-dflow-run-1.html">2026-07-16-dflow-run-1.html</a> (all six stages worked, cross-checked against the shipped panel), <a href="2026-07-16-dflow-w1-plan.html">2026-07-16-dflow-w1-plan.html</a> (plan).</li>
+    </ul>
+    <ul data-item="distillation">
       <li><strong>Distillation:</strong> nothing distils to T1/T2 yet — by design. The base flow becomes the T1 process doc after W4; the seed lists stay in T3 until W2/W3 consume them.</li>
     </ul>
   </main>

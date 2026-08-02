@@ -84,7 +84,7 @@ flowchart LR
     <p>No <code>ui/</code> or <code>src/</code> code, no T1/T2 doc changes. The base-flow definition here is a first cut that only becomes the T1 process doc after W4 validates it — W1 distils nothing upward yet.</p>
 
     <h2 id="test-plan">Test plan</h2>
-    <div class="callout warn" data-c="test-plan">
+    <div class="callout warn" data-c="test-plan" data-item="test-plan">
       <p><strong>Level: WU → integration — waived (process / docs-only).</strong> W1 changes no app code; its deliverables are three docs. Per the project rule, docs/infra-only diffs are exempt from the test layers, so the WU tip carries <code>test/v2</code> with <code>waived: "process WU — deliverables are the plan + worked run + findings docs; no app code. The flow's plumbing gets its scripted e2e in W7 (fake user + fake agent); the receipted acceptance run is W4/W7."</code></p>
       <p>The hand-run itself is the informal validation: if the flow stalls, produces an empty artifact, or its stages read as ambiguous, that surfaces as a finding rather than a passing gate — which is exactly W1's job.</p>
     </div>
