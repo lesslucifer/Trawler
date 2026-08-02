@@ -62,5 +62,6 @@ accepted_nits:
   - "check-render.mjs's missing catch around execFile - recorded rather than fixed: the gate still exits non-zero so it never fails open, maxBuffer is 64MB against small specimen docs, and xtask/src/ui.rs reads only the exit status"
 note: "Four fix rounds produced four defects, three of them introduced by the fix for the previous one, every one in the interaction between two individually-correct behaviours. Select now carries four tests, one per behaviour, because each was broken at some point by a fix for another: a reorder reconciles by id, an unchanged array rebuilt each render holds the highlight, narrowing by filter resets to the first match, and a vanished option falls back to the first row."
 gate0: "green - fmt + clippy -D warnings + workspace tests"
+rebound: "The PASS was reached on cb5eed5. Re-bound twice since, both times to a docs-only commit with zero files outside docs/ (verified by git diff --name-only): cb5eed5 corrected the result report's stale counts, 21f8192 added five missing follow-up rows. No reviewed behaviour changed, so the verdict carries; the diff_sha256 above is recomputed against the current tip so the binding is exact rather than approximately right."
 verdict: PASS
-date: 2026-07-31
+date: 2026-08-02
