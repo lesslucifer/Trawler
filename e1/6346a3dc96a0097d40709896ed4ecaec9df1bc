@@ -1,0 +1,149 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W5
+branch: wu/design-flow/revise-registry
+changes:
+  - path: docs/decisions/dec-16-design-file-retirement.html
+    tier: T2
+    action: added
+    distills: "DEC-16 — the design-file retirement order: distil the forks to docs/decisions/, verify the TSDoc block is complete, then remove. The distillation checklist's one T2 candidate, and shape-level because it constrains what W7 may build. What makes it a decision rather than plan detail: a ~600-line design file compiles to a nine-line TSDoc block and the difference is not padding — the fork cards and frame drivers have no home in code (CopyButton's D1 on label-swap vs chip vs toast; D2b's adjacency test), because code shows the choice and never the road not taken, and that is also the part nobody re-reads, which is why the file looks redundant once the component exists. Enforcement is W7's and must be a predicate, on DEC-15's own reasoning. Four rejected options recorded, including delete-alongside-the-build (fresh code, cold forks — the wrong moment) and keep-the-files-forever (two homes for one contract, the drift this epic exists to kill)"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-16 routed into the decisions index"
+  - path: docs/work/2026-07-27-dflow-w5-plan.html
+    tier: T3
+    action: added
+    distills: "the W5 plan — the 35-finding worklist by target, the build table by tier, the test plan at all three levels (D7, no waiver), and the deliberate scope change recorded at planning: D3 supersedes the epic plan and the W2 seed for T1/T2 only, on the reviewer's instruction, so what moves is WHEN the collection becomes code"
+  - path: docs/work/2026-07-27-dflow-w5-discussion.html
+    tier: T3
+    action: added
+    distills: "the direction round that preceded the plan — D1-D7 and Q1-Q3 resolved, including D3 (build T1/T2 now), D5 (reopened forks are edited in place, snapshot history is the record), D6 (a contract whose exceptions live outside the lines the gate reads is unenforceable), Q1 (design files are transient) and Q2 (extracted components are left unused)"
+  - path: docs/work/2026-07-29-dflow-w5-result.html
+    tier: T3
+    action: added
+    distills: "the W5 result report — outcome, the three deviations recorded rather than left to be discovered (specimen.css deleted instead of resolved; the gallery's cut-marker defect; four design files migrated to mount real components), evidence at every level, the distillation verdict that produced DEC-16, and follow-ups tabled by owner. Its own authoring surfaced the mermaid startOnLoad defect, measured and recorded in its test note"
+  - path: docs/work/2026-07-27-dflow-w5-step3-discussion.html
+    tier: T3
+    action: added
+    distills: "step 3's working doc — the case for one Tailwind vocabulary over a linked second stylesheet: linking still leaves two files to drift plus a gate to police the drift, while reading the same config means there is no second copy"
+  - path: docs/work/2026-07-27-dflow-w5-step3-evidence.html
+    tier: T3
+    action: added
+    distills: "the measured evidence behind step 3 — which of the six W5-owned CONFLICT markers were real disagreements and which were translation artifacts (the sheet invented .ct, .sl-glyph, .sel-trigger where the app said text-ink-body, font-ui, px-control-x). Four dissolved, two decided on merit"
+  - path: docs/work/2026-07-27-dflow-w5-specimens-in-react.html
+    tier: T3
+    action: added
+    distills: "the specimens-in-React working doc — how a design file mounts the real component instead of hand-drawing it, and the retirement-order sequencing that this WU's distillation lifted into DEC-16 (the ordered flow is now recorded there; this doc holds the working derivation)"
+  - path: docs/work/components/toned-text.html
+    tier: T3
+    action: added
+    distills: "TonedText (T1) — designed and confirmed. Not a proposal but a dangling contract: StatusPill's @madeof named it and its @avoid routed non-HTTP toned values to it by name and tier, while W2's fork D4 promised the roster would gain it and the confirmation landed without it. Two independent W4 sightings (r2·21, r3·8)"
+  - path: docs/work/components/status-line.html
+    tier: T3
+    action: added
+    distills: "StatusLine (T2) — designed and confirmed. A precondition's resolved verdict (glyph · name · message) with an in-flight state; T2 because the precedence rules are business logic — an authoritative positive beats a stale error. Its contract specs a short message, which is what produced the [UI_DEFER] marker in setup.ts (r3·2, r3·22)"
+  - path: docs/work/components/step-list.html
+    tier: T3
+    action: added
+    distills: "StepList (T1) — designed and confirmed. Ordered manual instructions, a slot per step. The registry had no instructional component at all: all 16 W1 files came from a read-only panel that never asked the user for anything (r3·3, r3·9)"
+  - path: docs/work/components/select.html
+    tier: T3
+    action: added
+    distills: "Select (T1) — designed and confirmed over two review rounds; round 2 answered remote options and the no-selection state. The app's one searchable dropdown, options passed in, proposed generic rather than as a target picker (r3·4)"
+  - path: docs/work/components/copy-button.html
+    tier: T3
+    action: updated
+    distills: "contract fix — forks D2 and D4 reopened in place (D5). D2's icon-form exception moved out of the rejected card and into @avoid inline, at one named size (24px, the generous-targets floor), because both W4 runs read @avoid, shipped the wrong form and borrowed BodyViewer's private 22px .ibtn; D4 resolves the FlashButton deferral exactly as that card's escape path predicted, with Button as the non-copy tenant it was waiting for. Then migrated to mount the real component (r2·27, r2·28, r3·17, r3·21)"
+  - path: docs/work/components/button.html
+    tier: T3
+    action: updated
+    distills: "Button becomes the shared shell (reviewer call, round 3) — three customization props frame|shape|tone, each defaulting to Button's own value, so all three buttons are one <button> element and its token table is the single source for the box. Three values had silently drifted between Button and CopyButton while both claimed identical chrome (border alias, padding, active wash), reconciled to what the specimens actually draw; and Button now names where its in-flight state lives instead of delegating to the caller's zone (r3·7, r3·1)"
+  - path: docs/work/components/icon-button.html
+    tier: T3
+    action: updated
+    distills: "composes Button with frame=bare shape=square size=28 tone=mute — and its own three forks (D1 hover, D2 border, D3 size) turn out to map one-for-one onto the shell's axes, which is what confirms they are the right ones. Focus ring, disabled, radius, hit floor and keyboard are inherited rather than restated"
+  - path: docs/work/components/notice.html
+    tier: T3
+    action: updated
+    distills: "the @avoid line that forbade success/ok states now permits the positive outcome — run #3's zone C is exactly that, and nothing else in the roster renders a positive outcome. Surfaced by W4's own elements·avoid-cited predicate rather than by a reviewer. Also absorbs the two private absence-notice families (r3·24, r2·24, r2·31)"
+  - path: docs/work/components/section.html
+    tier: T3
+    action: updated
+    distills: "fork F3 reopened in place (D5) for the variant=band leg-level grouping — a two-leg screen needs two grouping levels and Sections must not nest; plus rules on the stack-level label slot and the 10/14px vs px-4 py-3 padding conflict resolved (r2·3, r3·16, r2·24)"
+  - path: docs/work/components/header-table.html
+    tier: T3
+    action: updated
+    distills: "design-only (T4, not built). Gains pending — awaiting response — because an in-flight response's empty header array rendered none, which the lexicon reserves for an empty set: a false statement in a trust-critical tool. Sub-bar takes the icon form instead of a hard-coded label; value cells keep KeyValueRow's click-to-copy. Also migrated: the file carried a 36-line vanilla re-implementation whose own comment admitted it was a CopyButton stand-in (r2·1, r2·24)"
+  - path: docs/work/components/body-viewer.html
+    tier: T3
+    action: updated
+    distills: "design-only (T4, not built). Gains a fifth state fetch-failed — body unavailable, the flow is no longer captured, with retry — because its four absences all described bytes that are absent, not unreachable. Leg label degrades to body when the host names the leg; chrome-bar metadata may wrap; and it stops re-drawing the SegmentedControl / CopyButton / IconButton it declares as @madeof (r2·5, r2·24)"
+  - path: docs/work/components/body-renderer.html
+    tier: T3
+    action: updated
+    distills: "TextRenderer designed — BodyViewer's dispatch routes text/*, application/javascript and every raw-view text body to it, and the family was documented as five members with no such file, so the most common body kind in the app reached a component nobody had specified. The family is now six, and the two shared parts (SourceSurface, CutMarker) became components in their own right (r2·2)"
+  - path: docs/work/components/status-pill.html
+    tier: T3
+    action: updated
+    distills: "the fork-D4 split lands: StatusPill becomes {status: number | null} resolving tone, with '…' for null and the reason phrase, while the shipped generic {tone, children} span it used to be is TonedText. Fork D4 had already recorded the demotion and promised the split; this is that promise landing rather than a new decision"
+  - path: docs/work/components/copy-all-headers-button.html
+    tier: T3
+    action: updated
+    distills: "a dissolved component's file corrected — it hand-drew the very CopyButton and rows it claimed had moved elsewhere. A design file that imitates the component it documents is the defect class this epic exists to kill"
+  - path: docs/work/components/copy-text.html
+    tier: T3
+    action: updated
+    distills: "migrated to mount the real component; its specimen class strings are now the component's className verbatim, so the build copies rather than translates"
+  - path: docs/work/components/key-value-row.html
+    tier: T3
+    action: updated
+    distills: "the value cell's CopyText affordance made explicit — the duplicated key/value grid the specimen sheet exposed was one of the six conflicts, and composition rather than re-drawing is what the collection integration test now asserts (r2·24)"
+  - path: docs/work/components/method-label.html
+    tier: T3
+    action: updated
+    distills: "migrated to the one Tailwind vocabulary; method-* colours became named tokens in ui/tailwind.config.js rather than literals in the specimen"
+  - path: docs/work/components/segmented-control.html
+    tier: T3
+    action: updated
+    distills: "migrated to the one Tailwind vocabulary and to mounting the real component"
+  - path: docs/work/components/duration-text.html
+    tier: T3
+    action: updated
+    distills: "migrated to the one Tailwind vocabulary; its @avoid line (never a live ticker while in-flight) is now pinned by a unit test"
+  - path: docs/work/components/timestamp-text.html
+    tier: T3
+    action: updated
+    distills: "migrated to the one Tailwind vocabulary; its @avoid line (always local, never UTC) is now pinned by a unit test"
+  - path: docs/work/components/specimen.css
+    tier: T3
+    action: deleted
+    distills: "deviation 1, and the WU's strongest simplification: the sheet was not resolved but dissolved. Its content did not move to another doc — it was replaced by the app's own config, which every design doc now loads directly (ui/tailwind.config.js via doc-assets/components/tw-config.js). Four of its six W5-owned conflicts were translation artifacts, not disagreements; the other two were then decided on merit and live in the design files they belong to. The fourteen private token copies went with it. Lineage is ui/tailwind.config.js — a stronger form of the same guarantee, because there is no second copy to drift and no gate needed to police one"
+  - path: docs/work/components/specimen.js
+    tier: T3
+    action: deleted
+    distills: "relocated verbatim to doc-assets/components/specimen.js — the element-map and state-toggle behaviours a run doc loads. Moved out of docs/ because docs/ holds only HTML; the behaviour and its consumers are unchanged, and design-flow-base.html now cites the new path"
+  - path: docs/work/component-design-base.html
+    tier: T3
+    action: updated
+    distills: "the design-file template rewritten for the one vocabulary: specimens are written in the app's own Tailwind (CDN + tw-config.js importing ui/tailwind.config.js, no generated copy), the specimen's class string IS the component's className verbatim so the two cannot drift, and a value with no utility needs a named token in the config rather than a literal in the doc"
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "the flow template's compose-the-artifacts principle re-pointed at the new mechanism — a run doc loads the same theme and reuses the design files' class strings instead of linking a second stylesheet; asset citations move to doc-assets/components/, and the verify-doc asset check now names tw-config.js"
+  - path: docs/work/2026-07-22-dflow-w2-registry-seed.html
+    tier: T3
+    action: updated
+    distills: "the roster truth pass — rows for the four components W5 designed and the two W4 designed, a new Built column recording what is real code, and the design-to-code edge redrawn from 'built later WU' to 'built in W5'. Every @madeof / @avoid name in the shipped TSDoc resolves to a row here, and collection.test.tsx is what asserts it. The generator edge stays dashed and is now labelled as still owed by W7 (r2·21, r3·11)"
+  - path: docs/work/2026-07-25-dflow-w4-run-2.html
+    tier: T3
+    action: updated
+    distills: "migrated off the deleted sheet onto the one Tailwind vocabulary — an archived run's content is untouched, only how it renders. Its prose reference to specimen.css is kept as plain text rather than a dead link, since the run is a record of what the flow was"
+  - path: docs/work/2026-07-26-dflow-w4-run-3.html
+    tier: T3
+    action: updated
+    distills: "same migration off the deleted sheet, same treatment of the reference. Deliberately still not archived: its tests pin run #3's new predicates against a real artifact"
+  - path: docs/work/2026-07-16-dflow-run-1.html
+    tier: T3
+    action: updated
+    distills: "same migration, mechanical — the W1 bare-flow run is archived and predates every predicate"
