@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+branch: epic/design-flow
+tests:
+  unit:
+    waived: "No behaviour changes. The clippy fix rewrites a Latin-1 test fixture from a byte-char array to the equivalent byte string (*b\"caf\\xe9\") at two call sites; the bytes are identical and the two tests asserting on them (decode::tests::charset_transcoded_to_utf8, api::decode_brotli_charset_and_xml_over_router) already cover the behaviour and still pass unchanged. The remaining five files are docs/work governance retagging."
