@@ -1,0 +1,26 @@
+schema: doc/v1
+epic: E-DFLOW
+branch: epic/design-flow
+changes:
+  - path: docs/work/2026-07-16-dflow-frame-reps.html
+    tier: T3
+    action: updated
+    distills: "governance tag only: data-status review -> draft; representation scratch already merged back into the run doc, so draft is its true state"
+  - path: docs/work/2026-07-16-dflow-elements-reps.html
+    tier: T3
+    action: updated
+    distills: "governance tag only: data-status review -> draft (same rationale)"
+  - path: docs/work/2026-07-16-dflow-mockup-reps.html
+    tier: T3
+    action: updated
+    distills: "governance tag only: data-status review -> draft (same rationale)"
+  - path: docs/work/2026-07-16-dflow-w1-plan.html
+    tier: T3
+    action: updated
+    distills: "tagged the existing test-plan callout data-item=\"test-plan\"; no content change"
+  - path: docs/work/2026-07-20-dflow-w1-result.html
+    tier: T3
+    action: updated
+    distills: "tagged existing sections with the five wu-result items (delivered->outcome, learned->deviations, seeds->follow-ups, gate split into evidence + distillation); added one Artifacts bullet under evidence linking the three deliverables already named in the doc"
+t2_waived: "Nothing to distil. The code change is a clippy byte_char_slices rewrite of a test fixture with identical bytes and no behaviour change; the doc changes correct machine-readable governance tags that were red since f70797a, adding no new project fact. The T3 docs' content is unchanged."
+date: 2026-08-02
