@@ -68,6 +68,12 @@
           <td>A design run is a governed artifact checked on every write; its receipt covers <strong>soft rules only</strong> — a rule with a Tier-1 predicate is judged by the predicate, never by the run's claim about itself — with coverage read from the rulebook on disk and the unimplemented gap printed rather than filed. The gate proves a receipt is complete and well-formed, never that it is true</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-16-design-file-retirement.html"><code>dec-16-design-file-retirement.html</code></a></td>
+          <td><span class="badge id">DEC-16</span></td>
+          <td>Retiring a design file whose component is built runs in one order — <strong>distil the forks to <code>docs/decisions/</code>, verify the TSDoc block is complete, then remove</strong> — because code-as-truth carries the contract and never the <em>why</em>: the fork cards and frame drivers are the part nobody re-reads, which is exactly why the file looks redundant. W7 enforces the order as a predicate, not a paragraph</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

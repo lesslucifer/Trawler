@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — MethodLabel component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="../../../doc-assets/components/tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t2{color:var(--ok);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
     /* row / panel chrome */
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:520px;}
     .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
@@ -18,8 +19,6 @@
     .list-row .r{text-align:right;}
     .list-row .tm{color:var(--a-mute);}
     .list-row .du{color:var(--a-mute);font-variant-numeric:tabular-nums;}
-    /* method label atoms */
-    .ml{color:var(--a-body);font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;text-transform:uppercase;display:inline-block;width:4.5ch;/* ponytail: ch-based fixed width, good enough for 3–7 char methods at one font */}
     /* swatch grids */
     .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;}
     .swatch .panel{max-width:none;display:flex;align-items:center;gap:8px;}
@@ -41,14 +40,7 @@
     .spill{font-family:"DM Mono",ui-monospace,monospace;font-size:11px;font-variant-numeric:tabular-nums;}
     .spill.ok{color:var(--a-ok);}
     .spill.warn{color:var(--a-warn);}
-    .spill.muted{color:var(--a-mute);}
-    /* verb→color mapping (fork D1 settled: per-verb color; unmapped verbs keep .ml body tone) */
-    .ml-clr-get{color:#4cc38a;}
-    .ml-clr-post{color:#e5bf4d;}
-    .ml-clr-put{color:#e5924d;}
-    .ml-clr-del{color:#e5484d;}
-    .ml-clr-patch{color:#a78bfa;}
-  </style>
+    .spill.muted{color:var(--a-mute);}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -84,7 +76,7 @@
     <div class="app" data-c="anatomy-specimen">
       <div class="list-row" style="grid-template-columns:110px 70px 180px 1fr 70px 90px;">
         <span class="tm">12:04:31</span>
-        <span><span class="ml ml-clr-get" id="anno-verb">GET<span class="anno">1</span></span></span>
+        <span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-get" id="anno-verb">GET<span class="anno">1</span></span></span>
         <span class="truncate" style="color:var(--a-body);">api.example.com</span>
         <span class="truncate" style="color:var(--a-body);">/v2/orders/8f3a91c2</span>
         <span class="r"><span class="spill ok">200</span></span>
@@ -95,10 +87,10 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="display:flex;gap:16px;align-items:center;">
-            <span class="ml ml-clr-get">GET</span>
-            <span class="ml ml-clr-post">POST</span>
-            <span class="ml ml-clr-del">DELETE</span>
-            <span class="ml">OPTIONS</span>
+            <span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-get">GET</span>
+            <span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-post">POST</span>
+            <span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-delete">DELETE</span>
+            <span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">OPTIONS</span>
           </div>
           <div class="cap">all four at once — left edges align; OPTIONS does not push GET rightward. Mapped verbs carry their color; OPTIONS falls back to body tone</div>
         </div>
@@ -118,10 +110,10 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-            <span class="ml ml-clr-get">GET</span>
-            <span class="ml ml-clr-post">POST</span>
-            <span class="ml ml-clr-del">DELETE</span>
-            <span class="ml">HEAD</span>
+            <span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-get">GET</span>
+            <span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-post">POST</span>
+            <span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-delete">DELETE</span>
+            <span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">HEAD</span>
           </div>
           <div class="cap">caller passes the raw verb; the component resolves the color — never the call site</div>
         </div>
@@ -137,10 +129,10 @@
         <div class="ex">
           <div class="panel" style="display:flex;flex-direction:column;gap:6px;">
             <div style="display:flex;gap:16px;">
-              <span class="ml ml-clr-get">GET</span><span style="color:var(--a-mute);font-size:11px;margin-left:4px;">3 ch</span>
+              <span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-get">GET</span><span style="color:var(--a-mute);font-size:11px;margin-left:4px;">3 ch</span>
             </div>
             <div style="display:flex;gap:16px;">
-              <span class="ml">OPTIONS</span><span style="color:var(--a-mute);font-size:11px;margin-left:4px;">7 ch</span>
+              <span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">OPTIONS</span><span style="color:var(--a-mute);font-size:11px;margin-left:4px;">7 ch</span>
             </div>
           </div>
           <div class="cap">both occupy the same slot width; the column to the right stays still</div>
@@ -157,7 +149,7 @@
         <div class="ex">
           <div class="panel" style="display:flex;gap:12px;align-items:center;">
             <span style="color:var(--a-mute);font-size:11px;">API sends "get" →</span>
-            <span class="ml ml-clr-get">GET</span>
+            <span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-get">GET</span>
           </div>
           <div class="cap">caller passes the raw value; component normalises to uppercase</div>
         </div>
@@ -172,7 +164,7 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="display:flex;gap:12px;align-items:center;">
-            <span class="ml ml-clr-get">GET</span>
+            <span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-get">GET</span>
             <span style="color:var(--a-mute);font-size:11px;">← no truncation, no tooltip</span>
           </div>
           <div class="cap">all methods fit; truncation would hide the value the user needs</div>
@@ -191,39 +183,39 @@
     <p data-c="states-intro" style="color:var(--muted);">MethodLabel is value-variant, not interaction-variant. The "states" are the full set of HTTP methods it must render, each resolved through the verb→color mapping — five scan-target verbs carry a color token, the rest fall back to body tone. There is no hover, focus, or click state — the component is text.</p>
     <div class="app swatches" data-c="states">
       <div class="swatch">
-        <div class="panel"><span class="ml ml-clr-get">GET</span></div>
+        <div class="panel"><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-get">GET</span></div>
         <div class="cap"><strong>GET</strong> — method-get #4cc38a</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="ml ml-clr-post">POST</span></div>
+        <div class="panel"><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-post">POST</span></div>
         <div class="cap"><strong>POST</strong> — method-post #e5bf4d</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="ml ml-clr-put">PUT</span></div>
+        <div class="panel"><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-put">PUT</span></div>
         <div class="cap"><strong>PUT</strong> — method-put #e5924d</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="ml ml-clr-del">DELETE</span></div>
+        <div class="panel"><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-delete">DELETE</span></div>
         <div class="cap"><strong>DELETE</strong> — method-delete #e5484d</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="ml ml-clr-patch">PATCH</span></div>
+        <div class="panel"><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-patch">PATCH</span></div>
         <div class="cap"><strong>PATCH</strong> — method-patch #a78bfa</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="ml">HEAD</span></div>
+        <div class="panel"><span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">HEAD</span></div>
         <div class="cap"><strong>HEAD</strong> — body fallback</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="ml">OPTIONS</span></div>
+        <div class="panel"><span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">OPTIONS</span></div>
         <div class="cap"><strong>OPTIONS</strong> — body fallback · 7 ch ceiling</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="ml">CONNECT</span></div>
+        <div class="panel"><span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">CONNECT</span></div>
         <div class="cap"><strong>CONNECT</strong> — body fallback · 7 ch ceiling</div>
       </div>
       <div class="swatch">
-        <div class="panel"><span class="ml">TRACE</span></div>
+        <div class="panel"><span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">TRACE</span></div>
         <div class="cap"><strong>TRACE</strong> — body fallback</div>
       </div>
     </div>
@@ -241,7 +233,7 @@
         <div style="margin-top:8px;">
           <div class="list-row" style="grid-template-columns:110px 70px 180px 1fr 70px 90px;margin-bottom:4px;">
             <span class="tm">12:04:31</span>
-            <span><span class="ml ml-clr-get">GET</span></span>
+            <span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-get">GET</span></span>
             <span style="color:var(--a-body);" class="truncate">api.example.com</span>
             <span style="color:var(--a-body);" class="truncate">/v2/orders</span>
             <span class="r"><span class="spill ok">200</span></span>
@@ -249,7 +241,7 @@
           </div>
           <div class="list-row" style="grid-template-columns:110px 70px 180px 1fr 70px 90px;margin-bottom:4px;">
             <span class="tm">12:04:32</span>
-            <span><span class="ml ml-clr-post">POST</span></span>
+            <span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-post">POST</span></span>
             <span style="color:var(--a-body);" class="truncate">api.example.com</span>
             <span style="color:var(--a-body);" class="truncate">/v2/orders</span>
             <span class="r"><span class="spill ok">201</span></span>
@@ -257,7 +249,7 @@
           </div>
           <div class="list-row" style="grid-template-columns:110px 70px 180px 1fr 70px 90px;">
             <span class="tm">12:04:33</span>
-            <span><span class="ml ml-clr-del">DELETE</span></span>
+            <span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-delete">DELETE</span></span>
             <span style="color:var(--a-body);" class="truncate">api.example.com</span>
             <span style="color:var(--a-body);" class="truncate">/v2/orders/8f3a91c2</span>
             <span class="r"><span class="spill ok">204</span></span>
@@ -267,11 +259,11 @@
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;"><strong>Settled: per-verb color coding</strong> — manager decision on review, taking the promotion path this fork had reserved: an explicit T2 with named tokens, never an ad-hoc tint. The familiar Postman/Insomnia convention: five scan-target verbs get tokens (GET #4cc38a · POST #e5bf4d · PUT #e5924d · DELETE #e5484d · PATCH #a78bfa); HEAD/OPTIONS/CONNECT/TRACE and non-standard verbs stay body tone — plumbing verbs add noise, not scan value. Method tokens join ok/warn as named DEC-11 chromatic exceptions (token map below). GET shares the ok hue and DELETE the warn hue deliberately — same semantic family (safe vs destructive); column position disambiguates method from status.</p>
       </div>
       <div class="card">
-        <strong>alt: body tone only — zero color</strong> <span class="badge warn">superseded 2026-07-23 — manager prefers color</span>
+        <strong>alt: body tone only — zero color</strong> <span class="badge text-warn">superseded 2026-07-23 — manager prefers color</span>
         <div style="margin-top:8px;">
           <div class="list-row" style="grid-template-columns:110px 70px 180px 1fr 70px 90px;margin-bottom:4px;">
             <span class="tm">12:04:31</span>
-            <span><span class="ml">GET</span></span>
+            <span><span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">GET</span></span>
             <span style="color:var(--a-body);" class="truncate">api.example.com</span>
             <span style="color:var(--a-body);" class="truncate">/v2/orders</span>
             <span class="r"><span class="spill ok">200</span></span>
@@ -279,7 +271,7 @@
           </div>
           <div class="list-row" style="grid-template-columns:110px 70px 180px 1fr 70px 90px;margin-bottom:4px;">
             <span class="tm">12:04:32</span>
-            <span><span class="ml">POST</span></span>
+            <span><span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">POST</span></span>
             <span style="color:var(--a-body);" class="truncate">api.example.com</span>
             <span style="color:var(--a-body);" class="truncate">/v2/orders</span>
             <span class="r"><span class="spill ok">201</span></span>
@@ -287,7 +279,7 @@
           </div>
           <div class="list-row" style="grid-template-columns:110px 70px 180px 1fr 70px 90px;">
             <span class="tm">12:04:33</span>
-            <span><span class="ml">DELETE</span></span>
+            <span><span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">DELETE</span></span>
             <span style="color:var(--a-body);" class="truncate">api.example.com</span>
             <span style="color:var(--a-body);" class="truncate">/v2/orders/8f3a91c2</span>
             <span class="r"><span class="spill ok">204</span></span>
@@ -302,17 +294,17 @@
       <div class="card">
         <strong>D2 · fixed-width mechanism</strong> <span class="badge auto">settled: ch-unit min-width on the component</span>
         <div class="panel" style="margin-top:8px;display:flex;gap:16px;">
-          <span class="ml">GET</span>
-          <span class="ml">OPTIONS</span>
+          <span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">GET</span>
+          <span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">OPTIONS</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;"><strong>ch-unit <code>min-width</code> on the component span.</strong> The list grid column (<code>70px</code> in <code>FlowList.tsx:9</code>) already handles column alignment in the list — but the identity bar and any future context are not grid columns. A <code>min-width: 4.5ch</code> on the component guarantees the verb never causes a layout shift in any parent. The ch unit tracks the mono font so the slot self-calibrates if the font stack changes.</p>
       </div>
       <div class="card">
-        <strong>alt: rely solely on the grid column</strong> <span class="badge warn">rejected — not portable</span>
+        <strong>alt: rely solely on the grid column</strong> <span class="badge text-warn">rejected — not portable</span>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">The list column does the alignment today (<code>FlowList.tsx:9</code>). But the detail identity bar (<code>FlowDetail.tsx:62</code>) is a flex row — no grid. A bare <code>&lt;span&gt;</code> in a flex row gives different widths per method, so the bar wiggles when navigating between flows. The fix must live in the component, not each caller.</p>
       </div>
       <div class="card">
-        <strong>alt: fixed px width</strong> <span class="badge warn">rejected</span>
+        <strong>alt: fixed px width</strong> <span class="badge text-warn">rejected</span>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;">A hardcoded px value (e.g. <code>52px</code>) would break if the mono font stack changes or if the base font size is adjusted. ch units self-calibrate; px units don't.</p>
       </div>
     </div>
@@ -321,13 +313,13 @@
       <div class="card">
         <strong>D3 · fallback tone for unmapped verbs: body vs mute</strong> <span class="badge auto">settled: body tone (<code>ink-body</code>)</span>
         <div class="panel" style="margin-top:8px;display:flex;gap:16px;align-items:center;">
-          <span class="ml">OPTIONS</span>
+          <span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">OPTIONS</span>
           <span style="font-size:11px;color:var(--a-mute);">body: #c9c0ad — reads clearly, slightly below ink</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:8px;"><strong>Body tone</strong> for verbs outside the color mapping (HEAD, OPTIONS, CONNECT, TRACE, non-standard). The method is data — a primary field in the row even without a token. Mute tone is reserved for metadata (timestamp, duration) per the shipped <code>FlowList.tsx:79,86</code> pattern.</p>
       </div>
       <div class="card">
-        <strong>alt: mute tone (<code>ink-mute</code>)</strong> <span class="badge warn">rejected</span>
+        <strong>alt: mute tone (<code>ink-mute</code>)</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;display:flex;gap:16px;align-items:center;">
           <span style="color:var(--a-mute);font-family:'DM Mono',ui-monospace,monospace;font-size:12.5px;text-transform:uppercase;min-width:4.5ch;">OPTIONS</span>
           <span style="font-size:11px;color:var(--a-mute);">mute: #aea69c — recedes too far; method loses prominence</span>
@@ -392,31 +384,31 @@
           <span style="color:var(--a-mute);font-family:Inter,system-ui,sans-serif;font-size:10px;text-transform:uppercase;letter-spacing:.05em;text-align:right;">Status</span>
         </div>
         <div class="list-row" style="grid-template-columns:110px 70px 1fr 80px;">
-          <span class="tm">12:04:31</span><span><span class="ml ml-clr-get">GET</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders</span><span class="r"><span class="spill ok">200</span></span>
+          <span class="tm">12:04:31</span><span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-get">GET</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders</span><span class="r"><span class="spill ok">200</span></span>
         </div>
         <div class="list-row" style="grid-template-columns:110px 70px 1fr 80px;">
-          <span class="tm">12:04:32</span><span><span class="ml ml-clr-post">POST</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders</span><span class="r"><span class="spill ok">201</span></span>
+          <span class="tm">12:04:32</span><span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-post">POST</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders</span><span class="r"><span class="spill ok">201</span></span>
         </div>
         <div class="list-row" style="grid-template-columns:110px 70px 1fr 80px;">
-          <span class="tm">12:04:33</span><span><span class="ml ml-clr-put">PUT</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders/8f3a91c2</span><span class="r"><span class="spill ok">200</span></span>
+          <span class="tm">12:04:33</span><span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-put">PUT</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders/8f3a91c2</span><span class="r"><span class="spill ok">200</span></span>
         </div>
         <div class="list-row" style="grid-template-columns:110px 70px 1fr 80px;">
-          <span class="tm">12:04:34</span><span><span class="ml ml-clr-del">DELETE</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders/8f3a91c2</span><span class="r"><span class="spill ok">204</span></span>
+          <span class="tm">12:04:34</span><span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-delete">DELETE</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders/8f3a91c2</span><span class="r"><span class="spill ok">204</span></span>
         </div>
         <div class="list-row" style="grid-template-columns:110px 70px 1fr 80px;">
-          <span class="tm">12:04:35</span><span><span class="ml ml-clr-patch">PATCH</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders/8f3a91c2</span><span class="r"><span class="spill ok">200</span></span>
+          <span class="tm">12:04:35</span><span><span class="font-mono text-value uppercase inline-block w-[4.5ch] text-method-patch">PATCH</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders/8f3a91c2</span><span class="r"><span class="spill ok">200</span></span>
         </div>
         <div class="list-row" style="grid-template-columns:110px 70px 1fr 80px;">
-          <span class="tm">12:04:36</span><span><span class="ml">HEAD</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders</span><span class="r"><span class="spill ok">200</span></span>
+          <span class="tm">12:04:36</span><span><span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">HEAD</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders</span><span class="r"><span class="spill ok">200</span></span>
         </div>
         <div class="list-row" style="grid-template-columns:110px 70px 1fr 80px;">
-          <span class="tm">12:04:37</span><span><span class="ml">OPTIONS</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders</span><span class="r"><span class="spill muted">204</span></span>
+          <span class="tm">12:04:37</span><span><span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">OPTIONS</span></span><span style="color:var(--a-body);" class="truncate">/v2/orders</span><span class="r"><span class="spill muted">204</span></span>
         </div>
         <div class="list-row" style="grid-template-columns:110px 70px 1fr 80px;">
-          <span class="tm">12:04:38</span><span><span class="ml">CONNECT</span></span><span style="color:var(--a-body);" class="truncate">/v2/tunnel</span><span class="r"><span class="spill muted">200</span></span>
+          <span class="tm">12:04:38</span><span><span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">CONNECT</span></span><span style="color:var(--a-body);" class="truncate">/v2/tunnel</span><span class="r"><span class="spill muted">200</span></span>
         </div>
         <div class="list-row" style="grid-template-columns:110px 70px 1fr 80px;border-bottom:none;">
-          <span class="tm">12:04:39</span><span><span class="ml">TRACE</span></span><span style="color:var(--a-body);" class="truncate">/v2/debug</span><span class="r"><span class="spill muted">200</span></span>
+          <span class="tm">12:04:39</span><span><span class="text-ink-body font-mono text-value uppercase inline-block w-[4.5ch]">TRACE</span></span><span style="color:var(--a-body);" class="truncate">/v2/debug</span><span class="r"><span class="spill muted">200</span></span>
         </div>
       </div>
       <div class="caption" style="color:var(--muted);font-size:12px;margin-top:8px;">All nine standard HTTP methods. Left edges of the method column align; the path column is stable across all rows. Rendered in Warp tokens — the five mapped verbs carry their color, HEAD/OPTIONS/CONNECT/TRACE stay body tone (fork D1/D3). The 7-char ceiling (OPTIONS, CONNECT) sets the slot; GET/PUT/HEAD/etc. all align to it.</div>

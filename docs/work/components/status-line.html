@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a66c3e99f34851f0dfa9a75">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — StatusLine component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="../../../doc-assets/components/tw-config.js"></script>
+  <style>
+    /* Component values come from specimen.css — .sl* is this component's block
+       there, and the glyph/message tones are TonedText's (.sp-*), which this
+       component composes rather than draws. Doc scaffolding only below. */
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);}
+
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;display:flex;align-items:center;gap:10px;padding:10px 12px;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:var(--a-ui);}
+    .tsdoc{font-family:var(--a-mono);font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .app .fork-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;}
+    .app .fork-card{background:var(--a-soft);border:1px solid var(--a-line);border-radius:6px;padding:10px 12px;min-width:190px;flex:1;}
+    .app .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--a-mute);margin-bottom:6px;font-family:var(--a-ui);}
+    .app .fork-card .fc-ex{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:6px;}
+    .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:var(--a-ui);}
+    .prec td,.prec th{vertical-align:top;font-size:12.5px;}
+    .prec code{font-size:11.5px;}
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
+    .callout.ok{border-color:var(--ok);}</style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>StatusLine <span class="tier t2">T2</span></h1>
+      <p>A precondition's resolved verdict on one line — glyph, name, short message — where the verdict is what has actually been observed, not what was last clicked.</p>
+      <div class="meta">Component design · <strong>draft — awaiting confirmation</strong> · 2026-07-27 · E-DFLOW.W5 · T3 (docs/work/components/) · proposed by <a href="../2026-07-26-dflow-w4-run-3.html#elements">run #3</a> (×3, in <code>PreconditionRow</code>) · fixes <a href="../2026-07-26-dflow-w4-run-3.html#findings">findings 2 · 22</a> · <code>@madeof</code> <a href="toned-text.html">TonedText</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> nothing in the roster carries a non-HTTP status with a message. <a href="status-pill.html">StatusPill</a> is the only status component and its <code>@avoid</code> excludes exactly this case; <a href="notice.html">Notice</a> is one sentence about a zone's absence, not a per-item verdict; <a href="toned-text.html">TonedText</a> is a tone and some text with no notion of which verdict wins. <strong>Run #3's setup screen needed this three times in the one zone that carries the screen's whole meaning</strong> — is the certificate trusted, is the proxy set, is traffic arriving — and had to compose it from parts. The reason it is T2 and not a layout helper: <em>which verdict is true</em> is business logic the app already ships (<code>trustStatus</code> / <code>proxyStatus</code> / <code>verifyStatus</code>, <code>setup.ts:206–262</code>), and it is not obvious — an authoritative positive must beat a stale error.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t2">T2 Widget</span> — owns the verdict precedence (authoritative positive &gt; in-flight &gt; error &gt; inference &gt; unknown) and the glyph→tone pairing → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>the setup screen's three preconditions — certificate · proxy · verify (<a href="../2026-07-26-dflow-w4-run-3.html#elements">run #3</a>, inside <code>PreconditionRow</code> ×3) · any future checklist, health panel, or diagnostic where an item reports a resolved state with a reason</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>the <em>logic</em> ships and is unit-tested — <code>StepStatusView {glyph, tone, message}</code> (<code>setup.ts:191</code>) returned by three resolvers; the <em>rendering</em> is inline in <code>Onboarding.tsx</code>. This component is the render side, and it takes the shipped view struct as its input</td></tr>
+      <tr><td><strong>Made of</strong></td><td><a href="toned-text.html">TonedText</a> — the glyph and, when present, the message tone. StatusLine adds the precedence, the name, and the in-flight case; TonedText adds the colour</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① three of these are scanned together, top to bottom</td><td>one line, fixed leading, and a <strong>short</strong> message — <a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 22</a>. A status line is scanned, not read; the elaboration belongs to the zone body below it, where there is room</td></tr>
+        <tr><td>② the verdict must never overstate (the epic's trust-critical rule)</td><td>a resolved <code>muted</code> "can't check" is a first-class outcome, not a failure and not a blank. The component renders what it is handed and never infers a positive from silence</td></tr>
+        <tr><td>③ an authoritative positive outranks a stale error</td><td>the precedence is <em>inside</em> the component's contract (and already inside the shipped resolvers): the CA is trusted whatever the last click did. This single rule is what makes it T2</td></tr>
+        <tr><td>④ the actions behind it take seconds and show an OS prompt</td><td>an explicit in-flight verdict (<code>⟳</code>, muted) that is a state of the <em>line</em>, not of the button beside it — the home <a href="button.html">Button</a>'s <code>@states</code> delegates to "the caller's zone" (<a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 7</a>)</td></tr>
+        <tr><td>⑤ colour is never the only channel (<code>colour-plus-text</code>)</td><td>the glyph is required and distinct per verdict shape (<code>✓ ⚠ ◐ ○ ⟳</code>) — so the line reads correctly in greyscale. This is the obligation <a href="toned-text.html">TonedText</a>'s D2 states and cannot enforce; StatusLine discharges it</td></tr>
+        <tr><td>⑥ zero chromatic accent (Warp DEC-11, <code>zero-accent</code>)</td><td>three tones only, and they arrive already resolved. No fourth tone, no per-verdict hue — the glyph carries the distinction that colour cannot</td></tr>
+        <tr><td>⑦ never a checkbox — "a tick lies in most real states" (run #3's Frame)</td><td>no box, no control affordance, no interactivity. A checkbox promises two states to something that has five, and promises the user can set it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="precedence">The precedence — the business logic that makes this T2</h2>
+    <p style="color:var(--muted);">Read top to bottom; the first row that matches is the verdict. This is not new logic — it is <code>setup.ts:206–262</code> stated as a contract, so a second tenant inherits the reasoning instead of re-deriving it. A component that got this order wrong would be actively misleading, which is why it cannot be a T1.</p>
+    <table data-c="precedence" class="prec">
+      <thead><tr><th>#</th><th>Condition</th><th>Verdict</th><th>Why it ranks here</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>an action is running</td><td><span class="app"><span class="text-body leading-none font-ui text-ink-mute">⟳</span></span> muted · "Installing…"</td><td>the truest thing about right now is that we are working. Suppresses every stale reading beneath it, including a previous error (driver ④)</td></tr>
+        <tr><td>2</td><td>the probe says yes</td><td><span class="app"><span class="text-body leading-none font-ui text-ok">✓</span></span> ok</td><td><strong>an authoritative positive beats a stale error</strong> — the machine trusts the CA whatever the last click did (driver ③, <code>setup.ts:214</code>)</td></tr>
+        <tr><td>3</td><td>observed evidence proves it</td><td><span class="app"><span class="text-body leading-none font-ui text-ok">✓</span></span> ok · "confirmed by captured traffic"</td><td>a decrypted flow is proof the probe could not obtain — evidence outranks an unavailable check, and still outranks the error</td></tr>
+        <tr><td>4</td><td>the last action failed</td><td><span class="app"><span class="text-body leading-none font-ui text-warn">⚠</span></span> warn · "Install failed — …"</td><td>only reached when nothing above proved success. Below both positives by design: an error that has since been overtaken is noise</td></tr>
+        <tr><td>5</td><td>partial evidence contradicts</td><td><span class="app"><span class="text-body leading-none font-ui text-warn">⚠</span></span> warn · "arriving but not decrypting"</td><td>traffic without decryption points at the sending device — a warning, not a red error (<code>setup.ts:219</code>)</td></tr>
+        <tr><td>6</td><td>the probe cannot run here</td><td><span class="app"><span class="text-body leading-none font-ui text-ink-mute">◐</span></span> muted · "can't check automatically"</td><td>a resolved verdict, not a failure and not a blank (driver ②). The half-glyph is the shape of "unknown", distinct from "no"</td></tr>
+        <tr><td>7</td><td>nothing yet</td><td><span class="app"><span class="text-body leading-none font-ui text-ink-mute">○</span></span> muted · "not … yet"</td><td>the honest floor. "Yet" is load-bearing microcopy — the state is pending, not broken</td></tr>
+      </tbody>
+    </table>
+    <div class="callout ok" data-c="prec-boundary">
+      <strong>Where the precedence lives.</strong> The <em>resolvers</em> stay in the domain (<code>setup.ts</code>) — they read probes, observations, and running flags this component has no business knowing. What StatusLine owns is the <strong>contract</strong> that a verdict is already resolved by this order, and the guarantee that it will render the result faithfully: it never re-ranks, never merges two verdicts, and never substitutes a friendlier one. Fork D1 settles the API that makes this true — the component takes <em>one</em> resolved verdict, never the raw inputs. So the T2 line is: <em>StatusLine owns the shape of a verdict and the promise of the order; the domain owns which one is true.</em>
+    </div>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-hero">
+      <div class="panel" style="max-width:430px;">
+        <div class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]">
+          <span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">◐<span class="anno" style="position:absolute;transform:translate(0,-14px);z-index:1;">1</span></span><span class="text-ink-body font-ui shrink-0">certificate<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">2</span></span></span>
+          <span class="text-ink-mute font-ui min-w-0">can't check from here<span class="anno" style="position:absolute;transform:translate(2px,-14px);z-index:1;">3</span></span>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">Glyph · name · short message — the whole component, on one line</div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;flex-direction:column;gap:5px;">
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-mute font-ui min-w-0">resolved yes</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-mute font-ui min-w-0">needs attention</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="text-body leading-none font-ui text-ink-mute">◐</span><span class="text-ink-mute font-ui min-w-0">can't determine</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="text-body leading-none font-ui text-ink-mute">○</span><span class="text-ink-mute font-ui min-w-0">not yet</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-block w-spinner h-spinner border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px]"></span><span class="text-ink-mute font-ui min-w-0">working</span></span>
+          </div>
+          <div class="cap">five shapes, three tones — the glyph is the greyscale channel</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> the glyph</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>required, from the verdict: <code>✓</code> resolved-yes · <code>⚠</code> attention · <code>◐</code> can't-determine · <code>○</code> not-yet · <code>⟳</code> in-flight (rendered as a spinner, fork D3). A <a href="toned-text.html">TonedText</a> in the verdict's tone, <code>aria-hidden</code> — the message is the accessible text.</span>
+            <span class="k">why</span><span>five distinguishable shapes, not five colours: at three tones two verdict pairs share a tone (<code>◐</code>/<code>○</code> muted, <code>⚠</code>×2 warn), so the glyph is what separates them — and it is the whole reason the line survives greyscale (driver ⑤). The values are the domain's, verbatim (<code>setup.ts:214–229</code>): a component that re-chose them would fork the vocabulary the resolvers already ship.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;flex-direction:column;gap:5px;">
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-body font-ui shrink-0">proxy</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span>
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span>
+          </div>
+          <div class="cap">with a name · without — the name is optional</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> the name</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>optional string, Inter at <code>ink-body</code> — <strong>never toned</strong>, never truncated, <code>flex-shrink:0</code>. One or two lowercase words naming the thing being reported ("certificate", "proxy"). Omitted when the host already labels the row.</span>
+            <span class="k">why</span><span><code>ink-body</code> and untoned so three stacked lines read as a list of subjects with a verdict each, rather than three coloured sentences — the eye lands on the glyph column, then the name, then the message. Optional because <code>PreconditionRow</code> may carry its own heading; <code>labels-add-context</code> wants the subject named once, not twice. Never truncated: "certificate" abbreviated is not a shorter status, it is a worse one.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="max-width:none;">
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">not decrypting</span></span>
+            <div style="margin-top:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);border-top:1px solid var(--a-line);padding-top:6px;">Traffic is arriving but not decrypting — install the certificate on the device you're capturing from.</div>
+          </div>
+          <div class="cap">short on the line, the long sentence in the body below</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> the short message</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>required, Inter at <code>ink-mute</code>, <strong>a fragment not a sentence</strong> — no trailing period, lowercase, target ≤ 40 characters. Wraps if it must (never truncated, never ellipsised); the line grows rather than hiding a word.</span>
+            <span class="k">why</span><span>three of these are scanned together (driver ①), and <a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 22</a> is precisely this: the shipped resolvers return full sentences, so run #3's mockup wrote fragments the domain cannot produce. <strong>The boundary is misplaced, not the copy</strong> — the contract here asks for the short form, the elaboration goes in the zone body where there is room, and closing the gap is a domain change (<code>setup.ts</code>) that W5 marks with a <code>[UI_DEFER]</code> TODO rather than making. <code>ink-mute</code> keeps it quieter than the name: the message is the detail, the glyph is the verdict.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout warn" data-c="microcopy-gap">
+      <strong>The one contract this component cannot honour on its own.</strong> <code>trustStatus</code> and <code>proxyStatus</code> return sentences like <em>"Can't check automatically — we'll confirm when traffic arrives."</em> (<code>setup.ts:227</code>). StatusLine specs the short fragment, so <strong>until the domain returns both a short and a long form, a tenant either renders the long sentence on the line or shortens it at the call site</strong> — and a screen shortening a message it does not own is the boundary error finding 22 names. W5 records it at the source (a <code>// TODO [UI_DEFER]</code> at the microcopy boundary in <code>setup.ts</code>, per the plan's Q3) rather than papering over it here. <em>Stated in <code>@avoid</code>: never shorten a domain message at the call site.</em>
+    </div>
+    <div class="callout" data-c="no-checkbox">
+      <strong>No checkbox, no toggle, no chevron.</strong> Run #3's Frame put it plainly: <em>a tick lies in most real states</em> — a checkbox offers two states to something that has five, and looks settable when the user cannot set it. Disclosure of the body below is <code>PreconditionRow</code>'s, and it makes the whole status row the target (<code>generous-targets</code>), which is also why <a href="icon-button.html">IconButton</a> was rejected for a chevron here. StatusLine itself is pure display (driver ⑦).
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">trusted on this machine</span></span></div>
+        <div class="cap"><strong>ok</strong> — resolved yes. <code>✓</code> in <code>text-ok</code>; reached by precedence 2 or 3</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">not decrypting</span></span></div>
+        <div class="cap"><strong>warn</strong> — needs attention. <code>⚠</code> in <code>text-warn</code>; precedence 4 or 5</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">◐</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">can't check from here</span></span></div>
+        <div class="cap"><strong>muted · can't determine</strong> — <code>◐</code>. A resolved verdict, not a failure (driver ②)</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">○</span><span class="text-ink-body font-ui shrink-0">proxy</span></span><span class="text-ink-mute font-ui min-w-0">no traffic reaching trawler yet</span></span></div>
+        <div class="cap"><strong>muted · not yet</strong> — <code>○</code>. Same tone as above, different shape: the glyph carries it</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="inline-block w-spinner h-spinner border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px]"></span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">installing…</span></span></div>
+        <div class="cap"><strong>in-flight</strong> — spinner, muted, ellipsis. Precedence 1: outranks everything, including a previous error</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span></div>
+        <div class="cap"><strong>no name</strong> — the optional-name variant of any of the five, for a host that labels its own row</div>
+      </div>
+    </div>
+    <p style="color:var(--muted);font-size:12px;">Five verdict states × (with name · without) — and the states are <em>verdict shapes</em>, not tones: <code>◐</code> and <code>○</code> are both muted, <code>⚠</code> covers two precedence rows. Reading the tone alone loses information, which is the point of driver ⑤.</p>
+    <div class="callout warn" data-c="non-states">
+      <strong>Deliberately absent:</strong>
+      <ul style="margin:6px 0 0 0;">
+        <li><strong>no empty state</strong> — a precondition always has a verdict; the resolvers' floor is <code>○ … yet</code> (precedence 7), never nothing. A host with no verdict to show renders no StatusLine.</li>
+        <li><strong>no disabled state</strong> — run #3's Frame bans an unmet predecessor locking a successor. All three preconditions always report.</li>
+        <li><strong>no interaction states</strong> — pure display (driver ⑦); the surrounding row owns the target.</li>
+        <li><strong>no error state distinct from <code>warn</code></strong> — a failed action <em>is</em> a warn verdict with a reason (precedence 4). A separate error tone would need a fourth colour, and DEC-11 has three.</li>
+        <li><strong>no success animation</strong> — the verdict flipping to <code>✓</code> is the feedback. A celebration on a security precondition reads as reassurance the app cannot always justify (driver ②).</li>
+      </ul>
+    </div>
+
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app" data-c="d1">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D1 · API — take one resolved verdict, never the raw inputs</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex">
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-body font-ui shrink-0">proxy</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span>
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">&lt;StatusLine name="proxy" verdict={proxyStatus(…)} /&gt;</span>
+          </div>
+          <div class="fc-note"><strong><code>{glyph, tone, message}</code> in — the shipped <code>StepStatusView</code> exactly</strong> (<code>setup.ts:191</code>). The resolvers are pure, unit-tested, and read probes plus observations this component must not know. StatusLine owns the <em>shape and the promise of the order</em>; the domain owns which verdict is true. Zero duplication: the struct already exists and already has tests.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">&lt;StatusLine probe="untrusted" seen={…} running={null} error={…} /&gt;</span>
+          </div>
+          <div class="fc-note"><strong>Raw inputs in, precedence inside the component.</strong> Symmetric with <a href="status-pill.html">StatusPill</a>'s fork D4 (status-in, not tone-in), which is the real argument for it. Rejected: StatusPill's mapping is <em>universal</em> HTTP semantics, while this precedence reads capture observations and running flags — domain state a component would have to import. It would also duplicate three tested resolvers and let the two copies drift on the one rule that must not (driver ③).</div>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:4px;"><strong>The asymmetry is deliberate and worth naming</strong>, because a reviewer will read D1 against StatusPill's D4 and see a contradiction. Both put business logic where the inputs live: HTTP status → display is a pure total function of one number, so StatusPill absorbs it. Probe + observations + running + error → verdict is a function of app state, so the domain keeps it and StatusLine takes the result. <em>The tier is the same (T2) because owning the verdict's form and guaranteeing its order is still business logic — it is just not the resolution step.</em></div>
+    </div>
+    <div class="app" data-c="d2" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D2 · short message on the line, elaboration in the body below</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex">
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">not decrypting</span></span>
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);border-top:1px solid var(--a-line);padding-top:4px;">…install the certificate on the device you're capturing from. ← the body's</span>
+          </div>
+          <div class="fc-note"><strong>A fragment, ≤ ~40 chars.</strong> Three lines are scanned as a column (driver ①); a sentence per line makes the column a paragraph and the glyphs stop lining up. The remedy belongs where the user acts on it. Cost, disclosed: the domain does not return the short form yet — hence the <code>[UI_DEFER]</code> marker, not a silent shortening.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]" style="max-width:250px;"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">Traffic is arriving but not decrypting — install the certificate on the device you're capturing from.</span></span>
+          </div>
+          <div class="fc-note"><strong>Render whatever the domain returns, full sentence and all.</strong> Honest today and needs no domain change. Rejected: it makes the component's spec "however long the caller's string is", so three preconditions become three wrapped paragraphs and the scan column is gone. The contract should describe the design, and the gap should be visible.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d3" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D3 · in-flight is a spinner in the glyph slot, not a static <code>⟳</code></strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex">
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="inline-block w-spinner h-spinner border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px]"></span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">installing…</span></span>
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">domain sends glyph "⟳" → the component animates it</span>
+          </div>
+          <div class="fc-note"><strong>The <code>⟳</code> the resolvers return renders as <a href="body-viewer.html">BodyViewer</a>'s existing spinner</strong> (<code>.spin</code>, already in the sheet), same slot, same width. Motion is the one honest signal that a multi-second privileged action is still running (driver ④) — a static glyph beside "installing…" is indistinguishable from a hang. Reuses a drawing rather than adding one.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">⟳</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">installing…</span></span>
+          </div>
+          <div class="fc-note"><strong>Static <code>⟳</code>, verbatim.</strong> Simplest, and consistent with rendering the glyph as given. Rejected: <a href="duration-text.html">DurationText</a>'s ban on live animation is about a <em>scan column of resting values</em>, and this is the opposite case — the only element on screen that is genuinely mid-flight, during an OS password prompt where the user needs to know we are still waiting too.</div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="open-q" style="margin-top:16px;">
+      <strong>Open for review — announcement.</strong> A verdict flipping while the user watches (the proxy starts receiving traffic) is a meaningful change with no visual motion. An <code>aria-live="polite"</code> region would announce it; three of them announcing on every poll would be noise. Not settled here because the right answer depends on how <code>PreconditionRow</code> polls, which is screen work W5 does not do — and <a href="toned-text.html">TonedText</a> deliberately adds no semantics, so this component is the right owner when it is decided. <em>Recorded, not designed.</em>
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Required</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>verdict</code></td><td><code>StepStatusView</code><br><code>{glyph, tone, message}</code></td><td>✅ required</td><td>the already-resolved verdict, straight from a domain resolver (<code>trustStatus</code> / <code>proxyStatus</code> / <code>verifyStatus</code>, <code>setup.ts:206–262</code>). Passed through faithfully — never re-ranked, merged, or substituted (D1)</td></tr>
+        <tr><td><code>name</code></td><td><code>string</code></td><td>optional</td><td>the subject being reported ("certificate", "proxy"). <code>ink-body</code>, never toned, never truncated. Omit when the host already labels the row</td></tr>
+        <tr><td><code>className</code></td><td><code>string</code></td><td>optional</td><td>pass-through for layout only — never for colour, family or size</td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--muted);font-size:12px;">The in-flight state is <em>not</em> a prop: it arrives inside the verdict (<code>glyph: "⟳"</code>) because the resolvers already own precedence 1. A separate <code>busy</code> boolean would let a caller render a spinner beside a <code>✓</code>, which the precedence forbids.</p>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built (code-as-truth):</p>
+      <pre class="tsdoc">/**
+ * StatusLine — a precondition's resolved verdict on one line: glyph, name, short message.
+ * @tier T2 — owns the verdict's form and the guarantee of its precedence (running &gt; authoritative positive &gt; observed proof &gt; action error &gt; partial evidence &gt; can't-check &gt; not-yet), plus the glyph→tone pairing. Takes a resolved StepStatusView; the domain resolvers own which verdict is true
+ * @anatomy one baseline row: glyph as a TonedText in the verdict tone (✓ resolved · ⚠ attention · ◐ can't-determine · ○ not-yet · ⟳ in-flight, animated) · optional name in Inter ink-body, never toned, never truncated · short message in Inter ink-mute, a fragment not a sentence (≤ ~40 chars), wraps rather than truncates
+ * @use any item that reports a resolved state with a reason — a setup precondition, a health check, a diagnostic row. Pass the resolver's StepStatusView through unchanged
+ * @avoid an HTTP status (use StatusPill) · a zone-level absence or one-sentence outcome with an action (use Notice) · a bare toned value with no verdict semantics (use TonedText) · re-resolving or re-ranking the verdict at the call site — the order is the contract · shortening a domain message at the call site: the short form is the domain's to return (see the [UI_DEFER] marker in setup.ts) · rendering it as a checkbox or toggle: a tick lies in most real states, and it is pure display
+ * @states ok (✓, resolved yes) · warn (⚠, needs attention) · muted·can't-determine (◐) · muted·not-yet (○) · in-flight (spinner, muted, outranks every other verdict including a stale error) — each with or without the name. No empty, disabled, interaction, or distinct-error state
+ * @madeof TonedText
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Any item that reports a <em>resolved state plus a reason</em> and will be scanned alongside its siblings: the setup screen's three preconditions, a future health panel, a diagnostics list. Pass the domain resolver's view struct straight through — the component's promise is that it renders the verdict you resolved, in a shape that survives greyscale and stacks into a scannable column.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>An HTTP status — <a href="status-pill.html">StatusPill</a>. A zone with nothing to show, or a one-sentence outcome with an action beside it — <a href="notice.html">Notice</a> (and it is a <em>zone</em> statement, not a per-item verdict). A toned value with no verdict semantics — <a href="toned-text.html">TonedText</a>. Re-resolving or re-ranking at the call site: the precedence is the contract, and a screen that reorders it can show a stale error over a proven success. Shortening a domain message locally — the short form is the domain's to return. And never draw it as a checkbox or toggle: a tick lies in most real states, and this component is pure display.</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part / state</th><th>Tailwind (build WU)</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>line</td><td><code>flex items-baseline gap-1.5 text-xs leading-normal min-h-[18px]</code></td><td><code>items-baseline</code> so glyph, name and message sit on one baseline at three sizes; <code>min-h</code> holds the row while a verdict changes</td></tr>
+        <tr><td>glyph</td><td>a <code>&lt;TonedText&gt;</code> — <code>text-xs leading-none</code>, <code>aria-hidden</code></td><td>tone comes from the verdict via TonedText; this component adds no colour class of its own</td></tr>
+        <tr><td>glyph · in-flight</td><td><code>inline-block h-2.5 w-2.5 rounded-full border-[1.5px] border-hairline border-t-ink-mute animate-spin</code></td><td>BodyViewer's <code>.spin</code>, scaled to the line (D3) — a reuse, not a new drawing</td></tr>
+        <tr><td>name</td><td><code>font-ui text-ink-body shrink-0</code></td><td>never a tone class, never <code>truncate</code></td></tr>
+        <tr><td>message</td><td><code>font-ui text-ink-mute min-w-0</code></td><td><code>min-w-0</code> lets it wrap inside the flex row; no <code>truncate</code>, no <code>line-clamp</code></td></tr>
+        <tr><td>tones</td><td>— (TonedText's)</td><td><code>text-ok</code> · <code>text-warn</code> · <code>text-ink-mute</code>, resolved by the primitive it is <code>@madeof</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="scale-note">
+      <strong>Off-scale, disclosed:</strong> <code>gap-1.5</code> (6px) and the spinner's <code>1.5px</code> border are below <code>spacing-scale</code>'s 8px floor, and <code>min-h-[18px]</code> is an arbitrary value. All three are inherited, not invented: 6px is the sheet's existing <code>.chrome-bar</code> gap, the spinner is BodyViewer's, and 18px is one line-box at 12px/1.5. The same 8px-floor contradiction <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 14</a> records — <strong>W6 settles the floor</strong> and this file moves with the sheet, never independently. Note also that <strong>the 24px hit floor does not apply</strong>: StatusLine is not interactive (driver ⑦), and the row's target is <code>PreconditionRow</code>'s.
+    </div>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="app" data-c="specimen">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">The precedence, driven</div>
+          <div class="panel" style="max-width:340px;">
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input class="accent-ink-mute w-3 h-3 cursor-pointer" type="checkbox" id="sl-running"> an action is running</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input class="accent-ink-mute w-3 h-3 cursor-pointer" type="checkbox" id="sl-probe"> the probe says trusted</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input class="accent-ink-mute w-3 h-3 cursor-pointer" type="checkbox" id="sl-decrypted"> a decrypted flow was seen</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><input class="accent-ink-mute w-3 h-3 cursor-pointer" type="checkbox" id="sl-error" checked> the last install failed</label>
+            </div>
+            <div style="border-top:1px solid var(--a-line);padding-top:10px;">
+              <div class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]" id="sl-out"></div>
+            </div>
+            <div id="sl-rank" style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);margin-top:8px;"></div>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Tick <em>probe</em> and <em>failed</em> together: the <code>✓</code> wins. That is driver ③, and it is the whole reason this is T2.</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Three, scanned together</div>
+          <div class="panel" style="max-width:330px;">
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-body font-ui shrink-0">proxy</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span>
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">◐</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">can't check from here</span></span>
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">○</span><span class="text-ink-body font-ui shrink-0">capture</span></span><span class="text-ink-mute font-ui min-w-0">waiting for your first request</span></span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">The glyph column is the scan target (driver ①). Two of the three are muted — the shapes separate them.</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Greyscale — colour removed</div>
+          <div class="panel" style="max-width:330px;filter:grayscale(1);">
+            <div style="display:flex;flex-direction:column;gap:9px;">
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ok">✓</span><span class="text-ink-body font-ui shrink-0">proxy</span></span><span class="text-ink-mute font-ui min-w-0">receiving traffic</span></span>
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-warn">⚠</span><span class="text-ink-body font-ui shrink-0">certificate</span></span><span class="text-ink-mute font-ui min-w-0">not decrypting</span></span>
+              <span class="flex items-baseline gap-chrome-gap text-body leading-normal min-h-[18px]"><span class="inline-flex items-baseline gap-control-gap shrink-0"><span class="text-body leading-none font-ui text-ink-mute">◐</span><span class="text-ink-body font-ui shrink-0">capture</span></span><span class="text-ink-mute font-ui min-w-0">can't check from here</span></span>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Still readable — <code>colour-plus-text</code> discharged by the glyph (driver ⑤), which TonedText can only state.</div>
+        </div>
+      </div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — the left panel runs the precedence table verbatim. Rendered in app Warp tokens from specimen.css; the tone classes are <a href="toned-text.html">TonedText</a>'s, only <code>.sl*</code> (layout) is new.</div>
+    </div>
+  </main>
+  <script>
+    const VERDICTS = [
+      { id: 'sl-running',   rank: 1, glyph: 'spin',  tone: 'muted', msg: 'installing…',            note: '1 · an action is running — outranks everything, including the error' },
+      { id: 'sl-probe',     rank: 2, glyph: '✓',     tone: 'ok',    msg: 'trusted on this machine', note: '2 · authoritative positive — beats the stale error (driver ③)' },
+      { id: 'sl-decrypted', rank: 3, glyph: '✓',     tone: 'ok',    msg: 'confirmed by traffic',    note: '3 · observed proof — evidence the probe could not obtain' },
+      { id: 'sl-error',     rank: 4, glyph: '⚠',     tone: 'warn',  msg: 'install failed — timeout', note: '4 · action error — only when nothing above proved success' },
+    ];
+    const FLOOR = { glyph: '○', tone: 'muted', msg: 'not trusted on this machine yet', note: '7 · nothing yet — the honest floor' };
+
+    const SL_VERDICT = 'inline-flex items-baseline gap-control-gap shrink-0';
+    const SL_GLYPH = 'text-body leading-none font-ui';
+    const SL_NAME = 'text-ink-body font-ui shrink-0';
+    const SL_MSG = 'text-ink-mute font-ui min-w-0';
+    const SL_SPIN = 'inline-block w-spinner h-spinner border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px]';
+    const TONE = { ok: 'text-ok', warn: 'text-warn', muted: 'text-ink-mute' };
+
+    function render() {
+      const hit = VERDICTS.find((v) => document.getElementById(v.id).checked) || FLOOR;
+      const glyph = hit.glyph === 'spin'
+        ? `<span class="${SL_SPIN}"></span>`
+        : `<span class="${SL_GLYPH} ${TONE[hit.tone]}">${hit.glyph}</span>`;
+      document.getElementById('sl-out').innerHTML =
+        `<span class="${SL_VERDICT}">${glyph}<span class="${SL_NAME}">certificate</span></span><span class="${SL_MSG}">${hit.msg}</span>`;
+      document.getElementById('sl-rank').textContent = 'precedence ' + hit.note;
+    }
+    VERDICTS.forEach((v) => document.getElementById(v.id).addEventListener('change', render));
+    render();
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

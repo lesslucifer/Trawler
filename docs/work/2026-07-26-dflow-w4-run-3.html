@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — E-DFLOW.W4 Run #3 (setup screen, integrated)</title>
-  <link rel="stylesheet" href="components/specimen.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="../../doc-assets/components/tw-config.js"></script>
   <style>
     .stage{border-left:3px solid var(--line);padding-left:14px;margin-left:2px;}
     .kd{color:var(--muted);}
     .fr b{color:var(--accent);font-weight:600;}
-    .tag{display:inline-block;font-size:10px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:0 6px;color:var(--muted);white-space:nowrap;}
     .tag.w5{color:var(--ok);border-color:var(--ok);} .tag.w6{color:var(--accent);border-color:var(--accent);}
     .tag.w7{color:var(--warn);border-color:var(--warn);} .tag.fl{color:var(--ink);}
     table{font-size:13px;} pre{white-space:pre-wrap;}
@@ -114,8 +114,7 @@
     .a-toggles{display:flex;gap:8px;}
     .statebtn{border:1px solid var(--line);border-radius:4px;background:transparent;
               color:var(--muted);font-size:11.5px;padding:3px 9px;cursor:pointer;}
-    .statebtn:hover{color:var(--ink);}
-  </style>
+    .statebtn:hover{color:var(--ink);}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -451,7 +450,7 @@ renders as → ◐ can't check from here   (true, but incomplete)</pre><code>Tru
     </div>
 
     <h3 id="mockup">5 · Draft mockup</h3>
-    <p>A real build. Every <span class="v sat">reuse</span> row composes <a href="components/specimen.css"><code>components/specimen.css</code></a> by class name — no colour, control padding, radius or type is re-typed here. The four <span class="v prop">propose</span> rows have nothing to compose, so they are screen-owned and <b>declared</b> below; that is the honest cost of finding 11, made visible as CSS rather than hidden as prose. Two toggles flip the three states the <a href="#interaction">Interaction</a> table named.</p>
+    <p>A real build. Every <span class="v sat">reuse</span> row composes <code>components/specimen.css</code> by class name — no colour, control padding, radius or type is re-typed here. The four <span class="v prop">propose</span> rows have nothing to compose, so they are screen-owned and <b>declared</b> below; that is the honest cost of finding 11, made visible as CSS rather than hidden as prose. Two toggles flip the three states the <a href="#interaction">Interaction</a> table named.</p>
 
     <table data-c="mockup-boundary">
       <thead><tr><th>Layer</th><th>Source</th><th>In this build</th></tr></thead>
@@ -466,15 +465,15 @@ renders as → ◐ can't check from here   (true, but incomplete)</pre><code>Tru
       <div class="a-win" id="mock">
         <div class="a-measure">
 
-          <div class="notice a-orient">Trawler captures HTTPS by decrypting it — that needs its certificate trusted and your traffic routed here.</div>
+          <div class="text-ink-mute text-body font-ui py-chrome-y a-orient">Trawler captures HTTPS by decrypting it — that needs its certificate trusted and your traffic routed here.</div>
 
           <div class="a-zone-lbl">set up capture</div>
-          <div class="sec-stack">
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]">
 
-            <div class="sec-block a-pre a-open">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0 a-pre a-open">
               <div class="a-status">
                 <span class="a-tone-muted arrived-hide inflight-hide">◐</span>
-                <span class="a-tone-muted inflight-only"><span class="spin"></span></span>
+                <span class="a-tone-muted inflight-only"><span class="inline-block w-spinner-lg h-spinner-lg border-2 border-hairline border-t-ink-mute rounded-full animate-spin align-[-2px]"></span></span>
                 <span class="a-tone-ok arrived-only">✓</span>
                 <span class="a-status-name">certificate</span>
                 <span class="a-tone-muted arrived-hide inflight-hide">can't check from here</span>
@@ -484,25 +483,25 @@ renders as → ◐ can't check from here   (true, but incomplete)</pre><code>Tru
               <div class="body a-body arrived-hide">
                 <div class="a-row">
                   <div class="a-select">macOS <span class="a-caret">▾</span></div>
-                  <button class="btn" disabled>install for me</button>
+                  <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" disabled>install for me</button>
                   <span class="a-hint inflight-only">macOS is asking for your password</span>
                   <span class="a-hint inflight-hide">adds Trawler's certificate to your system keychain — macOS will ask for your password</span>
                 </div>
                 <div class="a-guide">
                   <div class="a-guide-lbl">by hand</div>
                   <ol class="a-steps">
-                    <li>Download <span class="ct">http://127.0.0.1:7421/ca.crt</span></li>
+                    <li>Download <span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">http://127.0.0.1:7421/ca.crt</span></li>
                     <li>Open it in Keychain Access and add it to <em>System</em></li>
                     <li>Set it to <em>Always Trust</em>, or run:
-                      <div class="a-cmd"><span class="ct">security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/Downloads/ca.crt</span></div>
+                      <div class="a-cmd"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/Downloads/ca.crt</span></div>
                     </li>
                   </ol>
-                  <div class="a-undo">to undo<div class="a-cmd"><span class="ct">security remove-trusted-cert -d ~/Downloads/ca.crt</span></div></div>
+                  <div class="a-undo">to undo<div class="a-cmd"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">security remove-trusted-cert -d ~/Downloads/ca.crt</span></div></div>
                 </div>
               </div>
             </div>
 
-            <div class="sec-block a-pre">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0 a-pre">
               <div class="a-status">
                 <span class="a-tone-ok">✓</span>
                 <span class="a-status-name">proxy</span>
@@ -510,7 +509,7 @@ renders as → ◐ can't check from here   (true, but incomplete)</pre><code>Tru
               </div>
             </div>
 
-            <div class="sec-block a-pre">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0 a-pre">
               <div class="a-status">
                 <span class="a-tone-muted arrived-hide">○</span>
                 <span class="a-tone-ok arrived-only">✓</span>
@@ -519,26 +518,26 @@ renders as → ◐ can't check from here   (true, but incomplete)</pre><code>Tru
                 <span class="a-tone-ok arrived-only">capturing traffic</span>
               </div>
               <div class="body a-body arrived-hide">
-                <div class="a-cmd"><span class="ct">curl -x http://127.0.0.1:7420 https://example.com</span></div>
+                <div class="a-cmd"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">curl -x http://127.0.0.1:7420 https://example.com</span></div>
               </div>
             </div>
 
           </div>
 
-          <div class="notice a-outcome arrived-only">✓ It's working — capturing traffic. <span class="ct">https://example.com/</span></div>
+          <div class="text-ink-mute text-body font-ui py-chrome-y a-outcome arrived-only">✓ It's working — capturing traffic. <span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">https://example.com/</span></div>
 
           <div class="a-zone-lbl">undo</div>
-          <div class="sec-stack">
-            <div class="sec-block">
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
               <div class="lbl">system proxy</div>
               <div class="body">
-                <div class="a-row"><button class="btn">stop routing through Trawler</button><span class="a-hint">turns the system proxy off — the saved address is kept</span></div>
-                <div class="a-cmd"><span class="ct">networksetup -setwebproxystate Wi-Fi off &amp;&amp; networksetup -setsecurewebproxystate Wi-Fi off</span></div>
+                <div class="a-row"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none">stop routing through Trawler</button><span class="a-hint">turns the system proxy off — the saved address is kept</span></div>
+                <div class="a-cmd"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">networksetup -setwebproxystate Wi-Fi off &amp;&amp; networksetup -setsecurewebproxystate Wi-Fi off</span></div>
               </div>
             </div>
-            <div class="sec-block">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
               <div class="lbl">certificate</div>
-              <div class="body"><div class="a-cmd"><span class="ct">security remove-trusted-cert -d ~/Downloads/ca.crt</span></div></div>
+              <div class="body"><div class="a-cmd"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">security remove-trusted-cert -d ~/Downloads/ca.crt</span></div></div>
             </div>
           </div>
 
@@ -673,7 +672,7 @@ soft:
     <table data-c="hard-rules">
       <thead><tr><th>Hard rule</th><th>This run</th><th>Who checks it</th></tr></thead>
       <tbody>
-        <tr><td><code>colour-tokens-only</code></td><td>the screen's own CSS holds <strong>zero</strong> colour values — every one is a <code>var(--a-…)</code> from <a href="components/specimen.css"><code>specimen.css</code></a>, including all four proposals' tones</td><td><strong>predicate, now</strong> — <code>mockup·colour-literals</code></td></tr>
+        <tr><td><code>colour-tokens-only</code></td><td>the screen's own CSS holds <strong>zero</strong> colour values — every one is a <code>var(--a-…)</code> from <code>specimen.css</code>, including all four proposals' tones</td><td><strong>predicate, now</strong> — <code>mockup·colour-literals</code></td></tr>
         <tr><td><code>spacing-scale</code></td><td>every <em>layout</em> gap the screen owns is 8 · 16 · 24. Two breaches, both declared: <code>.sec-block</code>'s composed 10/14 px (its own specimen comment already flags it), and <b>the proposed Select's own control padding at 4/8 px</b> — below the 8 px floor, because an 11.5 px control cannot carry 8 px of vertical padding. <b>The second one is the screen's, not a component's</b>, and it lands exactly where run #2's finding 14 predicted: the scale has no sub-8 step, so every control in the app violates it</td><td>W6 settles the floor — this run is the second independent screen to hit it, now from the <em>screen-owned</em> side rather than the composed side. Then a W7 predicate proves it</td></tr>
         <tr><td><code>zero-accent</code></td><td>held — the screen uses <code>ok</code> and <code>warn</code> only, both at their fixed meanings, and <b>the neutral channel carries every uncertain state</b>. This is the run that would have broken the rule: <a href="#findings">finding 2</a> argues <em>unknown</em> deserves its own entry, and the design deliberately did <em>not</em> coin one</td><td>W6 decides whether a third chromatic meaning exists (finding 2)</td></tr>
         <tr><td><code>state-declarations</code></td><td>every catalog row's Shape · States cell is non-empty; the four proposals declare the states their design files must own, and PreconditionRow declares what the screen coordinates</td><td>W7 — the predicate must read the registry verdict, or a correct by-citation cell reds</td></tr>
@@ -799,7 +798,7 @@ soft:
         </tr>
         <tr>
           <td>12</td><td>Elements</td>
-          <td><strong>The element map shipped inert, and two gates missed it.</strong> The Elements stage was written keyed and correct, but the run doc never linked <a href="components/specimen.css"><code>specimen.css</code></a> — which is where <code>.hl</code> lives. Every click fired and toggled a class that styled nothing. <code>verify-doc</code> <em>did</em> catch it as <code>assets·specimen</code>, and the run read that failure as "a downstream stage is still pending" and moved on: <b>a checker is only as good as the reading of its output</b>, and a red that names an asset is indistinguishable, at a glance, from a red that names a missing section. Separately, <code>elements·map</code> itself was too weak — it passed on <code>data-map</code> plus <em>any single</em> <code>data-key</code>, so a keyed tree over an unkeyed catalog (half the map dead) read as green; the flow's own green test fixture was exactly that shape. <b>Fixed mid-run</b>: the check now requires a key in <em>both</em> halves and reds any component placed in the tree with no catalog row — the last one is the valuable half, since a placed component with no row never faced the reuse-or-propose pass at all.</td>
+          <td><strong>The element map shipped inert, and two gates missed it.</strong> The Elements stage was written keyed and correct, but the run doc never linked <code>specimen.css</code> — which is where <code>.hl</code> lives. Every click fired and toggled a class that styled nothing. <code>verify-doc</code> <em>did</em> catch it as <code>assets·specimen</code>, and the run read that failure as "a downstream stage is still pending" and moved on: <b>a checker is only as good as the reading of its output</b>, and a red that names an asset is indistinguishable, at a glance, from a red that names a missing section. Separately, <code>elements·map</code> itself was too weak — it passed on <code>data-map</code> plus <em>any single</em> <code>data-key</code>, so a keyed tree over an unkeyed catalog (half the map dead) read as green; the flow's own green test fixture was exactly that shape. <b>Fixed mid-run</b>: the check now requires a key in <em>both</em> halves and reds any component placed in the tree with no catalog row — the last one is the valuable half, since a placed component with no row never faced the reuse-or-propose pass at all.</td>
           <td><span class="tag w7">W7 harness</span></td>
         </tr>
         <tr>
@@ -952,6 +951,6 @@ soft:
     mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
   </script>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
-  <script src="components/specimen.js" defer></script>
+  <script src="../../doc-assets/components/specimen.js" defer></script>
 </body>
 </html>

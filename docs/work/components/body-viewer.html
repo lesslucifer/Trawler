@@ -4,45 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — BodyViewer component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="../../../doc-assets/components/tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
     .t2{color:var(--ok);}
     .t4{color:var(--warn);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;--a-key:#8fb8de;--a-str:#9ec99a;--a-num:#d9a866;}
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:520px;}
     .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
-    /* Chrome bar */
-    .chrome-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--a-line);padding-bottom:8px;margin-bottom:8px;}
-    .chrome-bar .sect-lbl{color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-family:Inter,system-ui,sans-serif;}
-    .chrome-bar .meta-tag{color:var(--a-mute);font-size:11px;font-family:"DM Mono",ui-monospace,monospace;}
-    .chrome-bar .spacer{flex:1;}
-    /* Toggle */
-    .toggle{display:inline-flex;border:1px solid var(--a-line);border-radius:3px;overflow:hidden;}
-    .toggle .seg{padding:1px 7px;font-size:11px;font-family:Inter,system-ui,sans-serif;color:var(--a-mute);cursor:pointer;}
-    .toggle .seg.active{background:var(--a-soft);color:var(--a-ink);}
-    /* Action buttons */
-    .btn{border:1px solid var(--a-line);border-radius:3px;padding:1px 7px;font-size:11px;font-family:Inter,system-ui,sans-serif;color:var(--a-mute);background:transparent;cursor:pointer;}
-    .btn:hover{color:var(--a-ink);}
-    /* Icon actions — CopyButton icon form (⧉) + IconButton save (↓) */
-    .ibtn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:none;border-radius:3px;padding:0;font-size:13px;line-height:1;color:var(--a-mute);background:transparent;cursor:pointer;}
-    .ibtn:hover{color:var(--a-ink);background:rgba(247,245,240,.07);}
-    .ibtn.confirm{color:var(--a-ok);}
-    /* Loading spinner */
-    .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--a-line);border-top-color:var(--a-mute);border-radius:50%;animation:bv-spin .8s linear infinite;vertical-align:-2px;}
-    @keyframes bv-spin{to{transform:rotate(360deg)}}
-    /* Body pane */
-    .body-pane{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;line-height:1.6;color:var(--a-body);white-space:pre-wrap;word-break:break-all;padding:6px 0;min-height:36px;}
-    .body-pane .notice{color:var(--a-mute);font-style:italic;}
-    .body-pane .warn{color:var(--a-warn);}
-    .body-pane .cut{color:var(--a-warn);font-size:11px;border-top:1px dashed var(--a-line);margin-top:6px;padding-top:6px;display:block;}
-    /* syntax tokens in pretty JSON mockups (body-renderer DEC-11) */
-    .body-pane .jk{color:var(--a-key);}
-    .body-pane .js{color:var(--a-str);}
-    .body-pane .jn{color:var(--a-num);}
-    .body-pane .jp{color:var(--a-mute);}
-    .body-pane .spinner{color:var(--a-mute);}
     /* Swatch grid */
     .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
     .swatch .panel{max-width:none;}
@@ -72,25 +43,19 @@
     .badge.rejected{color:var(--warn);border-color:var(--warn);}
     .badge.open{color:var(--accent);border-color:var(--accent);}
     /* Two-panel layout for fork */
-    .two-panel{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-    @media(max-width:700px){.two-panel{grid-template-columns:1fr;} .part{grid-template-columns:1fr;}}
+    .two-panel{display:grid;grid-template-columns:1fr 1fr;gap:12px;}@media(max-width:700px){.two-panel{grid-template-columns:1fr;} .part{grid-template-columns:1fr;}}
     /* Dispatch diagram */
     .dispatch-table{font-size:12px;font-family:"DM Mono",ui-monospace,monospace;width:100%;border-collapse:collapse;}
     .dispatch-table th{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;padding:4px 8px;border-bottom:1px solid var(--line);text-align:left;}
     .dispatch-table td{padding:3px 8px;border-bottom:1px solid var(--a-line);color:var(--a-body);}
-    .dispatch-table .kind{color:var(--a-ink);}
-    /* Leg switch indicator */
-    .leg-switch{display:inline-flex;border:1px solid var(--a-line);border-radius:3px;overflow:hidden;}
-    .leg-switch .seg{padding:1px 10px;font-size:11px;font-family:Inter,system-ui,sans-serif;color:var(--a-mute);}
-    .leg-switch .seg.active{background:var(--a-soft);color:var(--a-ink);}
-  </style>
+    .dispatch-table .kind{color:var(--a-ink);}</style>
 </head>
 <body>
   <header class="doc-hero">
     <div class="inner">
       <h1>BodyViewer <span class="tier t4">T4</span></h1>
       <p>One leg's body: chrome bar (leg label · raw|pretty view switch · metadata · copy ⧉ · save ↓) + renderer pane dispatched by content-type and view state. Composition — not collected.</p>
-      <div class="meta">Component design · <strong>confirmed 2026-07-23</strong> · 2026-07-22 · rev 2026-07-23 (comment round 1: D3 + D4 settled, icon actions, spinner · sync with body-renderer rounds 1–2: copy-exact source, syntax tokens, human-readable cut marker, CodeMirror surface) · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+      <div class="meta">Component design · <strong>confirmed 2026-07-23</strong> · <strong>contract fix E-DFLOW.W5 2026-07-27</strong> (fifth state <code>fetch-failed</code> · leg-label degradation · chrome-bar wrap — <a href="../2026-07-27-dflow-w5-plan.html">W5 plan</a>; design only, not built in W5) · 2026-07-22 · rev 2026-07-23 (comment round 1: D3 + D4 settled, icon actions, spinner · sync with body-renderer rounds 1–2: copy-exact source, syntax tokens, human-readable cut marker, CodeMirror surface) · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
     </div>
   </header>
   <main>
@@ -103,7 +68,7 @@
       <tr><td><strong>Tier</strong></td><td><span class="tier t4">T4 Composition</span> — designed, not collected; a T4 that proved reusable across screens would be promoted to T2</td></tr>
       <tr><td><strong>Tenants</strong></td><td>Zones C (request body) and D (response body) of the FlowDetail panel (W1 design; W2 decomposes the monolith) — <strong>one BodyViewer instance per leg</strong> (fork D3, settled Option A)</td></tr>
       <tr><td><strong>Exists today</strong></td><td><code>ui/src/BodyViewer.tsx:139</code> — monolithic; inline ModeButton, inline renderer family, inline copy+save</td></tr>
-      <tr><td><strong>Made of</strong></td><td><a href="segmented-control.html">SegmentedControl</a> (raw|pretty view switch) · <a href="body-renderer.html">BodyRenderer</a> (JsonRenderer · XmlRenderer · ImageRenderer · FormRenderer · HexRenderer) · <a href="copy-button.html">CopyButton</a> (icon form ⧉) · <a href="icon-button.html">IconButton</a> (save ↓) · <a href="section.html">Section</a> chrome</td></tr>
+      <tr><td><strong>Made of</strong></td><td><a href="segmented-control.html">SegmentedControl</a> (raw|pretty view switch) · <a href="body-renderer.html">BodyRenderer</a> (JsonRenderer · XmlRenderer · ImageRenderer · FormRenderer · HexRenderer · TextRenderer) · <a href="notice.html">Notice</a> (every absence and the fetch-failed state) · <a href="copy-button.html">CopyButton</a> (icon form ⧉, 24 px — fork D2b) · <a href="icon-button.html">IconButton</a> (save ↓) · <a href="section.html">Section</a> chrome</td></tr>
     </table>
     <table data-c="frame-drivers">
       <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
@@ -111,44 +76,44 @@
         <tr><td>① trustworthy — the view is always named, never silent</td><td>the active segment names the view: <code>raw</code> = decoded raw (as sent) · <code>pretty</code> = pretty-printed; pretty is the default (fork D4, settled 2026-07-23) — trust lives in the explicit label, not a raw default</td></tr>
         <tr><td>② lazy fetch — bytes not in the flow view (<code>api.ts:141</code>)</td><td>component owns fetch; spinner while loading; cancels on flow change / unmount</td></tr>
         <tr><td>③ content-type drives render (<code>body.ts:8</code> bodyKind())</td><td>chrome bar shows content-type; dispatch table selects renderer</td></tr>
-        <tr><td>④ body cap is a capture-time fact (TooLarge / 10 MiB, <code>config.rs:28</code>)</td><td>renders a notice for not_captured/streaming/empty; never blank</td></tr>
+        <tr><td>④ bytes can be missing for five different reasons, and four of them are not faults</td><td>a <a href="notice.html">Notice</a> per case, each naming <em>which</em> absence it is — mute for empty/not_captured/streaming/no-response-yet, warn for <code>fetch-failed</code> where bytes were captured and are now unreachable (W5, <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·5</a>). Never blank, and never one shared sentence</td></tr>
         <tr><td>⑤ hex and JSON have render caps (HEX_MAX=4096, TREE_MAX=131072 — <code>body.ts:40/45</code>)</td><td>warn-tone cut marker below last rendered line, shown/total human-readable (<code>body-renderer.html</code> DEC-12); copy + save always available</td></tr>
         <tr><td>⑥ images have no text form (<code>BodyViewer.tsx:203</code> kind !== 'image' guard)</td><td>copy hidden for image; save always shown</td></tr>
-        <tr><td>⑦ calm, dense panel</td><td>chrome bar is one compact line; no repeated labels per pane</td></tr>
+        <tr><td>⑦ calm, dense panel</td><td>chrome bar is compact and <strong>wraps rather than overflowing or squeezing</strong> — it fits one line at generous widths and drops metadata to a second at the real panel column (W5, <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·5</a>); no label repeats what the host already says (<code>labels-add-context</code> — the leg-label degradation rule)</td></tr>
       </tbody>
     </table>
 
     <h2 id="anatomy">Anatomy — the parts you see</h2>
     <div class="app" data-c="anatomy-specimen">
       <div class="panel">
-        <div class="chrome-bar">
-          <span class="sect-lbl">response body<span class="anno">1</span></span>
-          <span class="meta-tag">application/json · 2.4 KiB<span class="anno">2</span></span>
-          <span class="spacer"></span>
-          <div class="toggle"><span class="seg">raw</span><span class="seg active">pretty<span class="anno">3</span></span></div>
-          <button class="ibtn" title="copy body">⧉<span class="anno">4</span></button>
-          <button class="ibtn" title="save body to file">↓<span class="anno">5</span></button>
+        <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2">
+          <span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body<span class="anno">1</span></span>
+          <span class="text-ink-mute text-chrome font-mono">application/json · 2.4 KiB<span class="anno">2</span></span>
+          <span class="flex-1"></span>
+          <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty<span class="anno">3</span></span></div>
+          <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="copy body">⧉<span class="anno">4</span></button>
+          <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="save body to file">↓<span class="anno">5</span></button>
         </div>
-        <div class="body-pane"><span class="jp">{</span><br>  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"8f3a91c2"</span><span class="jp">,</span><br>  <span class="jk">"method"</span><span class="jp">:</span> <span class="js">"GET"</span><span class="jp">,</span><br>  <span class="jk">"status"</span><span class="jp">:</span> <span class="jn">200</span><br><span class="jp">}</span><span class="anno">6</span></div>
+        <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute">{</span><br>  <span class="text-syn-key">"id"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"8f3a91c2"</span><span class="text-ink-mute">,</span><br>  <span class="text-syn-key">"method"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"GET"</span><span class="text-ink-mute">,</span><br>  <span class="text-syn-key">"status"</span><span class="text-ink-mute">:</span> <span class="text-syn-num">200</span><br><span class="text-ink-mute">}</span><span class="anno">6</span></div>
       </div>
     </div>
     <div class="app parts" data-c="anatomy-parts">
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="chrome-bar"><span class="sect-lbl">response body</span></div></div>
+          <div class="panel"><div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span></div></div>
           <div class="cap">the label names the leg; muted, uppercase, 10px — same style as Section's heading</div>
         </div>
         <div>
-          <strong><span class="anno">1</span> leg label</strong>
+          <strong><span class="anno">1</span> leg label</strong> <span class="badge id">W5 · r2·5</span>
           <div class="spec">
-            <span class="k">spec</span><span>uppercase muted leg label — <code>request body</code> | <code>response body</code>, derived from the <code>leg</code> prop (one instance per leg, fork D3 settled Option A); left-aligned in the chrome bar; follows <a href="section.html">Section</a>'s label convention</span>
-            <span class="k">why</span><span>with two viewers stacked in the panel (zones C and D), the label is what tells them apart; it replaces both the old shared "body" label and the leg switch of the rejected D3-B</span>
+            <span class="k">spec</span><span>uppercase muted leg label, derived from the <code>leg</code> prop (one instance per leg, fork D3 settled Option A); left-aligned in the chrome bar; follows <a href="section.html">Section</a>'s label convention. <strong>Two forms, chosen by the host:</strong> <code>request body</code> | <code>response body</code> when the host does not name the leg, and the bare word <code>body</code> when it does — the <code>legNamedByHost</code> prop asserts it (see the degradation rule below).</span>
+            <span class="k">why</span><span>with two viewers stacked in one flat panel (zones C and D), the label is what tells them apart; it replaces both the old shared "body" label and the leg switch of the rejected D3-B. But a host that already groups by leg — a two-leg screen with a REQUEST band above the group — makes the full form say the leg twice in adjacent lines, which is exactly what <code>labels-add-context</code> forbids — its own ✗ example is a label repeating the heading above it</span>
           </div>
         </div>
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="chrome-bar"><span class="meta-tag">application/json · 2.4 KiB</span></div></div>
+          <div class="panel"><div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-chrome font-mono">application/json · 2.4 KiB</span></div></div>
           <div class="cap">content-type · size — both from the loaded BodyFetch; absent while loading or when the body is not captured</div>
         </div>
         <div>
@@ -161,7 +126,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="chrome-bar"><div class="toggle"><span class="seg">raw</span><span class="seg active">pretty</span></div></div></div>
+          <div class="panel"><div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></div></div></div>
           <div class="cap">view switch — a <a href="segmented-control.html">SegmentedControl</a> (raw | pretty); pretty active by default (D4); disabled when body is not captured</div>
         </div>
         <div>
@@ -174,7 +139,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="chrome-bar"><span class="spacer"></span><button class="ibtn" title="copy body">⧉</button></div></div>
+          <div class="panel"><div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="flex-1"></span><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="copy body">⧉</button></div></div>
           <div class="cap">copy — <a href="copy-button.html">CopyButton</a> in icon form (⧉, tooltip "copy body"); hidden for image bodies (no text form)</div>
         </div>
         <div>
@@ -187,7 +152,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="chrome-bar"><span class="spacer"></span><button class="ibtn" title="save body to file">↓</button></div></div>
+          <div class="panel"><div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="flex-1"></span><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="save body to file">↓</button></div></div>
           <div class="cap"><a href="icon-button.html">IconButton</a> <code>glyph="save"</code> (↓) — right-aligned; shown when body is loaded; hidden when not loaded</div>
         </div>
         <div>
@@ -201,7 +166,7 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="body-pane">{"id":"8f3a91c2","status":200}</div>
+            <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]">{"id":"8f3a91c2","status":200}</div>
           </div>
           <div class="cap">the renderer pane — fills all remaining height; renderer chosen by content-type + view state</div>
         </div>
@@ -257,7 +222,7 @@ flowchart LR
     <div class="app parts" data-c="behavior-rules" style="margin-top:16px;">
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="chrome-bar"><span class="sect-lbl">response body</span></div><div class="body-pane"><span class="spin"></span></div></div>
+          <div class="panel"><div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span></div><div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="inline-block w-spinner-lg h-spinner-lg border-2 border-hairline border-t-ink-mute rounded-full animate-spin align-[-2px]"></span></div></div>
           <div class="cap">flow change → previous fetch cancelled, spinner shows (animated, no text)</div>
         </div>
         <div>
@@ -270,7 +235,7 @@ flowchart LR
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="chrome-bar"><div class="toggle"><span class="seg">raw</span><span class="seg active">pretty</span></div></div><div class="body-pane"><span class="jp">{</span><br>  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"8f3a91c2"</span><br><span class="jp">}</span></div></div>
+          <div class="panel"><div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></div></div><div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute">{</span><br>  <span class="text-syn-key">"id"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"8f3a91c2"</span><br><span class="text-ink-mute">}</span></div></div>
           <div class="cap">default state: pretty active; switching to raw shows the body exactly as sent (minified stays minified)</div>
         </div>
         <div>
@@ -283,7 +248,7 @@ flowchart LR
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="chrome-bar"><span class="spacer"></span><button class="ibtn" title="copy body">⧉</button></div><div class="body-pane">00000000  7b 22 69 64 22 3a  |{"id":|<br/><span class="cut">⚠ showing 4.0 KiB of 12.6 KiB — save to see all</span></div></div>
+          <div class="panel"><div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="flex-1"></span><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="copy body">⧉</button></div><div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]">00000000  7b 22 69 64 22 3a  |{"id":|<br/><span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 4.0 KiB of 12.6 KiB — save to see all</span></div></div>
           <div class="cap">copy delivers what the pane shows — here the hex dump text; the cut marker (family form, DEC-12) is the renderer's, not BodyViewer's</div>
         </div>
         <div>
@@ -296,7 +261,7 @@ flowchart LR
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="chrome-bar"><span class="spacer"></span><button class="ibtn" title="save body to file">↓</button></div></div>
+          <div class="panel"><div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="flex-1"></span><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="save body to file">↓</button></div></div>
           <div class="cap">save always delivers the decoded-raw bytes via saveBody() regardless of view state</div>
         </div>
         <div>
@@ -307,80 +272,151 @@ flowchart LR
           </div>
         </div>
       </div>
+      <div class="part">
+        <div class="ex">
+          <div class="flow-ex" style="flex-direction:column;align-items:stretch;gap:8px;">
+            <div class="panel" style="max-width:none;">
+              <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span><span class="flex-1"></span></div>
+              <div style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">flat panel — the label names the leg</div>
+            </div>
+            <div class="panel" style="max-width:none;">
+              <div style="color:var(--a-mute);font-size:10px;letter-spacing:.08em;font-family:var(--a-ui);border-bottom:1px solid var(--a-line);padding-bottom:4px;margin-bottom:6px;">RESPONSE</div>
+              <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">body</span><span class="flex-1"></span></div>
+              <div style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">grouped panel — the band names the leg, so the label degrades to the bare word</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <strong>Leg-label degradation</strong> <span class="badge id">W5 · <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·5</a></span>
+          <div class="spec">
+            <span class="k">spec</span><span>when the host passes <code>legNamedByHost</code>, the leg label renders the bare word <strong>body</strong>; otherwise the full <code>request body</code> / <code>response body</code>. Nothing else about the chrome bar changes, and <code>aria-label</code> on the region keeps the full form in both cases — the redundancy is visual only, so the screen-reader name must not degrade with it.</span>
+            <span class="k">why</span><span><a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·5</a>: a two-leg screen that groups by leg (a REQUEST / RESPONSE band above each group — <a href="section.html">Section</a>'s reopened F3 band variant) renders "request body" directly under "REQUEST". <code>labels-add-context</code> forbids exactly that. The host is the only party that knows whether the leg is already named, so it asserts it — BodyViewer cannot inspect its ancestors, and guessing from <code>leg</code> alone is what produced the duplication.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="max-width:230px;">
+            <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2">
+              <span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span>
+              <span class="text-ink-mute text-chrome font-mono">application/json · 2.4 KiB</span>
+              <span class="flex-1"></span>
+              <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></div>
+              <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="copy body">⧉</button>
+              <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="save body to file">↓</button>
+            </div>
+          </div>
+          <div class="cap">at a narrow column the bar wraps to a second line — metadata drops below, the switch and the two icon buttons stay together and never shrink</div>
+        </div>
+        <div>
+          <strong>Chrome-bar wrap</strong> <span class="badge id">W5 · <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·5</a></span>
+          <div class="spec">
+            <span class="k">spec</span><span>the chrome bar is <strong>not</strong> a one-line contract: it is a wrapping flex row (<code>flex-wrap</code>). Priority when width runs out — the leg label and the controls group (switch · copy · save) hold their line; the <strong>body metadata wraps first</strong>, dropping to a second line aligned under the label. The controls never shrink below their own hit areas (<code>generous-targets</code>) and the switch never truncates its segment words (<code>wrap-not-truncate</code>). Two lines is the floor; the bar does not scroll horizontally.</span>
+            <span class="k">why</span><span><a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·5</a>: at the real panel column width all six parts do not fit one line, so the old one-line spec resolved itself by either overflowing or squeezing the switch — both of which break a rule. Metadata is the right thing to move because it is the only part that is read once and never operated: content-type and size inform a decision, the controls <em>are</em> the decision. <code>overflow-declared</code> requires this to be stated rather than discovered at build time.</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <h2 id="states">States</h2>
     <div class="app swatches" data-c="states">
       <div class="swatch">
         <div class="panel">
-          <div class="chrome-bar"><span class="sect-lbl">response body</span><span class="spacer"></span><div class="toggle"><span class="seg">raw</span><span class="seg active">pretty</span></div></div>
-          <div class="body-pane"><span class="spin"></span></div>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span><span class="flex-1"></span><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></div></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="inline-block w-spinner-lg h-spinner-lg border-2 border-hairline border-t-ink-mute rounded-full animate-spin align-[-2px]"></span></div>
         </div>
         <div class="cap"><strong>loading</strong> — fetch in flight; chrome bar shows the switch (view state is known); copy/save hidden; animated spinner in pane, no text</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="chrome-bar"><span class="sect-lbl">response body</span><span class="meta-tag">application/json · 2.4 KiB</span><span class="spacer"></span><div class="toggle"><span class="seg active">raw</span><span class="seg">pretty</span></div><button class="ibtn" title="copy body">⧉</button><button class="ibtn" title="save body to file">↓</button></div>
-          <div class="body-pane">{"id":"8f3a91c2","method":"GET","status":200}</div>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span><span class="text-ink-mute text-chrome font-mono">application/json · 2.4 KiB</span><span class="flex-1"></span><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">pretty</span></div><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="copy body">⧉</button><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="save body to file">↓</button></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]">{"id":"8f3a91c2","method":"GET","status":200}</div>
         </div>
         <div class="cap"><strong>JSON body (raw)</strong> — the body exactly as sent: minified stays one line; TextRenderer; copy and save shown</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="chrome-bar"><span class="sect-lbl">response body</span><span class="meta-tag">application/json · 2.4 KiB</span><span class="spacer"></span><div class="toggle"><span class="seg">raw</span><span class="seg active">pretty</span></div><button class="ibtn" title="copy body">⧉</button><button class="ibtn" title="save body to file">↓</button></div>
-          <div class="body-pane"><span class="jp">{</span><br/>  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"8f3a91c2"</span><span class="jp">,</span><br/>  <span class="jk">"status"</span><span class="jp">:</span> <span class="jn">200</span><br/><span class="jp">}</span></div>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span><span class="text-ink-mute text-chrome font-mono">application/json · 2.4 KiB</span><span class="flex-1"></span><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></div><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="copy body">⧉</button><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="save body to file">↓</button></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute">{</span><br/>  <span class="text-syn-key">"id"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"8f3a91c2"</span><span class="text-ink-mute">,</span><br/>  <span class="text-syn-key">"status"</span><span class="text-ink-mute">:</span> <span class="text-syn-num">200</span><br/><span class="text-ink-mute">}</span></div>
         </div>
         <div class="cap"><strong>JSON body (pretty — default)</strong> — pretty active; JsonRenderer (copy-exact pretty-printed source in the CodeMirror surface, DEC-11 syntax tokens); copy and save shown</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="chrome-bar"><span class="sect-lbl">response body</span><span class="meta-tag">image/png · 18 KiB</span><span class="spacer"></span><div class="toggle"><span class="seg">raw</span><span class="seg active">pretty</span></div><button class="ibtn" title="save body to file">↓</button></div>
-          <div class="body-pane" style="color:var(--a-mute);font-style:italic;">[image preview]</div>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span><span class="text-ink-mute text-chrome font-mono">image/png · 18 KiB</span><span class="flex-1"></span><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></div><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="save body to file">↓</button></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]" style="color:var(--a-mute);font-style:italic;">[image preview]</div>
         </div>
         <div class="cap"><strong>image body</strong> — copy hidden; save ↓ shown; ImageRenderer in either view (no text form); dimensions caption from renderer</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="chrome-bar"><span class="sect-lbl">response body</span><span class="meta-tag">application/octet-stream · 10 KiB</span><span class="spacer"></span><div class="toggle"><span class="seg active">raw</span><span class="seg">pretty</span></div><button class="ibtn" title="copy body">⧉</button><button class="ibtn" title="save body to file">↓</button></div>
-          <div class="body-pane">00000000  89 50 4e 47 0d 0a  |.PNG..|<br/>00000010  1a 0a 00 00 00 0d  |......|<br/><span class="cut">⚠ showing 4.0 KiB of 10 KiB — save to see all</span></div>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span><span class="text-ink-mute text-chrome font-mono">application/octet-stream · 10 KiB</span><span class="flex-1"></span><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">pretty</span></div><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="copy body">⧉</button><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="save body to file">↓</button></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]">00000000  89 50 4e 47 0d 0a  |.PNG..|<br/>00000010  1a 0a 00 00 00 0d  |......|<br/><span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 4.0 KiB of 10 KiB — save to see all</span></div>
         </div>
         <div class="cap"><strong>oversized-cut (hex fallback)</strong> — binary body: HexRenderer in either view, HEX_MAX=4096 B then the warn-tone family cut marker, shown/total human-readable (<code>body-renderer.html</code> DEC-12, replacing the shipped "… N more bytes" of <code>body.ts:56</code>); save is the escape hatch; copy copies the visible dump</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="chrome-bar"><span class="sect-lbl">request body</span><span class="spacer"></span><div class="toggle disabled"><span class="seg" style="opacity:.4;">raw</span><span class="seg active" style="opacity:.4;">pretty</span></div></div>
-          <div class="body-pane"><span class="notice">empty body</span></div>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">request body</span><span class="flex-1"></span><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome disabled"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" style="opacity:.4;">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink" style="opacity:.4;">pretty</span></div></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute text-body font-ui py-chrome-y">empty body</span></div>
         </div>
         <div class="cap"><strong>empty body</strong> — API state="empty"; muted "empty body" notice; switch disabled; no copy/save</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="chrome-bar"><span class="sect-lbl">response body</span><span class="spacer"></span><div class="toggle disabled"><span class="seg" style="opacity:.4;">raw</span><span class="seg active" style="opacity:.4;">pretty</span></div></div>
-          <div class="body-pane"><span class="notice">not captured — too large (12.0 MiB)</span></div>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span><span class="flex-1"></span><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome disabled"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" style="opacity:.4;">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink" style="opacity:.4;">pretty</span></div></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute text-body font-ui py-chrome-y">not captured — too large (12.0 MiB)</span></div>
         </div>
         <div class="cap"><strong>not-captured (too large)</strong> — API state="not_captured", reason="too_large"; body_cap=10 MiB (<code>config.rs:28</code>); notice shows the actual size human-readable (shared <code>humanBytes()</code>); no copy/save</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="chrome-bar"><span class="sect-lbl">response body</span><span class="spacer"></span><div class="toggle disabled"><span class="seg" style="opacity:.4;">raw</span><span class="seg active" style="opacity:.4;">pretty</span></div></div>
-          <div class="body-pane"><span class="notice">streaming (text/event-stream) — passed through, not captured</span></div>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span><span class="flex-1"></span><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome disabled"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" style="opacity:.4;">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink" style="opacity:.4;">pretty</span></div></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute text-body font-ui py-chrome-y">streaming (text/event-stream) — passed through, not captured</span></div>
         </div>
         <div class="cap"><strong>streaming</strong> — API state="streaming"; passed through; notice shows content-type; no copy/save</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="chrome-bar"><span class="sect-lbl">response body</span><span class="spacer"></span><div class="toggle disabled"><span class="seg" style="opacity:.4;">raw</span><span class="seg active" style="opacity:.4;">pretty</span></div></div>
-          <div class="body-pane"><span class="notice">no response yet</span></div>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span><span class="flex-1"></span><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome disabled"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" style="opacity:.4;">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink" style="opacity:.4;">pretty</span></div></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute text-body font-ui py-chrome-y">no response yet</span></div>
         </div>
         <div class="cap"><strong>no response yet</strong> — response_body is null (flow in-flight); muted notice; toggle disabled</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="chrome-bar"><span class="sect-lbl">response body</span><span class="spacer"></span><div class="toggle"><span class="seg">raw</span><span class="seg active">pretty</span></div></div>
-          <div class="body-pane"><span class="warn">failed to load body</span></div>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span><span class="flex-1"></span><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></div></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-warn">failed to load body</span></div>
         </div>
-        <div class="cap"><strong>fetch error</strong> — API call failed; warn-toned "failed to load body" (<code>BodyViewer.tsx:220</code>); copy/save hidden; switch retains state so user can retry by switching view</div>
+        <div class="cap"><strong>fetch error</strong> — the API call failed for a flow that is still captured; warn-toned "failed to load body" (<code>BodyViewer.tsx:220</code>); copy/save hidden; switch retains state so user can retry by switching view</div>
       </div>
+      <div class="swatch">
+        <div class="panel">
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span><span class="flex-1"></span><div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome disabled"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1" style="opacity:.4;">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink" style="opacity:.4;">pretty</span></div></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]" style="font-family:var(--a-ui);font-style:normal;">
+            <span class="text-warn">⚠ body unavailable</span>
+            <span class="text-ink-mute text-body font-ui py-chrome-y" style="display:block;font-style:normal;">the flow is no longer captured — the capture ring moved past it</span>
+          </div>
+        </div>
+        <div class="cap"><strong>fetch-failed (ring eviction)</strong> <span class="badge id">W5 · <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·5</a></span> — the flow itself is gone from the store, so the bytes are <em>unreachable</em>, not absent. A warn <a href="notice.html">Notice</a> with the eviction detail line; <strong>no retry offered</strong> — a retry can never succeed; switch disabled; copy/save hidden.</div>
+      </div>
+    </div>
+    <div class="callout warn" data-c="fifth-absence">
+      <strong>The fifth state — why <code>fetch-failed</code> is not one of the other four</strong> <span class="badge id">W5 fix</span>
+      <br><br>
+      The four absences above all describe bytes that <em>are not there</em>, for reasons that are the store working as designed. Eviction is a different claim: the exchange happened, the bytes were captured, and the ring has since moved past the flow — the bytes are <strong>unreachable</strong>. Rendering "empty body" or "not captured" for that is the same class of false statement as HeaderTable's "none" for a pending response.
+      <table style="margin-top:10px;">
+        <thead><tr><th>state</th><th>the claim</th><th>tone</th><th>action</th></tr></thead>
+        <tbody>
+          <tr><td><code>empty</code></td><td>the leg carried no bytes</td><td>mute</td><td>none possible</td></tr>
+          <tr><td><code>not-captured</code></td><td>bytes existed; the cap declined them</td><td>mute</td><td>none possible</td></tr>
+          <tr><td><code>streaming</code></td><td>bytes passed through uncaptured, by design</td><td>mute</td><td>none possible</td></tr>
+          <tr><td><code>no-response-yet</code></td><td>the exchange is unfinished</td><td>mute</td><td>wait — it resolves itself</td></tr>
+          <tr><td><code>fetch-failed</code> <span class="badge id">new</span></td><td>bytes were captured and are now unreachable</td><td><strong>warn</strong></td><td><strong>none for eviction; retry only when the fetch itself failed</strong></td></tr>
+        </tbody>
+      </table>
+      <p style="margin:8px 0 0;">Warn rather than mute because this is the one case where what the user asked for existed and cannot be delivered. But it is <strong>not a fault</strong> — the ring moved on, which is the store working as specified — so the wording must not read as an error the tool committed (<code>calm-microcopy</code>). The term "no longer captured" is <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·31</a>'s lexicon proposal and belongs to W6; this file uses it and will follow whatever W6 settles.</p>
+      <p style="margin:8px 0 0;"><strong>Two failures, one state, distinguished by whether retry is offered:</strong> a transport failure against a live flow gets <em>retry</em> (the existing "failed to load body" swatch); an evicted flow gets no action at all, because <code>empty-states-orient</code>'s instruction to offer a next step is a lie when none exists (<a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·16</a>). The caller supplies the sentence and the action slot; BodyViewer only decides that the region is warn-toned and the controls are gone.</p>
     </div>
     <div class="callout" data-c="no-states">
       <strong>Deliberate non-states.</strong>
@@ -394,12 +430,12 @@ flowchart LR
       <div class="fork-grid">
         <div class="fork-card">
           <strong>A — muted notice line</strong> <span class="badge settled">chosen</span>
-          <div class="panel" style="margin-top:8px;"><div class="body-pane"><span class="notice">empty body</span></div></div>
+          <div class="panel" style="margin-top:8px;"><div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute text-body font-ui py-chrome-y">empty body</span></div></div>
           <p class="cap">The pane is never blank. A muted "empty body" line fills the slot — the screen never leaves a silent void. Matches <code>body.ts:68</code> ("empty body") and the shipped <code>bodyNotice()</code> contract.</p>
         </div>
         <div class="fork-card">
           <strong>B — omit BodyViewer entirely</strong> <span class="badge rejected">rejected</span>
-          <div class="panel" style="margin-top:8px;"><div class="body-pane" style="height:20px;"></div></div>
+          <div class="panel" style="margin-top:8px;"><div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]" style="height:20px;"></div></div>
           <p class="cap">Leaving the slot empty means the screen jumps in height when body state changes. The notice is zero implementation cost and prevents the layout shift.</p>
         </div>
       </div>
@@ -410,12 +446,12 @@ flowchart LR
       <div class="fork-grid">
         <div class="fork-card">
           <strong>A — renderer marks its own cut</strong> <span class="badge settled">chosen</span>
-          <div class="panel" style="margin-top:8px;"><div class="body-pane">00000000  89 50 4e 47  |.PNG|<br/><span class="cut">⚠ showing 4.0 KiB of 10 KiB — save to see all</span></div></div>
+          <div class="panel" style="margin-top:8px;"><div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]">00000000  89 50 4e 47  |.PNG|<br/><span class="block mt-chrome-gap text-warn text-chrome border-t border-dashed border-hairline pt-[5px]">⚠ showing 4.0 KiB of 10 KiB — save to see all</span></div></div>
           <p class="cap">The cut marker is a rendering artifact — it belongs to the renderer that produced the truncated output (shipped: <code>body.ts:56</code> appends "… N more bytes"; the family redesign replaces the form with the warn-tone human-readable marker, <code>body-renderer.html</code> DEC-12 — ownership unchanged). BodyViewer only needs to provide the save button. Clean separation: renderer is responsible for what it shows.</p>
         </div>
         <div class="fork-card">
           <strong>B — BodyViewer compares sizes and adds an overlay</strong> <span class="badge rejected">rejected</span>
-          <div class="panel" style="margin-top:8px;"><div class="body-pane">00000000  89 50 4e 47  |.PNG|</div><div style="background:var(--a-soft);border:1px solid var(--a-line);border-radius:3px;padding:4px 8px;font-size:11px;color:var(--a-mute);margin-top:4px;">showing 4096 of 10240 bytes</div></div>
+          <div class="panel" style="margin-top:8px;"><div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]">00000000  89 50 4e 47  |.PNG|</div><div style="background:var(--a-soft);border:1px solid var(--a-line);border-radius:3px;padding:4px 8px;font-size:11px;color:var(--a-mute);margin-top:4px;">showing 4096 of 10240 bytes</div></div>
           <p class="cap">Adds a BodyViewer-level size comparison that duplicates the renderer's own knowledge. The renderer already knows its cap; an overlay is redundant and harder to keep consistent across the five renderer members.</p>
         </div>
       </div>
@@ -429,27 +465,27 @@ flowchart LR
           <div class="fork-card">
             <strong>Option A — one BodyViewer per leg</strong> <span class="badge settled">chosen</span>
             <div class="panel" style="margin:8px 0;">
-              <div class="chrome-bar"><span class="sect-lbl" style="color:var(--a-mute);">request body</span><span class="meta-tag">text/plain · 0 B</span></div>
-              <div class="body-pane"><span class="notice">empty body</span></div>
+              <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui" style="color:var(--a-mute);">request body</span><span class="text-ink-mute text-chrome font-mono">text/plain · 0 B</span></div>
+              <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute text-body font-ui py-chrome-y">empty body</span></div>
             </div>
             <div class="panel" style="margin:8px 0;">
-              <div class="chrome-bar"><span class="sect-lbl" style="color:var(--a-mute);">response body</span><span class="meta-tag">application/json · 2.4 KiB</span></div>
-              <div class="body-pane">{"status":200}</div>
+              <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui" style="color:var(--a-mute);">response body</span><span class="text-ink-mute text-chrome font-mono">application/json · 2.4 KiB</span></div>
+              <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]">{"status":200}</div>
             </div>
             <p class="cap"><strong>Props:</strong> simpler component (no leg-switch state); request and response bodies visible simultaneously; decode state is independent per leg; matches the W1 draft's grouping.<br><strong>Cons:</strong> both fetch at mount (more API calls up front); two chrome bars take more vertical space when one leg has no body.</p>
           </div>
           <div class="fork-card">
             <strong>Option B — single viewer, leg switch in chrome bar</strong> <span class="badge rejected">rejected</span>
             <div class="panel" style="margin:8px 0;">
-              <div class="chrome-bar">
-                <span class="sect-lbl" style="color:var(--a-mute);">body</span>
-                <div class="leg-switch"><span class="seg">req</span><span class="seg active">resp</span></div>
-                <span class="meta-tag">application/json · 2.4 KiB</span>
-                <span class="spacer"></span>
-                <div class="toggle"><span class="seg active">raw</span><span class="seg">decoded</span></div>
-                <button class="btn">copy</button><button class="btn">save</button>
+              <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2">
+                <span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui" style="color:var(--a-mute);">body</span>
+                <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">req</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">resp</span></div>
+                <span class="text-ink-mute text-chrome font-mono">application/json · 2.4 KiB</span>
+                <span class="flex-1"></span>
+                <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">decoded</span></div>
+                <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none">copy</button><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none">save</button>
               </div>
-              <div class="body-pane">{"status":200}</div>
+              <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]">{"status":200}</div>
             </div>
             <p class="cap"><strong>Props:</strong> matches the shipped <code>BodyViewer.tsx</code> shape exactly (leg switch at <code>BodyViewer.tsx:140</code> — a second <a href="segmented-control.html">SegmentedControl</a> tenant); one fetch at a time; single chrome bar; compact in a narrow panel.<br><strong>Cons:</strong> cannot compare request and response bodies simultaneously; leg switch adds component state; decode state resets on leg change (current shipped behavior) — may surprise users.</p>
           </div>
@@ -524,6 +560,7 @@ flowchart LR
         <tr><td><code>flowId</code></td><td><code>string</code></td><td>flow identity — fetch path + save filename</td></tr>
         <tr><td><code>leg</code></td><td><code>Leg</code></td><td>fixed per instance (D3 settled Option A) — names the leg label ("request body" | "response body") and the fetch path</td></tr>
         <tr><td><code>body</code></td><td><code>BodyView</code></td><td>state + size for the notice states, from <code>FlowView.request_body</code> / <code>response_body</code></td></tr>
+        <tr><td><code>legNamedByHost</code></td><td><code>boolean?</code></td><td>the host asserts that the leg is already named above this viewer (a REQUEST / RESPONSE band). Degrades the leg label to the bare word "body"; the region's <code>aria-label</code> keeps the full form either way. Default <code>false</code> — a flat panel names its own legs. <strong>Only the host can know this</strong>, which is why it is a prop and not an inference (W5, <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·5</a>)</td></tr>
       </tbody>
     </table>
     <div data-c="tsdoc">
@@ -531,11 +568,11 @@ flowchart LR
       <pre class="tsdoc">/**
  * BodyViewer — one leg's body: chrome bar (leg label · raw|pretty switch · content-type · size · copy ⧉ · save ↓) + renderer pane dispatched by content-type and view state.
  * @tier T4 — composition; assembles SegmentedControl · BodyRenderer family · CopyButton (icon form) · IconButton; designed-only (not collected)
- * @anatomy chrome bar: leg label ("request body" | "response body") · body metadata (content-type · humanBytes size) · view switch (SegmentedControl raw | pretty, pretty default — D4) · copy ⧉ (CopyButton icon form; hidden for images) · save ↓ (IconButton glyph="save") — then renderer pane (dispatch contract; raw = decoded raw, never wire hex; json/xml = read-only CodeMirror surface, auto-height — body-renderer DEC-13)
+ * @anatomy chrome bar (WRAPS — metadata drops to a second line first; controls never shrink): leg label ("request body" | "response body", degrading to bare "body" when the host names the leg — legNamedByHost) · body metadata (content-type · humanBytes size) · view switch (SegmentedControl raw | pretty, pretty default — D4) · copy ⧉ (CopyButton icon form, 24px; hidden for images) · save ↓ (IconButton glyph="save") — then renderer pane (dispatch contract; raw = decoded raw, never wire hex; json/xml = read-only CodeMirror surface, auto-height — body-renderer DEC-13; absences render a Notice, never a bare styled line)
  * @use zones C and D of FlowDetail — one instance per leg (D3): the request body section and response body section
  * @avoid use as a generic file previewer outside the FlowDetail context — it is bound to TrawlerApi and the BodyView state contract
- * @states loading (spinner) · raw-body (as sent) · pretty-body · image-body · oversized-cut (hex HEX_MAX/json TREE_MAX, renderer marks the cut) · empty (notice) · not-captured (notice) · streaming (notice) · no-response-yet (notice) · fetch-error
- * @madeof SegmentedControl · JsonRenderer · XmlRenderer · ImageRenderer · FormRenderer · HexRenderer · CopyButton · IconButton
+ * @states loading (spinner) · raw-body (as sent) · pretty-body · image-body · oversized-cut (hex HEX_MAX/json TREE_MAX, renderer marks the cut) · empty (mute Notice) · not-captured (mute Notice) · streaming (mute Notice) · no-response-yet (mute Notice) · fetch-failed (warn Notice — bytes were captured and are now unreachable; retry offered for a transport failure, never for a ring eviction)
+ * @madeof SegmentedControl · JsonRenderer · XmlRenderer · ImageRenderer · FormRenderer · HexRenderer · TextRenderer · Notice · CopyButton · IconButton
  */</pre>
     </div>
 
@@ -556,8 +593,9 @@ flowchart LR
         <tr><td>copy ⧉ (CopyButton, icon form)</td><td>see <a href="copy-button.html">copy-button.html</a> token table; icon form uses IconButton-style hit area (<code>w-6 h-6</code>, 24 px — WCAG floor), confirm swaps glyph to ✓ <code>text-ok</code></td></tr>
         <tr><td>save ↓ (IconButton)</td><td>see <a href="icon-button.html">icon-button.html</a> token table; <code>size=24</code> in the compact chrome bar</td></tr>
         <tr><td>renderer pane wrapper</td><td><code>min-h-0</code> — no inner scroll; outer FlowDetail scroll container handles overflow (<code>FlowDetail.tsx:79</code>); the Json/Xml CodeMirror surface is themed auto-height with its own scroller disabled (<code>body-renderer.html</code> § tokens)</td></tr>
-        <tr><td>notice text (empty / not-captured / streaming / no-response)</td><td><code>text-xs text-ink-mute</code></td></tr>
-        <tr><td>error text (fetch failed)</td><td><code>text-xs text-warn</code> — matches <code>BodyViewer.tsx:220</code></td></tr>
+        <tr><td>absence sentences (empty / not-captured / streaming / no-response)</td><td>see <a href="notice.html">notice.html</a> token table — <code>&lt;Notice&gt;</code> at mute tone. BodyViewer draws no notice CSS of its own; the private mono-italic <code>.body-pane .notice</code> is absorbed by Notice (W5, <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·24</a>), which switches the family to Inter upright — the cost is disclosed in <a href="notice.html">notice.html</a> § absorbs</td></tr>
+        <tr><td><code>fetch-failed</code> (transport failure · ring eviction)</td><td>see <a href="notice.html">notice.html</a> token table — <code>&lt;Notice tone="warn"&gt;</code> with the ⚠ glyph and an optional <code>detail</code> line; the retry <a href="button.html">Button</a> goes in its <code>action</code> slot, and is passed only when a retry can succeed. Replaces the bare <code>text-warn</code> line of <code>BodyViewer.tsx:220</code></td></tr>
+        <tr><td>chrome-bar wrap priority</td><td>the metadata span carries <code>order-last basis-full</code> at the narrow breakpoint (or simply wraps last, given it is the only non-<code>shrink-0</code> member); the leg label, switch, and both icon buttons are <code>shrink-0</code> so they never compress below their hit areas</td></tr>
         <tr><td>loading spinner</td><td><code>w-3 h-3 rounded-full border-2 border-hairline border-t-ink-mute animate-spin</code> — no text (manager 2026-07-23)</td></tr>
       </tbody>
     </table>
@@ -567,40 +605,40 @@ flowchart LR
     <div class="app swatches" data-c="specimen">
       <div class="swatch">
         <div class="panel" style="max-width:none;">
-          <div class="chrome-bar">
-            <span class="sect-lbl">response body</span>
-            <span class="meta-tag">application/json · 1.1 KiB</span>
-            <span class="spacer"></span>
-            <div class="toggle"><span class="seg active">raw</span><span class="seg">pretty</span></div>
-            <button class="ibtn" title="copy body">⧉</button>
-            <button class="ibtn" title="save body to file">↓</button>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2">
+            <span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span>
+            <span class="text-ink-mute text-chrome font-mono">application/json · 1.1 KiB</span>
+            <span class="flex-1"></span>
+            <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">pretty</span></div>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="copy body">⧉</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="save body to file">↓</button>
           </div>
-          <div class="body-pane">{"id":"8f3a91c2","method":"GET","status":200,"uri":"https://api.example.com/orders"}</div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]">{"id":"8f3a91c2","method":"GET","status":200,"uri":"https://api.example.com/orders"}</div>
         </div>
         <div class="cap"><strong>State: JSON body, raw</strong> — the body exactly as sent (minified stays one line, decoded raw — not hex); TextRenderer; copy ⧉ and save ↓ active</div>
       </div>
       <div class="swatch">
         <div class="panel" style="max-width:none;">
-          <div class="chrome-bar">
-            <span class="sect-lbl">response body</span>
-            <span class="meta-tag">application/json · 1.1 KiB</span>
-            <span class="spacer"></span>
-            <div class="toggle"><span class="seg">raw</span><span class="seg active">pretty</span></div>
-            <button class="ibtn" title="copy body">⧉</button>
-            <button class="ibtn" title="save body to file">↓</button>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2">
+            <span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span>
+            <span class="text-ink-mute text-chrome font-mono">application/json · 1.1 KiB</span>
+            <span class="flex-1"></span>
+            <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></div>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="copy body">⧉</button>
+            <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" title="save body to file">↓</button>
           </div>
-          <div class="body-pane"><span class="jp">{</span><br>  <span class="jk">"id"</span><span class="jp">:</span> <span class="js">"8f3a91c2"</span><span class="jp">,</span><br>  <span class="jk">"method"</span><span class="jp">:</span> <span class="js">"GET"</span><span class="jp">,</span><br>  <span class="jk">"status"</span><span class="jp">:</span> <span class="jn">200</span><span class="jp">,</span><br>  <span class="jk">"uri"</span><span class="jp">:</span> <span class="js">"https://api.example.com/orders"</span><br><span class="jp">}</span></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute">{</span><br>  <span class="text-syn-key">"id"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"8f3a91c2"</span><span class="text-ink-mute">,</span><br>  <span class="text-syn-key">"method"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"GET"</span><span class="text-ink-mute">,</span><br>  <span class="text-syn-key">"status"</span><span class="text-ink-mute">:</span> <span class="text-syn-num">200</span><span class="text-ink-mute">,</span><br>  <span class="text-syn-key">"uri"</span><span class="text-ink-mute">:</span> <span class="text-syn-str">"https://api.example.com/orders"</span><br><span class="text-ink-mute">}</span></div>
         </div>
         <div class="cap"><strong>State: JSON body, pretty (default)</strong> — pretty active; JsonRenderer (copy-exact pretty-printed source from the API decode chain, <code>decode.rs:28</code>, in the read-only CodeMirror surface with DEC-11 tokens); copy ⧉ and save ↓ active</div>
       </div>
       <div class="swatch">
         <div class="panel" style="max-width:none;">
-          <div class="chrome-bar">
-            <span class="sect-lbl">response body</span>
-            <span class="spacer"></span>
-            <div class="toggle" style="opacity:.45;"><span class="seg">raw</span><span class="seg active">pretty</span></div>
+          <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2">
+            <span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">response body</span>
+            <span class="flex-1"></span>
+            <div class="inline-flex border border-hairline rounded-card overflow-hidden font-ui text-chrome" style="opacity:.45;"><span class="seg px-chrome-x py-[2px] cursor-pointer text-ink-mute bg-transparent border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1">raw</span><span class="seg px-chrome-x py-[2px] cursor-pointer border-none leading-[1.6] select-none hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:-outline-offset-1 bg-canvas-soft text-ink">pretty</span></div>
           </div>
-          <div class="body-pane"><span class="notice">not captured — too large (14.0 MiB)</span></div>
+          <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]"><span class="text-ink-mute text-body font-ui py-chrome-y">not captured — too large (14.0 MiB)</span></div>
         </div>
         <div class="cap"><strong>State: not captured</strong> — body exceeded 10 MiB cap (<code>config.rs:28</code>); notice shows actual size; switch disabled; no copy/save</div>
       </div>

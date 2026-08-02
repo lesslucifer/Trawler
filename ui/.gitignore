@@ -5,3 +5,7 @@ src-tauri/target
 src-tauri/gen
 tsconfig.tsbuildinfo
 *.log
+
+# Scratch entry dir for the specimens build; removed by its own try/finally,
+# ignored so a killed run cannot leave a tracked stray.
+.specimens-*

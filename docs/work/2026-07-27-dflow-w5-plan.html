@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a66be149f34851f0dfa9a37">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W5 plan (Revise + build registry)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W5 plan — Revise <em>and build</em> the registry</h1>
+      <p>Apply the 35 W4 findings the registry owns, design the four components run #3 proved missing, resolve the specimen sheet's conflicts — then ship the whole T1/T2 collection as real code, tested.</p>
+      <div class="meta">WU plan · 2026-07-27 · Trawler · T3 (docs/work/) · <code>wu/design-flow/revise-registry</code> → <code>epic/design-flow</code> · epic plan: <a href="2026-07-16-design-flow-plan.html">E-DFLOW</a> · direction: <a href="2026-07-27-dflow-w5-discussion.html">W5 discussion</a> (D1–D7, Q1–Q3 resolved)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+
+    <div class="callout">
+      Every registry defect the two W4 runs found is fixed in the component design files; the four components run #3 proved missing (<strong>TonedText · StatusLine · StepList · Select</strong>) are designed and confirmed; the shared specimen sheet's six W5-owned <code>CONFLICT:</code> markers are resolved and the design files link the sheet instead of carrying private copies — and every confirmed <strong>T1 and T2</strong> component then exists as real code under <code>ui/src/components/</code>, its TSDoc carried verbatim from the design file, each with unit tests and the collection with an integration test.
+    </div>
+
+    <h2 id="mapping">Mapping</h2>
+
+    <p>E-DFLOW's W5 summary — <em>"apply W4 findings to the registry — retier, split, merge, or document components; refine the index and usage docs"</em> — verifying requirement #1 (component registry), second pass. <strong>No UC contract:</strong> the collection is new code with no screen consuming it (Q2: extracted components are left unused), so app behavior is unchanged and <code>docs/use-cases/</code> is untouched.</p>
+
+    <div class="callout warn">
+      <strong>Deliberate scope change, recorded at planning.</strong> The epic plan and the <a href="2026-07-22-dflow-w2-registry-seed.html">W2 registry seed</a> both place the build in "a later WU", and the epic's non-goals say <em>"no Trawler UI re-design"</em>. <strong>D3 supersedes both for T1/T2 only</strong> — on the reviewer's instruction: <em>"need code, implement the components in collection. For T3 / T4 &amp; screen design we temporarily skip."</em> No screen is re-designed, so the non-goal holds in substance; what moves is <em>when</em> the collection becomes code. The result report restates this as a deviation.
+    </div>
+
+    <div class="diagram" data-c="dia-shape">
+      <pre class="mermaid">
+flowchart LR
+  A["① fix the contracts
+6 files that lie
+or contradict themselves"] --> C
+  B["② design 4 new
+TonedText · StatusLine
+StepList · Select"] --> C
+  C["③ resolve the sheet
+6 CONFLICT: → one value
+files link, stop copying"] --> D
+  D["④ build T1+T2
+ui/src/components/
+TSDoc = the file"] --> E["⑤ test
+unit per component
++ collection integration"]
+  C -.->|"4 markers re-tagged"| W6["W6 rulebook"]
+  D -.->|"registry predicates
+deferred (D4)"| W7["W7 harness"]
+      </pre>
+      <div class="caption">③ gates ④: a component cannot be built from a file that draws 10 px and specs <code>py-3</code>.</div>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+
+    <table data-c="tbl-expected">
+      <thead><tr><th>Observable</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Six lying contracts fixed</strong> — CopyButton's <code>@avoid</code> carries its fork-D2 exception and its specimen draws the icon form at one agreed size · HeaderTable gains <code>pending</code> (it renders "none" today for a response that has not arrived) · TextRenderer designed (dispatched by BodyViewer, never specified) · BodyViewer gains a fifth state <code>fetch-failed</code> · Notice permits the positive outcome or says why not · Button names where its in-flight state lives</td><td><code>docs/work/components/*.html</code></td></tr>
+        <tr><td><strong>Four new confirmed design files</strong> — TonedText (T1) · StatusLine (T2) · StepList (T1) · Select (T1), each through <a href="component-design-base.html">component-design-base</a>'s review loop; only a <em>confirmed</em> file feeds the build</td><td><code>docs/work/components/</code> + roster rows</td></tr>
+        <tr><td><strong>The specimen sheet resolved</strong> — six W5-owned conflicts each pick one value; the fourteen private copies become <code>&lt;link&gt;</code>s; the four W6-owned markers stay marked and are re-tagged <code>→ W6</code></td><td><code>docs/work/components/specimen.css</code></td></tr>
+        <tr><td><strong>The collection, in code</strong> — every confirmed T1 + T2 under <code>ui/src/components/</code>, one file per component, TSDoc carried verbatim from its design file's compile block</td><td><code>ui/src/components/*.tsx</code></td></tr>
+        <tr><td><strong>Structure calls settled</strong> — Section's fork F3 reopened <em>in place</em> for the band variant plus a ruling on the stack-level label slot; BodyViewer's leg-label degradation and chrome-bar wrap; the HeaderTable sub-bar icon extension</td><td>the three design files</td></tr>
+        <tr><td><strong>The roster tells the truth</strong> — every <code>@madeof</code> / <code>@avoid</code> name resolves to a row, every row has a file</td><td><a href="2026-07-22-dflow-w2-registry-seed.html">registry seed</a> roster</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Out of scope:</strong> T3 (<code>ProtocolLine</code>) and T4 (<code>HeaderTable</code>, <code>BodyViewer</code>) <em>code</em> — their design fixes land, the components are not built · screen assembly or re-design (<code>FlowDetail.tsx</code>, <code>Onboarding.tsx</code>, <code>FlowList.tsx</code> keep their inline copies, Q2) · new gate predicates (deferred to W7, D4) · a format change for reopened forks (D5 — edit in place) · rulebook edits (W6) · a fourth design run (W9) · deleting design files the code absorbs (Q1 — W7 still reads them).</p>
+
+    <h2 id="worklist">The worklist — 35 findings, by target</h2>
+
+    <p>Each row cites its finding number: <span class="badge id">r2·N</span> = <a href="2026-07-25-dflow-w4-run-2.html">run #2</a>, <span class="badge id">r3·N</span> = <a href="2026-07-26-dflow-w4-run-3.html">run #3</a>.</p>
+
+    <table data-c="tbl-worklist">
+      <thead><tr><th>Target</th><th>Change</th><th>Findings</th></tr></thead>
+      <tbody>
+        <tr><td><strong>CopyButton</strong></td><td><code>@avoid</code>'s flat "icon-only form" gains its own fork-D2 exception (D6 — two runs cited the file and shipped the wrong form) · the specimen draws the D2 icon form at one agreed size, so tenants compose it instead of borrowing BodyViewer's private 22 px <code>.ibtn</code></td><td><span class="badge id">r2·27</span> <span class="badge id">r2·28</span> <span class="badge id">r3·17</span> <span class="badge id">r3·21</span></td></tr>
+        <tr><td><strong>HeaderTable</strong> <span class="badge approval">design only</span></td><td>gains <code>pending</code> ("awaiting response…") — today an in-flight response's empty header array renders "none", which the lexicon reserves for an empty set: <em>a false statement in a trust-critical tool</em> · sub-bar takes the icon form instead of the hard-coded <code>label="copy all"</code> · its value cells keep KeyValueRow's click-to-copy</td><td><span class="badge id">r2·1</span> <span class="badge id">r2·24</span></td></tr>
+        <tr><td><strong>BodyViewer</strong> <span class="badge approval">design only</span></td><td>fifth state <code>fetch-failed</code> ("body unavailable — the flow is no longer captured", with retry) — its four absences all describe bytes that are <em>absent</em>, not <em>unreachable</em> · leg label degrades to "body" when the host names the leg · chrome-bar metadata may wrap · stops re-drawing the SegmentedControl / CopyButton / IconButton it declares as <code>@madeof</code></td><td><span class="badge id">r2·5</span> <span class="badge id">r2·24</span></td></tr>
+        <tr><td><strong>TextRenderer</strong></td><td>designed — BodyViewer's dispatch routes <code>text/*</code>, <code>application/javascript</code> and every raw-view text body to it, and the family is documented as five members with no such file. The most common body kind in the app currently reaches a component nobody specified</td><td><span class="badge id">r2·2</span></td></tr>
+        <tr><td><strong>Section</strong></td><td>fork F3 reopened <em>in place</em> (D5) for the <code>variant="band"</code> leg-level grouping — a two-leg screen needs two grouping levels and Sections must not nest · rules on the stack-level label slot: a stacked Section's zone label is otherwise <em>always</em> the screen's problem · padding conflict resolved (10/14 px vs <code>px-4 py-3</code>)</td><td><span class="badge id">r2·3</span> <span class="badge id">r3·16</span> <span class="badge id">r2·24</span></td></tr>
+        <tr><td><strong>Notice</strong></td><td>permits the positive outcome or states why not — its <code>@avoid</code> forbids "success/ok states" and run #3's zone C is exactly that, with nothing else in the roster rendering a positive outcome (surfaced by W4's own <code>elements·avoid-cited</code> predicate, not by a reviewer) · absorbs the two private absence-notice families</td><td><span class="badge id">r3·24</span> <span class="badge id">r2·24</span> <span class="badge id">r2·31</span></td></tr>
+        <tr><td><strong>Button</strong></td><td>names where the in-flight state lives instead of delegating to "the caller's zone" — every write on the setup screen takes seconds and shows an OS prompt · <strong>becomes the shared shell</strong> (reviewer call, round 3): gains three customization props — <code>frame</code> (border|bare) · <code>shape</code> (label|square, with <code>size</code>) · <code>tone</code> (body|mute), each defaulting to Button's own value — so <em>all three</em> buttons are one <code>&lt;button&gt;</code> element and its token table is the single source for the box</td><td><span class="badge id">r3·7</span> <span class="badge id">r3·1</span> <span class="badge id">review</span></td></tr>
+        <tr><td><strong>the button family</strong> <span class="badge approval">reviewer call, round 3</span></td><td><strong>All three buttons compose Button</strong> — one <code>&lt;button&gt;</code> element in the collection. CopyButton's fork D4 reopened in place, resolving the FlashButton deferral exactly as that card's own escape path predicted (Button is the non-copy tenant it was waiting for): it passes <code>tone="mute"</code>, plus <code>shape="square"</code> for its D2b icon form. IconButton passes <code>frame="bare" shape="square" size={28} tone="mute"</code> — and its own three forks (D1 hover · D2 border · D3 size) turn out to map one-for-one onto the axes, which is what confirms they are the right ones. Three values had silently drifted between Button and CopyButton while both claimed identical chrome — <code>border-hairline</code>/<code>border-line</code>, <code>px-2 py-1</code>/<code>px-[9px] py-[3px]</code>, <code>bg-canvas-soft</code>/<code>bg-ink-mute/12</code> — reconciled to what both specimens actually draw. Focus ring, disabled, radius, hit floor and keyboard are now inherited, not restated in three files</td><td><span class="badge id">r2·24</span> <span class="badge id">review</span></td></tr>
+        <tr><td><strong>TonedText</strong> <span class="badge auto">new T1</span></td><td>designed + rostered. Not a proposal but a <em>dangling contract</em>: StatusPill's <code>@madeof</code> names it and its <code>@avoid</code> routes non-HTTP toned values to it by name and tier; W2's fork D4 promised the roster would gain it and the confirmation landed without it. Two independent sightings</td><td><span class="badge id">r2·21</span> <span class="badge id">r3·8</span></td></tr>
+        <tr><td><strong>StatusLine</strong> <span class="badge auto">new T2</span></td><td>designed + rostered — a precondition's resolved verdict (glyph · name · message) with an in-flight state. T2 because the precedence rules are business logic. Its contract specs a <em>short</em> message</td><td><span class="badge id">r3·2</span> <span class="badge id">r3·22</span></td></tr>
+        <tr><td><strong>StepList</strong> <span class="badge auto">new T1</span></td><td>designed + rostered — ordered manual instructions, a slot per step. The registry has <em>no instructional component at all</em>: all 16 files came from a read-only panel that never asked the user for anything</td><td><span class="badge id">r3·3</span> <span class="badge id">r3·9</span></td></tr>
+        <tr><td><strong>Select</strong> <span class="badge auto">new T1</span></td><td>designed + rostered — the app's one searchable dropdown, options passed in. Proposed generic, not as a target picker</td><td><span class="badge id">r3·4</span></td></tr>
+        <tr><td><strong><code>specimen.css</code></strong></td><td>six W5-owned conflicts resolved (Section padding · <code>.ibtn</code> size · the D2 icon form's home · <code>@madeof</code> re-drawing · the duplicated key/value grid · two notice families); four W6-owned markers stay and are re-tagged</td><td><span class="badge id">r2·24</span></td></tr>
+        <tr><td><strong>roster</strong></td><td>rows for the four new components; every <code>@madeof</code>/<code>@avoid</code> name resolves; tier column re-checked</td><td><span class="badge id">r2·21</span> <span class="badge id">r3·11</span></td></tr>
+        <tr><td><strong><code>setup.ts</code></strong></td><td>a <code>// TODO [UI_DEFER]</code> at the microcopy boundary — <code>trustStatus</code>/<code>proxyStatus</code> return full sentences, so a screen cannot shorten what it renders (Q3)</td><td><span class="badge id">r3·22</span></td></tr>
+        <tr><td><span class="badge id">closed</span> won't fix</td><td>"no record of a reopened fork" — D5 rules that forks are edited in place; snapshot history and the doc diff layer are the record</td><td><span class="badge id">r2·8</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="build">The build — what ships as code</h2>
+
+    <table data-c="tbl-build">
+      <thead><tr><th>Tier</th><th>Components</th><th>Built</th></tr></thead>
+      <tbody>
+        <tr><td><strong>T1</strong></td><td>Section · IconButton · CopyButton · CopyText · KeyValueRow · DurationText · TimestampText · SegmentedControl · Notice · Button · <em>TonedText</em> · <em>StepList</em> · <em>Select</em></td><td>✅ 13 — italics new in this WU</td></tr>
+        <tr><td><strong>T2</strong></td><td>MethodLabel · StatusPill · <em>StatusLine</em> · BodyRenderer family (json · xml · image · form · hex · <em>text</em>)</td><td>✅ 9</td></tr>
+        <tr><td><strong>T3 / T4</strong></td><td>ProtocolLine · HeaderTable · BodyViewer</td><td>🚫 design fixes only</td></tr>
+        <tr><td>screens</td><td>FlowDetail · Onboarding · FlowList</td><td>🚫 untouched</td></tr>
+      </tbody>
+    </table>
+
+    <table data-c="tbl-buildrules">
+      <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><strong>TSDoc is carried verbatim</strong> from each design file's compile block — first line · <code>@tier</code> · <code>@anatomy</code> · <code>@use</code>/<code>@avoid</code> · <code>@states</code> · <code>@madeof</code></td><td>Code-as-truth (<a href="2026-07-22-dflow-w2-registry-seed.html">W2 model</a>): the generated index derives from TSDoc, so one copy exists. Q1 confirms the direction — <em>the design file is transient and gets deleted once the code ships</em>; W5 keeps the files only because W7 still reads them.</td></tr>
+        <tr><td><strong><code>StatusPill</code> is rewritten to its design file</strong> (Q1). Today <code>components.tsx:24</code> is <code>{tone, children}</code> — a generic toned mono span. That <em>is</em> TonedText under fork D4. So: TonedText takes the shipped implementation, StatusPill becomes <code>{status: number | null}</code> resolving tone, "…" for null, and the reason phrase</td><td>The design file is the contract both runs cited. Fork D4 already recorded the demotion and promised the split; this is that promise landing, not a new decision.</td></tr>
+        <tr><td><strong><code>Field</code> and <code>StatusDot</code> are not touched</strong></td><td>Neither is in the collection — the W2 seed lists them as shipped, validated and outside the W1 roster. They join when a build WU gives them the TSDoc shape.</td></tr>
+        <tr><td><strong>Extracted components are left unused</strong> (Q2) — <code>FlowDetail.tsx</code> and <code>BodyViewer.tsx</code> keep their inline copies</td><td>Rewiring them is screen work, which D3 defers. An unused-but-tested component is honest; a half-rewired screen is not.</td></tr>
+        <tr><td><strong>New dependency:</strong> <code>statuses</code> (jshttp, ~2 kB, zero-dep) for StatusPill's reason phrases</td><td>Settled in status-pill's fork D5: IANA-sourced and maintained upstream. <code>http.STATUS_CODES</code> is Node-only and unavailable in the Tauri webview bundle; the rejected alternative was ~60 lines of copied table that drifts.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="tests">Test plan <span class="badge id">D7 — no waiver</span></h2>
+
+    <table data-c="tbl-tests">
+      <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>unit</strong><br>commit level</td>
+          <td><code>ui/src/components/*.test.tsx</code> (vitest + @testing-library/react, the suite the repo already runs). One test file per component, asserting <em>its own contract</em>, not generic rendering: every state in its <code>@states</code> line renders and is distinguishable · every documented keyboard path fires · the <code>@avoid</code> boundaries that are representable in code hold. The findings this WU fixes each get their own case, so a regression reds:
+          <ul>
+            <li><strong>StatusPill</strong> — <code>200→ok</code>, <code>404/500→warn</code>, <code>301/101/unknown→muted</code>, <code>null→"…"</code> muted; the reason phrase reaches <code>title</code> + <code>aria-label</code></li>
+            <li><strong>TonedText</strong> — the three tones; no business logic (it never inspects its children)</li>
+            <li><strong>CopyButton</strong> — labelled <em>and</em> icon (D2) forms; the ⧉→✓ confirm flash and its timeout; the icon form's hit area meets the agreed size (the 22 px borrow both runs made is the bug this pins)</li>
+            <li><strong>CopyText</strong> — click copies the whole value; the selection guard leaves a partial take native</li>
+            <li><strong>Notice</strong> — mute (absence) and warn (failure) tones, the optional secondary line, the action slot, and the positive-outcome state this WU adds</li>
+            <li><strong>Button</strong> — labelled action, disabled, and the in-flight state this WU gives it a home for</li>
+            <li><strong>StepList</strong> — ordered steps, per-step slot content</li>
+            <li><strong>Select</strong> — open/close, type-to-filter, ↑/↓/Enter selection</li>
+            <li><strong>StatusLine</strong> — glyph·name·message per verdict, plus in-flight; an authoritative positive beats a stale error (the precedence that makes it T2)</li>
+            <li><strong>KeyValueRow</strong> — the value cell carries CopyText's affordance (the conflict the sheet exposed)</li>
+            <li><strong>SegmentedControl · Section · IconButton · MethodLabel · DurationText · TimestampText · BodyRenderers</strong> — states, keyboard, and each one's own <code>@avoid</code> line (e.g. DurationText never renders a live ticker while in-flight; TimestampText is always local, never UTC)</li>
+          </ul></td>
+        </tr>
+        <tr>
+          <td><strong>integration</strong><br>WU level</td>
+          <td><code>ui/src/components/collection.test.tsx</code> — the collection's bounded contract, the thing no per-component test can assert: <strong>①</strong> every T1/T2 component in the roster is exported from the collection's barrel and renders standalone · <strong>②</strong> each component's <code>@madeof</code> composition actually composes — StatusPill renders a TonedText, KeyValueRow renders a CopyText — rather than re-drawing it, which is the exact defect the specimen sheet exposed in three files · <strong>③</strong> a component's <code>@avoid</code> alternative exists and is reachable (IconButton's "use a plain button" resolves to a real export — the gap that went unnoticed for four zones). This is the WU's contract: <em>the collection is a vocabulary, not a folder of files</em>.</td>
+        </tr>
+        <tr><td><strong>e2e</strong></td><td><code>waived: "flow e2e is W7 per the epic plan"</code> — same wording as W4. No screen consumes the collection yet (Q2), so there is no user-visible flow to drive.</td></tr>
+        <tr><td>gate 0</td><td><code>cargo test --workspace</code> unaffected but re-run (the WU touches no Rust) · <code>npm test</code> in <code>ui/</code> green · <code>tsc -b</code> clean · <code>cargo xtask verify-doc</code> green on every doc this WU writes.</td></tr>
+      </tbody>
+    </table>
+
+    <p class="meta">No test asserts that a design is <em>good</em> — that stays review territory, per the epic's non-goals. What these assert is that a component <em>does what its own contract says</em>, which is precisely what the two W4 runs found six files failing to do.</p>
+
+    <h2 id="order">Order of work</h2>
+
+    <div class="diagram" data-c="dia-order">
+      <pre class="mermaid">
+flowchart TD
+  S1["1 · design fixes
+6 lying contracts + Section F3
+edit forks in place (D5)"] --> S2
+  S2["2 · four new design files
+TonedText → StatusLine
+StepList → Select
+each: draft → review → confirmed"] --> S3
+  S3["3 · specimen sheet
+6 conflicts resolved
+files link, private copies dropped"] --> S4
+  S4["4 · build T1
+Button first — the only button element
+then CopyButton + IconButton (compose it)
+TonedText, then StatusPill"] --> S5
+  S5["5 · build T2
+StatusPill split · MethodLabel
+StatusLine · BodyRenderers"] --> S6
+  S6["6 · integration test
++ roster truth pass
++ [UI_DEFER] TODO"] --> S7
+  S7["7 · result doc
+distillation · code-review
+--no-ff merge"]
+      </pre>
+      <div class="caption">Design confirms before code — <em>only a confirmed design file feeds the build</em> (component-design-base). Two <code>@madeof</code> edges order the T1 build: <strong>Button before <em>both</em> <a href="components/copy-button.html">CopyButton</a> and <a href="components/icon-button.html">IconButton</a></strong> — all three are one <code>&lt;button&gt;</code> element, the siblings passing only <code>frame</code> / <code>shape</code> / <code>tone</code> deltas — and <strong>TonedText before StatusPill</strong>. Build Button first and the three token drifts cannot recur; build it later and three files each need their own focus ring.</div>
+    </div>
+
+    <h2 id="distillation">Distillation plan</h2>
+
+    <table data-c="tbl-distil">
+      <thead><tr><th>Tier</th><th>What moves</th></tr></thead>
+      <tbody>
+        <tr><td><strong>T4 · <code>ui/</code></strong></td><td><strong>The registry becomes truth here.</strong> After this WU the collection's TSDoc — not the design files — is what a reuse decision reads. That is the epic's code-as-truth model arriving, and Q1 states the endpoint: the design files are transient and a later WU deletes what the code absorbed.</td></tr>
+        <tr><td><strong>T2 · decisions</strong></td><td>Likely a DEC-15 amendment or a short sibling: the collection is built, the design file is scaffolding, and the generated index still owes its generator (W7). Judged at the distillation checklist — if nothing shape-level changed, nothing is written.</td></tr>
+        <tr><td><strong>T2 · design-rules</strong></td><td><strong>Untouched</strong> — the rulebook is W6's. The four re-tagged specimen conflicts are W6 input, not edits made here.</td></tr>
+        <tr><td><strong>T2 · use-cases</strong></td><td>No change — no screen consumes the collection (Q2), so no UC contract moves.</td></tr>
+        <tr><td><strong>T1</strong></td><td>Expected none. The flow doc stays T3 until W7 (W4's reasoning holds: it is still moving). If the build changes where components live in a way <a href="../architecture.html">architecture</a> states, that one line moves.</td></tr>
+        <tr><td><strong>T3</strong></td><td>This plan, the result report, the four new design files, the six edited ones, the resolved sheet, and the roster update.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="risks">Called at planning</h2>
+
+    <table data-c="tbl-risks">
+      <thead><tr><th>Item</th><th>Call</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The WU is large</strong> — 10 design files touched, 4 authored, 22 components built, ~23 test files.</td><td>Accepted, not split. The build is the reviewer's instruction and the design fixes are its precondition — a component built from an unfixed contract is a defect shipped twice. Commits stay per-component so the diff reads in pieces.</td></tr>
+        <tr><td><strong>Four design files need review rounds</strong> before their code can be written.</td><td>Sequenced first (step 2). If a confirmation stalls, its <em>build</em> drops to a follow-up WU while everything else lands — the design file being unconfirmed is exactly the signal not to build it.</td></tr>
+        <tr><td><strong>Unused exports</strong> — 22 components, no consumer (Q2).</td><td>Deliberate. Lint config may need to permit it; the integration test is what proves they work in the absence of a screen.</td></tr>
+        <tr><td><strong>The four W6-owned specimen conflicts</strong> keep the sheet self-contradicting on the 8 px floor, the hover wash and the syntax tokens.</td><td>Correct and deliberate — resolving a contested rule here would pre-empt W6, and W7 cannot write an honest predicate until W6 settles it. The markers stay visible.</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

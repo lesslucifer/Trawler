@@ -15,7 +15,28 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
             Ok((0, String::new()))
         }
         ["e2e"] => e2e(&dir),
+        ["specimens"] => specimens(repo, "build-specimens.mjs"),
+        ["specimens", "--check"] => specimens(repo, "check-render.mjs"),
         _ => Err(super::USAGE.to_string()),
+    }
+}
+
+// Design files render the real ui/src/components/ collection. On a file:// origin
+// a page may not read local files and module scripts never execute, so the
+// collection is compiled to one classic script at author time instead of load
+// time. Node owns that (esbuild, headless Chrome); xtask is the entry point, the
+// same way `ui build` fronts pnpm.
+fn specimens(repo: &Path, script: &str) -> Result<(i32, String), String> {
+    let script_path = repo.join("scripts").join(script);
+    let status = Command::new("node")
+        .arg(&script_path)
+        .current_dir(repo)
+        .status()
+        .map_err(|e| format!("failed to launch node (is it installed?): {e}"))?;
+    if status.success() {
+        Ok((0, String::new()))
+    } else {
+        Err(format!("{script} failed"))
     }
 }
 
@@ -68,6 +89,12 @@ mod tests {
     #[test]
     fn unknown_ui_subcommand_is_usage_error() {
         let err = run(&["frobnicate"], Path::new(".")).unwrap_err();
+        assert!(err.contains("usage:"));
+    }
+
+    #[test]
+    fn specimens_rejects_an_unknown_flag() {
+        let err = run(&["specimens", "--rebuild-everything"], Path::new(".")).unwrap_err();
         assert!(err.contains("usage:"));
     }
 }

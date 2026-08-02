@@ -4,26 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — CopyText component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- No import map, no module scripts, no fetch: a design file must open by
+       double-click, and a file:// page may not read local files or run module
+       scripts. These are plain classic scripts, which do both.
+       specimens.bundle.js carries the app theme, the shared specimen behaviours
+       and the real collection, in that order -- one tag cannot be misordered.
+       Generated and git-ignored: regenerate with `cargo xtask ui specimens`
+       after changing ui/src/components/ or specimen.js. Babel stays a separate
+       tag because the text/babel block below is compiled in the browser. -->
+  <script src="../../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
     .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
-    .ct{color:var(--a-body);cursor:text;word-break:break-all;text-decoration:underline dotted var(--a-line);text-underline-offset:3px;user-select:text;}
-    .ct:hover,.ct.s-hover{color:var(--a-ink);text-decoration-color:var(--a-mute);}
-    .ct:focus-visible,.ct.s-focus{outline:1px solid var(--a-mute);outline-offset:2px;border-radius:2px;}
-    .ct.s-confirm{text-decoration-color:var(--a-ok);}
-    .chip{display:inline-block;margin-left:8px;font-size:10px;line-height:16px;color:var(--a-ok);border:1px solid var(--a-ok);border-radius:999px;padding:0 6px;vertical-align:1px;font-family:Inter,system-ui,sans-serif;}
-    .sel{background:rgba(174,166,156,.35);color:var(--a-ink);}
     .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
     .swatch .panel{max-width:none;}
     .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
     .swatch .cap strong{color:var(--ink);}
     .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:Inter,system-ui,sans-serif;}
     .tsdoc{font-family:"DM Mono",ui-monospace,monospace;font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
-    .glyph{color:var(--a-mute);margin-left:6px;cursor:pointer;font-size:11px;}
     .parts{display:flex;flex-direction:column;gap:10px;}
     .part{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
     .part .ex .panel{max-width:none;padding:8px 10px;}
@@ -34,8 +37,7 @@
     .flow-ex .arr{color:var(--muted);font-size:11px;white-space:nowrap;}
     .timeline{font-family:"DM Mono",ui-monospace,monospace;font-size:11px;color:var(--a-body);background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:8px 10px;line-height:1.8;white-space:pre;overflow-x:auto;}
     .timeline .m{color:var(--a-mute);}
-    .timeline .o{color:var(--a-ok);}
-  </style>
+    .timeline .o{color:var(--a-ok);}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -71,13 +73,14 @@
     <div class="app" data-c="anatomy">
       <div class="panel">
         <div class="lbl">Request</div>
-        <span class="ct s-confirm">https://api.example.com/v2/orders/8f3a91c2<span class="anno">1</span>…?expand=pricing<span class="anno">2</span></span><span class="chip">copied</span><span class="anno">3</span>
+        <div id="spec-anatomy"></div>
       </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">The real component, mid-confirm. <span class="anno">1</span> value · <span class="anno">2</span> wraps, never truncates · <span class="anno">3</span> the copied chip</div>
     </div>
     <div class="app parts" data-c="anatomy-parts">
       <div class="part">
         <div class="ex">
-          <div class="panel"><span class="ct">https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&amp;currency=USD</span></div>
+          <div class="panel" style="max-width:300px;"><div id="spec-wrap"></div></div>
           <div class="cap">a long URI: wrapped over several lines, all of it visible — the column never widens, the string never shortens</div>
         </div>
         <div>
@@ -90,7 +93,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><span class="ct">…orders/8f3a91c2/items</span></div>
+        <div class="panel"><div id="spec-anat-rest"></div></div>
           <div class="cap">the only hint at rest: a dotted hairline underline — no button, no icon, no background</div>
         </div>
         <div>
@@ -103,7 +106,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><span class="ct s-confirm">…orders/8f3a91c2/items</span><span class="chip">copied</span></div>
+        <div class="panel"><div id="spec-anat-confirm"></div></div>
           <div class="cap">just clicked: chip + ok underline — both gone after ~2 s</div>
         </div>
         <div>
@@ -121,7 +124,7 @@
     <div class="app parts" data-c="behavior-table">
       <div class="part">
         <div class="ex">
-          <div class="flow-ex"><div class="panel"><span class="ct">…/items</span></div><span class="arr">click ▸</span><div class="panel"><span class="ct s-confirm">…/items</span><span class="chip">copied</span></div></div>
+      <div class="flow-ex"><div class="panel"><div id="spec-flow-before"></div></div><span class="text-ink-mute text-chrome">click ▸</span><div class="panel"><div id="spec-flow-after"></div></div></div>
           <div class="cap">one click (or Enter when focused) — the full URI is now on the clipboard</div>
         </div>
         <div>
@@ -134,7 +137,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="flow-ex"><div class="panel"><span class="ct">…orders/<span class="sel">8f3a91c2</span>/items</span></div><span class="arr">release ▸ nothing</span></div>
+      <div class="flow-ex"><div class="panel"><div id="spec-flow-select"></div></div><span class="text-ink-mute text-chrome">release ▸ nothing</span></div>
           <div class="cap">drag "8f3a91c2", release: no chip, clipboard untouched — ⌘C now copies just the selection</div>
         </div>
         <div>
@@ -176,7 +179,7 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="flow-ex"><div class="panel"><span class="ct">…/items</span></div><span class="arr">click, OS denies ▸</span><div class="panel"><span class="ct">…/items</span></div></div>
+      <div class="flow-ex"><div class="panel"><div id="spec-flow-fail-before"></div></div><span class="text-ink-mute text-chrome">click, OS denies ▸</span><div class="panel"><div id="spec-flow-fail-after"></div></div></div>
           <div class="cap">write fails → screen unchanged: no chip, no error message</div>
         </div>
         <div>
@@ -205,11 +208,11 @@
 
     <h2 id="states">States</h2>
     <div class="app swatches" data-c="states">
-      <div class="swatch"><div class="panel"><span class="ct">…orders/8f3a91c2/items</span></div><div class="cap"><strong>rest</strong> — body tone, hairline dotted underline</div></div>
-      <div class="swatch"><div class="panel"><span class="ct s-hover">…orders/8f3a91c2/items</span></div><div class="cap"><strong>hover</strong> — ink, underline strengthens to mute · native tooltip "click to copy" · cursor stays the I-beam (honest: the text is selectable; never pointer — not a link)</div></div>
-      <div class="swatch"><div class="panel"><span class="ct s-focus">…orders/8f3a91c2/items</span></div><div class="cap"><strong>focus</strong> — 1 px mute outline (zero-chromatic-accent rule: focus is ink-toned, never colored)</div></div>
-      <div class="swatch"><div class="panel"><span class="ct s-confirm">…orders/8f3a91c2/items</span><span class="chip">copied</span></div><div class="cap"><strong>confirming</strong> — ~2 s; re-click restarts; value change resets instantly (CopyButton convention)</div></div>
-      <div class="swatch"><div class="panel"><span class="ct">…orders/<span class="sel">8f3a91c2</span>/items</span></div><div class="cap"><strong>drag-selecting</strong> — native selection wins; releasing a non-collapsed selection fires <em>no</em> copy</div></div>
+      <div class="swatch"><div class="panel"><div id="spec-st-rest"></div></div><div class="cap"><strong>rest</strong> — body tone, hairline dotted underline</div></div>
+      <div class="swatch force-hover"><div class="panel"><div id="spec-st-hover"></div></div><div class="cap"><strong>hover</strong> — ink, underline strengthens to mute · native tooltip "click to copy" · cursor stays the I-beam (honest: the text is selectable; never pointer — not a link)</div></div>
+      <div class="swatch force-focus"><div class="panel"><div id="spec-st-focus"></div></div><div class="cap"><strong>focus</strong> — 1 px mute outline (zero-chromatic-accent rule: focus is ink-toned, never colored)</div></div>
+      <div class="swatch"><div class="panel"><div id="spec-st-confirm"></div></div><div class="cap"><strong>confirming</strong> — ~2 s; re-click restarts; value change resets instantly (CopyButton convention). <em>Click it</em> — this swatch is the live component, so the state is entered the way a user enters it, not painted on</div></div>
+      <div class="swatch"><div class="panel"><div id="spec-st-select"></div></div><div class="cap"><strong>drag-selecting</strong> — native selection wins; releasing a non-collapsed selection fires <em>no</em> copy. <em>Try it</em> — drag across part of the value</div></div>
     </div>
     <div class="callout" data-c="no-empty">
       <strong>No empty / disabled state.</strong> A value that is absent isn't rendered as a CopyText — the screen omits the field. Nothing to copy → the component doesn't exist.
@@ -219,34 +222,34 @@
     <div class="app cards" data-c="d1">
       <div class="card">
         <strong>D1 · trigger model</strong> <span class="badge auto">settled: A + cursor: copy</span>
-        <div class="panel" style="margin-top:8px;"><span class="ct">…/orders/8f3a91c2</span></div>
+        <div class="panel" style="margin-top:8px;"><div id="spec-d1-settled"></div></div>
         <p class="cap" style="font-size:12px;color:var(--muted);"><strong>A — the value is the button</strong> (+ selection guard). Zero extra chrome; the biggest possible hit target; drag-select still native. Cursor sub-fork, review-driven: <code>pointer</code> read as a link ("click to open") ✗ · <code>copy</code> is macOS's arrow + green plus — drag-drop connotation, visually clunky ✗ · <strong><code>text</code> (I-beam) ✓</strong> — honest for selectable text; the dotted underline, hover strengthening and tooltip carry the copy signal. Custom image cursors rejected: platform-inconsistent, scale badly.</p>
       </div>
       <div class="card">
-        <strong>alt: hover glyph</strong> <span class="badge warn">rejected</span>
-        <div class="panel" style="margin-top:8px;"><span style="color:var(--a-body);">…/orders/8f3a91c2</span><span class="glyph">⧉</span></div>
+        <strong>alt: hover glyph</strong> <span class="badge text-warn">rejected</span>
+        <div class="panel" style="margin-top:8px;"><span style="color:var(--a-body);">…/orders/8f3a91c2</span><span class="text-ink-mute ml-chrome-gap cursor-pointer text-chrome">⧉</span></div>
         <p class="cap" style="font-size:12px;color:var(--muted);"><strong>B — text inert, glyph copies.</strong> Keeps I-beam purity, but adds chrome, a tiny target, and the glyph lands wherever a wrapped URI happens to end — exactly the W1 "no fitting glyph" lesson.</p>
       </div>
       <div class="card">
-        <strong>alt: no guard</strong> <span class="badge warn">rejected</span>
-        <div class="panel" style="margin-top:8px;"><span class="ct">…/orders/<span class="sel">8f3a91c2</span></span><span class="chip">copied</span></div>
+        <strong>alt: no guard</strong> <span class="badge text-warn">rejected</span>
+        <div class="panel" style="margin-top:8px;"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]">…/orders/<span class="bg-wash-select text-ink">8f3a91c2</span></span><span class="inline-block ml-2 text-label leading-4 text-ok border border-ok rounded-full px-[6px] align-[1px] font-ui">copied</span></div>
         <p class="cap" style="font-size:12px;color:var(--muted);"><strong>C — every mouseup copies.</strong> Selecting a substring would overwrite your clipboard with the full value — hostile to the "take part of it" case KeyValueRow preserves.</p>
       </div>
     </div>
     <div class="app cards" data-c="d2">
       <div class="card">
         <strong>D2 · confirm form</strong> <span class="badge auto">settled: chip</span>
-        <div class="panel" style="margin-top:8px;"><span class="ct s-confirm">…/orders/8f3a91c2</span><span class="chip">copied</span></div>
+        <div class="panel" style="margin-top:8px;"><div id="spec-d2-settled"></div></div>
         <p class="cap" style="font-size:12px;color:var(--muted);"><strong>Inline chip after the value.</strong> Confirms where you clicked; the value stays fully visible (trust — never hide what was copied).</p>
       </div>
       <div class="card">
-        <strong>alt: text swap</strong> <span class="badge warn">rejected</span>
-        <div class="panel" style="margin-top:8px;"><span class="ct" style="color:var(--a-ok);">copied</span></div>
+        <strong>alt: text swap</strong> <span class="badge text-warn">rejected</span>
+        <div class="panel" style="margin-top:8px;"><span class="text-ink-body cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px]" style="color:var(--a-ok);">copied</span></div>
         <p class="cap" style="font-size:12px;color:var(--muted);">CopyButton's swap doesn't transfer: swapping the <em>value</em> hides what was just copied and reflows the whole line.</p>
       </div>
       <div class="card">
-        <strong>alt: underline flash</strong> <span class="badge warn">rejected</span>
-        <div class="panel" style="margin-top:8px;"><span class="ct s-confirm">…/orders/8f3a91c2</span></div>
+        <strong>alt: underline flash</strong> <span class="badge text-warn">rejected</span>
+        <div class="panel" style="margin-top:8px;"><span class="cursor-text break-all underline decoration-dotted decoration-hairline underline-offset-[3px] select-text hover:text-ink hover:decoration-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:rounded-[2px] text-ok border-ok">…/orders/8f3a91c2</span></div>
         <p class="cap" style="font-size:12px;color:var(--muted);">Zero reflow, but too subtle to verify at a glance — and invisible to a screen reader without the chip's live region anyway.</p>
       </div>
     </div>
@@ -293,39 +296,59 @@
     <div class="app" data-c="specimen">
       <div class="panel">
         <div class="lbl">Request</div>
-        <span id="live-ct" class="ct" role="button" tabindex="0" title="click to copy"
-              data-value="https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&amp;currency=USD">https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&amp;currency=USD</span><span id="live-chip"></span>
+        <div id="spec-live"></div>
       </div>
-      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — click the URI (copies for real), drag-select a substring (no copy fires), Tab + Enter (keyboard copy). Rendered in the app's Warp tokens, not the doc palette.</div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — click the URI (copies for real), drag-select a substring (no copy fires), Tab + Enter (keyboard copy). <strong>This is <code>ui/src/components/CopyText.tsx</code></strong>, fetched from disk and transpiled in your browser.</div>
     </div>
     <div class="callout" data-c="specimen-rule">
-      <strong>Template rule — the specimen scales down, never away.</strong> A fully live specimen is the ideal when the behavior is cheap to re-implement in a doc (this one is ~20 lines). When it isn't — a collapsible JSON tree, a hex grid — a simplified sample stands in: static swatches, explanation text, diagrams or visualizations of the hard part. The states section stays visual either way; only the <em>interactivity</em> is negotiable.
+      <strong>Template rule — the specimen no longer scales down, because it is no longer re-implemented.</strong> This file used to carry ~30 lines of vanilla JS re-doing the confirm flash, the selection guard and the keyboard path — a second implementation whose only job was to look like the first. It is deleted: the specimen imports the component, so the 2 s timeout, the <code>ok</code> tone swap and the selection guard you exercise above are <em>the shipped ones</em>. The scale-down rule still applies to a component too expensive to instantiate in a doc (a hex grid over a large body), but it is no longer about cost of re-implementation — nothing is re-implemented.
     </div>
   </main>
-  <script>
-    const ct = document.getElementById('live-ct');
-    const chipSlot = document.getElementById('live-chip');
-    let timer;
-    function confirmCopy() {
-      ct.classList.add('s-confirm');
-      chipSlot.innerHTML = '<span class="chip" role="status" aria-live="polite">copied</span>';
-      clearTimeout(timer);
-      timer = setTimeout(() => { ct.classList.remove('s-confirm'); chipSlot.innerHTML = ''; }, 2000);
+
+  <script type="text/babel" data-presets="react">
+    const { React, createRoot, CopyText } = window.Trawler;
+
+    const URI = 'https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&currency=USD';
+    const SHORT = '…orders/8f3a91c2/items';
+
+    const mount = (id, node) => {
+      const host = document.getElementById(id);
+      if (host) createRoot(host).render(node);
+      return host;
+    };
+
+    mount('spec-anatomy', <CopyText value={URI} label="request URI" />);
+    mount('spec-wrap', <CopyText value={URI} label="request URI" />);
+
+    for (const state of ['rest', 'hover', 'focus', 'confirm', 'select']) {
+      mount(`spec-st-${state}`, <CopyText value={SHORT} label="request URI" />);
     }
-    function copy() {
-      navigator.clipboard?.writeText(ct.dataset.value).then(confirmCopy, () => {});
+
+    mount('spec-live', <CopyText value={URI} label="request URI" />);
+
+    /* Anatomy and the behaviour flows used to paste CopyText's class string. They
+       drifted -- every copy was missing font-mono and text-body, so the specimen
+       rendered in the wrong face and size. These mount the component instead. */
+    for (const id of ['spec-anat-rest', 'spec-flow-before', 'spec-flow-select',
+                      'spec-flow-fail-before', 'spec-flow-fail-after']) {
+      mount(id, <CopyText value={SHORT} label="request URI" />);
     }
-    ct.addEventListener('click', () => {
-      const sel = window.getSelection();
-      if (sel && !sel.isCollapsed) return;
-      copy();
-    });
-    ct.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      copy();
-    });
+
+    /* `confirming` is internal to useConfirm with no prop, so the swatch enters it
+       the way a user does: a real click, via the shared specimen.js helper. */
+    const clickToConfirm = (id) =>
+      specimenReach(mount(id, <CopyText value={SHORT} label="request URI" />));
+
+    clickToConfirm('spec-anat-confirm');
+    clickToConfirm('spec-flow-after');
+
+    /* The two SETTLED fork legs describe what was actually built, so they render it.
+       The rejected legs beside them stay hand-drawn: they describe designs that do
+       not exist and cannot be instantiated. */
+    mount('spec-d1-settled', <CopyText value={SHORT} label="request URI" />);
+    clickToConfirm('spec-d2-settled');
   </script>
+
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
 </html>

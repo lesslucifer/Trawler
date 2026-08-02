@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a66c3ea9f34851f0dfa9a79">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Select component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- No import map, no module scripts, no fetch: a design file must open by
+       double-click, and a file:// page may not read local files or run module
+       scripts. These are plain classic scripts, which do both.
+       specimens.bundle.js carries the app theme, the shared specimen behaviours
+       and the real collection, in that order -- one tag cannot be misordered.
+       Generated and git-ignored: regenerate with `cargo xtask ui specimens`
+       after changing ui/src/components/ or specimen.js. Babel stays a separate
+       tag because the text/babel block below is compiled in the browser. -->
+  <script src="../../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    /* Component values come from specimen.css — .sel-* is this component's block
+       there, and the trigger's box values are CopyButton's (.cb), cloned per
+       fork D1 so the app has one small-control chrome. Doc scaffolding only
+       below, plus the one override the static illustrations need. */
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);}
+
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;}
+    .swatch .panel{max-width:none;padding:10px 12px;min-height:52px;}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
+    .swatch .cap strong{color:var(--ink);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:var(--a-ui);}
+    .tsdoc{font-family:var(--a-mono);font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .ex .panel{max-width:none;padding:8px 10px;}
+    .part .ex .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .app .fork-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;}
+    .app .fork-card{background:var(--a-soft);border:1px solid var(--a-line);border-radius:6px;padding:10px 12px;min-width:190px;flex:1;}
+    .app .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--a-mute);margin-bottom:6px;font-family:var(--a-ui);}
+    .app .fork-card .fc-ex{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:6px;}
+    /* A settled leg renders the real Select, whose popup is absolutely positioned
+       over the page. The card has to reserve that height or the popup spills past
+       its own border onto whatever follows -- measured at 33px before this. */
+    .app .fork-card .fc-ex.has-popup{padding-bottom:200px;}
+    .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:var(--a-ui);}
+    .kbd{display:inline-block;border:1px solid var(--line);border-radius:3px;padding:0 4px;font-family:var(--a-mono);font-size:11px;color:var(--ink);background:var(--paper);}
+    .cmp td,.cmp th{vertical-align:top;font-size:12.5px;}
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
+    .callout.ok{border-color:var(--ok);}
+</style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Select <span class="tier t1">T1</span></h1>
+      <p>The app's one dropdown — a compact trigger, a popup list, and type-to-filter above a threshold. Options come in; nothing is resolved inside.</p>
+      <div class="meta">Component design · <strong>draft — round 2, awaiting confirmation</strong> · 2026-07-27 · E-DFLOW.W5 · T3 (docs/work/components/) · proposed by <a href="../2026-07-26-dflow-w4-run-3.html#elements">run #3</a> (B1 · B2) · fixes <a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 4</a> · generic per <a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 10</a>'s review ruling</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> the roster has no dropdown at all. <a href="segmented-control.html">SegmentedControl</a> is its only mutually-exclusive switch and it forbids nothing that applies — <strong>an <code>@avoid</code> miss by scale, not by kind</strong> (<a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 10</a>). At 6–7 options its inline group of segments stops being a switch and becomes a toolbar, so the row read as a clean reuse right up to the mockup. Review then ruled the fix generic rather than local: <em>not a setup-specific target picker but the app's one searchable select, which every future dropdown builds on</em>. So this file claims the category — <strong>the gap is the dropdown, not this screen</strong> — and the trust-target list is just data a caller passes in.
+    </div>
+    <div class="callout warn" data-c="round-2">
+      <strong>Round 2 — the review widened the component's remit.</strong> Draft 1 designed against the two lists it could see (6 trust targets, 7 proxy targets): both hardcoded at build time, both always with a selection. Review rejected four of its "deliberately absent" calls, and they resolve to one direction — <strong>Select must also serve remotely-loaded options and an initially-empty value</strong>. What changed:
+      <table style="margin-top:8px;">
+        <thead><tr><th>Draft 1 said</th><th>Round 2</th><th>Consequence</th></tr></thead>
+        <tbody>
+          <tr><td>no loading state</td><td><code>isLoading</code> prop</td><td>remote data is in scope — the component is no longer "options the caller already has"</td></tr>
+          <tr><td>no empty state</td><td>an empty-options state</td><td>"loaded, and there is nothing" is a real outcome, distinct from loading and from no-match</td></tr>
+          <tr><td>no "nothing selected"</td><td><code>value</code> may be <code>undefined</code></td><td>driver ③ falls; a placeholder returns and <code>onChange</code>'s type widens</td></tr>
+          <tr><td>search threshold is the component's (&gt; 8)</td><td><code>searchable</code> prop, default <code>true</code></td><td>fork D2 reverses — see the rewritten card</td></tr>
+          <tr><td>options are <code>{id, label}</code></td><td>optional element per item</td><td>an option may render richer content than its label string</td></tr>
+        </tbody>
+      </table>
+      <p style="margin:8px 0 0 0;">Collision handling stays deferred — review confirmed it ("ok, skip for now"). <strong>The tier does not move:</strong> loading and empty are still states the caller drives, and the component still resolves, sorts and fetches nothing. What grew is the number of situations it must render honestly, which is a primitive's job.</p>
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — presentation and keyboard behaviour only. Options, the selected value, the loading flag and the change handler all come from the caller; nothing is resolved, defaulted, fetched or filtered by domain rules → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>the setup screen's two pickers — 6 trust targets (<code>TARGETS</code>, <code>setup.ts:25</code>) and 7 proxy targets, each defaulted by the caller from <code>defaultTarget(hostOs())</code> · every future dropdown: a filter, a saved view, an export format · <strong>and, per round 2, any picker whose options arrive from the API</strong> — which has no tenant today and is the reason the loading and empty states exist ahead of one</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>nowhere — the app has no dropdown of any kind. <code>Field</code> (<code>components.tsx:9</code>) is the only input primitive that ships, and it is a text box</td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (T1 primitive). Its trigger is <a href="copy-button.html">CopyButton</a>'s box cloned, the way <a href="button.html">Button</a>'s is (fork D1) — a shared chrome, not a composition</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① it must not read as a fourth control style</td><td>the trigger is <a href="copy-button.html">CopyButton</a>'s box exactly — same border, radius, padding, family, size and interaction tones, plus a caret. Beside a <a href="button.html">Button</a> in the same row, only the caret differs (fork D1)</td></tr>
+        <tr><td>② filtering is the default way through a list, whatever its length (round 2)</td><td><code>searchable</code> is a prop defaulting to <code>true</code> — a caller with two options opts out; nobody has to opt in. Reversed from draft 1's component-owned threshold (fork D2)</td></tr>
+        <tr><td>③ a selection is usual but not guaranteed (round 2)</td><td><code>value</code> may be <code>undefined</code>, which renders a muted placeholder on the trigger and no tick in the list. The setup screen still always passes one (<code>defaultTarget(hostOs())</code> resolves); a filter or an API-fed picker may not</td></tr>
+        <tr><td>③b options may not be there yet, or may not exist at all (round 2)</td><td>two more rendered outcomes — <code>isLoading</code>, and loaded-but-empty — each stated in the popup where the list would be. The component never fetches; it renders the caller's flag honestly</td></tr>
+        <tr><td>④ keyboard-complete, because it is an input (WCAG 2.1.1)</td><td><span class="kbd">↑</span><span class="kbd">↓</span> move, <span class="kbd">Enter</span> selects, <span class="kbd">Esc</span> closes, typing filters, <span class="kbd">Tab</span> leaves. Focus returns to the trigger on close — the one non-negotiable behaviour in this file</td></tr>
+        <tr><td>⑤ zero chromatic accent (Warp DEC-11, <code>zero-accent</code>)</td><td>the selected option is marked with a tick glyph and ink weight, never a coloured row or highlight. <code>ok</code>/<code>warn</code> stay reserved for status</td></tr>
+        <tr><td>⑥ it sits inside a dense zone that may scroll</td><td>the popup is absolutely positioned and overlays rather than pushing content — a picker that reflows the zone below it moves the very steps the user is reading (its real host is <code>PreconditionRow</code>, above a <a href="step-list.html">StepList</a>)</td></tr>
+        <tr><td>⑦ touch target (WCAG 2.5.8)</td><td><code>min-height:24px</code> on the trigger <em>and</em> on every option row — the floor <a href="icon-button.html">IconButton</a> cites and <a href="button.html">Button</a> reuses</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="vs-segmented">Select vs <a href="segmented-control.html">SegmentedControl</a> — the boundary finding 10 asked for</h2>
+    <p style="color:var(--muted);">Two components now do mutually-exclusive selection, so the line between them must be drawn in both files. <strong>The axis is cardinality, and it is the first time this collection has needed one</strong> — which is finding 10's real point: the contract language had no way to say "correct in kind, wrong at this count".</p>
+    <table data-c="vs" class="cmp">
+      <thead><tr><th></th><th>Select <em>(this)</em></th><th><a href="segmented-control.html">SegmentedControl</a></th></tr></thead>
+      <tbody>
+        <tr><td><strong>option count</strong></td><td><strong>5 or more</strong> — and no upper bound</td><td><strong>2 to 4</strong></td></tr>
+        <tr><td><strong>options are</strong></td><td>hidden until opened</td><td>all visible, always</td></tr>
+        <tr><td><strong>reads as</strong></td><td>a value you can change</td><td>a switch between views</td></tr>
+        <tr><td><strong>label length</strong></td><td>any — the popup is as wide as it needs</td><td>short words that fit inline</td></tr>
+        <tr><td><strong>search</strong></td><td><span class="yes">yes</span>, on by default (D2)</td><td><span class="no">never</span></td></tr>
+        <tr><td><strong>options may be fetched</strong></td><td><span class="yes">yes</span> — <code>isLoading</code> + an empty state</td><td><span class="no">no</span> — segments are known at build time</td></tr>
+        <tr><td><strong>may start unselected</strong></td><td><span class="yes">yes</span> — <code>value</code> may be <code>undefined</code></td><td><span class="no">no</span> — a switch always has a side</td></tr>
+        <tr><td><strong>archetype</strong></td><td>6 trust targets · 7 proxy targets · any API-fed list</td><td>raw ⇄ decoded · request ⇄ response</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="sibling-edit">
+      <strong><a href="segmented-control.html">SegmentedControl</a> needs one line if this lands</strong> — W5's to make, not this file's: its <code>@avoid</code> should send lists of five or more here by name, which is the bound finding 10 says component files lack. Not a design change to that component; it is the registry closing a loop that let a reuse read as clean until the mockup. <em>The 5-option boundary is the reviewable claim in this file — 4 fits inline, 5 is where a group starts becoming a toolbar.</em>
+    </div>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-hero">
+      <div class="panel" style="max-width:400px;min-height:230px;">
+        <div id="spec-hero"></div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);"><span class="anno">1</span> trigger label · <span class="anno">2</span> filter field · <span class="anno">3</span> selected option. Open on load, with the six real trust targets (<code>setup.ts:25</code>) — the popup overlays here exactly as it does in the app (driver ⑥), because it <em>is</em> the app's popup</div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div class="ex">
+          <div class="panel" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:40px;">
+            <div id="spec-trigger"></div>
+          </div>
+          <div class="cap">Select beside CopyButton — same box, plus a caret</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> the trigger</strong>
+          <div class="spec">
+            <span class="k">spec</span><span><code>padding:3px 9px</code>, <code>min-height:24px</code>, <code>border-radius:3px</code>, 1px <code>line</code> border, Inter 11.5px at <code>ink-body</code> — <a href="copy-button.html">CopyButton</a>'s box exactly. Plus: a <code>▾</code> caret in <code>ink-mute</code> pushed right, and <code>min-width:132px</code>. Shows the <em>selected option's label</em> — or, when <code>value</code> is <code>undefined</code>, the <code>placeholder</code> in <code>ink-mute</code> (round 2). Hover and focus tones are the shared ones; open holds the hover look.</span>
+            <span class="k">why</span><span>one small-control chrome across the app (driver ①) — <a href="button.html">Button</a> made the same call in its fork D1, so three controls now share one box and the differences are the caret, the word, and the glyph. The caret is what makes a bare label read as openable, and it is the only chrome this component adds. <code>min-width</code> so the trigger does not resize as the selection changes: a control that jumps when you pick "Linux" after "iOS Simulator" moves the row (driver ⑥). <code>ink-body</code> at rest, matching Button — the selection is a value the user is meant to read, not a quiet convenience. <strong>The placeholder is one tone quieter</strong> (<code>ink-mute</code>) precisely so an unmade choice never reads as a made one: at <code>ink-body</code>, "select a target" looks like a selected option called "select a target".</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:180px;">
+              <div class="flex items-center gap-chrome-gap px-chrome-x py-chrome-y border-b border-hairline"><span class="text-ink-mute text-chrome shrink-0">⌕</span><input class="flex-1 min-w-0 border-none bg-transparent [outline:none] font-ui text-control text-ink p-0 placeholder:text-ink-mute" value="fire" readonly></div>
+              <div class="max-h-[184px] overflow-y-auto py-[2px]">
+                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0"></span><span class="text-ink underline decoration-ink-mute underline-offset-2">Fire</span>fox</div>
+              </div>
+            </div>
+          </div>
+          <div class="cap">typing "fire" — one match, highlighted where it matched</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> the search row</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>appears when the option count is <strong>&gt; 8</strong> (D2), or immediately when the user types with the popup open. Borderless input on the popup background, Inter 11.5px at <code>ink</code>, <code>⌕</code> in <code>ink-mute</code>, placeholder "filter…". Case-insensitive substring match on the label, matched run underlined in <code>ink</code>. Focused automatically when the popup opens with search shown.</span>
+            <span class="k">why</span><span>a component-owned threshold, not a prop, so no call site has to notice its list grew and two callers cannot disagree (driver ②). <strong>Typing filters even below the threshold</strong> — type-ahead is what a keyboard user reaches for regardless, so the input appears the moment it is used; the threshold only decides whether it is there <em>before</em> you type. Substring rather than prefix because "ios sim" and "sim" should both find the iOS Simulator. The underline marks <em>why</em> a row matched, and is ink-only (driver ⑤).</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:170px;">
+              <div class="max-h-[184px] overflow-y-auto py-[2px]">
+                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span>macOS</div>
+                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div>
+                <div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Linux</div>
+              </div>
+            </div>
+          </div>
+          <div class="cap">selected (tick) · keyboard-active (wash) — two different things</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> the option rows</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>one row per option: 9px tick column, then the option's <code>element</code> if it has one, else its <code>label</code> (round 2). <code>padding:3px 9px</code>, <code>min-height:24px</code>, Inter 11.5px at <code>ink-body</code>, single-line. <strong>Selected</strong> = <code>✓</code> in <code>ink</code>. <strong>Keyboard-active</strong> = <code>soft</code> background wash + <code>ink</code> label. <strong>Hover</strong> = a 7% ink wash. The list scrolls past ~7 rows (<code>max-height:184px</code>); the active row is scrolled into view.</span>
+            <span class="k">why</span><span>the tick column is reserved on <em>every</em> row so labels share one left edge and nothing shifts when the selection moves. Selected and active are deliberately different channels — the tick says "this is the value", the wash says "Enter picks this" — and conflating them is what makes keyboard navigation feel like it has already changed the value. Both are ink-family (driver ⑤): SegmentedControl's active segment uses the same <code>soft</code> background, so the two switches agree on what "active" looks like. 24px per row is the touch floor (driver ⑦), and the scroll cap keeps a growing list from covering the instructions below it. <strong><code>element</code> is optional and <code>label</code> stays required</strong> even when it is supplied (round 2, D4): the trigger renders a single line and the filter matches text, so both need a string regardless of how the <em>row</em> draws — an element-only option would produce a blank trigger and an unfilterable row.</span>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div class="ex">
+          <div class="panel">
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:180px;">
+              <div class="flex items-center gap-chrome-gap px-chrome-x py-chrome-y border-b border-hairline"><span class="text-ink-mute text-chrome shrink-0">⌕</span><input class="flex-1 min-w-0 border-none bg-transparent [outline:none] font-ui text-control text-ink p-0 placeholder:text-ink-mute" value="chrome" readonly></div>
+              <div class="px-control-x py-[5px] font-ui text-control text-ink-mute italic">no match</div>
+            </div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:180px;">
+              <div class="px-control-x py-[5px] font-ui text-control text-ink-mute italic"><span class="inline-block w-glyph h-glyph border-[1.5px] border-hairline border-t-ink-mute rounded-full animate-spin align-[-1px]"></span>loading…</div>
+            </div>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:180px;">
+              <div class="px-control-x py-[5px] font-ui text-control text-ink-mute italic">nothing to choose from</div>
+            </div>
+          </div>
+          <div class="cap">one slot, three outcomes — no match · loading · empty</div>
+        </div>
+        <div>
+          <strong><span class="anno">4</span> the message row — where a list would be</strong>
+          <div class="spec">
+            <span class="k">spec</span><span>one line of <code>ink-mute</code> italic Inter in place of the list, never selectable or focusable. Three occupants, in precedence order: <strong><code>isLoading</code></strong> → a spinner + "loading…" (round 2) · <strong>no options at all</strong> → "nothing to choose from" (round 2) · <strong>a filter that matches none</strong> → "no match". Loading outranks empty, because an empty list mid-fetch is not yet a fact.</span>
+            <span class="k">why</span><span>the alternative is an empty popup, which reads as broken rather than as a stated outcome — the same reasoning <a href="notice.html">Notice</a> encodes for a zone with nothing to show, at control scale, and <a href="header-table.html">HeaderTable</a>'s pending fix is the same class of bug: <em>rendering "none" for something that has not arrived is a false statement</em>. Hence the precedence, and hence three distinct sentences rather than one shared "empty" — "loading…", "nothing to choose from" and "no match" are three different facts, and collapsing any two of them tells the user something untrue. All muted italic so none is mistakable for an option (a plain-styled row is one <span class="kbd">Enter</span> away from looking selectable), and none is warn-toned: a slow fetch, an empty set and a mistyped filter are all ordinary (<code>zero-accent</code>, driver ⑤).</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="no-multi">
+      <strong>Single-select only. No multi-select, no clear affordance, no free text.</strong> <em>At most</em> one option is selected (driver ③, round 2): the value may be <code>undefined</code>, and then the trigger shows the placeholder — but there is never a second selection. Multi-select needs a different trigger (it must show "3 selected" or a chip row), different keyboard rules (<span class="kbd">Space</span> toggles, <span class="kbd">Enter</span> commits) and a notion of partial state: that is a different component, and no tenant has asked for it. A Select that accepts typed values it cannot resolve is a combobox — also not this. <strong>No clear affordance either</strong>, despite <code>undefined</code> now being representable: an × in the trigger is a second target inside a control whose whole job is one target, and no tenant needs to return to unselected once a choice is made. A caller that genuinely needs "none" offers it as an option.
+    </div>
+    <div class="callout" data-c="no-groups">
+      <strong>No option groups, no disabled options — but a row may render its own content (round 2).</strong> Comment: <em>"should allow optional item element"</em>. So an option carries an optional <code>element</code>, and what a row <em>looks like</em> becomes the caller's (a glyph beside a label, a two-tone pair, a mono value). What stays the component's is everything structural: <strong>groups</strong> would need a non-selectable header row that <span class="kbd">↓</span> must skip, <strong>disabled options</strong> are a choice shown and refused — the caller should not pass one — and the <strong>24px row floor plus single-line rhythm</strong> holds whatever the element draws, because it is the touch target (driver ⑦) and the scroll cap depends on it. An element that wants two lines is asking for a different component; the constraint is stated in <code>@avoid</code> rather than enforced, since a T1 cannot police what it renders in a slot.
+    </div>
+
+    <h2 id="behavior">Behavior — the keyboard contract</h2>
+    <p style="color:var(--muted);">Anatomy is what you see; this is what it does. Every row is <span class="kbd">Tab</span>-reachable behaviour a test asserts, because a dropdown that only works with a mouse is a dropdown that excludes a keyboard user from the setup screen entirely (driver ④).</p>
+    <table data-c="keyboard">
+      <thead><tr><th>Key</th><th>Closed</th><th>Open</th></tr></thead>
+      <tbody>
+        <tr><td><span class="kbd">Enter</span> / <span class="kbd">Space</span></td><td>opens, active row = the selected one, or the first row when nothing is selected</td><td>selects the active row, closes, focus returns to the trigger. A no-op while loading, empty, or filtered to nothing</td></tr>
+        <tr><td><span class="kbd">↓</span></td><td>opens, active = selected (or first)</td><td>next visible row; stops at the last (no wrap — wrapping loses your place in a filtered list)</td></tr>
+        <tr><td><span class="kbd">↑</span></td><td>opens, active = selected (or first)</td><td>previous visible row; stops at the first</td></tr>
+        <tr><td><span class="kbd">Esc</span></td><td>—</td><td>closes, <strong>selection unchanged</strong>, filter cleared, focus returns to the trigger</td></tr>
+        <tr><td><span class="kbd">Tab</span></td><td>moves on normally</td><td>closes without selecting, then moves on — never traps focus</td></tr>
+        <tr><td>typing</td><td>—</td><td>filters (shows the search row if it was hidden); active resets to the first match</td></tr>
+        <tr><td>click outside</td><td>—</td><td>closes, selection unchanged</td></tr>
+      </tbody>
+    </table>
+    <div class="callout ok" data-c="kbd-why">
+      <strong>Two rules carry the whole feel.</strong> ① <strong>Closing always restores focus to the trigger</strong> — otherwise focus lands on <code>&lt;body&gt;</code> and a keyboard user's next <span class="kbd">Tab</span> starts from the top of the screen, which on the setup screen means walking back through three preconditions. ② <strong><span class="kbd">Esc</span> and <span class="kbd">Tab</span> never change the selection</strong>, and moving the active row is not selecting: a picker that commits on <span class="kbd">↓</span> re-renders the <a href="step-list.html">StepList</a> below it on every keypress, so the instructions flicker while you are looking for the right target.
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch"><div class="panel"><div id="spec-st-rest"></div></div><div class="cap"><strong>rest</strong> — <code>ink-body</code> label, hairline border, muted caret</div></div>
+      <div class="swatch force-hover"><div class="panel"><div id="spec-st-hover"></div></div><div class="cap"><strong>hover</strong> — label to <code>ink</code>, border to <code>ink-mute</code>. Button's values, inherited</div></div>
+      <div class="swatch force-focus"><div class="panel"><div id="spec-st-focus"></div></div><div class="cap"><strong>focus</strong> — 1px mute outline at 2px offset. Ink-toned, never chromatic</div></div>
+      <div class="swatch"><div class="panel" style="min-height:200px;"><div id="spec-st-open"></div></div><div class="cap"><strong>open</strong> — popup below the trigger, selected row ticked and tinted. <em>Opened by a real click on the real trigger</em>, not drawn: <code>open</code> is internal state with no prop, so the swatch does what a user does</div></div>
+      <div class="swatch"><div class="panel" style="min-height:200px;"><div id="spec-st-filtering"></div></div><div class="cap"><strong>filtering</strong> — typed query narrows the list; the component's own matcher decides what survives</div></div>
+      <div class="swatch"><div class="panel"><div id="spec-st-disabled"></div></div><div class="cap"><strong>disabled</strong> — 38% opacity, no pointer events, out of the tab order</div></div>
+      <div class="swatch"><div class="panel" style="min-height:120px;"><div id="spec-st-loading"></div></div><div class="cap"><strong>loading</strong> — <code>isLoading</code>: the list is awaited, the trigger stays operable</div></div>
+      <div class="swatch"><div class="panel" style="min-height:120px;"><div id="spec-st-empty"></div></div><div class="cap"><strong>empty</strong> — no options at all, distinct from "no match for a filter"</div></div>
+    </div>
+    <p style="color:var(--muted);font-size:12px;">Eight states, every one the real <code>Select</code>. Five come from props (<code>disabled</code>, <code>isLoading</code>, an empty <code>options</code> array, and the two tone axes); <strong>three cannot</strong> — <code>hover</code> and <code>focus</code> are CSS pseudo-classes, forced by re-targeting the component's own generated rules, and <code>open</code>/<code>filtering</code> are internal <code>useState</code> with no prop to set. Those two swatches click and type into the component on load. Nothing here paints a state the component cannot actually reach.</p>
+    <h2 id="decisions">Forks — settled here, confirm or push back</h2>
+    <div class="app" data-c="d1">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D1 · the trigger is CopyButton's box, not a text-field look</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex">
+            <div id="spec-d1" style="display:flex;gap:6px;align-items:center;"></div>
+          </div>
+          <div class="fc-note"><strong>The shared small-control box.</strong> Its real host puts a Select and a <a href="button.html">Button</a> side by side in one row — with one box, that row reads as two controls of the same weight, which is what they are. Button's fork D1 already made this call for the same reason; a third box would make the collection teach that picking and acting are different kinds of thing.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <div style="display:flex;gap:6px;align-items:center;">
+              <span style="display:inline-flex;align-items:center;justify-content:space-between;gap:8px;min-width:120px;padding:3px 9px;min-height:24px;border:1px solid var(--a-line);border-radius:3px;background:var(--a-soft);font-family:var(--a-ui);font-size:11.5px;color:var(--a-body);">macOS<span style="color:var(--a-mute);font-size:9px;">▾</span></span>
+              <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">filled, like Field</span>
+            </div>
+          </div>
+          <div class="fc-note"><strong>A filled input look</strong> (the <code>Field</code> primitive's <code>bg-canvas</code> box), so it reads as data entry rather than as an action. Genuinely arguable — a Select <em>is</em> an input. Rejected: it puts a filled box next to a transparent Button in the same row at the same size, which reads as a hierarchy that does not exist, and <code>data-ink-first</code> prefers the hairline. Revisit if the app grows a real form, where every control is an input and the row has no buttons.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d2" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D2 · search is a prop defaulting to on</strong> <span style="color:var(--a-warn);">— reopened and reversed at review, round 2</span></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span> <span style="color:var(--a-mute);">(round 2)</span></div>
+          <div class="fc-ex has-popup">
+            <div id="spec-d2-settled"></div>
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">searchable defaults true — the 6-option picker shows it too</span>
+          </div>
+          <div class="fc-note"><strong><code>searchable?: boolean</code>, default <code>true</code>.</strong> Review: <em>"a prop and default to true"</em>. Filtering is the default way through a list of any length, and a caller with two obvious options opts out — <strong>nobody has to opt in</strong>, so the failure mode is a redundant filter box rather than a missing one. That asymmetry is the argument: an unnecessary search row costs one line of chrome, while a missing one on a list that grew costs the user the ability to find their option at all.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected <span style="color:var(--a-mute);">(was draft 1's settled)</span></div>
+          <div class="fc-ex">
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:160px;">
+              <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span>macOS</div><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Linux</div></div>
+            </div>
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">6 options → no search row (threshold &gt; 8)</span>
+          </div>
+          <div class="fc-note"><strong>A component-owned threshold (&gt; 8), no prop.</strong> Draft 1 settled this to keep "is this list long?" out of every call site — the failure mode of <a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 10</a>, where a contract reads clean because nobody had to decide. Rejected at review. The threshold's real problem: it is a guess about scannability that <em>varies by content</em> — six near-identical mono strings are harder to scan than twelve distinct words — so a fixed number is wrong on both sides of itself, and a caller who disagrees has no recourse.</div>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:4px;"><strong>What survives from draft 1:</strong> typing filters even when <code>searchable</code> is <code>false</code>, and the row appears the moment it is used. Type-ahead is what a keyboard user reaches for regardless, so opting out of the <em>chrome</em> should not opt out of the <em>capability</em> — otherwise <code>searchable={false}</code> silently removes a keyboard affordance to save a line of pixels. <em>Also unchanged: there is no <code>searchThreshold</code> prop. A boolean is a call-site statement about its own list; a number is a design decision leaking into call sites, which is the part finding 10 was actually about.</em></div>
+    </div>
+    <div class="app" data-c="d3" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D3 · selected and keyboard-active are two channels, not one</strong></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex has-popup">
+            <div id="spec-d3-settled"></div>
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">tick = the value · wash = Enter picks this</span>
+          </div>
+          <div class="fc-note"><strong>Tick for selected, wash for active.</strong> While arrowing you can see both what the value <em>is</em> and what <span class="kbd">Enter</span> would make it — which is the whole information a keyboard user needs mid-navigation. Two channels also means <span class="kbd">Esc</span> is obviously non-destructive: the tick never moved.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:160px;">
+              <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control text-ink-body cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink"><span class="text-ink-mute text-label w-glyph shrink-0"></span>macOS</div><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink bg-wash-tint"><span class="text-ink-mute text-label w-glyph shrink-0"></span>Windows</div></div>
+            </div>
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">one wash, moved by ↑↓</span>
+          </div>
+          <div class="fc-note"><strong>One highlight that moves.</strong> Simpler, and how a native <code>&lt;select&gt;</code> feels. Rejected: after one <span class="kbd">↓</span> the popup no longer shows what the current value is, so <span class="kbd">Esc</span> looks like it will keep the highlighted row. Costs a tick column; buys an honest picker.</div>
+        </div>
+      </div>
+    </div>
+    <div class="app" data-c="d4" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D4 · an option may carry an element, but <code>label</code> stays required</strong> <span style="color:var(--a-mute);">— new in round 2</span></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex has-popup">
+            <div id="spec-d4-settled"></div>
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">{ id, label: "get /v1/flows", element: &lt;…&gt; }</span>
+          </div>
+          <div class="fc-note"><strong><code>{ id, label, element? }</code>.</strong> Review: <em>"should allow optional item element"</em> — so a row can be richer than a string. <code>label</code> remains required because two other places need text and neither can use an element: <strong>the trigger</strong> renders one line, and <strong>the filter</strong> matches characters. Keeping the string mandatory is what makes those two work for free on every option, however the row draws.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex">
+            <span style="font-size:10px;color:var(--a-mute);font-family:var(--a-ui);">{ id, element } — element instead of label</span>
+            <div class="min-w-full z-20 bg-canvas border border-hairline rounded-card overflow-hidden static top-auto shadow-none mt-1" style="min-width:150px;">
+              <div class="max-h-[184px] overflow-y-auto py-[2px]"><div class="flex items-center gap-chrome-gap px-control-x py-control-y min-h-control font-ui text-control cursor-pointer whitespace-nowrap hover:bg-wash-hover hover:text-ink text-ink"><span class="text-ink-mute text-label w-glyph shrink-0">✓</span><span style="color:var(--a-warn);">?</span></div></div>
+            </div>
+          </div>
+          <div class="fc-note"><strong>An element <em>replacing</em> the label.</strong> Fewer fields, and the caller controls everything. Rejected: the trigger would have nothing to render but a duplicated element (it is a single 24px line, not a row), and the filter would have no text to match — so the component would need <code>searchText</code> anyway, which is <code>label</code> with a worse name. It also silently breaks the accessible name.</div>
+        </div>
+      </div>
+      <div class="callout" style="margin-top:4px;"><strong>The boundary the slot does not move:</strong> the row stays one line at a 24px floor, and the element inherits the row's tone rules. The component renders the slot and asserts nothing about it — a T1 cannot police its own children — so this is an <code>@avoid</code> line, not a guard. <em>An element that needs two lines or its own hit target is a different component.</em></div>
+    </div>
+    <div class="callout" data-c="open-q" style="margin-top:16px;">
+      <strong>Open, deliberately not settled here — collision handling.</strong> <span style="color:var(--a-ok);">Confirmed deferred at review: "ok, skip for now".</span> The popup always opens downward with a 184px cap. A Select near the bottom of a short window will clip. Flip-on-collision (or a portal) is real layout work and its first honest tenant should drive it: today's host sits above a <a href="step-list.html">StepList</a> with room below, so designing it now would be designing against a hypothesis. Recorded so the first clipped call site reopens this rather than adding an <code>openUp</code> prop. Second open item: whether the trigger should be a native <code>&lt;select&gt;</code> under the hood — rejected in practice because a native popup cannot carry the search row or the tick column, but it is the fallback if the keyboard contract proves hard to hold.
+    </div>
+
+    <h2 id="api">API + registry TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Required</th><th></th></tr></thead>
+      <tbody>
+        <tr><td><code>options</code></td><td><code>{ id: string; label: string;<br>&nbsp; element?: ReactNode }[]</code></td><td>✅ required</td><td>the choices, in the order given — never sorted, grouped, or filtered by the component (except by the user's live filter). <code>element</code> draws the row when present; <code>label</code> is still required either way — the trigger and the filter both need text (D4). May be empty: that renders the empty state, not a crash</td></tr>
+        <tr><td><code>value</code></td><td><code>string | undefined</code></td><td>✅ required</td><td>the selected option's <code>id</code>, or <code>undefined</code> for nothing selected — which shows <code>placeholder</code> on the trigger and no tick in the list (round 2). Required as a <em>prop</em> so the caller states its intent; <code>undefined</code> is a value, not an omission</td></tr>
+        <tr><td><code>onChange</code></td><td><code>(id: string) =&gt; void</code></td><td>✅ required</td><td>fires only on an actual selection — never on open, arrow, filter, <span class="kbd">Esc</span>, or <span class="kbd">Tab</span>. The argument is always a real <code>id</code>: the component can reach <code>undefined</code> but never returns to it</td></tr>
+        <tr><td><code>placeholder</code></td><td><code>string</code></td><td>optional (default: <code>'select…'</code>)</td><td>the trigger's text when <code>value</code> is <code>undefined</code>, rendered in <code>ink-mute</code>. Ignored when something is selected</td></tr>
+        <tr><td><code>isLoading</code></td><td><code>boolean</code></td><td>optional (default: false)</td><td>options are on their way: the popup shows a spinner and "loading…" instead of a list, and <span class="kbd">Enter</span> selects nothing. Outranks the empty state — an empty list mid-fetch is not yet a fact. The component never fetches anything itself</td></tr>
+        <tr><td><code>searchable</code></td><td><code>boolean</code></td><td>optional (default: <strong>true</strong>)</td><td>shows the filter row (D2, round 2). <code>false</code> hides the chrome but not the capability — typing still filters, and the row appears when it does</td></tr>
+        <tr><td><code>label</code></td><td><code>string</code></td><td>optional</td><td>the accessible name (<code>aria-label</code>) when no visible label names it — "trust target". Not rendered</td></tr>
+        <tr><td><code>disabled</code></td><td><code>boolean</code></td><td>optional (default: false)</td><td>38% opacity, out of tab order — for a caller whose action is in flight</td></tr>
+        <tr><td><code>className</code></td><td><code>string</code></td><td>optional</td><td>pass-through for layout only (e.g. <code>ml-auto</code>) — never for colour, border, or size</td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--muted);font-size:12px;">Still absent: <code>searchThreshold</code> (a number is a design decision leaking into call sites — D2), <code>multiple</code>, <code>onOpen</code>, <code>onClear</code>, <code>error</code>. <code>{id, label}</code> remains structurally compatible with <code>TARGETS</code> (<code>setup.ts:25</code>), so its tenant still passes the shipped constant with no adapter — <code>element</code> is additive and the setup screen omits it.</p>
+    <div data-c="tsdoc">
+      <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built (code-as-truth):</p>
+      <pre class="tsdoc">/**
+ * Select — the app's one dropdown: a compact trigger, a popup list, and type-to-filter.
+ * @tier T1 — presentation and keyboard behaviour only; options, the selected value, the loading flag and the handler all come from the caller. It never fetches, sorts, resolves or defaults anything
+ * @anatomy trigger = CopyButton's box (1px line border, radius 3, padding 3/9, min-height 24, Inter 11.5px ink-body) plus a muted ▾ caret and min-width 132 so it never resizes with the selection; shows the selected label, or the placeholder in ink-mute when value is undefined · popup overlays below (canvas, hairline border, radius 4, shadow), never pushes content · search row when searchable (default true) or as soon as the user types: borderless input, case-insensitive substring on label, matched run underlined · option rows with a reserved 9px tick column, min-height 24, one line: the option's element if given, else its label; selected = ✓ in ink, keyboard-active = soft wash — two channels, not one · one muted-italic line replaces the list for the three non-list outcomes, in precedence order: "loading…" with a spinner (isLoading) · "nothing to choose from" (no options) · "no match" (filter) · list scrolls past ~7 rows
+ * @use any single choice from five or more options, whether they are known at build time or fetched: a target picker, a filter, a saved view, an export format. Pass {id,label,element?}[] plus the value and a handler; value may be undefined for nothing-selected, and isLoading covers options still on their way
+ * @avoid two to four options (use SegmentedControl — all choices visible reads as a switch; this is a miss by cardinality, not kind) · multi-select or a clear affordance — at most one option is selected, and nothing returns to unselected once chosen · free-text entry (that is a combobox, not this) · option groups or disabled entries · an option element that needs two lines or its own hit target: the row is one line at a 24px floor whatever the element draws · an element without a label — the trigger and the filter both need text · fetching, sorting or defaulting options inside the component · explaining a failed fetch here: stop passing isLoading and render your own Notice, a 184px popup cannot carry an error and a retry · committing on arrow-key movement: only Enter or a click selects
+ * @states rest · hover · focus (1px mute outline) · open · filtering · no-match · loading (spinner, outranks empty) · empty (loaded, no options) · nothing-selected (value undefined → muted placeholder, no tick) · disabled (38%, out of tab order). Keyboard: ↑↓ move without selecting (no wrap), Enter selects (a no-op while loading, empty or filtered to nothing), Esc closes unchanged, Tab closes and moves on, typing filters even when searchable is false; closing always returns focus to the trigger. No invalid, partial-selection or open-upward state
+ * @madeof —
+ */</pre>
+    </div>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="cards" data-c="fit-cards">
+      <div class="card"><strong>✅ Use</strong><p>Any single choice from five or more options — known at build time or fetched: the setup screen's trust and proxy targets, and every dropdown the app grows after them — a filter, a saved view, an export format. Pass <code>{id,label,element?}[]</code>, the current value, and a handler; <code>value</code> may be <code>undefined</code> before a choice is made, and <code>isLoading</code> covers options still arriving. This is the whole dropdown category (<a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 10</a>'s review ruling), not a target picker.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p>Two to four options — <a href="segmented-control.html">SegmentedControl</a>, where all choices visible reads as a switch. Multi-select or a clear affordance: at most one option is selected, and nothing returns to unselected once chosen. Free text — that is a combobox. Option groups or disabled rows. An option <code>element</code> that wants two lines or its own hit target — the row is one line at a 24px floor (D4) — or an element with no <code>label</code>, since the trigger and the filter both need text. Fetching or sorting options inside the component — that would make it a T2 about your domain. Explaining a <em>failed</em> fetch here: stop passing <code>isLoading</code> and render your own <a href="notice.html">Notice</a>, because a 184px popup cannot carry an error and a retry. And never commit on <span class="kbd">↑</span><span class="kbd">↓</span>: moving the active row must not change the value, or every keypress re-renders whatever the selection drives.</p></div>
+    </div>
+
+    <h2 id="tokens">Token mapping (mockup → build)</h2>
+    <table data-c="token-map">
+      <thead><tr><th>Part / state</th><th>Tailwind (build WU)</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>trigger (base)</td><td><code>inline-flex items-center justify-between gap-2 px-[9px] py-[3px] min-h-6 min-w-[132px] rounded-button border border-line font-ui text-[11.5px] text-ink-body bg-transparent cursor-pointer select-none whitespace-nowrap</code></td><td>CopyButton's box (D1) plus <code>min-w</code> and <code>justify-between</code></td></tr>
+        <tr><td>trigger hover / open</td><td><code>hover:text-ink hover:border-ink-mute</code>; open holds the same pair</td><td>CopyButton's values — no background, no rotation on the caret</td></tr>
+        <tr><td>trigger focus</td><td><code>focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-ink-mute</code></td><td>never chromatic</td></tr>
+        <tr><td>caret</td><td><code>text-[9px] leading-none text-ink-mute shrink-0</code>, <code>aria-hidden</code></td><td>the only chrome this component adds to the shared box</td></tr>
+        <tr><td>popup</td><td><code>absolute top-[calc(100%+4px)] left-0 min-w-full z-20 bg-canvas border border-line rounded-[4px] shadow-lg overflow-hidden</code></td><td>overlays, never reflows the zone (driver ⑥). <code>radius-4</code> — the panel's scale, one step above the control's 3</td></tr>
+        <tr><td>search row</td><td><code>flex items-center gap-1.5 px-2 py-1 border-b border-line</code>; input <code>flex-1 min-w-0 bg-transparent border-none outline-none font-ui text-[11.5px] text-ink placeholder:text-ink-mute</code></td><td>borderless — the popup edge is the field's edge</td></tr>
+        <tr><td>list</td><td><code>max-h-[184px] overflow-y-auto py-0.5</code></td><td>~7 rows at 24px + padding; the active row is scrolled into view</td></tr>
+        <tr><td>option row</td><td><code>flex items-center gap-1.5 px-[9px] py-[3px] min-h-6 font-ui text-[11.5px] text-ink-body cursor-pointer whitespace-nowrap</code></td><td>same padding and floor as the trigger (driver ⑦)</td></tr>
+        <tr><td>option · selected</td><td>tick <code>✓</code> <code>text-ink</code> in a <code>w-[9px] shrink-0</code> column</td><td>column reserved on every row, so labels share one left edge</td></tr>
+        <tr><td>option · active</td><td><code>bg-ink-soft text-ink</code></td><td>SegmentedControl's active background — the two switches agree (D3)</td></tr>
+        <tr><td>option · hover</td><td><code>hover:bg-ink/7 hover:text-ink</code></td><td>IconButton's 7% ink wash — the literal <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 22</a> has no token for; reused, not invented</td></tr>
+        <tr><td>match highlight</td><td><code>text-ink underline decoration-ink-mute underline-offset-2</code></td><td>ink-only, never a chromatic or background highlight (driver ⑤)</td></tr>
+        <tr><td>message row (all three)</td><td><code>px-[9px] py-[5px] font-ui text-[11.5px] text-ink-mute italic</code></td><td>one slot for no-match · loading · empty. Never a warn tone — a filter miss, a slow fetch and an empty set are all ordinary</td></tr>
+        <tr><td>loading spinner</td><td><code>inline-block h-[9px] w-[9px] rounded-full border-[1.5px] border-hairline border-t-ink-mute animate-spin mr-1.5</code></td><td>StatusLine's spinner one step smaller — itself BodyViewer's <code>.spin</code>. A third size of one drawing, not a new one</td></tr>
+        <tr><td>trigger · placeholder</td><td><code>text-ink-mute</code> on the label span</td><td>one tone below a real selection, so an unmade choice cannot read as a made one</td></tr>
+        <tr><td>option · element slot</td><td>— (the caller's)</td><td>inherits the row's <code>text-[11.5px]</code> and tone; the row keeps <code>min-h-6</code> and one line whatever it draws (D4)</td></tr>
+        <tr><td>disabled</td><td><code>disabled:opacity-38 disabled:pointer-events-none</code></td><td>Button's value; the <code>disabled</code> attr removes it from tab order</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="scale-note">
+      <strong>Off-scale, disclosed.</strong> <em>Inherited:</em> <code>py-[3px]</code>, <code>px-[9px]</code>, the 11.5px label and the 7% hover wash are CopyButton's and IconButton's confirmed values, cloned per D1 — the same 8px-floor contradiction <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 14</a> already records, and this file moves with the sheet when <strong>W6 settles the floor</strong>. <em>Chosen here, and therefore reviewable as design:</em> <code>min-w-[132px]</code> (fits "iOS Simulator" without resizing), <code>max-h-[184px]</code> (~7 rows), the <code>4px</code> popup offset, <code>radius-4</code> on the popup, <code>w-[9px]</code> tick column, and the <code>shadow-lg</code> — <strong>the shadow is the one genuinely new visual primitive in this file</strong>, since nothing in the collection has floated above content before. It exists because an overlay needs to read as above rather than beside; if the rulebook would rather ban shadows, the alternative is a heavier border and that is a W6 call.
+    </div>
+
+    <h2 id="specimen">Live specimen — the closing example</h2>
+    <div class="app" data-c="specimen">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Live — 6 real targets, keyboard-complete</div>
+          <div class="panel" style="max-width:330px;min-height:200px;">
+            <div id="spec-live"></div>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Click or press ↓ to open · type to filter · ↑/↓ to move · Enter to pick · Esc to close</div>
+        </div>
+        <div>
+          <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">No selection yet</div>
+          <div class="panel" style="max-width:330px;min-height:200px;">
+            <div id="spec-live-empty"></div>
+          </div>
+          <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">The placeholder path — <code>value={undefined}</code>, resolved in round 2</div>
+        </div>
+      </div>
+      <div id="spec-log" style="min-height:20px;"></div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;"><strong>This is <code>ui/src/components/Select.tsx</code></strong>, fetched from disk and transpiled in your browser. The filter matcher, the ↑/↓ wrap-around, the Esc handling and the outside-click dismissal are the shipped ones — this file previously carried ~175 lines of vanilla JS re-implementing all of it, which is now deleted.</div>
+    </div>
+  </main>
+
+  <script type="text/babel" data-presets="react">
+    const { React, createRoot, Select, Button, CopyButton } = window.Trawler;
+
+    /* The six real trust targets — setup.ts:25 */
+    const TARGETS = [
+      { id: 'macos', label: 'macOS' },
+      { id: 'windows', label: 'Windows' },
+      { id: 'linux', label: 'Linux' },
+      { id: 'firefox', label: 'Firefox' },
+      { id: 'ios', label: 'iOS Simulator' },
+      { id: 'android', label: 'Android' },
+    ];
+
+    const log = (message) => {
+      const el = document.getElementById('spec-log');
+      if (!el) return;
+      el.style.cssText = 'font-size:12px;font-family:var(--a-ui);color:var(--a-ok);margin-top:6px;';
+      el.textContent = message;
+      clearTimeout(el._timer);
+      el._timer = setTimeout(() => { el.textContent = ''; }, 2000);
+    };
+
+    /* A Select whose selection actually moves — a controlled specimen, because a
+       dropdown that cannot change its value demonstrates nothing. */
+    function Demo({ initial = 'macos', options = TARGETS, onPick, ...rest }) {
+      const [value, setValue] = React.useState(initial);
+      return (
+        <Select
+          options={options}
+          value={value}
+          onChange={(id) => { setValue(id); onPick?.(id, options); }}
+          label="trust target"
+          placeholder="choose a target"
+          {...rest}
+        />
+      );
+    }
+
+    const mount = (id, node) => {
+      const host = document.getElementById(id);
+      if (host) createRoot(host).render(node);
+      return host;
+    };
+
+    const openIt = (host, typed) => specimenReach(host, { type: typed });
+
+    openIt(mount('spec-hero', <Demo />));
+
+    /* The three SETTLED fork legs (D2 search row, D3 tick-vs-wash, D4 option
+       element) used to hand-draw the popup's internals. They render the real
+       popup now, opened the only way it opens -- a real click. The rejected legs
+       beside them stay drawn: they describe designs that were never built. */
+    openIt(mount('spec-d2-settled', <Demo />));
+    openIt(mount('spec-d3-settled', <Demo />));
+    openIt(mount('spec-d4-settled', <Demo />));
+
+    mount('spec-st-rest', <Demo />);
+    mount('spec-st-hover', <Demo />);
+    mount('spec-st-focus', <Demo />);
+    openIt(mount('spec-st-open', <Demo />));
+    openIt(mount('spec-st-filtering', <Demo />), 'i');
+    mount('spec-st-disabled', <Demo disabled />);
+    openIt(mount('spec-st-loading', <Demo options={[]} isLoading />));
+    openIt(mount('spec-st-empty', <Demo initial={undefined} options={[]} />));
+
+    /* The "same box" claims — a Select drawn next to a hand-drawn Button proves
+       nothing; these are all three real components sharing one shell. */
+    mount('spec-trigger',
+      <div className="flex items-center gap-[10px] flex-wrap">
+        <Demo />
+        <CopyButton value="curl https://example.com" label="curl" />
+      </div>
+    );
+    mount('spec-d1',
+      <div className="flex items-center gap-[6px]">
+        <Demo />
+        <Button onClick={() => {}}>trust</Button>
+      </div>
+    );
+
+    mount('spec-live',
+      <Demo onPick={(id, options) => log(`onChange("${id}") — ${options.find((o) => o.id === id).label}`)} />
+    );
+    mount('spec-live-empty',
+      <Demo initial={undefined} onPick={(id) => log(`first selection: ${id}`)} />
+    );
+  </script>
+
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

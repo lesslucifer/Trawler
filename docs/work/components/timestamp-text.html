@@ -4,15 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — TimestampText component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="../../../doc-assets/components/tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
     .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
-    .ts{color:var(--a-mute);font-variant-numeric:tabular-nums;}
-    .ts-body{color:var(--a-body);font-variant-numeric:tabular-nums;}
     .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
     .swatch .panel{max-width:none;}
     .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
@@ -39,8 +38,7 @@
     .ba td.raw{color:var(--muted);}
     .ba td.ren{color:var(--a-body);}
     .ba td.note{color:var(--muted);font-family:Inter,system-ui,sans-serif;font-size:11px;font-variant-numeric:normal;}
-    .ba td.ms{color:var(--a-mute);}
-  </style>
+    .ba td.ms{color:var(--a-mute);}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -91,7 +89,7 @@
         <div class="ex">
           <div class="panel">
             <div class="lbl">Time column (same-day)</div>
-            <span class="ts">14:07:52</span>
+            <span class="text-ink-mute tabular-nums">14:07:52</span>
           </div>
           <div class="cap">8 chars, always — no locale variability, no AM/PM, no shifting digits</div>
         </div>
@@ -151,7 +149,7 @@
       <div class="part">
         <div class="ex">
           <div class="flow-ex">
-            <div class="panel"><span class="ts">—</span></div>
+            <div class="panel"><span class="text-ink-mute tabular-nums">—</span></div>
           </div>
           <div class="cap">no value / unparseable → em-dash, slot preserved — layout doesn't jump</div>
         </div>
@@ -187,7 +185,7 @@
       <div class="part">
         <div class="ex">
           <div class="flow-ex">
-            <div class="panel"><span class="ts">3 minutes ago</span></div>
+            <div class="panel"><span class="text-ink-mute tabular-nums">3 minutes ago</span></div>
           </div>
           <div class="cap">format="relative" → moment fromNow(); refreshes every 10 s while mounted</div>
         </div>
@@ -226,43 +224,43 @@
       <div class="swatch">
         <div class="panel">
           <div class="lbl">S1 — same-day (common case)</div>
-          <span class="ts">14:07:52</span>
+          <span class="text-ink-mute tabular-nums">14:07:52</span>
         </div>
         <div class="cap"><strong>S1 same-day</strong> — HH:MM:SS only, 8 chars, muted; today's flows never show a date prefix</div>
       </div>
       <div class="swatch">
         <div class="panel">
           <div class="lbl">S2 — cross-midnight / cross-day</div>
-          <span class="ts" style="white-space:nowrap;">21/07 · 23:14:05</span>
+          <span class="text-ink-mute tabular-nums" style="white-space:nowrap;">21/07 · 23:14:05</span>
         </div>
         <div class="cap"><strong>S2 cross-day</strong> — "DD/MM · HH:MM:SS" (year appended when ≠ current); date disambiguates a proxy left running overnight</div>
       </div>
       <div class="swatch">
         <div class="panel">
           <div class="lbl">S3 — sub-second burst (ms truncated)</div>
-          <span class="ts">14:07:52</span><span class="ts ms" style="color:var(--a-mute);font-size:10px;margin-left:4px;">.381</span>
-          <div style="color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;margin-top:4px;">→ rendered: <span class="ts">14:07:52</span> (ms dropped)</div>
+          <span class="text-ink-mute tabular-nums">14:07:52</span><span class="text-ink-mute tabular-nums ms" style="color:var(--a-mute);font-size:10px;margin-left:4px;">.381</span>
+          <div style="color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;margin-top:4px;">→ rendered: <span class="text-ink-mute tabular-nums">14:07:52</span> (ms dropped)</div>
         </div>
         <div class="cap"><strong>S3 ms truncated</strong> — ms are always dropped from the display; ordering within a burst is handled by list position (insertion order from the server), not sub-second display; see Fork F2</div>
       </div>
       <div class="swatch">
         <div class="panel">
           <div class="lbl">S4 — absent / unparseable</div>
-          <span class="ts">—</span>
+          <span class="text-ink-mute tabular-nums">—</span>
         </div>
         <div class="cap"><strong>S4 absent</strong> — em-dash for null or any value moment can't parse; guard, not a design state</div>
       </div>
       <div class="swatch">
         <div class="panel">
           <div class="lbl">S5 — custom format (format="HH:mm:ss.SSS")</div>
-          <span class="ts">14:07:52.381</span>
+          <span class="text-ink-mute tabular-nums">14:07:52.381</span>
         </div>
         <div class="cap"><strong>S5 custom format</strong> — moment format string replaces the default logic entirely; still local time, same muted styling</div>
       </div>
       <div class="swatch">
         <div class="panel">
           <div class="lbl">S6 — relative (format="relative")</div>
-          <span class="ts">3 minutes ago</span>
+          <span class="text-ink-mute tabular-nums">3 minutes ago</span>
         </div>
         <div class="cap"><strong>S6 relative</strong> — <code>fromNow()</code>, refreshed every 10 s; opt-in only, never the list-column default (F1)</div>
       </div>
@@ -276,16 +274,16 @@
       <div class="card">
         <strong>F1 · absolute vs relative time</strong> <span class="badge auto">settled: absolute default · relative opt-in</span>
         <div class="panel" style="margin-top:8px;">
-          <span class="ts">14:07:52</span>
+          <span class="text-ink-mute tabular-nums">14:07:52</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);">
           <strong>Absolute HH:MM:SS default (chosen).</strong> A debugging proxy is used side-by-side with server logs, terminal output, and system clocks. Absolute time reads directly against those; "2 m ago" requires the user to subtract from now. Relative time IS supported — <code>format="relative"</code> (State S6) — for surfaces where recency matters more than log correlation; it is opt-in per callsite, so its 10 s re-render tick is confined to the surfaces that ask for it.
         </p>
       </div>
       <div class="card">
-        <strong>alt: relative as the default</strong> <span class="badge warn">rejected</span>
+        <strong>alt: relative as the default</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;">
-          <span class="ts">3 minutes ago</span>
+          <span class="text-ink-mute tabular-nums">3 minutes ago</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);">
           As a list-wide default, relative times require mental arithmetic to correlate against a log, re-render on a timer for every visible row, and become ambiguous after a few hours ("2 h ago" is less useful than "10:07"). Rejected as the default; available only as the explicit <code>format="relative"</code> mode. No hybrid default (relative for recent + absolute after threshold) — a branch point without gain for a debugging tool.
@@ -297,7 +295,7 @@
       <div class="card">
         <strong>F2 · millisecond display</strong> <span class="badge auto">settled: default truncates · custom format shows them</span>
         <div class="panel" style="margin-top:8px;">
-          <span class="ts">14:07:52</span>
+          <span class="text-ink-mute tabular-nums">14:07:52</span>
           <div style="color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;margin-top:4px;">raw: 14:07:52.381 → shown: 14:07:52</div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);">
@@ -305,9 +303,9 @@
         </p>
       </div>
       <div class="card">
-        <strong>alt: milliseconds in the default (HH:MM:SS.mmm)</strong> <span class="badge warn">rejected</span>
+        <strong>alt: milliseconds in the default (HH:MM:SS.mmm)</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;">
-          <span class="ts" style="font-size:11px;">14:07:52.381</span>
+          <span class="text-ink-mute tabular-nums" style="font-size:11px;">14:07:52.381</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);">
           12-char output exceeds the 110 px column at current font size. The column would need to widen, pushing host and path columns or triggering truncation. Sub-second burst ordering is already communicated by list row order — ms in the default adds width without a gain. Covered by the <code>format</code> prop where needed.
@@ -319,7 +317,7 @@
       <div class="card">
         <strong>F3 · local vs UTC timezone</strong> <span class="badge auto">settled: always local</span>
         <div class="panel" style="margin-top:8px;">
-          <span class="ts">14:07:52</span>
+          <span class="text-ink-mute tabular-nums">14:07:52</span>
           <div style="color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;margin-top:4px;">system clock: UTC+2 → "14:07:52" (local)</div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);">
@@ -327,9 +325,9 @@
         </p>
       </div>
       <div class="card">
-        <strong>alt: UTC (always suffix "Z")</strong> <span class="badge warn">rejected</span>
+        <strong>alt: UTC (always suffix "Z")</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;">
-          <span class="ts">12:07:52Z</span>
+          <span class="text-ink-mute tabular-nums">12:07:52Z</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);">
           UTC forces the user to add their offset before matching a local log line. Useful only if target servers always log UTC and users never use local tooling — not the case for a general desktop proxy. Rejected outright — always local, no UTC mode or preference.
@@ -341,7 +339,7 @@
       <div class="card">
         <strong>F4 · 12 h vs 24 h</strong> <span class="badge auto">settled: 24 h default · 12 h via custom format</span>
         <div class="panel" style="margin-top:8px;">
-          <span class="ts">14:07:52</span>
+          <span class="text-ink-mute tabular-nums">14:07:52</span>
           <div style="color:var(--a-mute);font-size:11px;font-family:Inter,system-ui,sans-serif;margin-top:4px;">not "02:07:52 PM"</div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);">
@@ -349,9 +347,9 @@
         </p>
       </div>
       <div class="card">
-        <strong>alt: locale default (may be 12 h)</strong> <span class="badge warn">rejected</span>
+        <strong>alt: locale default (may be 12 h)</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;">
-          <span class="ts" style="font-size:11px;">02:07:52 PM</span>
+          <span class="text-ink-mute tabular-nums" style="font-size:11px;">02:07:52 PM</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);">
           The current <code>toLocaleTimeString()</code> call (<code>flow.ts:44</code>) has no options — on a US-English locale it may produce "2:07:52 PM", which is 11 chars with variable leading-zero behavior. Column unstable; format unfamiliar for log correlation. Rejected as the default; covered by the <code>format</code> prop where needed.
@@ -363,16 +361,16 @@
       <div class="card">
         <strong>F5 · date library — moment vs native Date</strong> <span class="badge auto">settled: moment</span>
         <div class="panel" style="margin-top:8px;">
-          <span class="ts" style="font-size:11px;">moment(timestamp).format('HH:mm:ss')</span>
+          <span class="text-ink-mute tabular-nums" style="font-size:11px;">moment(timestamp).format('HH:mm:ss')</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);">
           <strong>moment (chosen — manager direction).</strong> One parser/formatter covers all three modes: lenient parsing of ISO 8601 / epoch ms / <code>Date</code>, format-token rendering for the default and custom strings, and <code>fromNow()</code> for relative — nothing hand-built. New UI dependency (<code>ui/package.json</code> has no date library today). Note: moment is upstream-maintenance-mode; if that ever matters, dayjs shares the same format-token API and the swap is confined to this one component.
         </p>
       </div>
       <div class="card">
-        <strong>alt: native Date + Intl</strong> <span class="badge warn">rejected</span>
+        <strong>alt: native Date + Intl</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;">
-          <span class="ts" style="font-size:11px;">Intl.RelativeTimeFormat + hand-rolled units</span>
+          <span class="text-ink-mute tabular-nums" style="font-size:11px;">Intl.RelativeTimeFormat + hand-rolled units</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);">
           Zero-dependency, but three hand-built pieces: <code>Date.parse</code> accepts fewer input shapes than moment, custom formatting would mean inventing a token syntax for the <code>format</code> prop, and relative mode needs hand-rolled unit selection around <code>Intl.RelativeTimeFormat</code>. Rejected in favor of the one dependency.

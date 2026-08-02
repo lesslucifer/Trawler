@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — Component design (base spec &amp; template)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="../../doc-assets/components/tw-config.js"></script>
   <style>
     .tmpl{border:1px dashed var(--accent);border-radius:6px;padding:10px 12px;margin:8px 0;background:color-mix(in srgb, var(--accent) 6%, transparent);}
     .tmpl::before{content:"TEMPLATE — copy & fill";display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
@@ -12,8 +14,7 @@
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);} .t2{color:var(--ok);}
     table{font-size:13px;}
-    td:first-child{white-space:nowrap;}
-  </style>
+    td:first-child{white-space:nowrap;}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -42,7 +43,7 @@ flowchart LR
     <h2 id="principles">Principles (apply to every section)</h2>
     <ul data-c="principles">
       <li><strong>Example-first — the reader is not a designer.</strong> Every spec row carries a rendered example beside it (a swatch, a before→after pair, a timeline, a transcript). Terms alone fail review; this was the pilot's hardest-learned lesson.</li>
-      <li><strong>Specimens render in app tokens.</strong> Every visual uses the real Warp palette (an <code>.app</code>-scoped variable block copied from the exemplar), never the doc palette — the reviewer judges what will actually ship.</li>
+      <li><strong>Specimens are written in the app's own Tailwind.</strong> Load the CDN plus <code>tw-config.js</code> (which imports <code>ui/tailwind.config.js</code> directly — no generated copy) and mark every specimen up with utility classes — <code>px-control-x py-control-y text-control rounded-button</code>, never a hand-written rule. <strong>The specimen's class string is the component's <code>className</code>, verbatim</strong>, so the build copies rather than translates and the two cannot drift. Wrap specimens in <code>.app</code>; a value that has no utility needs a named token in the config, not a literal here (E-DFLOW.W5 step 3).</li>
       <li><strong>Every spec has a why.</strong> Each anatomy part and behavior rule traces to a driver (identity &amp; frame) or a shipped-code precedent (cite <code>file:line</code>). A spec that can't say why is a guess.</li>
       <li><strong>Spec-first, demo-last.</strong> The reader meets the reasoning before the toy: identity &amp; frame → anatomy → behavior → states → forks → API — the live specimen closes the file.</li>
       <li><strong>Forks show their losers.</strong> A settled decision renders its rejected alternatives visually, each with the reason it lost. Review catches ride in the winning card (see the exemplar's cursor sub-fork).</li>
@@ -71,6 +72,10 @@ flowchart LR
     <div class="tmpl" data-c="tmpl-skeleton">
       <pre>docs/work/components/<span class="ph">&lt;kebab-name&gt;</span>.html   <span class="ph">← mint data-htmldoc-id · snapshot on create (htmldoc skill)</span>
 
+&lt;head&gt;    <span class="ph">&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;
+          &lt;script type="module" src="../../doc-assets/components/tw-config.js"&gt;&lt;/script&gt;   ← imports ui/tailwind.config.js
+          &lt;style&gt; doc scaffolding only — never a component rule &lt;/style&gt;</span>
+
 hero      <span class="ph">&lt;Name&gt; &lt;tier badge&gt; · one-liner · status: <strong>draft — awaiting confirmation</strong> · link: registry seed</span>
 identity  <span class="ph">claim callout (one sentence) + fact table (tier+why · tenants · exists-today · made-of) + driver table (driver → consequence)</span>
 anatomy   <span class="ph">annotated specimen + part blocks (example · spec · why)</span>
@@ -82,7 +87,7 @@ fit       <span class="ph">use / avoid cards</span>
 tokens    <span class="ph">mockup → Tailwind table</span>
 specimen  <span class="ph">live demo (or simplified sample) — last</span></pre>
     </div>
-    <p>Styling, the <code>.app</code> token scope (Warp palette values), the part-block grid, swatches, timelines, chips: <strong>copy them from the exemplar</strong> — don't reinvent per file. Headings and <code>data-c</code> blocks stay direct children of <code>&lt;main&gt;</code> (htmldoc diff rule).</p>
+    <p>The part-block grid, swatches, timelines and chips are doc scaffolding: <strong>copy them from the exemplar</strong> — don't reinvent per file. Component styling is <em>not</em> copied at all any more — it is Tailwind utilities from the shared config. Headings and <code>data-c</code> blocks stay direct children of <code>&lt;main&gt;</code> (htmldoc diff rule).</p>
 
     <h2 id="tsdoc">How the file compresses to TSDoc</h2>
     <table data-c="tsdoc-map">

@@ -4,24 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — CopyButton component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="../../../doc-assets/components/tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
     .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
-    /* CopyButton styles */
-    .cb{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--a-line);border-radius:3px;font-family:Inter,system-ui,sans-serif;font-size:11.5px;color:var(--a-mute);cursor:pointer;background:transparent;user-select:none;white-space:nowrap;}
-    .cb:hover,.cb.s-hover{color:var(--a-ink);border-color:var(--a-mute);}
-    .cb:focus-visible,.cb.s-focus{outline:1px solid var(--a-mute);outline-offset:2px;color:var(--a-ink);}
-    .cb.s-active{color:var(--a-ink);background:rgba(174,166,156,.12);}
-    .cb.s-confirm{color:var(--a-ok);border-color:var(--a-ok);}
-    .cb.s-error{color:var(--a-warn);border-color:var(--a-warn);}
-    .cb:disabled,.cb.s-disabled{opacity:.38;pointer-events:none;}
-    .cb .cb-icon{font-size:12px;line-height:1;}
-    /* subbar context strip */
-    .subbar{display:flex;align-items:center;gap:8px;padding:4px 8px;border-bottom:1px solid var(--a-line);font-family:Inter,system-ui,sans-serif;}
     .subbar .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--a-mute);}
     /* shared swatch/part grid from exemplar */
     .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
@@ -44,15 +34,14 @@
     /* contrast comparison strip used in fork D2 */
     .contrast-strip{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
     .contrast-strip .item{flex:1;min-width:120px;}
-    .contrast-strip .item .lbl2{font-size:10px;color:var(--muted);margin-bottom:4px;}
-  </style>
+    .contrast-strip .item .lbl2{font-size:10px;color:var(--muted);margin-bottom:4px;}</style>
 </head>
 <body>
   <header class="doc-hero">
     <div class="inner">
       <h1>CopyButton <span class="tier t1">T1</span></h1>
-      <p>A labeled button that copies a derived, invisible payload and confirms inline — the payload is not shown; the label says what you will get.</p>
-      <div class="meta">Component design · <strong>confirmed 2026-07-23</strong> · 2026-07-22 · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
+      <p>A button that copies a derived payload and confirms inline. Labelled by default — the label says what you will get, because the payload is not shown. Icon-only where the payload <em>is</em> shown beside it (fork D2b).</p>
+      <div class="meta">Component design · <strong>confirmed 2026-07-23</strong> · <strong>contract fix E-DFLOW.W5 2026-07-27</strong> (forks D2 and D4 reopened in place — the icon form's exception and size, and the box now composed from <a href="button.html">Button</a>; <a href="../2026-07-27-dflow-w5-plan.html">W5 plan</a>) · 2026-07-22 · E-DFLOW.W2 · T3 (docs/work/components/) · registry: <a href="../2026-07-22-dflow-w2-registry-seed.html">W2 seed</a></div>
     </div>
   </header>
   <main>
@@ -62,28 +51,28 @@
       <strong>Why it exists:</strong> a debugging proxy generates derived payloads (curl, body, headers) users must copy in one act — without this, ad-hoc confirm logic gets reinvented per site.
     </div>
     <table data-c="identity">
-      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — clipboard write + timed confirm swap, zero business logic → <strong>in the collection</strong></td></tr>
-      <tr><td><strong>Tenants</strong></td><td>copy-as-curl (<code>FlowDetail.tsx:96</code>) · copy body (BodyViewer sub-bar) ×2 · copy all headers (<a href="header-table.html">HeaderTable</a> sub-bar ×2 — HeaderTable serialises, this writes) · any future one-click copy with its own label</td></tr>
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — clipboard write + timed confirm swap on a composed <a href="button.html">Button</a> shell, zero business logic → <strong>in the collection</strong>. Composing another T1 does not raise the tier: no domain knowledge enters, and the roster already has T1s made of T1s (<a href="notice.html">Notice</a> holds a Button in its action slot)</td></tr>
+      <tr><td><strong>Tenants</strong></td><td><em>labelled form:</em> copy-as-curl (<code>FlowDetail.tsx:96</code> — the curl string is never rendered, so the label is the only payload identifier). <em>icon-only form (D2b):</em> copy body (<a href="body-viewer.html">BodyViewer</a> chrome bar ×2 — the pane below shows the payload) · copy all headers (<a href="header-table.html">HeaderTable</a> sub-bar ×2 — the rows below are the payload; HeaderTable serialises, this writes)</td></tr>
       <tr><td><strong>Exists today</strong></td><td>inline in <code>FlowDetail.tsx:96–103</code> and <code>BodyViewer.tsx</code> — not yet extracted</td></tr>
-      <tr><td><strong>Made of</strong></td><td>— (the generic "flash a state for ~2 s" mechanic is one shared hook with <a href="copy-text.html">CopyText</a>; not composition. The hook is the generic layer, this component is the copy-specific contract — fork D4)</td></tr>
+      <tr><td><strong>Made of</strong></td><td><a href="button.html">Button</a> (T1) in <em>both</em> forms — <code>tone="mute"</code>, plus <code>shape="square"</code> for the D2b icon form; the element, its five states, focus ring, disabled treatment, radius, hit floor and keyboard all come from the shell · the shared "flash a state for ~2 s" hook (with <a href="copy-text.html">CopyText</a>). This component adds the copy contract: the clipboard write, the copied/failed vocabulary, and payload transparency — fork D4</td></tr>
     </table>
     <table data-c="frame-drivers">
       <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
       <tbody>
-        <tr><td>① derived payload, not displayed</td><td>label names what you'll get, not what you'll see</td></tr>
+        <tr><td>① derived payload, usually not displayed</td><td>label names what you'll get, not what you'll see. <strong>Where the payload <em>is</em> displayed beside the button the premise lapses</strong> — that, and only that, is what licenses the icon-only form (D2b)</td></tr>
         <tr><td>② one-click copy is a repeated pattern</td><td>extract to a shared primitive, not ad-hoc per site</td></tr>
         <tr><td>③ confirm must be trustworthy</td><td>label-swap "copied" only on a successful write; a failed write shows "failed" (warn tone) — the button never stays mute or lies (review 2026-07-23)</td></tr>
-        <tr><td>④ calm, dense panel</td><td>compact bordered button, ink-toned only — no chromatic accent at rest</td></tr>
+        <tr><td>④ calm, dense panel</td><td>compact bordered button, ink-toned only — no chromatic accent at rest. <strong>The box itself is <a href="button.html">Button</a>'s</strong> (D4), so "same as every other button" is structural rather than restated</td></tr>
         <tr><td>⑤ verify without looking away</td><td>confirm inline at the button, ~2 s, then auto-revert</td></tr>
       </tbody>
     </table>
 
     <h2 id="anatomy">Anatomy — the parts you see</h2>
     <div class="app" data-c="anatomy-specimen">
-      <div class="subbar">
+      <div class="flex items-center gap-2 px-chrome-x py-chrome-y border-b border-hairline font-ui">
         <span class="lbl">Copy as curl</span>
-        <button class="cb s-confirm" type="button" aria-label="copy curl command">
-          <span class="cb-icon">⧉</span> copied<span class="anno">3</span>
+        <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ok border-ok" type="button" aria-label="copy curl command">
+          <span class="text-body leading-none">⧉</span> copied<span class="anno">3</span>
         </button>
         <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">← label<span class="anno">1</span> + icon<span class="anno">2</span> in confirming state</span>
       </div>
@@ -92,9 +81,9 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="subbar" style="border-bottom:none;padding:0;gap:6px;">
-              <button class="cb" type="button">copy curl</button>
-              <button class="cb" type="button">copy body</button>
+            <div class="flex items-center gap-2 px-chrome-x py-chrome-y border-b border-hairline font-ui" style="border-bottom:none;padding:0;gap:6px;">
+              <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
+              <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy body</button>
             </div>
           </div>
           <div class="cap">two CopyButtons in the same sub-bar: label names the payload — "curl", "body"</div>
@@ -110,17 +99,17 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="padding:8px;display:flex;gap:8px;align-items:center;">
-            <button class="cb" type="button"><span class="cb-icon">⧉</span> copy curl</button>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button"><span class="text-body leading-none">⧉</span> copy curl</button>
             <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">← with icon</span>
-            <button class="cb" type="button">copy curl</button>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
             <span style="font-size:11px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">← label-only</span>
           </div>
-          <div class="cap">icon is optional; label-only is the minimum. Never icon-only — the label is required for payload identity.</div>
+          <div class="cap">in the labelled form the icon is optional and label-only is the minimum. Icon-only is a separate form, gated on adjacency (D2b).</div>
         </div>
         <div>
           <strong><span class="anno">2</span> optional icon</strong>
           <div class="spec">
-            <span class="k">spec</span><span>leading glyph (⧉ or caller-supplied); optional. <strong>Label is always present</strong> — icon-only is not allowed, except the visible-payload case (fork D2).</span>
+            <span class="k">spec</span><span>leading glyph (⧉ or caller-supplied); optional. <strong>In the labelled form the label is always present.</strong> The icon-only form (glyph alone, 24 px square, tooltip + <code>aria-label</code> mandatory, ✓ confirm) is a second form, allowed only under D2b's adjacency test — the payload is rendered beside the button.</span>
             <span class="k">why</span><span>the payload is invisible; the label is the only payload identifier. Removing it leaves a glyph with no payload name — the W1 "no fitting glyph" lesson (registry seed, IconButton card): "actions with no fitting glyph — the word carries it instead". Here both the word AND the glyph are fine, but the word is non-negotiable.</span>
           </div>
         </div>
@@ -128,7 +117,7 @@
       <div class="part">
         <div class="ex">
           <div class="panel" style="padding:8px;display:flex;gap:8px;align-items:center;">
-            <button class="cb s-confirm" type="button"><span class="cb-icon">⧉</span> copied</button>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ok border-ok" type="button"><span class="text-body leading-none">⧉</span> copied</button>
           </div>
           <div class="cap">confirming: label swapped, border + text go ok-tone for ~2 s</div>
         </div>
@@ -148,9 +137,9 @@
       <div class="part">
         <div class="ex">
           <div class="flow-ex">
-            <div class="panel" style="padding:6px 10px;"><button class="cb" type="button">copy curl</button></div>
-            <span class="arr">click / Enter ▸</span>
-            <div class="panel" style="padding:6px 10px;"><button class="cb s-confirm" type="button">copied</button></div>
+            <div class="panel" style="padding:6px 10px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button></div>
+            <span class="text-ink-mute text-chrome">click / Enter ▸</span>
+            <div class="panel" style="padding:6px 10px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ok border-ok" type="button">copied</button></div>
           </div>
           <div class="cap">one click writes the payload and immediately shows "copied" (if write succeeds)</div>
         </div>
@@ -179,11 +168,11 @@
       <div class="part">
         <div class="ex">
           <div class="flow-ex">
-            <div class="panel" style="padding:6px 10px;"><button class="cb" type="button">copy curl</button></div>
-            <span class="arr">OS denies ▸</span>
-            <div class="panel" style="padding:6px 10px;"><button class="cb s-error" type="button">failed</button></div>
-            <span class="arr">~2 s ▸</span>
-            <div class="panel" style="padding:6px 10px;"><button class="cb" type="button">copy curl</button></div>
+            <div class="panel" style="padding:6px 10px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button></div>
+            <span class="text-ink-mute text-chrome">OS denies ▸</span>
+            <div class="panel" style="padding:6px 10px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-warn border-warn" type="button">failed</button></div>
+            <span class="text-ink-mute text-chrome">~2 s ▸</span>
+            <div class="panel" style="padding:6px 10px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button></div>
           </div>
           <div class="cap">write fails → label swaps to "failed", warn tone, ~2 s, then auto-reverts — same rhythm as confirm</div>
         </div>
@@ -216,7 +205,7 @@
             <div class="panel" style="padding:6px 10px;display:flex;gap:8px;align-items:center;">
               <span style="font-size:10px;color:var(--a-mute);font-family:Inter,sans-serif;">curl:</span>
               <pre style="font-size:10.5px;font-family:'DM Mono',monospace;color:var(--a-body);margin:0;white-space:pre-wrap;word-break:break-all;flex:1;">curl -x http://127.0.0.1:7420 -i 'https://api.example.com/v2/orders/…'</pre>
-              <button class="cb" type="button">copy curl</button>
+              <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
             </div>
           </div>
           <div class="cap">curl display + CopyButton side by side: the payload description lives in the section, the button copies it</div>
@@ -234,32 +223,47 @@
     <h2 id="states">States</h2>
     <div class="app swatches" data-c="states">
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb" type="button">copy curl</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button></div>
         <div class="cap"><strong>rest</strong> — muted text, hairline border</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-hover" type="button">copy curl</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink border-ink-mute" type="button">copy curl</button></div>
         <div class="cap"><strong>hover</strong> — ink text, mute border (strengthens, ink-toned — zero chromatic accent)</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-focus" type="button">copy curl</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none outline outline-1 outline-ink-mute outline-offset-2 text-ink" type="button">copy curl</button></div>
         <div class="cap"><strong>focus</strong> — 1 px mute outline (ink-toned, not colored — zero-accent rule)</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-active" type="button">copy curl</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink bg-wash-tint" type="button">copy curl</button></div>
         <div class="cap"><strong>active</strong> — tinted fill, ink text (press-down acknowledgment; brief)</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-confirm" type="button">copied</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ok border-ok" type="button">copied</button></div>
         <div class="cap"><strong>confirming</strong> — ok-tone text + border, label "copied", ~2 s then reverts. Only on successful write.</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-error" type="button">failed</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-warn border-warn" type="button">failed</button></div>
         <div class="cap"><strong>error</strong> — warn-tone text + border, label "failed", ~2 s then reverts. Only on failed write (review 2026-07-23).</div>
       </div>
       <div class="swatch">
-        <div class="panel" style="padding:8px 12px;"><button class="cb s-disabled" type="button" disabled>copy curl</button></div>
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none opacity-disabled pointer-events-none" type="button" disabled>copy curl</button></div>
         <div class="cap"><strong>disabled</strong> — 38% opacity. Only when there is nothing to copy (e.g. body not yet captured).</div>
+      </div>
+    </div>
+    <p style="color:var(--muted);font-size:12px;margin-top:4px;">The icon-only form (D2b) carries the same seven states at 24 px square. Only the two transient ones look different, because there is no label to swap:</p>
+    <div class="app swatches" data-c="states-icon">
+      <div class="swatch">
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" type="button" title="copy body" aria-label="copy body">⧉</button></div>
+        <div class="cap"><strong>rest</strong> — ⧉ glyph, muted, hairline border. The payload is the pane below it; <code>title</code> + <code>aria-label</code> carry the name the label would.</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg text-ok border-ok" type="button" title="copied" aria-label="copied">✓</button></div>
+        <div class="cap"><strong>confirming</strong> — glyph swaps ⧉ → ✓ at ok tone, ~2 s, same timer rules as the label swap. No width change: the box was already square.</div>
+      </div>
+      <div class="swatch">
+        <div class="panel" style="padding:8px 12px;"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg text-warn border-warn" type="button" title="copy failed" aria-label="copy failed">⚠</button></div>
+        <div class="cap"><strong>error</strong> — glyph swaps to ⚠ at warn tone, ~2 s. The <code>aria-live</code> announcement is what carries "failed" to a screen reader — the glyph alone never states the outcome.</div>
       </div>
     </div>
     <div class="callout" data-c="non-states">
@@ -273,11 +277,11 @@
         <strong>D1 · confirm form: label-swap vs chip</strong> <span class="badge auto">settled: label-swap</span>
         <div class="panel" style="margin-top:8px;padding:6px 10px;">
           <div class="flow-ex">
-            <button class="cb" type="button">copy curl</button>
-            <span class="arr">click ▸</span>
-            <button class="cb s-confirm" type="button">copied</button>
-            <span class="arr">~2 s ▸</span>
-            <button class="cb" type="button">copy curl</button>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
+            <span class="text-ink-mute text-chrome">click ▸</span>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ok border-ok" type="button">copied</button>
+            <span class="text-ink-mute text-chrome">~2 s ▸</span>
+            <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
@@ -287,35 +291,57 @@
         </p>
       </div>
       <div class="card">
-        <strong>alt: chip after the button</strong> <span class="badge warn">rejected</span>
+        <strong>alt: chip after the button</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;">
-          <button class="cb" type="button">copy curl</button>
+          <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
           <span style="display:inline-block;font-size:10px;line-height:16px;color:var(--a-ok);border:1px solid var(--a-ok);border-radius:999px;padding:0 6px;font-family:Inter,sans-serif;">copied</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">Appending a chip outside the button is DOM outside the hit zone — reflows the sub-bar, adds a second element to manage, and makes the button narrower than needed while the chip floats. The label-swap keeps everything inside the button.</p>
       </div>
       <div class="card">
-        <strong>alt: toast</strong> <span class="badge warn">rejected</span>
+        <strong>alt: toast</strong> <span class="badge text-warn">rejected</span>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:4px;">A distant toast breaks the "verify without looking away" frame driver. Not considered further.</p>
       </div>
     </div>
 
     <div class="app cards" data-c="d2">
       <div class="card">
-        <strong>D2 · icon: include or omit</strong> <span class="badge auto">settled: optional, caller-controlled</span>
+        <strong>D2 · which forms exist</strong> <span class="badge auto">settled: two forms — labelled (default) · icon-only under the adjacency test</span>
+        <span class="badge id">reopened W5 · r2·27 · r2·28 · r3·17 · r3·21</span>
         <div class="panel" style="margin-top:8px;padding:6px 10px;display:flex;gap:8px;align-items:center;">
-          <button class="cb" type="button"><span class="cb-icon">⧉</span> copy curl</button>
-          <button class="cb" type="button">copy curl</button>
+          <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button"><span class="text-body leading-none">⧉</span> copy curl</button>
+          <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
+          <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">labelled — icon optional</span>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
-          The curl use-case in W1 explicitly dropped glyph-only because no glyph fits the action unambiguously (registry seed, IconButton card). With the label mandatory, a leading ⧉ is additive chrome — acceptable but not required. Caller decides; label-only is the default.
+          <strong>Labelled is the default form.</strong> The curl use-case in W1 dropped glyph-only because no glyph fits the action unambiguously (registry seed, IconButton card). With the label present, a leading ⧉ is additive chrome — acceptable, not required. Caller decides; label-only is the minimum.
         </p>
       </div>
       <div class="card">
-        <strong>alt: icon-only (no label)</strong> <span class="badge warn">rejected</span>
-        <div class="panel" style="margin-top:8px;padding:6px 10px;"><button class="cb" type="button"><span class="cb-icon">⧉</span></button></div>
-        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">The payload is invisible — the label is the only payload identifier. Icon-only collapses that identity. W1 lesson: "actions with no fitting glyph — the word carries it instead". CopyButton must always show the label.<br><br><strong>Exception — visible payload (manager review 2026-07-23, BodyViewer):</strong> when the payload is rendered directly adjacent to the button (BodyViewer's pane shows exactly what copy delivers), the invisible-payload premise doesn't hold, and icon form — ⧉ with mandatory tooltip + <code>aria-label</code>, confirm as a ✓ ok-tone glyph swap — is allowed (<a href="body-viewer.html">body-viewer.html</a> anatomy ④).</p>
+        <strong>D2b · icon-only form</strong> <span class="badge auto">settled: allowed when the payload is adjacent</span>
+        <div class="panel" style="margin-top:8px;padding:6px 10px;display:flex;gap:8px;align-items:center;">
+          <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" type="button" title="copy body" aria-label="copy body">⧉</button>
+          <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border rounded-button font-ui cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg text-ok border-ok" type="button" title="copied" aria-label="copied">✓</button>
+          <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">24 px square · tooltip + aria-label mandatory · ✓ confirm</span>
+        </div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
+          <strong>The adjacency test — the whole condition, in one sentence:</strong> the icon form is allowed only when the payload the button copies is <em>rendered on screen beside the button</em>. Then the label is not load-bearing, because the content itself names what will land on the clipboard. Tenants: <a href="body-viewer.html">BodyViewer</a>'s chrome bar (the pane below shows exactly what copy delivers) and <a href="header-table.html">HeaderTable</a>'s sub-bar (the rows below are the payload). Confirmed by manager review 2026-07-23.
+          <br><br>
+          <strong>Size: 24 px square</strong> — <code>generous-targets</code>' documented floor, and the value BodyViewer's own chrome-bar spec row already carries (<code>size=24</code>). Not IconButton's 28 px: this is a CopyButton, not an IconButton, and 28 px would break the chrome bar's single-line rhythm. Not the 22 px both W4 runs reached for — that is under the floor and was never anything's specified value (see the drift note below).
+          <br><br>
+          <strong>Mandatory with the icon form:</strong> a <code>title</code> tooltip <em>and</em> an <code>aria-label</code> naming the payload ("copy body", "copy all request headers"); the confirm is a ✓ ok-tone glyph swap for the same ~2 s as the label-swap, with identical timer rules.
+        </p>
       </div>
+      <div class="card">
+        <strong>alt: icon-only anywhere</strong> <span class="badge text-warn">rejected</span>
+        <div class="panel" style="margin-top:8px;padding:6px 10px;"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none w-control h-control p-0 gap-0 items-center justify-center text-glyph-lg" type="button">⧉</button><span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-left:8px;">payload nowhere on screen</span></div>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">When the payload is <em>not</em> rendered — copy-as-curl, where the curl string is assembled and never shown — the label is the only payload identifier and icon-only collapses that identity. W1 lesson: "actions with no fitting glyph — the word carries it instead". This is the case the flat <code>@avoid</code> line was written for, and it stays rejected.</p>
+      </div>
+    </div>
+    <div class="callout warn" data-c="d2-drift">
+      <strong>Why this fork was reopened (W5, D5 — edited in place).</strong> The exception above was settled in July but recorded only inside the <em>rejected</em> card, while <code>@avoid</code> read "icon-only form" flat. Two design runs read the <code>@avoid</code> line — which is where the flow instructs fit to be judged, and what <code>elements·avoid-cited</code> checks — and both shipped a wrong form while citing this file: <a href="../2026-07-25-dflow-w4-run-2.html#findings">run #2</a> (findings 27, 28) and <a href="../2026-07-26-dflow-w4-run-3.html#findings">run #3</a> (findings 17, 21). Both also borrowed BodyViewer's private 22 px <code>.ibtn</code>, because no canonical drawing of the icon form existed anywhere. The three fixes: the exception now lives in a <em>settled</em> card, <code>@avoid</code> carries it inline, and the size is one named value. <strong>A contract whose exceptions live outside the lines the gate reads is unenforceable by construction</strong> (W5 D6).
+      <br><br>
+      Run #3's finding 21 is the sharper lesson and is <em>not</em> fixed by this fork: that run put the icon form beside a command the user reads and copies verbatim, which <code>@avoid</code>'s <em>first</em> clause already excluded — that is <a href="copy-text.html">CopyText</a>'s job. Adjacency permits the icon form; it never overrides the CopyText boundary. Both clauses must pass.
     </div>
 
     <div class="app cards" data-c="d3">
@@ -329,15 +355,37 @@
 
     <div class="app cards" data-c="d4">
       <div class="card">
-        <strong>D4 · scope: copy-specific vs generic "flash a state" button</strong> <span class="badge auto">settled: copy-specific; the generic mechanic is the shared hook</span>
+        <strong>D4 · scope: copy-specific behaviour on a shared shell</strong> <span class="badge auto">settled: copy-specific contract · the box is Button · the timer is the shared hook</span>
+        <span class="badge id">reopened W5 — the deferred lift, resolving as this card predicted</span>
+        <div class="panel" style="margin-top:8px;padding:6px 10px;display:flex;gap:8px;align-items:center;">
+          <button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center" type="button">retry</button>
+          <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">Button</span>
+          <button class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none" type="button">copy curl</button>
+          <span style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;">= the same box + a clipboard</span>
+        </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
-          (Manager review 2026-07-23: the temporarily-switch-state logic could serve non-copy buttons — make the component generic?) The generic piece is real: timed state swap, timer restart on re-trigger, reset on input change, width stability, aria-live. But that piece is <strong>already factored as the shared confirm hook</strong> CopyText uses (Made of) — the hook IS the generic layer. What sits above it is copy-only and would not survive generalisation: the clipboard write, the "copied"/"failed" vocabulary, and the payload-transparency rules (label names the invisible payload, never icon-only, stale confirm resets on payload change). A generic component could not mandate any of those — each caller would reinvent them, which is exactly the ad-hoc drift frame driver ② exists to prevent.
+          Three layers, each owned once:
+        </p>
+        <table style="margin-top:6px;">
+          <thead><tr><th>layer</th><th>owner</th><th>what it is</th></tr></thead>
+          <tbody>
+            <tr><td>the box</td><td><a href="button.html">Button</a> (T1)</td><td>the <code>&lt;button&gt;</code> element, border, radius, padding, family, the five ink-toned states, the focus ring, the 24 px hit floor and the keyboard behaviour. This component passes <code>tone="mute"</code> (D3: a copy stays quieter than a zone's way out), and <code>shape="square"</code> for the D2b icon form. <a href="icon-button.html">IconButton</a> composes the same shell with <code>frame="bare"</code></td></tr>
+            <tr><td>the timed swap</td><td>the shared confirm hook</td><td>~2 s flash, restart on re-trigger, reset on input change, width stability, <code>aria-live</code> — shared with <a href="copy-text.html">CopyText</a></td></tr>
+            <tr><td>the copy contract</td><td><strong>this component</strong></td><td>the clipboard write · the "copied"/"failed" vocabulary · the ok/warn tone swap on the shell · payload transparency (the label names the payload; icon-only only under D2b's adjacency test; a stale confirm resets when the payload changes)</td></tr>
+          </tbody>
+        </table>
+        <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
+          The original ruling stands on the part that mattered — <strong>the component stays copy-specific</strong>, because a generic "flash a state" button could mandate none of the third row and every caller would reinvent it (frame driver ②). What changed is only <em>where the box comes from</em>.
         </p>
       </div>
       <div class="card">
-        <strong>alt: generic FlashButton (<code>onAction</code> + flash labels); copy = one caller</strong> <span class="badge warn">deferred — no non-copy tenant</span>
+        <strong>the deferred alternative, now landed</strong> <span class="badge auto">resolved W5 — Button is the tenant</span>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">
-          Every tenant today is a copy action (Identity § Tenants). Extracting a generic FlashButton now is speculative generality with a real cost (weaker contract, per-caller conventions) and no user. The escape path stays cheap: when a non-copy transient button appears, lift the shell + hook into FlashButton and make CopyButton its thin wrapper — no caller changes, no design rework here.
+          This card previously deferred a generic <em>FlashButton</em> for want of a non-copy tenant, and wrote its own escape path: <em>"when a non-copy transient button appears, lift the shell + hook into it and make CopyButton its thin wrapper — no caller changes, no design rework here."</em>
+          <br><br>
+          <strong>That tenant appeared.</strong> <a href="button.html">Button</a> was proposed in W4 (run #2's <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 30</a>) for the first non-copy action the collection met, and it was specified as <em>"CopyButton's box exactly"</em>. So the lift is not a new decision — it is this deferral resolving exactly as written, with one correction: the shared piece is the <strong>shell</strong>, not a flash mechanic. Button carries no timer and never flashes; the hook stays where it was.
+          <br><br>
+          <strong>Why it could not wait for the build:</strong> the two files had already drifted on three values (border alias, padding, active wash) while both claiming to be identical — see <a href="button.html#tokens">Button § tokens</a>. Two descriptions of one box drift silently; that is the same defect class as <a href="../2026-07-25-dflow-w4-run-2.html#findings">r2·24</a>, and composition is what makes "identical" structural instead of aspirational.
         </p>
       </div>
     </div>
@@ -346,10 +394,11 @@
     <table data-c="props">
       <thead><tr><th>Prop</th><th>Type</th><th></th></tr></thead>
       <tbody>
-        <tr><td><code>label</code></td><td><code>string</code></td><td>button label at rest ("copy curl", "copy body") — never "copy" alone when two CopyButtons share a zone</td></tr>
+        <tr><td><code>label</code></td><td><code>string</code></td><td>names the payload ("copy curl", "copy body", "copy all request headers") — never "copy" alone when two CopyButtons share a zone. Rendered as visible text in the labelled form; in the icon-only form it becomes the <code>title</code> and <code>aria-label</code> instead, so it is required in <em>both</em> forms</td></tr>
         <tr><td><code>value</code></td><td><code>string</code></td><td>payload to write to clipboard (eager — pre-computed by caller)</td></tr>
         <tr><td><code>getPayload</code></td><td><code>() =&gt; string</code></td><td>lazy alternative to <code>value</code>; use when payload computation is expensive. One of <code>value</code> or <code>getPayload</code> is required.</td></tr>
-        <tr><td><code>icon</code></td><td><code>ReactNode?</code></td><td>optional leading glyph — omitted by default</td></tr>
+        <tr><td><code>icon</code></td><td><code>ReactNode?</code></td><td>optional leading glyph in the labelled form — omitted by default. In the icon-only form it is the whole button face, defaulting to ⧉</td></tr>
+        <tr><td><code>iconOnly</code></td><td><code>boolean?</code></td><td>selects the icon-only form (fork D2b) — 24 px square, no visible text, <code>label</code> carried as <code>title</code> + <code>aria-label</code>, ✓ glyph confirm. Default <code>false</code>. <strong>The caller asserting adjacency:</strong> only correct when the payload is rendered beside the button, which is a fact about the host layout that the component cannot check</td></tr>
         <tr><td><code>disabled</code></td><td><code>boolean?</code></td><td>38% opacity, pointer-events none; use when there is nothing to copy</td></tr>
         <tr><td><code>className</code></td><td><code>string?</code></td><td>extra Tailwind classes for layout override by the parent</td></tr>
       </tbody>
@@ -358,12 +407,12 @@
       <p>The card this file compiles down to — carried verbatim as the component's TSDoc when built (code-as-truth):</p>
       <pre class="tsdoc">/**
  * CopyButton — labeled button that copies a derived payload and confirms inline; payload is not displayed.
- * @tier T1 — clipboard write + timed label-swap, no business logic
- * @anatomy compact bordered button · label (names payload) → "copied" (ok) or "failed" (warn) for ~2 s → reverts · optional leading icon (label always present — icon-only allowed only when the payload is rendered adjacent, e.g. BodyViewer: ⧉ + tooltip, ✓ confirm — fork D2)
+ * @tier T1 — clipboard write + timed label-swap on a composed Button shell, no business logic
+ * @anatomy two forms — LABELLED (default): compact bordered button · label (names payload) → "copied" (ok) or "failed" (warn) for ~2 s → reverts · optional leading icon. ICON-ONLY (fork D2b, adjacency test): 24px square · ⧉ glyph · tooltip + aria-label mandatory · ✓ ok-tone confirm, same ~2 s timer rules
  * @use any one-click copy affordance where the payload is derived/invisible: copy-as-curl, copy body, copy all headers (payload serialised by HeaderTable)
- * @avoid showing a value the user grabs verbatim (that is CopyText) · icon-only form · anything that is not a copy action · serialising the payload itself (the parent owns press logic)
- * @states rest · hover · focus · active · confirming (~2 s, restarts on re-click, resets instantly on payload change) · error ("failed", warn tone, ~2 s, same timer rules) · disabled (nothing to copy)
- * @madeof — (generic ~2 s flash mechanic in one shared hook with CopyText; copy contract lives here — fork D4)
+ * @avoid showing a value the user grabs verbatim (that is CopyText) · icon-only form UNLESS the payload is rendered directly adjacent (fork D2b: BodyViewer's pane, HeaderTable's rows — 24px square, mandatory tooltip + aria-label, ✓ confirm) · anything that is not a copy action · serialising the payload itself (the parent owns press logic)
+ * @states rest · hover · focus · active · confirming (~2 s, restarts on re-click, resets instantly on payload change — label swaps to "copied", or the glyph swaps to ✓ in the icon-only form) · error ("failed", warn tone, ~2 s, same timer rules; ⚠ glyph in the icon-only form) · disabled (nothing to copy)
+ * @madeof Button (T1) with tone="mute", plus shape="square" for the D2b icon form — the element, focus ring, disabled, radius, hit floor and keyboard come from the shell · the shared ~2 s confirm hook (with CopyText). The copy contract itself lives here — fork D4
  */</pre>
     </div>
 
@@ -375,7 +424,7 @@
       </div>
       <div class="card">
         <strong>Avoid</strong>
-        <p>A value that IS displayed verbatim and the user grabs whole — that is <a href="copy-text.html">CopyText</a> (the displayed string is both the affordance and the payload). Actions that are not clipboard writes — use <a href="icon-button.html">IconButton</a> or a plain button. Never icon-only when the payload is invisible — the label is load-bearing for payload identity (icon form is allowed only when the payload is rendered adjacent — fork D2 exception, BodyViewer).</p>
+        <p>A value that IS displayed verbatim and the user grabs whole — that is <a href="copy-text.html">CopyText</a> (the displayed string is both the affordance and the payload). This boundary is checked <em>first</em> and the icon form never overrides it: run #3 put an icon CopyButton beside a shell command the user reads and copies whole, which is CopyText's case (<a href="../2026-07-26-dflow-w4-run-3.html#findings">finding 21</a>). Actions that are not clipboard writes — use <a href="icon-button.html">IconButton</a> or <a href="button.html">Button</a>. <strong>Icon-only when the payload is not on screen</strong> — the label is load-bearing for payload identity; the icon form is allowed <em>only</em> under D2b's adjacency test (the payload is rendered beside the button: BodyViewer's pane, HeaderTable's rows), at 24 px with tooltip + <code>aria-label</code>.</p>
       </div>
     </div>
 
@@ -383,14 +432,12 @@
     <table data-c="token-map">
       <thead><tr><th>Part</th><th>Tailwind (build WU)</th></tr></thead>
       <tbody>
-        <tr><td>button shell (rest)</td><td><code>rounded-button border border-hairline px-2 py-1 text-xs text-ink-mute font-ui</code></td></tr>
-        <tr><td>button shell (hover)</td><td><code>hover:text-ink hover:border-ink-mute</code></td></tr>
-        <tr><td>button shell (focus)</td><td><code>focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2</code></td></tr>
-        <tr><td>button shell (active)</td><td><code>active:bg-canvas-soft active:text-ink</code></td></tr>
+        <tr><td>button shell — rest · hover · focus · active · disabled</td><td><strong>see <a href="button.html#tokens">button.html § tokens</a></strong> — the box is a composed <a href="button.html">Button</a> (D4), so its values live there and only there. <em>Three values in this table had drifted from Button's while both files claimed to be identical (border alias, padding, active wash); they are reconciled in that table.</em></td></tr>
+        <tr><td>label tone at rest</td><td>Button's <code>tone="mute"</code> → <code>text-ink-mute</code>, one step below the shell's <code>body</code> default: a copy is an always-available convenience, a Button is usually its zone's only way out (Button D3). <em>A prop, not a divergence — which is the point</em></td></tr>
         <tr><td>button shell (confirming)</td><td><code>text-ok border-ok</code> (transient class swap)</td></tr>
         <tr><td>button shell (error)</td><td><code>text-warn border-warn</code> (transient class swap, label "failed")</td></tr>
-        <tr><td>button shell (disabled)</td><td><code>opacity-[.38] pointer-events-none</code></td></tr>
         <tr><td>optional icon</td><td><code>text-[12px] leading-none</code> (inline before label text)</td></tr>
+        <tr><td>icon-only form (D2b)</td><td>Button's <code>shape="square"</code> at its 24 px default — <code>generous-targets</code>' floor (<a href="button.html#tokens">its token table</a>). Keeps <code>frame="border"</code>, the radius, and every state class of the labelled form; this component adds <code>title</code> + <code>aria-label</code> from <code>label</code>, and the ✓ / ⚠ glyph swaps</td></tr>
         <tr><td>aria-live region</td><td>visually hidden sibling; <code>sr-only</code>, <code>aria-live="polite"</code></td></tr>
       </tbody>
     </table>
@@ -407,7 +454,7 @@
   -H 'Accept: application/json' \
   'https://api.example.com/v2/orders/8f3a91c2/items?expand=pricing&amp;currency=USD'</pre>
           <button id="live-cb" type="button"
-            class="cb"
+            class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none"
             aria-label="copy curl command"
             style="flex-shrink:0;">copy curl</button>
           <span id="live-announce" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;"></span>
@@ -420,7 +467,7 @@
         <div class="lbl">Disabled example</div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
           <span style="font-size:11.5px;font-family:Inter,sans-serif;color:var(--a-mute);">body not captured</span>
-          <button type="button" class="cb s-disabled" disabled>copy body</button>
+          <button type="button" class="inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control text-ink-mute cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none opacity-disabled pointer-events-none" disabled>copy body</button>
         </div>
       </div>
     </div>
@@ -432,14 +479,22 @@
     const payload = document.getElementById('live-curl').textContent;
     let timer;
 
-    function flash(label, cls, announcement) {
+    // A tone class and the resting class set the same property, so the state
+    // swaps them — appending would lose to whichever Tailwind emits last.
+    const REST = ['text-ink-mute', 'border-hairline'];
+    const CONFIRM = ['text-ok', 'border-ok'];
+    const ERROR = ['text-warn', 'border-warn'];
+
+    function flash(label, tone, announcement) {
       btn.textContent = label;
-      btn.classList.add(cls);
+      btn.classList.remove(...REST);
+      btn.classList.add(...tone);
       announce.textContent = announcement;
       clearTimeout(timer);
       timer = setTimeout(() => {
         btn.textContent = 'copy curl';
-        btn.classList.remove('s-confirm', 's-error');
+        btn.classList.remove(...CONFIRM, ...ERROR);
+        btn.classList.add(...REST);
         announce.textContent = '';
       }, 2000);
     }
@@ -454,8 +509,8 @@
     function doCopy() {
       lockWidth();
       navigator.clipboard?.writeText(payload).then(
-        () => flash('copied', 's-confirm', 'copied'),
-        () => flash('failed', 's-error', 'copy failed'),
+        () => flash('copied', CONFIRM, 'copied'),
+        () => flash('failed', ERROR, 'copy failed'),
       );
     }
 

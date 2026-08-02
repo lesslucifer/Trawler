@@ -184,6 +184,13 @@ export function proxySteps(t: ProxyTarget, addr: string): string[] {
 // when neither can, so the remote/manual/un-probeable cases guide instead of
 // mislead. Pure data → unit-tested; the probes themselves live in Rust.
 
+// TODO [UI_DEFER] (E-DFLOW.W5, r3·22): these resolvers return full sentences, so
+// StatusLine's ≤~40-char message contract cannot be met by the component — and a
+// screen must not shorten a domain message itself (StatusLine @avoid). The short
+// form is this module's to return: StepStatusView gains a `short` field beside
+// `message`, filled here per verdict. Deferred because the setup screen still
+// renders these sentences directly; it lands with the screen that consumes
+// StatusLine.
 export type TrustProbe = "trusted" | "untrusted" | "unknown";
 export type ProxyProbe = "ours" | "foreign" | "none" | "unknown";
 export type StepTone = "ok" | "warn" | "muted";

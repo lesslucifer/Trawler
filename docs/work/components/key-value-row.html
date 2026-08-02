@@ -4,24 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — KeyValueRow component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="../../../doc-assets/components/tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
-    /* key-value-row specific: the two-column grid row */
-    .hr-table{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;}
-    .hr-key{color:var(--a-mute);white-space:nowrap;}
-    .hr-val{color:var(--a-body);word-break:break-all;text-decoration:underline dotted var(--a-line);text-underline-offset:3px;cursor:text;user-select:text;}
-    .hr-val:hover,.hr-val.s-hover{color:var(--a-ink);text-decoration-color:var(--a-mute);}
-    .hr-val.s-confirm{text-decoration-color:var(--a-ok);}
-    .hr-val.plain{text-decoration:none;}
-    .hr-row{display:contents;}
     /* panel wrapper */
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
     .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
-    .chip{display:inline-block;margin-left:8px;font-size:10px;line-height:16px;color:var(--a-ok);border:1px solid var(--a-ok);border-radius:999px;padding:0 6px;vertical-align:1px;font-family:Inter,system-ui,sans-serif;}
-    .sel{background:rgba(174,166,156,.35);color:var(--a-ink);}
     .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
     .swatch .panel{max-width:none;}
     .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
@@ -42,8 +33,7 @@
     /* hover-stripe for the rejected D3 alternative specimen */
     .hr-annotated .hr-row-hl .hr-key{color:var(--a-body);}
     .hr-annotated .hr-row-hl .hr-val{color:var(--a-ink);}
-    .hr-annotated .hr-row-hl{background:rgba(255,255,255,.035);border-radius:3px;}
-  </style>
+    .hr-annotated .hr-row-hl{background:rgba(255,255,255,.035);border-radius:3px;}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -80,18 +70,18 @@
     <div class="app" data-c="anatomy">
       <div class="panel">
         <div class="lbl">Request headers</div>
-        <div class="hr-table">
-          <div class="hr-row">
-            <span class="hr-key">content-type<span class="anno">1</span></span>
-            <span class="hr-val">application/json<span class="anno">2</span></span>
+        <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+          <div class="contents">
+            <span class="text-ink-mute whitespace-nowrap">content-type<span class="anno">1</span></span>
+            <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">application/json<span class="anno">2</span></span>
           </div>
-          <div class="hr-row">
-            <span class="hr-key">authorization</span>
-            <span class="hr-val s-confirm">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.sig<span class="chip">copied</span><span class="anno">3</span></span>
+          <div class="contents">
+            <span class="text-ink-mute whitespace-nowrap">authorization</span>
+            <span class="break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute text-ok border-ok">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.sig<span class="inline-block ml-2 text-label leading-4 text-ok border border-ok rounded-full px-[6px] align-[1px] font-ui">copied</span><span class="anno">3</span></span>
           </div>
-          <div class="hr-row">
-            <span class="hr-key">accept</span>
-            <span class="hr-val">*/*</span>
+          <div class="contents">
+            <span class="text-ink-mute whitespace-nowrap">accept</span>
+            <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">*/*</span>
           </div>
         </div>
       </div>
@@ -100,9 +90,9 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="hr-table">
-              <span class="hr-key">content-type</span><span class="hr-val">application/json</span>
-              <span class="hr-key">authorization</span><span class="hr-val">Bearer token…</span>
+            <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+              <span class="text-ink-mute whitespace-nowrap">content-type</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">application/json</span>
+              <span class="text-ink-mute whitespace-nowrap">authorization</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">Bearer token…</span>
             </div>
           </div>
           <div class="cap">name column: always nowrap, always muted, inert — it reads at a glance</div>
@@ -118,9 +108,9 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="hr-table">
-              <span class="hr-key">authorization</span>
-              <span class="hr-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.sig</span>
+            <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+              <span class="text-ink-mute whitespace-nowrap">authorization</span>
+              <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.sig</span>
             </div>
           </div>
           <div class="cap">long JWT: wraps inside the column, dotted hairline underline is the only hint — one click copies all of it</div>
@@ -136,9 +126,9 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="hr-table">
-              <span class="hr-key">authorization</span>
-              <span class="hr-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.<span class="sel">eyJzdWIiOiJ1c2VyXzg4OTAyIg</span>…</span>
+            <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+              <span class="text-ink-mute whitespace-nowrap">authorization</span>
+              <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.<span class="bg-wash-select text-ink">eyJzdWIiOiJ1c2VyXzg4OTAyIg</span>…</span>
             </div>
           </div>
           <div class="cap">drag-selecting the payload inside a JWT: releasing fires <em>no</em> copy — ⌘C takes just the substring</div>
@@ -174,9 +164,9 @@
       <div class="part">
         <div class="ex">
           <div class="panel">
-            <div class="hr-table">
-              <span class="hr-key">set-cookie</span>
-              <span class="hr-val">session=eyJhbGciOiJSUzI1NiJ9.payload.sig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
+            <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+              <span class="text-ink-mute whitespace-nowrap">set-cookie</span>
+              <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">session=eyJhbGciOiJSUzI1NiJ9.payload.sig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
             </div>
           </div>
           <div class="cap">long Set-Cookie wraps over multiple lines — the name column stays fixed, the value column absorbs all the space</div>
@@ -193,16 +183,16 @@
         <div class="ex">
           <div class="flow-ex">
             <div class="panel" style="font-family:'DM Mono',monospace;font-size:12.5px;">
-              <div class="hr-table">
-                <span class="hr-key">x-request-id</span>
-                <span class="hr-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+              <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+                <span class="text-ink-mute whitespace-nowrap">x-request-id</span>
+                <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
               </div>
             </div>
-            <span class="arr">FormRenderer ▸</span>
+            <span class="text-ink-mute text-chrome">FormRenderer ▸</span>
             <div class="panel" style="font-family:'DM Mono',monospace;font-size:12.5px;">
-              <div class="hr-table">
-                <span class="hr-key">email</span>
-                <span class="hr-val">user@example.com</span>
+              <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+                <span class="text-ink-mute whitespace-nowrap">email</span>
+                <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">user@example.com</span>
               </div>
             </div>
           </div>
@@ -222,36 +212,36 @@
     <div class="app swatches" data-c="states">
       <div class="swatch">
         <div class="panel">
-          <div class="hr-table">
-            <span class="hr-key">content-type</span><span class="hr-val">application/json</span>
-            <span class="hr-key">accept</span><span class="hr-val">*/*</span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+            <span class="text-ink-mute whitespace-nowrap">content-type</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">application/json</span>
+            <span class="text-ink-mute whitespace-nowrap">accept</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">*/*</span>
           </div>
         </div>
         <div class="cap"><strong>rest</strong> — name muted; value body tone with hairline dotted underline; no row background</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="hr-table">
-            <span class="hr-key">content-type</span><span class="hr-val s-hover">application/json</span>
-            <span class="hr-key">accept</span><span class="hr-val">*/*</span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+            <span class="text-ink-mute whitespace-nowrap">content-type</span><span class="break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute text-ink border-ink-mute">application/json</span>
+            <span class="text-ink-mute whitespace-nowrap">accept</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">*/*</span>
           </div>
         </div>
         <div class="cap"><strong>hover (value cell)</strong> — ink, underline strengthens, tooltip "click to copy" — CopyText's state, scoped to the cell, never the row</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="hr-table">
-            <span class="hr-key">authorization</span>
-            <span class="hr-val s-confirm">Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.sig<span class="chip">copied</span></span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+            <span class="text-ink-mute whitespace-nowrap">authorization</span>
+            <span class="break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute text-ok border-ok">Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.sig<span class="inline-block ml-2 text-label leading-4 text-ok border border-ok rounded-full px-[6px] align-[1px] font-ui">copied</span></span>
           </div>
         </div>
         <div class="cap"><strong>confirming</strong> — inline chip + ok underline for ~2 s after a whole-value copy (CopyText's convention)</div>
       </div>
       <div class="swatch">
         <div class="panel">
-          <div class="hr-table">
-            <span class="hr-key">authorization</span>
-            <span class="hr-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.<span class="sel">eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwfQ</span>.sig</span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+            <span class="text-ink-mute whitespace-nowrap">authorization</span>
+            <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.<span class="bg-wash-select text-ink">eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwfQ</span>.sig</span>
           </div>
         </div>
         <div class="cap"><strong>drag-selecting</strong> — native OS selection highlight; releasing fires no copy (the guard)</div>
@@ -272,19 +262,19 @@
       <div class="card">
         <strong>D1 · value wrapping vs truncation</strong> <span class="badge auto">settled: wrap, never truncate</span>
         <div class="panel" style="margin-top:8px;">
-          <div class="hr-table">
-            <span class="hr-key">set-cookie</span>
-            <span class="hr-val">session=abc123; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+            <span class="text-ink-mute whitespace-nowrap">set-cookie</span>
+            <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">session=abc123; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>Wrap (settled).</strong> The full value is always visible. Matches the trust contract from the Frame: display = payload. Matches CopyText's "never truncates" rule (<code>copy-text.html § anatomy ①</code>). Shipped today: <code>FlowDetail.tsx:25</code> uses <code>break-all</code> with no truncation. A debug proxy whose headers truncate is a proxy you can't trust.</p>
       </div>
       <div class="card">
-        <strong>alt: truncate with expand</strong> <span class="badge warn">rejected</span>
+        <strong>alt: truncate with expand</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;">
-          <div class="hr-table">
-            <span class="hr-key">set-cookie</span>
-            <span class="hr-val plain" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">session=abc123; Path=/; HttpOnly; Secure…</span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+            <span class="text-ink-mute whitespace-nowrap">set-cookie</span>
+            <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute no-underline" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;">session=abc123; Path=/; HttpOnly; Secure…</span>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">Truncation + a "show more" toggle hides wire data by default — the opposite of trustworthy display. The panel is scrollable; a long value costing vertical space is expected and correct.</p>
@@ -294,29 +284,29 @@
       <div class="card">
         <strong>D2 · value copy affordance</strong> <span class="badge auto">settled: value cell is a CopyText — review override 2026-07-23</span>
         <div class="panel" style="margin-top:8px;">
-          <div class="hr-table">
-            <span class="hr-key">authorization</span>
-            <span class="hr-val s-confirm">Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.sig<span class="chip">copied</span></span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+            <span class="text-ink-mute whitespace-nowrap">authorization</span>
+            <span class="break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute text-ok border-ok">Bearer eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyIn0.sig<span class="inline-block ml-2 text-label leading-4 text-ok border border-ok rounded-full px-[6px] align-[1px] font-ui">copied</span></span>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>CopyText on the value (settled on review).</strong> The seed verdict said native selection only; review flipped it: long values (<code>Set-Cookie</code>, JWT) are difficult to hand-select whole. CopyText gives the one-click whole-value grab while its selection guard keeps every partial take native (<code>copy-text.html § behavior</code>) — both intents survive. Whole-<em>set</em> copy still lives in <a href="header-table.html">HeaderTable</a>'s copy-all (a CopyButton), not on each row.</p>
       </div>
       <div class="card">
-        <strong>alt: native selection only</strong> <span class="badge warn">rejected on review</span>
+        <strong>alt: native selection only</strong> <span class="badge text-warn">rejected on review</span>
         <div class="panel" style="margin-top:8px;">
-          <div class="hr-table">
-            <span class="hr-key">set-cookie</span>
-            <span class="hr-val plain">session=eyJhbGciOiJSUzI1NiJ9.payload.sig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400</span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+            <span class="text-ink-mute whitespace-nowrap">set-cookie</span>
+            <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute no-underline">session=eyJhbGciOiJSUzI1NiJ9.payload.sig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400</span>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">The original seed verdict ("nothing to build"). Zero chrome — but grabbing a whole wrapped 300-char cookie takes a careful multi-line drag, and a one-character miss is silent. That is exactly the failure CopyText exists to remove (<code>copy-text.html § frame</code>); rejected 2026-07-23.</p>
       </div>
       <div class="card">
-        <strong>alt: hover copy glyph</strong> <span class="badge warn">rejected</span>
+        <strong>alt: hover copy glyph</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;">
-          <div class="hr-table">
-            <span class="hr-key">authorization</span>
-            <span class="hr-val plain">Bearer token… <span style="color:var(--a-mute);font-size:11px;">⧉</span></span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+            <span class="text-ink-mute whitespace-nowrap">authorization</span>
+            <span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute no-underline">Bearer token… <span style="color:var(--a-mute);font-size:11px;">⧉</span></span>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">A per-row glyph multiplies chrome across 30+ rows, lands at unpredictable positions on wrapped values, and shrinks the hit target to a few pixels. The W1 "no fitting glyph" lesson (<code>2026-07-22-dflow-w2-registry-seed.html</code> IconButton avoid) — and CopyText's own D1 already rejected it for the same reasons.</p>
@@ -326,23 +316,23 @@
       <div class="card">
         <strong>D3 · row hover highlight</strong> <span class="badge auto">settled: no row hover state</span>
         <div class="panel" style="margin-top:8px;">
-          <div class="hr-table">
-            <span class="hr-key">content-type</span><span class="hr-val">application/json</span>
-            <span class="hr-key">accept</span><span class="hr-val">*/*</span>
-            <span class="hr-key">x-request-id</span><span class="hr-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value">
+            <span class="text-ink-mute whitespace-nowrap">content-type</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">application/json</span>
+            <span class="text-ink-mute whitespace-nowrap">accept</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">*/*</span>
+            <span class="text-ink-mute whitespace-nowrap">x-request-id</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>No row highlight (settled).</strong> The interactive target is the value cell, and CopyText's cell-scoped hover already marks it; a row-wide tint would claim the whole row is clickable — it isn't. It would also fire continuously during drag-select across rows — visual thrash. Zero-chromatic-accent palette has no per-row tint token.</p>
       </div>
       <div class="card">
-        <strong>alt: subtle row stripe on hover</strong> <span class="badge warn">rejected</span>
+        <strong>alt: subtle row stripe on hover</strong> <span class="badge text-warn">rejected</span>
         <div class="panel" style="margin-top:8px;">
-          <div class="hr-table hr-annotated">
-            <span class="hr-key">content-type</span><span class="hr-val">application/json</span>
-            <div class="hr-row hr-row-hl" style="display:contents;">
-              <span class="hr-key" style="color:var(--a-body);">accept</span><span class="hr-val" style="color:var(--a-ink);background:rgba(255,255,255,.035);border-radius:3px;padding:0 2px;">*/*</span>
+          <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value hr-annotated">
+            <span class="text-ink-mute whitespace-nowrap">content-type</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">application/json</span>
+            <div class="contents hr-row-hl" style="display:contents;">
+              <span class="text-ink-mute whitespace-nowrap" style="color:var(--a-body);">accept</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute" style="color:var(--a-ink);background:rgba(255,255,255,.035);border-radius:3px;padding:0 2px;">*/*</span>
             </div>
-            <span class="hr-key">x-request-id</span><span class="hr-val">4f8a2c91…</span>
+            <span class="text-ink-mute whitespace-nowrap">x-request-id</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">4f8a2c91…</span>
           </div>
         </div>
         <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;">A row stripe suggests the whole row is a target when only the value cell is. If density concerns make scanning hard, the typography contrast (mute name / body value) is the solution, not a row stripe.</p>
@@ -404,37 +394,41 @@
     <div class="app" data-c="specimen">
       <div class="panel" style="max-width:600px;">
         <div class="lbl">Request headers</div>
-        <div class="hr-table" id="specimen-req">
-          <span class="hr-key">host</span><span class="hr-val">api.example.com</span>
-          <span class="hr-key">content-type</span><span class="hr-val">application/json; charset=utf-8</span>
-          <span class="hr-key">authorization</span><span class="hr-val">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.dummysig</span>
-          <span class="hr-key">accept</span><span class="hr-val">application/json</span>
-          <span class="hr-key">x-request-id</span><span class="hr-val">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
+        <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value" id="specimen-req">
+          <span class="text-ink-mute whitespace-nowrap">host</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">api.example.com</span>
+          <span class="text-ink-mute whitespace-nowrap">content-type</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">application/json; charset=utf-8</span>
+          <span class="text-ink-mute whitespace-nowrap">authorization</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIiwiaWF0IjoxNzIxNjQ5MjAwLCJleHAiOjE3MjE2NTI4MDB9.dummysig</span>
+          <span class="text-ink-mute whitespace-nowrap">accept</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">application/json</span>
+          <span class="text-ink-mute whitespace-nowrap">x-request-id</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">4f8a2c91-bb3d-4e7f-9d12-0e5f1a3c7b8e</span>
         </div>
       </div>
       <div class="panel" style="max-width:600px;margin-top:12px;">
         <div class="lbl">Response headers</div>
-        <div class="hr-table" id="specimen-resp">
-          <span class="hr-key">content-type</span><span class="hr-val">application/json; charset=utf-8</span>
-          <span class="hr-key">set-cookie</span><span class="hr-val">session=eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.dummysig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
-          <span class="hr-key">content-length</span><span class="hr-val">1842</span>
-          <span class="hr-key">x-trace-id</span><span class="hr-val">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
-          <span class="hr-key">cache-control</span><span class="hr-val">no-store, no-cache, must-revalidate, proxy-revalidate</span>
+        <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value" id="specimen-resp">
+          <span class="text-ink-mute whitespace-nowrap">content-type</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">application/json; charset=utf-8</span>
+          <span class="text-ink-mute whitespace-nowrap">set-cookie</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">session=eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyXzg4OTAyIn0.dummysig; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=86400; Domain=api.example.com</span>
+          <span class="text-ink-mute whitespace-nowrap">content-length</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">1842</span>
+          <span class="text-ink-mute whitespace-nowrap">x-trace-id</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</span>
+          <span class="text-ink-mute whitespace-nowrap">cache-control</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">no-store, no-cache, must-revalidate, proxy-revalidate</span>
         </div>
       </div>
       <div class="panel" style="max-width:600px;margin-top:12px;">
         <div class="lbl">Decoded form body (FormRenderer tenant)</div>
-        <div class="hr-table" id="specimen-form">
-          <span class="hr-key">grant_type</span><span class="hr-val">authorization_code</span>
-          <span class="hr-key">code</span><span class="hr-val">4/P7q7W91a-oMsCeLvIaQm6bTrgtp7</span>
-          <span class="hr-key">redirect_uri</span><span class="hr-val">https://app.example.com/auth/callback?origin=dashboard&amp;next=%2Fprofile</span>
-          <span class="hr-key">client_id</span><span class="hr-val">client_1234567890.apps.example.com</span>
+        <div class="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-value" id="specimen-form">
+          <span class="text-ink-mute whitespace-nowrap">grant_type</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">authorization_code</span>
+          <span class="text-ink-mute whitespace-nowrap">code</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">4/P7q7W91a-oMsCeLvIaQm6bTrgtp7</span>
+          <span class="text-ink-mute whitespace-nowrap">redirect_uri</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">https://app.example.com/auth/callback?origin=dashboard&amp;next=%2Fprofile</span>
+          <span class="text-ink-mute whitespace-nowrap">client_id</span><span class="hr-val text-ink-body break-all underline decoration-dotted decoration-hairline underline-offset-[3px] cursor-text select-text hover:text-ink hover:decoration-ink-mute">client_1234567890.apps.example.com</span>
         </div>
       </div>
       <div class="caption" style="color:var(--muted);font-size:12px;margin-top:8px;">Interactive — click any value (copies for real, chip confirms ~2 s), drag-select a substring (no copy fires; ⌘C takes the part), Tab + Enter for keyboard copy. All three tenants shown: request headers · response headers · decoded form body (same visual and grab contract). Rendered in the app's Warp tokens.</div>
     </div>
   </main>
   <script>
+    const CHIP = 'inline-block ml-2 text-label leading-4 text-ok border border-ok rounded-full px-[6px] align-[1px] font-ui';
+    const VALUE_REST = 'text-ink-body';
+    const VALUE_CONFIRM = 'text-ok';
+
     document.querySelectorAll('[data-c="specimen"] .hr-val').forEach((el) => {
       const value = el.textContent;
       el.setAttribute('role', 'button');
@@ -442,18 +436,24 @@
       el.title = 'click to copy';
       let timer;
       function confirmCopy() {
-        el.classList.add('s-confirm');
-        let chip = el.querySelector('.chip');
+        el.classList.remove(VALUE_REST);
+        el.classList.add(VALUE_CONFIRM);
+        let chip = el.querySelector('[data-chip]');
         if (!chip) {
           chip = document.createElement('span');
-          chip.className = 'chip';
+          chip.className = CHIP;
+          chip.dataset.chip = '';
           chip.setAttribute('role', 'status');
           chip.setAttribute('aria-live', 'polite');
           chip.textContent = 'copied';
           el.appendChild(chip);
         }
         clearTimeout(timer);
-        timer = setTimeout(() => { el.classList.remove('s-confirm'); chip.remove(); }, 2000);
+        timer = setTimeout(() => {
+          el.classList.remove(VALUE_CONFIRM);
+          el.classList.add(VALUE_REST);
+          chip.remove();
+        }, 2000);
       }
       function copy() {
         navigator.clipboard?.writeText(value).then(confirmCopy, () => {});

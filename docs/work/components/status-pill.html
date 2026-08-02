@@ -4,17 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — StatusPill component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="../../../doc-assets/components/tw-config.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t2{color:var(--ok);}
     /* app-token scope: every specimen renders in the real Warp palette, not the doc palette */
-    .app{--a-canvas:#2b2622;--a-soft:#383330;--a-line:#3f3a36;--a-ink:#f7f5f0;--a-body:#c9c0ad;--a-mute:#aea69c;--a-ok:#4cc38a;--a-warn:#e5484d;}
     .panel{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:8px;padding:10px 14px;font-family:"DM Mono",ui-monospace,monospace;font-size:12.5px;max-width:460px;}
     .panel .lbl{color:var(--a-mute);text-transform:uppercase;font-size:10px;letter-spacing:.05em;margin-bottom:6px;font-family:Inter,system-ui,sans-serif;}
-    /* status pill: mono, tabular-nums, toned by outcome */
-    .sp-ok{color:var(--a-ok);}
-    .sp-warn{color:var(--a-warn);}
-    .sp-muted{color:var(--a-mute);}
     .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;}
     .swatch .panel{max-width:none;}
     .swatch .cap{font-size:12px;color:var(--muted);margin-top:6px;}
@@ -39,8 +36,7 @@
     .dot-compare .dot.ok{background:var(--a-ok);}
     .dot-compare .dot.warn{background:var(--a-warn);}
     .dot-compare .dot.mute{background:var(--a-mute);}
-    .fork-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px;}
-  </style>
+    .fork-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:12px;}</style>
 </head>
 <body>
   <header class="doc-hero">
@@ -82,7 +78,7 @@
           <span>GET</span>
           <span class="mute">api.example.com</span>
           <span class="mute">/v2/orders</span>
-          <span class="text-right"><span class="sp-ok" id="a1" title="200 OK">200<span class="anno">1</span></span></span>
+          <span class="text-right"><span class="text-ok" id="a1" title="200 OK">200<span class="anno">1</span></span></span>
           <span class="text-right mute">142 ms</span>
         </div>
       </div>
@@ -92,7 +88,7 @@
         <div class="ex">
           <div class="panel">
             <div class="lbl">ok tone</div>
-            <span class="sp-ok" title="200 OK">200</span>
+            <span class="text-ok" title="200 OK">200</span>
           </div>
           <div class="cap">status code rendered in ok tone — mono, tabular, no extra chrome</div>
         </div>
@@ -115,11 +111,11 @@
           <div class="panel">
             <div class="lbl">caller passes the status, not the tone</div>
             <div style="display:flex;gap:12px;flex-wrap:wrap;">
-              <span><span class="sp-ok" title="200 OK">200</span></span>
-              <span><span class="sp-muted" title="301 Moved Permanently">301</span></span>
-              <span><span class="sp-muted" title="pending">…</span></span>
-              <span><span class="sp-warn" title="404 Not Found">404</span></span>
-              <span><span class="sp-warn" title="500 Internal Server Error">500</span></span>
+              <span><span class="text-ok" title="200 OK">200</span></span>
+              <span><span class="text-ink-mute" title="301 Moved Permanently">301</span></span>
+              <span><span class="text-ink-mute" title="pending">…</span></span>
+              <span><span class="text-warn" title="404 Not Found">404</span></span>
+              <span><span class="text-warn" title="500 Internal Server Error">500</span></span>
             </div>
           </div>
           <div class="cap">tone and display resolved inside — callers hand over <code>flow.status</code> raw</div>
@@ -136,7 +132,7 @@
         <div class="ex">
           <div class="panel">
             <div class="lbl">in-flight: null status</div>
-            <span class="sp-muted" title="pending">…</span>
+            <span class="text-ink-mute" title="pending">…</span>
           </div>
           <div class="cap">"…" rendered by the component itself when status is null</div>
         </div>
@@ -152,7 +148,7 @@
         <div class="ex">
           <div class="panel">
             <div class="lbl">hover / screen reader</div>
-            <span class="sp-warn" title="404 Not Found">404</span>
+            <span class="text-warn" title="404 Not Found">404</span>
           </div>
           <div class="cap">title + aria-label carry "404 Not Found" — hover the pill</div>
         </div>
@@ -172,32 +168,32 @@
       <div class="mapping-grid">
         <div class="mapping-card">
           <div class="class-label">tone: ok — 2xx</div>
-          <div class="pill-ex sp-ok">200 201 204 206</div>
+          <div class="pill-ex text-ok">200 201 204 206</div>
           <div style="font-size:11px;color:var(--a-mute);margin-top:6px;">color: #4cc38a (ok token)</div>
         </div>
         <div class="mapping-card">
           <div class="class-label">tone: warn — 4xx</div>
-          <div class="pill-ex sp-warn">400 401 403 404</div>
+          <div class="pill-ex text-warn">400 401 403 404</div>
           <div style="font-size:11px;color:var(--a-mute);margin-top:6px;">color: #e5484d (warn token)</div>
         </div>
         <div class="mapping-card">
           <div class="class-label">tone: warn — 5xx</div>
-          <div class="pill-ex sp-warn">500 502 503 504</div>
+          <div class="pill-ex text-warn">500 502 503 504</div>
           <div style="font-size:11px;color:var(--a-mute);margin-top:6px;">color: #e5484d (warn token) — server and client errors share warn</div>
         </div>
         <div class="mapping-card">
           <div class="class-label">tone: muted — 3xx</div>
-          <div class="pill-ex sp-muted">301 302 304 307</div>
+          <div class="pill-ex text-ink-mute">301 302 304 307</div>
           <div style="font-size:11px;color:var(--a-mute);margin-top:6px;">color: #aea69c (ink-mute) — redirects are informational, not failures</div>
         </div>
         <div class="mapping-card">
           <div class="class-label">tone: muted — 1xx</div>
-          <div class="pill-ex sp-muted">100 101</div>
+          <div class="pill-ex text-ink-mute">100 101</div>
           <div style="font-size:11px;color:var(--a-mute);margin-top:6px;">color: #aea69c (ink-mute) — informational</div>
         </div>
         <div class="mapping-card">
           <div class="class-label">tone: muted — pending (null)</div>
-          <div class="pill-ex sp-muted">…</div>
+          <div class="pill-ex text-ink-mute">…</div>
           <div style="font-size:11px;color:var(--a-mute);margin-top:6px;">status null → muted "…"; in-flight placeholder</div>
         </div>
       </div>
@@ -217,7 +213,7 @@
           <div>
             <div class="panel" style="margin-top:8px;">
               <div class="lbl">shipped (code wins)</div>
-              <span class="sp-ok" title="200 OK">200</span> <span class="sp-warn" title="404 Not Found">404</span> <span class="sp-muted" title="301 Moved Permanently">301</span>
+              <span class="text-ok" title="200 OK">200</span> <span class="text-warn" title="404 Not Found">404</span> <span class="text-ink-mute" title="301 Moved Permanently">301</span>
             </div>
             <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>A — plain tinted text.</strong> Zero chrome, zero per-row noise, dense list. The colour alone is the signal. This is what shipped at <code>components.tsx:25</code>. The W1 mockup had a border (pill shape); code dropped it — the design file documents the shipped form, not the mockup.</p>
           </div>
@@ -239,14 +235,14 @@
           <div>
             <div class="panel" style="margin-top:8px;">
               <div class="lbl">settled: muted</div>
-              <span class="sp-muted" title="301 Moved Permanently">301</span> <span class="sp-muted" title="302 Found">302</span>
+              <span class="text-ink-mute" title="301 Moved Permanently">301</span> <span class="text-ink-mute" title="302 Found">302</span>
             </div>
             <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>A — muted (shipped).</strong> A redirect means the exchange didn't complete at this URL; calling it "ok" would mislead a developer checking why their API call bounced. Muted reads "informational / non-terminal".</p>
           </div>
           <div>
             <div class="panel" style="margin-top:8px;">
               <div class="lbl">rejected: ok-tinted</div>
-              <span class="sp-ok">301</span> <span class="sp-ok">302</span>
+              <span class="text-ok">301</span> <span class="text-ok">302</span>
             </div>
             <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>B — ok (rejected).</strong> HTTP spec calls 3xx "successful redirection" — but from the proxy's perspective the intercepted request was redirected, not served. ok would obscure infinite-redirect bugs.</p>
           </div>
@@ -260,7 +256,7 @@
           <div>
             <div class="panel" style="margin-top:8px;">
               <div class="lbl">StatusPill — HTTP outcome</div>
-              <span class="sp-ok" title="200 OK">200</span> <span class="sp-warn" title="404 Not Found">404</span> <span class="sp-muted" title="pending">…</span>
+              <span class="text-ok" title="200 OK">200</span> <span class="text-warn" title="404 Not Found">404</span> <span class="text-ink-mute" title="pending">…</span>
             </div>
             <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>StatusPill</strong> shows the HTTP result of a single flow. Its tone comes from <code>statusTone()</code>. It is the per-row / per-flow status token. No interaction.</p>
           </div>
@@ -269,7 +265,7 @@
               <div class="lbl">StatusDot — capture connection</div>
               <div class="dot-compare">
                 <span><span class="dot ok"></span><span style="color:var(--a-ok);font-family:'DM Mono',monospace;font-size:12px;">connected</span></span>
-                <span><span class="dot warn"></span><span style="color:var(--a-warn);font-family:'DM Mono',monospace;font-size:12px;">broken</span></span>
+                <span><span class="dot text-warn"></span><span style="color:var(--a-warn);font-family:'DM Mono',monospace;font-size:12px;">broken</span></span>
                 <span><span class="dot mute"></span><span style="color:var(--a-mute);font-family:'DM Mono',monospace;font-size:12px;">checking</span></span>
               </div>
             </div>
@@ -287,7 +283,7 @@
             <div class="panel" style="margin-top:8px;">
               <div class="lbl">settled: status-in (T2)</div>
               <div style="color:var(--a-body);font-size:12px;">&lt;StatusPill status={404} /&gt;</div>
-              <div style="margin-top:6px;"><span class="sp-warn" title="404 Not Found">404</span></div>
+              <div style="margin-top:6px;"><span class="text-warn" title="404 Not Found">404</span></div>
             </div>
             <p class="cap" style="font-size:12px;color:var(--muted);margin-top:6px;"><strong>A — pass the status, get the full display.</strong> StatusPill owns the mapping, the formatting ("…" for null), and the alt text. Call sites shrink to one prop; a wrong tone/value pairing is unrepresentable. <em>Status → full display is business logic — T2.</em></p>
           </div>
@@ -366,46 +362,46 @@
           <div>
             <div style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-bottom:4px;">ok (2xx)</div>
             <div style="display:flex;flex-direction:column;gap:4px;">
-              <span class="sp-ok" title="200 OK">200</span>
-              <span class="sp-ok" title="201 Created">201</span>
-              <span class="sp-ok" title="204 No Content">204</span>
+              <span class="text-ok" title="200 OK">200</span>
+              <span class="text-ok" title="201 Created">201</span>
+              <span class="text-ok" title="204 No Content">204</span>
             </div>
           </div>
           <div>
             <div style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-bottom:4px;">warn (4xx)</div>
             <div style="display:flex;flex-direction:column;gap:4px;">
-              <span class="sp-warn" title="400 Bad Request">400</span>
-              <span class="sp-warn" title="401 Unauthorized">401</span>
-              <span class="sp-warn" title="404 Not Found">404</span>
+              <span class="text-warn" title="400 Bad Request">400</span>
+              <span class="text-warn" title="401 Unauthorized">401</span>
+              <span class="text-warn" title="404 Not Found">404</span>
             </div>
           </div>
           <div>
             <div style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-bottom:4px;">warn (5xx)</div>
             <div style="display:flex;flex-direction:column;gap:4px;">
-              <span class="sp-warn" title="500 Internal Server Error">500</span>
-              <span class="sp-warn" title="502 Bad Gateway">502</span>
-              <span class="sp-warn" title="503 Service Unavailable">503</span>
+              <span class="text-warn" title="500 Internal Server Error">500</span>
+              <span class="text-warn" title="502 Bad Gateway">502</span>
+              <span class="text-warn" title="503 Service Unavailable">503</span>
             </div>
           </div>
           <div>
             <div style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-bottom:4px;">muted (3xx)</div>
             <div style="display:flex;flex-direction:column;gap:4px;">
-              <span class="sp-muted" title="301 Moved Permanently">301</span>
-              <span class="sp-muted" title="302 Found">302</span>
-              <span class="sp-muted" title="304 Not Modified">304</span>
+              <span class="text-ink-mute" title="301 Moved Permanently">301</span>
+              <span class="text-ink-mute" title="302 Found">302</span>
+              <span class="text-ink-mute" title="304 Not Modified">304</span>
             </div>
           </div>
           <div>
             <div style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-bottom:4px;">muted (pending)</div>
             <div style="display:flex;flex-direction:column;gap:4px;">
-              <span class="sp-muted" title="pending">…</span>
+              <span class="text-ink-mute" title="pending">…</span>
             </div>
           </div>
           <div>
             <div style="font-size:10px;color:var(--a-mute);font-family:Inter,system-ui,sans-serif;margin-bottom:4px;">muted (1xx)</div>
             <div style="display:flex;flex-direction:column;gap:4px;">
-              <span class="sp-muted" title="100 Continue">100</span>
-              <span class="sp-muted" title="101 Switching Protocols">101</span>
+              <span class="text-ink-mute" title="100 Continue">100</span>
+              <span class="text-ink-mute" title="101 Switching Protocols">101</span>
             </div>
           </div>
         </div>
@@ -417,7 +413,7 @@
           <span>GET</span>
           <span class="mute">api.example.com</span>
           <span class="mute">/v2/orders</span>
-          <span class="text-right"><span class="sp-ok" title="200 OK">200</span></span>
+          <span class="text-right"><span class="text-ok" title="200 OK">200</span></span>
           <span class="text-right mute">142 ms</span>
         </div>
         <div class="row-sim" style="margin-top:4px;">
@@ -425,7 +421,7 @@
           <span>POST</span>
           <span class="mute">api.example.com</span>
           <span class="mute">/v2/checkout</span>
-          <span class="text-right"><span class="sp-warn" title="404 Not Found">404</span></span>
+          <span class="text-right"><span class="text-warn" title="404 Not Found">404</span></span>
           <span class="text-right mute">89 ms</span>
         </div>
         <div class="row-sim" style="margin-top:4px;">
@@ -433,7 +429,7 @@
           <span>GET</span>
           <span class="mute">api.example.com</span>
           <span class="mute">/v2/users/me</span>
-          <span class="text-right"><span class="sp-warn" title="500 Internal Server Error">500</span></span>
+          <span class="text-right"><span class="text-warn" title="500 Internal Server Error">500</span></span>
           <span class="text-right mute">231 ms</span>
         </div>
         <div class="row-sim" style="margin-top:4px;">
@@ -441,7 +437,7 @@
           <span>GET</span>
           <span class="mute">cdn.example.com</span>
           <span class="mute">/static/app.js</span>
-          <span class="text-right"><span class="sp-muted" title="304 Not Modified">304</span></span>
+          <span class="text-right"><span class="text-ink-mute" title="304 Not Modified">304</span></span>
           <span class="text-right mute">12 ms</span>
         </div>
         <div class="row-sim" style="margin-top:4px;">
@@ -449,7 +445,7 @@
           <span>POST</span>
           <span class="mute">api.example.com</span>
           <span class="mute">/v2/payments</span>
-          <span class="text-right"><span class="sp-muted" title="pending">…</span></span>
+          <span class="text-right"><span class="text-ink-mute" title="pending">…</span></span>
           <span class="text-right mute"></span>
         </div>
       </div>

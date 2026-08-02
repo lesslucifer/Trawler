@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — Notice component design</title>
-  <link rel="stylesheet" href="specimen.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="../../../doc-assets/components/tw-config.js"></script>
   <style>
     /* Every component value below comes from specimen.css. This block is doc
        scaffolding plus ONE new thing: Notice itself, which has no extraction
@@ -12,20 +13,6 @@
        proposal — everything else is composed. */
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);}
-
-    /* NEW — the proposed component. Absorbs .ht-none (HeaderTable, Inter 12px
-       upright) and .body-pane .notice (BodyViewer, mono italic): finding 24. */
-    .nt{display:flex;gap:6px;align-items:flex-start;font-family:var(--a-ui);font-size:12px;line-height:1.5;padding:4px 0;}
-    .nt-mute{color:var(--a-mute);}
-    .nt-warn{color:var(--a-warn);}
-    .nt .nt-glyph{flex:none;line-height:1.5;}
-    .nt .nt-body{min-width:0;}
-    .nt .nt-detail{display:block;color:var(--a-mute);font-size:11.5px;margin-top:2px;}
-    .nt .nt-action{display:flex;gap:8px;margin-top:8px;}
-    /* NEW — plain labelled button, proposed alongside; drawn in button.html.
-       Composed here so the action slot is not a stub. */
-    .bt{border:1px solid var(--a-line);border-radius:3px;padding:3px 10px;font-family:var(--a-ui);font-size:11.5px;color:var(--a-body);background:transparent;cursor:pointer;}
-    .bt:hover{color:var(--a-ink);border-color:var(--a-mute);}
 
     .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;}
     .swatch .panel{max-width:none;}
@@ -45,15 +32,14 @@
     .app .fork-card .fc-ex{margin-bottom:6px;}
     .app .fork-card .fc-note{font-size:11px;color:var(--a-mute);line-height:1.5;font-family:var(--a-ui);}
     .absorb td:first-child{white-space:nowrap;}
-    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
-  </style>
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}</style>
 </head>
 <body>
   <header class="doc-hero">
     <div class="inner">
       <h1>Notice <span class="tier t1">T1</span></h1>
-      <p>One sentence explaining why there is nothing to show, or why something failed — with the action that actually helps, when one exists.</p>
-      <div class="meta">Component design · <strong>proposed</strong> · 2026-07-26 · E-DFLOW.W4 · T3 (docs/work/components/) · proposed by <a href="../2026-07-25-dflow-w4-run-2.html#proposals">run #2</a> · fixes <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 24</a> · owner W5</div>
+      <p>One sentence explaining why there is nothing to show, why something failed, or that a zone is working — with the action that actually helps, when one exists.</p>
+      <div class="meta">Component design · <strong>proposed</strong> · 2026-07-26 · E-DFLOW.W4 · <strong>contract fix E-DFLOW.W5 2026-07-27</strong> (D4 — the <code>ok</code> tone, answering this file's open question; <a href="../2026-07-27-dflow-w5-plan.html">W5 plan</a>) · T3 (docs/work/components/) · proposed by <a href="../2026-07-25-dflow-w4-run-2.html#proposals">run #2</a> · fixes <a href="../2026-07-25-dflow-w4-run-2.html#findings">finding 24</a> + <a href="../2026-07-26-dflow-w4-run-3.html#findings">r3·24</a> · owner W5</div>
     </div>
   </header>
   <main>
@@ -63,17 +49,17 @@
     </div>
     <table data-c="identity">
       <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — renders a sentence at a tone; owns no domain knowledge → <strong>in the collection</strong></td></tr>
-      <tr><td><strong>Tenants</strong></td><td>HeaderTable empty + pending · BodyViewer's five absences · the flow detail panel's three load failures (zone E) · every future "nothing here / it broke" surface</td></tr>
-      <tr><td><strong>Exists today</strong></td><td>twice, privately and inconsistently: <code>.ht-none</code> (<a href="header-table.html">HeaderTable</a>) and <code>.body-pane .notice</code> (<a href="body-viewer.html">BodyViewer</a>) — marked <code>CONFLICT:</code> in <a href="specimen.css">specimen.css</a></td></tr>
+      <tr><td><strong>Tenants</strong></td><td>HeaderTable empty + pending · BodyViewer's five absences (incl. the W5 <code>fetch-failed</code> state) · the flow detail panel's three load failures (zone E) · the setup screen's capture-is-working zone (<code>tone="ok"</code>, D4) · every future "nothing here / it broke / it is working" surface</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>twice, privately and inconsistently: <code>.ht-none</code> (<a href="header-table.html">HeaderTable</a>) and <code>.body-pane .notice</code> (<a href="body-viewer.html">BodyViewer</a>) — marked <code>CONFLICT:</code> in specimen.css</td></tr>
       <tr><td><strong>Made of</strong></td><td><a href="button.html">Button</a> (T1) in the optional action slot — nothing else. Sibling of neither button primitive: Notice is a <em>message</em> that may carry an action, not an action.</td></tr>
     </table>
     <table data-c="frame-drivers">
       <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
       <tbody>
-        <tr><td>① one renderer, two tones</td><td><code>tone="mute"</code> (absence — normal, expected) · <code>tone="warn"</code> (failure — something broke). No third tone; <code>ok</code> is for outcomes, and a notice is never an outcome</td></tr>
+        <tr><td>① one renderer, three tones <span class="badge id">W5 · D4</span></td><td><code>tone="mute"</code> (absence — normal, expected) · <code>tone="warn"</code> (failure — something broke) · <code>tone="ok"</code> (a <em>standing</em> positive outcome — the zone is working). Not a fourth: transient confirmations of an action still belong at their control (<code>confirm-at-point</code>), and a toned <em>value</em> is TonedText's job, not a sentence's</td></tr>
         <tr><td>② it renders a sentence, it does not decide which</td><td>no <code>reason</code> enum, no built-in copy. The caller passes words. A component that owned the wording would need a case per absence and would still be wrong for the next one</td></tr>
         <tr><td>③ absence ≠ instruction (<code>empty-states-orient</code>, run #2 finding 16)</td><td>the action slot is <strong>optional</strong>. "not captured — too large" has no next action, and inventing one is a lie</td></tr>
-        <tr><td>④ tone is never the only channel (<code>colour-plus-text</code>)</td><td>warn carries a ⚠ glyph <em>and</em> warn-toned text; the sentence itself names the failure. Remove the colour and nothing is lost</td></tr>
+        <tr><td>④ tone is never the only channel (<code>colour-plus-text</code>)</td><td>warn carries ⚠ and ok carries ✓, each <em>and</em> its toned text; the sentence itself names the failure or the outcome. Remove the colour and nothing is lost. Mute carries no glyph — absence is the default, not a signal</td></tr>
         <tr><td>⑤ it is a sentence, not a card (<code>data-ink-first</code>)</td><td>no border, no background, no panel chrome. It sits inside whatever zone already has an edge</td></tr>
         <tr><td>⑥ calm, lowercase, blames nobody (<code>calm-microcopy</code>)</td><td>the component enforces nothing about wording, but the specimen is the reference the tenants copy</td></tr>
       </tbody>
@@ -100,11 +86,11 @@
     <div class="app" data-c="anatomy-hero">
       <div class="panel" style="max-width:420px;">
         <div class="lbl">response body</div>
-        <div class="nt nt-warn">
-          <span class="nt-glyph">⚠</span>
-          <span class="nt-body">body unavailable
-            <span class="nt-detail">the flow is no longer captured</span>
-            <span class="nt-action"><button class="bt">retry</button></span>
+        <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn">
+          <span class="flex-none leading-normal">⚠</span>
+          <span class="min-w-0">body unavailable
+            <span class="block text-ink-mute text-control mt-[2px]">the flow is no longer captured</span>
+            <span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">retry</button></span>
           </span>
         </div>
       </div>
@@ -113,7 +99,7 @@
     <div class="app parts" data-c="anatomy-parts">
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="nt nt-mute"><span class="nt-body">no request body</span></div></div>
+          <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">no request body</span></div></div>
           <div class="cap">the minimum Notice: one sentence, mute, no glyph, no action</div>
         </div>
         <div>
@@ -126,33 +112,33 @@
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">trawler is not responding</span></div></div>
+          <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">trawler is not responding</span></div></div>
           <div class="cap">warn tone — the glyph appears with it, never alone</div>
         </div>
         <div>
           <strong><span class="anno">2</span> tone glyph</strong>
           <div class="spec">
-            <span class="k">spec</span><span>⚠ rendered <em>only</em> at <code>tone="warn"</code>, same tone as the text, <code>aria-hidden</code>. Mute notices have no glyph.</span>
-            <span class="k">why</span><span><code>colour-plus-text</code>: warn must not be signalled by colour alone. It is <code>aria-hidden</code> because the sentence already carries the meaning for a screen reader — announcing "warning sign" adds nothing. The mute tone needs no glyph because absence is not a signal, it is the default.</span>
+            <span class="k">spec</span><span>⚠ at <code>tone="warn"</code>, ✓ at <code>tone="ok"</code> — same tone as the text, <code>aria-hidden</code>. Mute notices have no glyph.</span>
+            <span class="k">why</span><span><code>colour-plus-text</code>: neither warn nor ok may be signalled by colour alone — the ~8% of users who cannot separate red from green are exactly why both carry a glyph. It is <code>aria-hidden</code> because the sentence already carries the meaning for a screen reader — announcing "warning sign" adds nothing. The mute tone needs no glyph because absence is not a signal, it is the default.</span>
           </div>
         </div>
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="nt nt-mute"><span class="nt-body">not captured — too large<span class="nt-detail">the body exceeded the 10 MiB capture cap</span></span></div></div>
+          <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">not captured — too large<span class="block text-ink-mute text-control mt-[2px]">the body exceeded the 10 MiB capture cap</span></span></div></div>
           <div class="cap">optional second line — explains, does not instruct</div>
         </div>
         <div>
           <strong><span class="anno">3</span> detail line</strong>
           <div class="spec">
-            <span class="k">spec</span><span>optional. Always <code>ink-mute</code> even under a warn headline, 11.5px, 2px below. One line of cause or consequence.</span>
-            <span class="k">why</span><span>staying mute under a warn headline keeps exactly one warn element per notice — two would compete and neither would read as the point. The detail is context, and context is never the alarm.</span>
+            <span class="k">spec</span><span>optional. Always <code>ink-mute</code> whatever the headline's tone, 11.5px, 2px below. One line of cause or consequence.</span>
+            <span class="k">why</span><span>staying mute keeps exactly one toned element per notice — two would compete and neither would read as the point. The detail is context, and context is neither the alarm nor the good news.</span>
           </div>
         </div>
       </div>
       <div class="part">
         <div class="ex">
-          <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">could not load this flow — 500<span class="nt-action"><button class="bt">retry</button><button class="bt">close</button></span></span></div></div>
+          <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">could not load this flow — 500<span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">retry</button><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">close</button></span></span></div></div>
           <div class="cap">action slot — only the actions that can actually work</div>
         </div>
         <div>
@@ -169,31 +155,39 @@
     </div>
 
     <h2 id="states">States</h2>
-    <p style="color:var(--muted);">Notice is not interactive, so it has no rest/hover/focus set. Its states are its <em>two tones × the optional parts</em> — the full matrix a builder must render and a reviewer must check.</p>
+    <p style="color:var(--muted);">Notice is not interactive, so it has no rest/hover/focus set. Its states are its <em>three tones × the optional parts</em> — the full matrix a builder must render and a reviewer must check.</p>
     <div class="app swatches" data-c="states">
       <div class="swatch">
-        <div class="panel"><div class="nt nt-mute"><span class="nt-body">none</span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">none</span></div></div>
         <div class="cap"><strong>mute, bare</strong> — HeaderTable's empty set. The lexicon reserves "none" for exactly this.</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-mute"><span class="nt-body">awaiting response…</span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">awaiting response…</span></div></div>
         <div class="cap"><strong>mute, bare</strong> — HeaderTable's proposed pending state. Not "none": the call has not finished.</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-mute"><span class="nt-body">not captured — too large<span class="nt-detail">the body exceeded the 10 MiB capture cap</span></span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">not captured — too large<span class="block text-ink-mute text-control mt-[2px]">the body exceeded the 10 MiB capture cap</span></span></div></div>
         <div class="cap"><strong>mute + detail</strong> — the absence with no possible action (finding 16). No button, deliberately.</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">flow no longer captured<span class="nt-detail">the capture ring moved past it</span><span class="nt-action"><button class="bt">close</button></span></span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">flow no longer captured<span class="block text-ink-mute text-control mt-[2px]">the capture ring moved past it</span><span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">close</button></span></span></div></div>
         <div class="cap"><strong>warn + detail + action</strong> — zone E, eviction. <em>close</em> only: retry can never succeed.</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">trawler is not responding<span class="nt-detail">check the proxy is running</span><span class="nt-action"><button class="bt">retry</button></span></span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">trawler is not responding<span class="block text-ink-mute text-control mt-[2px]">check the proxy is running</span><span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">retry</button></span></span></div></div>
         <div class="cap"><strong>warn + detail + action</strong> — zone E, unreachable. <em>retry</em> works here, so it is offered.</div>
       </div>
       <div class="swatch">
-        <div class="panel"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">could not load this flow — 500<span class="nt-action"><button class="bt">retry</button><button class="bt">close</button></span></span></div></div>
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">could not load this flow — 500<span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">retry</button><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">close</button></span></span></div></div>
         <div class="cap"><strong>warn + two actions</strong> — the status code is the text channel beside the tone (<code>colour-plus-text</code>).</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ok"><span class="flex-none leading-normal">✓</span><span class="min-w-0">trawler is capturing</span></div></div>
+        <div class="cap"><strong>ok + glyph</strong> <span class="badge id">W5 · D4</span> — a standing positive outcome, the run #3 zone the old <code>@avoid</code> forbade. ✓ carries what the colour carries.</div>
+      </div>
+      <div class="swatch">
+        <div class="panel"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ok"><span class="flex-none leading-normal">✓</span><span class="min-w-0">trawler is capturing<span class="block text-ink-mute text-control mt-[2px]">traffic is being decrypted and recorded</span></span></div></div>
+        <div class="cap"><strong>ok + detail</strong> — the detail stays mute, exactly as under a warn headline: one toned element per notice.</div>
       </div>
     </div>
     <div class="callout" data-c="no-loading">
@@ -206,12 +200,12 @@
       <div class="fork-row">
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
-          <div class="fc-ex"><div class="nt nt-mute"><span class="nt-body">no response yet</span></div></div>
+          <div class="fc-ex"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">no response yet</span></div></div>
           <div class="fc-note"><strong>Inter, upright.</strong> <code>mono-for-wire-data</code> gives mono to bytes that crossed the wire; a notice is chrome about their absence. Inside a body pane the switch is also the clearest possible signal that what you are reading is <em>not</em> the body.</div>
         </div>
         <div class="fork-card">
           <div class="fc-lbl">rejected</div>
-          <div class="fc-ex"><div class="nt nt-mute" style="font-family:var(--a-mono);font-style:italic;"><span class="nt-body">no response yet</span></div></div>
+          <div class="fc-ex"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute" style="font-family:var(--a-mono);font-style:italic;"><span class="min-w-0">no response yet</span></div></div>
           <div class="fc-note"><strong>Mono italic</strong> (BodyViewer's current drawing). Keeps the pane's baseline grid, but makes the panel show two absence families at once and leans on italic mono at 12px — the least legible pairing on the surface.</div>
         </div>
       </div>
@@ -222,8 +216,8 @@
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
           <div class="fc-ex">
-            <div class="nt nt-mute"><span class="nt-body">empty body</span></div>
-            <div class="nt nt-warn" style="margin-top:4px;"><span class="nt-glyph">⚠</span><span class="nt-body">body unavailable</span></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">empty body</span></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn" style="margin-top:4px;"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">body unavailable</span></div>
           </div>
           <div class="fc-note"><strong>One component, <code>tone</code> prop.</strong> They are the same shape — a sentence, an optional cause, an optional way out — and the boundary between them moves: "not captured" is an absence, "could not load" is a failure, and BodyViewer's fifth state sits between. Two components would force each tenant to pick, and finding 24 is what happens when tenants pick.</div>
         </div>
@@ -239,7 +233,7 @@
       <div class="fork-row">
         <div class="fork-card">
           <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
-          <div class="fc-ex"><div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">could not load this flow — 500<span class="nt-action"><button class="bt">retry</button><button class="bt">close</button></span></span></div></div>
+          <div class="fc-ex"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">could not load this flow — 500<span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">retry</button><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors">close</button></span></span></div></div>
           <div class="fc-note"><strong><code>action?: ReactNode</code>.</strong> The three zone-E failures need close / retry / both, chosen by <em>why</em> the fetch failed — knowledge the panel has and this primitive must not. A slot also keeps Notice free of any Button-specific API.</div>
         </div>
         <div class="fork-card">
@@ -249,8 +243,38 @@
         </div>
       </div>
     </div>
-    <div class="callout" data-c="open-q" style="margin-top:16px;">
-      <strong>Open for W5:</strong> whether the mute tone should also accept an <code>ok</code> variant for confirmations. This design says no — confirmations are inline at their trigger (<code>confirm-at-point</code>) and CopyButton already owns its own confirm — but the first component that wants a green "saved" sentence will reopen it, so the rejection is recorded rather than assumed.
+    <div class="app" data-c="d4" style="margin-top:16px;">
+      <p style="font-size:12px;color:var(--a-mute);font-family:var(--a-ui);margin-bottom:8px;"><strong>D4 · a third tone — <code>ok</code>, for a standing positive outcome</strong> <span class="badge id">W5 · answers this file's open question · <a href="../2026-07-26-dflow-w4-run-3.html#findings">r3·24</a></span></p>
+      <div class="fork-row">
+        <div class="fork-card">
+          <div class="fc-lbl">settled <span style="color:var(--a-ok);">✓</span></div>
+          <div class="fc-ex" style="flex-direction:column;align-items:flex-start;gap:4px;">
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ok"><span class="flex-none leading-normal">✓</span><span class="min-w-0">trawler is capturing<span class="block text-ink-mute text-control mt-[2px]">traffic is being decrypted and recorded</span></span></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute" style="margin-top:2px;"><span class="min-w-0">none</span></div>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn"><span class="flex-none leading-normal">⚠</span><span class="min-w-0">trawler is not responding</span></div>
+          </div>
+          <div class="fc-note"><strong>Three tones: <code>ok</code> · <code>mute</code> · <code>warn</code>.</strong> <code>ok</code> carries a ✓ glyph on the same rules as warn's ⚠ (same tone as the text, <code>aria-hidden</code>, the sentence carries the meaning). Everything else is unchanged — no border, no background, optional detail, optional action.
+          <br><br>
+          <strong>Why this reverses the "no third tone" driver:</strong> the driver said <em>"a notice is never an outcome"</em>, which was true of every tenant the read-only panel had. Run #3's setup screen has a zone whose entire content <em>is</em> a standing outcome — capture is working — and the roster has nothing else that renders one. The choice was: permit it here, fork Notice, or invent a badge. Forking duplicates the whole anatomy for one colour, which is the argument D2 already won; inventing a badge adds a component whose shape is identical to this one.</div>
+        </div>
+        <div class="fork-card">
+          <div class="fc-lbl">rejected</div>
+          <div class="fc-ex"><span style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">two tones; positive outcomes have no component</span></div>
+          <div class="fc-note"><strong>Keep <code>ok</code> out, on <code>confirm-at-point</code>.</strong> The rule is real but it is about <em>confirmations of an action</em> — a transient acknowledgement belonging at the control that triggered it, which is why CopyButton owns its own and why this file still <code>@avoid</code>s them. A zone that says "capture is working" is not confirming anything the user just did; it is describing the zone's current state, for as long as it holds. That is precisely what Notice is. Rejected because the rule it leaned on does not reach the case.</div>
+        </div>
+      </div>
+    </div>
+    <div class="callout" data-c="ok-boundary" style="margin-top:16px;">
+      <strong>The boundary that keeps <code>ok</code> from spreading.</strong> Three tests, all of which must hold — otherwise the answer is still not Notice:
+      <table style="margin-top:8px;">
+        <thead><tr><th>test</th><th>✓ Notice <code>ok</code></th><th>✗ something else</th></tr></thead>
+        <tbody>
+          <tr><td>is it <em>standing</em>, or transient?</td><td>"trawler is capturing" — true until it stops</td><td>"copied" after a click → <code>confirm-at-point</code>, the control owns it</td></tr>
+          <tr><td>is it a <em>sentence</em> about a zone, or a value?</td><td>a zone that would otherwise be blank</td><td>a toned value in a row or table → <a href="../2026-07-27-dflow-w5-plan.html">TonedText</a> / StatusPill</td></tr>
+          <tr><td>is it the zone's <em>whole content</em>?</td><td>zone C is this sentence and nothing else</td><td>a green dot beside a live list → the list's own status renderer</td></tr>
+        </tbody>
+      </table>
+      <p style="margin:8px 0 0;">In particular <code>ok</code> does <strong>not</strong> make Notice a status renderer. Run #3's Frame required zone C to look unmistakably unlike the probe status lines directly above it — a Notice sentence and a <a href="../2026-07-27-dflow-w5-plan.html">StatusLine</a> verdict are different shapes on purpose, and giving Notice a third tone must not blur them. <code>zero-accent</code> is satisfied the same way warn is: <code>ok</code> is one of the two sanctioned status tones in the palette, used transiently or sparsely, never as decoration.</p>
     </div>
 
     <h2 id="api">API + registry TSDoc</h2>
@@ -258,7 +282,7 @@
       <thead><tr><th>Prop</th><th>Type</th><th>Required</th><th></th></tr></thead>
       <tbody>
         <tr><td><code>children</code></td><td><code>ReactNode</code></td><td>✅ required</td><td>the sentence. Lowercase, terse, no terminal period, names the state and never blames the user (<code>calm-microcopy</code>)</td></tr>
-        <tr><td><code>tone</code></td><td><code>'mute' | 'warn'</code></td><td>optional (default: <code>'mute'</code>)</td><td><code>mute</code> = absence, normal operation · <code>warn</code> = failure, adds the ⚠ glyph. Defaulting to mute means the common case is the short call</td></tr>
+        <tr><td><code>tone</code></td><td><code>'mute' | 'warn' | 'ok'</code></td><td>optional (default: <code>'mute'</code>)</td><td><code>mute</code> = absence, normal operation · <code>warn</code> = failure, adds ⚠ · <code>ok</code> = a standing positive outcome, adds ✓ (D4 — the three tests in the boundary callout must all hold). Defaulting to mute means the common case is the short call</td></tr>
         <tr><td><code>detail</code></td><td><code>ReactNode</code></td><td>optional</td><td>second line — cause or consequence. Always rendered <code>ink-mute</code> regardless of <code>tone</code></td></tr>
         <tr><td><code>action</code></td><td><code>ReactNode</code></td><td>optional</td><td>the way out, usually one or two <a href="button.html">Button</a>s. Omit when nothing the user can do would help — that is the honest rendering, not a missing feature</td></tr>
         <tr><td><code>className</code></td><td><code>string</code></td><td>optional</td><td>pass-through for layout only (spacing within the host zone) — never for colour or family</td></tr>
@@ -269,18 +293,18 @@
       <pre class="tsdoc">/**
  * Notice — one sentence explaining an absence or a failure, with the action that helps if one exists.
  * @tier T1 — renders a sentence at a tone; owns no domain knowledge
- * @anatomy Inter 12px sentence at ink-mute or ink-warn · ⚠ glyph at warn only (aria-hidden; colour is never the only channel) · optional detail line, always ink-mute, 11.5px · optional action slot 8px below, aligned to the sentence not the glyph · no border, no background, no panel chrome
- * @use any zone that has nothing to show and must say which nothing it is (empty · pending · capped · not captured), and any zone whose load failed — HeaderTable empty/pending, BodyViewer's five absences, the detail panel's load failures
- * @avoid transient confirmations (use confirm-at-point at the trigger — CopyButton owns its own) · a dismissible message (dismissing leaves the blank zone this component exists to prevent) · success/ok states · wrapping a notice in a card or panel of its own
- * @states not interactive — no rest/hover/focus. Renders: mute bare · mute + detail · warn + glyph · warn + detail · either + action slot
+ * @anatomy Inter 12px sentence at ink-mute, ink-warn or ok · ⚠ glyph at warn, ✓ at ok, none at mute (aria-hidden; colour is never the only channel) · optional detail line, always ink-mute, 11.5px · optional action slot 8px below, aligned to the sentence not the glyph · no border, no background, no panel chrome
+ * @use any zone that has nothing to show and must say which nothing it is (empty · pending · capped · not captured) · any zone whose load failed · any zone whose whole content is a STANDING positive outcome (tone="ok" — "trawler is capturing") — HeaderTable empty/pending, BodyViewer's five absences, the detail panel's load failures, the setup screen's capture-is-working zone
+ * @avoid transient confirmations of an action (use confirm-at-point at the trigger — CopyButton owns its own; tone="ok" is for a STANDING outcome, not an acknowledgement) · a dismissible message (dismissing leaves the blank zone this component exists to prevent) · a toned value rather than a sentence (that is TonedText, or StatusPill for an HTTP status) · a status verdict with a glyph+name+message shape (that is StatusLine) · wrapping a notice in a card or panel of its own
+ * @states not interactive — no rest/hover/focus. Renders: mute bare · mute + detail · warn + ⚠ · warn + detail · ok + ✓ · ok + detail · any tone + action slot
  * @madeof Button (T1) — in the action slot only
  */</pre>
     </div>
 
     <h2 id="fit">Use / avoid</h2>
     <div class="cards" data-c="fit-cards">
-      <div class="card"><strong>✅ Use</strong><p>Wherever a zone would otherwise be blank, and wherever a load failed. The sentence must name <em>which</em> state this is — "none" (empty set), "awaiting response…" (unfinished), "not captured — too large" (over cap), "no longer captured" (ring eviction) are four different sentences and must never collapse into one. Pass an action only when it can actually succeed.</p></div>
-      <div class="card"><strong>🚫 Avoid</strong><p>Confirmations — those are inline at their trigger (<code>confirm-at-point</code>), and <a href="copy-button.html">CopyButton</a> already owns its own. Anything dismissible or auto-hiding: Notice describes the zone's current state, so hiding it means lying about the zone. Success sentences (see the open question). And never wrap it in a bordered card — <code>data-ink-first</code>; it lives inside a zone that already has an edge.</p></div>
+      <div class="card"><strong>✅ Use</strong><p>Wherever a zone would otherwise be blank, wherever a load failed, and wherever a zone's whole content is a standing positive outcome (<code>tone="ok"</code> — D4). The sentence must name <em>which</em> state this is — "none" (empty set), "awaiting response…" (unfinished), "not captured — too large" (over cap), "no longer captured" (ring eviction) are four different sentences and must never collapse into one. Pass an action only when it can actually succeed.</p></div>
+      <div class="card"><strong>🚫 Avoid</strong><p><strong>Transient confirmations of an action</strong> — those are inline at their trigger (<code>confirm-at-point</code>), and <a href="copy-button.html">CopyButton</a> already owns its own; <code>tone="ok"</code> is for an outcome that <em>stands</em>, not an acknowledgement that fades. Anything dismissible or auto-hiding: Notice describes the zone's current state, so hiding it means lying about the zone. <strong>A toned value instead of a sentence</strong> — TonedText renders that, or StatusPill for an HTTP status; a <strong>glyph·name·message verdict</strong> is StatusLine's shape, and run #3's Frame requires the two to look unalike. And never wrap it in a bordered card — <code>data-ink-first</code>; it lives inside a zone that already has an edge.</p></div>
     </div>
 
     <h2 id="tokens">Token mapping (mockup → build)</h2>
@@ -291,8 +315,9 @@
         <tr><td>sentence</td><td><code>font-sans text-xs leading-normal</code> (Inter 12px) — wraps, never truncates</td></tr>
         <tr><td>tone <code>mute</code></td><td><code>text-ink-mute</code> (<code>#aea69c</code>)</td></tr>
         <tr><td>tone <code>warn</code></td><td><code>text-warn</code> (<code>#e5484d</code>) on the sentence and the glyph only</td></tr>
-        <tr><td>glyph</td><td>⚠ inline, <code>shrink-0</code>, <code>aria-hidden="true"</code> — rendered at <code>tone="warn"</code> only</td></tr>
-        <tr><td>detail line</td><td><code>block text-ink-mute text-[11.5px] mt-0.5</code> — mute under both tones</td></tr>
+        <tr><td>tone <code>ok</code></td><td><code>text-ok</code> (<code>#4cc38a</code>) on the sentence and the glyph only — same rule as warn</td></tr>
+        <tr><td>glyph</td><td>⚠ (warn) · ✓ (ok) inline, <code>shrink-0</code>, <code>aria-hidden="true"</code> — no glyph at <code>tone="mute"</code></td></tr>
+        <tr><td>detail line</td><td><code>block text-ink-mute text-[11.5px] mt-0.5</code> — mute under all three tones</td></tr>
         <tr><td>action slot</td><td><code>flex gap-2 mt-2</code>, inside the sentence column (not under the glyph)</td></tr>
       </tbody>
     </table>
@@ -305,33 +330,33 @@
       <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">In HeaderTable (absence)</div>
-          <div class="sec-stack" style="max-width:320px;">
-            <div class="sec-block">
-              <div class="ht-bar"><span class="sec-hd">headers</span></div>
-              <div class="nt nt-mute"><span class="nt-body">awaiting response…</span></div>
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="max-width:320px;">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
+              <div class="flex items-center justify-between mb-2"><span class="text-ink-mute uppercase text-label tracking-[.05em] mb-2 font-ui">headers</span></div>
+              <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">awaiting response…</span></div>
             </div>
           </div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Replaces <code>.ht-none</code> — same tone, same size, one owner.</div>
         </div>
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">In BodyViewer (absence → failure)</div>
-          <div class="sec-stack" style="max-width:320px;">
-            <div class="sec-block">
-              <div class="chrome-bar"><span class="sect-lbl">body</span></div>
-              <div class="body-pane" id="spec-pane"><div class="nt nt-mute"><span class="nt-body">empty body</span></div></div>
+          <div class="bg-canvas border border-hairline rounded-panel overflow-hidden max-w-[460px]" style="max-width:320px;">
+            <div class="border-b border-hairline px-4 py-3 last:border-b-0">
+              <div class="flex items-center gap-chrome-gap flex-wrap border-b border-hairline pb-2 mb-2"><span class="text-ink-mute text-label uppercase tracking-[.06em] font-ui">body</span></div>
+              <div class="font-mono text-body leading-relaxed text-ink-body whitespace-pre-wrap break-all py-chrome-gap min-h-[36px]" id="spec-pane"><div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-ink-mute"><span class="min-w-0">empty body</span></div></div>
             </div>
           </div>
-          <div style="margin-top:6px;"><button class="bt" id="spec-toggle">show fetch-failed</button></div>
+          <div style="margin-top:6px;"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" id="spec-toggle">show fetch-failed</button></div>
           <div style="font-size:11px;color:var(--a-mute);font-family:var(--a-ui);margin-top:5px;">Same component, both tones — the reason D2 keeps them together.</div>
         </div>
         <div>
           <div style="color:var(--a-mute);font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);">Zone E (failure, full)</div>
           <div class="panel" style="max-width:320px;">
-            <div class="nt nt-warn">
-              <span class="nt-glyph">⚠</span>
-              <span class="nt-body">flow no longer captured
-                <span class="nt-detail">the capture ring moved past it</span>
-                <span class="nt-action"><button class="bt" id="spec-close">close</button></span>
+            <div class="flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y text-warn">
+              <span class="flex-none leading-normal">⚠</span>
+              <span class="min-w-0">flow no longer captured
+                <span class="block text-ink-mute text-control mt-[2px]">the capture ring moved past it</span>
+                <span class="flex gap-2 mt-2"><button class="inline-flex gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body items-center justify-center transition-colors" id="spec-close">close</button></span>
               </span>
             </div>
           </div>
@@ -339,14 +364,20 @@
         </div>
       </div>
       <div id="spec-log" style="min-height:20px;"></div>
-      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — rendered in app Warp tokens, composed from <a href="specimen.css">specimen.css</a>. Every host zone around the notices is a real component's drawing; only <code>.nt*</code> and <code>.bt</code> are new.</div>
+      <div class="caption" style="color:var(--muted);font-size:12px;margin-top:6px;">Interactive — rendered in app Warp tokens, composed from specimen.css. Every host zone around the notices is a real component's drawing; only <code>.nt*</code> and <code>.bt</code> are new.</div>
     </div>
   </main>
   <script>
     const pane = document.getElementById('spec-pane');
     const toggle = document.getElementById('spec-toggle');
-    const empty = '<div class="nt nt-mute"><span class="nt-body">empty body</span></div>';
-    const failed = '<div class="nt nt-warn"><span class="nt-glyph">⚠</span><span class="nt-body">body unavailable<span class="nt-detail">the flow is no longer captured</span><span class="nt-action"><button class="bt">retry</button></span></span></div>';
+    const NT = 'flex gap-chrome-gap items-start font-ui text-body leading-normal py-chrome-y';
+    const NT_BODY = 'min-w-0';
+    const NT_GLYPH = 'flex-none leading-normal';
+    const NT_DETAIL = 'block text-ink-mute text-control mt-[2px]';
+    const NT_ACTION = 'flex gap-2 mt-2';
+    const BT = 'inline-flex items-center gap-control-gap px-control-x py-control-y min-h-control border border-hairline rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap hover:text-ink hover:border-ink-mute focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none text-ink-body justify-center transition-colors';
+    const empty = `<div class="${NT} text-ink-mute"><span class="${NT_BODY}">empty body</span></div>`;
+    const failed = `<div class="${NT} text-warn"><span class="${NT_GLYPH}">⚠</span><span class="${NT_BODY}">body unavailable<span class="${NT_DETAIL}">the flow is no longer captured</span><span class="${NT_ACTION}"><button class="${BT}">retry</button></span></span></div>`;
     let showingFailed = false;
     toggle.addEventListener('click', () => {
       showingFailed = !showingFailed;
