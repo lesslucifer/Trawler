@@ -18,7 +18,7 @@
     <h2 id="requirement">Requirement</h2>
 
     <div class="callout">
-      Every rulebook defect the two W4 runs found is fixed in <code>docs/design-rules/design-rules-index.html</code>; the token vocabulary is <strong>closed</strong> — <code>ui/tailwind.config.js</code> defines every legal token, Tailwind's inherited scales no longer resolve, the eight chromatic tokens are deleted and <code>MethodLabel</code> reverts to ink; and all <strong>twelve unimplemented hard rules carry a Tier-1 predicate</strong> in <code>cargo xtask verify-doc</code>, so the gap line it prints on every design run reads <code>hard rules: 13/13 machine-checked</code>.
+      Every rulebook defect the two W4 runs found is fixed in <code>docs/design-rules/design-rules-index.html</code>; the token vocabulary is <strong>closed</strong> — <code>ui/tailwind.config.js</code> defines every legal token, Tailwind's inherited scales no longer resolve, the eight chromatic tokens are deleted and <code>MethodLabel</code> reverts to ink; and all <strong>twelve unimplemented hard rules carry a Tier-1 predicate</strong> in <code>cargo xtask verify-doc</code>, so the gap line it prints on every design run reads <code>hard rules: 13/13 machine-checked (design)</code> — and a <a href="#the-code-check">local ESLint rule</a> (<code>design/vocabulary</code>) judges the same vocabulary against all of <code>ui/src/</code>, the surface no predicate reads.
     </div>
 
     <h2 id="mapping">Mapping</h2>
@@ -64,17 +64,17 @@ and links it"| S4
     <table data-c="tbl-expected">
       <thead><tr><th>Observable</th><th>Where</th></tr></thead>
       <tbody>
-        <tr><td><strong>The vocabulary is closed</strong> — <code>theme.extend</code> becomes <code>theme</code> for every size-bearing and colour scale, so <code>text-pink-500</code>, <code>p-5</code> and <code>w-96</code> produce no CSS at all</td><td><code>ui/tailwind.config.js</code></td></tr>
+        <tr><td><strong>The vocabulary is closed</strong> — <code>theme.extend</code> becomes <code>theme</code> for every size-bearing and colour scale, so <code>text-pink-500</code>, <code>p-5</code> and <code>w-96</code> produce no CSS at all. <strong>Silently</strong> — Tailwind 3 drops an unknown utility without a warning, so closing the config alone is <em>necessary but not sufficient</em>; the red comes from the <a href="#the-code-check">lint rule</a>, not the build</td><td><code>ui/tailwind.config.js</code></td></tr>
         <tr><td><strong>Zero chromatic tokens beyond <code>ok</code> and <code>warn</code></strong> — the 5 <code>method-*</code> and 3 <code>syn-*</code> entries deleted; <code>MethodLabel</code> distinguishes verbs by ink weight, not hue</td><td>config · <code>MethodLabel.tsx</code> + its design file</td></tr>
-        <tr><td><strong>Twelve new Tier-1 predicates</strong> — every hard rule checkable; the printed gap line reaches <code>13/13</code></td><td><code>xtask/src/doc.rs</code></td></tr>
+        <tr><td><strong>Twelve new Tier-1 predicates</strong> — every hard rule checkable; the printed gap line reaches <code>13/13</code>. These judge the <strong>design doc</strong> (see <a href="#two-surfaces">the two surfaces</a>); <code>ui/src/</code> is judged by the lint rule</td><td><code>xtask/src/doc.rs</code> · <code>ui/eslint-rules/</code></td></tr>
         <tr><td><strong>The <code>design-allow:</code> pragma</strong> — one line, names its class, requires a reason, rejected over any size value, and its live count printed by the gate</td><td><code>xtask/src/doc.rs</code> · <code>ui/src/components/</code></td></tr>
         <tr><td><strong>The KB revised</strong> — 19 findings applied; vocabularies link the config instead of copying it; the <code>binds</code> axis added; <code>familiar-idioms</code> scoped and <code>progressive-disclosure</code> promoted to <em>extracted</em></td><td><code>docs/design-rules/design-rules-index.html</code></td></tr>
         <tr><td><strong>Both archived runs still pass</strong> — twelve new predicates over run #2 and run #3, green, with <code>data-status="archived"</code> exercised rather than trusted</td><td>run #2 · run #3</td></tr>
-        <tr><td><strong>The collection enforces its own rules</strong> — <code>collection.test.tsx</code> asserts every class in every component resolves to a project token</td><td><code>ui/src/components/collection.test.tsx</code></td></tr>
+        <tr><td><strong>All of <code>ui/src/</code> enforces the vocabulary</strong> — a local ESLint rule resolves every <strong>scale-bearing</strong> class in every <code>.tsx</code> against the closed config, screens included, not just the 24 collection components; the 77 structural classes that no scale governs are <a href="#false-positives">out of scope by construction</a>, and violations surface in the editor</td><td><code>ui/eslint.config.js</code> · <code>ui/eslint-rules/vocabulary.js</code></td></tr>
       </tbody>
     </table>
 
-    <p class="meta"><strong>Out of scope:</strong> Tier-2 self-reflex receipt · Tier-3 adversarial review · the flow e2e (all W7) · T3/T4 components and screen assembly (build WU) · rewiring <code>FlowList</code>/<code>FlowDetail</code> off the old <code>StatusPill</code> · the run-doc "review closing" item (flow spec, finding 29) · <code>FlowEvicted</code> on the UI client and <code>unknown</code>'s missing error member (API/domain) · a fourth design run (W9).</p>
+    <p class="meta"><strong>Out of scope:</strong> Tier-2 self-reflex receipt · Tier-3 adversarial review · the flow e2e (all W7 — <a href="#why-w7">why the deferral holds</a>) · T3/T4 components and screen assembly (build WU) · rewiring <code>FlowList</code>/<code>FlowDetail</code> off the old <code>StatusPill</code> · the run-doc "review closing" item (flow spec, finding 29) · <code>FlowEvicted</code> on the UI client and <code>unknown</code>'s missing error member (API/domain) · a fourth design run (W9).</p>
 
     <h2 id="step0">⓪ The sweep — which scales are actually open</h2>
 
@@ -103,6 +103,86 @@ and links it"| S4
       <code>leading-relaxed</code> (1.625) and <code>tracking-wide</code> (0.025em) are <em>not</em> keywords by this test — they are named magnitudes. Both become project tokens in step 1.
     </div>
 
+    <h2 id="two-surfaces">Doc check or code check? — both, and they are not the same check</h2>
+
+    <p>A fair reading of "hard rules are machine-checked" is <em>the shipped UI is machine-checked</em>. That is <strong>not</strong> what the thirteen predicates do, and the plan should not imply it. <code>colour-tokens-only</code> as shipped in W4 reads the design doc's own mockup CSS (<code>xtask/src/doc.rs</code> → <code>mockup·colour-literals</code>); it has never opened a file under <code>ui/src/</code>.</p>
+
+    <table data-c="tbl-surfaces">
+      <thead><tr><th></th><th>Tier-1 predicates <span class="badge id">doc</span></th><th>Collection test <span class="badge id">code</span></th></tr></thead>
+      <tbody>
+        <tr><td><strong>Judges</strong></td><td>the design run doc — mockup CSS, catalog rows, receipt</td><td>every class in all 22 built components</td></tr>
+        <tr><td><strong>Answers</strong></td><td>"is this design <em>legal before anyone builds it</em>?"</td><td>"is the built thing legal?"</td></tr>
+        <tr><td><strong>Runs</strong></td><td><code>cargo xtask verify-doc</code> — design time</td><td><code>npx vitest run</code> — every commit</td></tr>
+        <tr><td><strong>Catches</strong></td><td>a mockup that picked <code>#f7f5f0</code> or <code>p-5</code>, before it becomes code</td><td>a component that drifted off the vocabulary</td></tr>
+        <tr><td><strong>Blind to</strong></td><td>everything in <code>ui/src/</code></td><td>a design never built, and every soft rule</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>So the <code>13/13</code> line means "thirteen hard rules have a design-time predicate" — not "the UI is verified".</strong> The gap that leaves is real, and it is why the <a href="#the-code-check">lint rule</a> is a first-class deliverable in this WU rather than a nicety: it is the <em>only</em> thing in the project that will judge <code>ui/src/</code> against the vocabulary. Both surfaces are needed — a design-time-only check lets drift land, a code-only check lets an illegal design get built before anyone notices. <strong>Consequence for the gap line:</strong> it prints the surface it speaks for, <code>hard rules: 13/13 machine-checked (design)</code>, so the number is never read as a claim about the shipped UI.
+    </div>
+
+    <h2 id="the-code-check">The code check — where it runs, and why it is not the collection test</h2>
+
+    <p>The plan said "<code>collection.test.tsx</code> asserts every class in every component resolves to a project token" and left it there. Measured against the real tree, that deliverable is <strong>scoped wrong</strong>. Three facts, all checked:</p>
+
+    <table data-c="tbl-coverage">
+      <thead><tr><th>Fact</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td><code>collection.test.tsx</code> covers <strong>only</strong> the 24 components in <code>src/components/</code>, via a hand-written <code>ROSTER</code> literal of mounted elements</td><td>Its reach stops at the barrel. A screen is not in the roster and never will be — the roster is a vocabulary of reusable parts by design.</td></tr>
+        <tr><td><strong>164 of 206 <code>className</code> sites live outside <code>src/components/</code></strong> — Gallery 50, Onboarding 40, BodyViewer 20, FlowDetail 19, FlowList 14, ProxyCloseDialog 13, App 7, Layout 5</td><td>Scoping the check to the collection would leave <strong>~80% of the class surface unchecked</strong> — including every screen, which is exactly what <code>binds: screen</code> rules are about.</td></tr>
+        <tr><td>The existing test asserts against <strong>rendered DOM</strong> after mounting</td><td>It can only see classes on code paths a test actually renders. A class behind an unexercised branch is invisible to it.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>Corrected deliverable: a local ESLint rule over <code>ui/src/**/*.tsx</code>, not a render assertion in the collection test.</strong> It reads class literals statically, resolves the <a href="#false-positives">scale-bearing</a> ones against the closed config, and reds on anything off-list — no mounting, no roster, no dependence on which branches a test happens to exercise. Coverage is ESLint's config glob, so a new screen is covered the day it is added rather than when someone remembers to register it. <strong>Measured feasibility:</strong> only <strong>7</strong> of the 206 sites are computed <code>className={…}</code> expressions (BodyViewer · FlowList · Onboarding ×2 · components.tsx ×3); the other ~96% are plain string literals a static reader gets exactly right. The 7 are handled by scanning the string literals <em>inside</em> the expression — a tone map like <code>{ ok: "text-ok" }</code> still holds its classes as literals — and any class assembled from runtime fragments is reported as unresolvable rather than silently passed.
+      <br><br>
+      <code>collection.test.tsx</code> is left alone: it keeps asserting the <strong>collection's</strong> contract (roster completeness, <code>@madeof</code> composition), and the vocabulary check moves to the lint rule that can actually see all of <code>ui/src/</code>.
+    </div>
+
+    <h3 id="why-not-lint">Could it be a lint rule? — yes, and it is</h3>
+
+    <p>It is the natural home, and review chose it. Cost stated plainly: <strong>the project has no ESLint today</strong> — no <code>eslint.config.*</code>, no <code>.eslintrc*</code>, no lint script, zero eslint packages installed; the UI's static gates are <code>npx tsc -b</code> and <code>npx vitest run</code>. So this WU <em>introduces</em> the lint toolchain rather than extending one.</p>
+
+    <table data-c="tbl-lint">
+      <thead><tr><th>Option</th><th>Cost</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>A · vitest static scan</strong> — one test file globbing <code>ui/src/**/*.tsx</code></td>
+          <td>Zero new dependencies. Runs in the gate that already runs.</td>
+          <td><strong>Not taken.</strong> Was this plan's first answer, on dependency cost. Overridden at review: it reports violations in a test run, never at the class being edited.</td>
+        </tr>
+        <tr>
+          <td><strong>B · local ESLint rule</strong> — adopt ESLint 9 + typescript-eslint, author <code>design/vocabulary</code> <span class="badge auto">chosen</span></td>
+          <td>New dev dependencies, a flat config, a gate step, and a rule-authoring surface.</td>
+          <td><strong>Take it.</strong> The deciding argument is <em>where the feedback lands</em>: an agent editing a component sees a squiggle on the offending class, in the editor, before the commit — not a test failure afterwards. For a codebase written entirely by agents that is the difference between a rule that teaches and a rule that scolds. <a href="#rule-shape">Shape</a>.</td>
+        </tr>
+        <tr>
+          <td><strong>C · Tailwind's own <code>content</code> scan</strong></td>
+          <td>Free.</td>
+          <td><strong>Rejected — it cannot red.</strong> Tailwind 3 drops unknown utilities silently; that is the same non-alarm noted above.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="meta">Recorded because it is a real scope addition: adopting ESLint is infrastructure this WU did not originally carry, and the ~39 sites it reds are the same either way. <strong>A second benefit worth naming</strong> — once the toolchain exists, later WUs can add rules for the other <code>binds: component</code> hard rules (<code>uppercase-mute-labels</code>, <code>radius-tokens</code>) in the same place, instead of each inventing its own check.</p>
+
+    <h2 id="binds-axis">What <code>binds</code> actually means</h2>
+
+    <p>A rule states <em>where it can be violated</em> — which decides which surface above judges it, and whether a screen must answer for it at all. Today the KB leaves this implicit, so <code>familiar-idioms</code> demands a receipt row from a bespoke detail pane it was never about (finding 15, D7).</p>
+
+    <table data-c="tbl-binds">
+      <thead><tr><th><code>binds</code></th><th>Violated in</th><th>Judged by</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><code>screen</code></td><td>a screen's layout / composition decisions</td><td>the design run + its receipt — and the lint rule once the screen is built, since it lints screen files too</td><td><code>familiar-idioms</code> · <code>overflow-declared</code></td></tr>
+        <tr><td><code>component</code></td><td>a built component's own markup</td><td>the lint rule, against real code</td><td><code>radius-tokens</code> · <code>uppercase-mute-labels</code></td></tr>
+        <tr><td><code>both</code></td><td>either — a screen can pick an illegal value, so can a component</td><td>both surfaces</td><td><code>spacing-scale</code> · <code>zero-accent</code></td></tr>
+      </tbody>
+    </table>
+
+    <p class="meta">Concretely it buys three things: a <code>binds: screen</code> rule stops asking components to answer it · a <code>binds: component</code> rule stops filling design receipts with <code>n/a</code> · and each predicate knows which surface it belongs on, which is what keeps the two columns above from drifting into one another.</p>
+
     <h2 id="worklist">The worklist</h2>
 
     <h3 id="step1">① Close the config</h3>
@@ -117,9 +197,9 @@ and links it"| S4
       </tbody>
     </table>
 
-    <h3 id="step2">② Fix what closing breaks — measured, 15 sites + 1 component</h3>
+    <h3 id="step2">② Fix what closing breaks — measured, 15 collection sites + 1 component, plus ~24 screen sites</h3>
 
-    <p class="meta">6 off-list spacing · 6 arbitrary values that must become tokens · 3 that earn a pragma. Zero-value usages are untouched.</p>
+    <p class="meta">In the collection: 6 off-list spacing · 6 arbitrary values that must become tokens · 3 that earn a pragma. In the screens: ~20 off-list spacing + 4 arbitrary, <a href="#step2-screens">itemised below</a>. Zero-value usages are untouched everywhere.</p>
 
     <table data-c="tbl-step2">
       <thead><tr><th>What</th><th>Where</th><th>Becomes</th></tr></thead>
@@ -133,13 +213,70 @@ and links it"| S4
       </tbody>
     </table>
 
+    <div class="callout warn" data-c="step2-screens" id="step2-screens">
+      <strong>The 15 sites above are the collection only — the screens add more, and the plan had not counted them.</strong> Because the check is a <a href="#the-code-check">tree-wide scan</a> rather than a collection test, the screen files are in scope too. Measured in <code>src/*.tsx</code>: <code>py-1</code> ×13 · <code>px-1</code> ×2 · <code>py-0.5</code> ×2 · <code>pt-0.5</code> · <code>pl-5</code> · <code>max-h-64</code>, plus 4 arbitrary values (<code>grid-cols-[auto_1fr]</code> ×3, <code>w-[380px]</code>). Zero-valued and relationship classes (<code>min-w-0</code> ×2, <code>inset-0</code> ×2, <code>min-h-0</code>, <code>top-0</code>) stay legal untouched.
+      <br><br>
+      <strong>These are the same three treatments</strong> — the 4px/6px chrome tokens step ② already introduces cover the <code>py-1</code>/<code>px-1</code>/<code>-0.5</code> family, <code>grid-cols-[auto_1fr]</code> is the already-sanctioned template-shape pragma, and <code>w-[380px]</code> / <code>max-h-64</code> become tokens. No new decision, just more sites — and finding them now is precisely what scoping the check tree-wide buys.
+    </div>
+
+    <h3 id="step2b">②ᵃ The check — an ESLint rule, scoped to scale-bearing classes only</h3>
+
+    <div class="callout">
+      <strong>Two corrections to the previous draft, both from review.</strong> The host becomes <strong>ESLint</strong>, not a vitest scan — asked for twice, and the editor-squiggle benefit is the deciding argument: an AI agent editing a component sees the violation at the offending class instead of in a test report after the fact. And the check is <strong>narrowed to classes a theme scale actually governs</strong>, because the previous "every class resolves to a project token" framing would have red-flagged 55 structural classes that carry no value at all.
+    </div>
+
+    <h4 id="false-positives">The false-positive problem, measured</h4>
+
+    <p>The concern is correct and it is not marginal. Enumerated over the real tree — <strong>180 distinct classes</strong> across <code>ui/src/</code>:</p>
+
+    <table data-c="tbl-fp">
+      <thead><tr><th>Kind</th><th>Count</th><th>Examples</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>No theme scale exists</strong> — structural, state, alignment</td>
+          <td><strong>77</strong></td>
+          <td><code>absolute</code> <code>flex</code> <code>grid</code> <code>truncate</code> <code>uppercase</code> <code>items-center</code> <code>justify-between</code> <code>sr-only</code> <code>animate-spin</code> <code>whitespace-pre</code> <code>font-mono</code></td>
+          <td><span class="badge auto">out of scope</span> These would have been <strong>77 false positives</strong>. Tailwind has no scale to close for them — there is no value in <code>absolute</code> to pick wrongly.</td>
+        </tr>
+        <tr>
+          <td><strong>Scale-bearing</strong> — a spacing/size/colour/type value</td>
+          <td><strong>103</strong></td>
+          <td><code>px-2</code> <code>w-64</code> <code>text-chrome</code> <code>gap-1</code> <code>z-20</code> <code>max-h-64</code> <code>rounded-card</code></td>
+          <td><span class="badge approval">in scope</span> The only classes the rule judges. A value was picked here, so it can be picked off-list.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>The discriminator is mechanical, not a hand-written allowlist</strong> — which is what makes it maintainable. A class is in scope <strong>iff its utility prefix maps to a key in the resolved Tailwind theme</strong>. Verified with <code>resolveConfig</code>: it exposes 119 theme scales; <code>spacing</code>, <code>width</code>, <code>opacity</code>, <code>zIndex</code>, <code>borderWidth</code> are all present, while <code>position</code>, <code>display</code> and <code>flexDirection</code> are <strong>absent entirely</strong>. So "does a scale govern this prefix?" is answerable from the config itself. Running the discriminator over the 180 real classes splits them exactly 103 / 77 with no per-class exceptions.
+      <br><br>
+      <strong>Two edge cases the enumeration surfaced</strong>, both handled by normalising before lookup rather than by exclusion: <strong>variant prefixes</strong> (12 sightings — <code>hover:text-ink</code>, <code>disabled:opacity-40</code>, <code>focus-visible:outline-1</code>, <code>placeholder:text-ink-mute</code>) are stripped, then the base class is judged · <strong>slash opacity</strong> (4 sightings — <code>bg-black/50</code>, <code>border-hairline/40</code>, <code>bg-canvas-soft/30</code>) splits into colour token + opacity modifier, each checked against its own scale.
+    </div>
+
+    <h4 id="rule-shape">The rule</h4>
+
+    <table data-c="tbl-scan">
+      <thead><tr><th>Part</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>Setup</td><td>ESLint 9 flat config (<code>ui/eslint.config.js</code>) + <code>typescript-eslint</code>, and an <code>npm run lint</code> script. New dev dependencies, accepted deliberately — this is the cost the previous draft declined to pay and review overrode.</td></tr>
+        <tr><td>Rule</td><td>A local rule, <code>design/vocabulary</code>, in <code>ui/eslint-rules/</code> — no plugin package to publish. It reads <code>className</code> string literals on JSX attributes plus string literals in the 7 computed <code>className={…}</code> sites (a tone map like <code>{ ok: "text-ok" }</code> still holds literals).</td></tr>
+        <tr><td>Judges</td><td>Only the scale-bearing classes above, against the closed config via the <strong>same</strong> <code>resolveConfig</code> JSON the six config-reading predicates consume — one source of truth, two consumers.</td></tr>
+        <tr><td>Reds on</td><td>a scale-bearing class whose value is not a project token · an arbitrary <code>[…]</code> size · a pragma over a bare size value.</td></tr>
+        <tr><td>Legal by rule</td><td>every non-scale-bearing class, silently · zero values and relationship keywords (<a href="#step0">the ⓪ ruling</a>) · a well-formed <code>design-allow:</code> pragma.</td></tr>
+        <tr><td>Coverage</td><td>ESLint's own config glob covers <code>ui/src/**/*.tsx</code> — a new screen is linted the day it is added, no roster to register with. Reported, never skipped: a class assembled from runtime fragments the rule cannot resolve.</td></tr>
+        <tr><td>Gate</td><td><code>npm run lint</code> joins gate 0 alongside <code>tsc -b</code> and <code>vitest run</code>. <code>cargo xtask ui</code> gains the lint step so the Rust-side gate reaches it too.</td></tr>
+      </tbody>
+    </table>
+
+    <p class="meta">Written before the re-expression, not after: the rule's first red list <em>is</em> the worklist for the rest of ②, which is why the site counts in this plan are measured rather than estimated. <strong>Its own tests</strong> — ESLint's <code>RuleTester</code> — carry the valid/invalid pairs, including one valid case per false-positive family above, so a future edit cannot silently re-widen the scope.</p>
+
     <h3 id="step3">③ Revise the KB — the 19 findings</h3>
 
     <table data-c="tbl-step3">
       <thead><tr><th>Group</th><th>Change</th></tr></thead>
       <tbody>
         <tr><td><strong>Vocabularies</strong></td><td>Stop listing token names; name each <em>set</em>, its governing rule, and link <code>ui/tailwind.config.js</code> as the member list. The KB mirrors the config and never re-states it — D1, and now also a mechanical necessity since six predicates read the config.</td></tr>
-        <tr><td><strong>Structure</strong></td><td>The <code>binds: screen · component · both</code> axis added to both rule tables (finding 4, D6).</td></tr>
+        <tr><td><strong>Structure</strong></td><td>The <code>binds: screen · component · both</code> axis added to both rule tables (finding 4, D6) — <a href="#binds-axis">what it means and what it buys</a>.</td></tr>
         <tr><td><strong><code>zero-accent</code></strong></td><td>Rewritten as the simplest rule in the book: chromatic colour is <code>ok</code> and <code>warn</code>. No exception list, no scope carve-out.</td></tr>
         <tr><td><strong><code>spacing-scale</code></strong></td><td>Layout spacing from the 8px scale, control chrome from a named chrome token, never a raw value — and the member list is the config, not a number list in the KB (findings 14 + run #3's second sighting).</td></tr>
         <tr><td><strong>Fixes</strong></td><td><code>display-equals-payload</code>'s example corrected against BodyViewer D4 (6) · <code>mono-for-wire-data</code> re-subjected — a shell command never travelled a wire, so the rule is about <em>machine-readable payload</em>, not provenance (run #3) · <code>empty-states-orient</code>'s next-action assumption loosened (16).</td></tr>
@@ -170,12 +307,50 @@ and links it"| S4
         <tr><td><code>keyboard-parity</code></td><td>a keyboard path per pointer use-case row, ∈ the conventions table or proposed</td></tr>
         <tr><td><code>colour-plus-text</code></td><td>a text channel declared per chromatic-exception row</td></tr>
         <tr><td class="meta"><code>colour-tokens-only</code></td><td class="meta">already shipped in W4 — widened to read the config rather than grep for hex literals. Do not rebuild.</td></tr>
+        <tr><td class="meta">the gap line itself</td><td class="meta"><code>tally_line</code> gains the surface label — <code>machine-checked (design)</code> — and drops the now-false <code>W7 Tier-1</code> tail. One-line change, but it is what stops <code>13/13</code> being read as a claim about <code>ui/src/</code>.</td></tr>
       </tbody>
     </table>
 
     <div class="callout">
       <strong>The pragma.</strong> <code>// design-allow: &lt;class&gt; — &lt;reason&gt;</code>, applying to the next line only. Enforced by the predicate itself: the named class must appear on that line (so an edited line stops matching and reds) · the reason must be non-empty, mirroring the gate's <code>waived:</code> rule · <strong>a pragma over a bare size value is rejected</strong>, never suppressed · the live total is printed on every run, so suppressions are visible debt rather than a silent hole.
     </div>
+
+    <h2 id="why-w7">The three tiers — and why only Tier-1 lands here</h2>
+
+    <p>The harness enforces three tiers over a design run. They differ in <strong>who judges</strong>, which is what decides the ordering.</p>
+
+    <table data-c="tbl-tiers">
+      <thead><tr><th>Tier</th><th>Judge</th><th>Scope</th><th>What it catches</th><th>WU</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Tier-1</strong> mechanical</td>
+          <td>code — <code>verify-doc</code></td>
+          <td>the 13 <strong>hard</strong> rules + completeness + receipt-coverage</td>
+          <td>an off-token value, a missing catalog column, an unreceipted soft rule. Deterministic, no judgement.</td>
+          <td><span class="badge auto">W6</span></td>
+        </tr>
+        <tr>
+          <td><strong>Tier-2</strong> self-reflex</td>
+          <td>the designing agent, on itself</td>
+          <td>its own receipt — one verdict + citation per <strong>soft</strong> rule</td>
+          <td>a design that satisfies every hard rule and is still bad. Forces the agent to state <em>why</em> each soft rule is met before it can pass.</td>
+          <td><span class="badge approval">W7</span></td>
+        </tr>
+        <tr>
+          <td><strong>Tier-3</strong> adversarial</td>
+          <td>a second, independent agent</td>
+          <td>soft rules + <strong>new-component warrant</strong></td>
+          <td>a self-serving Tier-2 receipt, and a component invented when an existing one fit. The check that cannot be self-administered.</td>
+          <td><span class="badge approval">W7</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Why the deferral holds — and it is not "capacity".</strong> Tier-2 and Tier-3 judge <em>soft</em> rules against the rulebook. This WU is <strong>rewriting that rulebook</strong>: <code>zero-accent</code> is rewritten, <code>mono-for-wire-data</code> re-subjected, <code>familiar-idioms</code> re-scoped, <code>progressive-disclosure</code> promoted, and new rules adopted or rejected. Building the two judged tiers first means writing a judge against rules that change underneath it, then rewriting it — the same rework the epic plan avoided by putting the rulebook before the harness. Tier-1 is different in kind: it reads the <em>config</em> and the doc's structure, and the closed vocabulary this WU ships is precisely its input. <strong>The ordering is a dependency, not a queue</strong> — and if the rulebook had been settled, moving Tier-2 here would be defensible.
+    </div>
+
+    <p class="meta">Two honest caveats. <strong>Nothing enforces the soft rules until W7 lands</strong> — after this WU the 13 hard rules are design-time checked and the ~12 soft rules rest entirely on reviewer attention, which is the status quo, not a regression. And the flow e2e stays in W7 because it exercises the <em>complete</em> three-tier flow; an e2e over one tier would be rewritten twice.</p>
 
     <h2 id="tests">Test plan <span class="badge id">D8 — no waiver except e2e</span></h2>
 
@@ -188,22 +363,22 @@ and links it"| S4
         </tr>
         <tr>
           <td><span class="badge id">integration</span> WU</td>
-          <td>The bounded contract, three parts: the checker parses the <em>revised</em> KB · <strong>every slug cited by an existing run doc still resolves</strong> — the slug-immutability guarantee proved mechanically, which is what makes D7's deprecate-never-rename safe · <code>hard rules: 13/13</code> actually prints.</td>
+          <td>The bounded contract, three parts: the checker parses the <em>revised</em> KB · <strong>every slug cited by an existing run doc still resolves</strong> — the slug-immutability guarantee proved mechanically, which is what makes D7's deprecate-never-rename safe · <code>hard rules: 13/13 machine-checked (design)</code> actually prints, surface label included.</td>
         </tr>
         <tr>
           <td><span class="badge id">regression</span></td>
           <td><strong>Both archived runs must still pass.</strong> Twelve new predicates over run #2 and run #3 is the real acceptance test: any predicate that reds correct, reviewed, shipped work is wrong. W4 shipped <code>data-status="archived"</code> for this — exercised, not trusted.</td>
         </tr>
         <tr>
-          <td><span class="badge id">collection</span></td>
-          <td><code>collection.test.tsx</code> gains the closed-vocabulary assertion: every class in every component resolves to a project token, arbitrary sizes fail, pragmas are honoured. This is where the ruling is enforced against <code>ui/src/</code> — no test reaches that today.</td>
+          <td><span class="badge id">lint</span></td>
+          <td>New <code>ui/eslint-rules/vocabulary.js</code>, tested with ESLint's <strong><code>RuleTester</code></strong>: valid/invalid pairs for each way the rule can be broken (off-list scale value · arbitrary <code>[…]</code> size · pragma over a bare size), <strong>plus one valid case per false-positive family</strong> — a structural class, a variant-prefixed class, a slash-opacity class, a zero value, a relationship keyword — so a future edit cannot silently re-widen the scope. Then <code>npm run lint</code> green over the whole tree. This is where the ruling is enforced against <code>ui/src/</code>; nothing reaches that today, and <strong>164 of the 206 class sites are outside the collection</strong>, which is why it is not scoped to <code>collection.test.tsx</code> (<a href="#the-code-check">reasoning</a>).</td>
         </tr>
         <tr>
           <td><span class="badge id">migration</span></td>
-          <td>The existing suite is the net for reverting <code>MethodLabel</code> and re-expressing 15 sites — <strong>447 tests across 38 files, green at planning</strong>: <code>MethodLabel.test.tsx</code>'s 5 verb rows change <em>by design</em>, everything else stays green untouched. Plus a build check: with the config closed, <code>npx tsc -b</code> and the vitest run pass, and <code>text-pink-500</code> produces <strong>no CSS</strong> — proving the vocabulary is shut at build time, not just at the gate.</td>
+          <td>The existing suite is the net for reverting <code>MethodLabel</code> and re-expressing 15 sites — <strong>447 tests across 38 files, green at planning</strong>: <code>MethodLabel.test.tsx</code>'s 5 verb rows change <em>by design</em>, everything else stays green untouched. Plus a build check: with the config closed, <code>npx tsc -b</code> and the vitest run pass, and <code>text-pink-500</code> produces <strong>no CSS</strong>. Note what that does <em>not</em> prove: an off-list class is dropped <strong>silently</strong> — the element just renders unstyled. The build is the mechanism, never the alarm; every red in this WU comes from the class scan or the gate.</td>
         </tr>
         <tr><td>e2e</td><td><code>waived: "flow e2e is W7 per the epic plan"</code> — same wording as W4 and W5.</td></tr>
-        <tr><td><span class="badge id">gate 0</span></td><td><code>cargo fmt --check</code> · <code>cargo clippy -D warnings</code> (pedantic) · <code>cargo test --workspace</code> · <code>npx tsc -b</code> · <code>npx vitest run</code> · <code>cargo xtask ui specimens --check</code> · <code>verify-doc</code> green on every doc this WU writes.</td></tr>
+        <tr><td><span class="badge id">gate 0</span></td><td><code>cargo fmt --check</code> · <code>cargo clippy -D warnings</code> (pedantic) · <code>cargo test --workspace</code> · <code>npx tsc -b</code> · <strong><code>npm run lint</code> (new)</strong> · <code>npx vitest run</code> · <code>cargo xtask ui specimens --check</code> · <code>verify-doc</code> green on every doc this WU writes.</td></tr>
       </tbody>
     </table>
 
@@ -217,9 +392,9 @@ and links it"| S4
       <thead><tr><th>Tier</th><th>What lands</th></tr></thead>
       <tbody>
         <tr><td><strong>T2 · design-rules</strong></td><td>The KB revision itself — this WU's primary output. The vocabularies section stops copying code and links it.</td></tr>
-        <tr><td><strong>T2 · decisions</strong></td><td><strong>DEC-17 — the closed vocabulary</strong>: why the token list is exhaustive, why chromatic colour is <code>ok</code>/<code>warn</code> only, why the config is the source of truth and the KB mirrors it, and the <code>design-allow:</code> pragma as the sanctioned escape with its count printed. Registered in <code>decisions-index</code>. DEC-15 gains the Tier-1 completion.</td></tr>
+        <tr><td><strong>T2 · decisions</strong></td><td><strong>DEC-17 — the closed vocabulary</strong>: why the token list is exhaustive, why chromatic colour is <code>ok</code>/<code>warn</code> only, why the config is the source of truth and the KB mirrors it, and the <code>design-allow:</code> pragma as the sanctioned escape with its count printed. Also records the <strong>two enforcement surfaces</strong> — design-time predicates over the run doc, a static scan over <code>ui/src/</code> — and why the code-side check is a <strong>local ESLint rule scoped to scale-bearing classes</strong> — including the measured 103/77 split that keeps 77 structural classes out of scope, so the false-positive question is not re-litigated. Records that this WU introduces the lint toolchain. Registered in <code>decisions-index</code>. DEC-15 gains the Tier-1 completion.</td></tr>
         <tr><td><strong>T1</strong></td><td>None expected. The design-flow doc is still the T1 candidate and still moving — W7 adds the remaining tiers. Promoting it now means editing a T1 process doc twice more inside the epic.</td></tr>
-        <tr><td><strong>T4 · code</strong></td><td><code>ui/tailwind.config.js</code> becomes the single source of truth for the vocabulary; <code>xtask/src/doc.rs</code> becomes the truth for what a design must satisfy. Where the KB and the code disagree, the code wins.</td></tr>
+        <tr><td><strong>T4 · code</strong></td><td><code>ui/tailwind.config.js</code> becomes the single source of truth for the vocabulary; <code>xtask/src/doc.rs</code> becomes the truth for what a design must satisfy, and <code>ui/eslint-rules/vocabulary.js</code> the truth for what the built UI must satisfy. Where the KB and the code disagree, the code wins.</td></tr>
         <tr><td><strong>T3</strong></td><td>This plan · the discussion · the result report. <code>MethodLabel</code>'s design file edited in place (fork D3 re-opened).</td></tr>
       </tbody>
     </table>
@@ -230,10 +405,10 @@ and links it"| S4
       <thead><tr><th>#</th><th>Step</th><th>Gate</th></tr></thead>
       <tbody>
         <tr><td>⓪</td><td>Sweep every scale; confirm the keyword-vs-value ruling against real usage</td><td>the list is exhaustive, not the six obvious ones</td></tr>
-        <tr><td>①</td><td>Close the config; delete the 8 chromatic tokens</td><td><code>text-pink-500</code> emits no CSS</td></tr>
-        <tr><td>②</td><td>Revert <code>MethodLabel</code>; re-express 15 class sites</td><td>447 tests green except the 5 rows that change by design</td></tr>
+        <tr><td>①</td><td>Close the config; delete the 8 chromatic tokens</td><td><code>text-pink-500</code> emits no CSS — a silent drop, so ② and the lint rule are what make it a red</td></tr>
+        <tr><td>②</td><td>Set up ESLint and write the <code>design/vocabulary</code> rule — it is the instrument that finds the work; revert <code>MethodLabel</code>; re-express the ~39 class sites it reds, collection and screens</td><td><code>npm run lint</code> green over all of <code>ui/src/</code>; 447 tests green except the 5 rows that change by design</td></tr>
         <tr><td>③</td><td>Revise the KB — 19 findings, <code>binds</code>, D7, lifecycle</td><td><code>verify-doc</code> parses it; every past-cited slug resolves</td></tr>
-        <tr><td>④</td><td>Build the 12 predicates + the pragma, each mutation-proved</td><td><code>hard rules: 13/13</code></td></tr>
+        <tr><td>④</td><td>Build the 12 predicates + the pragma, each mutation-proved</td><td><code>hard rules: 13/13 machine-checked (design)</code></td></tr>
         <tr><td>⑤</td><td>Run all 12 over both archived runs</td><td>both green — a red here means the predicate is wrong, not the run</td></tr>
         <tr><td>⑥</td><td>Result report · DEC-17 · code review · <code>--no-ff</code> merge</td><td><code>cr/v2</code> PASS bound to the committed tip</td></tr>
       </tbody>
