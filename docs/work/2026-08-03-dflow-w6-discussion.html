@@ -9,17 +9,21 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-DFLOW.W6 discussion — Revise the rulebook</h1>
-      <p>Open for the round. The 19 W6-owned findings from the two W4 runs were never the question — they are input. The question is what W5 did to the rulebook <em>without touching it</em>: the collection shipped a token vocabulary in code that the rulebook's own vocabularies table is now flatly false about. Eight forks below.</p>
-      <div class="meta">Discussion · 2026-08-03 · round 0 (nothing answered yet) · Trawler · T3 (docs/work/) · <code>wu/design-flow/revise-rulebook</code> · seeds: <a href="2026-07-25-dflow-w4-result.html">W4 result</a> · <a href="2026-07-29-dflow-w5-result.html">W5 result</a> · target: <a href="../design-rules/design-rules-index.html">design-rules KB</a></div>
+      <p>Round 1 answered. Two answers <strong>widen the WU past a doc revision</strong>: all <strong>12 hard-rule predicates are built here</strong>, not in W7 (D5), and the rulebook binds the <strong>built collection</strong> as well as screens (D6). W6 stops being "edit the KB" and becomes <em>settle every rule, then make the machine enforce it</em>.</p>
+      <div class="meta">Discussion · 2026-08-03 · rev 2026-08-03 (round 1 — 7 comments answered) · Trawler · T3 (docs/work/) · <code>wu/design-flow/revise-rulebook</code> · seeds: <a href="2026-07-25-dflow-w4-result.html">W4 result</a> · <a href="2026-07-29-dflow-w5-result.html">W5 result</a> · target: <a href="../design-rules/design-rules-index.html">design-rules KB</a></div>
     </div>
   </header>
   <main>
 
-    <h2 id="mandate">The mandate, and the thing that moved under it</h2>
+    <h2 id="mandate">The mandate, and the two things that moved under it</h2>
 
     <div class="callout">
       <strong>Epic plan, W6:</strong> <em>"Apply W4 findings to the rulebook — add/remove/retag rules, sharpen ids and hard/soft tags."</em>
-      That was written when the rulebook's job was to be read. Since then <strong>W5 turned the collection into code</strong>, and the rulebook's <a href="../design-rules/design-rules-index.html#vocabularies">vocabularies section</a> — colour, type, spacing, radius — is now <strong>a stale second copy of <code>ui/tailwind.config.js</code></strong>. Its own rule says <em>"values live in code where code exists — code wins"</em>, and code now exists. So W6 is the findings pass <em>plus</em> a reconciliation the epic plan could not have known to ask for.
+      That was written when the rulebook's job was to be read. Two things changed it. <strong>W5 turned the collection into code</strong>, so the KB's <a href="../design-rules/design-rules-index.html#vocabularies">vocabularies section</a> is now a stale second copy of <code>ui/tailwind.config.js</code> — its own rule says <em>"code wins"</em>, and code now exists. And <strong>round 1 moved the 12 hard-rule predicates into this WU</strong>. W6 settles each rule <em>and</em> writes the check that enforces it.
+    </div>
+
+    <div class="callout warn">
+      <strong>Why settle-then-check in one WU is the right shape, not scope creep.</strong> W4 ended by proving the same point the hard way: three times an agent broke a rule it had just written, which is why that WU ended with a checker instead of another paragraph. A rule settled in W6 and checked in W7 spends a whole WU in the state this epic exists to abolish — written down, believed, unenforced. And the four blocked predicates were already going to force W7 to re-read every ruling made here.
     </div>
 
     <div class="diagram" data-c="dia-inputs">
@@ -32,14 +36,20 @@ flowchart LR
   TW["ui/tailwind.config.js
 W5 shipped ~40 tokens
 the rulebook lists 4 sets"] ==>|"NEW — not in the plan"| W6
-  W6["W6 · revise the rulebook
-docs/design-rules/design-rules-index.html"]
-  W6 ==>|"unblocks 4 predicates"| W7["W7 · harness
-12 hard-rule predicates"]
+  W6["W6 · settle the rules
+AND build the 12 predicates
+KB + xtask/src/doc.rs"]
+  W6 ==>|"hard rules 13/13
+machine-checked"| DONE["the printed gap line
+reaches zero"]
+  W6 --> W7["W7 · harness
+Tier-2 self-reflex
+Tier-3 adversarial
+flow e2e"]
   W6 -.->|"vocabulary entries"| BUILD["build WU
 screen assembly"]
       </pre>
-      <div class="caption">Two known inputs and one that arrived late. The double arrow into W7 is the schedule risk: four hard rules cannot get an honest predicate until W6 rules on their content.</div>
+      <div class="caption">Round 1 moved the predicates left. W7 keeps the two judged tiers and the e2e; the mechanical tier finishes here, and the <code>hard rules: 1/13</code> line <code>verify-doc</code> prints on every run is this WU's own progress bar.</div>
     </div>
 
     <h2 id="the-drift">The drift W5 created</h2>
@@ -119,7 +129,7 @@ screen assembly"]
 
     <h2 id="forks">The forks</h2>
 
-    <p>Eight. D1–D3 are the drift; D4–D6 are scope; D7–D8 are method.</p>
+    <p>Eight. D1–D3 are the drift; D4–D6 are scope; D7–D8 are method. <strong>Round 1 answered D4, D5, D6 and asked for more on D2, D3, D7</strong> — those three now carry the visualization or the evidence that was missing. D1 and D8 are unanswered but both are now <em>forced</em> by D5: a predicate that reads the config <em>is</em> D1·A, and twelve new predicates remove D8's waiver.</p>
 
     <h3 id="d1">D1 · Do the vocabularies stop being a list?</h3>
 
@@ -136,6 +146,46 @@ screen assembly"]
 
     <p>Run #2 hit it on a 4px grid row gap. Run #3 hit it from the other side: an 11.5px control cannot carry 8px of vertical padding. W5 then shipped 14 named chrome tokens below the floor, each documented as a decision. Both sightings agree the rule as written is unsatisfiable for dense chrome.</p>
 
+    <div class="diagram" data-c="dia-d2-scales">
+      <pre class="mermaid">
+flowchart TB
+  subgraph RULE["spacing-scale, as written"]
+    direction LR
+    S8["8"] --- S12["12"] --- S16["16"] --- S24["24"] --- S32["32"] --- S48["48"]
+  end
+
+  subgraph LAYOUT["What layout actually uses — the rule holds"]
+    direction LR
+    L1["zone padding
+16"] --- L2["band gap
+12"] --- L3["section gap
+24"]
+  end
+
+  subgraph CHROME["What a control actually needs — every value is BELOW the floor"]
+    direction LR
+    C1["control-y
+3px"] --- C2["chrome-y
+4px"] --- C3["grid-gap-y
+4px"] --- C4["control-gap
+5px"] --- C5["control-x
+9px"] --- C6["glyph
+9px"]
+  end
+
+  RULE ==>|"satisfied"| LAYOUT
+  RULE ==>|"no member fits"| CHROME
+  CHROME --> WHY["an 11.5px control
++ 8px × 2 padding
+= a 27.5px row
+The panel ships 24px."]
+
+  style CHROME fill:#3a2020,stroke:#e5484d
+  style WHY fill:#3a2020,stroke:#e5484d
+      </pre>
+      <div class="caption">The rule is not <em>violated</em> by the chrome — it is <strong>inapplicable</strong> to it. One scale is being asked to govern two problems: how far apart <em>regions</em> sit, and how tightly a <em>control</em> packs around 11px text. Option A splits the axis and keeps one rule over both.</div>
+    </div>
+
     <table data-c="tbl-d2">
       <thead><tr><th>Option</th><th>What it means</th></tr></thead>
       <tbody>
@@ -149,6 +199,46 @@ screen assembly"]
 
     <p>The rule permits two exceptions (<code>ok</code>, <code>warn</code>). Shipped code has three syntax tints (DEC-11-confirmed, body-scoped) and five method tints (MethodLabel fork D3), and the config comments defer permissibility here. Run #3 adds a ninth candidate: a chromatic meaning for <code>unknown</code>.</p>
 
+    <div class="diagram" data-c="dia-d3-scope">
+      <pre class="mermaid">
+flowchart LR
+  subgraph B["Option B — rule by list. The list is the rule."]
+    direction TB
+    B1["seed: ok · warn
+2 members"] --> B2["W5 ships syntax + verb
+8 members"] --> B3["run #3 asks for unknown
+9?"] --> B4["…and the next screen?
+nothing bounds this"]
+    style B4 fill:#3a2020,stroke:#e5484d
+  end
+
+  subgraph A["Option A — rule by scope. The boundary is the rule."]
+    direction TB
+    A0{"where does
+the pixel live?"}
+    A0 -->|"chrome
+frames · labels · controls · seams"| A1["NO chromatic colour
+ever, no exceptions"]
+    A0 -->|"payload
+the bytes we captured"| A2["chromatic OK
+syn-key · syn-str · syn-num"]
+    A0 -->|"status identity
+what the exchange DID"| A3["chromatic OK
+ok · warn · method-*"]
+    A1 --> AR["each token still needs
+a fixed meaning in
+chromatic-meanings"]
+    A2 --> AR
+    A3 --> AR
+    style A1 fill:#1f3326,stroke:#4cc38a
+  end
+
+  B -.->|"same 8 tokens
+admitted either way"| A
+      </pre>
+      <div class="caption">Both options admit the same eight tokens today. The difference is what happens to the ninth: B needs a new ruling every time, A already answers it. Every one of the eight tokens' own source comments argues a <em>scope</em> ("scoped to body content only, never to chrome") — A is just writing down the reason they were already accepted.</div>
+    </div>
+
     <table data-c="tbl-d3">
       <thead><tr><th>Option</th><th>What it means</th></tr></thead>
       <tbody>
@@ -158,47 +248,142 @@ screen assembly"]
       </tbody>
     </table>
 
-    <h3 id="d4">D4 · Does <code>unknown</code> get a colour?</h3>
+    <h3 id="d4">D4 · <code>unknown</code> gets no colour <span class="badge id">answered — round 1</span></h3>
 
-    <p>Run #3's dominant status is neither ok nor warn — a probe that fails and a probe that shrugs both return <code>unknown</code>, and on the setup screen that is the permanent case, not an edge one. Default: <strong>no third tint — the neutral ink channel is the answer, and the chromatic-meanings table says so explicitly</strong> so the next screen does not re-ask. Cheaper than a token, and <code>colour-plus-text</code> already guarantees the text channel carries the meaning.</p>
+    <p><em>"ok."</em> No third tint. Run #3's dominant status is neither ok nor warn — a probe that fails and a probe that shrugs both return <code>unknown</code>, and on the setup screen that is the permanent case, not an edge one. The ruling: <strong>the neutral ink channel is the answer, written into the chromatic-meanings table explicitly</strong> so the next screen does not re-ask. <code>colour-plus-text</code> already guarantees the text channel carries the meaning.</p>
 
-    <h3 id="d5">D5 · Does W6 touch the harness?</h3>
+    <h3 id="d5">D5 · W6 builds all 12 predicates <span class="badge id">answered — round 1</span></h3>
+
+    <p><em>"We'll build hard rules predicate here" · "implement in W6."</em> Not the four unblocked ones — <strong>all twelve</strong>. The mechanical tier finishes in this WU and <code>verify-doc</code>'s printed gap line goes to <code>13/13</code>.</p>
 
     <table data-c="tbl-d5">
-      <thead><tr><th>Option</th><th>What it means</th></tr></thead>
+      <thead><tr><th>Slug</th><th>The predicate, and what settling it needs first</th><th>Reads</th></tr></thead>
       <tbody>
-        <tr><td><strong>A · rulebook only; W7 writes every predicate</strong> <span class="badge auto">default</span></td><td>W6 ships rule <em>content</em> and hands W7 four unblocked predicates. Matches the epic plan's split and keeps this WU docs-mostly. The <code>hard rules: 1/13</code> line reprints itself; if a rule is added or killed the count moves on its own.</td></tr>
-        <tr><td>B · also implement the four unblocked predicates</td><td>Tempting — settling a rule and checking it in one pass is how W4 ended. But it takes 4 of W7's 12 and blurs the WU boundary; W7 is then "the remaining 8 plus two tiers plus an e2e", which is a worse plan doc, not a better one.</td></tr>
+        <tr><td><code>spacing-scale</code></td><td>every spacing value resolves to a config key — <em>no raw px</em>, layout or chrome <span class="badge warn">needs D2</span></td><td>the config</td></tr>
+        <tr><td><code>zero-accent</code></td><td>chromatic tokens in chrome scope = ∅; payload/status scope checked against chromatic-meanings <span class="badge warn">needs D3</span></td><td>the config + KB</td></tr>
+        <tr><td><code>type-tokens-only</code></td><td><code>font-family</code> ∈ the 3 families; <code>font-size</code> ∈ the 7 named sizes (the ungoverned axis, per the drift table)</td><td>the config</td></tr>
+        <tr><td><code>radius-tokens</code></td><td><code>border-radius</code> ∈ the config's <code>borderRadius</code> keys — picks up <code>panel</code> for free</td><td>the config</td></tr>
+        <tr><td><code>overflow-declared</code></td><td>an overflow declaration per unbounded zone <span class="badge warn">needs D2's sibling ruling on granularity (finding 17)</span></td><td>the Layout note</td></tr>
+        <tr><td><code>state-declarations</code></td><td>states column non-empty per catalog row — <strong>must read the registry verdict</strong>, or a correct by-citation cell reds (finding 12)</td><td>catalog + roster</td></tr>
+        <tr><td><code>wrap-not-truncate</code></td><td>no truncate/ellipsis/nowrap on wire-data elements</td><td>the mockup</td></tr>
+        <tr><td><code>mono-for-wire-data</code></td><td>wire-data elements carry <code>font-mono</code> <span class="badge warn">the rule names the wrong subject (run #3)</span></td><td>the mockup</td></tr>
+        <tr><td><code>wire-order-preserved</code></td><td>an ordering declaration per captured-collection row — <strong>needs an n/a path</strong>: the setup screen renders no wire data at all</td><td>Elements</td></tr>
+        <tr><td><code>uppercase-mute-labels</code></td><td>label elements carry the uppercase-mute class set</td><td>the mockup</td></tr>
+        <tr><td><code>keyboard-parity</code></td><td>a keyboard path per pointer use-case row, ∈ the conventions table or proposed</td><td>Interaction + KB</td></tr>
+        <tr><td><code>colour-plus-text</code></td><td>a text channel declared per chromatic-exception row</td><td>Elements</td></tr>
+        <tr><td class="meta"><code>colour-tokens-only</code></td><td class="meta">already shipped in W4 — the 1 in <code>1/13</code>. Do not rebuild; it widens under D1 to read the config instead of a literal list.</td><td class="meta">—</td></tr>
       </tbody>
     </table>
 
-    <h3 id="d6">D6 · Does the rulebook govern the collection, or only screens?</h3>
+    <div class="callout">
+      <strong>The shape this forces.</strong> Six of the twelve read <code>ui/tailwind.config.js</code>, so the checker needs to parse it — and once it does, <strong>D1·A is no longer a style preference but a prerequisite</strong>: a predicate that reads the config is exactly "point, don't copy" implemented in Rust. Four are blocked on D2/D3 rulings in this same doc. Two (<code>state-declarations</code>, <code>wire-order-preserved</code>) carry a known defect from the runs that must be designed into the predicate, not discovered by it.
+    </div>
 
-    <p>Finding 4 asks for a <code>binds: screen · component · both</code> axis. It was cheap when components were docs. Now they are code with 226 unit tests, and the axis decides something real: whether <code>generous-targets</code> is judged against <code>IconButton</code>'s 24px control token or against the screen that places it. Default: <strong>add the axis</strong> — it is one column, and without it every component-level rule is judged twice or not at all.</p>
+    <h3 id="d6">D6 · The rulebook binds the collection too <span class="badge id">answered — round 1</span></h3>
 
-    <h3 id="d7">D7 · The two unvalidated imports</h3>
+    <p><em>"Collection as well."</em> Finding 4's <code>binds: screen · component · both</code> axis is added, and the <code>component</code> half now points at real code — 22 built components, not design files. That has a consequence worth stating plainly, because it is the one place this answer costs something:</p>
 
-    <p>The seed marked <code>familiar-idioms</code> and <code>progressive-disclosure</code> as principle imports that <em>"W4 must validate or kill"</em>. Two runs later neither has driven a single Tune call. The lifecycle table says imports that pull no weight are W6 kill candidates. Default: <strong>kill both</strong>, with a one-line deprecation pointer so the past receipts that cite them stay valid — that is the slug-immutability contract, and this is its first exercise.</p>
+    <table data-c="tbl-d6">
+      <thead><tr><th><code>binds</code></th><th>Judged against</th><th>Checked when</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><code>screen</code></td><td>the design run's artifacts</td><td>a design run</td><td><code>visual-weight-follows-goals</code> — only a Frame ranks goals</td></tr>
+        <tr><td><code>component</code></td><td><code>ui/src/components/</code> + its design file</td><td>a design run <em>and</em> a component change</td><td><code>generous-targets</code> — <code>IconButton</code>'s hit area is the component's, not the screen's</td></tr>
+        <tr><td><code>both</code></td><td>each at its own level</td><td>both</td><td><code>calm-microcopy</code> — a component's default string <em>and</em> the screen's override</td></tr>
+      </tbody>
+    </table>
 
-    <h3 id="d8">D8 · What test level does a docs WU carry?</h3>
+    <div class="callout warn">
+      <strong>What this exposes.</strong> A <code>component</code>-bound rule is only honestly enforced if something checks it when a component changes — and today nothing does. The collection has 226 unit tests asserting each component's <em>own contract</em>, and one integration test asserting the collection is a vocabulary; neither knows the rulebook exists. So D6 has a tail: <em>does the collection gain a rulebook check?</em> Recommendation: <strong>yes, but the cheap form</strong> — extend the existing <code>collection.test.tsx</code> rather than build a second gate, asserting the <code>component</code>-bound predicates that are statically checkable over the built components (token usage, hit area, mono for wire data). That reuses a test that already walks all 24 exports. The alternative — a design run being the only place a component rule is checked — means a component can drift for a whole epic between runs.
+    </div>
 
-    <p>W4 waived tests on "no code changes" and then shipped 269 of them. W6 under D5·A genuinely changes no code — but the KB it edits <em>is read by <code>xtask verify-doc</code> at runtime</em> for receipt coverage. Default: <strong>an integration test asserting the checker still parses the revised rulebook and that every slug a past run doc cites still resolves</strong> — that is the WU's bounded contract, and it is the mechanical proof that no rename slipped in. Unit level waived (no unit added); e2e waived to W7 as in W4 and W5.</p>
+    <h3 id="d7">D7 · The two unvalidated imports — elaborated, and my default was wrong</h3>
+
+    <div class="callout warn">
+      <strong>Correction.</strong> Round 0 said "two runs, zero Tune calls → kill both." That was drawn from run #2's finding 15 without reading run #3's receipt. <strong>Run #3 marks both rules <code>satisfied</code> with real citations</strong>, and <code>progressive-disclosure</code> drove that run's <em>largest</em> divergence from the shipped code. The kill verdict does not survive the evidence.
+    </div>
+
+    <p>What "principle import" means: the <a href="../design-rules/design-rules-index.html#soft-rules">Seed column</a> marks a rule as <em>extracted</em> (a W1/W2 citation — the codebase already made this decision) or <em>import</em> (an established design principle with at most one Trawler sighting, admitted on faith). The lifecycle table commits: <em>"imports that pull no weight are W6 kill candidates."</em> This is that audit. Here is every trace both rules left:</p>
+
+    <table data-c="tbl-d7-evidence">
+      <thead><tr><th>Rule</th><th>Run #2 · flow detail panel</th><th>Run #3 · setup screen</th><th>Reading</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>familiar-idioms</code></td>
+          <td><code>n/a</code> — <em>"a detail pane has no devtools idiom to follow; the rule bound run 1's list"</em></td>
+          <td><code>satisfied</code> — <em>"a checklist rather than a wizard — no Back/Next, no step numbers, and D is called 'undo' rather than 'reversal'"</em> <strong>(tune 6)</strong></td>
+          <td>Bound twice (run #1's list, run #3's checklist), inert once. It binds <strong>surfaces with an established genre</strong> — a list, a wizard, a form — and not a bespoke detail pane.</td>
+        </tr>
+        <tr>
+          <td><code>progressive-disclosure</code></td>
+          <td><code>inherited</code> — <em>"the panel is the list's depth level; raw is one act from pretty"</em></td>
+          <td><code>satisfied</code> — <em>"the scan level is all three statuses at once, depth opens in place, nothing is behind a second disclosure"</em></td>
+          <td>Never inert. And it produced the run's <strong>largest divergence</strong>: "a checklist, not a wizard" was written into the Frame <em>before</em> the shipped file was opened, then the cross-check found <code>Onboarding.tsx</code> running two disclosure models at once — its own comment conceding the tension.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>So finding 15's complaint is real but narrower than "kill": the noise is <strong>a coverage row that reads <code>n/a</code> on a surface the rule was never about</strong>, which trains a reviewer to skim the receipt. The fix for that is the <code>binds</code> axis D6 just added — not deletion.</p>
+
+    <table data-c="tbl-d7">
+      <thead><tr><th>Option</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A · keep both, scope <code>familiar-idioms</code> via <code>binds</code></strong> <span class="badge auto">recommended</span></td><td><code>familiar-idioms</code> gains <code>binds: screen</code> plus a genre precondition — <em>it applies where a devtools genre exists; a bespoke surface answers n/a once, in the Frame, not in the receipt</em>. <code>progressive-disclosure</code> is promoted from import to <strong>extracted</strong> — two sightings and a divergence finding is exactly the evidence the seed asked for. Neither slug moves, so every past receipt stays valid.</td></tr>
+        <tr><td>B · kill both <span class="badge id">round 0's default — withdrawn</span></td><td>Would delete the rule that caught the epic's best cross-check finding. Listed only so the reversal is on the record.</td></tr>
+        <tr><td>C · kill <code>familiar-idioms</code>, keep the other</td><td>Defensible — one inert row, one <code>satisfied</code>. But run #3's citation is substantive (three concrete departures from wizard convention), and killing it loses the vocabulary that named them.</td></tr>
+      </tbody>
+    </table>
+
+    <p class="meta">The wider point this exposes: <strong>the seed's import/extracted distinction has no expiry and no promotion path</strong>. A rule that proves itself should stop being provisional. Option A promotes one; if that is right, the lifecycle table needs a row saying when promotion happens — otherwise every import stays a kill candidate forever.</p>
+
+    <h3 id="d8">D8 · Test levels — no waiver available now</h3>
+
+    <p>Round 0 proposed one integration test on the assumption W6 was docs-mostly. D5 removed that assumption: this WU ships twelve predicates in <code>xtask/src/doc.rs</code>, so it carries the full commit + WU load, and W4's own precedent sets the bar (every check <em>mutation-proved on the real doc</em>, not just against fixtures).</p>
+
+    <table data-c="tbl-d8">
+      <thead><tr><th>Level</th><th>What</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">unit</span> commit</td><td>Per predicate: one green case and <strong>one red per way the rule can be broken</strong> — the shape W4's 13 tests already use. Plus the config parser: an unreadable/renamed <code>tailwind.config.js</code> must fail loudly, never silently pass every token rule.</td></tr>
+        <tr><td><span class="badge id">integration</span> WU</td><td>The bounded contract, three parts: the checker parses the <em>revised</em> KB · <strong>every slug cited by an existing run doc still resolves</strong> (the slug-immutability guarantee, mechanically proved — this is what makes D7's deprecation-not-rename safe) · <code>hard rules: 13/13</code> actually prints.</td></tr>
+        <tr><td><span class="badge id">regression</span></td><td><strong>The two archived runs must still pass.</strong> Twelve new predicates over run #2 and run #3 is this WU's real acceptance test: any predicate that reds correct, reviewed, shipped work is wrong. W4 shipped <code>data-status="archived"</code> for exactly this, so it must be exercised rather than trusted — a predicate that reds an archived run is caught here, not after.</td></tr>
+        <tr><td><span class="badge id">collection</span></td><td>Per D6's tail: <code>collection.test.tsx</code> extended with the statically-checkable <code>component</code>-bound rules.</td></tr>
+        <tr><td>e2e</td><td><code>waived: "flow e2e is W7 per the epic plan"</code> — same as W4 and W5.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>The risk this WU actually carries.</strong> Not "will the rules be right" — it is that <strong>twelve predicates written against two archived runs will over-fit to them</strong>. Both runs are the only design artifacts that exist, so a predicate can pass both and still be wrong about the third screen. The regression row above is necessary and not sufficient; the honest mitigation is that each predicate checks the <em>rule</em>, not the run — and where that cannot be written, the rule is not ready and stays unchecked with the gap printed, exactly as W4 did with the twelve.
+    </div>
 
     <h2 id="not-w6">Explicitly not W6</h2>
 
     <table data-c="tbl-not">
       <thead><tr><th>Item</th><th>Owner</th></tr></thead>
       <tbody>
-        <tr><td>The 12 hard-rule predicates, Tier-2 self-reflex, Tier-3 adversarial review, the flow e2e</td><td><span class="badge id">W7</span></td></tr>
-        <tr><td><code>state-declarations</code>' predicate must read the registry verdict; <code>wire-order-preserved</code> needs an n/a path</td><td><span class="badge id">W7</span></td></tr>
+        <tr><td>Tier-2 self-reflex receipt, Tier-3 adversarial review, the flow e2e <em>— the 12 predicates moved to W6 on round 1</em></td><td><span class="badge id">W7</span></td></tr>
         <tr><td>T3/T4 components, screen assembly, rewiring <code>FlowList</code>/<code>FlowDetail</code> off the old <code>StatusPill</code></td><td><span class="badge id">build WU</span></td></tr>
         <tr><td>The run-doc "review closing" item (finding 29)</td><td><span class="badge id">flow spec</span></td></tr>
         <tr><td><code>FlowEvicted</code> on the UI client · <code>unknown</code> carrying no error member</td><td><span class="badge id">API / domain</span></td></tr>
       </tbody>
     </table>
 
+    <h2 id="state">Where round 1 leaves it</h2>
+
+    <table data-c="tbl-state">
+      <thead><tr><th>Fork</th><th>State</th><th>Answer</th></tr></thead>
+      <tbody>
+        <tr><td>D1 · vocabularies point, don't copy</td><td><span class="badge auto">forced by D5</span></td><td>A — six predicates must read the config, which is D1·A in Rust</td></tr>
+        <tr><td>D2 · the 8px floor</td><td><span class="badge approval">open — visualized</span></td><td>recommend A (two scales, one rule); blocks 2 predicates</td></tr>
+        <tr><td>D3 · <code>zero-accent</code> vs 8 tokens</td><td><span class="badge approval">open — visualized</span></td><td>recommend A (rule by scope); blocks 1 predicate</td></tr>
+        <tr><td>D4 · <code>unknown</code>'s colour</td><td><span class="badge auto">answered</span></td><td>no third tint — neutral, stated in chromatic-meanings</td></tr>
+        <tr><td>D5 · who builds the predicates</td><td><span class="badge auto">answered</span></td><td><strong>all 12 in W6</strong></td></tr>
+        <tr><td>D6 · what the rules bind</td><td><span class="badge auto">answered</span></td><td>screens <strong>and</strong> the collection; tail question on how a component change gets checked</td></tr>
+        <tr><td>D7 · the two imports</td><td><span class="badge approval">open — default withdrawn</span></td><td>recommend A (keep both, scope one, promote the other)</td></tr>
+        <tr><td>D8 · test levels</td><td><span class="badge auto">forced by D5</span></td><td>full unit + integration + the archived-run regression</td></tr>
+      </tbody>
+    </table>
+
     <div class="callout">
-      <strong>Next:</strong> answer the eight forks (or accept the defaults), then the plan lands at <code>docs/work/2026-08-03-dflow-w6-plan.html</code> with its requirement sentence and test plan. Work is on <code>wu/design-flow/revise-rulebook</code>; nothing has been edited yet.
+      <strong>Next:</strong> three open forks — <a href="#d2">D2</a>, <a href="#d3">D3</a>, <a href="#d7">D7</a> — each with a recommendation. D2 and D3 gate three predicates, so they are the ones worth answering before the plan. Then the plan lands at <code>docs/work/2026-08-03-dflow-w6-plan.html</code>. Work is on <code>wu/design-flow/revise-rulebook</code>; the KB has not been edited yet.
     </div>
 
   </main>
