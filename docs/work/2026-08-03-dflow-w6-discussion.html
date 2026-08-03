@@ -9,8 +9,8 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-DFLOW.W6 discussion — Revise the rulebook</h1>
-      <p>Round 1 answered. Two answers <strong>widen the WU past a doc revision</strong>: all <strong>12 hard-rule predicates are built here</strong>, not in W7 (D5), and the rulebook binds the <strong>built collection</strong> as well as screens (D6). W6 stops being "edit the KB" and becomes <em>settle every rule, then make the machine enforce it</em>.</p>
-      <div class="meta">Discussion · 2026-08-03 · rev 2026-08-03 (round 1 — 7 comments answered) · Trawler · T3 (docs/work/) · <code>wu/design-flow/revise-rulebook</code> · seeds: <a href="2026-07-25-dflow-w4-result.html">W4 result</a> · <a href="2026-07-29-dflow-w5-result.html">W5 result</a> · target: <a href="../design-rules/design-rules-index.html">design-rules KB</a></div>
+      <p>Round 2 closed the vocabulary. W6 now has <strong>three legs</strong>: settle the rules · <strong>migrate the config</strong> (drop <code>theme.extend</code>, delete the 8 chromatic tokens, revert <code>MethodLabel</code>) · build all 12 predicates. Measured cost of the ruling: <strong>0 inherited colours in use</strong>, 1 component to revert, 7 spacing usages and 5 arbitrary sizes to re-express.</p>
+      <div class="meta">Discussion · 2026-08-03 · rev 2026-08-03 (round 2 — the closed-vocabulary ruling) · Trawler · T3 (docs/work/) · <code>wu/design-flow/revise-rulebook</code> · seeds: <a href="2026-07-25-dflow-w4-result.html">W4 result</a> · <a href="2026-07-29-dflow-w5-result.html">W5 result</a> · target: <a href="../design-rules/design-rules-index.html">design-rules KB</a></div>
     </div>
   </header>
   <main>
@@ -179,6 +179,74 @@ py-control-y text-control'"] --> TW
 
     <p><strong>So the problem is not that the rulebook lists the wrong numbers.</strong> It is that the rulebook describes a <em>closed</em> vocabulary while the tooling implements an <em>open</em> one. The rules were written as if picking off-scale were impossible; in fact it is the default, and three separate routes lead there: an inherited default, an arbitrary value, or a new token nobody ruled on. That is what D2 and D3 have to fix, and it is why both need a predicate rather than better wording.</p>
 
+    <h2 id="ruling">The ruling — a closed vocabulary <span class="badge id">answered — round 2</span></h2>
+
+    <div class="callout">
+      <strong>"We only accept our listed tokens, for both spacing and colour. Other tokens like <code>syn-</code> or <code>method-</code> are not allowed — they must use the listed tokens only. Extending the list requires careful human review."</strong>
+      <br><br>
+      This is stricter than any option D2 or D3 offered, and it collapses them into one decision: <strong>the vocabulary stops being open.</strong> Both forks are answered by it, so their option tables below are superseded and kept only for the record.
+    </div>
+
+    <table data-c="tbl-ruling">
+      <thead><tr><th>Sub-decision</th><th>Ruling</th></tr></thead>
+      <tbody>
+        <tr><td>Chromatic tokens</td><td><strong>Banned.</strong> <code>zero-accent</code> becomes absolute: chromatic colour is <code>ok</code> + <code>warn</code>, nothing else. The 5 <code>method-*</code> and 3 <code>syn-*</code> tokens are <strong>deleted from the config</strong>; <code>MethodLabel</code> reverts to ink tokens.</td></tr>
+        <tr><td>Where the list lives</td><td><strong><code>ui/tailwind.config.js</code> is the source of truth</strong>; the KB mirrors it and links it. A token is legal because it is defined there — Tailwind's inherited defaults are not. "Careful review" is the ordinary code review of the config diff.</td></tr>
+        <tr><td>How it is enforced</td><td><strong>Both ends.</strong> <code>theme.extend</code> → <code>theme</code> for <code>colors</code> / <code>spacing</code> / <code>borderRadius</code> / <code>fontSize</code>, so the defaults stop existing at build time — <code>text-pink-500</code> will not compile. The predicate is the backstop for what the config cannot catch: <strong>arbitrary values</strong> like <code>py-[5px]</code>, which always compile.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="blast-radius">What this costs — measured, not estimated</h3>
+
+    <p>I scanned every <code>className</code> in the 24 built components and resolved the config both ways. The result is smaller than the ruling sounds, with one genuine surprise:</p>
+
+    <table data-c="tbl-blast">
+      <thead><tr><th>Area</th><th>Count</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Inherited colours in use</strong></td>
+          <td><span class="badge auto">0</span></td>
+          <td>The surprise, and it is good news: <strong>not one component uses a Tailwind default colour.</strong> The palette is already clean in practice — closing it costs nothing and locks in behaviour that is already correct.</td>
+        </tr>
+        <tr>
+          <td><strong>Chromatic tokens to remove</strong></td>
+          <td>8 config entries<br>1 component</td>
+          <td><code>MethodLabel.tsx</code> maps 5 verbs to <code>text-method-*</code>; its test asserts all 5 plus a fallback. <code>syn-*</code> is free — defined but referenced by <strong>zero</strong> components. So the real cost is one component, its 5 test rows, and re-opening its design file's fork D3.</td>
+        </tr>
+        <tr>
+          <td><strong>Off-list spacing in use</strong></td>
+          <td>7</td>
+          <td><code>px-1</code> (CopyText) · <code>mt-1.5</code>, <code>pt-1</code> (CutMarker) · <code>mt-0.5</code> (Notice) · <code>py-1</code>, <code>py-0.5</code> (Select) — each must become a listed token or justify a new one.</td>
+        </tr>
+        <tr>
+          <td><strong>Arbitrary-value escapes</strong></td>
+          <td>9</td>
+          <td>Two classes: <em>sizes that should be tokens</em> (<code>py-[5px]</code>, <code>text-[11px]</code>, <code>border-[1.5px]</code>, <code>min-w-[132px]</code>, <code>max-h-[184px]</code>) and <em>layout expressions Tailwind has no token for</em> (<code>grid-cols-[auto_1fr]</code>, <code>grid-cols-[18px_1fr]</code>, <code>top-[calc(100%+4px)]</code>). The second class needs its own ruling — see the open question below.</td>
+        </tr>
+        <tr>
+          <td><strong>A member the list is missing</strong></td>
+          <td>1</td>
+          <td><code>min-w-0</code> / <code>left-0</code> are used in 5 components, and <code>0</code> is <em>not</em> in the project's spacing list — so closing the vocabulary breaks them unless <code>0</code> is added explicitly. Trivial, but it must be deliberate: this is exactly the "extending the list" path the ruling says needs review.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>One question the ruling does not settle — arbitrary values for layout.</strong> A token list can express <em>sizes</em>, but <code>grid-cols-[auto_1fr]</code> and <code>top-[calc(100%+4px)]</code> are <em>structural expressions</em>, not values from a scale; Tailwind offers no token form for them. Three ways to go, and this needs your call before the predicate can be written:
+      <table data-c="tbl-arbitrary">
+        <thead><tr><th>Option</th><th>Rule</th></tr></thead>
+        <tbody>
+          <tr><td><strong>A</strong> <span class="badge auto">recommended</span></td><td>Ban arbitrary values <em>that carry a size</em> (any <code>[…px]</code> / <code>[…rem]</code>); allow structural ones (<code>fr</code>, <code>auto</code>, <code>calc</code> over tokens). Catches all 5 real leaks, permits the 3 that have no token form. <code>grid-cols-[18px_1fr]</code> still reds — the 18px is <code>step-marker</code>.</td></tr>
+          <tr><td>B</td><td>Ban every <code>-[…]</code>. Cleanest predicate, but <code>grid-cols-[auto_1fr]</code> has no legal replacement, so it forces hand-written CSS outside the token system — worse.</td></tr>
+          <tr><td>C</td><td>Allow all arbitrary values. Leaves the biggest hole open: <code>py-[5px]</code> is exactly the drift this ruling exists to stop.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <strong>What this does to the WU's shape.</strong> W6 was already "settle the rules + build 12 predicates". The ruling adds a third leg: <strong>a config migration and a component change</strong> — <code>theme.extend</code> → <code>theme</code>, 8 tokens deleted, <code>MethodLabel</code> reverted, 7 spacing usages and 5 arbitrary sizes re-expressed. That is real <code>ui/</code> work with its own tests, in a WU the epic plan scoped as a rulebook revision. Worth naming now rather than discovering in the plan.
+    </div>
+
     <h2 id="forks">The forks</h2>
 
     <p>Eight. D1–D3 are the drift; D4–D6 are scope; D7–D8 are method. <strong>Round 1 answered D4, D5, D6 and asked for more on D2, D3, D7</strong> — those three now carry the visualization or the evidence that was missing. D1 and D8 are unanswered but both are now <em>forced</em> by D5: a predicate that reads the config <em>is</em> D1·A, and twelve new predicates remove D8's waiver.</p>
@@ -194,7 +262,11 @@ py-control-y text-control'"] --> TW
       </tbody>
     </table>
 
-    <h3 id="d2">D2 · The 8px floor — two independent sightings say the rule is wrong</h3>
+    <h3 id="d2">D2 · The 8px floor <span class="badge id">answered by the closed-vocabulary ruling</span></h3>
+
+    <div class="callout">
+      <strong>Resolved as a stricter variant of A.</strong> The two-scale split stands — layout numbers and named chrome tokens are both "listed" — but the ruling goes further: the list is <em>closed</em>, so the predicate's job is not "is this on scale" but "is this a project token at all". The options below are superseded; kept for the record.
+    </div>
 
     <p>Run #2 hit it on a 4px grid row gap. Run #3 hit it from the other side: an 11.5px control cannot carry 8px of vertical padding. W5 then shipped 14 named chrome tokens below the floor, each documented as a decision. Both sightings agree the rule as written is unsatisfiable for dense chrome.</p>
 
@@ -278,7 +350,11 @@ The panel ships 24px."]
 
     <p class="meta">A's cost, stated honestly: the predicate must resolve a JS config from Rust. Cheapest form is <code>node -p</code> shelling out to <code>resolveConfig</code> and emitting JSON — the same shape as the existing <code>cargo xtask ui</code> commands, which already shell to the Node toolchain. Not free, but it is one helper shared by six of the twelve predicates.</p>
 
-    <h3 id="d3">D3 · <code>zero-accent</code> vs eight chromatic tokens</h3>
+    <h3 id="d3">D3 · <code>zero-accent</code> vs eight chromatic tokens <span class="badge id">answered — option C, hardened</span></h3>
+
+    <div class="callout">
+      <strong>Resolved beyond C.</strong> C would have admitted syntax and rejected verbs; the ruling <strong>rejects both</strong> and deletes all eight tokens. <code>zero-accent</code> needs no exception list and no scope carve-out — it becomes the simplest rule in the book: chromatic colour is <code>ok</code> and <code>warn</code>. The options below are superseded; the state-of-play table above them is still the accurate picture of what is in the config today.
+    </div>
 
     <p><strong>How colour is stored and used</strong> — same mechanism as spacing (see <a href="#how-tokens-work">above</a>), so the concrete picture is:</p>
 
@@ -375,8 +451,8 @@ admitted either way"| A
     <table data-c="tbl-d5">
       <thead><tr><th>Slug</th><th>The predicate, and what settling it needs first</th><th>Reads</th></tr></thead>
       <tbody>
-        <tr><td><code>spacing-scale</code></td><td>every spacing value resolves to a config key — <em>no raw px</em>, layout or chrome <span class="badge warn">needs D2</span></td><td>the config</td></tr>
-        <tr><td><code>zero-accent</code></td><td>chromatic tokens in chrome scope = ∅; payload/status scope checked against chromatic-meanings <span class="badge warn">needs D3</span></td><td>the config + KB</td></tr>
+        <tr><td><code>spacing-scale</code></td><td>every spacing class resolves to a project token; arbitrary sizes red <span class="badge auto">settled by the ruling</span></td><td>the config</td></tr>
+        <tr><td><code>zero-accent</code></td><td>chromatic classes ⊆ {<code>ok</code>, <code>warn</code>} — no scope test, no exception list <span class="badge auto">settled by the ruling</span></td><td>the config</td></tr>
         <tr><td><code>type-tokens-only</code></td><td><code>font-family</code> ∈ the 3 families; <code>font-size</code> ∈ the 7 named sizes (the ungoverned axis, per the drift table)</td><td>the config</td></tr>
         <tr><td><code>radius-tokens</code></td><td><code>border-radius</code> ∈ the config's <code>borderRadius</code> keys — picks up <code>panel</code> for free</td><td>the config</td></tr>
         <tr><td><code>overflow-declared</code></td><td>an overflow declaration per unbounded zone <span class="badge warn">needs D2's sibling ruling on granularity (finding 17)</span></td><td>the Layout note</td></tr>
@@ -392,7 +468,7 @@ admitted either way"| A
     </table>
 
     <div class="callout">
-      <strong>The shape this forces.</strong> Six of the twelve read <code>ui/tailwind.config.js</code>, so the checker needs to parse it — and once it does, <strong>D1·A is no longer a style preference but a prerequisite</strong>: a predicate that reads the config is exactly "point, don't copy" implemented in Rust. Four are blocked on D2/D3 rulings in this same doc. Two (<code>state-declarations</code>, <code>wire-order-preserved</code>) carry a known defect from the runs that must be designed into the predicate, not discovered by it.
+      <strong>The shape this forces.</strong> Six of the twelve read <code>ui/tailwind.config.js</code>, so the checker needs to parse it — and once it does, <strong>D1·A is no longer a style preference but a prerequisite</strong>: a predicate that reads the config is exactly "point, don't copy" implemented in Rust. The <a href="#ruling">closed-vocabulary ruling</a> makes four of these <em>simpler</em>, not harder — with the vocabulary closed, every token predicate is one membership test against the config, and <code>zero-accent</code> loses its scope logic entirely. Two (<code>state-declarations</code>, <code>wire-order-preserved</code>) still carry a known defect from the runs that must be designed into the predicate, not discovered by it.
     </div>
 
     <h3 id="d6">D6 · The rulebook binds the collection too <span class="badge id">answered — round 1</span></h3>
@@ -461,7 +537,8 @@ admitted either way"| A
         <tr><td><span class="badge id">unit</span> commit</td><td>Per predicate: one green case and <strong>one red per way the rule can be broken</strong> — the shape W4's 13 tests already use. Plus the config parser: an unreadable/renamed <code>tailwind.config.js</code> must fail loudly, never silently pass every token rule.</td></tr>
         <tr><td><span class="badge id">integration</span> WU</td><td>The bounded contract, three parts: the checker parses the <em>revised</em> KB · <strong>every slug cited by an existing run doc still resolves</strong> (the slug-immutability guarantee, mechanically proved — this is what makes D7's deprecation-not-rename safe) · <code>hard rules: 13/13</code> actually prints.</td></tr>
         <tr><td><span class="badge id">regression</span></td><td><strong>The two archived runs must still pass.</strong> Twelve new predicates over run #2 and run #3 is this WU's real acceptance test: any predicate that reds correct, reviewed, shipped work is wrong. W4 shipped <code>data-status="archived"</code> for exactly this, so it must be exercised rather than trusted — a predicate that reds an archived run is caught here, not after.</td></tr>
-        <tr><td><span class="badge id">collection</span></td><td>Per D6's tail: <code>collection.test.tsx</code> extended with the statically-checkable <code>component</code>-bound rules.</td></tr>
+        <tr><td><span class="badge id">collection</span></td><td>Per D6's tail: <code>collection.test.tsx</code> extended with the statically-checkable <code>component</code>-bound rules — and this is now where the <a href="#ruling">closed vocabulary</a> is enforced against <code>ui/src/</code>, which no test reaches today. One assertion: every class in every component resolves to a project token.</td></tr>
+        <tr><td><span class="badge id">migration</span></td><td>New, from the ruling. The 226 existing unit tests are the regression net for reverting <code>MethodLabel</code> and re-expressing 12 class usages — <code>MethodLabel.test.tsx</code>'s 5 verb rows change by design, everything else must stay green untouched. Plus a build check: with <code>theme.extend</code> closed, <code>npx tsc -b</code> and the vitest run must pass and <code>text-pink-500</code> must produce no CSS.</td></tr>
         <tr><td>e2e</td><td><code>waived: "flow e2e is W7 per the epic plan"</code> — same as W4 and W5.</td></tr>
       </tbody>
     </table>
@@ -487,9 +564,10 @@ admitted either way"| A
     <table data-c="tbl-state">
       <thead><tr><th>Fork</th><th>State</th><th>Answer</th></tr></thead>
       <tbody>
-        <tr><td>D1 · vocabularies point, don't copy</td><td><span class="badge auto">forced by D5</span></td><td>A — six predicates must read the config, which is D1·A in Rust</td></tr>
-        <tr><td>D2 · the 8px floor</td><td><span class="badge approval">open — visualized</span></td><td>recommend A (two scales, one rule); blocks 2 predicates</td></tr>
-        <tr><td>D3 · <code>zero-accent</code> vs 8 tokens</td><td><span class="badge approval">open — visualized</span></td><td>recommend A (rule by scope); blocks 1 predicate</td></tr>
+        <tr><td>D1 · vocabularies point, don't copy</td><td><span class="badge auto">answered</span></td><td>the config is the source of truth; the KB mirrors and links it</td></tr>
+        <tr><td>D2 · the 8px floor</td><td><span class="badge auto">answered</span></td><td>closed vocabulary — listed tokens only, both scales</td></tr>
+        <tr><td>D3 · <code>zero-accent</code> vs 8 tokens</td><td><span class="badge auto">answered</span></td><td>all 8 chromatic tokens deleted; <code>ok</code> + <code>warn</code> only</td></tr>
+        <tr><td>— · arbitrary values for layout</td><td><span class="badge approval">open — new</span></td><td>recommend A (ban sizes, allow structural); blocks the spacing predicate</td></tr>
         <tr><td>D4 · <code>unknown</code>'s colour</td><td><span class="badge auto">answered</span></td><td>no third tint — neutral, stated in chromatic-meanings</td></tr>
         <tr><td>D5 · who builds the predicates</td><td><span class="badge auto">answered</span></td><td><strong>all 12 in W6</strong></td></tr>
         <tr><td>D6 · what the rules bind</td><td><span class="badge auto">answered</span></td><td>screens <strong>and</strong> the collection; tail question on how a component change gets checked</td></tr>
@@ -499,7 +577,9 @@ admitted either way"| A
     </table>
 
     <div class="callout">
-      <strong>Next:</strong> three open forks — <a href="#d2">D2</a>, <a href="#d3">D3</a>, <a href="#d7">D7</a> — each with a recommendation. D2 and D3 gate three predicates, so they are the ones worth answering before the plan. Then the plan lands at <code>docs/work/2026-08-03-dflow-w6-plan.html</code>. Work is on <code>wu/design-flow/revise-rulebook</code>; the KB has not been edited yet.
+      <strong>Next:</strong> two open items — <a href="#ruling">arbitrary values for layout</a> (recommend A: ban sizes, allow structural) and <a href="#d7">D7</a> (recommend keep both). Then the plan lands at <code>docs/work/2026-08-03-dflow-w6-plan.html</code>.
+      <br><br>
+      <strong>The WU now has three legs, not one:</strong> settle the rules · migrate the config and the components it breaks · build the 12 predicates. The epic plan scoped W6 as a rulebook revision, so the plan doc will need to record that deviation explicitly — the same way W5 recorded becoming the build WU.
     </div>
 
   </main>
