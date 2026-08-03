@@ -166,7 +166,7 @@ mod tests {
 
     #[test]
     fn charset_transcoded_to_utf8() {
-        let latin1 = [b'c', b'a', b'f', b'\xe9']; // café in ISO-8859-1
+        let latin1 = *b"caf\xe9"; // café in ISO-8859-1
         let out = decode_body(&latin1, None, Some("text/plain; charset=ISO-8859-1"));
         assert_eq!(String::from_utf8(out).unwrap(), "café");
     }
