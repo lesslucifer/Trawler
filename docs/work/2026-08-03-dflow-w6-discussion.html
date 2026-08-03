@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-DFLOW.W6 discussion — Revise the rulebook</h1>
       <p>Round 2 closed the vocabulary. W6 now has <strong>three legs</strong>: settle the rules · <strong>migrate the config</strong> (drop <code>theme.extend</code>, delete the 8 chromatic tokens, revert <code>MethodLabel</code>) · build all 12 predicates. Measured cost of the ruling: <strong>0 inherited colours in use</strong>, 1 component to revert, 7 spacing usages and 5 arbitrary sizes to re-express.</p>
-      <div class="meta">Discussion · 2026-08-03 · rev 2026-08-03 (round 2 — the closed-vocabulary ruling) · Trawler · T3 (docs/work/) · <code>wu/design-flow/revise-rulebook</code> · seeds: <a href="2026-07-25-dflow-w4-result.html">W4 result</a> · <a href="2026-07-29-dflow-w5-result.html">W5 result</a> · target: <a href="../design-rules/design-rules-index.html">design-rules KB</a></div>
+      <div class="meta">Discussion · 2026-08-03 · rev 2026-08-03 (round 3 — <strong>all forks answered</strong>: the pragma, zero-values, D7) · Trawler · T3 (docs/work/) · <code>wu/design-flow/revise-rulebook</code> · seeds: <a href="2026-07-25-dflow-w4-result.html">W4 result</a> · <a href="2026-07-29-dflow-w5-result.html">W5 result</a> · target: <a href="../design-rules/design-rules-index.html">design-rules KB</a></div>
     </div>
   </header>
   <main>
@@ -224,23 +224,79 @@ py-control-y text-control'"] --> TW
           <td>Two classes: <em>sizes that should be tokens</em> (<code>py-[5px]</code>, <code>text-[11px]</code>, <code>border-[1.5px]</code>, <code>min-w-[132px]</code>, <code>max-h-[184px]</code>) and <em>layout expressions Tailwind has no token for</em> (<code>grid-cols-[auto_1fr]</code>, <code>grid-cols-[18px_1fr]</code>, <code>top-[calc(100%+4px)]</code>). The second class needs its own ruling — see the open question below.</td>
         </tr>
         <tr>
-          <td><strong>A member the list is missing</strong></td>
-          <td>1</td>
-          <td><code>min-w-0</code> / <code>left-0</code> are used in 5 components, and <code>0</code> is <em>not</em> in the project's spacing list — so closing the vocabulary breaks them unless <code>0</code> is added explicitly. Trivial, but it must be deliberate: this is exactly the "extending the list" path the ruling says needs review.</td>
+          <td><strong>Zero-values</strong></td>
+          <td>8</td>
+          <td><code>min-w-0</code>, <code>p-0</code>, <code>m-0</code>, <code>gap-0</code>, <code>left-0</code> across 5 components. <span class="badge auto">resolved</span> — not spacing values at all; see <a href="#zero-values">the ruling below</a>. No list entry, no pragma.</td>
+        </tr>
+        <tr>
+          <td><strong>Other size scales left open</strong></td>
+          <td>?</td>
+          <td><code>min-w-full</code> comes from <code>minWidth</code>, not <code>spacing</code>. <code>minWidth</code> / <code>maxHeight</code> / <code>width</code> and siblings each carry their own inherited scale, so the migration must close all of them or the vocabulary is only half shut.</td>
         </tr>
       </tbody>
     </table>
 
-    <div class="callout warn">
-      <strong>One question the ruling does not settle — arbitrary values for layout.</strong> A token list can express <em>sizes</em>, but <code>grid-cols-[auto_1fr]</code> and <code>top-[calc(100%+4px)]</code> are <em>structural expressions</em>, not values from a scale; Tailwind offers no token form for them. Three ways to go, and this needs your call before the predicate can be written:
-      <table data-c="tbl-arbitrary">
-        <thead><tr><th>Option</th><th>Rule</th></tr></thead>
+    <h3 id="suppression">Structural exceptions: a suppression pragma <span class="badge id">answered — round 3</span></h3>
+
+    <p>Asked on the round: <em>"for structural values that can break the rules, can we have a pragma / comment to suppress the rule on them?"</em> <strong>Yes — and it is better than the blanket structural exemption I recommended.</strong> A category exemption ("allow <code>fr</code>, <code>auto</code>, <code>calc</code>") legalises a whole shape of value forever and cannot tell a genuine grid template from a lazy escape. A pragma makes each exception <em>individual, attributed, and greppable</em>.</p>
+
+    <table data-c="tbl-pragma-vs">
+      <thead><tr><th></th><th>Blanket structural exemption</th><th>Suppression pragma</th></tr></thead>
+      <tbody>
+        <tr><td>Scope</td><td>every value of that shape, forever</td><td>one line</td></tr>
+        <tr><td>Reviewable</td><td>invisible — nothing marks the exception</td><td>appears in the diff; a reviewer sees each one</td></tr>
+        <tr><td>Countable</td><td>no</td><td><code>grep</code> gives the exact debt list</td></tr>
+        <tr><td>Can it hide a leak?</td><td>yes — <code>calc(100% + 5px)</code> passes as "structural"</td><td>no — it is still an exception, just a declared one</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>The form, following this repo's own conventions.</strong> Two precedents exist and agree: <code>setup.ts</code> carries <code>// TODO [UI_DEFER] (E-DFLOW.W5, r3·22): …</code>, and the DoD gate accepts <code>waived: "&lt;why&gt;"</code> where <strong>an empty reason is not a waiver</strong>. So:
+      <pre data-item="pragma">// design-allow: grid-cols-[auto_1fr] — a grid template, not a size; no token form exists</pre>
+      Rules, all enforced by the predicate itself:
+      <table data-c="tbl-pragma-rules">
         <tbody>
-          <tr><td><strong>A</strong> <span class="badge auto">recommended</span></td><td>Ban arbitrary values <em>that carry a size</em> (any <code>[…px]</code> / <code>[…rem]</code>); allow structural ones (<code>fr</code>, <code>auto</code>, <code>calc</code> over tokens). Catches all 5 real leaks, permits the 3 that have no token form. <code>grid-cols-[18px_1fr]</code> still reds — the 18px is <code>step-marker</code>.</td></tr>
-          <tr><td>B</td><td>Ban every <code>-[…]</code>. Cleanest predicate, but <code>grid-cols-[auto_1fr]</code> has no legal replacement, so it forces hand-written CSS outside the token system — worse.</td></tr>
-          <tr><td>C</td><td>Allow all arbitrary values. Leaves the biggest hole open: <code>py-[5px]</code> is exactly the drift this ruling exists to stop.</td></tr>
+          <tr><td><strong>Applies to</strong></td><td>the next line only — never a file or a block, so it cannot silently widen</td></tr>
+          <tr><td><strong>Names the value</strong></td><td>the suppressed class is written out; if the line changes, the pragma stops matching and reds</td></tr>
+          <tr><td><strong>Requires a reason</strong></td><td>non-empty text after <code>—</code>, mirroring <code>waived:</code>. No reason = not a suppression = red</td></tr>
+          <tr><td><strong>Cannot suppress a size</strong></td><td>a pragma over a bare <code>[…px]</code>/<code>[…rem]</code> value is <strong>rejected</strong> — <code>py-[5px]</code> can never be pragma'd away, because a token is always the right answer there</td></tr>
+          <tr><td><strong>Is counted</strong></td><td>the gate prints the live total, like <code>hard rules: n/13</code> — so suppressions are visible debt, not a silent hole</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <p>Against the 9 real escapes this gives a clean split — and note it is <em>stricter</em> than the structural exemption would have been, because <code>min-w-[132px]</code> and <code>max-h-[184px]</code> can no longer hide behind a category:</p>
+
+    <table data-c="tbl-escapes">
+      <thead><tr><th>Escape</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><code>grid-cols-[auto_1fr]</code> · <code>grid-cols-[18px_1fr]</code></td><td><span class="badge approval">pragma</span> grid templates — but the <code>18px</code> must first become <code>theme(spacing.step-marker)</code>, so only the template shape is suppressed</td></tr>
+        <tr><td><code>top-[calc(100%+4px)]</code></td><td><span class="badge approval">pragma</span> a positioning expression; the <code>4px</code> should reference a token inside the <code>calc</code></td></tr>
+        <tr><td><code>py-[5px]</code> · <code>text-[11px]</code> · <code>border-[1.5px]</code> · <code>min-w-[132px]</code> · <code>max-h-[184px]</code></td><td><span class="badge warn">must become tokens</span> pragma is <em>not available</em> — all five are sizes</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="zero-values">And <code>min-w-0</code> / <code>left-0</code> <span class="badge id">answered — round 3</span></h3>
+
+    <p>Asked: <em>"so how do we handle them for now?"</em> I looked at all eight usages rather than assuming, and they turn out not to be a spacing question at all:</p>
+
+    <table data-c="tbl-zeros">
+      <thead><tr><th>Usage</th><th>Where</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><code>min-w-0</code></td><td>Notice · Select · StatusLine · StepList</td><td>The <strong>flexbox overflow idiom</strong> — a flex child defaults to <code>min-width:auto</code> and refuses to shrink, so text overflows instead of wrapping. This line is what makes <code>wrap-not-truncate</code> physically work.</td></tr>
+        <tr><td><code>p-0</code> <code>m-0</code> <code>gap-0</code></td><td>Button · StepList</td><td><strong>Resets</strong> of a browser default (<code>&lt;ol&gt;</code>'s padding, <code>&lt;button&gt;</code>'s padding).</td></tr>
+        <tr><td><code>left-0</code></td><td>Select</td><td>An <strong>anchor</strong> — "flush to the left edge" in an absolute position.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Ruling: zero is not a spacing value, so it needs no pragma and no list entry.</strong> A spacing scale answers <em>"how much space?"</em>; every usage above answers <em>"none"</em> or <em>"reset this"</em>. Removing a browser default is not picking a value off a scale. The predicate therefore treats <code>0</code> as always-legal for spacing, position and sizing utilities — one clause, no exceptions to maintain, and it matches how Tailwind itself models it (<code>spacing.0 = "0px"</code> ships in the default scale, not as an opt-in).
+      <br><br>
+      <strong>The alternative was worse:</strong> adding <code>0: "0px"</code> to the config's spacing list would work mechanically, but it invites the reading that zero is a design choice to be justified — and it would put eight pragmas or eight list-lookups in front of the flexbox idiom that <code>wrap-not-truncate</code> depends on.
+    </div>
+
+    <div class="callout warn">
+      <strong>One thing this exposed:</strong> <code>Select</code> uses <code>min-w-full</code>, which comes from Tailwind's <code>minWidth</code> scale — <em>not</em> from <code>spacing</code>. Closing <code>spacing</code> alone does not close <code>minWidth</code>, <code>maxHeight</code>, <code>width</code> and their siblings, each of which carries its own inherited scale. <strong>The config migration has to close every size-bearing scale, not just the four named in the ruling</strong> — otherwise <code>w-96</code> and <code>max-h-64</code> stay legal and the vocabulary is only half shut.
     </div>
 
     <div class="callout">
@@ -488,7 +544,11 @@ admitted either way"| A
       <strong>What this exposes.</strong> A <code>component</code>-bound rule is only honestly enforced if something checks it when a component changes — and today nothing does. The collection has 226 unit tests asserting each component's <em>own contract</em>, and one integration test asserting the collection is a vocabulary; neither knows the rulebook exists. So D6 has a tail: <em>does the collection gain a rulebook check?</em> Recommendation: <strong>yes, but the cheap form</strong> — extend the existing <code>collection.test.tsx</code> rather than build a second gate, asserting the <code>component</code>-bound predicates that are statically checkable over the built components (token usage, hit area, mono for wire data). That reuses a test that already walks all 24 exports. The alternative — a design run being the only place a component rule is checked — means a component can drift for a whole epic between runs.
     </div>
 
-    <h3 id="d7">D7 · The two unvalidated imports — elaborated, and my default was wrong</h3>
+    <h3 id="d7">D7 · The two unvalidated imports <span class="badge id">answered — option A</span></h3>
+
+    <div class="callout">
+      <strong>Keep both.</strong> <code>familiar-idioms</code> gains <code>binds: screen</code> plus the genre precondition — where no devtools genre exists, the Frame answers <em>n/a</em> once and the receipt carries no row. <code>progressive-disclosure</code> is <strong>promoted from import to extracted</strong>: two sightings plus a divergence finding is exactly the evidence the seed demanded. Neither slug moves, so every past receipt stays valid. The lifecycle table also gains the promotion row this exposed — without it, an import stays a kill candidate forever.
+    </div>
 
     <div class="callout warn">
       <strong>Correction.</strong> Round 0 said "two runs, zero Tune calls → kill both." That was drawn from run #2's finding 15 without reading run #3's receipt. <strong>Run #3 marks both rules <code>satisfied</code> with real citations</strong>, and <code>progressive-disclosure</code> drove that run's <em>largest</em> divergence from the shipped code. The kill verdict does not survive the evidence.
@@ -567,19 +627,22 @@ admitted either way"| A
         <tr><td>D1 · vocabularies point, don't copy</td><td><span class="badge auto">answered</span></td><td>the config is the source of truth; the KB mirrors and links it</td></tr>
         <tr><td>D2 · the 8px floor</td><td><span class="badge auto">answered</span></td><td>closed vocabulary — listed tokens only, both scales</td></tr>
         <tr><td>D3 · <code>zero-accent</code> vs 8 tokens</td><td><span class="badge auto">answered</span></td><td>all 8 chromatic tokens deleted; <code>ok</code> + <code>warn</code> only</td></tr>
-        <tr><td>— · arbitrary values for layout</td><td><span class="badge approval">open — new</span></td><td>recommend A (ban sizes, allow structural); blocks the spacing predicate</td></tr>
+        <tr><td>— · arbitrary values for layout</td><td><span class="badge auto">answered</span></td><td><code>design-allow:</code> pragma, one line, reason required, never over a size</td></tr>
+        <tr><td>— · zero-values</td><td><span class="badge auto">answered</span></td><td>zero is not a spacing value — always legal, no entry, no pragma</td></tr>
         <tr><td>D4 · <code>unknown</code>'s colour</td><td><span class="badge auto">answered</span></td><td>no third tint — neutral, stated in chromatic-meanings</td></tr>
         <tr><td>D5 · who builds the predicates</td><td><span class="badge auto">answered</span></td><td><strong>all 12 in W6</strong></td></tr>
         <tr><td>D6 · what the rules bind</td><td><span class="badge auto">answered</span></td><td>screens <strong>and</strong> the collection; tail question on how a component change gets checked</td></tr>
-        <tr><td>D7 · the two imports</td><td><span class="badge approval">open — default withdrawn</span></td><td>recommend A (keep both, scope one, promote the other)</td></tr>
+        <tr><td>D7 · the two imports</td><td><span class="badge auto">answered</span></td><td>A — keep both, scope <code>familiar-idioms</code>, promote <code>progressive-disclosure</code></td></tr>
         <tr><td>D8 · test levels</td><td><span class="badge auto">forced by D5</span></td><td>full unit + integration + the archived-run regression</td></tr>
       </tbody>
     </table>
 
     <div class="callout">
-      <strong>Next:</strong> two open items — <a href="#ruling">arbitrary values for layout</a> (recommend A: ban sizes, allow structural) and <a href="#d7">D7</a> (recommend keep both). Then the plan lands at <code>docs/work/2026-08-03-dflow-w6-plan.html</code>.
+      <strong>Every fork is answered.</strong> Next is the plan at <code>docs/work/2026-08-03-dflow-w6-plan.html</code> — requirement sentence, the three legs in order, and the test plan.
       <br><br>
-      <strong>The WU now has three legs, not one:</strong> settle the rules · migrate the config and the components it breaks · build the 12 predicates. The epic plan scoped W6 as a rulebook revision, so the plan doc will need to record that deviation explicitly — the same way W5 recorded becoming the build WU.
+      <strong>The WU has three legs, not one:</strong> settle the rules · migrate the config and the components it breaks · build the 12 predicates + the pragma. The epic plan scoped W6 as a rulebook revision, so the plan records that deviation explicitly, the way W5 recorded becoming the build WU.
+      <br><br>
+      <strong>One thing to decide in the plan, not here:</strong> the config migration must close <em>every</em> size-bearing scale, and the full list of those (<code>minWidth</code>, <code>maxWidth</code>, <code>maxHeight</code>, <code>width</code>, <code>height</code>, <code>inset</code>, …) has not been enumerated against real usage yet. That is a mechanical sweep, so it belongs in the plan's step 1 rather than in another round here.
     </div>
 
   </main>
