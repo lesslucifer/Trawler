@@ -54,7 +54,7 @@ screen assembly"]
 
     <h2 id="the-drift">The drift W5 created</h2>
 
-    <p>W5 deleted <code>specimen.css</code> and made every design doc read <code>ui/tailwind.config.js</code> directly — one vocabulary, no second copy. It did that <em>for the components</em>. The rulebook was left frozen, correctly, but the consequence is that the KB now describes a token set that no longer exists.</p>
+    <p>W5 deleted <code>specimen.css</code> and made every design doc read <code>ui/tailwind.config.js</code> directly — one vocabulary, no second copy. It did that <em>for the components</em>. The rulebook was left frozen, correctly, but the consequence is that the KB now describes a token set that no longer exists. Table below compares the KB against what W5 <em>wrote</em>; <a href="#how-tokens-work">how tokens actually work</a> compares it against what the toolchain <strong>resolves</strong>, which is worse.</p>
 
     <table data-c="tbl-drift">
       <thead><tr><th>Set</th><th>Rulebook says</th><th><code>tailwind.config.js</code> has</th><th>Verdict</th></tr></thead>
@@ -127,6 +127,58 @@ screen assembly"]
 
     <p class="meta">Shape of the load: <strong>7 vocabulary entries · 3 fixes · 2 new-rule proposals · 2 retags · 1 structural axis · 4 that block a W7 predicate</strong>. Only the last group has a downstream deadline.</p>
 
+    <h2 id="how-tokens-work">First: how tokens are stored and used today</h2>
+
+    <p>Round 1 asked this of both D2 and D3, and it is the right place to start — the forks below only make sense once this is on the table. Every number and colour in the shipped UI goes through <strong>one file and one mechanism</strong>.</p>
+
+    <div class="diagram" data-c="dia-token-pipeline">
+      <pre class="mermaid">
+flowchart LR
+  CFG["ui/tailwind.config.js
+theme.extend = {…}
+the ONLY definition site"] --> TW["Tailwind scans
+ui/src/**/*.tsx
+for class strings"]
+  TW --> CSS["generates CSS
+for classes it FOUND"]
+
+  CFG -.->|"same file, read directly
+since W5 deleted specimen.css"| DOC["docs/work/components/*.html
+design specimens"]
+
+  SRC["Button.tsx
+className='px-control-x
+py-control-y text-control'"] --> TW
+      </pre>
+      <div class="caption">One definition site, two consumers — the app and the design docs read the same config. That part works, and it is what W5 built.</div>
+    </div>
+
+    <table data-c="tbl-how-used">
+      <thead><tr><th>Layer</th><th>How it actually works</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Defined</strong></td><td><code>ui/tailwind.config.js</code> under <code>theme.<u>extend</u></code> — names mapped to values (<code>"control-x": "9px"</code>, <code>"syn-key": "#8fb8de"</code>).</td></tr>
+        <tr><td><strong>Used</strong></td><td>As a class string in a component: <code>className="px-control-x py-control-y text-control"</code>. Tailwind sees the class, emits the CSS. <strong>Nothing validates the class first</strong> — it is a string.</td></tr>
+        <tr><td><strong>Enforced</strong></td><td><span class="badge warn">nothing</span> No lint rule, no test, no gate. The <em>only</em> mechanical check anywhere is <code>colour-tokens-only</code>, which greps a <strong>design doc's own CSS</strong> for hex literals — it never looks at <code>ui/src/</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>The one word that causes both problems: <code>extend</code>.</strong>
+      <code>theme.extend</code> <em>adds to</em> Tailwind's defaults; <code>theme</code> alone would <em>replace</em> them. Because the project extends, <strong>every Tailwind default stays live alongside the project's tokens</strong>. Resolved from the real config just now:
+      <table data-c="tbl-resolved">
+        <thead><tr><th>Set</th><th>The rulebook says</th><th>What actually resolves</th></tr></thead>
+        <tbody>
+          <tr><td>spacing</td><td>6 members (8·12·16·24·32·48)</td><td><strong>50 keys.</strong> <code>p-5</code>→1.25rem · <code>p-7</code>→1.75rem · <code>gap-1.5</code>→0.375rem all compile fine</td></tr>
+          <tr><td>colour</td><td>7 chrome + 2 exceptions</td><td><strong>264 utilities.</strong> <code>text-pink-500</code> compiles today</td></tr>
+          <tr><td>radius</td><td>button · card · lg</td><td><strong>11 keys</strong> — and <code>lg</code> is <em>overridden</em> to 6px while <code>md</code>, <code>xl</code>, <code>full</code> survive untouched</td></tr>
+          <tr><td>type size</td><td>(not governed at all)</td><td><strong>20 keys</strong> — 7 project + 13 inherited (<code>text-sm</code>, <code>text-4xl</code>…)</td></tr>
+        </tbody>
+      </table>
+      Plus a second escape Tailwind always allows: <strong>arbitrary values</strong>. <code>py-[2px]</code> in <code>SegmentedControl.tsx</code> and <code>py-[5px]</code> in <code>Select.tsx</code> are raw px in shipped code, bypassing the token system entirely — 7 such escapes exist across the collection.
+    </div>
+
+    <p><strong>So the problem is not that the rulebook lists the wrong numbers.</strong> It is that the rulebook describes a <em>closed</em> vocabulary while the tooling implements an <em>open</em> one. The rules were written as if picking off-scale were impossible; in fact it is the default, and three separate routes lead there: an inherited default, an arbitrary value, or a new token nobody ruled on. That is what D2 and D3 have to fix, and it is why both need a predicate rather than better wording.</p>
+
     <h2 id="forks">The forks</h2>
 
     <p>Eight. D1–D3 are the drift; D4–D6 are scope; D7–D8 are method. <strong>Round 1 answered D4, D5, D6 and asked for more on D2, D3, D7</strong> — those three now carry the visualization or the evidence that was missing. D1 and D8 are unanswered but both are now <em>forced</em> by D5: a predicate that reads the config <em>is</em> D1·A, and twelve new predicates remove D8's waiver.</p>
@@ -186,18 +238,65 @@ The panel ships 24px."]
       <div class="caption">The rule is not <em>violated</em> by the chrome — it is <strong>inapplicable</strong> to it. One scale is being asked to govern two problems: how far apart <em>regions</em> sit, and how tightly a <em>control</em> packs around 11px text. Option A splits the axis and keeps one rule over both.</div>
     </div>
 
-    <table data-c="tbl-d2">
-      <thead><tr><th>Option</th><th>What it means</th></tr></thead>
+    <p><strong>The issue, stated exactly.</strong> Two separate defects, and an option only counts if it fixes both:</p>
+
+    <table data-c="tbl-d2-issue">
+      <thead><tr><th></th><th>Defect</th><th>Evidence</th></tr></thead>
       <tbody>
-        <tr><td><strong>A · two scales, one rule</strong> <span class="badge auto">default</span></td><td><code>spacing-scale</code> becomes: <em>layout spacing from the 8px scale; control chrome from a named chrome token — never a raw value in either case</em>. The predicate reads the config's key names rather than a hard-coded set, so it checks the real invariant (<em>no raw px</em>) instead of a number list. This is what W5 already built and commented; W6 ratifies or overrules it.</td></tr>
-        <tr><td>B · lower the floor to 4px</td><td>Cheapest edit, weakest rule — <code>control-x: 9px</code> and <code>glyph: 9px</code> still break it, so it does not even fix the sighting.</td></tr>
-        <tr><td>C · keep the floor, exempt chrome by name</td><td>An exception list that grows per component; the same shape as <code>zero-accent</code>'s exception list, which D3 is about to strain.</td></tr>
+        <tr><td><strong>i</strong></td><td>The rule is <em>unsatisfiable</em> for control chrome — no scale member fits an 11.5px control</td><td>two independent run sightings; 14 shipped chrome tokens all below the floor</td></tr>
+        <tr><td><strong>ii</strong></td><td>The rule is <em>unenforced</em> — 50 spacing keys resolve and arbitrary values are always available</td><td><code>py-[2px]</code>, <code>py-[5px]</code> shipped; <code>p-5</code> compiles</td></tr>
       </tbody>
     </table>
 
+    <table data-c="tbl-d2">
+      <thead><tr><th>Option</th><th>The rule becomes</th><th>The predicate becomes</th><th>Fixes</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>A · two scales, one rule</strong> <span class="badge auto">recommended</span></td>
+          <td><em>Layout spacing from the 8px scale; control chrome from a named chrome token. Never a raw value, never an inherited default, in either case.</em></td>
+          <td>Resolve the config, partition its spacing keys into <em>layout</em> (the 6 numbers) and <em>chrome</em> (the named ones). Every spacing class in the artifact must resolve to a key in the partition matching its context — and <strong>any <code>-[…]</code> arbitrary value is an automatic red</strong>. Inherited defaults fail because they are not in either list.</td>
+          <td><span class="badge auto">i + ii</span></td>
+        </tr>
+        <tr>
+          <td>B · lower the floor to 4px</td>
+          <td><em>Spacing ∈ {4, 8, 12, 16, 24, 32, 48}.</em></td>
+          <td>Same list check, one more member.</td>
+          <td><span class="badge warn">neither</span> — <code>control-x: 9px</code>, <code>control-y: 3px</code>, <code>control-gap: 5px</code>, <code>glyph: 9px</code> still fail, and the open-vocabulary hole is untouched</td>
+        </tr>
+        <tr>
+          <td>C · keep the floor, exempt chrome by name</td>
+          <td><em>Spacing ∈ the scale, except these 14 named tokens.</em></td>
+          <td>List check + a 14-entry exception list, maintained by hand in the KB.</td>
+          <td><span class="badge approval">i only</span> — and the list drifts the moment a component adds a token, which is the exact failure the drift table documents</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Why A is the recommendation.</strong> It is the only option where <em>adding a token to the config cannot silently break the rule</em> — because the config <em>is</em> the rule's member list. B and C both keep a hand-maintained list in the KB that must be edited in lockstep with code, which is the drift this WU exists to end. A also happens to be what W5 already built and commented in the config; W6 either ratifies it or overrules it, but the code is not currently ungoverned by accident — it is ungoverned <em>pending this decision</em>.
+    </div>
+
+    <p class="meta">A's cost, stated honestly: the predicate must resolve a JS config from Rust. Cheapest form is <code>node -p</code> shelling out to <code>resolveConfig</code> and emitting JSON — the same shape as the existing <code>cargo xtask ui</code> commands, which already shell to the Node toolchain. Not free, but it is one helper shared by six of the twelve predicates.</p>
+
     <h3 id="d3">D3 · <code>zero-accent</code> vs eight chromatic tokens</h3>
 
-    <p>The rule permits two exceptions (<code>ok</code>, <code>warn</code>). Shipped code has three syntax tints (DEC-11-confirmed, body-scoped) and five method tints (MethodLabel fork D3), and the config comments defer permissibility here. Run #3 adds a ninth candidate: a chromatic meaning for <code>unknown</code>.</p>
+    <p><strong>How colour is stored and used</strong> — same mechanism as spacing (see <a href="#how-tokens-work">above</a>), so the concrete picture is:</p>
+
+    <table data-c="tbl-d3-now">
+      <thead><tr><th>Group</th><th>Tokens in the config</th><th>Used in code as</th><th>Ruled on?</th></tr></thead>
+      <tbody>
+        <tr><td>chrome</td><td><code>canvas</code> <code>canvas-soft</code> <code>hairline</code> <code>ink</code> <code>ink-strong</code> <code>ink-body</code> <code>ink-mute</code></td><td><code>text-ink-body</code>, <code>border-hairline</code> — everywhere</td><td>✅ yes, these are the palette</td></tr>
+        <tr><td>status</td><td><code>ok</code> <code>warn</code></td><td><code>text-ok</code> in <code>Notice</code>, <code>CopyText</code>, <code>CopyButton</code>; <code>text-warn</code> in <code>CutMarker</code>, <code>HexRenderer</code></td><td>✅ the two sanctioned exceptions</td></tr>
+        <tr><td>verb</td><td><code>method-get</code> <code>method-post</code> <code>method-put</code> <code>method-delete</code> <code>method-patch</code></td><td><code>text-method-get</code> in <code>MethodLabel</code> — shipped and unit-tested</td><td><span class="badge warn">no</span> config comment says "permissibility is W6's"</td></tr>
+        <tr><td>syntax</td><td><code>syn-key</code> <code>syn-str</code> <code>syn-num</code></td><td><strong>nowhere yet</strong> — defined for the JSON body renderer, no component references them</td><td><span class="badge warn">no</span> same deferral</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>The problem, in one sentence:</strong> <code>zero-accent</code> says <em>"no chromatic colour beyond the listed exceptions"</em> and lists two — but <strong>eight chromatic tokens are in the config, five are shipped and tested, and 264 colour utilities resolve including every Tailwind default.</strong> So the rule is false about the code in three different ways at once: it under-counts the sanctioned tokens, it has no opinion on the two groups W5 explicitly deferred to this WU, and it is unenforced against <code>text-pink-500</code> anyway.
+      <br><br>
+      There is no <em>bug</em> here — <code>MethodLabel</code>'s colours are deliberate and reviewed. The problem is that the rulebook cannot currently say whether they are allowed, so no design run can honestly receipt <code>zero-accent</code>, and W7 cannot write its predicate. <strong>That is the whole of D3: not "are these colours nice" but "what sentence makes them legal, and can a machine check that sentence".</strong>
+    </div>
 
     <div class="diagram" data-c="dia-d3-scope">
       <pre class="mermaid">
@@ -240,13 +339,30 @@ admitted either way"| A
     </div>
 
     <table data-c="tbl-d3">
-      <thead><tr><th>Option</th><th>What it means</th></tr></thead>
+      <thead><tr><th>Option</th><th>The rule becomes</th><th>The predicate becomes</th><th>Cost</th></tr></thead>
       <tbody>
-        <tr><td><strong>A · rule by scope, not by list</strong> <span class="badge auto">default</span></td><td>Restate as: <em>chrome carries no chromatic colour; payload rendering and status identity may, each via a token whose meaning is fixed in the chromatic-meanings table</em>. The exception list stops growing per token and starts being a scope boundary — which is what every one of the eight tokens' own comment already argues. The chromatic-meanings table then grows three rows: syntax, verb, and (per D4) <code>unknown</code>.</td></tr>
-        <tr><td>B · extend the exception list to eight</td><td>Honest and mechanical, but the list has grown 2 → 8 in one WU with no principle bounding the ninth.</td></tr>
-        <tr><td>C · admit syntax, reject method tints</td><td>Would force a MethodLabel re-design after W5 shipped and tested it. Only worth it if the reviewer actually wants monochrome verbs.</td></tr>
+        <tr>
+          <td><strong>A · rule by scope</strong> <span class="badge auto">recommended</span></td>
+          <td><em>Chrome carries no chromatic colour. Payload rendering and status identity may, each via a config token whose meaning is fixed in chromatic-meanings.</em></td>
+          <td>Resolve the config. Every colour utility must be a project token (kills all 247 inherited defaults in one clause). Chromatic tokens — anything not in the 7 chrome names — must appear only on elements in payload or status scope, and must have a chromatic-meanings row. Adding <code>method-*</code> to the config without a KB row reds.</td>
+          <td>Needs the scope of an element to be determinable. In a design run that is the zone; in a component it is the file. Both are workable, neither is free.</td>
+        </tr>
+        <tr>
+          <td>B · extend the list to eight</td>
+          <td><em>Chromatic colour ∈ {ok, warn, syn-key, syn-str, syn-num, method-×5}.</em></td>
+          <td>Membership check against a list written in the KB.</td>
+          <td>Simplest to write. But the list grew 2→8 in one WU, and nothing tells the next author whether their new tint belongs — so the KB list and the config drift apart again, which is the failure this whole WU is repairing.</td>
+        </tr>
+        <tr>
+          <td>C · admit syntax, reject verbs</td>
+          <td>As B, minus the five <code>method-*</code>.</td>
+          <td>Same as B.</td>
+          <td>Forces a <code>MethodLabel</code> re-design and test rewrite after W5 shipped it. Only correct if you actually want monochrome verbs — a product call, not a cleanup.</td>
+        </tr>
       </tbody>
     </table>
+
+    <p class="meta">A and B admit exactly the same eight tokens today; they differ only on what happens to the ninth. A answers it by rule, B by another round of this conversation. That is the trade the diagram above draws.</p>
 
     <h3 id="d4">D4 · <code>unknown</code> gets no colour <span class="badge id">answered — round 1</span></h3>
 
