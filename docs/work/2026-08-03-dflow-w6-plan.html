@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a700a0b9f34851f0dfab08d">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W6 plan (Revise the rulebook + close the vocabulary)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W6 plan — Revise the rulebook <em>and close the vocabulary</em></h1>
+      <p>Apply the 19 W6-owned findings to the design-rules KB, close the token vocabulary in code so off-list values stop compiling, and build the twelve hard-rule predicates so every rule the KB states is machine-checked.</p>
+      <div class="meta">WU plan · 2026-08-03 · Trawler · T3 (docs/work/) · <code>wu/design-flow/revise-rulebook</code> → <code>epic/design-flow</code> · epic plan: <a href="2026-07-16-design-flow-plan.html">E-DFLOW</a> · direction: <a href="2026-08-03-dflow-w6-discussion.html">W6 discussion</a> (D1–D8 + the closed-vocabulary ruling, all resolved)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+
+    <div class="callout">
+      Every rulebook defect the two W4 runs found is fixed in <code>docs/design-rules/design-rules-index.html</code>; the token vocabulary is <strong>closed</strong> — <code>ui/tailwind.config.js</code> defines every legal token, Tailwind's inherited scales no longer resolve, the eight chromatic tokens are deleted and <code>MethodLabel</code> reverts to ink; and all <strong>twelve unimplemented hard rules carry a Tier-1 predicate</strong> in <code>cargo xtask verify-doc</code>, so the gap line it prints on every design run reads <code>hard rules: 13/13 machine-checked</code>.
+    </div>
+
+    <h2 id="mapping">Mapping</h2>
+
+    <p>E-DFLOW's W6 summary — <em>"apply W4 findings to the rulebook — add/remove/retag rules, sharpen ids and hard/soft tags"</em> — verifying requirement #2 (tokens + rules), second pass. No UC contract: the app's runtime behaviour is unchanged, so <code>docs/use-cases/</code> is untouched.</p>
+
+    <div class="callout warn">
+      <strong>Deliberate scope change, recorded at planning.</strong> The epic plan scopes W6 as a rulebook revision and gives W7 the <em>"Tier-1 mechanical"</em> tier. Two round-1 answers supersede that: <strong>"we'll build hard rules predicate here"</strong> and <strong>"implement in W6"</strong>. Round 2 then added a third leg — the reviewer's closed-vocabulary ruling makes this WU change <code>ui/tailwind.config.js</code> and one component. W7 keeps Tier-2 self-reflex, Tier-3 adversarial review and the flow e2e. The result report restates this as a deviation, as W5 did when it became the build WU.
+    </div>
+
+    <div class="diagram" data-c="dia-legs">
+      <pre class="mermaid">
+flowchart LR
+  S0["⓪ sweep
+enumerate every
+size-bearing scale"] --> S1
+  S1["① close the config
+theme.extend → theme
+delete 8 chromatic tokens"] --> S2
+  S2["② fix what closing breaks
+MethodLabel reverts
+15 sites re-expressed"] --> S3
+  S3["③ revise the KB
+19 findings · binds axis
+D7 · lifecycle"] --> S4
+  S4["④ build 12 predicates
++ the design-allow pragma"] --> S5
+  S5["⑤ regression
+both archived runs
+must still pass"] --> S6["⑥ report · distil
+review · merge"]
+
+  S1 -.->|"config is the
+source of truth"| S4
+  S3 -.->|"KB mirrors
+and links it"| S4
+      </pre>
+      <div class="caption">① gates ②: nothing can be re-expressed until the closed config says what is legal. ③ can run in parallel with ①–② but is drawn in sequence because the KB must describe the config that ships, not the one planned.</div>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+
+    <table data-c="tbl-expected">
+      <thead><tr><th>Observable</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The vocabulary is closed</strong> — <code>theme.extend</code> becomes <code>theme</code> for every size-bearing and colour scale, so <code>text-pink-500</code>, <code>p-5</code> and <code>w-96</code> produce no CSS at all</td><td><code>ui/tailwind.config.js</code></td></tr>
+        <tr><td><strong>Zero chromatic tokens beyond <code>ok</code> and <code>warn</code></strong> — the 5 <code>method-*</code> and 3 <code>syn-*</code> entries deleted; <code>MethodLabel</code> distinguishes verbs by ink weight, not hue</td><td>config · <code>MethodLabel.tsx</code> + its design file</td></tr>
+        <tr><td><strong>Twelve new Tier-1 predicates</strong> — every hard rule checkable; the printed gap line reaches <code>13/13</code></td><td><code>xtask/src/doc.rs</code></td></tr>
+        <tr><td><strong>The <code>design-allow:</code> pragma</strong> — one line, names its class, requires a reason, rejected over any size value, and its live count printed by the gate</td><td><code>xtask/src/doc.rs</code> · <code>ui/src/components/</code></td></tr>
+        <tr><td><strong>The KB revised</strong> — 19 findings applied; vocabularies link the config instead of copying it; the <code>binds</code> axis added; <code>familiar-idioms</code> scoped and <code>progressive-disclosure</code> promoted to <em>extracted</em></td><td><code>docs/design-rules/design-rules-index.html</code></td></tr>
+        <tr><td><strong>Both archived runs still pass</strong> — twelve new predicates over run #2 and run #3, green, with <code>data-status="archived"</code> exercised rather than trusted</td><td>run #2 · run #3</td></tr>
+        <tr><td><strong>The collection enforces its own rules</strong> — <code>collection.test.tsx</code> asserts every class in every component resolves to a project token</td><td><code>ui/src/components/collection.test.tsx</code></td></tr>
+      </tbody>
+    </table>
+
+    <p class="meta"><strong>Out of scope:</strong> Tier-2 self-reflex receipt · Tier-3 adversarial review · the flow e2e (all W7) · T3/T4 components and screen assembly (build WU) · rewiring <code>FlowList</code>/<code>FlowDetail</code> off the old <code>StatusPill</code> · the run-doc "review closing" item (flow spec, finding 29) · <code>FlowEvicted</code> on the UI client and <code>unknown</code>'s missing error member (API/domain) · a fourth design run (W9).</p>
+
+    <h2 id="step0">⓪ The sweep — which scales are actually open</h2>
+
+    <p>The discussion flagged that closing four scales leaves the vocabulary half shut. Resolved against the real config: <strong>~800 utilities resolve across 22 scales, and the project defines tokens in only six.</strong></p>
+
+    <table data-c="tbl-scales">
+      <thead><tr><th>Scale</th><th>Resolves</th><th>Project tokens</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td><code>spacing</code></td><td>50</td><td>21</td><td rowspan="6"><span class="badge auto">close</span> replace, keep only project keys</td></tr>
+        <tr><td><code>colors</code></td><td>44</td><td>17 → <strong>9</strong> after the deletions</td></tr>
+        <tr><td><code>fontSize</code></td><td>20</td><td>7</td></tr>
+        <tr><td><code>borderRadius</code></td><td>12</td><td>4</td></tr>
+        <tr><td><code>opacity</code></td><td>22</td><td>1</td></tr>
+        <tr><td><code>boxShadow</code></td><td>9</td><td>1</td></tr>
+        <tr><td><code>width</code> · <code>height</code> · <code>minWidth</code> · <code>minHeight</code> · <code>maxWidth</code> · <code>maxHeight</code> · <code>inset</code> · <code>translate</code></td><td>54–85 each</td><td><strong>0</strong></td><td><span class="badge auto">close</span> these inherit <em>wholesale</em> — <code>w-96</code>, <code>max-h-64</code> all legal today. They derive from <code>spacing</code> plus keywords, so closing <code>spacing</code> fixes the numeric half; the keyword half needs the ruling below</td></tr>
+        <tr><td><code>gap</code> · <code>padding</code> · <code>margin</code> · <code>space</code></td><td>50–51</td><td>0</td><td><span class="badge auto">inherits <code>spacing</code></span> — closed for free once <code>spacing</code> is</td></tr>
+        <tr><td><code>lineHeight</code> · <code>letterSpacing</code> · <code>borderWidth</code> · <code>zIndex</code></td><td>5–14</td><td>0</td><td><span class="badge approval">rule needed</span> — in use today (<code>leading-none</code>, <code>tracking-wide</code>, <code>border-t</code>, <code>z-20</code>) and the ruling never named them</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>The sweep surfaced a distinction the ruling did not make: values vs keywords.</strong> Some off-list classes are <em>scale values</em> (<code>p-5</code> = 1.25rem — a number someone picked). Others are <em>keywords</em> with no numeric choice in them: <code>rounded-full</code>, <code>max-w-full</code>, <code>min-w-full</code>, <code>border-none</code>, <code>border-t</code>, <code>leading-none</code>, <code>w-px</code>. All are in use in the shipped collection.
+      <br><br>
+      <strong>Proposed rule, following the zero-value precedent:</strong> a keyword that expresses <em>a relationship or a reset</em> rather than a magnitude is always legal — <code>full</code>, <code>none</code>, <code>px</code>, <code>auto</code>, and the side-only border utilities. It is the same argument that settled <code>min-w-0</code>: <em>"100% of the parent"</em> is not a value picked off a scale. Everything with a number in it stays closed. <strong>This is the one ruling the plan makes on its own</strong>; it is called out here for review rather than buried in step 1, and if it is wrong the fix is 7 class usages, not a re-plan.
+      <br><br>
+      <code>leading-relaxed</code> (1.625) and <code>tracking-wide</code> (0.025em) are <em>not</em> keywords by this test — they are named magnitudes. Both become project tokens in step 1.
+    </div>
+
+    <h2 id="worklist">The worklist</h2>
+
+    <h3 id="step1">① Close the config</h3>
+
+    <table data-c="tbl-step1">
+      <thead><tr><th>Change</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td><code>extend</code> → <code>theme</code></td><td>For the six scales the project defines, plus explicit closed maps for the scales that inherit wholesale. Keyword members (<code>full</code>, <code>none</code>, <code>px</code>, <code>auto</code>, <code>0</code>) are declared deliberately, so their legality is visible in the config rather than implied.</td></tr>
+        <tr><td>Delete 8 chromatic tokens</td><td><code>syn-key</code> <code>syn-str</code> <code>syn-num</code> <code>method-get</code> <code>method-post</code> <code>method-put</code> <code>method-delete</code> <code>method-patch</code>. The <code>syn-*</code> three are referenced by <strong>zero</strong> components — pure deletion.</td></tr>
+        <tr><td>Add the two named magnitudes</td><td><code>lineHeight</code> and <code>letterSpacing</code> gain project entries for the values actually in use, so <code>leading-relaxed</code> and <code>tracking-wide</code> have token names.</td></tr>
+        <tr><td>Keep the comments honest</td><td>The config's four "whether the rulebook permits them is W6's" comments are resolved — the tokens are gone, so the comments go with them.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="step2">② Fix what closing breaks — measured, 15 sites + 1 component</h3>
+
+    <p class="meta">6 off-list spacing · 6 arbitrary values that must become tokens · 3 that earn a pragma. Zero-value usages are untouched.</p>
+
+    <table data-c="tbl-step2">
+      <thead><tr><th>What</th><th>Where</th><th>Becomes</th></tr></thead>
+      <tbody>
+        <tr><td><code>text-method-*</code> ×5</td><td><code>MethodLabel.tsx</code></td><td>Ink tokens — verbs distinguished by <strong>weight, not hue</strong>. Its design file's fork D3 re-opens in place; its 5 test rows change by design.</td></tr>
+        <tr><td><code>px-1</code> · <code>pt-1</code> · <code>py-1</code></td><td>CopyText · CutMarker · Select</td><td>4px — becomes a named chrome token or the nearest listed one, decided per site.</td></tr>
+        <tr><td><code>mt-1.5</code> · <code>mt-0.5</code> · <code>py-0.5</code></td><td>CutMarker · Notice · Select</td><td>6px / 2px — same treatment.</td></tr>
+        <tr><td><code>py-[5px]</code> · <code>text-[11px]</code> · <code>border-[1.5px]</code>×2 · <code>min-w-[132px]</code> · <code>max-h-[184px]</code></td><td>Select · StatusLine · StepList</td><td>Tokens. <strong>Pragma is not available for these</strong> — all carry a size. <code>text-[11px]</code> is already <code>text-chrome</code>.</td></tr>
+        <tr><td><code>grid-cols-[auto_1fr]</code> · <code>grid-cols-[18px_1fr]</code> · <code>top-[calc(100%+4px)]</code></td><td>FormRenderer · StepList · Select</td><td><code>design-allow:</code> pragma — but the embedded <code>18px</code> and <code>4px</code> first become <code>theme(spacing.step-marker)</code> / a token reference, so only the <em>template shape</em> is suppressed.</td></tr>
+        <tr><td><code>min-w-0</code> ×4 · <code>p-0</code> · <code>m-0</code> · <code>gap-0</code> · <code>left-0</code></td><td>5 components</td><td><span class="badge auto">no change</span> zero is not a spacing value — always legal, per the ruling.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="step3">③ Revise the KB — the 19 findings</h3>
+
+    <table data-c="tbl-step3">
+      <thead><tr><th>Group</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Vocabularies</strong></td><td>Stop listing token names; name each <em>set</em>, its governing rule, and link <code>ui/tailwind.config.js</code> as the member list. The KB mirrors the config and never re-states it — D1, and now also a mechanical necessity since six predicates read the config.</td></tr>
+        <tr><td><strong>Structure</strong></td><td>The <code>binds: screen · component · both</code> axis added to both rule tables (finding 4, D6).</td></tr>
+        <tr><td><strong><code>zero-accent</code></strong></td><td>Rewritten as the simplest rule in the book: chromatic colour is <code>ok</code> and <code>warn</code>. No exception list, no scope carve-out.</td></tr>
+        <tr><td><strong><code>spacing-scale</code></strong></td><td>Layout spacing from the 8px scale, control chrome from a named chrome token, never a raw value — and the member list is the config, not a number list in the KB (findings 14 + run #3's second sighting).</td></tr>
+        <tr><td><strong>Fixes</strong></td><td><code>display-equals-payload</code>'s example corrected against BodyViewer D4 (6) · <code>mono-for-wire-data</code> re-subjected — a shell command never travelled a wire, so the rule is about <em>machine-readable payload</em>, not provenance (run #3) · <code>empty-states-orient</code>'s next-action assumption loosened (16).</td></tr>
+        <tr><td><strong>Vocabulary entries</strong></td><td><em>no longer captured</em> as a third kind of absence, and not a fault (31) · <em>pretty</em> and <em>raw</em> (9) · <em>first flow</em> (run #3) · <em>dismiss → Esc</em>, now on its second independent sighting (10 + run #3) · the searchable-list bindings ↑/↓/type-to-filter/Enter (run #3) · <code>unknown</code> ruled explicitly neutral in chromatic-meanings, so the next screen does not re-ask (D4).</td></tr>
+        <tr><td><strong>New rules</strong></td><td>Adopt or reject <code>absence-names-itself</code> and <code>focus-returns-to-origin</code> (13) · a rule for <strong>control adjacency within a row</strong> — the one Tune call in run #3 that could cite no slug.</td></tr>
+        <tr><td><strong>D7</strong></td><td><code>familiar-idioms</code> gains <code>binds: screen</code> + the genre precondition, so a bespoke surface answers n/a in the Frame and carries no receipt row · <code>progressive-disclosure</code> promoted from <em>import</em> to <em>extracted</em> · the lifecycle table gains the promotion row this exposed.</td></tr>
+        <tr><td><strong>Lifecycle</strong></td><td>The <code>design-allow:</code> pragma documented as the sanctioned escape, with its rules and the fact that its count is printed.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="step4">④ The twelve predicates + the pragma</h3>
+
+    <p>Six read the config through one shared helper — <code>node -p</code> over <code>resolveConfig</code>, emitting JSON, mirroring how <code>cargo xtask ui</code> already shells to the Node toolchain.</p>
+
+    <table data-c="tbl-predicates">
+      <thead><tr><th>Slug</th><th>Predicate</th></tr></thead>
+      <tbody>
+        <tr><td><code>spacing-scale</code></td><td>every spacing class resolves to a project token; arbitrary sizes red; zero and relationship keywords legal</td></tr>
+        <tr><td><code>zero-accent</code></td><td>chromatic classes ⊆ {<code>ok</code>, <code>warn</code>}</td></tr>
+        <tr><td><code>type-tokens-only</code></td><td><code>font-family</code> ∈ the 3 families; <code>font-size</code> ∈ the 7 named sizes</td></tr>
+        <tr><td><code>radius-tokens</code></td><td><code>border-radius</code> ∈ the config's <code>borderRadius</code> keys</td></tr>
+        <tr><td><code>overflow-declared</code></td><td>an overflow declaration per unbounded zone — granularity settled in ③ (finding 17)</td></tr>
+        <tr><td><code>state-declarations</code></td><td>states column non-empty per catalog row, <strong>reading the registry verdict</strong> so a correct by-citation cell does not red (finding 12)</td></tr>
+        <tr><td><code>wrap-not-truncate</code></td><td>no truncate/ellipsis/nowrap on wire-data elements</td></tr>
+        <tr><td><code>mono-for-wire-data</code></td><td>wire-data elements carry <code>font-mono</code>, against the re-subjected rule from ③</td></tr>
+        <tr><td><code>wire-order-preserved</code></td><td>ordering declaration per captured-collection row, <strong>with an n/a path</strong> — the setup screen renders no wire data at all</td></tr>
+        <tr><td><code>uppercase-mute-labels</code></td><td>label elements carry the uppercase-mute class set</td></tr>
+        <tr><td><code>keyboard-parity</code></td><td>a keyboard path per pointer use-case row, ∈ the conventions table or proposed</td></tr>
+        <tr><td><code>colour-plus-text</code></td><td>a text channel declared per chromatic-exception row</td></tr>
+        <tr><td class="meta"><code>colour-tokens-only</code></td><td class="meta">already shipped in W4 — widened to read the config rather than grep for hex literals. Do not rebuild.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>The pragma.</strong> <code>// design-allow: &lt;class&gt; — &lt;reason&gt;</code>, applying to the next line only. Enforced by the predicate itself: the named class must appear on that line (so an edited line stops matching and reds) · the reason must be non-empty, mirroring the gate's <code>waived:</code> rule · <strong>a pragma over a bare size value is rejected</strong>, never suppressed · the live total is printed on every run, so suppressions are visible debt rather than a silent hole.
+    </div>
+
+    <h2 id="tests">Test plan <span class="badge id">D8 — no waiver except e2e</span></h2>
+
+    <table data-c="tbl-tests">
+      <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge id">unit</span> commit</td>
+          <td>Per predicate in <code>xtask/src/doc.rs</code>: one green case and <strong>one red per way the rule can be broken</strong> — the shape W4's 13 tests already use. Plus the config helper: a renamed or unreadable <code>tailwind.config.js</code> must <strong>fail loudly</strong>, never silently pass every token rule. Plus the pragma: reason-missing reds · class-not-on-the-line reds · <strong>pragma-over-a-size reds</strong> · a valid pragma passes and increments the count.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">integration</span> WU</td>
+          <td>The bounded contract, three parts: the checker parses the <em>revised</em> KB · <strong>every slug cited by an existing run doc still resolves</strong> — the slug-immutability guarantee proved mechanically, which is what makes D7's deprecate-never-rename safe · <code>hard rules: 13/13</code> actually prints.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">regression</span></td>
+          <td><strong>Both archived runs must still pass.</strong> Twelve new predicates over run #2 and run #3 is the real acceptance test: any predicate that reds correct, reviewed, shipped work is wrong. W4 shipped <code>data-status="archived"</code> for this — exercised, not trusted.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">collection</span></td>
+          <td><code>collection.test.tsx</code> gains the closed-vocabulary assertion: every class in every component resolves to a project token, arbitrary sizes fail, pragmas are honoured. This is where the ruling is enforced against <code>ui/src/</code> — no test reaches that today.</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">migration</span></td>
+          <td>The existing suite is the net for reverting <code>MethodLabel</code> and re-expressing 15 sites — <strong>447 tests across 38 files, green at planning</strong>: <code>MethodLabel.test.tsx</code>'s 5 verb rows change <em>by design</em>, everything else stays green untouched. Plus a build check: with the config closed, <code>npx tsc -b</code> and the vitest run pass, and <code>text-pink-500</code> produces <strong>no CSS</strong> — proving the vocabulary is shut at build time, not just at the gate.</td>
+        </tr>
+        <tr><td>e2e</td><td><code>waived: "flow e2e is W7 per the epic plan"</code> — same wording as W4 and W5.</td></tr>
+        <tr><td><span class="badge id">gate 0</span></td><td><code>cargo fmt --check</code> · <code>cargo clippy -D warnings</code> (pedantic) · <code>cargo test --workspace</code> · <code>npx tsc -b</code> · <code>npx vitest run</code> · <code>cargo xtask ui specimens --check</code> · <code>verify-doc</code> green on every doc this WU writes.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>The risk this WU carries, named at planning.</strong> Twelve predicates written against the only two design runs that exist <strong>will tend to over-fit to them</strong>. The regression pass is necessary and not sufficient — a predicate can pass both runs and still be wrong about the third screen. The mitigation is discipline, not tooling: each predicate checks <em>the rule</em>, not the run, and where that cannot be written honestly, <strong>the rule stays unchecked and the gap keeps printing</strong> — exactly what W4 did with these twelve rather than shipping a predicate it did not believe.
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+
+    <table data-c="tbl-distil">
+      <thead><tr><th>Tier</th><th>What lands</th></tr></thead>
+      <tbody>
+        <tr><td><strong>T2 · design-rules</strong></td><td>The KB revision itself — this WU's primary output. The vocabularies section stops copying code and links it.</td></tr>
+        <tr><td><strong>T2 · decisions</strong></td><td><strong>DEC-17 — the closed vocabulary</strong>: why the token list is exhaustive, why chromatic colour is <code>ok</code>/<code>warn</code> only, why the config is the source of truth and the KB mirrors it, and the <code>design-allow:</code> pragma as the sanctioned escape with its count printed. Registered in <code>decisions-index</code>. DEC-15 gains the Tier-1 completion.</td></tr>
+        <tr><td><strong>T1</strong></td><td>None expected. The design-flow doc is still the T1 candidate and still moving — W7 adds the remaining tiers. Promoting it now means editing a T1 process doc twice more inside the epic.</td></tr>
+        <tr><td><strong>T4 · code</strong></td><td><code>ui/tailwind.config.js</code> becomes the single source of truth for the vocabulary; <code>xtask/src/doc.rs</code> becomes the truth for what a design must satisfy. Where the KB and the code disagree, the code wins.</td></tr>
+        <tr><td><strong>T3</strong></td><td>This plan · the discussion · the result report. <code>MethodLabel</code>'s design file edited in place (fork D3 re-opened).</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="order">Order of work</h2>
+
+    <table data-c="tbl-order">
+      <thead><tr><th>#</th><th>Step</th><th>Gate</th></tr></thead>
+      <tbody>
+        <tr><td>⓪</td><td>Sweep every scale; confirm the keyword-vs-value ruling against real usage</td><td>the list is exhaustive, not the six obvious ones</td></tr>
+        <tr><td>①</td><td>Close the config; delete the 8 chromatic tokens</td><td><code>text-pink-500</code> emits no CSS</td></tr>
+        <tr><td>②</td><td>Revert <code>MethodLabel</code>; re-express 15 class sites</td><td>447 tests green except the 5 rows that change by design</td></tr>
+        <tr><td>③</td><td>Revise the KB — 19 findings, <code>binds</code>, D7, lifecycle</td><td><code>verify-doc</code> parses it; every past-cited slug resolves</td></tr>
+        <tr><td>④</td><td>Build the 12 predicates + the pragma, each mutation-proved</td><td><code>hard rules: 13/13</code></td></tr>
+        <tr><td>⑤</td><td>Run all 12 over both archived runs</td><td>both green — a red here means the predicate is wrong, not the run</td></tr>
+        <tr><td>⑥</td><td>Result report · DEC-17 · code review · <code>--no-ff</code> merge</td><td><code>cr/v2</code> PASS bound to the committed tip</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      Direction resolved in the <a href="2026-08-03-dflow-w6-discussion.html">W6 discussion</a>; work lands on <code>wu/design-flow/revise-rulebook</code>. The one ruling this plan makes on its own — <a href="#step0">relationship keywords are always legal</a> — is flagged there for review rather than assumed.
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
