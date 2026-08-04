@@ -21,6 +21,14 @@
       <strong>The ⓪ gate passes: the scale list is exhaustive, and the keyword ruling holds.</strong> 119 theme scales resolve; the project defines tokens in six; the discriminator "does a theme scale govern this prefix?" splits the real tree cleanly with <strong>no per-class exceptions</strong>. The relationship-keyword ruling was checked against all 31 of its real sightings and every one is a relationship or a reset, never a magnitude. <strong>But the plan's measured counts are stale</strong> — <a href="#corrections">four corrections</a> below, one of which adds ~19 sites to step ②.
     </div>
 
+    <div class="callout warn" data-c="oracle-correction" id="oracle-correction">
+      <strong>Correction, added after the first draft of this doc: the class enumeration below was NOT exhaustive, and the method that produced it was unsound.</strong> The first pass scanned string literals <em>at <code>className=</code> sites only</em>. This codebase's dominant idiom is the opposite — classes live in module-level constants and lookup maps (<code>BASE</code>, <code>FRAME</code>, <code>TONE</code>, <code>METHOD_COLOR</code>, <code>DOT_CLASS</code>) that are interpolated in later, so their literals sit nowhere near a <code>className=</code>. <strong>41 classes were missed.</strong>
+      <br><br>
+      <strong>How it was caught, and the method that should have been used from the start:</strong> build the CSS (<code>npx tailwindcss</code>) and read the emitted selectors. Tailwind scans its own <code>content</code> globs, so <strong>the built stylesheet is ground truth for what classes exist</strong> — 242 emitted, against the scanner's 205. Any bespoke scanner must be diffed against it, never trusted alone. <a href="#oracle">Full reconciliation below.</a>
+      <br><br>
+      <strong>The one that matters:</strong> <code>text-method-get</code> · <code>-post</code> · <code>-put</code> · <code>-delete</code> · <code>-patch</code> were invisible to the scanner — <em>the exact five tokens step ① deletes and step ② must re-express in <code>MethodLabel</code></em>. A lint rule built on the scanner's design would have missed the primary deletion this WU exists to make.
+    </div>
+
     <h2 id="corrections">What the plan got wrong</h2>
 
     <p>Recorded before the work, because step ② is scoped off these numbers.</p>
@@ -229,13 +237,66 @@
       <strong>Two families the plan did not count at all: the 28 inherited type sizes and the ~20 type/stacking/focus values.</strong> Both are straightforward — they are the same three treatments the plan already sanctions — but they roughly double step ②'s re-expression surface over the "~39 sites" figure. Flagged now rather than discovered mid-②; this is what scoping the check tree-wide was supposed to buy, and it did.
     </div>
 
+    <h2 id="oracle">⓪ᵍ Reconciliation against ground truth</h2>
+
+    <p>The scanner's completeness was an assumption. It was tested by building the real stylesheet and diffing — the only check that does not simply re-run the scanner's own premises.</p>
+
+    <table data-c="tbl-oracle">
+      <thead><tr><th>Source</th><th>Distinct classes</th><th>Trust</th></tr></thead>
+      <tbody>
+        <tr><td><code>npx tailwindcss</code> emitted selectors</td><td><strong>242</strong></td><td><span class="badge auto">ground truth</span> Tailwind scans its own <code>content</code> globs. If a class is not here, it produces no CSS and cannot affect the UI.</td></tr>
+        <tr><td>The bespoke <code>className=</code> scanner</td><td>205</td><td><span class="badge approval">incomplete</span> missed 41; the delta is entirely the constant/lookup-map idiom.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="missed">The 41 missed classes</h3>
+
+    <table data-c="tbl-missed">
+      <thead><tr><th>Group</th><th>Classes</th><th>Effect on the worklist</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>The chromatic tokens this WU deletes</strong></td>
+          <td><code>text-method-get</code> <code>text-method-post</code> <code>text-method-put</code> <code>text-method-delete</code> <code>text-method-patch</code></td>
+          <td><span class="badge approval">critical</span> All five live in <code>MethodLabel.tsx</code>'s <code>METHOD_COLOR</code> map. Step ② must re-express them; the first pass reported them absent.</td>
+        </tr>
+        <tr>
+          <td><strong>Interactive-state colours</strong></td>
+          <td><code>hover:bg-wash-hover</code> <code>active:bg-wash-active</code> <code>active:bg-wash-tint</code> <code>active:text-ink</code> <code>hover:text-ok</code> <code>hover:text-warn</code> <code>focus-visible:text-ink</code> <code>hover:decoration-ink-mute</code></td>
+          <td>Resolve to project tokens — <strong>no re-expression needed</strong>. Note the variant handling itself was fine (it splits on <code>:</code> generically); these were missed for the <em>same single reason</em> as the rest — they live in <code>Button.tsx</code>'s <code>FRAME</code>/<code>TONE</code> maps. One root cause, not two.</td>
+        </tr>
+        <tr>
+          <td><strong>Status / wash colours</strong></td>
+          <td><code>bg-ok</code> <code>bg-warn</code> <code>bg-ink-mute</code> <code>bg-wash-tint</code> <code>border-ink-mute</code> <code>border-warn</code> <code>decoration-ok</code> <code>decoration-hairline</code></td>
+          <td>All project tokens. <code>decoration-*</code> is a colour scale the first pass never classified at all.</td>
+        </tr>
+        <tr>
+          <td><strong>Spacing</strong></td>
+          <td><code>gap-0</code> · <code>gap-control-gap</code> · <code>opacity-disabled</code></td>
+          <td><code>gap-0</code> is a zero (legal); the other two are project tokens.</td>
+        </tr>
+        <tr>
+          <td class="meta"><strong>Tailwind base/plugin artifacts</strong> — not authored classes</td>
+          <td class="meta"><code>container</code> <code>filter</code> <code>transform</code> <code>transition</code> <code>ring</code> <code>shadow</code> <code>rounded</code> <code>outline</code> <code>collapse</code> <code>table</code> <code>static</code> <code>visible</code> <code>hidden</code> <code>inline</code> <code>grow</code> <code>lowercase</code> <code>size-px</code> <code>!relative</code></td>
+          <td class="meta">Oracle noise: emitted by Tailwind's base layer or matched from non-class strings, not written by anyone. Excluded from the worklist — the reason the oracle is a <em>cross-check</em>, not a drop-in replacement.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>Net effect on the numbers.</strong> The <strong>off-list worklist is essentially unchanged</strong> — nearly every missed class resolves to a project token, so ②'s re-expression surface stands, with the <code>text-method-*</code> five restored to it (they were always in the plan; the sweep simply failed to re-confirm them). <strong>What does change is the distinct-class count and the split</strong>: the population is ~224 authored classes, not 200, so the 144/56 figure is itself provisional and <strong>must be recomputed by the ②ᵃ rule against the oracle before it is quoted into DEC-17</strong>. The plan's 103/77 was wrong; 144/56 is closer but not yet proven.
+      <br><br>
+      <strong>Binding requirement on the ②ᵃ lint rule:</strong> it must resolve classes held in module-level constants and lookup maps, not only literals at <code>className=</code>. That is the majority idiom in <code>src/components/</code>, and it is invisible to the naive approach. Its <code>RuleTester</code> suite needs a case for it, and <code>npm run lint</code>'s coverage should be reconciled against the built CSS at least once.
+    </div>
+
     <h2 id="method">How this was measured</h2>
 
     <table data-c="tbl-method">
       <thead><tr><th>Step</th><th>Instrument</th></tr></thead>
       <tbody>
         <tr><td>Scale enumeration</td><td><code>resolveConfig</code> over <code>ui/tailwind.config.js</code>, counting keys per scale — the same entry point the six config-reading predicates and the lint rule will consume.</td></tr>
-        <tr><td>Class extraction</td><td>Brace-balanced scan of <code>className="…"</code> and <code>className={…}</code> across <code>ui/src/**/*.tsx</code>, tests excluded; template-literal interpolations split out so only static segments are treated as classes.</td></tr>
+        <tr><td>Class extraction <span class="badge approval">superseded</span></td><td>Brace-balanced scan of <code>className="…"</code> and <code>className={…}</code> across <code>ui/src/**/*.tsx</code>, tests excluded. <strong>Unsound — see <a href="#oracle">the reconciliation</a>:</strong> it cannot see classes held in constants and lookup maps, which is this codebase's dominant idiom, and it missed 41.</td></tr>
+        <tr><td>Ground truth <span class="badge auto">authoritative</span></td><td><code>npx tailwindcss -c tailwind.config.js</code> over a bare <code>@tailwind</code> entry, then parse the emitted selectors. Tailwind resolves its own <code>content</code> globs (<code>./index.html</code> + <code>./src/**/*.{ts,tsx}</code>), so anything absent here emits no CSS. Carries base-layer noise, so it cross-checks the scanner rather than replacing it.</td></tr>
+        <tr><td>Glob-coverage check</td><td>Confirmed the scanner's <code>.tsx</code>-only reach against Tailwind's wider <code>{ts,tsx}</code> + <code>index.html</code> globs. The two <code>.ts</code> hits (<code>onboardingMachine.ts</code>, <code>body.ts</code>) are prose and MIME strings, and <code>index.html</code> carries no <code>class=</code> — so this particular gap costs nothing, but it was a gap.</td></tr>
         <tr><td>Classification</td><td>Longest-prefix match into a prefix→scale map, with the overloaded <code>text-</code>/<code>border-</code>/<code>outline-</code>/<code>font-</code> prefixes resolved by value.</td></tr>
         <tr><td>Cross-check</td><td>Site counts independently confirmed by <code>grep -ro 'className=' --include='*.tsx'</code> → 235 / 29 computed, matching the scanner exactly.</td></tr>
       </tbody>
@@ -246,7 +307,9 @@
     <h2 id="next">Gate</h2>
 
     <div class="callout">
-      <strong>⓪'s gate — "the list is exhaustive, not the six obvious ones" — is met.</strong> 119 scales enumerated, 22 carry inherited values reachable from real classes, six named for closure plus <code>lineHeight</code>/<code>letterSpacing</code>/<code>zIndex</code>/<code>outlineWidth</code>/<code>outlineOffset</code> now added. The keyword ruling is confirmed, not assumed. <strong>Ready for ①</strong>, with the corrected counts above superseding the plan's estimates and the <a href="#split">overloaded-prefix requirement</a> carried into ②ᵃ.
+      <strong>⓪'s gate — "the list is exhaustive, not the six obvious ones" — is met, on its own terms.</strong> The gate is about <em>scales</em>, and that half is exhaustive by construction: the 119 come from <code>resolveConfig</code>, Tailwind's own resolution, not from a scan. 22 carry inherited values reachable from real classes; six are named for closure plus <code>lineHeight</code>/<code>letterSpacing</code>/<code>zIndex</code>/<code>outlineWidth</code>/<code>outlineOffset</code>. The keyword ruling is confirmed against all 31 sightings, not assumed.
+      <br><br>
+      <strong>The class enumeration is a different claim and a weaker one.</strong> It is now reconciled against the built CSS and no longer rests on the scanner alone — but the exact 144/56 split is <strong>provisional until the ②ᵃ rule recomputes it</strong>, and it must not be quoted into DEC-17 before then. <strong>Ready for ①</strong> (which depends only on the scale list and the ruling, both solid), carrying two binding requirements into ②ᵃ: the <a href="#split">overloaded-prefix rule</a> and the <a href="#oracle">constant/lookup-map requirement</a>.
     </div>
 
   </main>
