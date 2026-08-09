@@ -13,7 +13,18 @@ const context = contextUtils.createContext(resolved);
 export const emittableClasses = context.getClassList();
 
 const EMITTABLE = new Set(emittableClasses);
-const OPACITY_STEPS = new Set(Object.keys(resolved.theme.opacity));
+
+// A `/step` draws from the scale its own base draws from, never from one global
+// step list: `text-` is a colour prefix and a size prefix at once, so
+// `text-ink/wash` dims a colour while `text-body/loose` sets a line height, and
+// Tailwind emits nothing at all — not even the base — for the wrong pairing.
+const MODIFIERS = new Map();
+for (const entry of context.getClassList({ includeMetadata: true })) {
+  if (!Array.isArray(entry)) continue;
+  const [names, meta] = entry;
+  for (const name of [names].flat()) MODIFIERS.set(name, new Set(meta?.modifiers ?? []));
+}
+
 const STATIC_UTILITIES = new Set(
   [...context.candidateRuleMap.keys()].filter((k) => typeof k === "string"),
 );
@@ -51,12 +62,13 @@ export function classify(cls) {
 
   const slash = base.lastIndexOf("/");
   if (slash > 0) {
-    const colour = base.slice(0, slash);
+    const owner = base.slice(0, slash);
     const step = base.slice(slash + 1);
-    if (EMITTABLE.has(colour)) {
-      return OPACITY_STEPS.has(step)
+    const steps = MODIFIERS.get(owner);
+    if (steps) {
+      return steps.has(step)
         ? { legal: true }
-        : { legal: false, kind: "modifier", value: step };
+        : { legal: false, kind: "modifier", value: step, owner, steps: [...steps] };
     }
   }
   return { legal: false, kind: "offlist" };
@@ -67,10 +79,6 @@ export function classify(cls) {
 // can never reach them and the rule has nothing to judge.
 export function isScaleBearing(cls) {
   return !STATIC_UTILITIES.has(stripVariants(cls));
-}
-
-export function opacitySteps() {
-  return [...OPACITY_STEPS];
 }
 
 function walk(node, visit, skip) {
@@ -158,12 +166,21 @@ export function collectClasses(program) {
   const seeds = [];
   const wanted = new Set();
 
+  // Every declaration of a name is kept, not just the last: following is by name
+  // over the whole file, so two functions each holding `const cls = ...` would
+  // otherwise leave one of them unread and the file reported clean.
+  const declare = (name, node) => {
+    const bound = declarations.get(name);
+    if (bound) bound.push(node);
+    else declarations.set(name, [node]);
+  };
+
   walk(program, (node) => {
     if (node.type === "VariableDeclarator" && node.id.type === "Identifier" && node.init) {
-      declarations.set(node.id.name, node.init);
+      declare(node.id.name, node.init);
     }
     if (node.type === "FunctionDeclaration" && node.id) {
-      declarations.set(node.id.name, node.body);
+      declare(node.id.name, node.body);
     }
     if (node.type === "JSXAttribute" && node.name?.name === "className" && node.value) {
       seeds.push(node.value);
@@ -178,10 +195,12 @@ export function collectClasses(program) {
     const name = pending.pop();
     if (followed.has(name)) continue;
     followed.add(name);
-    const init = declarations.get(name);
-    if (!init) continue;
-    roots.push(init);
-    pending = pending.concat([...referencedNames(init)].filter((n) => !followed.has(n)));
+    const bound = declarations.get(name);
+    if (!bound) continue;
+    roots.push(...bound);
+    bound.forEach((init) =>
+      pending.push(...[...referencedNames(init)].filter((n) => !followed.has(n))),
+    );
   }
 
   const found = [];

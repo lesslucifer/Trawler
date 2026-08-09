@@ -1,4 +1,4 @@
-import { arbitraryValue, classify, collectClasses, isBareSize, opacitySteps } from "./classes.js";
+import { arbitraryValue, classify, collectClasses, isBareSize } from "./classes.js";
 
 const PRAGMA = /design-allow:\s*(\S+)\s*(?:—|--)\s*(\S.*?)\s*$/;
 
@@ -16,7 +16,7 @@ export default {
       arbitrary:
         "`{{cls}}` is an arbitrary value. Closing the config cannot reach arbitrary values, so this is the only check that can: name `{{value}}` as a token in ui/tailwind.config.js.",
       modifier:
-        "`{{cls}}` dims with `/{{value}}`, which is not a step in the closed opacity scale ({{steps}}).",
+        "`{{cls}}` modifies `{{owner}}` with `/{{value}}`, which is not a step that scale carries ({{steps}}). Tailwind emits no CSS at all for the pair — not even `{{owner}}`.",
       unresolvable:
         "`{{cls}}` is assembled from runtime fragments, so its vocabulary cannot be checked. Interpolate whole class names instead.",
       pragmaMalformed:
@@ -70,7 +70,7 @@ export default {
             node,
             loc,
             messageId: verdict.kind,
-            data: { cls, value: verdict.value, steps: opacitySteps().join(", ") },
+            data: { cls, value: verdict.value, owner: verdict.owner, steps: verdict.steps?.join(", ") },
           });
         }
       },

@@ -319,6 +319,38 @@
       <strong>Two holes, named at the gate rather than at review.</strong> The rule is off for test files, so a class that lives only in a test is unseen — accepted because tests assert on class-name fragments by design. And an <em>open</em> scale is invisible to the rule by construction: <code>fontWeight</code> was legal-because-unclosed, and nothing red until a human read the config. ③ owes a sweep for any other scale ① left open.
     </div>
 
+    <h2 id="review">What code review found — two defects in the rule itself</h2>
+
+    <div class="callout warn">
+      <strong>The gate above was green and the rule was still wrong twice.</strong> Both defects are in <code>classify</code>/<code>collectClasses</code> — the rule's own judgement, the one thing no test in the app can reach. Neither was findable by running the rule over <code>ui/src/</code>, because both are <em>silences</em>: the rule said nothing where it should have spoken.
+    </div>
+
+    <table data-c="tbl-review">
+      <thead><tr><th>Defect</th><th>What it did</th><th>Why the gate missed it</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Identifier map keyed by bare name</td>
+          <td>Two functions in one file each holding <code>const cls = …</code> overwrote each other; only the last-declared binding's classes were ever checked, the earlier one dropped with no report.</td>
+          <td>The shape occurs nowhere in <code>ui/src/</code> — six names repeat in the tree (<code>stored</code>, <code>res</code>, <code>mime</code>, <code>live</code>, <code>auto</code>, <code>at</code>) and none hold a class string. A rule cannot red what nobody wrote.</td>
+          <td>Every declaration of a name is kept, not just the last. False-negative only, so no site changed verdict.</td>
+        </tr>
+        <tr>
+          <td><code>/step</code> checked against one global opacity list</td>
+          <td><code>rounded-full/wash</code>, <code>z-popup/wash</code>, <code>border/hairline</code> all classified <strong>legal</strong> while Tailwind emits <em>nothing at all</em> — not even the base utility. And <code>text-body/loose</code>, which is legal, was reported.</td>
+          <td>All four live <code>/</code> sites are colour-bearing (<code>bg-canvas-soft/wash</code>, <code>border-hairline/hairline</code>, <code>border-hairline/scrim</code> ×2), so the correct and the broken rule agree on every class the app actually authors.</td>
+          <td>Each base's modifier scale comes from <code>getClassList({includeMetadata:true})</code> — Tailwind's own per-class list, so the check needs no colour-prefix table any more than the base check needed a prefix table.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>The second defect falsifies a sentence the plan and this doc both wrote.</strong> Both said the split is "colour token + opacity modifier, each checked against its own scale". The code checked the base against the <em>undifferentiated</em> class list and the step against a global opacity set — so the modifier half was never checked against its own scale at all. <code>text-</code> is the prefix where that bites: it is a colour prefix and a size prefix at once, which is the same overload requirement 1 exists to handle, one level down. Fixing it turned out to <em>widen</em> the vocabulary as well as narrow it — <code>text-body/loose</code> sets a line height and was previously reported as a bad opacity step.
+    </div>
+
+    <div class="callout warn">
+      <strong>The honest lesson for ③.</strong> ①'s defects were found by diffing built CSS; ②'s were found only by an adversarial reader of the rule's source. Both of ②'s defects are invisible to <em>every</em> mechanism this WU built — the lint run, the reconciler, and the 467 tests all stayed green through both. The rule's own unit tests are the only surface that can hold them, which is why the fix for each landed as a failing RuleTester case first. The rule count is now 23.
+    </div>
+
     <h2 id="next">What ② hands to ③</h2>
 
     <div class="callout">

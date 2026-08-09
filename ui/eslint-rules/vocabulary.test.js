@@ -22,6 +22,7 @@ ruleTester.run("design/vocabulary", vocabulary, {
     { code: `const A = () => <i className="text-center border-none outline-none font-mono" />;` },
     { code: `const A = () => <i className="hover:text-ink focus-visible:outline-focus" />;` },
     { code: `const A = () => <i className="bg-canvas-soft/wash border-hairline/hairline" />;` },
+    { code: `const A = () => <i className="text-body/loose" />;` },
     { code: `const A = () => <i className="p-0 m-0 gap-0 min-w-0 inset-0" />;` },
     { code: `const A = () => <i className="w-full max-w-full rounded-full ml-auto leading-none" />;` },
     { code: `const TONE = { ok: "text-ok" };\nconst A = ({ t }) => <i className={TONE[t]} />;` },
@@ -43,6 +44,19 @@ ruleTester.run("design/vocabulary", vocabulary, {
       code: `const A = () => <i className="bg-canvas-soft/30" />;`,
       errors: [{ messageId: "modifier" }],
     },
+    // A modifier belongs to the scale its own base draws from, not to one global
+    // step list: `text-` is a colour prefix and a size prefix at once, and
+    // Tailwind emits nothing at all — not even the base — for the wrong pairing.
+    {
+      code: `const A = () => <i className="text-body/wash" />;`,
+      errors: [{ messageId: "modifier" }],
+    },
+    // A base that carries no modifier scale at all is off-list outright: there is
+    // no scale to have picked the wrong step from.
+    {
+      code: `const A = () => <i className="rounded-full/wash z-popup/wash" />;`,
+      errors: [{ messageId: "offlist" }, { messageId: "offlist" }],
+    },
     // Requirement 2: the class the WU exists to delete is reachable only through
     // the lookup map. A className-anchored reader reports this file as clean.
     {
@@ -52,6 +66,13 @@ ruleTester.run("design/vocabulary", vocabulary, {
     {
       code: `const A = ({ t }) => <i className={\`text-\${t}\`} />;`,
       errors: [{ messageId: "unresolvable" }],
+    },
+    // Identifier-following is by name across the whole file, so a name declared
+    // twice must keep both declarations. Keeping only the last one reds nothing
+    // and reports the file clean — the silence this rule exists to end.
+    {
+      code: `const A = () => {\n  const cls = "text-xs";\n  return <i className={cls} />;\n};\nconst B = () => {\n  const cls = "flex";\n  return <i className={cls} />;\n};`,
+      errors: [{ messageId: "offlist" }],
     },
     {
       code: `const A = () => (\n  <i\n    className={\n      // design-allow: grid-cols-[auto_1fr]\n      "grid grid-cols-[auto_1fr]"\n    }\n  />\n);`,
