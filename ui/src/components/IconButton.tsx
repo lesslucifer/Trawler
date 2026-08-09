@@ -47,7 +47,7 @@ export function IconButton({
       tone="mute"
       size={size}
       label={label ?? glyph}
-      className={`text-sm ${className}`}
+      className={`text-note ${className}`}
     >
       {face}
     </Button>

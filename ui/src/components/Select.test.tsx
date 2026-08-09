@@ -224,7 +224,7 @@ describe("Select", () => {
 
   it("the trigger holds a min-width so it never resizes with the selection", () => {
     setup();
-    expect(trigger().className).toContain("min-w-[132px]");
+    expect(trigger().className).toContain("min-w-control-min");
   });
 
   it("never selects a row the options changed underneath — remote options arrive while open", () => {

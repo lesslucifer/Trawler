@@ -25,7 +25,7 @@ export function Section({
   if (variant === "band") {
     return (
       <section data-variant="band">
-        <h2 className="mb-2 px-4 pt-3 text-chrome uppercase tracking-wide text-ink-strong">
+        <h2 className="mb-2 px-4 pt-3 text-chrome uppercase tracking-label text-ink-strong">
           {title}
         </h2>
         <InBand.Provider value={true}>{children}</InBand.Provider>
@@ -37,7 +37,7 @@ export function Section({
 
   return (
     <section className="border-b border-hairline px-4 py-3">
-      <Heading className="mb-2 text-chrome uppercase tracking-wide text-ink-mute">{title}</Heading>
+      <Heading className="mb-2 text-chrome uppercase tracking-label text-ink-mute">{title}</Heading>
       {children}
     </section>
   );

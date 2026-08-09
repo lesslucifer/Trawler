@@ -43,14 +43,14 @@ export function CopyText({
             copy();
           }
         }}
-        className={`cursor-text break-all font-mono text-body underline decoration-dotted underline-offset-[3px] hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 ${
+        className={`cursor-text break-all font-mono text-body underline decoration-dotted underline-offset-link hover:text-ink focus-visible:outline focus-visible:outline-focus focus-visible:outline-ink-mute focus-visible:outline-offset-focus ${
           confirming ? "decoration-ok text-ok" : "text-ink-body decoration-hairline hover:decoration-ink-mute"
         }`}
       >
         {value}
       </span>
       {confirming && (
-        <span className="ml-control-gap rounded-button border border-ok px-1 font-ui text-label text-ok">
+        <span className="ml-control-gap rounded-button border border-ok px-chrome-x font-ui text-label text-ok">
           copied
         </span>
       )}

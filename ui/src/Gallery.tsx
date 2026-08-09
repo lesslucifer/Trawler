@@ -34,8 +34,8 @@ import { proxyStatus, trustStatus, verifyStatus } from "./setup";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-4 border-b border-hairline/40 py-2 last:border-0">
-      <span className="w-52 shrink-0 pt-0.5 font-mono text-label uppercase tracking-wide text-ink-mute">
+    <div className="flex items-start gap-4 border-b border-hairline/hairline py-2 last:border-0">
+      <span className="w-pane-narrow shrink-0 pt-chrome-tight font-mono text-label uppercase tracking-label text-ink-mute">
         {label}
       </span>
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{children}</div>
@@ -57,7 +57,7 @@ function Pane({ children, tail = false }: { children: React.ReactNode; tail?: bo
   return (
     <div
       ref={box}
-      className="min-w-0 max-h-64 flex-1 overflow-auto rounded-card border border-hairline bg-canvas-soft/30 p-2"
+      className="min-w-0 max-h-body-max flex-1 overflow-auto rounded-card border border-hairline bg-canvas-soft/wash p-2"
     >
       {children}
     </div>
@@ -123,14 +123,14 @@ export function Gallery() {
 
   return (
     <div className="h-full overflow-y-auto bg-canvas font-ui text-ink">
-      <header className="sticky top-0 z-10 border-b border-hairline bg-canvas px-4 py-3">
-        <h1 className="font-serif text-lg italic">Component gallery</h1>
-        <p className="mt-1 text-chrome text-ink-mute">
+      <header className="sticky top-0 z-sticky border-b border-hairline bg-canvas px-4 py-3">
+        <h1 className="font-serif text-title italic">Component gallery</h1>
+        <p className="mt-chrome-y text-chrome text-ink-mute">
           E-DFLOW.W5 steps 4 + 5 — every T1 and T2 component, every state its
           design file names. Throwaway screen.
         </p>
         {fired && (
-          <p className="mt-1 font-mono text-chrome text-ok">handler fired → {fired}</p>
+          <p className="mt-chrome-y font-mono text-chrome text-ok">handler fired → {fired}</p>
         )}
       </header>
 
@@ -232,7 +232,7 @@ export function Gallery() {
           <span className="text-value">
             <TonedText tone="ok">12.5px</TonedText>
           </span>
-          <span className="text-lg">
+          <span className="text-title">
             <TonedText tone="ok">large</TonedText>
           </span>
         </Row>
@@ -271,14 +271,19 @@ export function Gallery() {
           </span>
         </Row>
         <Row label="wraps, never truncates">
-          <div className="w-64 border border-hairline/50 p-2">
+          <div className="w-pane-label border border-hairline/scrim p-2">
             <CopyText value={URI} label="request URI" />
           </div>
         </Row>
       </Section>
 
       <Section title="KeyValueRow — one wire pair">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y">
+        <dl
+          className={
+            // design-allow: grid-cols-[auto_1fr] — a two-column template shape, no size in it
+            "grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y"
+          }
+        >
           <KeyValueRow name="content-type" value="application/json; charset=utf-8" />
           <KeyValueRow name="cache-control" value="no-store, max-age=0" />
           <KeyValueRow name="set-cookie" value={"session=" + "a1b2c3d4".repeat(12)} />
@@ -303,7 +308,7 @@ export function Gallery() {
           <DurationText value={36} unit="h" />
         </Row>
         <Row label="pending holds the column">
-          <span className="border border-hairline/50">
+          <span className="border border-hairline/scrim">
             <DurationText value={null} />
           </span>
           <span className="text-chrome text-ink-mute">invisible "000 ms" — never a ticker</span>
@@ -525,7 +530,7 @@ export function Gallery() {
           ))}
         </Row>
         <Row label="the alignment contract — all nine, left edges align">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-chrome-y">
             {["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE"].map(
               (m) => (
                 <span key={m} className="flex gap-3">
@@ -551,7 +556,7 @@ export function Gallery() {
 
       <Section title="StatusLine — a resolved verdict (T2)">
         <Row label="the four settled glyphs">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-chrome-y">
             <StatusLine status={{ glyph: "✓", tone: "ok", message: "Trusted on this machine" }} />
             <StatusLine status={{ glyph: "⚠", tone: "warn", message: "Install failed — declined" }} />
             <StatusLine status={{ glyph: "◐", tone: "muted", message: "Can't check automatically" }} />
@@ -559,7 +564,7 @@ export function Gallery() {
           </div>
         </Row>
         <Row label="in-flight — a spinner, and it outranks everything">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-chrome-y">
             <StatusLine status={{ glyph: "⟳", tone: "muted", message: "Installing…" }} />
             <StatusLine
               name="over a stale error"
@@ -572,7 +577,7 @@ export function Gallery() {
           </div>
         </Row>
         <Row label="the two muted glyphs are different verdicts">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-chrome-y">
             <StatusLine
               name="◐ can't determine"
               status={trustStatus("unknown", NOTHING_SEEN, null)}
@@ -581,7 +586,7 @@ export function Gallery() {
           </div>
         </Row>
         <Row label="verifyStatus — the third resolver">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-chrome-y">
             <StatusLine name="Capture" status={verifyStatus({ decrypted: true, trafficSeen: true })} />
             <StatusLine name="Capture" status={verifyStatus(NOTHING_SEEN)} />
           </div>
@@ -590,7 +595,7 @@ export function Gallery() {
           <StatusLine name="System proxy" status={proxyStatus("foreign", NOTHING_SEEN, null)} />
         </Row>
         <Row label="with the name slot">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-chrome-y">
             <StatusLine name="Certificate" status={{ glyph: "✓", tone: "ok", message: "Trusted" }} />
             <StatusLine name="System proxy" status={{ glyph: "○", tone: "muted", message: "Not set" }} />
           </div>
@@ -602,7 +607,7 @@ export function Gallery() {
           />
         </Row>
         <Row label="precedence — ✓ beats a stale error">
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-chrome-y">
             <StatusLine
               name="probe says trusted"
               status={trustStatus("trusted", NOTHING_SEEN, null, "install exploded")}

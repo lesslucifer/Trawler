@@ -25,13 +25,13 @@ export function StatusLine({
 
   return (
     <div
-      className={`flex min-h-[18px] items-baseline gap-chrome-gap text-body leading-normal ${className}`}
+      className={`flex min-h-line items-baseline gap-chrome-gap text-body leading-normal ${className}`}
     >
       {inFlight ? (
         <span
           aria-hidden="true"
           data-testid="status-line-spinner"
-          className="inline-block h-spinner w-spinner animate-spin rounded-full border-[1.5px] border-hairline border-t-ink-mute"
+          className="inline-block h-spinner w-spinner animate-spin rounded-full border-emphasis border-hairline border-t-ink-mute"
         />
       ) : (
         <span aria-hidden="true">

@@ -22,7 +22,10 @@ export function FormRenderer({ text }: { text: string }) {
     <>
       <dl
         data-testid="body-form"
-        className="grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y"
+        className={
+          // design-allow: grid-cols-[auto_1fr] — a two-column template shape, no size in it
+          "grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y"
+        }
       >
         {formEntries(shown).map(([key, value], i) => (
           <KeyValueRow key={i} name={key} value={value} />

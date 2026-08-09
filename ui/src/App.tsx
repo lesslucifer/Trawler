@@ -110,7 +110,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
         header={
           <>
             {dot}
-            <h1 className="font-serif text-lg italic">Trawler</h1>
+            <h1 className="font-serif text-title italic">Trawler</h1>
           </>
         }
       >
@@ -136,25 +136,25 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       header={
         <>
           {dot}
-          <h1 className="mr-2 font-serif text-lg italic">Trawler</h1>
+          <h1 className="mr-2 font-serif text-title italic">Trawler</h1>
           <Field
             aria-label="filter"
             placeholder="filter — free text"
-            className="min-w-32 flex-1"
+            className="min-w-field flex-1"
             value={filter.q ?? ""}
             onChange={(e) => update("q", e.target.value)}
           />
           <Field
             aria-label="host"
             placeholder="host"
-            className="w-40"
+            className="w-field-lg"
             value={filter.host ?? ""}
             onChange={(e) => update("host", e.target.value)}
           />
           <Field
             aria-label="method"
             placeholder="method"
-            className="w-24"
+            className="w-field-sm"
             value={filter.method ?? ""}
             onChange={(e) => update("method", e.target.value)}
           />
@@ -162,7 +162,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             aria-label="status"
             placeholder="status"
             inputMode="numeric"
-            className="w-20"
+            className="w-field-sm"
             value={filter.status ?? ""}
             onChange={(e) => update("status", e.target.value)}
           />

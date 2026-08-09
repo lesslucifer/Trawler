@@ -21,7 +21,15 @@ export default {
       "ink-strong": "#dad2c1",
       "ink-body": "#c9c0ad",
       "ink-mute": "#aea69c",
+      // The chromatic set, named for what a colour means and never for who
+      // uses it. Each carries one fixed meaning and one owning component
+      // (DEC-11 chromatic-meanings); `ok` and `warn` also read as the effect a
+      // request has on a resource, which is why GET and DELETE need no token
+      // of their own.
       ok: "#4cc38a",
+      create: "#e5bf4d",
+      replace: "#e5924d",
+      amend: "#a78bfa",
       warn: "#e5484d",
       scrim: "rgba(0,0,0,.5)",
     },
@@ -70,6 +78,17 @@ export default {
       "listing-max": "184px",
       "body-max": "256px",
       "dialog-max": "384px",
+      // Two slots sized by their content rather than by the layout scale: a
+      // verb never pushes the column beside it, a one-line chrome row never
+      // collapses below its glyph.
+      verb: "4.5ch",
+      line: "18px",
+    },
+    // Closed at one member because the UI renders one weight. Left open,
+    // Tailwind's nine magnitudes all resolve and no check can say so — an open
+    // scale is invisible to the lint rule by construction (E-DFLOW.W6 step 2).
+    fontWeight: {
+      normal: "400",
     },
     fontSize: {
       // Chrome type. The panel is dense by product requirement — a request,

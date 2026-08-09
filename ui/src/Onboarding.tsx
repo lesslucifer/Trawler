@@ -97,12 +97,12 @@ function ActionButton({
         data-testid={testId}
         disabled={state === "running"}
         onClick={onClick}
-        className="rounded-button border border-hairline px-2 py-1 text-ink disabled:opacity-60"
+        className="rounded-button border border-hairline px-2 py-chrome-y text-ink disabled:opacity-disabled"
       >
         {label}
       </button>
       {note[state] && (
-        <div data-testid={`${testId}-status`} data-state={state} className="mt-1">
+        <div data-testid={`${testId}-status`} data-state={state} className="mt-chrome-y">
           <p>{note[state]}</p>
           {state === "failed" && error && (
             <p data-testid={`${testId}-error`} className="text-warn">
@@ -133,7 +133,7 @@ function ManualPanel({
   return (
     <details data-testid="manual" className="mt-2" open={open}>
       <summary className="cursor-pointer text-ink-mute">Set it up manually</summary>
-      <div className="mt-1">{children}</div>
+      <div className="mt-chrome-y">{children}</div>
     </details>
   );
 }
@@ -171,7 +171,7 @@ function TrustCa({
             data-testid="trust-target"
             value={target}
             onChange={(e) => setTarget(e.target.value as TrustTarget)}
-            className="rounded-button border border-hairline bg-transparent px-1 py-0.5 text-ink"
+            className="rounded-button border border-hairline bg-transparent px-chrome-x py-chrome-tight text-ink"
           >
             {TARGETS.map((t) => (
               <option key={t.id} value={t.id}>
@@ -180,14 +180,14 @@ function TrustCa({
             ))}
           </select>
         </label>
-        <ol data-testid="guided-steps" className="mt-1 list-decimal pl-5">
+        <ol data-testid="guided-steps" className="mt-chrome-y list-decimal pl-6">
           {guidedSteps(target).map((step) => (
             <li key={step}>{step}</li>
           ))}
         </ol>
         <details className="mt-2">
           <summary className="cursor-pointer text-ink-mute">Remove the certificate later</summary>
-          <ol data-testid="removal-steps" className="mt-1 list-decimal pl-5">
+          <ol data-testid="removal-steps" className="mt-chrome-y list-decimal pl-6">
             {removalSteps(target).map((step) => (
               <li key={step}>{step}</li>
             ))}
@@ -249,7 +249,7 @@ function SetProxy({
             data-testid="proxy-target"
             value={target}
             onChange={(e) => setTarget(e.target.value as ProxyTarget)}
-            className="rounded-button border border-hairline bg-transparent px-1 py-0.5 text-ink"
+            className="rounded-button border border-hairline bg-transparent px-chrome-x py-chrome-tight text-ink"
           >
             {PROXY_TARGETS.map((t) => (
               <option key={t.id} value={t.id}>
@@ -258,7 +258,7 @@ function SetProxy({
             ))}
           </select>
         </label>
-        <ol data-testid="proxy-steps" className="mt-1 list-decimal pl-5">
+        <ol data-testid="proxy-steps" className="mt-chrome-y list-decimal pl-6">
           {proxySteps(target, addr).map((step) => (
             <li key={step}>{step}</li>
           ))}
@@ -268,14 +268,14 @@ function SetProxy({
             type="button"
             data-testid="copy-snippet"
             onClick={() => navigator.clipboard.writeText(snippet)}
-            className="mt-1 rounded-button border border-hairline px-2 py-1 text-ink"
+            className="mt-chrome-y rounded-button border border-hairline px-2 py-chrome-y text-ink"
           >
             Copy command
           </button>
         )}
         <details className="mt-2">
           <summary className="cursor-pointer text-ink-mute">Turn the proxy off later</summary>
-          <ol data-testid="proxy-off-steps" className="mt-1 list-decimal pl-5">
+          <ol data-testid="proxy-off-steps" className="mt-chrome-y list-decimal pl-6">
             {proxyOffSteps(target).map((step) => (
               <li key={step}>{step}</li>
             ))}
@@ -293,14 +293,14 @@ function ProveIt({ addr }: { addr: string }) {
   const cmd = proveItSnippet(addr);
   return (
     <div className="mt-2">
-      <pre data-testid="prove-it" className="overflow-x-auto rounded-button border border-hairline px-2 py-1 text-ink">
+      <pre data-testid="prove-it" className="overflow-x-auto rounded-button border border-hairline px-2 py-chrome-y text-ink">
         {cmd}
       </pre>
       <button
         type="button"
         data-testid="copy-prove-it"
         onClick={() => navigator.clipboard.writeText(cmd)}
-        className="mt-1 rounded-button border border-hairline px-2 py-1 text-ink"
+        className="mt-chrome-y rounded-button border border-hairline px-2 py-chrome-y text-ink"
       >
         Copy command
       </button>
@@ -367,7 +367,7 @@ export function Onboarding({
             type="button"
             data-testid="onb-exit"
             onClick={() => dispatch({ t: "exit" })}
-            className="rounded-button px-2 py-1 text-sm text-ink-mute hover:text-ink"
+            className="rounded-button px-2 py-chrome-y text-note text-ink-mute hover:text-ink"
           >
             {COPY.back}
           </button>
@@ -375,9 +375,9 @@ export function Onboarding({
       </div>
 
       <div className="flex flex-1 items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <h2 className="text-center font-serif text-lg italic text-ink">{COPY.title}</h2>
-          <p className="mb-4 text-center text-sm text-ink-mute">{COPY.subtitle}</p>
+        <div className="w-full max-w-dialog-max">
+          <h2 className="text-center font-serif text-title italic text-ink">{COPY.title}</h2>
+          <p className="mb-4 text-center text-note text-ink-mute">{COPY.subtitle}</p>
 
           <ol>
             {STEPS.map((step, i) => {
@@ -409,7 +409,7 @@ export function Onboarding({
                   </button>
 
                   {active && (
-                    <div data-testid="step-body" className="mt-2 text-sm text-ink-mute">
+                    <div data-testid="step-body" className="mt-2 text-note text-ink-mute">
                       <p>{copy.body}</p>
                       {step === "trust-ca" ? (
                         <TrustCa
@@ -443,7 +443,7 @@ export function Onboarding({
               data-testid="onb-back"
               disabled={atFirst}
               onClick={() => dispatch({ t: "back" })}
-              className="rounded-button border border-hairline px-3 py-1 text-ink disabled:opacity-40"
+              className="rounded-button border border-hairline px-3 py-chrome-y text-ink disabled:opacity-disabled"
             >
               Back
             </button>
@@ -452,7 +452,7 @@ export function Onboarding({
               data-testid="onb-next"
               disabled={atLast}
               onClick={() => dispatch({ t: "next" })}
-              className="rounded-button border border-hairline px-3 py-1 text-ink disabled:opacity-40"
+              className="rounded-button border border-hairline px-3 py-chrome-y text-ink disabled:opacity-disabled"
             >
               Next
             </button>
