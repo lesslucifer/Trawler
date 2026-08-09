@@ -1,0 +1,15 @@
+level: commit
+gates:
+  - "cargo fmt --check: pass"
+  - "cargo clippy -D warnings (pedantic): pass"
+  - "cargo test --workspace: 271 pass, 0 fail"
+  - "npx tsc -b: clean"
+  - "pnpm lint (design/vocabulary over ui/src): 0 errors"
+  - "pnpm test: 467/467 across 39 files (448 app + 19 rule)"
+evidence:
+  - "ui/eslint-rules/vocabulary.test.js: 17 RuleTester cases — 9 valid, 8 invalid — one valid case per false-positive family the design predicted (structural, overloaded prefix, variant-prefixed, slash-opacity, zero value, relationship keyword, lookup-map-legal, valid pragma)"
+  - "ui/eslint-rules/vocabulary.test.js: 2 vitest cases for requirement 4 — getClassList() carries no duplicate today, and reintroducing borderWidth.hairline makes border-hairline appear twice"
+  - "reconcile.mjs: 208 authored distinct across 45 files vs 235 emitted; AGREE on 205, 3 arbitrary values diverge by design"
+  - "built CSS probe: text-ok rgb(76 195 138) · text-create rgb(229 191 77) · text-replace rgb(229 146 77) · text-amend rgb(167 139 250) · text-warn rgb(229 72 77) — byte-identical to the five hues W5 shipped"
+  - "built CSS probe: font-bold not emitted (fontWeight closed to one member)"
+  - "MethodLabel.test.tsx: the 5 verb rows change token name only; +1 test asserting no method-named token survives; fallback test asserts HEAD/OPTIONS/CONNECT/TRACE/PROPFIND take ink-body and no chromatic tone"
