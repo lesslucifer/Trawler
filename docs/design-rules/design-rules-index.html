@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Design rules — the KB, one file</h1>
       <p>The enumerable, slug-id'd design rules every Trawler screen design must consider. Hard rules are one-liners — their Tier-1 predicate carries them; soft rules carry the judgment guidance a Tier-3 reviewer needs.</p>
-      <div class="meta">Living T2 · the design-rules KB's single file (index = rulebook) · Trawler · rationale: <a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a> · tokens: DEC-11 · closed vocabulary: DEC-17</div>
+      <div class="meta">Living T2 · the design-rules KB's single file (index = rulebook) · Trawler · rationale: <a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a> · tokens: DEC-11 · closed vocabulary: <a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a></div>
     </div>
   </header>
   <main>
@@ -79,7 +79,7 @@ flowchart LR
       </tbody>
     </table>
     <div class="callout" data-c="closed-vocabulary">
-      <strong>The vocabulary is closed, and "closed" is a property of each scale — checked per scale, never asserted once.</strong> Every scale <em>replaces</em> Tailwind's rather than extending it, so an off-list value emits no CSS at all. Tailwind drops an unknown utility <em>silently</em>, so the config is the definition and <code>npm run lint</code> (<code>design/vocabulary</code>) is the alarm (DEC-17).
+      <strong>The vocabulary is closed, and "closed" is a property of each scale — checked per scale, never asserted once.</strong> Every scale <em>replaces</em> Tailwind's rather than extending it, so an off-list value emits no CSS at all. Tailwind drops an unknown utility <em>silently</em>, so the config is the definition and <code>npm run lint</code> (<code>design/vocabulary</code>) is the alarm (<a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a>).
       <table>
         <thead><tr><th>How a closed vocabulary leaks</th><th>What holds it shut</th></tr></thead>
         <tbody>

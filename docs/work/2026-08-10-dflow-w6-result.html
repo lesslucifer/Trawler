@@ -232,24 +232,25 @@
           <tr><td><code>e242af2</code> · <code>5338775</code></td><td>② the lint rule and the re-expression; then the fix for what review found</td></tr>
           <tr><td><code>e82d872</code> · <code>87fbd4d</code> · <code>41f272e</code></td><td>③ the rulebook, its two rulings, and the tiering pass that moved this epic's case history out of the T2</td></tr>
           <tr><td><code>5244e2e</code> · <code>b0a15d2</code> · <code>bb5481c</code></td><td>④ the twelve predicates, the emitter, the rulebook's contract additions, and this report</td></tr>
-          <tr><td><em>uncommitted</em></td><td>⑤ the regression re-run: run #3 archived, the guard test naming all three closed runs, and the corrections this step's evidence forced on ④ and on this report</td></tr>
+          <tr><td><code>40ff32c</code></td><td>⑤ the regression re-run: run #3 archived, the guard test naming all three closed runs, and the corrections this step's evidence forced on ④ and on this report</td></tr>
         </tbody>
       </table>
 
       <div class="callout warn" data-c="owed">
         <strong>What this tip still owes before the merge gate — read off <code>verify-dod wu</code>, not
         from memory.</strong> Seven commits carry a <code>test/v2</code> and five a <code>doc/v1</code>; what
-        is missing is on the <em>tip</em>, which is the only place the gate looks. Its four reds:
+        is missing is on the <em>tip</em>, which is the only place the gate looks. Its four reds at ⑤'s close:
         <strong>no <code>test/v2</code></strong> on the tip · <strong>no <code>cr/v2</code></strong> (②'s PASS
-        is bound to <code>18c99213…</code>, so ③+④+⑤ are unreviewed) · the tip's <code>doc</code> note is
+        is bound to <code>18c99213…</code>, so ③+④+⑤ are unreviewed) · the tip's <code>doc</code> note was
         <strong>not valid <code>doc/v1</code></strong> — a test-shaped body with no <code>schema</code> field
         at all, so the note contract was broken by the very commit that reports on it · and
-        <strong>no <code>mr/v1</code></strong>, which only a human can write. Remaining, in order: commit ⑤ ·
-        <strong>DEC-17</strong> (the closed vocabulary) in <code>docs/decisions/</code> with its index entry,
-        and DEC-15's Tier-1 completion · <code>test/v2</code> + a valid <code>doc/v1</code> on the tip · the
-        code-review skill over ③+④+⑤ → <code>cr/v2</code> PASS bound to that exact diff · the human's
-        <code>mr confirm</code> · <code>--no-ff</code> merge into <code>epic/design-flow</code>. The gate
-        writes <code>dod/v1</code>; nothing here bypasses it.
+        <strong>no <code>mr/v1</code></strong>, which only a human can write. Remaining, in order:
+        <s>commit ⑤</s> <code>40ff32c</code> · <s><strong>DEC-17</strong> with its index entry and DEC-15's
+        Tier-1 completion</s> <a href="../decisions/dec-17-closed-vocabulary.html">landed</a> ·
+        <code>test/v2</code> + a valid <code>doc/v1</code> on the tip · the code-review skill over ③+④+⑤ →
+        <code>cr/v2</code> PASS bound to that exact diff · the human's <code>mr confirm</code> ·
+        <code>--no-ff</code> merge into <code>epic/design-flow</code>. The gate writes <code>dod/v1</code>;
+        nothing here bypasses it.
       </div>
     </div>
 
@@ -265,17 +266,27 @@
               counts out into the work docs, so the rulebook reads as a permanent contract rather than an
               incident report</td></tr>
         <tr><td><strong>T2 · decisions</strong></td>
-            <td><span class="badge approval">owed at ⑥</span> <strong>DEC-17 — the closed vocabulary.</strong>
-              Why the token list is exhaustive · why legality is membership of a <em>declared</em> scale rather
-              than of what Tailwind can emit · why the config is the source of truth and the KB mirrors it ·
-              the two enforcement surfaces and why the code-side check is a local ESLint rule · the
-              <code>design-allow</code> pragma with its five rules and its printed count · the
-              <code>data-wire</code> declaration and its n/a path · and the three traps with the defect each
-              one now prevents. DEC-15 gains the Tier-1 completion</td></tr>
+            <td><span class="badge auto">done</span>
+              <strong><a href="../decisions/dec-17-closed-vocabulary.html">DEC-17 — the closed
+              vocabulary</a></strong>, registered in <code>decisions-index</code>. Why the token list is
+              exhaustive · why legality is membership of a <em>declared</em> scale rather than of what
+              Tailwind can emit · why the config is the source of truth and the KB mirrors it · the two
+              enforcement surfaces and why the code-side check is a local ESLint rule, with the five
+              requirements on it and the defect each one is earned by · the <code>design-allow</code> pragma
+              with its five rules and its printed count · the styling-API escape and its colour guard · the
+              <code>data-wire</code> declaration and its n/a path · the three traps with the defect each one
+              now prevents · and the measured <strong>161/47</strong> split, recorded as an output of the rule
+              rather than the two estimates that preceded it.
+              <a href="../decisions/dec-15-design-run-enforcement.html#consequences">DEC-15 gains the Tier-1
+              completion</a>: its W7 consequence is struck, because Tier-1 reads the config and so the closed
+              vocabulary <em>is</em> its input</td></tr>
         <tr><td><strong>T1</strong></td>
-            <td><span class="badge">none</span> As planned. The design-flow doc is still the T1 candidate and
-              still moving — W7 adds the two judged tiers. Promoting it now means editing a T1 process doc
-              twice more inside the epic</td></tr>
+            <td><span class="badge auto">one row</span> <code>architecture.html</code>'s <em>Lint</em> row named
+              <code>cargo clippy</code> and nothing else; the tree now has a second linter that is a gate, so
+              the row names <code>npm run lint</code> and the <code>design/vocabulary</code> rule. Otherwise
+              <strong>none, as planned</strong> — the design-flow doc is still the T1 candidate and still
+              moving, W7 adds the two judged tiers, and promoting it now means editing a T1 process doc twice
+              more inside the epic</td></tr>
         <tr><td><strong>T4 · code</strong></td>
             <td><span class="badge auto">done</span> <code>ui/tailwind.config.js</code> is the single source of
               truth for the vocabulary · <code>xtask/src/doc.rs</code> is the truth for what a design must

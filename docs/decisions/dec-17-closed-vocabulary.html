@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7995919f34851f0dfab458">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-17: the closed vocabulary</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-17 — the design vocabulary is closed, and legality is membership of a <em>declared</em> scale</h1>
+      <p>Why the token list is exhaustive rather than preferred, why the Tailwind config is its single home, and the two surfaces that enforce it.</p>
+      <div class="meta">DEC-17 · 2026-08-10 · Trawler · E-DFLOW.W6 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p><a href="dec-14-design-rules-kb.html">DEC-14</a> gave the design rules a home and <a href="dec-15-design-run-enforcement.html">DEC-15</a> made a design run a governed artifact. Neither said what a <em>token</em> is. The rulebook listed members — colours, sizes, spacings — and three rules said designs must pick from those lists. Two W4 design runs and one sweep showed what that was worth:</p>
+    <table data-c="context-evidence">
+      <thead><tr><th>Measured</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td><strong>63</strong> of the config's size- or style-bearing scales were <em>open</em> — declared under <code>theme.extend</code>, so Tailwind's own ladder stayed live beneath every project token</td>
+            <td><code>font-bold</code>, <code>duration-500</code>, <code>animate-bounce</code> were all legal. Not by anyone's decision — by inheritance</td></tr>
+        <tr><td><strong>142</strong> off-vocabulary classes across <strong>58</strong> distinct names shipped in <code>ui/src/</code></td>
+            <td>The rulebook had said colour, type and spacing came from tokens since W3. The built code disagreed, and nothing noticed</td></tr>
+        <tr><td><strong>33</strong> reds over <strong>29</strong> distinct sites in the two closed design runs</td>
+            <td>The designs that <em>wrote</em> the rules broke them, including a <code>.a-</code> CSS block that opens by promising "zero component values re-typed" and then writes seven magnitudes</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="the-silence">
+      <strong>The failure mode is silence, not error.</strong> Tailwind drops an unknown utility without a word — no build error, no warning, no missing-class report. A class that governs nothing looks exactly like a class that governs something. So a vocabulary is only as closed as the thing that <em>checks</em> it, and a list in a document checks nothing.
+    </div>
+
+    <h2 id="choice">Choice</h2>
+    <table data-c="choice-table">
+      <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The token list is exhaustive, not preferred.</strong> Every scale <em>replaces</em> Tailwind's rather than extending it — <code>theme</code>, never <code>theme.extend</code></td>
+            <td>A preferred list is advisory and drifts by omission: the off-list value keeps working, so the only thing standing between the code and the vocabulary is whether somebody remembered. Replacing the scale means an off-list value emits no CSS at all — the vocabulary becomes a property of the build rather than of attention</td></tr>
+        <tr><td><strong>Legality is membership of a scale the config <em>declares</em></strong> — never of what Tailwind can emit</td>
+            <td>The narrower test is the one that fails safe. An undeclared scale inherits its whole default ladder, and every member of it emits, so <em>nothing drawn from it can ever red</em> — the leak is invisible by construction and no amount of linting finds it. One line of definition closed 63 scales at once; the alternative was 63 config entries, added one defect at a time</td></tr>
+        <tr><td><strong><a href="../../ui/tailwind.config.js">ui/tailwind.config.js</a> is the source of truth; the rulebook points at it and never lists a member</strong></td>
+            <td>Two copies of a list is one list plus a drift schedule. The <a href="../design-rules/design-rules-index.html#vocabularies">Vocabularies</a> section therefore names the sets and the rule that forces a pick from each, with the config key beside it. What is fixed in the rulebook is the part the config cannot hold: what each chromatic token <em>means</em></td></tr>
+        <tr><td><strong>Two enforcement surfaces, one list.</strong> The Tier-1 predicates judge the design run's artifacts; the <code>design/vocabulary</code> ESLint rule judges <code>ui/src/</code>. The rulebook's <a href="../design-rules/design-rules-index.html#binds"><code>binds</code></a> axis says which surface owns a rule</td>
+            <td>A design can pick an illegal value and so can a built component, and they fail at different times: a design fails once, at review; a component fails on every edit forever. A single surface would either leave built code ungoverned or leave designs unjudged until they became code</td></tr>
+        <tr><td><strong>One oracle, derived — never transcribed.</strong> Both checkers resolve legality through Tailwind's own <code>getClassList()</code> over the real config</td>
+            <td>Which classes a rule owns is <em>computed</em> (empty the scale, diff the emitted list), and the chromatic set is <em>measured</em> (a colour is chromatic when its channels disagree by more than 40). Rust cannot import an ES module, so <code><a href="../../scripts/design-vocabulary.mjs">scripts/design-vocabulary.mjs</a></code> emits the vocabulary as JSON from that same oracle and the predicates read it. A hand-copied class list is the exact drift this record exists to end</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="chromatic-note">
+      <strong>The chromatic set is measured, and its size was never the point.</strong> W6 was directed to reduce <code>zero-accent</code> to "chromatic colour is <code>ok</code> and <code>warn</code>"; it has <strong>eight</strong> members. The five verb tones proved to be a palette gap rather than a deletion, and DEC-11's three syntax tones proved to be <em>already painted</em> as hex literals while the config called them unreferenced. What the ruling actually asked for is the <em>shape</em> — one membership test, no exception list — and that is what shipped. Membership is fixed in the config, <em>meaning</em> is fixed in <a href="../design-rules/design-rules-index.html#chromatic-meanings">the rulebook</a> (the one thing a config cannot hold), and "chromatic" itself is computed rather than enumerated.
+    </div>
+
+    <h2 id="why-eslint">Why the code-side check is a local ESLint rule</h2>
+    <table data-c="eslint-table">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>A published Tailwind lint plugin</td><td>None judges membership of <em>this</em> config's declared scales — they check ordering, shorthand and typos against Tailwind's defaults, which is the test being rejected here</td></tr>
+        <tr><td>A grep or a CI script</td><td>It would run after the fact, at a moment nobody is reading. The rule fires in the editor, on the line, while the class is being typed — and <code>--fix</code>-less by design, because the fix is a decision</td></tr>
+        <tr><td>A type-level trick over <code>className</code></td><td><code>tsc</code> is already green over all 142 violations. Class names are strings and the vocabulary lives in a JS config; there is no type to be wrong about</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">So: <code><a href="../../ui/eslint-rules/vocabulary.js">ui/eslint-rules/vocabulary.js</a></code> plus <code><a href="../../ui/eslint-rules/classes.js">classes.js</a></code> as the shared oracle, wired into the flat config. <strong>This WU introduces the lint toolchain</strong> — ESLint 9 was not previously in the tree — and the rule's own <code>RuleTester</code> suite pins every judgement it makes.</p>
+
+    <h3 id="requirements">Five requirements on the checker, each earned by a defect</h3>
+    <table data-c="requirements-table">
+      <thead><tr><th>#</th><th>Requirement</th><th>What goes wrong without it</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Classify on the resolved <strong>(prefix, value)</strong> pair, never the prefix alone</td>
+            <td><code>text-center</code>, <code>border-none</code>, <code>outline-none</code>, <code>font-mono</code> all red as false positives — the exact failure that scoping the rule to scale-bearing classes exists to prevent</td></tr>
+        <tr><td>2</td><td>Resolve classes held in <strong>module-level constants and lookup maps</strong>, not only literals at <code>className=</code></td>
+            <td>A <code>className=</code>-only scanner missed <strong>41</strong> classes this way, including all five <code>text-method-*</code> — the primary deletion this WU exists to make. A rule with that blind spot reports the headline change as already done</td></tr>
+        <tr><td>3</td><td><strong>Arbitrary <code>[…]</code> values must red</strong></td>
+            <td><a href="#traps">Trap 3.</a> They emit whether or not a scale is closed, so the rule is the only instrument that can reach them</td></tr>
+        <tr><td>4</td><td>Assert <strong>no token name collides across two scales sharing a class prefix</strong></td>
+            <td><a href="#traps">Trap 2.</a> Invisible to <code>tsc</code> and to 447 passing tests</td></tr>
+        <tr><td>5</td><td><strong>Reconcile its class enumeration against the built CSS</strong> at least once</td>
+            <td>Any bespoke scanner's completeness is an assumption until diffed against <code>npx tailwindcss</code> output — and the first one's was wrong by 41. The reconciliation is what makes the rule's verdict evidence rather than a second opinion: it now agrees with the built stylesheet on all <strong>205</strong> non-arbitrary classes the tree authors</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="traps">Three ways a closed vocabulary leaks</h2>
+    <p>Each one is a real defect this closure caught, not a hypothetical. <strong>"Closed" is a property of each scale, checked per scale — never asserted once.</strong></p>
+    <table data-c="traps-table">
+      <thead><tr><th>Leak</th><th>What holds it shut</th><th>The defect it caught</th></tr></thead>
+      <tbody>
+        <tr><td><strong>An undeclared scale</strong> inherits Tailwind's whole ladder</td>
+            <td>Legality is declared-scale membership. The config names every scale the code draws from, at exactly the members it uses</td>
+            <td>63 open scales — <code>font-bold</code> legal because <code>fontWeight</code> was never declared, while the rulebook said "one weight"</td></tr>
+        <tr><td><strong>One token name in two scales</strong> that share a class prefix — the class then sets both properties at once, and changing one changes the other silently</td>
+            <td>A unit test asserts no duplicate in the generated class list</td>
+            <td><code>hairline</code> was already a colour token; adding a <code>borderWidth</code> key of the same name made <code>border-hairline</code> emit both properties under one selector, silently re-widthing <strong>22</strong> borders 1px → 1.5px. Found by diffing emitted stylesheets; the build was green and the tests assert on class names</td></tr>
+        <tr><td><strong>Arbitrary <code>[…]</code> values</strong>, which emit whether or not a scale is closed — closing the config cannot reach them at all</td>
+            <td>The lint rule reds every one, and the design-side predicate reds every one in a mockup, unless a <a href="#pragma">pragma</a> excuses a template shape carrying no size</td>
+            <td>10 arbitrary values across the two closed runs, plus <code>text-[11px]</code> in shipped code — a size, chosen past the scale that exists to hold sizes</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="css-half">
+      <strong>A fourth hole, and it is the one both checkers are blind to by construction.</strong> The lint rule reads class names and the Tier-1 predicates read the design doc, so <em>a value that is never a class is invisible to both</em>. Every off-token magnitude that has actually shipped in a design run shipped through the mockup's own <code>.a-</code> CSS. Four of the twelve predicates therefore read that CSS as a governed surface, and the <a href="#escapes">styling-API escape</a> carries a mechanical colour guard for the same reason.
+    </div>
+    <div class="callout" data-c="structural-scope">
+      <strong>Structural classes are out of scope by nature, and the discriminator is mechanical.</strong> A class is <em>structural</em> iff Tailwind registers it whole — a static utility like <code>flex</code>, <code>absolute</code>, <code>truncate</code>, <code>text-center</code> — rather than generating it from a theme key. It carries no value a scale could govern, so closing a scale can never reach it and the rule has nothing to judge. No allowlist is needed and none exists, which is what keeps the scope from being re-litigated or quietly widened.
+      <br><br>
+      Measured over the 208 distinct classes the tree authored on 2026-08-10: <strong>161 scale-bearing / 47 structural</strong>. This figure is an <em>output</em> of the rule reconciled against the built CSS, not an input to it — two earlier estimates (103/77, then 144/56) were both wrong, the second by a scanner that read <code>className=</code> literals only. The durable part is the discriminator; the counts are true of that day's tree and of no other.
+    </div>
+
+    <h2 id="escapes">The two sanctioned escapes</h2>
+    <p>A closed vocabulary needs a way out, or the way out becomes <em>"stop running the check"</em>. There are exactly two, both narrow, and neither can excuse the thing the vocabulary exists to govern.</p>
+
+    <h3 id="pragma">① the <code>design-allow</code> pragma — a template shape</h3>
+    <table data-c="pragma-table">
+      <thead><tr><th>Rule of the escape</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Form is <code>// design-allow: &lt;class&gt; — &lt;reason&gt;</code>, applying to the <strong>next line only</strong>, written inside the <code>className</code> expression</td><td>Same granularity as <code>eslint-disable-next-line</code>. JSX has no comment position inside an opening tag, so the expression container is the one place that works everywhere and keeps the pragma beside the class it excuses</td></tr>
+        <tr><td>The named class <strong>must appear on the line below</strong></td><td>An edited line stops matching and reds again — a stale pragma cannot go on protecting code it no longer describes</td></tr>
+        <tr><td>The reason must be non-empty</td><td>Mirrors the merge gate's <code>waived:</code> rule — a suppression with no argument is not a decision</td></tr>
+        <tr><td><strong>A pragma over a size value is rejected, never honoured</strong></td><td>It exists for template <em>shapes</em> — <code>grid-cols-[auto_1fr]</code>, a two-column layout with no size in it. The moment it could excuse <code>text-[11px]</code>, the vocabulary is advisory</td></tr>
+        <tr><td><strong>The live count is printed on every run</strong></td><td>Suppressions are visible debt, not a silent hole. A number that goes up is a conversation; a number nobody prints is a slope</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">Six sites use it today: five <code>grid-cols-[…]</code> templates and one <code>top-[calc(100%+theme(spacing.chrome-y))]</code> offset — and in the two that <em>do</em> carry a magnitude, the magnitude is <code>theme(spacing.…)</code>, a token read out of the config rather than a number. The same five rules govern the pragma on both surfaces; the design-side predicates did not invent a second dialect.</p>
+
+    <h3 id="styling-api">② raw CSS configuring a third-party styling API</h3>
+    <p>An editor's theme object or an injected stylesheet has no <code>className</code> to give it. Such a block is <strong>accepted</strong>, not excused, on three conditions — it covers the styling API and never a plain element; <strong>every colour in it is still a palette value, asserted mechanically over all of <code>ui/src/</code></strong>; and sizes inside it are the author's to justify and are <em>not</em> mechanically checked, which is stated rather than implied. A literal that <em>is</em> a token renders the vocabulary; a literal that is not is a second copy of it. The colour guard is what makes this escape safe rather than a hole; full conditions in <a href="../design-rules/design-rules-index.html#css-config">the rulebook</a>.</p>
+
+    <h2 id="wire">The one thing a mockup must declare: <code>data-wire</code></h2>
+    <div class="callout" data-c="wire-callout">
+      <p>Three hard rules — <code>mono-for-wire-data</code>, <code>wrap-not-truncate</code>, <code>wire-order-preserved</code> — turn on <strong>which elements render a verbatim payload</strong>. That is a fact about <em>content</em>, and no static reader can recover it from markup: a wire value and a label look identical. So the mockup says so: <code>data-wire="&lt;what it is&gt;"</code> on every payload element, <code>data-wire="collection"</code> on a catalog row rendering a captured collection, and <code>data-wire="none"</code> once when the screen renders no payload at all.</p>
+      <p><strong>The n/a path is an answer; leaving the question unanswered is not one.</strong> An unmarked mockup reds — following the house precedent (<code>capabilities·answered</code>, <code>elements·map</code>, <code>frame·example</code>) rather than inventing a third answer called silence, because silence reads as <em>correctly typed</em> when in fact nobody looked. Open for reversal to a silent n/a; it is a two-line change and the ruling is recorded rather than buried.</p>
+    </div>
+
+    <h2 id="options">Options rejected</h2>
+    <table data-c="options">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Keep <code>theme.extend</code></strong> and lint the difference</td><td>The lint rule would need its own list of what is legal — a transcription of the config, which is the drift being removed. Worse, an undeclared scale is invisible to it: there is nothing to diff against</td></tr>
+        <tr><td><strong>Declare the 63 open scales explicitly</strong>, one entry each</td><td>63 entries maintained by hand, and scale number 64 arrives open. The rule change makes the other 54 need no entry at all — anything drawn from them reds on sight</td></tr>
+        <tr><td><strong>Enumerate the token members in the rulebook</strong> so a reader needs one doc</td><td>The copy drifts, and it drifts <em>silently</em> — the config keeps emitting and the rulebook keeps reading true. The section points at the config and states what the config cannot: what each chromatic token means</td></tr>
+        <tr><td><strong>One surface only</strong> — govern designs, let code follow</td><td>142 violations across 58 classes are what "code follows" produced over three WUs. A rule that binds a component must be checked on every component change, not only when someone designs a screen</td></tr>
+        <tr><td><strong>A precedence rule</strong> for a class two rules both own (<code>text-pink-500</code> answers to <code>colour-tokens-only</code> and <code>type-tokens-only</code> at once)</td><td>It silently exempts whichever rule loses. Double-reporting is noise; a silent exemption is a hole. Measured rather than argued: all six <code>colour-tokens-only</code> reds in the regression are sizes, not colours — 12% of 49, revisited at W9 if it costs a reader something</td></tr>
+        <tr><td><strong>Fix the design runs</strong> that red under the closed vocabulary</td><td>They are closed records under an older contract, and the tokens that would fix most of them were minted <em>from</em> those runs. <code>data-status="archived"</code> exempts them — the mechanism that keeps a tightened rule from reopening finished work (DEC-15)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li><strong>DEC-15's Tier-1 tier is complete, one WU early.</strong> That record left twelve predicates to W7; the gap line now reads <code>hard rules: 13/13 machine-checked (design)</code>. The ordering was a dependency, not a queue — Tier-1 reads the config, so the closed vocabulary <em>is</em> its input, and building the predicates against an open config would have pinned the wrong legality test. W7 keeps Tier-2 self-reflex, Tier-3 adversarial review and the flow e2e.</li>
+      <li><strong>13/13 is a test, not a sentence in a doc.</strong> <code>every_hard_rule_in_the_live_rulebook_carries_a_predicate</code> derives both sides from the rulebook on disk and fails on a hard rule with no check, an orphan predicate, or a hard list that is not thirteen. Retagging a rule re-opens the question automatically.</li>
+      <li><strong>Where the config and the rulebook disagree, the config wins</strong> — and where the rulebook and the checkers disagree, the checkers win. <code>ui/tailwind.config.js</code> is the vocabulary; <code>xtask/src/doc.rs</code> is what a design must satisfy; <code>ui/eslint-rules/vocabulary.js</code> is what built code must satisfy; <code>scripts/design-vocabulary.mjs</code> is the bridge, and it derives.</li>
+      <li><strong>Adding a token is a config edit under review</strong> — which is the only way a new one can arrive. A design that needs a value the config lacks proposes it (reuse-or-propose), the receipt records the proposal, and confirmation lands both the config entry and the rulebook's meaning for it.</li>
+      <li><strong>A generated artifact that cannot be regenerated stops being generated and starts being a copy.</strong> Closing the config broke two files still destructuring the emptied <code>theme.extend</code> — every design doc's CSS variables went dead and the specimen bundle could not be rebuilt, so the render check stayed green against a stale bundle rendering the pre-closure palette. Anything reading the config must be re-run, not assumed.</li>
+      <li><strong>Seven of the thirteen predicates have never red on a real artifact.</strong> Clean on both closed runs for stated reasons, but a predicate's only real failing test is an artifact that fails it — the same bet <a href="dec-15-design-run-enforcement.html#consequences">DEC-15</a> records losing eleven times. W9's fourth design run is where a live screen tests whether they over-fit.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
