@@ -1,0 +1,31 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W6
+branch: wu/design-flow/revise-rulebook
+tests:
+  unit:
+    count: 69
+    covers: "40 new in xtask/src/doc.rs (59 -> 99) for the twelve Tier-1 predicates, the design-surface pragma, the vocabulary bridge, the closed-run guard and six review rounds' fixes; 28 in the new ui/eslint-rules/vocabulary.test.js (RuleTester, every judgement the design/vocabulary rule makes); 1 in MethodLabel.test.tsx for the reverted verb tones. Recomputed by measurement at this tip, not carried forward - an earlier revision of this note stated a total its own breakdown did not sum to, which review caught"
+  integration:
+    count: 9
+    covers: "xtask/tests/verify_doc.rs - the verify-doc CLI contract exercised over the real doc corpus, one case added this WU. The bounded contract is 'a design run doc is judged against the vocabulary the config declares', judged end to end through the binary rather than through the predicate functions"
+  e2e:
+    waived: "the flow e2e is W7's deliverable per the epic plan - W6 ships the rulebook and its two checkers, and there is no user-facing flow to drive. The nearest whole-system checks that do exist were run: cargo xtask ui specimens --check renders all six migrated design files over file://, and node eslint-rules/reconcile.mjs diffs the rule's class enumeration against the built stylesheet"
+gates:
+  - "cargo test --workspace: 312 passed, 0 failed"
+  - "cargo fmt --check / cargo clippy -D warnings (pedantic, workspace, all targets): clean"
+  - "npx vitest run: 476 passed across 39 files"
+  - "npx eslint src eslint-rules: exit 0 - design/vocabulary green over all of ui/src/ (142 violations across 58 classes at the WU's start)"
+  - "npx tsc -b: exit 0"
+  - "cargo xtask ui specimens --check: all six migrated design files render"
+  - "node eslint-rules/reconcile.mjs: 208 authored classes, 161 scale-bearing / 47 structural, AGREE on 205, 3 arbitrary diverge by design"
+  - "cargo xtask verify-doc over all 80 tracked docs: none red"
+evidence:
+  - "13/13 is a test, not a sentence: every_hard_rule_in_the_live_rulebook_carries_a_predicate derives both lists from the rulebook on disk and fails on a hard rule with no check, an orphan predicate, or a hard list that is not thirteen"
+  - "the twelve predicates were run over both closed design runs twice - inside step 4, then independently re-run in step 5 - reproducing 49 reds exactly, each traced to a real site by text search; zero predicates wrong"
+  - "the closed-run guard is mutation-proved both ways: removing data-status=\"archived\" from run #3 reds three tests, and reopened() asserts its own strip changed something so an archived run cannot make a form pin pass vacuously"
+  - "the lint rule's verdict is reconciled against the built stylesheet rather than trusted - a bespoke scanner's completeness is an assumption, and the first one's was wrong by 41 classes"
+  - "every cross-doc anchor in every doc this WU touched resolves against its target's ids"
+  - "eight review rounds, each run against the tip the last one produced; a finding in every round, nine of them inside the checkers this WU built. Every correctness fix carries its regression test written red first, and the tag-scan changes are proved to move no real verdict by diffing verify-doc's full output over all 80 docs against the pre-change binary"
+  - "rounds 3 through 8 all landed on the same hand-rolled HTML scanning, each on the previous round's repair - recorded as follow-up 10 with the four functions that are now its whole surface, rather than patched a seventh time inside a rulebook WU"
