@@ -1679,6 +1679,21 @@ fn exempt_declared(html: &str, artifact_pos: usize) -> Option<String> {
         .filter(|v| v == "draft" || v == "archived")
 }
 
+// A tag's own text can quote an attribute without carrying one - a doc that
+// documents the contract judging it is the likeliest place for that - so a match
+// still inside an open value is text, not a declaration.
+fn quoting(tag: &str) -> bool {
+    let mut open = None;
+    for c in tag.chars() {
+        match (open, c) {
+            (None, '"' | '\'') => open = Some(c),
+            (Some(q), c) if c == q => open = None,
+            _ => {}
+        }
+    }
+    open.is_some()
+}
+
 fn attr_positions(html: &str, name: &str) -> Vec<(usize, String)> {
     let needle = format!("{name}=\"");
     let mut out = Vec::new();
@@ -1693,7 +1708,7 @@ fn attr_positions(html: &str, name: &str) -> Vec<(usize, String)> {
             (Some(_), None) => true,
             _ => false,
         };
-        if !preceded || !in_tag {
+        if !preceded || !in_tag || before.rfind('<').is_some_and(|lt| quoting(&before[lt..])) {
             continue;
         }
         let vstart = pos + needle.len();
@@ -2850,6 +2865,29 @@ chroma_floor: 40
                 "a declared ordering answers the rule: {answered}"
             );
         }
+    }
+
+    // Every declaration check reads attributes through one helper, so a value
+    // that merely CONTAINS an attribute is one hole in all of them at once - and
+    // a doc quoting the contract it is judged by is the likeliest place for it.
+    #[test]
+    fn an_attribute_quoted_inside_another_value_declares_nothing() {
+        let decoy_order = green_run().replace(
+            "<tr data-key=\"section\">",
+            "<tr data-key=\"section\" data-wire=\"collection\" title='say data-order=\"wire\" here'>",
+        );
+        assert!(
+            what(&doc_verdict(&decoy_order), "wire-order-preserved·ordering")
+                .contains("no ordering"),
+            "a quoted lookalike is text, not a declaration"
+        );
+
+        let decoy_wire =
+            green_run().replace(" data-wire=\"none\"", " title='mark it data-wire=\"none\" once'");
+        assert!(
+            !what(&doc_verdict(&decoy_wire), "mono-for-wire-data·undeclared").is_empty(),
+            "the same hole in the same helper answers for the payload question too"
+        );
     }
 
     fn layout(sketch: &str) -> String {
