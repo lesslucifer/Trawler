@@ -17,7 +17,7 @@
         <code>13/13 machine-checked (design)</code>. Ten live defects were found along the way —
         <em>every one by executing against the real artifact, none by the type-checker and none by the
         test suite</em> — the tenth by ⑤ re-running ④'s own regression instead of reading it. Then the code
-        review at ⑥ found <strong>fifteen more</strong> over five rounds, seven of them inside the checkers
+        review at ⑥ found <strong>sixteen more</strong> over six rounds, seven of them inside the checkers
         this WU had just built.</p>
       <div class="meta">Result report · 2026-08-10 · Trawler · T3 (docs/work/) ·
         <code>wu/design-flow/revise-rulebook</code> → <code>epic/design-flow</code> ·
@@ -40,12 +40,12 @@
         and the built stylesheet agree on all 205 non-arbitrary classes the tree authors</p></div>
       <div class="card"><h3>19 / 19</h3><p>carried W4 findings disposed — each landed, or recorded with the
         reason it did not</p></div>
-      <div class="card"><h3>10 + 15 defects</h3><p><strong>Ten</strong> found by the steps, in shipped code
+      <div class="card"><h3>10 + 16 defects</h3><p><strong>Ten</strong> found by the steps, in shipped code
         or shipped docs — three in the closure, two in the lint rule, two in the rulebook's own subject
-        matter, two in the doc toolchain, one in the doc corpus. <strong>Fifteen more found by the code
-        review at ⑥</strong>, over <a href="#review">five rounds</a>, in the work this WU had just
+        matter, two in the doc toolchain, one in the doc corpus. <strong>Sixteen more found by the code
+        review at ⑥</strong>, over <a href="#review">six rounds</a>, in the work this WU had just
         finished</p></div>
-      <div class="card"><h3>781 tests</h3><p>305 Rust (91 of them in <code>doc.rs</code>) · 476 vitest
+      <div class="card"><h3>782 tests</h3><p>306 Rust (93 of them in <code>doc.rs</code>) · 476 vitest
         across 39 files · clippy, fmt, tsc, eslint and the specimen render check all clean</p></div>
     </div>
 
@@ -135,18 +135,18 @@
         <tr><td><strong>⑥</strong> <a href="#review">the review</a></td>
             <td>DEC-17 and DEC-15's completion · the T1 lint row · the code-review skill over the whole WU
               diff, five rounds, each one re-run on the tip the last one produced</td>
-            <td><strong>15 defects in the work this WU had just finished</strong>, seven of them in the
+            <td><strong>16 defects in the work this WU had just finished</strong>, seven of them in the
               instrument itself. <code>zero-accent</code> called <code>font-[900]</code> a colour;
               <code>wire-order-preserved</code> accepted the word <code>border</code>; the pragma had two
               dialects, so <code>h-[100dvh]</code> was excused on one surface and rejected on the other; the
-              emitter built a second unguarded Tailwind context. Then three rounds running, the fix for one
+              emitter built a second unguarded Tailwind context. Then four rounds running, the fix for one
               hole in the HTML scanning revealed the next — <a href="#follow-ups">follow-up 10</a></td></tr>
       </tbody>
     </table>
 
-    <h3 id="review">The five review rounds</h3>
+    <h3 id="review">The six review rounds</h3>
     <p class="meta">Each round ran against the tip the previous round's fixes produced, so every fix was itself
-      reviewed. No round was clean until the fifth.</p>
+      reviewed. <strong>No round came back clean</strong> — six rounds, and the sixth found the third revision of one function still wrong. What finally closed it was not a better patch but a different bound; see <a href="#follow-ups">follow-up 10</a>.</p>
     <table data-c="review-rounds">
       <thead><tr><th>Round</th><th>Verified</th><th>What it caught</th></tr></thead>
       <tbody>
@@ -172,11 +172,16 @@
               flat membership test, a binding surface the predicate never receives, and
               <code>keyboard-parity</code> checking that a cell is answered rather than that the answer is a
               convention</td></tr>
+        <tr><td><strong>6</strong></td><td>1 + 9</td>
+            <td>The round-5 fix again: quotes <em>re-pair</em> across a fault, so "stop where the quote
+              opened" could not see the fault at all. Closed by a different bound — a tag never reaches past
+              the next <code>&lt;</code>. Plus nine doc defects, including this report's own stale counts and
+              a commit table that omitted every commit of ⑥</td></tr>
       </tbody>
     </table>
     <div class="callout warn" data-c="review-lesson">
-      <strong>Seven of the fifteen were in the checkers this WU built, and every gate was green the whole
-      time.</strong> 305 tests, clippy pedantic, <code>tsc</code>, ESLint and <code>verify-doc</code> over 80
+      <strong>Seven of the sixteen were in the checkers this WU built, and every gate was green the whole
+      time.</strong> 306 tests, clippy pedantic, <code>tsc</code>, ESLint and <code>verify-doc</code> over 80
       docs all passed on code that reported a colour nobody wrote and accepted an answer nobody gave. That is
       not an argument against the gates — it is the WU's own thesis arriving at its author: <em>a predicate
       that has never been executed against an artifact built to break it is a claim</em>. The review is the
@@ -184,16 +189,16 @@
     </div>
 
     <div class="callout" data-c="through-line">
-      <strong>The one finding that outranks every other in this WU.</strong> Twenty-five live defects, and the
+      <strong>The one finding that outranks every other in this WU.</strong> Twenty-six live defects, and the
       instrument that found each of them was the same: executing against the real artifact, or reading it.
-      Zero were found by <code>tsc -b</code>. Zero were found by the 781-and-growing test suite. Four of the
+      Zero were found by <code>tsc -b</code>. Zero were found by the 782-and-growing test suite. Four of the
       first ten were invisible <em>by construction</em> — a value that is never a class cannot be seen by a
       class-reading check, and an open scale cannot be red by a rule whose legality test is "Tailwind can
       emit it". Both holes are closed at their root rather than one instance at a time.
       <br><br>
       The point arrives twice, each time by the same route. ⑤ existed only to re-run a regression ④ had
       already run and judged, and re-running it found a closed run that had been red in the tree for two
-      Working Units. ⑥ existed to review work that was already green, and found <a href="#review">fifteen
+      Working Units. ⑥ existed to review work that was already green, and found <a href="#review">sixteen
       more</a> — seven of them inside the checkers built to catch exactly this class of thing. <strong>Both
       steps were re-executions of something already believed done, and both paid.</strong>
     </div>
@@ -253,12 +258,12 @@
         <thead><tr><th>Gate</th><th>Result</th></tr></thead>
         <tbody>
           <tr><td><code>cargo fmt --check</code> · <code>cargo clippy -D warnings</code> (pedantic)</td><td>clean</td></tr>
-          <tr><td><code>cargo test --workspace</code></td><td>300 passed, 0 failed — 87 of them the design predicates in <code>xtask/src/doc.rs</code></td></tr>
+          <tr><td><code>cargo test --workspace</code></td><td>306 passed, 0 failed — 93 of them the design predicates in <code>xtask/src/doc.rs</code></td></tr>
           <tr><td><code>npx tsc -b</code></td><td>clean</td></tr>
           <tr><td><code>npm run lint</code> (new this WU)</td><td>green over all of <code>ui/src/</code></td></tr>
           <tr><td><code>npx vitest run</code></td><td>474 passed across 39 files</td></tr>
           <tr><td><code>cargo xtask ui specimens --check</code></td><td>all six migrated design files render, against a bundle rebuilt from the closed config</td></tr>
-          <tr><td><code>cargo xtask verify-doc</code></td><td>green over <strong>all 78 tracked docs</strong>, not only the ones this WU wrote — the narrower wording is what let run #3 sit red; the live rulebook parses and every past-cited slug still resolves</td></tr>
+          <tr><td><code>cargo xtask verify-doc</code></td><td>green over <strong>all 80 tracked docs</strong>, not only the ones this WU wrote — the narrower wording is what let run #3 sit red; the live rulebook parses and every past-cited slug still resolves</td></tr>
           <tr><td>reconciliation against the built stylesheet</td><td>AGREE on all 205 non-arbitrary classes; 3 arbitrary values diverge by design</td></tr>
           <tr><td>the twelve predicates over both closed runs</td><td>run and <a href="2026-08-10-dflow-w6-step4-predicates.html#evidence">judged red by red</a> in ④, then <a href="2026-08-10-dflow-w6-step5-regression.html#judgement">re-run and recounted in ⑤</a> — 49 reds, 33 real over 29 sites, zero predicates wrong</td></tr>
         </tbody>
@@ -288,6 +293,10 @@
           <tr><td><code>e82d872</code> · <code>87fbd4d</code> · <code>41f272e</code></td><td>③ the rulebook, its two rulings, and the tiering pass that moved this epic's case history out of the T2</td></tr>
           <tr><td><code>5244e2e</code> · <code>b0a15d2</code> · <code>bb5481c</code></td><td>④ the twelve predicates, the emitter, the rulebook's contract additions, and this report</td></tr>
           <tr><td><code>40ff32c</code></td><td>⑤ the regression re-run: run #3 archived, the guard test naming all three closed runs, and the corrections this step's evidence forced on ④ and on this report</td></tr>
+          <tr><td><code>c578673</code> · <code>8d871af</code></td><td>⑥ the distillation — DEC-17, DEC-15's Tier-1 completion, the index row, and the T1 lint row signed with a human <code>Reviewed-By</code></td></tr>
+          <tr><td><code>0726ff4</code></td><td>⑥ review round 1's seven verified findings: the <code>#</code> anchor, the <code>order</code> substring, the two pragma dialects, the second Tailwind context, DEC-17's copied table</td></tr>
+          <tr><td><code>ef4ff4f</code></td><td>⑥ round 2 — the ordering fix was wrong in kind; a keyword over prose becomes <code>data-order</code>, a declaration</td></tr>
+          <tr><td><code>fcbe2ba</code> · <code>5ac17d4</code> · <code>12a1699</code> · <code>HEAD</code></td><td>⑥ rounds 3&ndash;6 — the HTML scanning holes, five rulebook rows that claimed more than their predicate does, and two records this WU had made false</td></tr>
         </tbody>
       </table>
 

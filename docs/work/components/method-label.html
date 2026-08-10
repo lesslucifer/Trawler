@@ -374,7 +374,7 @@
 
     <h2 id="fit">Use / avoid</h2>
     <div class="cards" data-c="fit-cards">
-      <div class="card"><strong>✅ Use</strong><p>Any place a flow's HTTP method must appear: the virtualized list rows (<a href="../../FlowList.tsx">FlowList.tsx</a> col 2), the detail identity bar (<a href="../../FlowDetail.tsx">FlowDetail.tsx</a> header). The component owns the uppercase transform, the fixed-width contract, and the verb→color mapping — callers pass raw.</p></div>
+      <div class="card"><strong>✅ Use</strong><p>Any place a flow's HTTP method must appear: the virtualized list rows (<a href="../../../ui/src/FlowList.tsx">FlowList.tsx</a> col 2), the detail identity bar (<a href="../../../ui/src/FlowDetail.tsx">FlowDetail.tsx</a> header). The component owns the uppercase transform, the fixed-width contract, and the verb→color mapping — callers pass raw.</p></div>
       <div class="card"><strong>🚫 Avoid</strong><p>Do not restyle a verb at the call site — the verb→color mapping lives inside MethodLabel; a new or changed color is a token + mapping change here, never an inline tint (DEC-11 exceptions are token-named). Do not use for a non-method label just because it shares the visual style; reach for a plain <code>font-mono text-ink-body</code> span instead, and promote only when reuse evidence appears.</p></div>
     </div>
 

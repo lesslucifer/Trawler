@@ -1113,7 +1113,10 @@ fn read_pragmas(failures: &mut Vec<Failure>, html: &str) -> Allowances {
         let Some(end) = html[at..].find("-->").map(|rel| at + rel) else { continue };
         let body = html[at + 4..end].trim();
         let Some(rest) = body.strip_prefix("design-allow:") else { continue };
-        let Some((cls, why)) = rest.split_once('—').map(|(c, w)| (c.trim(), w.trim())) else {
+        // `--` as well as the em dash, because the lint rule takes both and one
+        // rule cannot have two dialects.
+        let split = rest.split_once('—').or_else(|| rest.split_once("--"));
+        let Some((cls, why)) = split.map(|(c, w)| (c.trim(), w.trim())) else {
             fail(
                 format!("`{}` gives no reason", rest.trim()),
                 "a pragma reads `design-allow: <class> — <reason>` (em dash) - an escape nobody justified is a hole",
@@ -1697,23 +1700,28 @@ fn quoting(tag: &str) -> bool {
 // and a scan that stops at the quoted one reads half the tag's attributes and
 // reports the rest missing.
 //
-// Running out of input has two meanings, and only one is a fault. A quote left
-// OPEN is malformed markup, and carrying on would let the scan re-sync on a later
-// tag's quotes and lend this element the next one's attributes - so it falls back
-// to the raw bracket, which is narrow rather than borrowing. A quote left CLOSED
-// is just a fragment with no tag close in it, which callers pass deliberately.
+// A tag ends at its first UNQUOTED `>`, because an attribute value may hold one,
+// and in no case later than the NEXT `<`. That second bound is what makes this
+// safe on malformed markup rather than merely correct on clean markup: quotes
+// re-pair across a fault - an unclosed value's quote is closed by the next tag's
+// - so "stop where the quote opened" cannot even see the fault, and a scan with
+// only the first bound walks into the neighbouring element and reads ITS
+// attributes as this one's. Borrowing a class is a false green; truncating at the
+// next tag is a false red on markup that is already broken.
+//
+// Running out of input means no tag close in the fragment, which callers pass
+// deliberately - `classes_at` hands over an opening tag with the `>` removed.
 fn tag_end(html: &str, start: usize) -> usize {
-    let mut open = None;
+    let mut quote = None;
     for (i, c) in html[start..].char_indices() {
-        match (open, c) {
-            (None, '"' | '\'') => open = Some(c),
-            (Some(q), c) if c == q => open = None,
-            (None, '>') => return start + i,
+        let at = start + i;
+        match (quote, c) {
+            (None, '"' | '\'') => quote = Some(c),
+            (Some(q), c) if c == q => quote = None,
+            (None, '>') => return at,
+            (_, '<') if at > start => return at,
             _ => {}
         }
-    }
-    if open.is_some() {
-        return html[start..].find('>').map_or(html.len(), |rel| start + rel);
     }
     html.len()
 }
@@ -2930,6 +2938,21 @@ chroma_floor: 40
         }
     }
 
+    // A bracket may sit legally inside a closed value on a tag that LATER goes
+    // malformed. Truncating at that bracket drops the attributes between it and
+    // the fault - a false red, which is the direction a checker cannot afford.
+    #[test]
+    fn a_legal_bracket_survives_a_later_fault_in_the_same_tag() {
+        let doc = green_run().replace(
+            "<div data-item=\"mockup\" data-wire=\"none\">",
+            "<div data-item=\"mockup\" data-wire=\"none\"><span title=\"a>b\" class=\"font-mono\" data-wire=\"body\" hint=\"oops>x</span>",
+        );
+        assert!(
+            !reds(&doc).contains(&"mono-for-wire-data·family".to_string()),
+            "the class sits before the fault and must still be read"
+        );
+    }
+
     // An unterminated quote has no honest reading, so the scan must not run past
     // the tag looking for one: re-syncing on a LATER tag's quotes would lend this
     // element the next element's classes, and lending font-mono is a false green.
@@ -3048,6 +3071,19 @@ chroma_floor: 40
         assert!(!v.red(), "{:?}", failures(&v));
         let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
         assert!(summary.contains("design-allow: 1 live suppression"), "{summary}");
+    }
+
+    // The lint rule has always taken `--` for authors without an em dash to hand.
+    // One rule, two surfaces: a pragma the other surface honours cannot read as
+    // reasonless here.
+    #[test]
+    fn an_ascii_dash_separates_a_pragma_the_way_the_lint_rule_allows() {
+        let doc = pragma(
+            "grid-cols-[auto_1fr] -- the two-column payload grid has no token shape",
+            "<div class=\"grid-cols-[auto_1fr]\">x</div>",
+        );
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        assert!(!v.red(), "{:?}", failures(&v));
     }
 
     #[test]
