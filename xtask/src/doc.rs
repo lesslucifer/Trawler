@@ -971,8 +971,7 @@ fn authored_classes(html: &str) -> Vec<(usize, String)> {
 
 fn classes_at(html: &str, attr_pos: usize) -> Vec<String> {
     let start = html[..attr_pos].rfind('<').unwrap_or(0);
-    let end = html[start..].find('>').map_or(html.len(), |rel| start + rel);
-    attr_positions(&html[start..end], "class")
+    attr_positions(&html[start..tag_end(html, start)], "class")
         .into_iter()
         .flat_map(|(_, value)| {
             value.split_whitespace().map(|c| base_class(c).to_string()).collect::<Vec<_>>()
@@ -1694,6 +1693,22 @@ fn quoting(tag: &str) -> bool {
     open.is_some()
 }
 
+// A tag ends at its first UNQUOTED `>`, because an attribute value may hold one -
+// and a scan that stops at the quoted one reads half the tag's attributes and
+// reports the rest missing.
+fn tag_end(html: &str, start: usize) -> usize {
+    let mut open = None;
+    for (i, c) in html[start..].char_indices() {
+        match (open, c) {
+            (None, '"' | '\'') => open = Some(c),
+            (Some(q), c) if c == q => open = None,
+            (None, '>') => return start + i,
+            _ => {}
+        }
+    }
+    html.len()
+}
+
 fn attr_positions(html: &str, name: &str) -> Vec<(usize, String)> {
     let needle = format!("{name}=\"");
     let mut out = Vec::new();
@@ -1703,12 +1718,9 @@ fn attr_positions(html: &str, name: &str) -> Vec<(usize, String)> {
         from = pos + needle.len();
         let before = &html[..pos];
         let preceded = before.chars().next_back().is_some_and(char::is_whitespace);
-        let in_tag = match (before.rfind('<'), before.rfind('>')) {
-            (Some(lt), Some(gt)) => lt > gt,
-            (Some(_), None) => true,
-            _ => false,
-        };
-        if !preceded || !in_tag || before.rfind('<').is_some_and(|lt| quoting(&before[lt..])) {
+        let in_tag =
+            before.rfind('<').is_some_and(|lt| pos < tag_end(html, lt) && !quoting(&before[lt..]));
+        if !preceded || !in_tag {
             continue;
         }
         let vstart = pos + needle.len();
@@ -1723,8 +1735,10 @@ fn element_content(html: &str, attr_pos: usize) -> ((usize, usize), bool) {
     let empty = ((attr_pos, attr_pos), false);
     let Some(start) = html[..attr_pos].rfind('<') else { return empty };
     let name: String = html[start + 1..].chars().take_while(char::is_ascii_alphanumeric).collect();
-    let Some(open_rel) = html[start..].find('>') else { return empty };
-    let open_end = start + open_rel;
+    let open_end = tag_end(html, start);
+    if open_end == html.len() {
+        return empty;
+    }
     if name.is_empty() || html[..open_end].ends_with('/') {
         return empty;
     }
@@ -2888,6 +2902,23 @@ chroma_floor: 40
             !what(&doc_verdict(&decoy_wire), "mono-for-wire-data·undeclared").is_empty(),
             "the same hole in the same helper answers for the payload question too"
         );
+    }
+
+    // The other half of the same confusion: a tag ends at its first UNQUOTED `>`.
+    // Stopping at a quoted one reads part of the tag and reports the rest missing,
+    // which is a false RED - the direction a checker cannot afford.
+    #[test]
+    fn a_bracket_inside_a_value_does_not_end_the_tag() {
+        let doc = green_run().replace(
+            "<div data-item=\"mockup\" data-wire=\"none\">",
+            "<div data-item=\"mockup\"><span title=\"a > b\" class=\"font-mono\" data-wire=\"body\">x</span>",
+        );
+        for check in ["mono-for-wire-data·family", "mono-for-wire-data·undeclared"] {
+            assert!(
+                !reds(&doc).contains(&check.to_string()),
+                "the element is declared and mono; {check} must not fire"
+            );
+        }
     }
 
     fn layout(sketch: &str) -> String {

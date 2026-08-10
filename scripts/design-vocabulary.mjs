@@ -81,9 +81,9 @@ for (const [name, steps] of modifierSteps) {
   if (steps.size) modifiers[name] = [...steps];
 }
 
-// The palette's warmest neutral spans 27 (#2b2622); its faintest chromatic token
-// spans 57 (#d9a866). Anything between is neither, and the gap is wide enough
-// that the floor is a fact about the palette rather than a tuned constant.
+// Measured, not tuned: the palette's warmest neutral spans 28 (ink-body #c9c0ad)
+// and its faintest chromatic token spans 47 (syn-str #9ec99a), so any floor in
+// that gap separates them and 40 sits in the middle of it.
 const CHROMA_FLOOR = 40;
 
 function isChromatic(value) {
