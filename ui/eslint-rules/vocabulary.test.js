@@ -1,3 +1,4 @@
+import { globSync, readFileSync } from "node:fs";
 import { RuleTester } from "eslint";
 import { describe, expect, it } from "vitest";
 import resolveConfig from "tailwindcss/resolveConfig.js";
@@ -126,5 +127,31 @@ describe("the closed vocabulary itself", () => {
       borderWidth: { ...tailwindConfig.theme.borderWidth, hairline: "1.5px" },
     });
     expect(duplicates(collided)).toContain("border-hairline");
+  });
+
+  // colour-tokens-only on the code surface, where the lint rule cannot reach.
+  // A component adapting a third-party styling API — CodeMirror's theme object,
+  // a raw stylesheet — has no class to give it, so the literal is the sanctioned
+  // form. It must still BE a palette value: SourceSurface's three DEC-11 tones
+  // were literals, so deleting their tokens left the screen painting colours the
+  // vocabulary no longer contained, and every check stayed green.
+  // Hex only, which is this tree's idiom; an rgb() literal would slip past.
+  it("writes no colour literal that is not a palette value", () => {
+    const theme = resolveConfig(tailwindConfig).theme;
+    const palette = new Set(
+      [...Object.values(theme.colors), ...Object.values(theme.backgroundColor)]
+        .filter((value) => typeof value === "string")
+        .map((value) => value.toLowerCase()),
+    );
+
+    const stray = globSync("src/**/*.{ts,tsx,css}")
+      .filter((file) => !/\.test\.tsx?$/.test(file))
+      .flatMap((file) =>
+        (readFileSync(file, "utf8").match(/#[0-9a-fA-F]{3,8}\b/g) ?? [])
+          .filter((hex) => !palette.has(hex.toLowerCase()))
+          .map((hex) => `${file}: ${hex}`),
+      );
+
+    expect(stray).toEqual([]);
   });
 });

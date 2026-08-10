@@ -87,8 +87,17 @@ flowchart LR
       </table>
       Scope: the rule judges the <strong>161</strong> scale-bearing classes <code>ui/src/</code> authors. The other <strong>47</strong> are structural (<code>flex</code>, <code>absolute</code>, <code>truncate</code>) — Tailwind registers them whole rather than generating them from a theme key, so no scale could govern them and the rule has nothing to judge.
     </div>
-    <div class="callout warn" data-c="blind-spot">
-      <strong>What neither surface can see: a value that is never a class.</strong> The lint rule reads class names and the Tier-1 predicates read the design doc, so a colour or size written as a <em>CSS-in-JS value</em> is invisible to both. <a href="../work/components/body-renderer.html">SourceSurface</a> is where this bit: it painted the three DEC-11 syntax tones as hex literals, so W6 step ① deleted those tokens as "referenced by zero components" while the component went on painting them — and the test guarding the tones asserted on <code>style="color:…"</code>, so it would have stayed green whatever they became. The syntax three are now palette classes and that test asserts classes. <strong>What remains: <code>SourceSurface</code>'s CodeMirror theme block still holds ~7 chrome colours, a font size and a radius as literals</strong> — a real <code>colour-tokens-only</code> · <code>type-tokens-only</code> · <code>radius-tokens</code> violation that no check in this repo can currently detect. Named here rather than left to be rediscovered.
+    <div class="callout" id="css-config" data-c="css-config">
+      <strong>The second sanctioned escape: a component may write raw CSS when it is configuring something that cannot take a class.</strong> A third-party styling API — CodeMirror's theme object, a stylesheet — has no class to give it. <a href="../work/components/body-renderer.html">SourceSurface</a> is the case: it hands CodeMirror a theme block of literal declarations, and that block is <strong>accepted</strong>, not excused.
+      <table>
+        <thead><tr><th>Condition</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>The escape covers the <em>styling API</em>, never a plain element. Anything with a <code>className</code> uses tokens</td><td>Otherwise it becomes a general way out and the vocabulary is advisory</td></tr>
+          <tr><td><strong>Every colour in it must still be a palette value</strong> — asserted mechanically over all of <code>ui/src/</code></td><td>A literal that <em>is</em> a token is a rendering of the vocabulary; a literal that is not is a second copy, and the copy drifts. It already did: SourceSurface painted the three DEC-11 tones as hex, so step ① deleted those tokens as "referenced by zero components" while the component went on painting them, and every check stayed green — including the component's own test, which asserted on <code>style="color:…"</code> and so would have passed whatever they became</td></tr>
+          <tr><td>Sizes and radii inside such a block are the author's to justify, and are <em>not</em> mechanically checked</td><td>Stated rather than implied — extracting lengths from arbitrary CSS-in-JS is noisy enough to be worse than honest silence</td></tr>
+        </tbody>
+      </table>
+      The general shape worth remembering: <strong>the lint rule reads class names and the Tier-1 predicates read the design doc, so a value that is never a class is invisible to both.</strong> The colour guard is what makes this escape safe rather than a hole.
     </div>
     <h3 id="chromatic-meanings">Chromatic meanings</h3>
     <p>Every chromatic token is named for <em>what a colour means</em>, never for who uses it — and its meaning is fixed <strong>here</strong> while its membership is fixed in <a href="../../ui/tailwind.config.js">the config</a>. A tint stays consistent because its mapping lives in exactly one component: screens reuse the component, never re-map the colour. A new tint is a config edit under review, which is the only way one can arrive.</p>
@@ -262,7 +271,7 @@ flowchart LR
           <td><code>one-term-per-concept</code></td>
           <td>Every user-facing term comes from the <a href="#lexicon">lexicon</a> — one term per concept, one concept per term; new terms are proposed, never coined ad hoc. <em>Reuse-or-propose, for words.</em></td>
           <td><span style="color:var(--ok)">✓ "decode" everywhere</span><br><span style="color:var(--warn)">✗ "decode" here, "prettify" there</span></td>
-          <td>Check each label/microcopy term against the lexicon; unknown terms need a proposal entry.</td>
+          <td>Check each label/microcopy term against the lexicon; unknown terms need a proposal entry. <em>Also check it against the component's own design file:</em> a live example is <a href="../work/components/body-viewer.html">BodyViewer</a>, whose contract says <code>raw | pretty</code> while the build says <code>decoded | raw</code> — one word doing two jobs (<a href="#open">open</a>).</td>
           <td><code>both</code></td>
           <td><a href="../work/components/header-table.html">HeaderTable</a> "copy all" · <a href="../work/components/body-viewer.html">BodyViewer</a> decode</td>
         </tr>
@@ -326,8 +335,8 @@ flowchart LR
       </tbody>
     </table>
 
-    <h3 id="pragma">The sanctioned escape — <code>design-allow:</code></h3>
-    <p>A closed vocabulary needs exactly one way out, or the way out becomes "stop running the check". The pragma is it — and it is deliberately unable to excuse the thing the vocabulary exists to govern.</p>
+    <h3 id="pragma">The sanctioned escapes</h3>
+    <p>A closed vocabulary needs a way out, or the way out becomes "stop running the check". There are exactly two, both narrow: a <a href="#css-config">raw CSS block configuring a third-party styling API</a>, whose colours are still checked against the palette — and the pragma below, for a class carrying a template shape. Neither can excuse the thing the vocabulary exists to govern.</p>
     <table data-c="pragma-table">
       <thead><tr><th>Rule of the escape</th><th>Why</th></tr></thead>
       <tbody>
@@ -343,7 +352,7 @@ flowchart LR
     <table data-c="open-table">
       <thead><tr><th>What</th><th>State</th></tr></thead>
       <tbody>
-        <tr><td><strong>The body view switch is labelled two different ways.</strong> <a href="../work/components/body-viewer.html">BodyViewer</a>'s confirmed design file settles fork D4 on <code>raw | pretty</code>, pretty by default; the built <code>BodyViewer.tsx</code> renders <code>decoded | raw</code> — the <em>transport</em> switch wearing the other switch's words</td><td>A <code>one-term-per-concept</code> violation on a shipped component, found while writing the lexicon's three body terms. A build defect against a confirmed contract, not a rulebook question — recorded rather than fixed by a rulebook edit</td></tr>
+        <tr><td><strong>The body view switch is labelled two different ways.</strong> <a href="../work/components/body-viewer.html">BodyViewer</a>'s confirmed design file settles fork D4 on <code>raw | pretty</code>, pretty by default; the built <code>BodyViewer.tsx</code> renders <code>decoded | raw</code> — the <em>transport</em> switch wearing the other switch's words</td><td><span class="badge approval">ruled</span> <strong><code>raw | pretty</code> is correct</strong> and the built component is what changes. Deferred, not dropped: <a href="../backlog/roadmap.html#rmap-deferred">tracked in the deferred backlog</a> and owned by whichever epic next opens BodyViewer. <strong>The rule that must catch it is <code>one-term-per-concept</code></strong>, on its Tier-3 pass over any screen composing this component — which is what a soft rule is for, and why a deferral is not a skip</td></tr>
         <tr><td><strong>Nothing enforces a soft rule yet.</strong> The 13 hard rules are checked on both surfaces; the 17 soft rules rest on reviewer attention</td><td>Status quo, not a regression. Tier-2 and Tier-3 are W7 — deliberately after this revision, so a judge is not written against rules that change underneath it</td></tr>
       </tbody>
     </table>

@@ -91,8 +91,10 @@ would pass on ANY colour"]
       </tbody>
     </table>
 
-    <div class="callout warn" data-c="blind-spot">
-      <strong>The general form, which is worse than the instance and is now written into the KB.</strong> The lint rule reads class names; the Tier-1 predicates read the design doc. <strong>A colour or a size expressed as a CSS-in-JS value is invisible to both.</strong> <code>SourceSurface</code>'s CodeMirror theme block still holds ~7 chrome colours, a font size and a radius as literals — a real <code>colour-tokens-only</code> · <code>type-tokens-only</code> · <code>radius-tokens</code> violation that no check in this repo can detect. Named in the rulebook rather than left to be rediscovered by whoever next writes prose about it.
+    <div class="callout" data-c="blind-spot">
+      <strong>The general form is worse than the instance: the lint rule reads class names, the Tier-1 predicates read the design doc, so a value that is never a class is invisible to both.</strong> <code>SourceSurface</code>'s CodeMirror theme block is the rest of it — ~7 chrome colours, a font size and a radius, none of which can be a class because CodeMirror takes declarations.
+      <br><br>
+      <strong>Ruled: the block is accepted, and the acceptance is guarded.</strong> A component configuring a third-party styling API is the <a href="../design-rules/design-rules-index.html#css-config">second sanctioned escape</a> — but every colour in it must still <em>be</em> a palette value, asserted over all of <code>ui/src/</code> by a test that greps every hex and checks it against <code>theme.colors</code> + <code>theme.backgroundColor</code>. All six literals in the tree already pass (<code>#2b2622</code> canvas · <code>#383330</code> canvas-soft · <code>#3f3a36</code> hairline · <code>#f7f5f0</code> ink · <code>#c9c0ad</code> ink-body · <code>#aea69c</code> ink-mute), which is the point: the sanction costs nothing today and makes the drift that caused defect ① impossible tomorrow. Written red first — injecting <code>#ff00aa</code> into <code>ImageRenderer</code> fails the test by file and by value. Sizes inside such a block stay the author's, and the rulebook says so rather than implying it.
     </div>
 
     <h3 id="defect-labels">② The body view switch is labelled two different ways</h3>
@@ -105,7 +107,11 @@ would pass on ANY colour"]
       </tbody>
     </table>
 
-    <p>Two different switches, sharing the word <em>raw</em>, one of them wearing the other's name. Found while writing the lexicon entries finding 9 asked for, because writing three definitions forces the question the two artifacts never had to answer together. <strong>Recorded, not fixed:</strong> it is a build defect against a confirmed contract, and a rulebook step that quietly edits UI copy is a rulebook step nobody can trust. The lexicon now states the ladder — <em>wire bytes → decode → raw → pretty</em> — so the fix has something to be correct against.</p>
+    <p>Two different switches, sharing the word <em>raw</em>, one of them wearing the other's name. Found while writing the lexicon entries finding 9 asked for, because writing three definitions forces the question the two artifacts never had to answer together.</p>
+
+    <div class="callout" data-c="labels-ruling">
+      <strong>Ruled: <code>raw | pretty</code> is correct and the build is what changes. Deferred, and deliberately not skipped.</strong> A rulebook step that quietly edits UI copy is a rulebook step nobody can trust, so the fix does not happen here — but a deferral with no home is a drop. It has three: the lexicon states the ladder (<em>wire bytes → decode → raw → pretty</em>) so the fix has something to be correct against · the <a href="../design-rules/design-rules-index.html#open">rulebook's Open table</a> carries the ruling · and the <a href="../backlog/roadmap.html#rmap-deferred">deferred backlog</a> owns it until an epic absorbs it. <strong>The rule that catches it meanwhile is <code>one-term-per-concept</code></strong>, which now cites this as a live example on its own row — a soft rule earning its place by naming a real defect rather than a hypothetical one.
+    </div>
 
     <h2 id="sweep">The sweep ② handed over — 63 scales were open, not one</h2>
 
