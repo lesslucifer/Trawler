@@ -1,0 +1,13 @@
+level: commit
+gates:
+  - "npx vitest run: 474/474 across 39 files (was 473)"
+  - "npm run lint (design/vocabulary over ui/src): 0 errors"
+  - "npx tsc -b: clean"
+  - "cargo fmt --check / clippy --all-targets -D warnings: clean (no Rust changed)"
+  - "cargo xtask ui specimens --check: all migrated design files render"
+evidence:
+  - "new test asserts every hex literal in ui/src/**/*.{ts,tsx,css} is a value in theme.colors or theme.backgroundColor; passes on all six literals in the tree (#2b2622 #383330 #3f3a36 #f7f5f0 #c9c0ad #aea69c)"
+  - "written red first: injecting #ff00aa into ImageRenderer.tsx fails with 'src/components/ImageRenderer.tsx: #ff00aa', naming file and value; restored and green"
+  - "scope stated in the test comment rather than implied — hex only, which is this tree's idiom; an rgb() literal would slip past, and sizes inside a CSS-in-JS block are not checked at all"
+  - "docs validated mechanically: all three edited files well-formed, zero dangling #anchors, every relative href resolves"
+waived: "e2e — flow e2e is W7 per the epic plan"
