@@ -1,0 +1,7 @@
+level: wu
+scope: "docs/design-rules/design-rules-index.html (T2) · docs/work/2026-08-10-dflow-w6-step3-rulebook.html (T3) · docs/backlog/roadmap.html (T2)"
+evidence:
+  - "T2 swept mechanically for episodic references — /W[1-9]/, /run #N/, /D[1-8]/, /finding N/, /step [circled]/, E-DFLOW, E-UISETUP and the measured counts 447/161/54: zero remain"
+  - "every moved item mapped to its new home in the step 3 doc #tiering table, with a companion list of what deliberately stayed and why it is not episodic"
+  - "all three docs well-formed, zero dangling #anchors, every relative href resolves"
+  - "no rule text, slug, check, binds value or reviewer question changed in this pass — tiering only; 13 hard and 17 soft rows intact"
