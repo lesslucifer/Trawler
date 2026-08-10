@@ -157,7 +157,7 @@ sequenceDiagram
         <tr><td>Trust the CA</td><td>Fetch the CA certificate from the control API's cert endpoint and install it per the <a href="core-technical-design.html#network">platform table</a>.</td></tr>
         <tr><td>Quick check</td><td>Send a request through the proxy, then read it back from the flows endpoint of the control API.</td></tr>
         <tr><td>Backend tests</td><td><code>cargo test</code> — unit + integration + e2e for the core (hermetic: ephemeral ports, local origins).</td></tr>
-        <tr><td>Lint</td><td><code>cargo clippy</code> — pedantic, warnings-as-errors, <code>unsafe</code> forbidden.</td></tr>
+        <tr><td>Lint</td><td><code>cargo clippy</code> — pedantic, warnings-as-errors, <code>unsafe</code> forbidden. Front end: <code>npm run lint</code> in <code>ui/</code>, which also runs the project-local <code>design/vocabulary</code> rule that judges every class against the closed token vocabulary (<a href="decisions/dec-17-closed-vocabulary.html">DEC-17</a>).</td></tr>
         <tr><td>Front-end build / dev</td><td><code>cargo xtask ui build</code> bundles the webview; <code>cargo xtask ui dev</code> launches the native window against a running core.</td></tr>
         <tr><td>UI e2e</td><td><code>cargo xtask ui e2e</code> — drives the real native window via WebDriver against an ephemeral core + local origin.</td></tr>
         <tr><td>Gate &amp; debug tooling</td><td>The <code>xtask</code> crate also runs the DoD gate and a live browser view of the evidence trail (see the <a href="workflow.html">workflow standard</a>).</td></tr>
