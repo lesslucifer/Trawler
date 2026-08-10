@@ -17,7 +17,7 @@
         <code>13/13 machine-checked (design)</code>. Ten live defects were found along the way —
         <em>every one by executing against the real artifact, none by the type-checker and none by the
         test suite</em> — the tenth by ⑤ re-running ④'s own regression instead of reading it. Then the code
-        review at ⑥ ran <strong>eight rounds and none came back clean</strong>, nine of its findings inside the
+        review at ⑥ ran <strong>nine rounds and none came back clean</strong>, ten of its findings inside the
         checkers this WU had just built.</p>
       <div class="meta">Result report · 2026-08-10 · Trawler · T3 (docs/work/) ·
         <code>wu/design-flow/revise-rulebook</code> → <code>epic/design-flow</code> ·
@@ -40,13 +40,13 @@
         and the built stylesheet agree on all 205 non-arbitrary classes the tree authors</p></div>
       <div class="card"><h3>19 / 19</h3><p>carried W4 findings disposed — each landed, or recorded with the
         reason it did not</p></div>
-      <div class="card"><h3>10 + 8 rounds</h3><p><strong>Ten</strong> found by the steps, in shipped code
+      <div class="card"><h3>10 + 9 rounds</h3><p><strong>Ten</strong> found by the steps, in shipped code
         or shipped docs — three in the closure, two in the lint rule, two in the rulebook's own subject
         matter, two in the doc toolchain, one in the doc corpus. Then the code review at ⑥ ran
-        <a href="#review">eight rounds</a> and <strong>no round came back clean</strong> — the per-round
+        <a href="#review">nine rounds</a> and <strong>no round came back clean</strong> — the per-round
         counts are in that table rather than summed here, because a total this report cannot recompute is the
         defect it keeps finding elsewhere</p></div>
-      <div class="card"><h3>788 tests</h3><p>312 Rust (99 of them in <code>doc.rs</code>) · 476 vitest
+      <div class="card"><h3>789 tests</h3><p>313 Rust (100 of them in <code>doc.rs</code>) · 476 vitest
         across 39 files · clippy, fmt, tsc, eslint and the specimen render check all clean</p></div>
     </div>
 
@@ -135,8 +135,8 @@
               ③ adopted this WU</td></tr>
         <tr><td><strong>⑥</strong> <a href="#review">the review</a></td>
             <td>DEC-17 and DEC-15's completion · the T1 lint row · the code-review skill over the whole WU
-              diff, eight rounds, each one re-run on the tip the last one produced</td>
-            <td><strong>defects in the work this WU had just finished, in every one of eight rounds</strong>, nine of them in the
+              diff, nine rounds, each one re-run on the tip the last one produced</td>
+            <td><strong>defects in the work this WU had just finished, in every one of nine rounds</strong>, ten of them in the
               instrument itself. <code>zero-accent</code> called <code>font-[900]</code> a colour;
               <code>wire-order-preserved</code> accepted the word <code>border</code>; the pragma had two
               dialects, so <code>h-[100dvh]</code> was excused on one surface and rejected on the other; the
@@ -145,7 +145,7 @@
       </tbody>
     </table>
 
-    <h3 id="review">The eight review rounds</h3>
+    <h3 id="review">The nine review rounds</h3>
     <p class="meta">Each round ran against the tip the previous round's fixes produced, so every fix was itself
       reviewed. <strong>No round came back clean</strong> — and rounds 3 through 8 all landed on the same
       function, each on the previous round's repair. What finally closed it was not a better patch but a
@@ -197,11 +197,19 @@
               tag open to every HTML parser alive, so reding it is correct and now pinned as such. Plus the
               ninth declared scale, the RuleTester count, and a commit table whose last row cannot know its own
               hash</td></tr>
+        <tr><td><strong>9</strong></td><td>1 + 1 nit</td>
+            <td>Scoped to round 8's own six lines, because eight rounds had already swept the diff. Round 8's
+              pragma fix made a reason-less class carrying its own <code>--</code> report
+              <em>&ldquo;<code>grid-cols-[</code> carries a value&rdquo;</em> — a truncated class and the wrong
+              cause. Which reading an author meant is <strong>undecidable</strong> from the string, and the
+              lint rule's regex resolves it identically, so the verdict stays and the message now names the
+              reading it took rather than guessing a cause. The nit: one of round 8's three tests is a pin on
+              refuted behaviour, not a regression net — kept deliberately, so round 10 does not re-litigate it</td></tr>
       </tbody>
     </table>
     <div class="callout warn" data-c="review-lesson">
-      <strong>Nine findings were in the checkers this WU built, and every gate was green the whole
-      time.</strong> 312 tests, clippy pedantic, <code>tsc</code>, ESLint and <code>verify-doc</code> over 80
+      <strong>Ten findings were in the checkers this WU built, and every gate was green the whole
+      time.</strong> 313 tests, clippy pedantic, <code>tsc</code>, ESLint and <code>verify-doc</code> over 80
       docs all passed on code that reported a colour nobody wrote and accepted an answer nobody gave. That is
       not an argument against the gates — it is the WU's own thesis arriving at its author: <em>a predicate
       that has never been executed against an artifact built to break it is a claim</em>. The review is the
@@ -211,7 +219,7 @@
     <div class="callout" data-c="through-line">
       <strong>The one finding that outranks every other in this WU.</strong> Every live defect in it, and the
       instrument that found each of them was the same: executing against the real artifact, or reading it.
-      Zero were found by <code>tsc -b</code>. Zero were found by the 788-and-growing test suite. Four of the
+      Zero were found by <code>tsc -b</code>. Zero were found by the 789-and-growing test suite. Four of the
       first ten were invisible <em>by construction</em> — a value that is never a class cannot be seen by a
       class-reading check, and an open scale cannot be red by a rule whose legality test is "Tailwind can
       emit it". Both holes are closed at their root rather than one instance at a time.
@@ -278,7 +286,7 @@
         <thead><tr><th>Gate</th><th>Result</th></tr></thead>
         <tbody>
           <tr><td><code>cargo fmt --check</code> · <code>cargo clippy -D warnings</code> (pedantic)</td><td>clean</td></tr>
-          <tr><td><code>cargo test --workspace</code></td><td>312 passed, 0 failed — 99 of them the design predicates in <code>xtask/src/doc.rs</code></td></tr>
+          <tr><td><code>cargo test --workspace</code></td><td>313 passed, 0 failed — 100 of them the design predicates in <code>xtask/src/doc.rs</code></td></tr>
           <tr><td><code>npx tsc -b</code></td><td>clean</td></tr>
           <tr><td><code>npm run lint</code> (new this WU)</td><td>green over all of <code>ui/src/</code></td></tr>
           <tr><td><code>npx vitest run</code></td><td>476 passed across 39 files</td></tr>
@@ -317,7 +325,7 @@
           <tr><td><code>0726ff4</code></td><td>⑥ review round 1's seven verified findings: the <code>#</code> anchor, the <code>order</code> substring, the two pragma dialects, the second Tailwind context, DEC-17's copied table</td></tr>
           <tr><td><code>ef4ff4f</code></td><td>⑥ round 2 — the ordering fix was wrong in kind; a keyword over prose becomes <code>data-order</code>, a declaration</td></tr>
           <tr><td><code>fcbe2ba</code> · <code>5ac17d4</code> · <code>12a1699</code> · <code>a033d14</code></td><td>⑥ rounds 3&ndash;6 — the HTML scanning holes, five rulebook rows that claimed more than their predicate does, and two records this WU had made false</td></tr>
-          <tr><td><code>5c6b03a</code> · <em>the tip</em></td><td>⑥ rounds 7&ndash;8 — the ambiguity closed instead of guessed, then the panic and the pragma dialect that closing it introduced. <strong>A commit cannot print its own hash</strong>, so the last row of a table like this was stale in three separate rounds; the list is <code>git log --oneline epic/design-flow..HEAD</code> and this row stops transcribing it</td></tr>
+          <tr><td><code>5c6b03a</code> · <code>25e0f36</code> · <em>the tip</em></td><td>⑥ rounds 7&ndash;9 — the ambiguity closed instead of guessed, then the panic and the pragma dialect that closing it introduced, then the message that dialect's fix made misleading. <strong>A commit cannot print its own hash</strong>, so the last row of a table like this was stale in three separate rounds; the list is <code>git log --oneline epic/design-flow..HEAD</code> and this row stops transcribing it</td></tr>
         </tbody>
       </table>
 

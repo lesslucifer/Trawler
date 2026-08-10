@@ -1136,9 +1136,15 @@ fn read_pragmas(failures: &mut Vec<Failure>, html: &str) -> Allowances {
         match arbitrary_value(cls) {
             Some(value) if !is_bare_size(value) => {}
             _ => {
+                // Which reading an author meant is undecidable from the string, and the
+                // lint rule's regex resolves it the same way, so the message names the
+                // reading rather than the checker guessing a cause it cannot know.
+                let read_inside = (cls != token)
+                    .then(|| format!(" - `{token}` read as this class plus a reason, its own rightmost separator being the split"))
+                    .unwrap_or_default();
                 fail(
-                    format!("`{cls}` carries a value, and the pragma never excuses one"),
-                    "the pragma covers a template shape only - name the magnitude as a token in ui/tailwind.config.js",
+                    format!("`{cls}` carries a value, and the pragma never excuses one{read_inside}"),
+                    "the pragma covers a template shape only - name the magnitude as a token in ui/tailwind.config.js, and spell a reason after a space so the dashes a class carries stay inside it",
                 );
                 continue;
             }
@@ -3245,5 +3251,14 @@ chroma_floor: 40
     fn distance_is_small_for_typos_only() {
         assert_eq!(edit_distance("expcted", "expected"), 1);
         assert!(edit_distance("banana", "expected") > 3);
+    }
+    // A class carrying its own `--` and no reason cannot be told from a class with
+    // a glued one-word reason, here or in the lint rule's regex. The verdict is red
+    // either way; what must not happen is a message blaming a cause nobody can know.
+    #[test]
+    fn a_reasonless_class_carrying_its_own_dashes_is_red_and_says_which_reading_it_took() {
+        let doc = pragma("grid-cols-[--tw-cols]", "<div class=\"grid-cols-[--tw-cols]\">x</div>");
+        let said = what(&verify_html_against(&doc, Some(&rules()), Some(&vocab())), "design-allow");
+        assert!(said.contains("grid-cols-[--tw-cols]` read as this class plus a reason"), "{said}");
     }
 }
