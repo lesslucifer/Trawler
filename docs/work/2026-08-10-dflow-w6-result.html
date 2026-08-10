@@ -17,8 +17,8 @@
         <code>13/13 machine-checked (design)</code>. Ten live defects were found along the way —
         <em>every one by executing against the real artifact, none by the type-checker and none by the
         test suite</em> — the tenth by ⑤ re-running ④'s own regression instead of reading it. Then the code
-        review at ⑥ ran <strong>nine rounds and none came back clean</strong>, ten of its findings inside the
-        checkers this WU had just built.</p>
+        review at ⑥ ran <strong>ten rounds, and only the tenth came back clean</strong> — ten of its findings were
+        inside the checkers this WU had just built.</p>
       <div class="meta">Result report · 2026-08-10 · Trawler · T3 (docs/work/) ·
         <code>wu/design-flow/revise-rulebook</code> → <code>epic/design-flow</code> ·
         plan: <a href="2026-08-03-dflow-w6-plan.html">W6 plan</a> ·
@@ -40,10 +40,10 @@
         and the built stylesheet agree on all 205 non-arbitrary classes the tree authors</p></div>
       <div class="card"><h3>19 / 19</h3><p>carried W4 findings disposed — each landed, or recorded with the
         reason it did not</p></div>
-      <div class="card"><h3>10 + 9 rounds</h3><p><strong>Ten</strong> found by the steps, in shipped code
+      <div class="card"><h3>10 + 10 rounds</h3><p><strong>Ten</strong> found by the steps, in shipped code
         or shipped docs — three in the closure, two in the lint rule, two in the rulebook's own subject
         matter, two in the doc toolchain, one in the doc corpus. Then the code review at ⑥ ran
-        <a href="#review">nine rounds</a> and <strong>no round came back clean</strong> — the per-round
+        <a href="#review">ten rounds</a>, <strong>nine of which found something</strong> — the per-round
         counts are in that table rather than summed here, because a total this report cannot recompute is the
         defect it keeps finding elsewhere</p></div>
       <div class="card"><h3>789 tests</h3><p>313 Rust (100 of them in <code>doc.rs</code>) · 476 vitest
@@ -135,8 +135,8 @@
               ③ adopted this WU</td></tr>
         <tr><td><strong>⑥</strong> <a href="#review">the review</a></td>
             <td>DEC-17 and DEC-15's completion · the T1 lint row · the code-review skill over the whole WU
-              diff, nine rounds, each one re-run on the tip the last one produced</td>
-            <td><strong>defects in the work this WU had just finished, in every one of nine rounds</strong>, ten of them in the
+              diff, ten rounds, each one re-run on the tip the last one produced</td>
+            <td><strong>defects in the work this WU had just finished, in nine of ten rounds</strong>, ten of them in the
               instrument itself. <code>zero-accent</code> called <code>font-[900]</code> a colour;
               <code>wire-order-preserved</code> accepted the word <code>border</code>; the pragma had two
               dialects, so <code>h-[100dvh]</code> was excused on one surface and rejected on the other; the
@@ -145,10 +145,12 @@
       </tbody>
     </table>
 
-    <h3 id="review">The nine review rounds</h3>
+    <h3 id="review">The ten review rounds</h3>
     <p class="meta">Each round ran against the tip the previous round's fixes produced, so every fix was itself
-      reviewed. <strong>No round came back clean</strong> — and rounds 3 through 8 all landed on the same
-      function, each on the previous round's repair. What finally closed it was not a better patch but a
+      reviewed. <strong>Nine of the ten found something</strong> — and rounds 3 through 8 all landed on the
+      same function, each on the previous round's repair. What stopped the sequence was scope: rounds 9 and 10
+      reviewed only the previous round's own handful of lines, which is the smallest diff a fix can be judged
+      against. What finally closed it was not a better patch but a
       different bound, and then making the one input that bound cannot parse illegal; see
       <a href="#follow-ups">follow-up 10</a>.</p>
     <table data-c="review-rounds">
@@ -205,6 +207,12 @@
               lint rule's regex resolves it identically, so the verdict stays and the message now names the
               reading it took rather than guessing a cause. The nit: one of round 8's three tests is a pin on
               refuted behaviour, not a regression net — kept deliberately, so round 10 does not re-litigate it</td></tr>
+        <tr><td><strong>10</strong></td><td><strong>0</strong></td>
+            <td>Scoped to round 9's three-line message change. <strong>Clean</strong> — and clean with evidence
+              rather than by inspection: the clause is proved verdict-neutral by diffing <code>verify-doc</code>'s
+              full output over all 80 docs between binaries built at both commits, round 9's test is proved to
+              fail when its fix is reverted, and every number in both notes and in this report is
+              re-measured from source</td></tr>
       </tbody>
     </table>
     <div class="callout warn" data-c="review-lesson">
@@ -325,7 +333,7 @@
           <tr><td><code>0726ff4</code></td><td>⑥ review round 1's seven verified findings: the <code>#</code> anchor, the <code>order</code> substring, the two pragma dialects, the second Tailwind context, DEC-17's copied table</td></tr>
           <tr><td><code>ef4ff4f</code></td><td>⑥ round 2 — the ordering fix was wrong in kind; a keyword over prose becomes <code>data-order</code>, a declaration</td></tr>
           <tr><td><code>fcbe2ba</code> · <code>5ac17d4</code> · <code>12a1699</code> · <code>a033d14</code></td><td>⑥ rounds 3&ndash;6 — the HTML scanning holes, five rulebook rows that claimed more than their predicate does, and two records this WU had made false</td></tr>
-          <tr><td><code>5c6b03a</code> · <code>25e0f36</code> · <em>the tip</em></td><td>⑥ rounds 7&ndash;9 — the ambiguity closed instead of guessed, then the panic and the pragma dialect that closing it introduced, then the message that dialect's fix made misleading. <strong>A commit cannot print its own hash</strong>, so the last row of a table like this was stale in three separate rounds; the list is <code>git log --oneline epic/design-flow..HEAD</code> and this row stops transcribing it</td></tr>
+          <tr><td><code>5c6b03a</code> · <code>25e0f36</code> · <code>aaae52a</code> · <em>the tip</em></td><td>⑥ rounds 7&ndash;10 — the ambiguity closed instead of guessed, then the panic and the pragma dialect that closing it introduced, then the message that dialect's fix made misleading, then a clean round. <strong>The tip itself is this report recording that</strong> — the last commit of a review is always the one the review cannot have read, which is why <code>mr/v1</code> and not <code>cr/v2</code> is what attests it. <strong>A commit cannot print its own hash</strong>, so the last row of a table like this was stale in three separate rounds; the list is <code>git log --oneline epic/design-flow..HEAD</code> and this row stops transcribing it</td></tr>
         </tbody>
       </table>
 
