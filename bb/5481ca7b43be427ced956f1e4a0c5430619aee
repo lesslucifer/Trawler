@@ -1,0 +1,10 @@
+level: wu
+scope: "docs/work/2026-08-10-dflow-w6-result.html (T3)"
+evidence:
+  - "cargo xtask verify-doc: green on docs/work/2026-08-10-dflow-w6-result.html (wu-result) — all five required items present and filled: outcome, deviations, evidence, distillation, follow-ups"
+  - "every number in the report re-measured against the tree rather than copied from a step doc: 300 Rust pass / 0 fail, 87 of them in xtask/src/doc.rs, 474 vitest across 39 files, 205 classes reconciled, 13 hard / 17 soft"
+  - "every relative href resolves; the step ledger links all five step records, the review report, and both archived runs"
+  - "snapshotted before and after writing, so <doc>.html?diff=latest shows the round"
+open:
+  - "DEC-17 and DEC-15's Tier-1 completion are owed at step 6; the report's distillation table spells out DEC-17's required content so writing it is not a re-derivation"
+  - "docs/work/2026-07-29-dflow-w5-result.html carries no data-artifact, so verify-doc never checked its five items — found while matching this report to the house form, logged as follow-up 7, one attribute to fix on the next docs touch"
