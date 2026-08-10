@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W6
+branch: wu/design-flow/revise-rulebook
+changes:
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: updated
+    distills: "the rulebook now describes the checks that ship rather than the ones step 3 could only specify — the data-wire callout naming the one thing a mockup must declare and its n/a path; the CSS-value half added to spacing-scale, type-tokens-only and radius-tokens, which is the surface no class check can reach; wire-order-preserved pointed at data-wire=collection; uppercase-mute-labels restated as 'whatever is uppercase and is not font-mono, tracking from the token'; wrap-not-truncate stating that data-wire and font-mono are both ways of being a payload; and zero-accent recording that with the config closed no legal class can break its membership test, so what the predicate owns is the value written past the config. No rule text, slug, binds value or reviewer question changed — 13 hard and 17 soft rows intact."
+  - path: docs/work/2026-08-10-dflow-w6-step4-predicates.html
+    tier: T3
+    action: added
+    distills: "step 4's record — the vocabulary bridge diagrammed (one oracle, two languages, everything derived rather than transcribed), a per-predicate table naming what each one reads and what it actually caught on a shipped run, the 49-red judgement over both archived runs with the plan's green prediction overturned and why, the data-wire contract with its three spellings, the pragma's five rules with the reason each exists, the two step-1 defects found by reading with the diagram of why every check stayed green over them, and the two honest limits (shared-prefix double-reporting, zero-accent's narrowed job)"
+open:
+  - "docs/decisions DEC-17 is still unwritten and now owes the data-wire declaration with its n/a path, the two-surface split for the value rules, and the derived-not-transcribed rule for the emitter, on top of everything step 2 and step 3 listed for it"
+  - "the data-wire ruling is deliberately open for reversal: an unmarked mockup currently reds, and a silent n/a is a two-line change if the reviewer prefers it"
+  - "no staleness check exists on doc-assets/components/specimens.bundle.js — the preceding commit fixed the two files that could not regenerate it, but nothing yet reds a bundle older than the config it was built from"
