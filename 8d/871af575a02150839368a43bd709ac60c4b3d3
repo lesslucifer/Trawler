@@ -1,0 +1,23 @@
+schema: cr/v2
+scope: "WU E-DFLOW.W6 the closed vocabulary -> epic/design-flow"
+epic: E-DFLOW
+wu: E-DFLOW.W6
+branch: wu/design-flow/revise-rulebook
+base: 838eb95859b893f9e3cf12c1c1b25f34b1295eed
+head: 8d871af575a02150839368a43bd709ac60c4b3d3
+diff_sha256: 730d1f87a89a96a5105f0d84e8bbbacb7ab2dba521727dab44d60e7a5a85e70f
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 10, verified: 7, waived: 0 }
+verified:
+  - "important xtask/src/doc.rs is_chromatic: no `#` anchor, so any 3- or 6-char all-hex-digit arbitrary value is judged a colour - `font-[900]` reds under zero-accent. The JS twin requires ^#. Reproduced through the CLI"
+  - "important xtask/src/doc.rs check_wire_order_preserved: the ordering declaration is a bare contains(\"order\") over the row's raw outerHTML, so `border` satisfies it. Adding class=\"border-b\" to a data-wire=\"collection\" row that declares no ordering flips the check red -> green"
+  - "important scripts/design-vocabulary.mjs: builds a SECOND Tailwind context without classes.js's inherited-scale guard, so the modifier map Rust consumes can disagree with the one the ESLint rule uses. Identical under today's config; exhibited by dropping the opacity declaration"
+  - "important classes.js isBareSize vs doc.rs is_bare_size: a unit whitelist against a generic trim. `h-[100dvh]` under a design-allow pragma is excused in ui/src/ and rejected in a design run - the one dialect DEC-17 says does not exist"
+  - "important docs/decisions/dec-17-closed-vocabulary.html: the pragma table is byte-identical to the rulebook's for 4 of its 5 rows with no link back, and the fifth already differs. Two T2 homes for one enforceable fact, which documentation-system.html bans and DEC-17's own options table argues against"
+  - "nit docs/backlog/roadmap.html + docs/work/...step3-rulebook.html: both link design-rules-index.html#open, an id that exists in neither revision - an Open table the WU intended and never shipped"
+  - "nit xtask/src/doc.rs Vocabulary: the Default half of the derive is unused; cargo check passes without it"
+refuted:
+  - "check_wire_data attribute order - classes_at re-scans the whole tag, so order cannot hide an element; all four probe orderings red identically"
+  - "the redundant mockup_declarations call - real shape, but the largest <style> in the repo is 6.7KB and it re-parses at most 3 times, against a node subprocess that dominates the run. Not an efficiency finding"
+verdict: FAIL
+date: 2026-08-10
