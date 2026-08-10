@@ -1114,29 +1114,25 @@ fn read_pragmas(failures: &mut Vec<Failure>, html: &str) -> Allowances {
         let Some(end) = html[at..].find("-->").map(|rel| at + rel) else { continue };
         let body = html[at + 4..end].trim();
         let Some(rest) = body.strip_prefix("design-allow:") else { continue };
-        // The class is the first whitespace-delimited token and the separator comes
-        // after it - never a raw substring search, because `w-[--tw-x:1]` carries
-        // the separator inside the class. `--` as well as the em dash, since the
+        // The class is the longest prefix of the first token that a separator
+        // follows - rightmost, so `w-[--tw-x:1]` keeps the dashes it owns, and no
+        // whitespace required, so a separator glued to the class reads here the way
+        // it reads in the lint rule's regex. `--` as well as the em dash, since the
         // lint rule takes both and one rule cannot have two dialects.
-        let split = rest.trim_start().split_once(char::is_whitespace).and_then(|(cls, tail)| {
-            let tail = tail.trim_start();
-            let why = tail.strip_prefix('—').or_else(|| tail.strip_prefix("--"))?;
-            Some((cls, why))
+        let decl = rest.trim_start();
+        let token = decl.split_whitespace().next().unwrap_or("");
+        let split = (1..=token.len()).rev().filter(|n| token.is_char_boundary(*n)).find_map(|n| {
+            let after = decl[n..].trim_start();
+            let why = after.strip_prefix('—').or_else(|| after.strip_prefix("--"))?;
+            (!why.trim().is_empty()).then_some((&decl[..n], why))
         });
-        let Some((cls, why)) = split.map(|(c, w)| (c.trim(), w.trim())) else {
+        let Some(cls) = split.map(|(cls, _)| cls.trim()) else {
             fail(
                 format!("`{}` gives no reason", rest.trim()),
                 "a pragma reads `design-allow: <class> — <reason>` (em dash) - an escape nobody justified is a hole",
             );
             continue;
         };
-        if why.is_empty() {
-            fail(
-                format!("`{cls}` gives no reason"),
-                "a pragma reads `design-allow: <class> — <reason>` (em dash) - an escape nobody justified is a hole",
-            );
-            continue;
-        }
         match arbitrary_value(cls) {
             Some(value) if !is_bare_size(value) => {}
             _ => {
@@ -1739,7 +1735,7 @@ fn check_escaped_markup(failures: &mut Vec<Failure>, html: &str) {
             (Some(_), Some(q), c) if c == q => quote = None,
             (Some(_), None, '>') => tag_from = None,
             (Some(from), Some(_), '<' | '>') => {
-                let seen = &html[from..i.min(from + 80)];
+                let seen: String = html[from..i].chars().take(80).collect();
                 failures.push(Failure {
                     check: "markup·escaped".to_string(),
                     what: format!("an attribute value holds a raw `{c}`: {seen}"),
@@ -3136,6 +3132,29 @@ chroma_floor: 40
         );
     }
 
+    // A raw `<` in prose that a letter follows is a tag open to every HTML parser
+    // alive, so the sentence after it is swallowed as attributes - the two token
+    // reds below are that swallowing. Naming it is the fail-safe reading; going
+    // quiet on it would leave the classes silently lost.
+    #[test]
+    fn a_raw_bracket_in_prose_is_named_not_tolerated() {
+        let doc = mockup("<p class=\"text-sm\">x<y here; it's fine, and 3 > 2 too.</p>");
+        assert!(
+            reds(&doc).contains(&"markup·escaped".to_string()),
+            "{:?}",
+            failures(&doc_verdict(&doc))
+        );
+    }
+
+    // The named snippet is cut to a length, and a length in bytes lands mid
+    // character on the em dashes this project writes everywhere.
+    #[test]
+    fn naming_a_raw_bracket_survives_a_multibyte_value() {
+        let long = "—".repeat(40);
+        let doc = mockup(&format!("<span title=\"{long} a < b\">x</span>"));
+        assert!(what(&doc_verdict(&doc), "markup·escaped").contains("raw"));
+    }
+
     #[test]
     fn an_ascii_dash_separates_a_pragma_the_way_the_lint_rule_allows() {
         let doc = pragma(
@@ -3154,6 +3173,19 @@ chroma_floor: 40
         let doc = pragma(
             "grid-cols-[--tw-cols] -- the template shape comes from a custom property",
             "<div class=\"grid-cols-[--tw-cols]\">x</div>",
+        );
+        let reds = failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab())));
+        assert!(!reds.contains(&"design-allow".to_string()), "{reds:?}");
+    }
+
+    // The lint rule's regex needs no whitespace before the separator, so neither
+    // may this - one pragma form, or an escape legal in a component is red in the
+    // mockup that specimen came from.
+    #[test]
+    fn a_separator_glued_to_the_class_reads_the_way_the_lint_rule_reads_it() {
+        let doc = pragma(
+            "grid-cols-[auto_1fr]--the two-column payload grid has no token shape",
+            "<div class=\"grid-cols-[auto_1fr]\">x</div>",
         );
         let reds = failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab())));
         assert!(!reds.contains(&"design-allow".to_string()), "{reds:?}");

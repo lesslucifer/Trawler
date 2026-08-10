@@ -17,7 +17,7 @@
         <code>13/13 machine-checked (design)</code>. Ten live defects were found along the way —
         <em>every one by executing against the real artifact, none by the type-checker and none by the
         test suite</em> — the tenth by ⑤ re-running ④'s own regression instead of reading it. Then the code
-        review at ⑥ ran <strong>seven rounds and none came back clean</strong>, seven of its findings inside the
+        review at ⑥ ran <strong>eight rounds and none came back clean</strong>, nine of its findings inside the
         checkers this WU had just built.</p>
       <div class="meta">Result report · 2026-08-10 · Trawler · T3 (docs/work/) ·
         <code>wu/design-flow/revise-rulebook</code> → <code>epic/design-flow</code> ·
@@ -40,13 +40,13 @@
         and the built stylesheet agree on all 205 non-arbitrary classes the tree authors</p></div>
       <div class="card"><h3>19 / 19</h3><p>carried W4 findings disposed — each landed, or recorded with the
         reason it did not</p></div>
-      <div class="card"><h3>10 + 7 rounds</h3><p><strong>Ten</strong> found by the steps, in shipped code
+      <div class="card"><h3>10 + 8 rounds</h3><p><strong>Ten</strong> found by the steps, in shipped code
         or shipped docs — three in the closure, two in the lint rule, two in the rulebook's own subject
         matter, two in the doc toolchain, one in the doc corpus. Then the code review at ⑥ ran
-        <a href="#review">seven rounds</a> and <strong>no round came back clean</strong> — the per-round
+        <a href="#review">eight rounds</a> and <strong>no round came back clean</strong> — the per-round
         counts are in that table rather than summed here, because a total this report cannot recompute is the
         defect it keeps finding elsewhere</p></div>
-      <div class="card"><h3>785 tests</h3><p>309 Rust (96 of them in <code>doc.rs</code>) · 476 vitest
+      <div class="card"><h3>788 tests</h3><p>312 Rust (99 of them in <code>doc.rs</code>) · 476 vitest
         across 39 files · clippy, fmt, tsc, eslint and the specimen render check all clean</p></div>
     </div>
 
@@ -66,7 +66,7 @@
             <td>emitted stylesheet 225 → 183 classes, 42 dropped, zero surviving class changed meaning.
               Then ③ found the closure was still half open — <strong>63 scales</strong> sat identical to
               Tailwind's defaults, every member legal with nothing able to say so. Fixed at the root by
-              redefining legality as <em>membership of a scale the config declares</em>: 8 scales in use
+              redefining legality as <em>membership of a scale the config declares</em>: 9 scales
               declared, 54 latent ones now red on sight</td>
             <td><span class="badge auto">met</span></td></tr>
         <tr><td>The eight chromatic tokens are deleted and <code>MethodLabel</code> reverts to ink</td>
@@ -83,7 +83,7 @@
             <td><span class="badge auto">met</span></td></tr>
         <tr><td>A local ESLint rule judges the same vocabulary against all of <code>ui/src/</code></td>
             <td><code>design/vocabulary</code>, sharing one class-list oracle with the emitter that feeds
-              Rust — so the two surfaces cannot drift. 19 RuleTester cases plus a re-runnable reconciler
+              Rust — so the two surfaces cannot drift. 25 RuleTester cases plus a re-runnable reconciler
               against the built CSS</td>
             <td><span class="badge auto">met</span></td></tr>
       </tbody>
@@ -135,8 +135,8 @@
               ③ adopted this WU</td></tr>
         <tr><td><strong>⑥</strong> <a href="#review">the review</a></td>
             <td>DEC-17 and DEC-15's completion · the T1 lint row · the code-review skill over the whole WU
-              diff, five rounds, each one re-run on the tip the last one produced</td>
-            <td><strong>defects in the work this WU had just finished, in every one of seven rounds</strong>, seven of them in the
+              diff, eight rounds, each one re-run on the tip the last one produced</td>
+            <td><strong>defects in the work this WU had just finished, in every one of eight rounds</strong>, nine of them in the
               instrument itself. <code>zero-accent</code> called <code>font-[900]</code> a colour;
               <code>wire-order-preserved</code> accepted the word <code>border</code>; the pragma had two
               dialects, so <code>h-[100dvh]</code> was excused on one surface and rejected on the other; the
@@ -145,9 +145,12 @@
       </tbody>
     </table>
 
-    <h3 id="review">The seven review rounds</h3>
+    <h3 id="review">The eight review rounds</h3>
     <p class="meta">Each round ran against the tip the previous round's fixes produced, so every fix was itself
-      reviewed. <strong>No round came back clean</strong> — six rounds, and the sixth found the third revision of one function still wrong. What finally closed it was not a better patch but a different bound; see <a href="#follow-ups">follow-up 10</a>.</p>
+      reviewed. <strong>No round came back clean</strong> — and rounds 3 through 8 all landed on the same
+      function, each on the previous round's repair. What finally closed it was not a better patch but a
+      different bound, and then making the one input that bound cannot parse illegal; see
+      <a href="#follow-ups">follow-up 10</a>.</p>
     <table data-c="review-rounds">
       <thead><tr><th>Round</th><th>Verified</th><th>What it caught</th></tr></thead>
       <tbody>
@@ -186,11 +189,19 @@
               rather than guessed: <code>markup·escaped</code> now reds a raw angle bracket in a value, the
               spelling every doc in the corpus already used. Plus a third pragma dialect (the class is a token,
               not everything left of the first <code>--</code>) and four more of this report's own numbers</td></tr>
+        <tr><td><strong>8</strong></td><td>2 + 4<br><span class="meta">1 refuted</span></td>
+            <td>Round 7's own two: the named snippet was cut at a <em>byte</em> length, so an em dash in a value
+              — which this project writes everywhere — <strong>panicked the whole run</strong> instead of
+              reding one doc; and the pragma fix left the Rust side demanding whitespace before a separator the
+              lint rule's regex accepts glued, a fourth dialect. Refuted: a raw <code>&lt;</code> in prose is a
+              tag open to every HTML parser alive, so reding it is correct and now pinned as such. Plus the
+              ninth declared scale, the RuleTester count, and a commit table whose last row cannot know its own
+              hash</td></tr>
       </tbody>
     </table>
     <div class="callout warn" data-c="review-lesson">
-      <strong>Seven findings were in the checkers this WU built, and every gate was green the whole
-      time.</strong> 309 tests, clippy pedantic, <code>tsc</code>, ESLint and <code>verify-doc</code> over 80
+      <strong>Nine findings were in the checkers this WU built, and every gate was green the whole
+      time.</strong> 312 tests, clippy pedantic, <code>tsc</code>, ESLint and <code>verify-doc</code> over 80
       docs all passed on code that reported a colour nobody wrote and accepted an answer nobody gave. That is
       not an argument against the gates — it is the WU's own thesis arriving at its author: <em>a predicate
       that has never been executed against an artifact built to break it is a claim</em>. The review is the
@@ -200,7 +211,7 @@
     <div class="callout" data-c="through-line">
       <strong>The one finding that outranks every other in this WU.</strong> Every live defect in it, and the
       instrument that found each of them was the same: executing against the real artifact, or reading it.
-      Zero were found by <code>tsc -b</code>. Zero were found by the 785-and-growing test suite. Four of the
+      Zero were found by <code>tsc -b</code>. Zero were found by the 788-and-growing test suite. Four of the
       first ten were invisible <em>by construction</em> — a value that is never a class cannot be seen by a
       class-reading check, and an open scale cannot be red by a rule whose legality test is "Tailwind can
       emit it". Both holes are closed at their root rather than one instance at a time.
@@ -267,7 +278,7 @@
         <thead><tr><th>Gate</th><th>Result</th></tr></thead>
         <tbody>
           <tr><td><code>cargo fmt --check</code> · <code>cargo clippy -D warnings</code> (pedantic)</td><td>clean</td></tr>
-          <tr><td><code>cargo test --workspace</code></td><td>309 passed, 0 failed — 96 of them the design predicates in <code>xtask/src/doc.rs</code></td></tr>
+          <tr><td><code>cargo test --workspace</code></td><td>312 passed, 0 failed — 99 of them the design predicates in <code>xtask/src/doc.rs</code></td></tr>
           <tr><td><code>npx tsc -b</code></td><td>clean</td></tr>
           <tr><td><code>npm run lint</code> (new this WU)</td><td>green over all of <code>ui/src/</code></td></tr>
           <tr><td><code>npx vitest run</code></td><td>476 passed across 39 files</td></tr>
@@ -284,7 +295,7 @@
         <tbody>
           <tr><td>unit · commit</td><td>Per predicate: a green case and a red per way the rule can be broken. Plus the emitter — a renamed or unreadable config fails loudly, never silently passes every token rule. Plus the pragma's four rejection paths</td></tr>
           <tr><td>integration · WU</td><td><code>xtask/tests/verify_doc.rs</code>: a design run is receipted against the rulebook on disk, the gap line prints with its surface label and suppression count, and a run without the vocabulary emitter is red rather than quietly green</td></tr>
-          <tr><td>lint</td><td><code>ui/eslint-rules/vocabulary.test.js</code> — 19 RuleTester cases including one per false-positive family (structural, variant-prefixed, slash-opacity, zero, relationship keyword) so a future edit cannot silently re-widen the scope</td></tr>
+          <tr><td>lint</td><td><code>ui/eslint-rules/vocabulary.test.js</code> — 25 RuleTester cases including one per false-positive family (structural, variant-prefixed, slash-opacity, zero, relationship keyword) so a future edit cannot silently re-widen the scope</td></tr>
           <tr><td>regression</td><td>The existing suite as the net for reverting <code>MethodLabel</code> and re-expressing 58 classes; the archived runs as the net for the predicates</td></tr>
           <tr><td>e2e</td><td><code>waived: "flow e2e is W7 per the epic plan"</code> — same wording as W4 and W5</td></tr>
         </tbody>
@@ -305,7 +316,8 @@
           <tr><td><code>c578673</code> · <code>8d871af</code></td><td>⑥ the distillation — DEC-17, DEC-15's Tier-1 completion, the index row, and the T1 lint row signed with a human <code>Reviewed-By</code></td></tr>
           <tr><td><code>0726ff4</code></td><td>⑥ review round 1's seven verified findings: the <code>#</code> anchor, the <code>order</code> substring, the two pragma dialects, the second Tailwind context, DEC-17's copied table</td></tr>
           <tr><td><code>ef4ff4f</code></td><td>⑥ round 2 — the ordering fix was wrong in kind; a keyword over prose becomes <code>data-order</code>, a declaration</td></tr>
-          <tr><td><code>fcbe2ba</code> · <code>5ac17d4</code> · <code>12a1699</code> · <code>HEAD</code></td><td>⑥ rounds 3&ndash;6 — the HTML scanning holes, five rulebook rows that claimed more than their predicate does, and two records this WU had made false</td></tr>
+          <tr><td><code>fcbe2ba</code> · <code>5ac17d4</code> · <code>12a1699</code> · <code>a033d14</code></td><td>⑥ rounds 3&ndash;6 — the HTML scanning holes, five rulebook rows that claimed more than their predicate does, and two records this WU had made false</td></tr>
+          <tr><td><code>5c6b03a</code> · <em>the tip</em></td><td>⑥ rounds 7&ndash;8 — the ambiguity closed instead of guessed, then the panic and the pragma dialect that closing it introduced. <strong>A commit cannot print its own hash</strong>, so the last row of a table like this was stale in three separate rounds; the list is <code>git log --oneline epic/design-flow..HEAD</code> and this row stops transcribing it</td></tr>
         </tbody>
       </table>
 
@@ -424,7 +436,7 @@
           <code>colour-plus-text</code>. Clean on both runs for stated reasons, but their only failing
           evidence is synthetic. This is the over-fit exposure the plan named, with a number on it</td>
           <td>W9 · the fourth design run</td></tr>
-      <tr><td>10</td><td><strong>The predicates read HTML with hand-rolled string scanning, and three review
+      <tr><td>10</td><td><strong>The predicates read HTML with hand-rolled string scanning, and six review
           rounds each found a hole in it.</strong> An attribute quoted inside another attribute's value counted
           as that attribute; a tag's end was found at a bracket inside a quoted value; then the fix for the
           second could re-sync past a malformed tag and lend one element another's classes. Each fix was
@@ -433,9 +445,12 @@
           <code>attr_positions</code>, <code>tag_end</code>, <code>element_content</code> — and every one is
           the same mistake, treating an attribute's <em>value</em> as markup. A real parser would end the
           class; it is a bigger change than a rulebook WU should absorb, and the cost of not making it is one
-          more round of this per predicate added. <strong>The three functions are now the whole
-          surface</strong>, so replacing them is a bounded job rather than a rewrite</td><td>W7 · Tier-2 +
-          Tier-3</td></tr>
+          more round of this per predicate added — measured: rounds 3, 4, 5, 6, 7 and 8, six for six. Rounds 7
+          and 8 are the clearest evidence, because the round-7 fix that finally worked was itself a fourth
+          scanner (<code>check_escaped_markup</code>), and round 8 found two defects in it. <strong>The four
+          functions are now the whole surface</strong> — <code>attr_positions</code>, <code>tag_end</code>,
+          <code>element_content</code>, <code>check_escaped_markup</code> — so replacing them is a bounded job
+          rather than a rewrite</td><td>W7 · Tier-2 + Tier-3</td></tr>
         </tbody>
     </table>
   </main>
