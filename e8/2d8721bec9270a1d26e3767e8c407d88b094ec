@@ -1,0 +1,17 @@
+level: commit
+gates:
+  - "npx vitest run: 473/473 across 39 files (was 471)"
+  - "npm run lint (design/vocabulary over ui/src): 0 errors"
+  - "npx tsc -b: clean"
+  - "node eslint-rules/reconcile.mjs: AGREE on 205; 3 arbitrary values diverge by design"
+  - "cargo fmt --check / clippy --all-targets -D warnings / cargo test --all: clean, clean, 63 pass"
+  - "cargo xtask ui specimens --check: all migrated design files render"
+evidence:
+  - "open-scale sweep measured by generating the class list per scale emptied and intersecting with what ui/src/ authors: 63 open, 8 drawn from (animation cursor flex flexShrink gridColumnStart gridRowStart listStyleType transitionProperty), 54 latent"
+  - "built stylesheet diffed before/after declaring the 8: exactly one rule differs, the removal of `.transition` — emitted only because the word appears in a TonedText JSDoc comment and Tailwind's scanner reads prose. Nothing the app renders changed"
+  - "vocabulary.test.js +2 cases: the 8 declared scales' in-use classes stay valid; duration-500 (undeclared scale), animate-bounce (declared scale, absent member) and font-bold all red as offlist"
+  - "steps?.size guard applied from the step 2 review waiver; re-measured after the narrowing — 0 bases carry an empty modifier list, so it stays a guard with no reachable case rather than a faked test"
+  - "SourceSurface: HighlightStyle takes `class`, so the palette is the single source; built CSS probe confirms .text-syn-key emits rgb(143 184 222) = #8fb8de, byte-identical to the deleted literal"
+  - "SourceSurface.test.tsx rewritten because the old assertion was vacuous under the change: querySelectorAll(style*=color) returns 0 and `size <= 4` passes. New test asserts the class set is exactly the four palette classes AND that no span carries an inline colour"
+  - "KB validated mechanically: HTML well-formed (no unclosed tags), zero dangling #anchors, every relative href resolves, 13 hard rows and 17 soft rows each with the full cell count"
+waived: "e2e — flow e2e is W7 per the epic plan, same as W4 and W5"
