@@ -2235,10 +2235,18 @@ chromatic: [ok, warn]
         assert!(what(&doc_verdict(&doc), "elements·map").contains("notice"));
     }
 
+    // These two judge run #3's form, not its status, and archiving it exempts
+    // the whole doc - so they would keep passing while asserting nothing.
+    fn reopened(run: &str) -> String {
+        let open = run.replace(" data-status=\"archived\"", "");
+        assert_ne!(open, run, "run is not archived - reopening it is now a silent no-op");
+        open
+    }
+
     #[test]
     fn the_run_3_elements_map_is_a_live_two_half_map() {
-        let doc = include_str!("../../docs/work/2026-07-26-dflow-w4-run-3.html");
-        assert!(!failures(&doc_verdict(doc)).contains(&"elements·map".to_string()));
+        let doc = reopened(include_str!("../../docs/work/2026-07-26-dflow-w4-run-3.html"));
+        assert!(!failures(&doc_verdict(&doc)).contains(&"elements·map".to_string()));
     }
 
     #[test]
@@ -2344,8 +2352,8 @@ chromatic: [ok, warn]
 
     #[test]
     fn the_run_3_form_rules_hold_on_the_real_doc() {
-        let doc = include_str!("../../docs/work/2026-07-26-dflow-w4-run-3.html");
-        let reds = failures(&doc_verdict(doc));
+        let doc = reopened(include_str!("../../docs/work/2026-07-26-dflow-w4-run-3.html"));
+        let reds = failures(&doc_verdict(&doc));
         for check in [
             "elements·gist",
             "interaction·gist",
@@ -2437,6 +2445,7 @@ chromatic: [ok, warn]
         for run in [
             include_str!("../../docs/work/2026-07-16-dflow-run-1.html"),
             include_str!("../../docs/work/2026-07-25-dflow-w4-run-2.html"),
+            include_str!("../../docs/work/2026-07-26-dflow-w4-run-3.html"),
         ] {
             assert!(
                 matches!(verify_html(run), Verdict::Exempt(s) if s == "archived"),

@@ -14,9 +14,9 @@
         <code>ui/tailwind.config.js</code> now replaces Tailwind's rather than extending it, so an off-list
         value emits no CSS; a local ESLint rule is the alarm that silence needs; and all thirteen hard rules
         carry a Tier-1 predicate, so the gap line finally reads
-        <code>13/13 machine-checked (design)</code>. Nine live defects were found along the way —
+        <code>13/13 machine-checked (design)</code>. Ten live defects were found along the way —
         <em>every one by executing against the real artifact, none by the type-checker and none by the
-        test suite</em>.</p>
+        test suite</em> — the tenth by ⑤ re-running ④'s own regression instead of reading it.</p>
       <div class="meta">Result report · 2026-08-10 · Trawler · T3 (docs/work/) ·
         <code>wu/design-flow/revise-rulebook</code> → <code>epic/design-flow</code> ·
         plan: <a href="2026-08-03-dflow-w6-plan.html">W6 plan</a> ·
@@ -38,8 +38,10 @@
         and the built stylesheet agree on all 205 non-arbitrary classes the tree authors</p></div>
       <div class="card"><h3>19 / 19</h3><p>carried W4 findings disposed — each landed, or recorded with the
         reason it did not</p></div>
-      <div class="card"><h3>9 defects</h3><p>live, in shipped code or shipped docs. Three in the closure,
-        two in the lint rule, two in the rulebook's own subject matter, two in the doc toolchain</p></div>
+      <div class="card"><h3>10 defects</h3><p>live, in shipped code or shipped docs. Three in the closure,
+        two in the lint rule, two in the rulebook's own subject matter, two in the doc toolchain, and one
+        in the doc corpus — <a href="2026-08-10-dflow-w6-step5-regression.html#finding">a closed design run
+        that was never archived</a>, red in the tree since W4</p></div>
       <div class="card"><h3>774 tests</h3><p>300 Rust (87 of them in <code>doc.rs</code>) · 474 vitest
         across 39 files · clippy, fmt, tsc, eslint and the specimen render check all clean</p></div>
     </div>
@@ -117,19 +119,24 @@
             <td><strong>2 defects</strong>: two files still destructuring the <code>theme.extend</code> ①
               emptied, so every design doc's CSS variables were dead and the specimen bundle could not be
               rebuilt — which is why it was still shipping the pre-① palette</td></tr>
-        <tr><td><strong>⑤</strong> the regression</td>
-            <td>all 12 predicates run over run #2 and run #3 — <strong>done inside ④</strong>, on ③'s
+        <tr><td><strong>⑤</strong> <a href="2026-08-10-dflow-w6-step5-regression.html">the regression</a></td>
+            <td>all 12 predicates run over run #2 and run #3 — first <strong>inside ④</strong>, on ③'s
               warning that a predicate never run over a real artifact is the bet that has already lost eleven
-              times</td>
-            <td>49 reds, 29 of them real values that shipped past a closed vocabulary.
+              times; then <strong>re-run in ⑤</strong>, because ④ judging its own output is a claim</td>
+            <td>49 reds reproduce exactly and no predicate is wrong.
               <a href="#deviations">The plan predicted green</a>; the plan was wrong and the predicates were
-              not</td></tr>
+              not. <strong>Run #3 turned out never to have been archived</strong> — the only red doc of 78,
+              live since W4; ⑤ archives it and names all three closed runs in the guard test. ④'s red
+              breakdown is corrected: 33 reds over 29 real sites, and six of its "pre-existing" were rules
+              ③ adopted this WU</td></tr>
       </tbody>
     </table>
 
     <div class="callout" data-c="through-line">
-      <strong>The one finding that outranks every other in this WU.</strong> Nine live defects, and the
+      <strong>The one finding that outranks every other in this WU.</strong> Ten live defects, and the
       instrument that found each of them was the same: executing against the real artifact, or reading it.
+      The tenth makes the point twice over: ⑤ existed only to re-run a regression ④ had already run and
+      judged, and re-running it found a closed run that was never archived and nineteen live reds on it.
       Zero were found by <code>tsc -b</code>. Zero were found by the 447-and-growing test suite. Four of them
       were invisible <em>by construction</em> — a value that is never a class cannot be seen by a
       class-reading check, and an open scale cannot be red by a rule whose legality test is "Tailwind can
@@ -168,7 +175,9 @@
             <td>The rule holds for a predicate that reds <em>correct</em> work. These are arbitrary values,
               classes that stopped emitting when ① closed the config, and raw magnitudes in a mockup's own
               CSS. <code>data-status="archived"</code> exists exactly so a tightened rule does not reopen a
-              closed record. Nothing was softened to make a number look better</td></tr>
+              closed record — <strong>and ⑤ found run #3 never carried it</strong>, so nineteen of the 49
+              were live rather than exempt until this step archived it. Nothing was softened to make a
+              number look better</td></tr>
         <tr><td>Twelve predicates over the rules as ③ states them</td>
             <td>Plus one new run-doc contract: <code>data-wire</code></td>
             <td>Three rules turn on which elements render a verbatim payload, and no static reader can
@@ -194,9 +203,9 @@
           <tr><td><code>npm run lint</code> (new this WU)</td><td>green over all of <code>ui/src/</code></td></tr>
           <tr><td><code>npx vitest run</code></td><td>474 passed across 39 files</td></tr>
           <tr><td><code>cargo xtask ui specimens --check</code></td><td>all six migrated design files render, against a bundle rebuilt from the closed config</td></tr>
-          <tr><td><code>cargo xtask verify-doc</code></td><td>green on every doc this WU wrote; the live rulebook parses and every past-cited slug still resolves</td></tr>
+          <tr><td><code>cargo xtask verify-doc</code></td><td>green over <strong>all 78 tracked docs</strong>, not only the ones this WU wrote — the narrower wording is what let run #3 sit red; the live rulebook parses and every past-cited slug still resolves</td></tr>
           <tr><td>reconciliation against the built stylesheet</td><td>AGREE on all 205 non-arbitrary classes; 3 arbitrary values diverge by design</td></tr>
-          <tr><td>the twelve predicates over both archived runs</td><td>run and <a href="2026-08-10-dflow-w6-step4-predicates.html#evidence">judged red by red</a></td></tr>
+          <tr><td>the twelve predicates over both closed runs</td><td>run and <a href="2026-08-10-dflow-w6-step4-predicates.html#evidence">judged red by red</a> in ④, then <a href="2026-08-10-dflow-w6-step5-regression.html#judgement">re-run and recounted in ⑤</a> — 49 reds, 33 real over 29 sites, zero predicates wrong</td></tr>
         </tbody>
       </table>
 
@@ -222,19 +231,25 @@
           <tr><td><code>4835e95</code></td><td>① the closed config, and its three defects</td></tr>
           <tr><td><code>e242af2</code> · <code>5338775</code></td><td>② the lint rule and the re-expression; then the fix for what review found</td></tr>
           <tr><td><code>e82d872</code> · <code>87fbd4d</code> · <code>41f272e</code></td><td>③ the rulebook, its two rulings, and the tiering pass that moved this epic's case history out of the T2</td></tr>
-          <tr><td><em>uncommitted</em></td><td>④ the twelve predicates, the emitter, the rulebook's contract additions, and this report</td></tr>
+          <tr><td><code>5244e2e</code> · <code>b0a15d2</code> · <code>bb5481c</code></td><td>④ the twelve predicates, the emitter, the rulebook's contract additions, and this report</td></tr>
+          <tr><td><em>uncommitted</em></td><td>⑤ the regression re-run: run #3 archived, the guard test naming all three closed runs, and the corrections this step's evidence forced on ④ and on this report</td></tr>
         </tbody>
       </table>
 
       <div class="callout warn" data-c="owed">
-        <strong>What this tip still owes before the merge gate.</strong> ④ is uncommitted, and no
-        <code>test/v2</code>, <code>doc/v1</code>, <code>cr/v2</code> or <code>dod/v1</code> note exists on
-        the branch yet — only ②'s two commits were noted, and ②'s <code>cr/v2</code> PASS is bound to
-        <code>18c99213…</code>, not to the tip. Remaining, in order: commit ④ · <code>test/v2</code> +
-        <code>doc/v1</code> on the tip · <strong>DEC-17</strong> (the closed vocabulary) in
-        <code>docs/decisions/</code> with its index entry, and DEC-15's Tier-1 completion · the code-review
-        skill over ③+④ → <code>cr/v2</code> PASS bound to that exact diff · <code>--no-ff</code> merge into
-        <code>epic/design-flow</code>. The gate writes <code>dod/v1</code>; nothing here bypasses it.
+        <strong>What this tip still owes before the merge gate — read off <code>verify-dod wu</code>, not
+        from memory.</strong> Seven commits carry a <code>test/v2</code> and five a <code>doc/v1</code>; what
+        is missing is on the <em>tip</em>, which is the only place the gate looks. Its four reds:
+        <strong>no <code>test/v2</code></strong> on the tip · <strong>no <code>cr/v2</code></strong> (②'s PASS
+        is bound to <code>18c99213…</code>, so ③+④+⑤ are unreviewed) · the tip's <code>doc</code> note is
+        <strong>not valid <code>doc/v1</code></strong> — a test-shaped body with no <code>schema</code> field
+        at all, so the note contract was broken by the very commit that reports on it · and
+        <strong>no <code>mr/v1</code></strong>, which only a human can write. Remaining, in order: commit ⑤ ·
+        <strong>DEC-17</strong> (the closed vocabulary) in <code>docs/decisions/</code> with its index entry,
+        and DEC-15's Tier-1 completion · <code>test/v2</code> + a valid <code>doc/v1</code> on the tip · the
+        code-review skill over ③+④+⑤ → <code>cr/v2</code> PASS bound to that exact diff · the human's
+        <code>mr confirm</code> · <code>--no-ff</code> merge into <code>epic/design-flow</code>. The gate
+        writes <code>dod/v1</code>; nothing here bypasses it.
       </div>
     </div>
 
@@ -268,7 +283,7 @@
               <code>scripts/design-vocabulary.mjs</code> is the bridge, and it derives rather than
               transcribes. Where the KB and the code disagree, the code wins</td></tr>
         <tr><td><strong>T3</strong></td>
-            <td><span class="badge auto">done</span> The discussion, the plan and its two revisions, five step
+            <td><span class="badge auto">done</span> The discussion, the plan and its two revisions, six step
               records, the ② quiz, the ② review report, and this report. <code>MethodLabel</code>'s design
               file edited in place (fork D3 re-opened)</td></tr>
       </tbody>
@@ -297,9 +312,11 @@
           <code>type-tokens-only</code> at once, and an outline <em>width</em> like <code>outline-1</code>
           reports under the colour rule because <code>outline-</code> is a colour prefix. Chosen over a
           precedence rule, which would silently exempt whichever rule loses. Revisit only if the noise
-          actually costs a reader something</td><td>W9 · the fourth design run</td></tr>
-        <tr><td>5</td><td><strong>29 real reds in the two archived runs need no action, and that should be
-          said once rather than re-discovered.</strong> The tokens that would fix most of them were minted
+          actually costs a reader something — <span class="badge id">⑤ measured it</span> all six of
+          <code>colour-tokens-only</code>'s reds in the regression are sizes, not colours: <strong>12% of
+          49</strong></td><td>W9 · the fourth design run</td></tr>
+        <tr><td>5</td><td><strong>29 real sites (33 reds) in the two closed runs need no action, and that
+          should be said once rather than re-discovered.</strong> The tokens that would fix most of them were minted
           <em>from</em> those runs. The honest default is no follow-up; the fourth design run is where a live
           screen tests whether the predicates over-fit</td><td>W9</td></tr>
         <tr><td>6</td><td><strong>The <code>steps?.size</code> guard in the lint rule has no test.</strong>
@@ -308,6 +325,18 @@
         <tr><td>7</td><td><strong>W5's result report carries no <code>data-artifact</code></strong>, so
           <code>verify-doc</code> never checked its five items. Found while matching this report to the house
           form. One attribute</td><td>next docs touch</td></tr>
+        <tr><td>8</td><td><strong>Closing a design run is nobody's step.</strong> A run is archived as a
+          side effect of the <em>next</em> run being written, so run #3 — which never had a next run — stayed
+          unarchived and red for two WUs, and the guard test enumerates closed runs by hand. A sweep asserting
+          "every design run is archived or green" is wrong as a unit test: a run mid-design is legitimately
+          red for days and would hold the whole suite red with it. The home is the flow harness, where "the
+          run closes" can be a step something owns</td><td>W7 · Tier-2 + Tier-3</td></tr>
+        <tr><td>9</td><td><strong>Seven of the thirteen predicates have never red on a real artifact</strong>
+          — <code>zero-accent</code>, <code>overflow-declared</code>, <code>state-declarations</code>,
+          <code>wrap-not-truncate</code>, <code>wire-order-preserved</code>, <code>keyboard-parity</code>,
+          <code>colour-plus-text</code>. Clean on both runs for stated reasons, but their only failing
+          evidence is synthetic. This is the over-fit exposure the plan named, with a number on it</td>
+          <td>W9 · the fourth design run</td></tr>
       </tbody>
     </table>
   </main>

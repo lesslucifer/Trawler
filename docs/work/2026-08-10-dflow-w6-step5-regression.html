@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7984059f34851f0dfab421">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W6 step 5 (the regression)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W6 step ⑤ — the regression, and the run nobody archived</h1>
+      <p>④'s 49 reds reproduce exactly and no predicate is wrong. What the re-run found instead is
+         that <strong>only one of the two runs was ever archived</strong> — run #3 has been sitting
+         in the tree red, and it is the only red doc among 78.</p>
+      <div class="meta">Step record · 2026-08-10 · Trawler · T3 (docs/work/) · wu/design-flow/revise-rulebook ·
+        plan: <a href="2026-08-03-dflow-w6-plan.html#order">W6 ⑤</a> ·
+        previous: <a href="2026-08-10-dflow-w6-step4-predicates.html">④ the twelve predicates</a> ·
+        subjects: <a href="2026-07-25-dflow-w4-run-2.html">run #2</a> ·
+        <a href="2026-07-26-dflow-w4-run-3.html">run #3</a></div>
+    </div>
+  </header>
+
+  <main>
+    <h2 id="verdict">Verdict</h2>
+    <div class="cards" data-c="verdict-cards">
+      <div class="card"><h3>49 reds</h3><p>reproduced exactly — 30 over run #2, 19 over run #3. ④'s
+        headline number is right</p></div>
+      <div class="card"><h3>0 predicates wrong</h3><p>every red was traced back to its site in the source
+        doc. The plan's rule — <em>a red means the predicate is wrong</em> — never fired</p></div>
+      <div class="card"><h3>1 red doc</h3><p>of 78 tracked. <strong>Run #3 carries no
+        <code>data-status</code></strong>, so its 19 reds are live, not a closed record. The archive it
+        was assumed to have was never applied</p></div>
+      <div class="card"><h3>7 of 13</h3><p>predicates have still never red on a real artifact. Their
+        only evidence is their own unit tests — the over-fit exposure the plan named, now measured</p></div>
+      <div class="card"><h3>3 rows off</h3><p>in ④'s evidence table. The total is right and the
+        breakdown is not: its last row was computed as a residual rather than counted</p></div>
+    </div>
+
+    <h2 id="how">How it was re-run</h2>
+    <p>④ ran the predicates and judged them in the same step, which makes its numbers a claim by the
+       author of the thing being judged. ⑤'s only job is to be a second execution.</p>
+
+    <table data-c="method-table">
+      <thead><tr><th>Subject</th><th>How</th><th>Reds</th></tr></thead>
+      <tbody>
+        <tr><td><a href="2026-07-25-dflow-w4-run-2.html">run #2</a></td>
+            <td>archived, so <code>verify-doc</code> exempts it — copied with the attribute lifted, then checked</td>
+            <td><strong>30</strong></td></tr>
+        <tr><td><a href="2026-07-26-dflow-w4-run-3.html">run #3</a></td>
+            <td><strong>no copy needed.</strong> It is not archived; <code>cargo xtask verify-doc</code>
+              reds it as it sits in the tree</td>
+            <td><strong>19</strong></td></tr>
+        <tr><td class="meta">run #1</td>
+            <td class="meta">lifted the same way, as a third artifact rather than as scope</td>
+            <td class="meta">12 — all form-era <code>item·*</code> plus the new wire contract.
+              <strong>Zero vocabulary reds</strong>: its mockup predates the Tailwind substrate W5 built,
+              so the five class-reading predicates have nothing to read</td></tr>
+        <tr><td>every tracked doc</td>
+            <td><code>verify-doc</code> over all 78 <code>docs/**/*.html</code> in the index</td>
+            <td><strong>run #3 alone</strong></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="finding">The finding: "both archived runs" describes one run</h2>
+
+    <div class="diagram" data-c="archive-diagram">
+      <pre class="mermaid">
+flowchart TB
+  W4["W4 writes run #3
+  the generalization test"] --> A["run #3's new checks
+  red runs #1 and #2"]
+  A --> B["W4 archives #1 and #2
+  a closed record is not reopened"]
+  W4 --> C["run #3 is the live run
+  nothing archives the newest"]
+  C --> D["W4 merges. #3 closes,
+  but no step owns the flag"]
+  D --> E["W6 tightens every rule"]
+  E --> F["run #3 reds: 19
+  in the committed tree"]
+  B --> G["the guard test lists
+  the two runs W4 archived"]
+  G --> F
+  style F fill:#3a2020,stroke:#e5484d
+      </pre>
+      <div class="caption">Archiving happened as a side effect of writing the <em>next</em> run. Run #3
+        never got a next run, so it never got the flag — and the test that guards the invariant
+        enumerates by hand, so it could not notice.</div>
+    </div>
+
+    <table data-c="finding-table">
+      <thead><tr><th>Said</th><th>True</th></tr></thead>
+      <tbody>
+        <tr><td>The plan's ⑤ gate: "<strong>both archived runs</strong> must still pass … W4 shipped
+          <code>data-status="archived"</code> for this"</td>
+            <td>Run #2 carries it. Run #3 never has. The plan's own test-plan row was written against
+              an assumption nobody checked</td></tr>
+        <tr><td>④: "None reopens an archived run … <code>data-status="archived"</code> exists exactly so
+          a tightened rule does not reopen a closed record"</td>
+            <td>True of run #2's 30. <strong>False of run #3's 19</strong> — nothing exempts them, and
+              they are what <code>verify-doc</code> prints today</td></tr>
+        <tr><td>The result report: "<code>verify-doc</code> green on every doc this WU wrote"</td>
+            <td>Accurate as worded, and it is the wording that hides this: run #3 is a doc this WU
+              <em>read</em> nineteen times and never ran the checker over</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="why-invisible">
+      <strong>Why nothing caught it.</strong> <code>verify-doc</code> is invoked by hand, per path — no
+      gate walks <code>docs/</code>. The one mechanical guard,
+      <code>the_closed_runs_are_archived_so_a_new_rule_does_not_reopen_them</code>, is a hand-written
+      list of two. A list that must be extended when a run closes is a list that drifts the first time
+      closing a run is nobody's step — which is exactly what happened.
+    </div>
+
+    <h2 id="ruling">The ruling: run #3 is archived</h2>
+
+    <table data-c="ruling-table">
+      <thead><tr><th>Option</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Fix run #3's 19 reds</strong> — re-express its classes and its mockup CSS against
+          the closed vocabulary</td>
+            <td><span class="badge">rejected</span> It is a merged W4 record whose 19 findings were fully
+              disposed in ③. Editing it re-opens a closed run to satisfy rules written after it, which is
+              the precise thing the archive mechanism exists to refuse</td></tr>
+        <tr><td><strong>Archive it</strong> — one attribute, and the guard test names all three closed
+          runs</td>
+            <td><span class="badge auto">taken</span> Same status as runs #1 and #2, for the same reason,
+              and its reds are now recorded here rather than lost. <code>verify-doc</code> over the whole
+              index goes green</td></tr>
+        <tr><td class="meta"><strong>Assert it mechanically</strong> — walk <code>docs/work/</code> and
+          require every design run to be archived or green</td>
+            <td class="meta"><span class="badge">not built</span> A run mid-design is legitimately red for
+              days, and this check would hold the whole test suite red with it. The honest home is W7's
+              flow harness, where "the run closes" is a step something owns</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="trap">
+      <strong>The trap in the one-line fix, and the guard against it.</strong> Archiving exempts the
+      <em>whole doc</em>, and two tests read run #3 for its <em>form</em> —
+      <code>the_run_3_elements_map_is_a_live_two_half_map</code> and
+      <code>the_run_3_form_rules_hold_on_the_real_doc</code>. Both assert the <em>absence</em> of named
+      reds, so against an exempt doc they pass while asserting nothing. Both now verify the doc with the
+      flag lifted, through one helper that <strong>fails loudly if the run ever stops being
+      archived</strong> rather than quietly returning the doc unchanged. Mutation-proved: removing the
+      attribute again reds all three tests, not one.
+    </div>
+
+    <h2 id="judgement">Red by red — the corrected tally</h2>
+    <p>Every red was traced to its site with a text search of the source doc before being judged. No red
+       is a predicate misreading its input.</p>
+
+    <table data-c="tally-table">
+      <thead><tr><th>What</th><th>Reds</th><th>Distinct sites</th><th>Whose</th></tr></thead>
+      <tbody>
+        <tr><td>arbitrary <code>[…]</code> values</td><td>12</td><td>10 classes</td>
+            <td rowspan="4"><span class="badge approval">real</span> values that shipped past a closed
+              vocabulary</td></tr>
+        <tr><td>classes that stopped emitting when ① closed the config</td><td>6</td><td>4 classes</td></tr>
+        <tr><td>raw magnitudes in the mockup's own <code>.a-</code> CSS</td><td>7</td><td>7 declarations</td></tr>
+        <tr><td>uppercase labels tracking by hand</td><td>8</td><td>8 elements</td></tr>
+        <tr><td><strong>real — subtotal</strong></td><td><strong>33</strong></td><td><strong>29</strong></td><td></td></tr>
+        <tr><td><code>mono-for-wire-data</code> undeclared</td><td>2</td><td>2</td>
+            <td><span class="badge auto">a contract ④ added</span> <code>data-wire</code> did not exist
+              when these runs were written</td></tr>
+        <tr><td>receipt rows for <code>absence-names-itself</code>,
+          <code>focus-returns-to-origin</code>, <code>choose-before-act</code></td><td>6</td><td>6</td>
+            <td><span class="badge auto">a contract ③ added</span> three soft rules adopted this WU, one
+              missing row each, in both runs</td></tr>
+        <tr><td>W4-era form checks — gists, <code>capabilities</code>, <code>avoid</code>-cited,
+          <code>tune·drawn</code>, <code>frame·example</code></td><td>8</td><td>8</td>
+            <td><span class="badge">pre-existing</span> run #2 only, and the reason it was archived</td></tr>
+        <tr><td><strong>total</strong></td><td><strong>49</strong></td><td><strong>45</strong></td><td></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="tally-correction">
+      <strong>What ④'s table got wrong, and how.</strong> Its total is right; three of its six rows are
+      not. Two rows count <em>distinct classes</em> (10 arbitrary, 4 dead) while the rest count
+      <em>reds</em> — and the last row, "W4's own checks · 18", is the residual that makes the column
+      add up rather than a count of anything. The true residual is <strong>14</strong>, and six of those
+      fourteen are receipt rows for rules <strong>③ adopted in this same WU</strong> — a widened contract,
+      the same class as <code>mono-for-wire-data</code>, filed as somebody else's old debt. Genuinely
+      pre-existing: <strong>8</strong>. The <em>29 real</em> headline survives intact, as 29 distinct
+      sites across 33 reds.
+    </div>
+
+    <h2 id="overfit">Which predicates have actually fired</h2>
+    <p>The plan named the risk at planning: twelve predicates written against the only two runs that exist
+       will tend to over-fit them. Two runs later, the exposure has a number.</p>
+
+    <table data-c="overfit-table">
+      <thead><tr><th></th><th>Slugs</th><th>What that means</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Red on a real artifact</strong> <span class="badge auto">6</span></td>
+            <td><code>spacing-scale</code> · <code>type-tokens-only</code> · <code>radius-tokens</code> ·
+              <code>colour-tokens-only</code> · <code>uppercase-mute-labels</code> ·
+              <code>mono-for-wire-data</code></td>
+            <td>Each has now caught something no author, reviewer, type-checker or test suite caught</td></tr>
+        <tr><td><strong>Never red on a real artifact</strong> <span class="badge approval">7</span></td>
+            <td><code>zero-accent</code> · <code>overflow-declared</code> ·
+              <code>state-declarations</code> · <code>wrap-not-truncate</code> ·
+              <code>wire-order-preserved</code> · <code>keyboard-parity</code> ·
+              <code>colour-plus-text</code></td>
+            <td>Clean on both runs for reasons ④ states row by row — but their only <em>failing</em>
+              evidence is synthetic, from their own red-per-way-to-break unit cases. W9's fourth run is
+              the first live test</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="shared-prefix">
+      <strong>The shared-prefix limit, quantified.</strong> All <strong>six</strong> of
+      <code>colour-tokens-only</code>'s reds are sizes, not colours — <code>text-[14px]</code>,
+      <code>border-2</code>, <code>outline-1</code> ×2, <code>outline-offset-2</code> ×2 — reaching it
+      because <code>text-</code>, <code>border-</code> and <code>outline-</code> are colour prefixes too.
+      That is <strong>12% of every red in this regression</strong>, and it is the number
+      <a href="2026-08-10-dflow-w6-result.html#follow-ups">follow-up 4</a> asked for before revisiting.
+      No chromatic value has yet been red by any predicate on a real run.
+    </div>
+
+    <h2 id="disposition">The question ④ handed over</h2>
+    <p><em>"Is any of the twenty-nine worth a follow-up against a live screen?"</em></p>
+
+    <table data-c="disposition-table">
+      <thead><tr><th>Answer</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><strong>None of the 29.</strong> The honest default holds</td>
+            <td>Both runs are closed records under an older contract. The tokens that would fix most of
+              them — <code>w-verb</code>, <code>py-chrome-tight</code>, <code>text-note</code>,
+              <code>tracking-label</code> — were minted <em>from</em> these very runs, so the reds are the
+              vocabulary's own before-picture</td></tr>
+        <tr><td><strong>One is not a value at all</strong></td>
+            <td>Run #3's <code>.a-</code> block opens by promising "zero component values re-typed" and then
+              writes seven magnitudes. That is a <em>rulebook</em> fact, and ③ already took it: the
+              mockup's own CSS is a governed surface, which is why four of the twelve predicates read it</td></tr>
+        <tr><td><strong>The regression itself earns one</strong></td>
+            <td>Not a value — the closed-run list. See below</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="hands-over">What ⑤ hands to ⑥</h2>
+    <ul>
+      <li><strong>One code change and one doc change</strong>: run #3 gains <code>data-status="archived"</code>;
+        <code>xtask/src/doc.rs</code>'s closed-run test names all three, and the two tests that read run #3
+        for its form lift the flag first. Mutation-proved in both directions.</li>
+      <li><strong>Two corrections</strong> land on ④'s evidence table and the result report's ledger, so the
+        breakdown matches what a second execution counts.</li>
+      <li><strong>A new follow-up for W7</strong>: closing a design run is nobody's step, which is how run #3
+        stayed unarchived and red for two WUs. W7 owns the flow harness and is where "the run closes → it is
+        archived, and the guard test says so" belongs.</li>
+      <li><strong>13/13 is not a claim in a doc</strong> — <code>every_hard_rule_in_the_live_rulebook_carries_a_predicate</code>
+        derives both sides from the live rulebook and fails on a hard rule without a check, an orphan
+        predicate, or a hard list that is not thirteen.</li>
+      <li><strong>Gates re-run whole, after the change</strong>: fmt · clippy pedantic · 300 Rust · 474 vitest
+        across 39 files · <code>npm run lint</code> · <code>tsc -b</code> · and <code>verify-doc</code> over
+        all 78 tracked docs, none red.</li>
+    </ul>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

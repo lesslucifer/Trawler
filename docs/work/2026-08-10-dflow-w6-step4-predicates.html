@@ -92,22 +92,27 @@ flowchart LR
       </tbody>
     </table>
 
-    <h2 id="evidence">Run over both archived runs, before it was believed</h2>
+    <h2 id="evidence">Run over both closed runs, before it was believed</h2>
     <p>③ handed ④ a warning rather than a fact: every correction in this WU came from executing against the
        real artifact, never from re-reading a document. So the predicates were pointed at run #2 and run #3
        the moment they compiled, not at step ⑤.</p>
 
     <table data-c="evidence-table">
-      <thead><tr><th>Red</th><th>Count</th><th>Judgement</th></tr></thead>
+      <thead><tr><th>Red</th><th>Reds <span class="badge id">⑤-corrected</span></th><th>Judgement</th></tr></thead>
       <tbody>
-        <tr><td>arbitrary <code>[…]</code> values</td><td>10</td><td><strong>real.</strong> The rulebook says arbitrary sizes red, and most of these now <em>have</em> tokens — <code>w-[4.5ch]</code> became <code>w-verb</code>, <code>py-[2px]</code> became <code>py-chrome-tight</code>. The vocabulary was built out of these very runs</td></tr>
-        <tr><td>classes that emit nothing since ①</td><td>4</td><td><strong>real.</strong> <code>outline-1</code>, <code>outline-offset-2</code>, <code>border-2</code>, <code>leading-relaxed</code> — closing the config killed them silently, exactly the failure mode ① documented and could not itself detect</td></tr>
+        <tr><td>arbitrary <code>[…]</code> values</td><td>12 · <span class="meta">10 classes</span></td><td><strong>real.</strong> The rulebook says arbitrary sizes red, and most of these now <em>have</em> tokens — <code>w-[4.5ch]</code> became <code>w-verb</code>, <code>py-[2px]</code> became <code>py-chrome-tight</code>. The vocabulary was built out of these very runs</td></tr>
+        <tr><td>classes that emit nothing since ①</td><td>6 · <span class="meta">4 classes</span></td><td><strong>real.</strong> <code>outline-1</code>, <code>outline-offset-2</code>, <code>border-2</code>, <code>leading-relaxed</code> — closing the config killed them silently, exactly the failure mode ① documented and could not itself detect</td></tr>
         <tr><td>raw magnitudes in the mockup's own CSS</td><td>7</td><td><strong>real, and the most interesting.</strong> Run #3's <code>.a-</code> block opens with a comment promising "zero component values re-typed" and then writes four. No class-reading check could ever have seen them</td></tr>
         <tr><td>labels tracking by hand</td><td>8</td><td><strong>real.</strong> The same defect, found twice independently — an arbitrary class in run #2, a declaration in run #3</td></tr>
-        <tr><td><code>mono-for-wire-data</code> undeclared</td><td>2</td><td><strong>expected.</strong> A contract that did not exist when those runs were written. This is what <code>data-status="archived"</code> is for</td></tr>
-        <tr><td>W4's own checks (gists, capabilities, receipt coverage…)</td><td>18</td><td>pre-existing, and the same reason those runs are archived</td></tr>
+        <tr><td><code>mono-for-wire-data</code> undeclared</td><td>2</td><td><strong>expected.</strong> A contract that did not exist when those runs were written. This is what <code>data-status="archived"</code> is for — <a href="2026-08-10-dflow-w6-step5-regression.html#finding">and ⑤ found run #3 never had it</a></td></tr>
+        <tr><td>receipt rows for ③'s three new soft rules</td><td>6</td><td><span class="badge id">⑤-corrected</span> <strong>expected, not pre-existing.</strong> <code>absence-names-itself</code>, <code>focus-returns-to-origin</code> and <code>choose-before-act</code> were adopted in this WU; a run written before them owes no row. Same class as the row above, and the residual below hid it</td></tr>
+        <tr><td>W4-era form checks — gists, <code>capabilities</code>, <code>avoid</code>-cited, <code>tune·drawn</code>, <code>frame·example</code></td><td>8</td><td><span class="badge id">⑤-corrected, was 18</span> pre-existing, run #2 only, and the same reason that run is archived</td></tr>
       </tbody>
     </table>
+
+    <div class="callout warn" data-c="tally-corrected">
+      <strong>This table's total was right and its rows were not.</strong> <a href="2026-08-10-dflow-w6-step5-regression.html#judgement">⑤ re-ran the same 49 reds and counted them</a>: the first two rows counted distinct <em>classes</em> while the rest counted reds, and the last row was a residual computed to make the column add up rather than a count of anything. Six of that residual are the receipt rows now given their own row above — a contract <em>this WU</em> widened, filed as old debt. Real: <strong>33 reds across 29 distinct sites</strong>, which is where the <em>29</em> quoted throughout comes from.
+    </div>
 
     <div class="callout" data-c="plan-deviation">
       <strong>The plan said both runs would come back green; they did not, and the plan was wrong rather
@@ -208,11 +213,14 @@ flowchart TB
 
     <h2 id="hands-over">What ④ hands to ⑤</h2>
     <ul>
-      <li>The predicates have <strong>already been run</strong> over both archived runs; ⑤ inherits the
-        judgement above rather than an unopened box.</li>
-      <li>Twenty-nine reds are real values that shipped. None reopens an archived run — the question for ⑤ is
-        whether any of them is worth a follow-up against a live screen, and the honest default is no: the
-        tokens that would fix most of them were minted <em>from</em> these runs.</li>
+      <li>The predicates have <strong>already been run</strong> over both closed runs; ⑤ inherits the
+        judgement above rather than an unopened box — <a href="2026-08-10-dflow-w6-step5-regression.html">and
+        re-ran it, which is how the two corrections above were found</a>.</li>
+      <li>Twenty-nine real sites. <s>None reopens an archived run</s> — <span class="badge id">⑤-corrected</span>
+        <strong>run #3 was never archived</strong>, so its nineteen were live in the tree; ⑤ archives it on the
+        same grounds runs #1 and #2 were. The question for ⑤ was whether any of the twenty-nine is worth a
+        follow-up against a live screen, and the answer stayed no: the tokens that would fix most of them were
+        minted <em>from</em> these runs.</li>
       <li>The two surfaces stay separate on purpose. Nothing here reads <code>ui/src/</code>; that is
         <code>design/vocabulary</code>'s, which is why the gap line now says <strong>(design)</strong>.</li>
       <li>The rulebook was edited to describe what ships — the <code>data-wire</code> marker, the CSS-value
