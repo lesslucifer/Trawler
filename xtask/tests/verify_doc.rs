@@ -238,7 +238,7 @@ fn stub_vocabulary(dir: &TempDir) {
     std::fs::create_dir_all(&scripts).unwrap();
     std::fs::write(
         scripts.join("design-vocabulary.mjs"),
-        "process.stdout.write(JSON.stringify({legal:[\"text-ink\"],         rules:{\"colour-tokens-only\":[\"text-\"]},values:{},modifiers:{},chromatic:[\"ok\"]}));",
+        "process.stdout.write(JSON.stringify({legal:[\"text-ink\"],         rules:{\"colour-tokens-only\":[\"text-\"]},values:{},modifiers:{},chromatic:[\"ok\"],chroma_floor:40}));",
     )
     .unwrap();
 }

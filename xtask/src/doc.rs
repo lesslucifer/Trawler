@@ -125,6 +125,7 @@ pub struct Vocabulary {
     values: BTreeMap<String, Vec<String>>,
     modifiers: BTreeMap<String, Vec<String>>,
     chromatic: BTreeSet<String>,
+    chroma_floor: u32,
 }
 
 impl Vocabulary {
@@ -577,7 +578,7 @@ fn check_vocabulary(
         // still owns is the value written past the config - an inline chromatic
         // colour, which the vocabulary check reds as untokenised and this one
         // reds as chromatic.
-        if let Some(value) = arbitrary.filter(|v| is_chromatic(v)) {
+        if let Some(value) = arbitrary.filter(|v| is_chromatic(v, vocabulary.chroma_floor)) {
             if reported.insert(("zero-accent".to_string(), base.to_string())) {
                 failures.push(Failure {
                     check: "zero-accent·off-set".to_string(),
@@ -795,32 +796,38 @@ fn check_wire_data(failures: &mut Vec<Failure>, html: &str) {
 // wire-order-preserved. A captured collection renders in wire order unless a
 // sort is declared with its why; a screen may render no captured collection at
 // all, which is the rule's n/a path and must be said, not assumed.
-// A word, not a substring: `border` ends in `order` and every row in the house
-// carries one, so the raw markup can never be the searched text.
-fn declares_ordering(text: &str) -> bool {
-    text.to_ascii_lowercase()
-        .split(|c: char| !c.is_ascii_alphanumeric())
-        .any(|word| word.starts_with("order"))
-}
-
+// The answer is declared, never inferred from prose: no keyword can tell "sorted
+// newest first, because the ring is a stack" from "the rows look orderly", and a
+// keyword that scans markup instead reads `border` as an answer. So the row says
+// so - the same shape `data-wire` itself uses, one attribute beside it.
 fn check_wire_order_preserved(failures: &mut Vec<Failure>, elements: &str) {
-    // The mark rides the row's opening tag, which inner-text extraction drops -
-    // so the row is found from the attribute's position, never by searching its
-    // body for its own tag.
-    let rows: Vec<String> = attr_positions(elements, "data-wire")
+    let collections: Vec<usize> = attr_positions(elements, "data-wire")
         .into_iter()
         .filter(|(_, kind)| kind == "collection")
-        .map(|(pos, _)| inner_text(elements, element_content(elements, pos).0))
+        .map(|(pos, _)| pos)
         .collect();
-    if rows.is_empty() {
+    if collections.is_empty() {
         return;
     }
-    let silent = rows.iter().filter(|r| !declares_ordering(r)).count();
+    let declared = attr_positions(elements, "data-order");
+    let silent = collections
+        .iter()
+        .filter(|pos| {
+            !declared
+                .iter()
+                .any(|(at, how)| !how.trim().is_empty() && same_tag(elements, **pos, *at))
+        })
+        .count();
     if silent > 0 {
         failures.push(Failure {
             check: "wire-order-preserved·ordering".to_string(),
-            what: format!("{silent} of {} captured collections declare no ordering", rows.len()),
-            fix: "a captured collection renders in wire order, or names the sort and why it beats the wire's".to_string(),
+            what: format!(
+                "{silent} of {} captured collections declare no ordering",
+                collections.len()
+            ),
+            fix:
+                "the row carries data-order=\"wire\", or names the sort and why it beats the wire's"
+                    .to_string(),
         });
     }
 }
@@ -1006,11 +1013,10 @@ fn is_bare_size(value: &str) -> bool {
         && digits.chars().any(|c| c.is_ascii_digit())
 }
 
-// Chromatic means the channels disagree. The palette's warmest neutral spans 27
-// and its faintest chromatic token spans 57, so the floor is a fact about the
-// palette rather than a tuned constant - the same one the vocabulary script
-// derives the chromatic set with.
-fn is_chromatic(value: &str) -> bool {
+// Chromatic means the channels disagree by more than the floor the vocabulary
+// script measured its own chromatic set with - carried across the bridge rather
+// than restated, because a threshold written twice can be raised once.
+fn is_chromatic(value: &str, floor: u32) -> bool {
     // The `#` is the whole difference between a colour and a magnitude: every
     // digit of `font-[900]` is a hex digit too.
     let Some(hex) = value.trim().strip_prefix('#') else { return false };
@@ -1026,7 +1032,7 @@ fn is_chromatic(value: &str) -> bool {
     }
     .unwrap_or_default();
     match (channels.iter().max(), channels.iter().min()) {
-        (Some(high), Some(low)) => u32::from(*high) - u32::from(*low) > 40,
+        (Some(high), Some(low)) => u32::from(*high) - u32::from(*low) > floor,
         _ => false,
     }
 }
@@ -1912,6 +1918,7 @@ values:
 modifiers:
   bg-canvas: [wash, scrim]
 chromatic: [ok, warn]
+chroma_floor: 40
 "##;
 
     fn vocab() -> Vocabulary {
@@ -2814,26 +2821,35 @@ chromatic: [ok, warn]
         );
     }
 
-    // The declaration is prose in the row, so the row's markup is not searchable
-    // text: `border` carries `order` and every table row in the house has one.
+    // No keyword can judge prose: one that reds "sorted newest first, because the
+    // ring is a stack" and greens "the rows look orderly" is wrong both ways. The
+    // row declares its answer, the same way it declares which elements are wire.
     #[test]
-    fn a_styling_class_does_not_pass_for_an_ordering_declaration() {
-        let bordered = green_run().replace(
-            "<tr data-key=\"section\">",
-            "<tr data-key=\"section\" data-wire=\"collection\" class=\"border-b border-hairline\">",
-        );
-        assert!(
-            what(&doc_verdict(&bordered), "wire-order-preserved·ordering").contains("no ordering")
-        );
+    fn the_ordering_answer_is_a_declaration_and_prose_is_not_one() {
+        let collection = |row: &str| green_run().replace("<tr data-key=\"section\">", row);
 
-        let declared = green_run().replace(
-            "<tr data-key=\"section\">",
-            "<tr data-key=\"section\" data-wire=\"collection\"><td>wire order, unsorted</td>",
-        );
-        assert!(
-            !reds(&declared).contains(&"wire-order-preserved·ordering".to_string()),
-            "prose naming the ordering is what answers the rule"
-        );
+        for silent in [
+            "<tr data-key=\"section\" data-wire=\"collection\" class=\"border-b border-hairline\">",
+            "<tr data-key=\"section\" data-wire=\"collection\"><td>sorted newest first</td>",
+            "<tr data-key=\"section\" data-wire=\"collection\" data-order=\"  \">",
+        ] {
+            assert!(
+                what(&doc_verdict(&collection(silent)), "wire-order-preserved·ordering")
+                    .contains("no ordering"),
+                "neither a styling class, nor prose, nor a blank answer declares an ordering: {silent}"
+            );
+        }
+
+        for answered in [
+            "<tr data-key=\"section\" data-wire=\"collection\" data-order=\"wire\">",
+            "<tr data-key=\"section\" data-wire=\"collection\" data-order=\"newest first — the ring is a stack\">",
+        ] {
+            assert!(
+                !reds(&collection(answered))
+                    .contains(&"wire-order-preserved·ordering".to_string()),
+                "a declared ordering answers the rule: {answered}"
+            );
+        }
     }
 
     fn layout(sketch: &str) -> String {

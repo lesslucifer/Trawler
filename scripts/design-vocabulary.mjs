@@ -110,5 +110,8 @@ process.stdout.write(
     values,
     modifiers,
     chromatic: chromatic.sort(),
+    // The predicates judge inline values the config never saw, against the same
+    // floor the set above was measured with - so it crosses the bridge too.
+    chroma_floor: CHROMA_FLOOR,
   })}\n`,
 );
