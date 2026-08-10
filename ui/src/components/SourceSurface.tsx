@@ -6,12 +6,14 @@ import { standardKeymap } from "@codemirror/commands";
 import { tags } from "@lezer/highlight";
 
 // The three DEC-11 body tokens, and only those three — a full syntax theme is
-// what the family's @avoid forbids. Values mirror tailwind.config.js syn-*.
+// what the family's @avoid forbids. Classes rather than values, so the palette
+// is the single source: a hex here is a second copy of a token, and the copy is
+// what drifted when W6 step ① deleted the tokens this comment claimed to mirror.
 const warpHighlight = HighlightStyle.define([
-  { tag: [tags.propertyName, tags.tagName], color: "#8fb8de" },
-  { tag: [tags.string, tags.attributeValue], color: "#9ec99a" },
-  { tag: tags.number, color: "#d9a866" },
-  { tag: [tags.punctuation, tags.bracket, tags.attributeName], color: "#aea69c" },
+  { tag: [tags.propertyName, tags.tagName], class: "text-syn-key" },
+  { tag: [tags.string, tags.attributeValue], class: "text-syn-str" },
+  { tag: tags.number, class: "text-syn-num" },
+  { tag: [tags.punctuation, tags.bracket, tags.attributeName], class: "text-ink-mute" },
 ]);
 
 const warpTheme = EditorView.theme(

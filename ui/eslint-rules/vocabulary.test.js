@@ -27,6 +27,11 @@ ruleTester.run("design/vocabulary", vocabulary, {
     { code: `const A = () => <i className="w-full max-w-full rounded-full ml-auto leading-none" />;` },
     { code: `const TONE = { ok: "text-ok" };\nconst A = ({ t }) => <i className={TONE[t]} />;` },
     { code: `const A = () => <i className="px-chrome-x py-chrome-y text-body z-popup" />;` },
+    // The eight scales that carry no magnitude but are declared anyway, so the
+    // rule can see into them at all (step 3 sweep).
+    {
+      code: `const A = () => <i className="animate-spin cursor-pointer flex-1 shrink-0 col-start-1 row-start-1 list-none transition-colors" />;`,
+    },
     {
       code: `const A = () => (\n  <i\n    className={\n      // design-allow: grid-cols-[auto_1fr] — a two-column template shape, no size in it\n      "grid grid-cols-[auto_1fr]"\n    }\n  />\n);`,
     },
@@ -39,6 +44,15 @@ ruleTester.run("design/vocabulary", vocabulary, {
     {
       code: `const A = () => <i className="text-[11px]" />;`,
       errors: [{ messageId: "arbitrary" }],
+    },
+    // A scale the config never declares inherits Tailwind's whole ladder, and
+    // every member of it emits — so nothing could red inside it. `font-bold`
+    // was legal this way until step ② read the config by hand. Legality is
+    // membership of a DECLARED scale: `duration-500` draws from one the project
+    // never names, `animate-bounce` from one it names without that member.
+    {
+      code: `const A = () => <i className="duration-500 animate-bounce font-bold" />;`,
+      errors: [{ messageId: "offlist" }, { messageId: "offlist" }, { messageId: "offlist" }],
     },
     {
       code: `const A = () => <i className="bg-canvas-soft/30" />;`,

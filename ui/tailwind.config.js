@@ -31,6 +31,12 @@ export default {
       replace: "#e5924d",
       amend: "#a78bfa",
       warn: "#e5484d",
+      // The body-pane syntax group (DEC-11, confirmed 2026-07-23). Deleted by
+      // W6 step ① as unreferenced — which was wrong: SourceSurface painted all
+      // three as hex literals, where no class-reading check could see them.
+      "syn-key": "#8fb8de",
+      "syn-str": "#9ec99a",
+      "syn-num": "#d9a866",
       scrim: "rgba(0,0,0,.5)",
     },
     fontFamily: {
@@ -179,6 +185,41 @@ export default {
       max: "max-content",
       fit: "fit-content",
     }),
+    // Below: the scales that carry no magnitude the rulebook governs, declared
+    // anyway because an undeclared scale inherits Tailwind's whole ladder and
+    // the lint rule cannot see into it (E-DFLOW.W6 step 3 sweep). Each holds
+    // exactly the members `ui/src/` draws from; the remaining 54 scales stay
+    // undeclared, and any class drawn from them reds.
+    animation: {
+      spin: "spin 1s linear infinite",
+    },
+    keyframes: {
+      spin: { to: { transform: "rotate(360deg)" } },
+    },
+    cursor: {
+      default: "default",
+      pointer: "pointer",
+      text: "text",
+    },
+    flex: {
+      1: "1 1 0%",
+    },
+    flexShrink: {
+      0: "0",
+    },
+    gridColumnStart: {
+      1: "1",
+    },
+    gridRowStart: {
+      1: "1",
+    },
+    listStyleType: {
+      none: "none",
+      decimal: "decimal",
+    },
+    transitionProperty: {
+      colors: "color, background-color, border-color, text-decoration-color, fill, stroke",
+    },
     extend: {},
   },
   plugins: [],
