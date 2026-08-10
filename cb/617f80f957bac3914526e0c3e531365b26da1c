@@ -1,0 +1,23 @@
+schema: cr/v2
+scope: "WU E-DFLOW.W6 (revise the rulebook + close the vocabulary) -> epic/design-flow. Ten review rounds, each re-run on the tip the previous round's fixes produced; rounds 1-7 swept the whole diff across all five dimensions, rounds 8-10 were scoped to the previous round's own changes because that is the smallest diff a fix can be judged against. Round 10 returned zero candidates. The reviewed content is every commit through aaae52a; the tip is the report recording this review, which no review of itself can read - mr/v1 attests it."
+epic: E-DFLOW
+wu: E-DFLOW.W6
+branch: wu/design-flow/revise-rulebook
+base: 838eb95859b893f9e3cf12c1c1b25f34b1295eed
+head: cb617f80f957bac3914526e0c3e531365b26da1c
+diff_sha256: 0ded0880cb457338c6c3e348d2f87ecfb33014b1e2ae78734975b0e2d179d761
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 0, verified: 0, waived: 0 }
+rounds:
+  - "1: 7 verified of 10 candidates, 2 refuted - is_chromatic missing its # anchor, contains(\"order\"), two pragma dialects, a second Tailwind context, DEC-17 holding a byte-identical copy of the rulebook's pragma table"
+  - "2: 1 - the round-1 ordering fix was wrong in kind; a keyword judging prose became data-order, a declaration"
+  - "3: 1 + 2 nits - an attribute quoted inside another attribute's value counted as that attribute, in the shared reader"
+  - "4: 2 + 2 nits - a tag's end found at a bracket inside a quoted value, a false red; and two records still said the newest design run is never archived"
+  - "5: 1 + 5 - the round-4 fix could re-sync past a malformed tag; five rulebook rows claimed more than their predicate does"
+  - "6: 1 + 9 - quotes re-pair across a fault, so the round-5 bound could not see it; closed by bounding a tag at the next <"
+  - "7: 2 + 5 - the round-6 bound was not gated on quote state, a false red on title=\"a < b\"; the ambiguity closed by making a raw bracket in a value illegal"
+  - "8: 2 + 4, 1 refuted - the new check cut its snippet at a byte length and panicked on an em dash; its pragma split demanded whitespace the lint rule's regex does not"
+  - "9: 1 + 1 nit - the round-8 pragma fix made a red message name a cause it cannot know"
+  - "10: 0 - clean, with the verdict-neutrality of round 9's clause proved by diffing verify-doc's full output over all 80 docs between binaries built at both commits"
+verdict: PASS
+date: 2026-08-11
