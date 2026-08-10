@@ -110,17 +110,12 @@
     <p>A closed vocabulary needs a way out, or the way out becomes <em>"stop running the check"</em>. There are exactly two, both narrow, and neither can excuse the thing the vocabulary exists to govern.</p>
 
     <h3 id="pragma">① the <code>design-allow</code> pragma — a template shape</h3>
-    <table data-c="pragma-table">
-      <thead><tr><th>Rule of the escape</th><th>Why</th></tr></thead>
-      <tbody>
-        <tr><td>Form is <code>// design-allow: &lt;class&gt; — &lt;reason&gt;</code>, applying to the <strong>next line only</strong>, written inside the <code>className</code> expression</td><td>Same granularity as <code>eslint-disable-next-line</code>. JSX has no comment position inside an opening tag, so the expression container is the one place that works everywhere and keeps the pragma beside the class it excuses</td></tr>
-        <tr><td>The named class <strong>must appear on the line below</strong></td><td>An edited line stops matching and reds again — a stale pragma cannot go on protecting code it no longer describes</td></tr>
-        <tr><td>The reason must be non-empty</td><td>Mirrors the merge gate's <code>waived:</code> rule — a suppression with no argument is not a decision</td></tr>
-        <tr><td><strong>A pragma over a size value is rejected, never honoured</strong></td><td>It exists for template <em>shapes</em> — <code>grid-cols-[auto_1fr]</code>, a two-column layout with no size in it. The moment it could excuse <code>text-[11px]</code>, the vocabulary is advisory</td></tr>
-        <tr><td><strong>The live count is printed on every run</strong></td><td>Suppressions are visible debt, not a silent hole. A number that goes up is a conversation; a number nobody prints is a slope</td></tr>
-      </tbody>
-    </table>
-    <p class="meta">Six sites use it today: five <code>grid-cols-[…]</code> templates and one <code>top-[calc(100%+theme(spacing.chrome-y))]</code> offset — and in the two that <em>do</em> carry a magnitude, the magnitude is <code>theme(spacing.…)</code>, a token read out of the config rather than a number. The same five rules govern the pragma on both surfaces; the design-side predicates did not invent a second dialect.</p>
+    <p>A class carrying a template <em>shape</em> and no magnitude — <code>grid-cols-[auto_1fr]</code>, a two-column layout — is an arbitrary value the vocabulary has no token for and never should. The escape is a next-line pragma with a reason; <strong>the <a href="../design-rules/design-rules-index.html#pragma">rulebook holds its five rules</a></strong>, since a rule's form is a living contract and this record is not its second home. Two of the five are the decision rather than the mechanics:</p>
+    <div class="callout" data-c="pragma-decisions">
+      <p><strong>A pragma over a size value is rejected, never honoured.</strong> The moment it could excuse <code>text-[11px]</code>, the vocabulary is advisory. So the check trims the unit off and asks whether a magnitude is left — it never <em>recognises</em> units, because a whitelist dates the instant CSS grows one, and <code>h-[100dvh]</code> is exactly the class a whitelist excused on one surface while a trim rejected it on the other.</p>
+      <p><strong>The live count is printed on every run.</strong> Suppressions are visible debt, not a silent hole — a number that goes up is a conversation; a number nobody prints is a slope.</p>
+    </div>
+    <p class="meta">Six sites use it today: five <code>grid-cols-[…]</code> templates and one <code>top-[calc(100%+theme(spacing.chrome-y))]</code> offset — and in the two that <em>do</em> carry a magnitude, the magnitude is <code>theme(spacing.…)</code>, a token read out of the config rather than a number. Both surfaces answer "is this a size" with one implementation; the design side did not invent a second dialect.</p>
 
     <h3 id="styling-api">② raw CSS configuring a third-party styling API</h3>
     <p>An editor's theme object or an injected stylesheet has no <code>className</code> to give it. Such a block is <strong>accepted</strong>, not excused, on three conditions — it covers the styling API and never a plain element; <strong>every colour in it is still a palette value, asserted mechanically over all of <code>ui/src/</code></strong>; and sizes inside it are the author's to justify and are <em>not</em> mechanically checked, which is stated rather than implied. A literal that <em>is</em> a token renders the vocabulary; a literal that is not is a second copy of it. The colour guard is what makes this escape safe rather than a hole; full conditions in <a href="../design-rules/design-rules-index.html#css-config">the rulebook</a>.</p>

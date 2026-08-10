@@ -101,6 +101,17 @@ ruleTester.run("design/vocabulary", vocabulary, {
       code: `const A = () => (\n  <i\n    className={\n      // design-allow: grid-cols-[auto_1fr] — a template shape\n      "flex"\n    }\n  />\n);`,
       errors: [{ messageId: "pragmaStale" }],
     },
+    // A size is a size whatever unit it names. The design surface rejects these
+    // by trimming the unit rather than recognising it, so a whitelist here is a
+    // second dialect of one rule — and dvh/cqw were not on it.
+    {
+      code: `const A = () => (\n  <i\n    className={\n      // design-allow: h-[100dvh] — the viewport height, no size in it\n      "h-[100dvh]"\n    }\n  />\n);`,
+      errors: [{ messageId: "pragmaOverSize" }, { messageId: "arbitrary" }],
+    },
+    {
+      code: `const A = () => (\n  <i\n    className={\n      // design-allow: w-[50cqw] — a container-relative shape\n      "w-[50cqw]"\n    }\n  />\n);`,
+      errors: [{ messageId: "pragmaOverSize" }, { messageId: "arbitrary" }],
+    },
   ],
 });
 

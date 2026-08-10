@@ -16,9 +16,8 @@
 // Tailwind is a devDependency of ui/, and pnpm does not hoist — the same reason
 // build-specimens.mjs reaches for ui/node_modules/.bin/esbuild by path.
 import resolveConfig from "../ui/node_modules/tailwindcss/resolveConfig.js";
-import contextUtils from "../ui/node_modules/tailwindcss/lib/lib/setupContextUtils.js";
 import cfg from "../ui/tailwind.config.js";
-import { emittableClasses } from "../ui/eslint-rules/classes.js";
+import { closedContext, emittableClasses, modifierSteps } from "../ui/eslint-rules/classes.js";
 
 // Which scales each hard rule governs. The one hand-written table here, and it
 // is a statement about the RULEBOOK, not about Tailwind: `spacing-scale` owns
@@ -34,10 +33,7 @@ const resolved = resolveConfig(cfg).theme;
 const legal = new Set(emittableClasses);
 
 function classesOf(scale) {
-  const context = contextUtils.createContext(
-    resolveConfig({ ...cfg, theme: { ...cfg.theme, [scale]: {} } }),
-  );
-  const without = new Set(context.getClassList());
+  const without = new Set(closedContext({ [scale]: {} }).getClassList());
   return [...legal].filter((cls) => !without.has(cls));
 }
 
@@ -81,13 +77,8 @@ function flatten(value) {
 // a colour, `text-body/loose` sets a line height, and the wrong pairing emits
 // nothing at all. Only the bases that carry steps are listed.
 const modifiers = {};
-for (const entry of contextUtils
-  .createContext(resolveConfig(cfg))
-  .getClassList({ includeMetadata: true })) {
-  if (!Array.isArray(entry)) continue;
-  const [names, meta] = entry;
-  if (!meta?.modifiers?.length) continue;
-  for (const name of [names].flat()) modifiers[name] = meta.modifiers;
+for (const [name, steps] of modifierSteps) {
+  if (steps.size) modifiers[name] = [...steps];
 }
 
 // The palette's warmest neutral spans 27 (#2b2622); its faintest chromatic token

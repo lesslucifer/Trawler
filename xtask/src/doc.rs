@@ -118,7 +118,7 @@ fn row_slug(row: &str) -> Option<String> {
 // ui/tailwind.config.js. Rust cannot read an ES module, so the config is read by
 // the same oracle the lint rule uses and handed over as JSON - one source of
 // truth, two surfaces (DEC-17). JSON is YAML, so this needs no new parser.
-#[derive(Deserialize, Default)]
+#[derive(Deserialize)]
 pub struct Vocabulary {
     legal: BTreeSet<String>,
     rules: BTreeMap<String, Vec<String>>,
@@ -795,6 +795,14 @@ fn check_wire_data(failures: &mut Vec<Failure>, html: &str) {
 // wire-order-preserved. A captured collection renders in wire order unless a
 // sort is declared with its why; a screen may render no captured collection at
 // all, which is the rule's n/a path and must be said, not assumed.
+// A word, not a substring: `border` ends in `order` and every row in the house
+// carries one, so the raw markup can never be the searched text.
+fn declares_ordering(text: &str) -> bool {
+    text.to_ascii_lowercase()
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .any(|word| word.starts_with("order"))
+}
+
 fn check_wire_order_preserved(failures: &mut Vec<Failure>, elements: &str) {
     // The mark rides the row's opening tag, which inner-text extraction drops -
     // so the row is found from the attribute's position, never by searching its
@@ -802,15 +810,12 @@ fn check_wire_order_preserved(failures: &mut Vec<Failure>, elements: &str) {
     let rows: Vec<String> = attr_positions(elements, "data-wire")
         .into_iter()
         .filter(|(_, kind)| kind == "collection")
-        .map(|(pos, _)| {
-            let ((start, end), _) = element_content(elements, pos);
-            elements[start..end].to_string()
-        })
+        .map(|(pos, _)| inner_text(elements, element_content(elements, pos).0))
         .collect();
     if rows.is_empty() {
         return;
     }
-    let silent = rows.iter().filter(|r| !r.contains("order")).count();
+    let silent = rows.iter().filter(|r| !declares_ordering(r)).count();
     if silent > 0 {
         failures.push(Failure {
             check: "wire-order-preserved·ordering".to_string(),
@@ -1006,7 +1011,9 @@ fn is_bare_size(value: &str) -> bool {
 // palette rather than a tuned constant - the same one the vocabulary script
 // derives the chromatic set with.
 fn is_chromatic(value: &str) -> bool {
-    let hex = value.trim().trim_start_matches('#');
+    // The `#` is the whole difference between a colour and a magnitude: every
+    // digit of `font-[900]` is a hex digit too.
+    let Some(hex) = value.trim().strip_prefix('#') else { return false };
     let channels: Vec<u8> = match hex.len() {
         3 => hex
             .chars()
@@ -2636,6 +2643,19 @@ chromatic: [ok, warn]
         );
     }
 
+    // Every digit of 900 is a hex digit, so a colourless magnitude parses as one
+    // unless the `#` is required - and then the rule reports a colour nobody wrote.
+    #[test]
+    fn an_arbitrary_magnitude_that_reads_as_hex_is_not_a_colour() {
+        for base in ["font-[900]", "z-[999]", "leading-[100]"] {
+            let doc = mockup(&format!("<span class=\"{base}\">x</span>"));
+            assert!(
+                !reds(&doc).contains(&"zero-accent·off-set".to_string()),
+                "{base} names a magnitude past the config, not a chromatic colour"
+            );
+        }
+    }
+
     #[test]
     fn a_radius_outside_the_named_set_is_red() {
         let v = verify_html_against(
@@ -2791,6 +2811,28 @@ chromatic: [ok, warn]
         assert!(
             !reds(&green_run()).contains(&"wire-order-preserved·ordering".to_string()),
             "a screen may render no captured collection at all"
+        );
+    }
+
+    // The declaration is prose in the row, so the row's markup is not searchable
+    // text: `border` carries `order` and every table row in the house has one.
+    #[test]
+    fn a_styling_class_does_not_pass_for_an_ordering_declaration() {
+        let bordered = green_run().replace(
+            "<tr data-key=\"section\">",
+            "<tr data-key=\"section\" data-wire=\"collection\" class=\"border-b border-hairline\">",
+        );
+        assert!(
+            what(&doc_verdict(&bordered), "wire-order-preserved·ordering").contains("no ordering")
+        );
+
+        let declared = green_run().replace(
+            "<tr data-key=\"section\">",
+            "<tr data-key=\"section\" data-wire=\"collection\"><td>wire order, unsorted</td>",
+        );
+        assert!(
+            !reds(&declared).contains(&"wire-order-preserved·ordering".to_string()),
+            "prose naming the ordering is what answers the rule"
         );
     }
 
