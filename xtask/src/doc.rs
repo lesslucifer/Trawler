@@ -220,6 +220,7 @@ pub fn verify_html_against(
     }
 
     let mut failures = Vec::new();
+    check_escaped_markup(&mut failures, html);
     let mut artifacts: Vec<String> = Vec::new();
     let mut required: Vec<&str> = Vec::new();
     if artifact_decl.split_whitespace().next().is_none() {
@@ -1113,9 +1114,15 @@ fn read_pragmas(failures: &mut Vec<Failure>, html: &str) -> Allowances {
         let Some(end) = html[at..].find("-->").map(|rel| at + rel) else { continue };
         let body = html[at + 4..end].trim();
         let Some(rest) = body.strip_prefix("design-allow:") else { continue };
-        // `--` as well as the em dash, because the lint rule takes both and one
-        // rule cannot have two dialects.
-        let split = rest.split_once('—').or_else(|| rest.split_once("--"));
+        // The class is the first whitespace-delimited token and the separator comes
+        // after it - never a raw substring search, because `w-[--tw-x:1]` carries
+        // the separator inside the class. `--` as well as the em dash, since the
+        // lint rule takes both and one rule cannot have two dialects.
+        let split = rest.trim_start().split_once(char::is_whitespace).and_then(|(cls, tail)| {
+            let tail = tail.trim_start();
+            let why = tail.strip_prefix('—').or_else(|| tail.strip_prefix("--"))?;
+            Some((cls, why))
+        });
         let Some((cls, why)) = split.map(|(c, w)| (c.trim(), w.trim())) else {
             fail(
                 format!("`{}` gives no reason", rest.trim()),
@@ -1711,6 +1718,40 @@ fn quoting(tag: &str) -> bool {
 //
 // Running out of input means no tag close in the fragment, which callers pass
 // deliberately - `classes_at` hands over an opening tag with the `>` removed.
+// The convention `tag_end` rests on, enforced instead of assumed. A raw angle
+// bracket inside an attribute value is invalid HTML - it belongs written `&lt;` or
+// `&gt;` - and it is also the one shape no local rule can tell from a genuine
+// fault: `title="a > b"` and an unterminated `title="oops>` look identical to any
+// scan reading left to right. So rather than guess, the reader takes the safe
+// bound and this check makes the case it cannot parse impossible to write
+// silently. Zero sites in the corpus when it landed; it costs nothing to keep shut.
+fn check_escaped_markup(failures: &mut Vec<Failure>, html: &str) {
+    let bytes = html.as_bytes();
+    let (mut tag_from, mut quote) = (None, None);
+    for (i, c) in html.char_indices() {
+        match (tag_from, quote, c) {
+            (None, _, '<')
+                if bytes.get(i + 1).is_some_and(|b| b.is_ascii_alphabetic() || *b == b'/') =>
+            {
+                tag_from = Some(i);
+            }
+            (Some(_), None, '"' | '\'') => quote = Some(c),
+            (Some(_), Some(q), c) if c == q => quote = None,
+            (Some(_), None, '>') => tag_from = None,
+            (Some(from), Some(_), '<' | '>') => {
+                let seen = &html[from..i.min(from + 80)];
+                failures.push(Failure {
+                    check: "markup·escaped".to_string(),
+                    what: format!("an attribute value holds a raw `{c}`: {seen}"),
+                    fix: "write it `&lt;` or `&gt;` - a raw angle bracket in a value is invalid HTML, and no reader can tell it from an unterminated attribute".to_string(),
+                });
+                (tag_from, quote) = (None, None);
+            }
+            _ => {}
+        }
+    }
+}
+
 fn tag_end(html: &str, start: usize) -> usize {
     let mut quote = None;
     for (i, c) in html[start..].char_indices() {
@@ -3076,6 +3117,25 @@ chroma_floor: 40
     // The lint rule has always taken `--` for authors without an em dash to hand.
     // One rule, two surfaces: a pragma the other surface honours cannot read as
     // reasonless here.
+    // The reader takes the safe bound when a value holds a raw angle bracket, so
+    // the convention it rests on is checked rather than trusted: an unparseable
+    // value must be impossible to write silently, not merely rare.
+    #[test]
+    fn a_raw_angle_bracket_in_an_attribute_value_is_red() {
+        for tag in ["<span title=\"a < b\">x</span>", "<span title=\"a > b\">x</span>"] {
+            let doc = mockup(tag);
+            assert!(
+                what(&doc_verdict(&doc), "markup·escaped").contains("raw"),
+                "unescaped markup must be named, not silently mis-parsed: {tag}"
+            );
+        }
+        let escaped = mockup("<span title=\"a &lt; b\" class=\"font-mono\">x</span>");
+        assert!(
+            !reds(&escaped).contains(&"markup·escaped".to_string()),
+            "the entity form is the correct spelling and stays green"
+        );
+    }
+
     #[test]
     fn an_ascii_dash_separates_a_pragma_the_way_the_lint_rule_allows() {
         let doc = pragma(
@@ -3084,6 +3144,19 @@ chroma_floor: 40
         );
         let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
         assert!(!v.red(), "{:?}", failures(&v));
+    }
+
+    // A class may carry the separator inside itself - a CSS custom property is
+    // spelled with two dashes - so the class is a token, not everything left of
+    // the first `--`. The lint rule's regex has always read it that way.
+    #[test]
+    fn a_class_holding_two_dashes_is_not_split_inside_itself() {
+        let doc = pragma(
+            "grid-cols-[--tw-cols] -- the template shape comes from a custom property",
+            "<div class=\"grid-cols-[--tw-cols]\">x</div>",
+        );
+        let reds = failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab())));
+        assert!(!reds.contains(&"design-allow".to_string()), "{reds:?}");
     }
 
     #[test]
