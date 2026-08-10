@@ -1696,6 +1696,12 @@ fn quoting(tag: &str) -> bool {
 // A tag ends at its first UNQUOTED `>`, because an attribute value may hold one -
 // and a scan that stops at the quoted one reads half the tag's attributes and
 // reports the rest missing.
+//
+// Running out of input has two meanings, and only one is a fault. A quote left
+// OPEN is malformed markup, and carrying on would let the scan re-sync on a later
+// tag's quotes and lend this element the next one's attributes - so it falls back
+// to the raw bracket, which is narrow rather than borrowing. A quote left CLOSED
+// is just a fragment with no tag close in it, which callers pass deliberately.
 fn tag_end(html: &str, start: usize) -> usize {
     let mut open = None;
     for (i, c) in html[start..].char_indices() {
@@ -1705,6 +1711,9 @@ fn tag_end(html: &str, start: usize) -> usize {
             (None, '>') => return start + i,
             _ => {}
         }
+    }
+    if open.is_some() {
+        return html[start..].find('>').map_or(html.len(), |rel| start + rel);
     }
     html.len()
 }
@@ -2919,6 +2928,21 @@ chroma_floor: 40
                 "the element is declared and mono; {check} must not fire"
             );
         }
+    }
+
+    // An unterminated quote has no honest reading, so the scan must not run past
+    // the tag looking for one: re-syncing on a LATER tag's quotes would lend this
+    // element the next element's classes, and lending font-mono is a false green.
+    #[test]
+    fn an_unclosed_quote_does_not_lend_one_element_anothers_classes() {
+        let doc = green_run().replace(
+            "<div data-item=\"mockup\" data-wire=\"none\">",
+            "<div data-item=\"mockup\" data-wire=\"none\"><span data-wire=\"body\" title=\"oops>x</span><span class=\"font-mono\">y</span>",
+        );
+        assert!(
+            !what(&doc_verdict(&doc), "mono-for-wire-data·family").is_empty(),
+            "the payload carries no mono of its own and must not borrow the next element's"
+        );
     }
 
     fn layout(sketch: &str) -> String {
