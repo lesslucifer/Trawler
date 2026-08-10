@@ -63,7 +63,7 @@ import cfg from "../tailwind.config.js";
 const tw = window.tailwind ?? (window.tailwind = {});
 tw.config = { theme: cfg.theme };
 
-const { colors: c, fontFamily: f } = cfg.theme.extend;
+const { colors: c, fontFamily: f } = cfg.theme;
 const style = document.createElement("style");
 style.textContent = \`.app{
   --a-canvas:\${c.canvas};--a-soft:\${c["canvas-soft"]};--a-line:\${c.hairline};
