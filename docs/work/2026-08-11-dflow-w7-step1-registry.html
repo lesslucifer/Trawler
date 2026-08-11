@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7b18a99f34851f0dfab743">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W7 step 1 (the registry oracle)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W7 step ① — the collection's TSDoc is the registry</h1>
+      <p>One command emits the whole component vocabulary, read from the components themselves and
+        stored nowhere. Two sweep rows dissolved instead of being built, and the two hand-typed literals
+        in <code>collection.test.tsx</code> are gone — one of which had been describing something the
+        TSDoc never said.</p>
+      <div class="meta">Step record · 2026-08-11 · Trawler · T3 (docs/work/) · <code>wu/design-flow/harness</code> ·
+        plan: <a href="2026-08-11-dflow-w7-plan.html#step1">W7 ①</a> ·
+        direction: <a href="2026-08-11-dflow-w7-discussion.html">D3</a> ·
+        prior: <a href="2026-08-11-dflow-w7-step0-parser.html">W7 ⓪ the parser swap</a> ·
+        target: <code>scripts/design-registry.mjs</code></div>
+    </div>
+  </header>
+
+  <main>
+    <h2 id="verdict">Verdict</h2>
+    <div class="cards" data-c="verdict-cards">
+      <div class="card"><h3>24 in, 2 out</h3><p>every <code>@tier</code> block in
+        <code>ui/src/components/</code> is the vocabulary; <code>index.ts</code> and
+        <code>useConfirm.ts</code> carry none and are simply absent</p></div>
+      <div class="card"><h3>2 rows dissolved</h3><p>the freshness gate and
+        <code>index-covers-folder</code> — nothing stored can go stale, and the emitted index
+        <em>is</em> the folder</p></div>
+      <div class="card"><h3>53 literals deleted</h3><p>24 hand-transcribed names and 29 hand-transcribed
+        pairs. <strong>7 of those 29 were wrong</strong> — see <a href="#drift">the drift</a></p></div>
+      <div class="card"><h3>0 new dependencies</h3><p>node's own <code>fs</code>, <code>path</code> and
+        <code>url</code>. No parser, no TSDoc library</p></div>
+      <div class="card"><h3>78 tests</h3><p>12 new over the oracle, 66 over the collection (was 62).
+        309 across <code>ui/src/components/</code>, 492 across the app</p></div>
+    </div>
+
+    <h2 id="shape">What was built</h2>
+    <div class="diagram" data-c="dia-shape">
+      <pre class="mermaid">
+flowchart LR
+  TSDOC["ui/src/components/*.tsx<br/>@tier @use @avoid @states @madeof"]
+  TSDOC --> GEN["scripts/design-registry.mjs<br/>entry() · registry()"]
+  GEN -->|"node scripts/design-registry.mjs"| AGENT["the design run<br/>one command = whole vocabulary"]
+  GEN -->|"import { registry }"| TEST["collection.test.tsx<br/>names + redirects derived"]
+  GEN -.->|"step ②"| PRED["xtask verify-doc<br/>citations resolve"]
+  style GEN fill:#2b3a2b,stroke:#4cc38a
+      </pre>
+      <div class="caption">The shape <code>scripts/design-vocabulary.mjs</code> already uses for the token
+        vocabulary: one source, several surfaces, nothing committed. The dashed edge is
+        <a href="2026-08-11-dflow-w7-plan.html#step2">step ②</a> — the oracle exists before the predicate
+        that needs it.</div>
+    </div>
+    <table data-c="tbl-shape">
+      <thead><tr><th>Export</th><th>Does</th></tr></thead>
+      <tbody>
+        <tr><td><code>entry(source, name)</code></td>
+          <td>the pure half: the file's <code>@tier</code> block as an object, <code>null</code> when
+            there is none, a throw when there is one and it is incomplete</td></tr>
+        <tr><td><code>registry()</code></td>
+          <td>the folder, plus the one thing no single file can know — which roster names each
+            <code>@avoid</code> cites</td></tr>
+        <tr><td>run directly</td>
+          <td>the same object as JSON on stdout, which is how <code>xtask</code> and a design run read
+            it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="membership">Membership is <code>@tier</code> — the waiver, and the loud failure</h2>
+    <p>The plan asks for two failure modes that are easy to confuse and must not be: a component
+      deliberately outside the vocabulary, and a component whose block is broken. A short roster emitted
+      quietly is the defect the oracle exists to prevent, so the two get opposite treatments.</p>
+    <table data-c="tbl-membership">
+      <thead><tr><th>The block</th><th>Outcome</th><th>Why that way</th></tr></thead>
+      <tbody>
+        <tr><td>no TSDoc block, or one with no <code>@tier</code></td>
+          <td><span class="badge auto">absent</span></td>
+          <td>the waiver, stated in the file it waives. <code>useConfirm.ts</code> is a hook and
+            <code>index.ts</code> is the barrel; neither declares a tier, so neither is in the
+            vocabulary and no list anywhere had to say so</td></tr>
+        <tr><td><code>@tier</code> present, another of the five missing or empty</td>
+          <td><span class="badge approval">throws</span></td>
+          <td>declared is not the same as stated. The message names the file, the tag, and the five a
+            registry entry declares</td></tr>
+        <tr><td><code>@tier</code> that names no tier</td>
+          <td><span class="badge approval">throws</span></td>
+          <td>quotes what it read back — the shape W6's round 9 established, a red that does not guess
+            at a cause it cannot know</td></tr>
+        <tr><td>two <code>@tier</code> blocks in one file</td>
+          <td><span class="badge approval">throws</span></td>
+          <td>ambiguous, and first-wins would silently pick one. W6 ⑥ closed the same class of
+            ambiguity rather than guessing at it</td></tr>
+      </tbody>
+    </table>
+    <p class="kd"><strong>Gate:</strong> deleting <code>@states</code> from <code>Notice.tsx</code> fails
+      the collection suite at load with <code>Notice: @states is missing — a registry entry declares @tier
+      @use @avoid @states @madeof</code>. Deleting <code>CutMarker</code> from the barrel reds the
+      equality assertion. Both verified by mutation, then reverted.</p>
+
+    <h2 id="drift">The drift the hand-typed pairs were hiding</h2>
+    <p>The 29 <code>REDIRECTS</code> pairs claimed to be "<code>&lt;component&gt;</code>'s
+      <code>@avoid</code> sends you to <code>&lt;name&gt;</code>". Derived from the same
+      <code>@avoid</code> lines, the answer is 32 pairs — and the two sets are not nested.</p>
+    <table data-c="tbl-drift">
+      <thead><tr><th>Pair</th><th>Hand</th><th>TSDoc</th><th>What the difference is</th></tr></thead>
+      <tbody>
+        <tr><td><code>Button → Button</code> · <code>StepList → StepList</code></td>
+          <td>—</td><td>✅</td>
+          <td>a component naming itself ("a Button never carries a primary variant", "nesting a StepList
+            inside a step"). <code>Section → Section</code> was transcribed, these two were not — the
+            same shape, judged three different ways</td></tr>
+        <tr><td><code>Button → Notice</code> · <code>Notice → CopyButton</code> ·
+          <code>TextRenderer → JsonRenderer</code></td>
+          <td>—</td><td>✅</td>
+          <td>real citations the transcription skipped, all three in mid-clause prose rather than at a
+            "use X" phrase</td></tr>
+        <tr><td><code>JsonRenderer → TextRenderer</code> ·
+          <code>XmlRenderer → TextRenderer</code></td>
+          <td>✅</td><td>—</td>
+          <td><strong>neither <code>@avoid</code> mentions TextRenderer at all.</strong> Both come from
+            <code>@madeof</code> — a composition edge transcribed into a table that says it is reading
+            redirects. The test asserted a true fact about the wrong relation</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="drift-callout">
+      This is the whole argument for step ① in one row. The literal was not stale — <code>TextRenderer</code>
+      is exported and the assertion passed — it was <strong>describing something the source never said</strong>,
+      and no amount of the test being green could surface that. 27 of 29 right, in a table small enough to
+      re-read, is the accuracy hand-transcription actually achieves.
+    </div>
+
+    <h2 id="whole-names">Why a redirect is a whole name</h2>
+    <p>A citation is a roster name matched at word boundaries in the <code>@avoid</code> text. The
+      alternative — any capitalised word — was measured first and rejected: over the real corpus it also
+      returns <code>Enter</code>, <code>Inter</code>, <code>CodeMirror</code>, <code>BodyViewer</code>,
+      <code>HeaderTable</code>, <code>Field</code> and <code>StatusDot</code>.</p>
+    <table data-c="tbl-whole">
+      <thead><tr><th>Rejected</th><th>Because</th></tr></thead>
+      <tbody>
+        <tr><td>every capitalised word is a citation</td>
+          <td>a keyboard key, a typeface and a library are not components, and no rule tells them apart
+            from <code>StatusDot</code> — a component that really is missing. Keeping the noise means a
+            hand-typed allow-list, which is the transcription this step deletes</td></tr>
+        <tr><td>substring matching</td>
+          <td><code>Notice</code>'s <code>@avoid</code> names <code>CopyButton</code> and never
+            <code>Button</code>; a substring rule invents the second pair. Pinned by its own test</td></tr>
+      </tbody>
+    </table>
+    <p class="meta"><code>StatusDot</code> and <code>Field</code> are cited by an <code>@avoid</code> and
+      have no component — both are <a href="2026-08-11-dflow-w7-plan.html#expected">named out of scope</a>
+      by this WU's plan, and the emitted registry does not pretend to judge them. What the derivation
+      <em>does</em> still catch is the gap W5 found: the roster comes from the folder's TSDoc and the
+      barrel is authored separately, so a cited component that exists but is unexported still reds.</p>
+
+    <h2 id="tests">The tests</h2>
+    <table data-c="tbl-tests">
+      <thead><tr><th>Where</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td><code>registry.test.ts</code> <span class="badge id">new · 12</span></td>
+          <td>the whole entry is read from a block · a file with no block, and a block with no
+            <code>@tier</code>, are absent · a tag wrapped over lines folds to one value ·
+            each of the four other tags missing throws · an empty tag body throws · a tier that names no
+            tier throws · no summary throws · two <code>@tier</code> blocks throw</td></tr>
+        <tr><td><code>collection.test.tsx</code> <span class="badge id">62 → 66</span></td>
+          <td>the barrel exports exactly what the TSDoc declares · every name in the vocabulary has a
+            specimen · the 32 derived redirects each resolve to an export · a name is cited whole</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">What stays hand-written in <code>collection.test.tsx</code> is the one thing no TSDoc
+      can carry: the props each component needs to mount. <code>ROSTER</code> is renamed
+      <code>SPECIMENS</code> to say so, and its <em>keys</em> are now asserted against the vocabulary
+      rather than standing in for it.</p>
+
+    <h2 id="gotcha">One thing that cost time</h2>
+    <div class="callout warn" data-c="vite-callout">
+      <strong><code>new URL(x, import.meta.url)</code> is a vite build pattern, not a path expression.</strong>
+      Vite rewrites that exact form into an asset reference, so the collection path resolved to
+      <code>http://localhost:3000/src/components.tsx</code> under vitest while
+      <code>import.meta.url</code> itself was the correct <code>file://</code> URL — the misleading part.
+      <code>dirname(fileURLToPath(import.meta.url))</code> + <code>resolve</code> is not affected, and is
+      what <code>scripts/build-specimens.mjs</code> already does. Two config workarounds were tried and
+      reverted before the reading was correct; the fix was to use the pattern the repo already had.
+    </div>
+
+    <h2 id="gate">Gate 0</h2>
+    <table data-c="tbl-gate">
+      <thead><tr><th>Check</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><code>cargo fmt --check</code> · <code>clippy -D warnings</code> ·
+          <code>cargo test --workspace</code></td><td>green — untouched by this step</td></tr>
+        <tr><td><code>npx tsc -b</code></td><td>green. <code>allowJs</code> added to
+          <code>ui/tsconfig.json</code> so a test may import a <code>scripts/</code> oracle — the
+          alternative was a hand-written <code>.d.mts</code> that can drift from the thing it
+          declares</td></tr>
+        <tr><td><code>npm run lint</code> · <code>npx vitest run</code></td>
+          <td>green · 40 files, <strong>492 tests</strong></td></tr>
+        <tr><td><code>cargo xtask ui specimens --check</code></td><td>all migrated design files
+          render</td></tr>
+        <tr><td><code>verify-doc</code> over every tracked doc</td>
+          <td><strong>83 checked, none red</strong></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="next">Next</h2>
+    <p><a href="2026-08-11-dflow-w7-plan.html#step2">② the registry gate</a> — requirement #1 has had a
+      registry since W2 and a gate never. <code>xtask/src/doc.rs</code> gains the oracle as a second JSON
+      bridge beside the token vocabulary, and a design run's citations start being checked for truth
+      rather than shape.</p>
+    <p class="meta">Carried to the WU's distillation: the
+      <a href="2026-07-22-dflow-w2-registry-seed.html">W2 registry seed</a>'s caption still calls the
+      generator "owed by W7" and its table "the hand-maintained index" — true when written, and now
+      neither.</p>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

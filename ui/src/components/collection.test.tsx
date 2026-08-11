@@ -3,13 +3,21 @@ import { render, screen } from "@testing-library/react";
 import { json } from "@codemirror/lang-json";
 import type { ReactElement } from "react";
 import * as collection from "./index";
+import { registry } from "../../../scripts/design-registry.mjs";
 
 // The collection's own contract (E-DFLOW.W5), the part no per-component test can
 // reach: the roster is a vocabulary, not a folder — every T1/T2 name is exported
 // and mounts, every @madeof edge really composes instead of re-drawing, and every
 // @avoid alternative resolves to something a caller can actually reach.
+//
+// The vocabulary is read from the components' own TSDoc (E-DFLOW.W7 ①), so the
+// names and the redirects below are derived. What stays hand-written is the one
+// thing no TSDoc can carry: the props each component needs to mount.
 
-const ROSTER: Record<string, ReactElement> = {
+const REGISTRY = registry();
+const NAMES = Object.keys(REGISTRY).sort();
+
+const SPECIMENS: Record<string, ReactElement> = {
   Button: <collection.Button onClick={() => {}}>send</collection.Button>,
   CopyButton: <collection.CopyButton value="v" label="copy" />,
   CopyText: <collection.CopyText value="v" label="uri" />,
@@ -59,16 +67,20 @@ beforeAll(() => {
 });
 
 describe("the collection — every T1/T2 component is exported and mounts standalone", () => {
-  it("the barrel exports exactly the roster, no more and no less", () => {
+  it("the barrel exports exactly what the TSDoc declares, no more and no less", () => {
     const exported = Object.entries(collection)
       .filter(([, v]) => typeof v === "function" && /^[A-Z]/.test(v.name))
       .map(([name]) => name);
 
-    expect(exported.sort()).toEqual(Object.keys(ROSTER).sort());
+    expect(exported.sort()).toEqual(NAMES);
   });
 
-  it.each(Object.keys(ROSTER))("%s renders with no screen around it", (name) => {
-    const { container } = render(ROSTER[name]);
+  it("every name in the vocabulary has a specimen here", () => {
+    expect(Object.keys(SPECIMENS).sort()).toEqual(NAMES);
+  });
+
+  it.each(Object.keys(SPECIMENS))("%s renders with no screen around it", (name) => {
+    const { container } = render(SPECIMENS[name]);
     expect(container).not.toBeEmptyDOMElement();
   });
 });
@@ -153,49 +165,21 @@ describe("@madeof composes — the parts are reused, never re-drawn", () => {
 });
 
 describe("@avoid alternatives are reachable — every redirect resolves to an export", () => {
-  // Each pair is "<component>'s @avoid sends you to <name>"; the gap that went
-  // unnoticed for four zones was a redirect with no destination in the barrel.
-  const REDIRECTS: [string, string][] = [
-    ["IconButton", "Button"],
-    ["IconButton", "CopyButton"],
-    ["Button", "CopyButton"],
-    ["Button", "IconButton"],
-    ["CopyButton", "CopyText"],
-    ["CopyText", "CopyButton"],
-    ["KeyValueRow", "CopyText"],
-    ["Notice", "TonedText"],
-    ["Notice", "StatusPill"],
-    ["Notice", "StatusLine"],
-    ["TonedText", "StatusPill"],
-    ["TonedText", "Notice"],
-    ["TonedText", "CopyText"],
-    ["TonedText", "Button"],
-    ["StatusPill", "TonedText"],
-    ["StatusLine", "StatusPill"],
-    ["StatusLine", "Notice"],
-    ["StatusLine", "TonedText"],
-    ["StepList", "KeyValueRow"],
-    ["StepList", "Notice"],
-    ["StepList", "CopyText"],
-    ["StepList", "StatusLine"],
-    ["Select", "SegmentedControl"],
-    ["Select", "Notice"],
-    ["Section", "Section"],
-    ["SourceSurface", "TextRenderer"],
-    ["FormRenderer", "KeyValueRow"],
-    ["JsonRenderer", "TextRenderer"],
-    ["XmlRenderer", "TextRenderer"],
-  ];
+  // Each pair is "<component>'s @avoid sends you to <name>", read out of the
+  // TSDoc; the gap that went unnoticed for four zones was a redirect with no
+  // destination in the barrel, and the barrel is the independent half here.
+  const REDIRECTS: [string, string][] = NAMES.flatMap((from) =>
+    REGISTRY[from].redirects.map((to: string): [string, string] => [from, to]),
+  );
 
   it.each(REDIRECTS)("%s's @avoid points at %s, which the barrel exports", (from, to) => {
     expect(collection[from as keyof typeof collection]).toBeTypeOf("function");
     expect(collection[to as keyof typeof collection]).toBeTypeOf("function");
   });
 
-  it("every name a redirect cites is one the roster mounts", () => {
-    for (const [from, to] of REDIRECTS) {
-      expect(ROSTER).toHaveProperty(from);
-      expect(ROSTER).toHaveProperty(to);
-    }
+  it("a name is cited whole — the CopyButton in Notice's @avoid is no Button redirect", () => {
+    expect(REGISTRY.Notice.avoid).toContain("CopyButton");
+    expect(REGISTRY.Notice.redirects).toContain("CopyButton");
+    expect(REGISTRY.Notice.redirects).not.toContain("Button");
   });
 });
