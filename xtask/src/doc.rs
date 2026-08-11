@@ -3,6 +3,8 @@ use std::fmt::Write as _;
 use std::path::Path;
 use std::process::Command;
 
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Reader;
 use serde::Deserialize;
 
 use crate::gate::Failure;
@@ -91,11 +93,10 @@ struct Receipt {
 pub fn rules_from_rulebook(html: &str) -> Vec<Rule> {
     let mut out = Vec::new();
     for (table, hard) in [("hard-rules-table", true), ("soft-rules-table", false)] {
-        let Some((pos, _)) = attr_positions(html, "data-c").into_iter().find(|(_, v)| v == table)
-        else {
+        let Some(declared) = attrs(html, "data-c").into_iter().find(|a| a.value == table) else {
             continue;
         };
-        let ((start, end), _) = element_content(html, pos);
+        let ((start, end), _) = element_content(html, declared.tag);
         for row in html[start..end].split("<tr").skip(1) {
             if let Some(slug) = row_slug(row) {
                 out.push(Rule { slug, hard });
@@ -210,12 +211,10 @@ pub fn verify_html_against(
     rules: Option<&[Rule]>,
     vocabulary: Option<&Vocabulary>,
 ) -> Verdict {
-    let Some((artifact_pos, artifact_decl)) =
-        attr_positions(html, "data-artifact").into_iter().next()
-    else {
+    let Some(artifact) = attrs(html, "data-artifact").into_iter().next() else {
         return Verdict::Ungoverned;
     };
-    if let Some(status) = exempt_declared(html, artifact_pos) {
+    if let Some(status) = exempt_declared(html, &artifact) {
         return Verdict::Exempt(status);
     }
 
@@ -223,14 +222,14 @@ pub fn verify_html_against(
     check_escaped_markup(&mut failures, html);
     let mut artifacts: Vec<String> = Vec::new();
     let mut required: Vec<&str> = Vec::new();
-    if artifact_decl.split_whitespace().next().is_none() {
+    if artifact.value.split_whitespace().next().is_none() {
         failures.push(Failure {
             check: "artifact".to_string(),
             what: "data-artifact is declared but empty".to_string(),
             fix: "declare one of: epic-plan, wu-plan, wu-result, epic-result (space-separated when combined)".to_string(),
         });
     }
-    for token in artifact_decl.split_whitespace() {
+    for token in artifact.value.split_whitespace() {
         if let Some(items) = checklist(token) {
             artifacts.push(token.to_string());
             for item in items {
@@ -250,19 +249,19 @@ pub fn verify_html_against(
         return Verdict::Checked { artifacts, failures, summary: None };
     }
 
-    let wu_blocks: Vec<Occurrence> = attr_positions(html, "data-wu")
+    let wu_blocks: Vec<Occurrence> = attrs(html, "data-wu")
         .into_iter()
-        .map(|(pos, value)| {
-            let (span, filled) = element_content(html, pos);
-            Occurrence { value, span, filled }
+        .map(|block| {
+            let (span, filled) = element_content(html, block.tag);
+            Occurrence { value: block.value, span, filled }
         })
         .collect();
     let in_wu_block = |pos: usize| wu_blocks.iter().any(|b| pos >= b.span.0 && pos < b.span.1);
-    let (sub_items, top_items): (Vec<Tagged>, Vec<Tagged>) = attr_positions(html, "data-item")
+    let (sub_items, top_items): (Vec<Tagged>, Vec<Tagged>) = attrs(html, "data-item")
         .into_iter()
-        .map(|(pos, value)| {
-            let (span, filled) = element_content(html, pos);
-            (pos, Occurrence { value, span, filled })
+        .map(|item| {
+            let (span, filled) = element_content(html, item.tag);
+            (item.at, Occurrence { value: item.value, span, filled })
         })
         .partition(|(pos, _)| in_wu_block(*pos));
 
@@ -694,8 +693,8 @@ fn check_uppercase_mute_labels(failures: &mut Vec<Failure>, html: &str, vocabula
             fix: "a zone or column label is the uppercase-mute set: uppercase + tracking-label + a mute ink - never a tracking written by hand".to_string(),
         });
     };
-    for (_, class_attr) in attr_positions(html, "class") {
-        let classes: Vec<&str> = class_attr.split_whitespace().map(base_class).collect();
+    for declared in attrs(html, "class") {
+        let classes: Vec<&str> = declared.value.split_whitespace().map(base_class).collect();
         if !classes.contains(&"uppercase") || classes.contains(&"font-mono") {
             continue;
         }
@@ -728,13 +727,13 @@ fn check_uppercase_mute_labels(failures: &mut Vec<Failure>, html: &str, vocabula
 // a chromatic token says in words what the colour says in hue. A tinted glyph
 // counts - it is a character; an empty span painted `ok` does not.
 fn check_colour_plus_text(failures: &mut Vec<Failure>, html: &str, vocabulary: &Vocabulary) {
-    for (pos, class_attr) in attr_positions(html, "class") {
-        let chromatic = class_attr.split_whitespace().map(base_class).find(|cls| {
+    for declared in attrs(html, "class") {
+        let chromatic = declared.value.split_whitespace().map(base_class).find(|cls| {
             vocabulary.emits(cls)
                 && vocabulary.token(cls).is_some_and(|t| vocabulary.chromatic.contains(t))
         });
         let Some(cls) = chromatic else { continue };
-        let (_, filled) = element_content(html, pos);
+        let (_, filled) = element_content(html, declared.tag);
         if !filled {
             failures.push(Failure {
                 check: "colour-plus-text·channel".to_string(),
@@ -753,7 +752,11 @@ fn check_colour_plus_text(failures: &mut Vec<Failure>, html: &str, vocabulary: &
 const WIRE_HOSTILE: &[&str] = &["truncate", "text-ellipsis", "whitespace-nowrap"];
 
 fn check_wire_data(failures: &mut Vec<Failure>, html: &str) {
-    let marked = attr_positions(html, "data-wire");
+    let marked = attrs(html, "data-wire");
+    let declared = attrs(html, "class");
+    let bases = |declared: &Attr| -> Vec<String> {
+        declared.value.split_whitespace().map(|c| base_class(c).to_string()).collect()
+    };
     if marked.is_empty() {
         failures.push(Failure {
             check: "mono-for-wire-data·undeclared".to_string(),
@@ -762,12 +765,16 @@ fn check_wire_data(failures: &mut Vec<Failure>, html: &str) {
         });
         return;
     }
-    for (pos, kind) in &marked {
+    for wire in &marked {
+        let kind = &wire.value;
         if kind == "none" || kind == "collection" {
             continue;
         }
-        let classes = classes_at(html, *pos);
-        if !classes.iter().any(|c| c == "font-mono") {
+        let mono = declared
+            .iter()
+            .filter(|c| c.tag == wire.tag)
+            .any(|c| bases(c).iter().any(|b| b == "font-mono"));
+        if !mono {
             failures.push(Failure {
                 check: "mono-for-wire-data·family".to_string(),
                 what: format!("the {kind} payload does not render mono"),
@@ -777,13 +784,13 @@ fn check_wire_data(failures: &mut Vec<Failure>, html: &str) {
     }
     // A payload is anything mono, whether or not it is marked: the two ways of
     // saying "this is wire data" both bind the wrapping rule.
-    for (pos, class_attr) in attr_positions(html, "class") {
-        let classes: Vec<&str> = class_attr.split_whitespace().map(base_class).collect();
-        let payload = classes.contains(&"font-mono")
-            || marked
-                .iter()
-                .any(|(at, kind)| kind != "none" && *at > pos && same_tag(html, pos, *at));
-        let Some(hostile) = classes.iter().find(|c| WIRE_HOSTILE.contains(c)) else { continue };
+    for class in &declared {
+        let classes = bases(class);
+        let payload = classes.iter().any(|c| c == "font-mono")
+            || marked.iter().any(|w| w.value != "none" && w.at > class.at && w.tag == class.tag);
+        let Some(hostile) = classes.iter().find(|c| WIRE_HOSTILE.contains(&c.as_str())) else {
+            continue;
+        };
         if payload {
             failures.push(Failure {
                 check: "wrap-not-truncate·payload".to_string(),
@@ -802,21 +809,16 @@ fn check_wire_data(failures: &mut Vec<Failure>, html: &str) {
 // keyword that scans markup instead reads `border` as an answer. So the row says
 // so - the same shape `data-wire` itself uses, one attribute beside it.
 fn check_wire_order_preserved(failures: &mut Vec<Failure>, elements: &str) {
-    let collections: Vec<usize> = attr_positions(elements, "data-wire")
-        .into_iter()
-        .filter(|(_, kind)| kind == "collection")
-        .map(|(pos, _)| pos)
-        .collect();
+    let collections: Vec<Attr> =
+        attrs(elements, "data-wire").into_iter().filter(|w| w.value == "collection").collect();
     if collections.is_empty() {
         return;
     }
-    let declared = attr_positions(elements, "data-order");
+    let declared = attrs(elements, "data-order");
     let silent = collections
         .iter()
-        .filter(|pos| {
-            !declared
-                .iter()
-                .any(|(at, how)| !how.trim().is_empty() && same_tag(elements, **pos, *at))
+        .filter(|row| {
+            !declared.iter().any(|how| !how.value.trim().is_empty() && how.tag == row.tag)
         })
         .count();
     if silent > 0 {
@@ -962,26 +964,16 @@ fn check_keyboard_parity(failures: &mut Vec<Failure>, interaction: &str) {
 // ─── the surfaces the predicates read ───────────────────────────────────────
 
 fn authored_classes(html: &str) -> Vec<(usize, String)> {
-    attr_positions(html, "class")
+    attrs(html, "class")
         .into_iter()
-        .flat_map(|(pos, value)| {
-            value.split_whitespace().map(|cls| (pos, cls.to_string())).collect::<Vec<_>>()
+        .flat_map(|declared| {
+            declared
+                .value
+                .split_whitespace()
+                .map(|cls| (declared.at, cls.to_string()))
+                .collect::<Vec<_>>()
         })
         .collect()
-}
-
-fn classes_at(html: &str, attr_pos: usize) -> Vec<String> {
-    let start = html[..attr_pos].rfind('<').unwrap_or(0);
-    attr_positions(&html[start..tag_end(html, start)], "class")
-        .into_iter()
-        .flat_map(|(_, value)| {
-            value.split_whitespace().map(|c| base_class(c).to_string()).collect::<Vec<_>>()
-        })
-        .collect()
-}
-
-fn same_tag(html: &str, a: usize, b: usize) -> bool {
-    html[..a].rfind('<') == html[..b].rfind('<')
 }
 
 // A variant chain decorates a class, it never changes which token it names:
@@ -1139,9 +1131,11 @@ fn read_pragmas(failures: &mut Vec<Failure>, html: &str) -> Allowances {
                 // Which reading an author meant is undecidable from the string, and the
                 // lint rule's regex resolves it the same way, so the message names the
                 // reading rather than the checker guessing a cause it cannot know.
-                let read_inside = (cls != token)
-                    .then(|| format!(" - `{token}` read as this class plus a reason, its own rightmost separator being the split"))
-                    .unwrap_or_default();
+                let read_inside = if cls == token {
+                    String::new()
+                } else {
+                    format!(" - `{token}` read as this class plus a reason, its own rightmost separator being the split")
+                };
                 fail(
                     format!("`{cls}` carries a value, and the pragma never excuses one{read_inside}"),
                     "the pragma covers a template shape only - name the magnitude as a token in ui/tailwind.config.js, and spell a reason after a space so the dashes a class carries stay inside it",
@@ -1221,10 +1215,8 @@ fn check_elements_map(failures: &mut Vec<Failure>, elements: &str) {
         .collect();
     let in_tree = |at: usize| tree_spans.iter().any(|&(s, e)| at >= s && at < e);
     let (tree, catalog): (Vec<_>, Vec<_>) =
-        attr_positions(elements, "data-key").into_iter().partition(|&(at, _)| in_tree(at));
-    let keys = |half: Vec<(usize, String)>| -> Vec<String> {
-        half.into_iter().map(|(_, value)| value).collect()
-    };
+        attrs(elements, "data-key").into_iter().partition(|key| in_tree(key.at));
+    let keys = |half: Vec<Attr>| -> Vec<String> { half.into_iter().map(|key| key.value).collect() };
     let (tree_keys, row_keys) = (keys(tree), keys(catalog));
     for (half, keys, fix) in [
         (
@@ -1591,7 +1583,7 @@ fn colour_literal(html: &str) -> Option<String> {
 }
 
 fn inner_text(html: &str, span: (usize, usize)) -> String {
-    let open_end = html[span.0..].find('>').map_or(span.0, |rel| span.0 + rel + 1);
+    let open_end = html[span.0..].find('>').map_or(span.0, |rel| span.0 + rel + 1).min(span.1);
     let mut out = String::new();
     let mut in_tag = false;
     for c in html[open_end..span.1].chars() {
@@ -1680,174 +1672,235 @@ fn check_unknown(
 // run #3's checks red runs #1 and #2, which are records of what the flow was, not
 // artifacts anyone will fix. A run still open is never archived: that would hide
 // exactly the reds the flow exists to surface.
-fn exempt_declared(html: &str, artifact_pos: usize) -> Option<String> {
-    let start = html[..artifact_pos].rfind('<').unwrap_or(0);
-    let close = html[start..].find('>')?;
-    attr_positions(&html[start..start + close], "data-status")
+fn exempt_declared(html: &str, artifact: &Attr) -> Option<String> {
+    if !artifact.closed {
+        return None;
+    }
+    attrs(html, "data-status")
         .into_iter()
-        .next()
-        .map(|(_, v)| v)
+        .find(|status| status.tag == artifact.tag)
+        .map(|status| status.value)
         .filter(|v| v == "draft" || v == "archived")
 }
 
-// A tag's own text can quote an attribute without carrying one - a doc that
-// documents the contract judging it is the likeliest place for that - so a match
-// still inside an open value is text, not a declaration.
-fn quoting(tag: &str) -> bool {
-    let mut open = None;
-    for c in tag.chars() {
-        match (open, c) {
-            (None, '"' | '\'') => open = Some(c),
-            (Some(q), c) if c == q => open = None,
-            _ => {}
-        }
-    }
-    open.is_some()
-}
-
-// A tag ends at its first UNQUOTED `>`, because an attribute value may hold one -
-// and a scan that stops at the quoted one reads half the tag's attributes and
-// reports the rest missing.
+// ─── the markup, tokenised once ─────────────────────────────────────────────
 //
-// A tag ends at its first UNQUOTED `>`, because an attribute value may hold one,
-// and in no case later than the NEXT `<`. That second bound is what makes this
-// safe on malformed markup rather than merely correct on clean markup: quotes
-// re-pair across a fault - an unclosed value's quote is closed by the next tag's
-// - so "stop where the quote opened" cannot even see the fault, and a scan with
-// only the first bound walks into the neighbouring element and reads ITS
-// attributes as this one's. Borrowing a class is a false green; truncating at the
-// next tag is a false red on markup that is already broken.
-//
-// Running out of input means no tag close in the fragment, which callers pass
-// deliberately - `classes_at` hands over an opening tag with the `>` removed.
-// The convention `tag_end` rests on, enforced instead of assumed. A raw angle
-// bracket inside an attribute value is invalid HTML - it belongs written `&lt;` or
-// `&gt;` - and it is also the one shape no local rule can tell from a genuine
-// fault: `title="a > b"` and an unterminated `title="oops>` look identical to any
-// scan reading left to right. So rather than guess, the reader takes the safe
-// bound and this check makes the case it cannot parse impossible to write
-// silently. Zero sites in the corpus when it landed; it costs nothing to keep shut.
-fn check_escaped_markup(failures: &mut Vec<Failure>, html: &str) {
-    let bytes = html.as_bytes();
-    let (mut tag_from, mut quote) = (None, None);
-    for (i, c) in html.char_indices() {
-        match (tag_from, quote, c) {
-            (None, _, '<')
-                if bytes.get(i + 1).is_some_and(|b| b.is_ascii_alphabetic() || *b == b'/') =>
-            {
-                tag_from = Some(i);
-            }
-            (Some(_), None, '"' | '\'') => quote = Some(c),
-            (Some(_), Some(q), c) if c == q => quote = None,
-            (Some(_), None, '>') => tag_from = None,
-            (Some(from), Some(_), '<' | '>') => {
-                let seen: String = html[from..i].chars().take(80).collect();
-                failures.push(Failure {
-                    check: "markup·escaped".to_string(),
-                    what: format!("an attribute value holds a raw `{c}`: {seen}"),
-                    fix: "write it `&lt;` or `&gt;` - a raw angle bracket in a value is invalid HTML, and no reader can tell it from an unterminated attribute".to_string(),
-                });
-                (tag_from, quote) = (None, None);
-            }
-            _ => {}
-        }
-    }
+// Every predicate reads HTML through this. What it replaced were four scanners
+// that read markup by hand - find a `<`, count the quotes, guess where the tag
+// ends - and six code-review rounds found six holes in them, each fix revealing
+// the next: an attribute quoted inside another's value read as a declaration · a
+// tag end taken from a bracket inside a value · quotes re-pairing across a fault
+// so one element was lent the next one's classes · a snippet cut mid-character.
+// Every one is a case a tokeniser already owns, so one owns them: quick-xml,
+// already in this repo's tree.
+#[derive(PartialEq)]
+enum Shape {
+    Open,
+    Close,
+    Void,
+    Other,
 }
 
-fn tag_end(html: &str, start: usize) -> usize {
-    let mut quote = None;
-    for (i, c) in html[start..].char_indices() {
-        let at = start + i;
-        match (quote, c) {
-            (None, '"' | '\'') => quote = Some(c),
-            (Some(q), c) if c == q => quote = None,
-            (None, '>') => return at,
-            (_, '<') if at > start => return at,
-            _ => {}
-        }
-    }
-    html.len()
+struct Node {
+    name: String,
+    shape: Shape,
+    // `<` .. one past the `>` that closes it
+    span: (usize, usize),
+    // false only for a tag that never reaches its `>`. What it declared is still
+    // read, so a truncated doc is checked rather than silently ungoverned.
+    closed: bool,
+    attrs: Vec<(usize, String, String)>,
 }
 
-fn attr_positions(html: &str, name: &str) -> Vec<(usize, String)> {
-    let needle = format!("{name}=\"");
+// One attribute declaration: where its owning tag opens - two attributes of one
+// element share it, which is how "on the same element" is asked - where the name
+// itself sits, and the raw value.
+struct Attr {
+    tag: usize,
+    at: usize,
+    value: String,
+    closed: bool,
+}
+
+// A `<` inside a script or a stylesheet is data, not markup - HTML's raw-text
+// rule. Tokenising those bodies invents tags out of `a < b`.
+const RAW_TEXT: &[&str] = &["script", "style"];
+
+fn nodes(html: &str) -> Vec<Node> {
     let mut out = Vec::new();
-    let mut from = 0;
-    while let Some(rel) = html[from..].find(&needle) {
-        let pos = from + rel;
-        from = pos + needle.len();
-        let before = &html[..pos];
-        let preceded = before.chars().next_back().is_some_and(char::is_whitespace);
-        let in_tag =
-            before.rfind('<').is_some_and(|lt| pos < tag_end(html, lt) && !quoting(&before[lt..]));
-        if !preceded || !in_tag {
-            continue;
+    let mut base = 0usize;
+    while base < html.len() {
+        let mut reader = Reader::from_str(&html[base..]);
+        let config = reader.config_mut();
+        config.check_end_names = false;
+        config.allow_unmatched_ends = true;
+        config.check_comments = false;
+        let mut resume = None;
+        loop {
+            let from = base + offset(reader.buffer_position());
+            let event = reader.read_event();
+            let to = base + offset(reader.buffer_position());
+            match event {
+                Ok(Event::Eof) => break,
+                Ok(Event::Text(_)) => {}
+                Ok(event) => {
+                    let node = node_of(html, &event, (from, to));
+                    if node.shape == Shape::Open && RAW_TEXT.contains(&node.name.as_str()) {
+                        let end = format!("</{}", node.name);
+                        resume = Some(html[to..].find(&end).map_or(html.len(), |rel| to + rel));
+                    }
+                    out.push(node);
+                    if resume.is_some() {
+                        break;
+                    }
+                }
+                // A tag that never closes has no honest reading, so the reader
+                // takes what it declared and picks up at the next tag: a fault
+                // must not silence the markup after it. `markup·escaped` names it.
+                Err(_) => {
+                    out.extend(truncated(html, from));
+                    resume = html[from + 1..].find('<').map(|rel| from + 1 + rel);
+                    break;
+                }
+            }
         }
-        let vstart = pos + needle.len();
-        if let Some(vlen) = html[vstart..].find('"') {
-            out.push((pos, html[vstart..vstart + vlen].to_string()));
+        match resume {
+            Some(next) if next > base => base = next,
+            _ => break,
         }
     }
     out
 }
 
-fn element_content(html: &str, attr_pos: usize) -> ((usize, usize), bool) {
-    let empty = ((attr_pos, attr_pos), false);
-    let Some(start) = html[..attr_pos].rfind('<') else { return empty };
-    let name: String = html[start + 1..].chars().take_while(char::is_ascii_alphanumeric).collect();
-    let open_end = tag_end(html, start);
-    if open_end == html.len() {
-        return empty;
+fn node_of(html: &str, event: &Event<'_>, span: (usize, usize)) -> Node {
+    let (shape, open) = match event {
+        Event::Start(tag) => (Shape::Open, Some(tag)),
+        Event::Empty(tag) => (Shape::Void, Some(tag)),
+        Event::End(_) => (Shape::Close, None),
+        _ => (Shape::Other, None),
+    };
+    let name = match event {
+        Event::Start(tag) | Event::Empty(tag) => text(tag.name().as_ref()),
+        Event::End(tag) => text(tag.name().as_ref()),
+        _ => String::new(),
+    };
+    let attrs = open.map(|tag| attrs_of(html, tag)).unwrap_or_default();
+    Node { name, shape, span, closed: true, attrs }
+}
+
+fn attrs_of(html: &str, tag: &BytesStart<'_>) -> Vec<(usize, String, String)> {
+    let mut attributes = tag.attributes();
+    attributes.with_checks(false);
+    // A valueless attribute (`data-map`, `defer`) is an error to an XML reader
+    // and a declaration no predicate here reads, so it is skipped, not reported.
+    attributes
+        .flatten()
+        .map(|a| (offset_in(html, a.key.as_ref()), text(a.key.as_ref()), text(&a.value)))
+        .collect()
+}
+
+fn truncated(html: &str, from: usize) -> Option<Node> {
+    let content = html[from..].strip_prefix('<')?;
+    let len = content.find(char::is_whitespace).unwrap_or(content.len());
+    let name = content[..len].to_string();
+    if !name.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        return None;
     }
-    if name.is_empty() || html[..open_end].ends_with('/') {
-        return empty;
-    }
-    let open_tag = format!("<{name}");
-    let close_tag = format!("</{name}");
-    let mut depth = 1usize;
-    let mut cursor = open_end + 1;
-    loop {
-        let rest = &html[cursor..];
-        let Some(close_rel) = find_tag(rest, &close_tag) else { return empty };
-        if let Some(open_inner) = find_tag(&rest[..close_rel], &open_tag) {
-            depth += 1;
-            cursor += open_inner + open_tag.len();
-        } else {
-            depth -= 1;
-            let close_abs = cursor + close_rel;
-            if depth == 0 {
-                let inner = &html[open_end + 1..close_abs];
-                return ((start, close_abs), has_text(inner));
+    let attrs = attrs_of(html, &BytesStart::from_content(content, len));
+    Some(Node { name, shape: Shape::Open, span: (from, html.len()), closed: false, attrs })
+}
+
+fn text(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes).into_owned()
+}
+
+// quick-xml hands back subslices of the input, so this is arithmetic, not a
+// search - the reading `check_elements_map` already takes of its tree spans.
+fn offset_in(html: &str, part: &[u8]) -> usize {
+    part.as_ptr() as usize - html.as_ptr() as usize
+}
+
+fn offset(position: u64) -> usize {
+    usize::try_from(position).unwrap_or(usize::MAX)
+}
+
+fn attrs(html: &str, name: &str) -> Vec<Attr> {
+    let mut out = Vec::new();
+    for node in nodes(html) {
+        let (tag, closed) = (node.span.0, node.closed);
+        for (at, key, value) in node.attrs {
+            if key == name {
+                out.push(Attr { tag, at, value, closed });
             }
-            cursor = close_abs + close_tag.len();
         }
+    }
+    out
+}
+
+// A raw angle bracket inside a tag is invalid HTML - it belongs written `&lt;` or
+// `&gt;` - and it is the one shape no reader can resolve: `title="a > b"` and an
+// unterminated `title="oops>` look identical left to right, and a raw `<` in
+// prose opens a tag that swallows the sentence after it, classes and all. So
+// rather than guess, the case that cannot be parsed is named. Zero sites in the
+// corpus when it landed; it costs nothing to keep shut.
+fn check_escaped_markup(failures: &mut Vec<Failure>, html: &str) {
+    for node in nodes(html).iter().filter(|n| n.shape != Shape::Other) {
+        // between the `<` and the `>` that closed it - and for a tag that never
+        // closed, everything it swallowed, which is the case being named
+        let inside = html[node.span.0 + 1..node.span.1].trim_end_matches('>');
+        let Some(raw) = inside.chars().find(|c| *c == '<' || *c == '>') else { continue };
+        let seen: String = inside.chars().take(80).collect();
+        failures.push(Failure {
+            check: "markup·escaped".to_string(),
+            what: format!("a tag holds a raw `{raw}`: {seen}"),
+            fix: "write it `&lt;` or `&gt;` - a raw angle bracket inside a tag is invalid HTML, and no reader can tell it from an unterminated attribute".to_string(),
+        });
     }
 }
 
-fn find_tag(hay: &str, tag: &str) -> Option<usize> {
-    let mut from = 0;
-    while let Some(rel) = hay[from..].find(tag) {
-        let pos = from + rel;
-        let after = hay[pos + tag.len()..].chars().next();
-        if after.is_none_or(|c| c == '>' || c == '/' || c.is_whitespace()) {
-            return Some(pos);
-        }
-        from = pos + tag.len();
+fn element_content(html: &str, tag: usize) -> ((usize, usize), bool) {
+    let empty = ((tag, tag), false);
+    let nodes = nodes(html);
+    let Some(open) = nodes.iter().position(|n| n.span.0 == tag) else { return empty };
+    if nodes[open].shape != Shape::Open || !nodes[open].closed {
+        return empty;
     }
-    None
-}
-
-fn has_text(inner: &str) -> bool {
-    let mut in_tag = false;
-    for c in inner.chars() {
-        match c {
-            '<' => in_tag = true,
-            '>' => in_tag = false,
-            c if !in_tag && !c.is_whitespace() => return true,
+    let mut depth = 1usize;
+    for (i, node) in nodes.iter().enumerate().skip(open + 1) {
+        if node.name != nodes[open].name {
+            continue;
+        }
+        match node.shape {
+            Shape::Open => depth += 1,
+            Shape::Close => {
+                depth -= 1;
+                if depth == 0 {
+                    let filled =
+                        has_text(html, &nodes[open + 1..i], nodes[open].span.1, node.span.0);
+                    return ((tag, node.span.0), filled);
+                }
+            }
             _ => {}
         }
     }
-    false
+    empty
+}
+
+// Text is what the tokeniser did not claim: the gaps between nodes. A comment or
+// an empty nested element is markup, so an element holding only those is empty -
+// the reading `check_items` needs to tell a written section from a tagged one.
+fn has_text(html: &str, inner: &[Node], from: usize, to: usize) -> bool {
+    let mut at = from;
+    for node in inner {
+        if node.span.0 < at || node.span.0 >= to {
+            continue;
+        }
+        if !html[at..node.span.0].trim().is_empty() {
+            return true;
+        }
+        at = node.span.1.clamp(at, to);
+    }
+    at < to && !html[at..to].trim().is_empty()
 }
 
 fn edit_distance(a: &str, b: &str) -> usize {
@@ -1936,7 +1989,7 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        attr_positions, check_frame_density, edit_distance, elements_of, format_verdict,
+        attrs, check_frame_density, edit_distance, elements_of, format_verdict,
         rules_from_rulebook, verify_html, verify_html_against, Verdict, Vocabulary,
         CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS,
         GIST_MAX_WORDS,
@@ -2668,8 +2721,7 @@ chroma_floor: 40
     fn attr_scan_requires_a_real_tag_position() {
         let html =
             "<p data-item=\"a\">x</p><p>text data-item=\"b\" more</p><code>data-item=\"c\"</code>";
-        let values: Vec<String> =
-            attr_positions(html, "data-item").into_iter().map(|(_, v)| v).collect();
+        let values: Vec<String> = attrs(html, "data-item").into_iter().map(|a| a.value).collect();
         assert_eq!(values, vec!["a"]);
     }
 
@@ -3009,6 +3061,50 @@ chroma_floor: 40
             !what(&doc_verdict(&doc), "mono-for-wire-data·family").is_empty(),
             "the payload carries no mono of its own and must not borrow the next element's"
         );
+    }
+
+    // A script writes markup; it does not carry it. Every component design file
+    // in the corpus builds its specimen from template literals, so tokenising a
+    // script body reads `class="${NT}"` as a declaration and `a < b` as a tag.
+    #[test]
+    fn a_class_a_script_writes_is_not_a_declaration() {
+        let doc = mockup(
+            "<script>const NT = 'p-[13px]'; if (a < b) render(`<span class=\"${NT}\">x</span>`);</script>",
+        );
+        assert!(
+            !verify_html_against(&doc, Some(&rules()), Some(&vocab())).red(),
+            "{:?}",
+            reds(&doc)
+        );
+    }
+
+    // A fault is local: the tag that carries it has no honest reading, and every
+    // declaration after it still does. Silencing the rest of the doc would turn
+    // one malformed tag into a green run with nine sections nobody checked.
+    #[test]
+    fn a_fault_does_not_silence_the_declarations_after_it() {
+        let doc = green_run().replace(
+            "<p data-item=\"frame\">",
+            "<span title=\"oops>x</span><p data-item=\"frame\">",
+        );
+        let reported = reds(&doc);
+        assert!(reported.contains(&"markup·escaped".to_string()), "{reported:?}");
+        for silenced in ["item·receipt", "item·capabilities", "item·proposals"] {
+            assert!(!reported.contains(&silenced.to_string()), "{silenced} lost: {reported:?}");
+        }
+    }
+
+    // An item is filled by TEXT. Markup the tokeniser claimed is not text, so a
+    // section holding only a comment is as empty as an untouched one - the
+    // reading that keeps a tagged-but-unwritten section from passing.
+    #[test]
+    fn a_section_holding_only_a_comment_is_empty() {
+        let commented = wu_result_body().replace(
+            "<p data-item=\"evidence\">tests</p>",
+            "<p data-item=\"evidence\"><!-- soon --></p>",
+        );
+        let v = verify_html(&doc("wu-result", "", &commented));
+        assert_eq!(failures(&v), vec!["item·evidence"]);
     }
 
     fn layout(sketch: &str) -> String {

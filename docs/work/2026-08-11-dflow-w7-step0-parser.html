@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7b04839f34851f0dfab714">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W7 step 0 (the parser swap)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W7 step ⓪ — the four hand-rolled scanners are gone</h1>
+      <p>Every predicate now reads HTML through one tokeniser. The acceptance was that nothing may
+        change: <strong>verify-doc's output is byte-identical</strong> on all 82 tracked docs and on
+        all three archived runs re-opened — 12 · 30 · 19 reds, W6's 49 over runs #2 and #3.</p>
+      <div class="meta">Step record · 2026-08-11 · Trawler · T3 (docs/work/) · <code>wu/design-flow/harness</code> ·
+        plan: <a href="2026-08-11-dflow-w7-plan.html#step0">W7 ⓪</a> ·
+        direction: <a href="2026-08-11-dflow-w7-discussion.html">D4</a> ·
+        prior evidence: <a href="2026-08-10-dflow-w6-step5-regression.html">W6 ⑤ the regression</a> ·
+        target: <code>xtask/src/doc.rs</code></div>
+    </div>
+  </header>
+
+  <main>
+    <h2 id="verdict">Verdict</h2>
+    <div class="cards" data-c="verdict-cards">
+      <div class="card"><h3>0 verdicts changed</h3><p>82 tracked docs + 3 re-opened runs, old binary
+        against new, <strong>diff empty</strong>. One message's wording is the single intended
+        difference</p></div>
+      <div class="card"><h3>12 · 30 · 19</h3><p>reds over runs #1 · #2 · #3 with the archive flag lifted —
+        the same counts W6 ⑤ recorded, red for red</p></div>
+      <div class="card"><h3>4 scanners out</h3><p><code>attr_positions</code> · <code>tag_end</code> ·
+        <code>element_content</code> · <code>check_escaped_markup</code>, and five private helpers with
+        them</p></div>
+      <div class="card"><h3>0 new dependencies</h3><p><code>quick-xml</code> was already in the
+        workspace lock — the proxy crate ships it. New to <code>xtask</code>, new to nothing
+        else</p></div>
+      <div class="card"><h3>163 tests</h3><p>in the xtask lib (103 in <code>doc.rs</code>), 316 across the
+        workspace. fmt · clippy <code>-D warnings</code> · <code>--workspace</code> all green</p></div>
+    </div>
+
+    <h2 id="why">Why a tokeniser, and why now</h2>
+    <p>Six code-review rounds each found a hole in these four functions, and each fix revealed the next.
+      That is the signature of one missing abstraction, not six bugs — and every later step in this WU
+      adds a predicate that would read through them.</p>
+
+    <div class="diagram" data-c="before-after">
+      <pre class="mermaid">
+flowchart LR
+  subgraph OLD["before — four scanners, one reading each"]
+    A1["attr_positions<br/>find name=&quot;, then guess in-tag"] --> A2["tag_end<br/>first unquoted &gt;, bounded by next &lt;"]
+    A3["element_content<br/>rfind &lt;, match close by name"] --> A2
+    A4["check_escaped_markup<br/>a state machine over chars"]
+  end
+  subgraph NEW["after — one tokeniser, four readers"]
+    N0["nodes()<br/>quick-xml + HTML's raw-text rule"] --> N1["attrs(name)<br/>tag · at · value · closed"]
+    N0 --> N2["element_content(tag)<br/>depth over nodes"]
+    N0 --> N3["check_escaped_markup<br/>a raw bracket inside a tag"]
+    N2 --> N4["has_text<br/>text = the gaps"]
+  end
+  OLD -->|"verdicts unchanged"| NEW
+  style N0 fill:#2b3a2b,stroke:#4cc38a
+      </pre>
+      <div class="caption">Quoting, tag ends, comments, CDATA and single-quoted values move into the
+        tokeniser. What stayed hand-written is the part it does not own: HTML's raw-text rule for
+        <code>&lt;script&gt;</code> and <code>&lt;style&gt;</code>, and recovery at a tag that never closes.</div>
+    </div>
+
+    <h2 id="holes">The six holes, as tests rather than comments</h2>
+    <p>Each was a review round in W6 ⑥. Each already had a test; the swap is what turns the long comment
+      that <em>explained</em> the hole into a case the tokeniser cannot re-open.</p>
+    <table data-c="holes-table">
+      <thead><tr><th>#</th><th>The hole</th><th>The test that pins it</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>an attribute quoted inside another attribute's value read as a declaration</td>
+          <td><code>an_attribute_quoted_inside_another_value_declares_nothing</code></td></tr>
+        <tr><td>2</td><td>a tag end taken from a bracket inside a quoted value</td>
+          <td><code>a_bracket_inside_a_value_does_not_end_the_tag</code></td></tr>
+        <tr><td>3</td><td>re-syncing past a malformed tag and lending one element another's classes</td>
+          <td><code>an_unclosed_quote_does_not_lend_one_element_anothers_classes</code></td></tr>
+        <tr><td>4</td><td>quotes re-pairing across a fault, dropping the attributes before it</td>
+          <td><code>a_legal_bracket_survives_a_later_fault_in_the_same_tag</code></td></tr>
+        <tr><td>5</td><td>a legal <code>title</code> holding an escaped angle bracket</td>
+          <td><code>a_raw_angle_bracket_in_an_attribute_value_is_red</code> ·
+            <code>a_raw_bracket_in_prose_is_named_not_tolerated</code></td></tr>
+        <tr><td>6</td><td>a snippet cut at a byte boundary mid-character</td>
+          <td><code>naming_a_raw_bracket_survives_a_multibyte_value</code></td></tr>
+      </tbody>
+    </table>
+    <p class="meta">Plus <code>unclosed_artifact_tag_fails_toward_checking_not_draft_silence</code>, which is
+      why <code>Attr</code> carries <code>closed</code>: a truncated tag's <code>data-artifact</code> is
+      read, so the doc is governed, while its <code>data-status</code> is not, so it cannot fall silent.</p>
+
+    <h2 id="new-logic">What the swap added, and what tests it</h2>
+    <table data-c="new-tests">
+      <thead><tr><th>New logic</th><th>Why it exists</th><th>Test</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Raw-text elements skipped</strong></td>
+          <td>a <code>&lt;</code> inside a script is data. Every component design file builds its specimen
+            from template literals, so tokenising the body reads <code>class="${NT}"</code> as a
+            declaration and <code>a &lt; b</code> as a tag — two corpus files stopped the parse
+            outright before this rule</td>
+          <td><code>a_class_a_script_writes_is_not_a_declaration</code></td></tr>
+        <tr><td><strong>Recovery at a fault</strong></td>
+          <td>the unclosed tag yields what it declared, then reading resumes at the next
+            <code>&lt;</code>. Running to EOF instead would let one malformed tag silence nine
+            sections and read as green</td>
+          <td><code>a_fault_does_not_silence_the_declarations_after_it</code></td></tr>
+        <tr><td><strong>Text is the gaps</strong></td>
+          <td><code>filled</code> is now "the tokeniser did not claim this", so a comment is markup and a
+            section holding only one is empty — the old scanner counted the tail of a value after a
+            quoted <code>&gt;</code> as text</td>
+          <td><code>a_section_holding_only_a_comment_is_empty</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">The gate: nothing changed</h2>
+    <p>The plan's acceptance is that the archived runs' reds <strong>reproduce exactly</strong> — a
+      different number means the swap moved a verdict, the one thing it must not do. Method: both
+      binaries built from the same tree, one per file so the full failure list prints (the batch form
+      prints a summary), <code>node</code> on <code>PATH</code> so the five vocabulary predicates
+      actually run.</p>
+    <table data-c="evidence-table">
+      <thead><tr><th>Subject</th><th>Old</th><th>New</th><th>W6 ⑤ recorded</th></tr></thead>
+      <tbody>
+        <tr><td><a href="2026-07-16-dflow-run-1.html">run #1</a>, flag lifted</td>
+          <td>12</td><td><strong>12</strong></td><td>12</td></tr>
+        <tr><td><a href="2026-07-25-dflow-w4-run-2.html">run #2</a>, flag lifted</td>
+          <td>30</td><td><strong>30</strong></td><td>30</td></tr>
+        <tr><td><a href="2026-07-26-dflow-w4-run-3.html">run #3</a>, flag lifted</td>
+          <td>19</td><td><strong>19</strong></td><td>19</td></tr>
+        <tr><td>every tracked doc — 82 <code>docs/**/*.html</code></td>
+          <td>0 red</td><td><strong>0 red</strong></td><td>run #3 alone, since archived</td></tr>
+        <tr><td>full output, all 85 files, diffed line by line</td>
+          <td colspan="2"><strong>empty diff</strong></td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">49 over runs #2 and #3, of which 33 are real over 29 sites — the tally W6 ⑤ judged red
+      by red. Reproducing the <em>count</em> is the weaker claim; the output diff is the strong one, and it
+      is empty per check, per message and per site.</p>
+
+    <h2 id="differences">The three differences the comparison did find</h2>
+    <p>All three are the swap doing what it was asked to. None moves a verdict on any doc as it sits.</p>
+    <table data-c="differences-table">
+      <thead><tr><th>What</th><th>Where</th><th>Effect today</th></tr></thead>
+      <tbody>
+        <tr><td><strong>19 declarations a script writes stop counting</strong> —
+          <code>class="${NT}"</code>, <code>title="Request headers"</code> and their kin</td>
+          <td><code>notice</code> (8) · <code>status-line</code> (5) · <code>step-list</code> (3) ·
+            <code>header-table</code> (3), all in <code>docs/work/components/</code></td>
+          <td><span class="badge auto">none</span> those four files declare no
+            <code>data-artifact</code>, so no predicate reads them. The old reading was simply
+            wrong: a string a script will build is not markup the doc carries</td></tr>
+        <tr><td><strong>Single-quoted attributes are now visible</strong> — the old scanner searched for
+          <code>name="</code> and could not see <code>name='…'</code></td>
+          <td>anywhere; the corpus's one instance is
+            <a href="2026-07-16-dflow-mockup-reps.html">mockup-reps</a>'s
+            <code>data-mxgraph='{…}'</code></td>
+          <td><span class="badge auto">none</span> that doc is <code>data-status="draft"</code>. Verified
+            with the flag lifted: <strong>2 reds either way, same slug</strong></td></tr>
+        <tr><td><strong><code>markup·escaped</code> is stated one level out</strong>: a raw bracket
+          <em>inside a tag</em>, not <em>inside a value</em></td>
+          <td>the <code>what</code> line and its <code>fix</code></td>
+          <td><span class="badge">wording</span> the same sites red, and the wider statement is what keeps
+            the prose case red — a raw <code>&lt;</code> in a sentence opens a tag whose attributes are
+            nobody's, and the brackets it swallows are inside the tag, not inside a value</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="dependency">
+      <strong>The dependency, against the house rule.</strong> "Never add one for what a few lines can
+      do" — six review rounds are the evidence that these were not a few lines. The cost turned out to be
+      zero anyway: <code>quick-xml 0.37</code> is already in <code>Cargo.lock</code> for the proxy crate,
+      so this adds a line to <code>xtask/Cargo.toml</code> and nothing to the supply chain.
+      <code>xtask</code> now carries <code>quick-xml</code> · <code>serde</code> ·
+      <code>serde_yaml</code> · <code>tempfile</code>.
+    </div>
+
+    <h2 id="scope">What was deliberately not swapped</h2>
+    <table data-c="scope-table">
+      <thead><tr><th>Still hand-written</th><th>Why it stays</th></tr></thead>
+      <tbody>
+        <tr><td><code>elements_of</code> · <code>data_rows</code> · <code>gists</code> ·
+          <code>words</code> · <code>inner_text</code></td>
+          <td>the plan names four functions, and these four are where the six holes were. These read
+            <em>fragments</em> for counting, and none of them decides whether a declaration exists — the
+            failure mode that produced the rounds. Candidates for a later pass, not for this one</td></tr>
+        <tr><td><code>mockup_declarations</code> · <code>colour_literal</code> ·
+          <code>strip_css_comments</code></td>
+          <td>they read CSS, not HTML. A tokeniser for the markup answers nothing about
+            <code>.a-measure{max-width:460px}</code></td></tr>
+        <tr><td><code>read_pragmas</code>' comment scan</td>
+          <td>the pragma is line-anchored by design (a moved line stops matching), so it reads lines, not
+            nodes</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">One unrelated fix rode along because gate 0 runs <code>clippy -D warnings</code>: a
+      newer clippy flagged <code>(cls != token).then(…).unwrap_or_default()</code> in W6's pragma message.
+      Rewritten as an <code>if</code>, same output, and the workspace is clean again.</p>
+
+    <h2 id="next">Next</h2>
+    <p><a href="2026-08-11-dflow-w7-plan.html#step1">① the registry oracle</a> — one script that can read a
+      TSDoc block, after which two sweep rows dissolve instead of being built. Every predicate step after
+      it now reads its markup through <code>nodes()</code>, which is the whole reason this step went
+      first.</p>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
