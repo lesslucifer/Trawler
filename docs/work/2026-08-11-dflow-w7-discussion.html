@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7a8c8b9f34851f0dfab622">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W7 discussion (the harness)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W7 — the harness</h1>
+      <p>Direction round 1. W6 finished Tier-1 a WU early, so what is left is not "build the harness" —
+        it is <strong>the two tiers a machine cannot administer, the half of the gate that was never
+        built at all (the registry), and the step where a run closes</strong>. Nine documents deferred
+        work here; this is the sweep, the forks, and what I need answered before planning.</p>
+      <div class="meta">Discussion · 2026-08-11 · Trawler · T3 (docs/work/) · epic/design-flow ·
+        prior: <a href="2026-08-10-dflow-w6-result.html">W6 result</a> ·
+        plan: <a href="2026-07-16-design-flow-plan.html#wu-summaries">epic plan · W7</a> ·
+        flow: <a href="design-flow-base.html">the flow spec</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="mandate">The mandate, and what moved under it</h2>
+    <p>The epic plan gives W7 three tiers, a receipt, the wiring, and the flow e2e. One of the three
+      already shipped: W6 built all twelve remaining Tier-1 predicates, because Tier-1 reads the config
+      and W6 was the WU that closed it — <a href="../decisions/dec-15-design-run-enforcement.html#consequences">DEC-15
+      records the supersession</a>. What that leaves is <em>not</em> a smaller version of the same job.</p>
+
+    <div class="diagram" data-c="dia-scope">
+      <pre class="mermaid">
+flowchart TB
+  subgraph DONE["shipped — W4 + W6"]
+    T1["Tier-1 mechanical<br/>13/13 hard predicates · receipt coverage<br/>xtask verify-doc"]
+    LINT["design/vocabulary<br/>the code-side surface<br/>ESLint"]
+  end
+  subgraph W7["W7 — what is left"]
+    T2["Tier-2 self-reflex<br/>the receipt · mostly already here"]
+    T3["Tier-3 adversarial<br/>soft rules + new-component warrant<br/>NOTHING EXISTS"]
+    REG["the registry gate<br/>index · freshness · 3 predicates · DEC-16<br/>NOTHING EXISTS"]
+    CLOSE["the run closes<br/>archive · review item"]
+    E2E["flow e2e<br/>fake user + fake agent"]
+  end
+  T1 --> T2 --> T3
+  REG --> T1
+  T3 --> CLOSE
+  W7 --> W8["W8 · design to dev"]
+      </pre>
+      <div class="caption">The surprise in the sweep: <strong>requirement #1 has no gate at all.</strong>
+        <code>xtask/src/doc.rs</code> never opens <code>ui/src/components/</code> — the design gate reads
+        the rulebook and the Tailwind config, and nothing else. Every registry check specified since W2
+        is still unbuilt.</div>
+    </div>
+
+    <h2 id="tiers">The three tiers, at a glance</h2>
+    <p>They differ in <strong>who judges</strong>, which is the only thing that decides what each one can
+      catch. Same rulebook throughout; the hard/soft tag decides which tier owns a rule.</p>
+    <table data-c="tbl-tiers">
+      <thead><tr><th>Tier</th><th>Who judges</th><th>Over what</th><th>Catches</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1 · mechanical</strong></td>
+            <td>a program, no judgment</td>
+            <td>the run doc's structure, its classes, the config, and the <em>completeness</em> of the
+              other two tiers' receipts</td>
+            <td>a stage that is missing, a value off the vocabulary, a rule with no verdict. It cannot
+              judge a design — it can refuse a receipt that skipped a rule id</td>
+            <td><span class="badge auto">shipped</span> W4 + W6</td></tr>
+        <tr><td><strong>2 · self-reflex</strong></td>
+            <td><strong>the designing agent, on its own work</strong></td>
+            <td>every <em>soft</em> rule: one verdict plus one clause of evidence, as machine-read YAML in
+              the run doc</td>
+            <td><strong>forgetting.</strong> The agent must state why each soft rule is met before it can
+              pass, so a rule it never thought about becomes an absent row — and Tier-1 reds an absent
+              row. It cannot catch a receipt that is complete and dishonest, which is exactly why Tier-3
+              exists</td>
+            <td><span class="badge auto">shipped, I believe</span> the W4 receipt <em>is</em> this. See
+              <a href="#d1">D1</a></td></tr>
+        <tr><td><strong>3 · adversarial</strong></td>
+            <td>a second, independent agent</td>
+            <td>soft rules + the new-component warrant, on the design artifact</td>
+            <td>a <strong>self-serving</strong> Tier-2 receipt, and a component invented when an existing
+              one fit. The one check that cannot be self-administered</td>
+            <td><span class="badge warn">nothing exists</span> See <a href="#d2">D2</a></td></tr>
+      </tbody>
+    </table>
+    <p class="muted">Tier-1 polices the <em>receipts</em> of 2 and 3 without judging the design — that is
+      the trick the whole model rests on
+      (<a href="design-flow-discussion.html#enforcement">direction doc §enforcement</a>).</p>
+
+    <h2 id="sweep">The deferral sweep</h2>
+    <p>Method is W5's, which is the one that worked: search the <em>deferral vocabulary</em>
+      (<code>defer</code> · <code>owed</code> · <code>open question</code> · <code>blocked on</code> ·
+      <code>later WU</code> · <code>follow-up</code> · <code>TODO</code>) across every epic document,
+      the T2 records and the code — not just the string <code>W7</code>, which is what makes an
+      ownerless deferral invisible. Nine documents defer here. Two rows below are <strong>new</strong>:
+      found by reading the checker rather than the docs.</p>
+
+    <table data-c="tbl-sweep">
+      <thead><tr><th>#</th><th>Carried item</th><th>Deferred by</th><th>State today</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4"><strong>A · the two judged tiers</strong></td></tr>
+        <tr><td>1</td>
+            <td><strong>Tier-2 · self-reflex receipt</strong> — one verdict + citation per soft rule,
+              emitted by the designing agent</td>
+            <td>epic plan · W6 plan (out of scope) · W6 follow-up 1</td>
+            <td><span class="badge auto">largely shipped</span> the receipt, the seven-verdict enum and
+              forced coverage against the live rulebook all landed in W4. See <a href="#d1">D1</a> —
+              I think this tier is <em>done</em> and the label is what is left</td></tr>
+        <tr><td>2</td>
+            <td><strong>Tier-3 · adversarial review</strong> — an independent agent over soft rules and
+              the new-component warrant</td>
+            <td>epic plan · direction doc <code>d-advscope</code> · W6 plan · W6 follow-up 1</td>
+            <td><span class="badge warn">nothing exists</span> 17 soft rules rest entirely on reviewer
+              attention. The largest single build in the WU. <span class="badge id">ruled — round 3</span>
+              a <strong>dimension of the existing code review</strong> — design rubric, a finder that
+              activates on a design-bearing diff, verdict in <strong><code>cr/v3</code></strong>, run
+              before the design reaches development. See <a href="#d2">D2</a></td></tr>
+
+        <tr><td colspan="4"><strong>B · the registry gate — requirement #1's half, never built</strong></td></tr>
+        <tr><td>3</td>
+            <td><strong>The generated index</strong> — TSDoc rolls up into the one file an agent loads</td>
+            <td>W2 plan · W2 seed · W2 result · W5 follow-up</td>
+            <td><span class="badge id">ruled — round 1</span> <strong>emitted inline, never stored.</strong>
+              The agent runs the generator when it needs the data; a 50 ms command. W2's <em>behavior</em>
+              is honoured and its <em>form</em> is dropped — see <a href="#d3">D3</a></td></tr>
+        <tr><td>4</td>
+            <td><strong>Wire regenerate-and-diff into the DoD gate</strong> — the W2 seed names the
+              wiring itself as W7's</td>
+            <td>W2 seed · W5 follow-up (a separate row on purpose)</td>
+            <td><span class="badge auto">dissolved</span> nothing is stored, so nothing can be stale.
+              W2 wrote this row to defend against a hand-edited index; a file that does not exist needs
+              no defence</td></tr>
+        <tr><td>5</td>
+            <td><strong><code>index-covers-folder</code></strong> — a collection file missing from the
+              index is red unless waived</td>
+            <td>epic plan (named inside W7's Tier-1 line) · direction doc <code>d-registry</code></td>
+            <td><span class="badge auto">dissolved, minus one half</span> the emitted index <em>is</em>
+              the folder, so it cannot omit a file — and the "unless waived" escape arrives free: a file
+              with no TSDoc block is not in the vocabulary, which is the waiver stated in the place that
+              cannot drift from it. <strong>What survives</strong> is the different check underneath:
+              a collection file the <em>barrel</em> does not export is unreachable to a caller.
+              <code>collection.test.tsx</code> already asserts that — against a hand-transcribed roster
+              literal, which the oracle in step ① makes derived</td></tr>
+        <tr><td>6</td>
+            <td><strong>Three registry predicates</strong> — every <code>@madeof</code>/<code>@avoid</code>
+              name resolves to a roster row · roster ↔ design file one-to-one · no design file re-draws a
+              class the shared vocabulary owns</td>
+            <td>W5 plan D4 · W5 follow-up</td>
+            <td><span class="badge warn">not built</span> the first is a 29-pair hand-written
+              <code>REDIRECTS</code> table in <code>collection.test.tsx</code></td></tr>
+        <tr><td>7</td>
+            <td><strong>DEC-16's retirement order as a predicate</strong>, and the deletions it unblocks
+              — refuse removal of a design file whose forks are not yet in <code>docs/decisions/</code></td>
+            <td><a href="../decisions/dec-16-design-file-retirement.html#enforcement">DEC-16 §enforcement</a>
+              · decisions-index · W5 follow-up</td>
+            <td><span class="badge warn">not built</span> "W7 owns both halves: the predicate that
+              refuses an undistilled removal, and the removal itself"</td></tr>
+        <tr><td>8</td>
+            <td><span class="badge id">new</span> <strong>A reuse can cite a component that does not
+              exist.</strong> <code>elements·avoid-cited</code> checks the run doc contains the
+              <em>string</em> <code>@avoid</code>; <code>state-declarations</code> reads the verdict word
+              in the row. Neither opens the component's file, so a fluent citation of a nonexistent
+              <code>@avoid</code> — the exact defect run #3's finding 21 shipped — still passes</td>
+            <td>this sweep · half-answers W4 run #2 finding 12</td>
+            <td><span class="badge warn">open</span> the predicates check the <em>shape</em> of a
+              citation and never its <em>truth</em>. Item 3 is what makes truth cheap to check</td></tr>
+
+        <tr><td colspan="4"><strong>C · the flow's own holes</strong></td></tr>
+        <tr><td>9</td>
+            <td><strong>A review-driven design change has nowhere to land</strong> — candidate: a
+              <code>review</code> closing item beside receipt · capabilities · proposals · blocked-on,
+              one row per instruction, what it moved and the contract it hit</td>
+            <td>W4 run #2 finding 29 · W4 result (flow row) · explicitly out of scope in the W6 plan</td>
+            <td><span class="badge warn">open</span> the only outstanding flow-spec finding; the other
+              seven landed in W4 and six are checked</td></tr>
+        <tr><td>10</td>
+            <td><strong>Closing a design run is nobody's step</strong> — a run is archived as a side
+              effect of the <em>next</em> run being written, which is how run #3 sat red in the tree for
+              two Working Units</td>
+            <td>W6 follow-up 8 · W6 step ⑤</td>
+            <td><span class="badge warn">open</span> ruled out as a unit test (a run mid-design is
+              legitimately red for days); the home is the harness, where "the run closes" is a step
+              something owns</td></tr>
+        <tr><td>11</td>
+            <td><span class="badge id">new</span> <strong>The rulebook pin is never verified.</strong>
+              W3 promised "a receipt pins the rulebook blob hash it ran against";
+              <code>receipt·rulebook</code> only checks the field is non-empty, so any string passes</td>
+            <td>this sweep · W3 result · DEC-14</td>
+            <td><span class="badge warn">open</span> one line against
+              <code>git hash-object</code>; archived runs already carry the exemption that makes it safe</td></tr>
+
+        <tr><td colspan="4"><strong>D · the instrument</strong></td></tr>
+        <tr><td>12</td>
+            <td><strong>The predicates read HTML with hand-rolled string scanning</strong> — four
+              functions (<code>attr_positions</code> · <code>tag_end</code> ·
+              <code>element_content</code> · <code>check_escaped_markup</code>), six review rounds, six
+              holes, each fix revealing the next</td>
+            <td>W6 follow-up 10</td>
+            <td><span class="badge warn">open</span> measured cost of not fixing it: one more round of
+              this per predicate added — and W7 adds predicates. See <a href="#d4">D4</a></td></tr>
+
+        <tr><td colspan="4"><strong>E · acceptance</strong></td></tr>
+        <tr><td>13</td>
+            <td><strong>The flow e2e</strong> — fake human + fake designing agent, all three tiers, never
+              stalls or emits an ambiguous prompt, every stage yields its artifact, a violating input
+              reds and a compliant one greens</td>
+            <td>epic plan §e2e · waived in identical words by W1 · W2 · W3 · W4 · W5 · W6</td>
+            <td><span class="badge warn">not built</span> six waivers deep — the one test level this
+              epic has never paid</td></tr>
+        <tr><td>14</td>
+            <td><strong>The acceptance demonstration</strong> — a passing, receipted run on the flow
+              detail panel, "no waiver intended"</td>
+            <td>epic plan §e2e</td>
+            <td><span class="badge id">ruled — round 2</span> <strong>both, and they are different
+              receipts.</strong> The flow e2e (row 13) is mine and attests as <code>test/v2</code>; the
+              fourth run is <strong>yours, by hand</strong>, and attests as <code>mr/v1</code> — the note
+              no agent may write. See <a href="#d5">D5</a></td></tr>
+        <tr><td>15</td>
+            <td><strong>Harness runner location</strong> — the epic's open question, default
+              <code>cargo xtask design-verify</code> shelling to Node</td>
+            <td>epic plan §open-questions ("settled in W7") · W2 plan</td>
+            <td><span class="badge auto">settled by evidence</span> Tier-1 already lives in
+              <code>verify-doc</code> and the code surface in ESLint. Recommend recording the answer,
+              not building a subcommand</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="already">What already exists — so W7 does not rebuild it</h2>
+    <p>DEC-15 warned about this by name. Each row below is a thing a fresh reading of the epic plan
+      would tell you to build, and each is already shipped and tested.</p>
+    <table data-c="tbl-already">
+      <thead><tr><th>Reads as W7's</th><th>Actually landed</th></tr></thead>
+      <tbody>
+        <tr><td>Tier-1 mechanical — the hard rules</td><td>W4 (<code>colour-tokens-only</code>) + W6 (the other twelve). <code>hard rules: 13/13 machine-checked (design)</code></td></tr>
+        <tr><td>Receipt coverage over every rule id</td><td>W4 — read from the rulebook on disk, unreadable rulebook is red, unknown slug names its nearest miss</td></tr>
+        <tr><td>The verdict vocabulary</td><td>W4 — a seven-verdict enum including <code>violated-inherited</code>, so composing a violator does not read as violating</td></tr>
+        <tr><td>Completeness — every stage yields its artifact</td><td>W4 + W6 — per-stage <code>data-item</code> checks, six Frame density predicates, <code>elements·map</code>, <code>tune·drawn</code>, <code>capabilities·answered</code></td></tr>
+        <tr><td>The code-side surface for the same rules</td><td>W6 — the <code>design/vocabulary</code> ESLint rule over all of <code>ui/src/</code>, sharing one oracle with the emitter that feeds Rust</td></tr>
+        <tr><td>"Store nothing forgeable"</td><td>W6 — <code>scripts/design-vocabulary.mjs</code> is <em>emitted on demand</em> and never committed, so there is no freshness gate to build. The precedent that decides <a href="#d3">D3</a></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="forks">The forks</h2>
+
+    <h3 id="d1">D1 · Is Tier-2 already shipped?</h3>
+    <div class="callout" data-c="d1-what">
+      <strong>What Tier-2 is.</strong> The <em>self</em>-reflex tier: the agent that just produced the
+      design writes a verdict on its own work, one row per soft rule, machine-read. It is the cheapest
+      possible defence against the epic's animating problem — an agent that forgets a rule cannot produce
+      a complete receipt, and Tier-1 reds an incomplete one. It is <strong>not</strong> a check that the
+      verdicts are true; a fluent <em>satisfied</em> costs nothing to write, which is the entire reason
+      Tier-3 exists.
+      <br><br>
+      Concretely, in a run doc today:
+      <pre>rulebook: &lt;blob sha&gt;
+soft:
+  data-ink-first: satisfied — zone B draws no chrome the payload does not need
+  calm-microcopy: inherited — StatusLine owns every message on this screen
+  empty-states-orient: n/a — no zone can be empty here</pre>
+      seven verdicts are legal (<code>satisfied</code> · <code>inherited</code> ·
+      <code>satisfied-via-proposal</code> · <code>blocked</code> · <code>n/a</code> ·
+      <code>violated</code> · <code>violated-inherited</code>), every soft slug in the rulebook must
+      appear, and a <em>hard</em> slug appearing is a red — a rule with a predicate is judged by the
+      predicate, never by a hand verdict.
+    </div>
+    <p><strong>So the question is only whether that counts as the tier.</strong> My read: it does. It was
+      built in W4 out of necessity — the run that needed a receipt is the run that exposed why — and the
+      epic plan's Tier-2 sentence describes it exactly.</p>
+    <table data-c="tbl-d1">
+      <thead><tr><th>Reading</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Yes — recommended.</strong> Tier-2 is "the agent emits its own verifiable receipt,
+          one verdict + citation per soft rule." That is the W4 receipt, and Tier-1 already refuses an
+          incomplete one</td>
+          <td>W7 records the tier as complete and spends nothing on it. The two <em>real</em> gaps under
+            this heading are rows 10 and 11 of the sweep — the run never closes, and the pin is never
+            verified</td></tr>
+        <tr><td>No — Tier-2 owes something more: a per-stage self-check, or a citation that must resolve
+          to a line rather than be a clause</td>
+          <td>a new artifact and new predicates. I see no evidence anyone asked for this, and forced
+            coverage plus <code>cr/v2</code> already catch the failure it would target</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="d2">D2 · What is Tier-3, mechanically?</h3>
+
+    <div class="callout" data-c="d2-what">
+      <strong>First, what Tier-3 judges — the design artifact, not the built code.</strong> Its subject is
+      a <em>design run doc</em> (or a component design file): the same thing Tier-1 checks mechanically and
+      Tier-2 receipts. It is the design-side answer to the rule the dev workflow already runs on —
+      <em>never judge your own diff</em>. <code>test/v2</code> is a note you write about your own work;
+      <code>cr/v2</code> is the independent one. <strong>Tier-2 and Tier-3 are that same pair, applied to
+      design</strong> — which is what settles <a href="#d2-ruling">where Tier-3 lives</a>.
+    </div>
+    <table data-c="tbl-d2-what">
+      <thead><tr><th></th><th>Tier-3</th></tr></thead>
+      <tbody>
+        <tr><td>Reads</td><td>the run doc's stages, its receipt, its proposals — a design artifact — plus
+          the substrate it cites (rulebook, registry)</td></tr>
+        <tr><td>Does not judge</td><td>built code. That is the review's other finders, and the
+          <code>design/vocabulary</code> ESLint rule for the hard rules binding components</td></tr>
+        <tr><td>Scope</td><td><strong>soft rules + the new-component warrant</strong>, and nothing else —
+          Tier-1 owns all 13 hard rules, so a second opinion on them is noise</td></tr>
+        <tr><td>Catches</td><td>a <strong>self-serving Tier-2 receipt</strong> (a fluent
+          <em>satisfied</em> the design does not earn — run #2 wrote exactly one and only composing the
+          real CSS caught it) and <strong>a component invented when an existing one fit</strong> (run #3
+          cited <code>CopyButton</code>'s <code>@use</code> correctly and shipped a wrong reuse for a
+          whole stage)</td></tr>
+        <tr><td>Why it cannot be self-administered</td><td>the agent being judged wrote the receipt.
+          That is the whole argument for the tier — everything else in the harness is the author checking
+          their own work</td></tr>
+        <tr><td>Where it comes from</td><td><a href="design-flow-discussion.html#enforcement">the epic
+          direction doc</a> (Tier-3 card, and <code>d-advscope</code> scoping it) ·
+          <a href="2026-07-16-design-flow-plan.html#wu-summaries">epic plan · W7</a> ·
+          <a href="2026-08-03-dflow-w6-plan.html">W6 plan</a>, which deferred it here</td></tr>
+      </tbody>
+    </table>
+
+    <h4 id="d2-ruling">The ruling <span class="badge id">answered — round 3</span></h4>
+    <p><strong>Tier-3 is a dimension of the code review, not a second review.</strong> Once it is named as
+      the design-side <code>cr/v2</code>, hosting it anywhere else means re-implementing independence,
+      freshness, binding-to-exact-bytes and the merge-time enforcement that already exist and already
+      work.</p>
+    <table data-c="tbl-d2">
+      <thead><tr><th>Question</th><th>Ruled</th><th>What it turns on</th></tr></thead>
+      <tbody>
+        <tr><td><strong>host</strong></td>
+            <td>the <strong>existing code-review skill</strong> — a design rubric and a finder that
+              activates when the diff carries a design artifact</td>
+            <td>the guarantees Tier-3 needs <em>are</em> the ones <code>cr</code> already provides. A
+              separate skill would rebuild every one of them, and then need its own merge-time
+              enforcement on top</td></tr>
+        <tr><td><strong>receipt</strong></td>
+            <td><strong><code>cr/v3</code></strong> — the note gains a design section, which is why the
+              schema bumps</td>
+            <td>the bump is <em>for enforcement</em>, not tidiness: without a field recording that the
+              design dimension ran, a PASS on a design-bearing diff is indistinguishable from one where
+              nobody looked at the design. Silence reading as <em>correctly typed</em> is the defect this
+              epic keeps finding. The field is required when the diff contains a design artifact</td></tr>
+        <tr><td><strong>when</strong></td>
+            <td><strong>before the design reaches development</strong> — unchanged</td>
+            <td>a <code>cr</code>-hosted review runs at the merge of the WU that lands the design. That is
+              the upstream gate <em>if</em> the design lands in its own commit ahead of implementation —
+              which is exactly <a href="2026-07-16-design-flow-plan.html#open-questions">W8's stated
+              default</a>. Flagged as the one dependency: if W8 rules that design and implementation share
+              a WU, the review fires after the code is written and the gate stops being upstream</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" id="d2-residual" data-c="d2-residual">
+      <strong>What survives from round 2, and what I had wrong.</strong> The inline principle survives
+      where it belongs: <strong>Tier-2's receipt stays in the run doc</strong> and dies with the file, which
+      is correct — the self-reflex claim is part of the artifact. Tier-3's <em>verdict</em> is about a
+      commit, and commits are permanent even when the files in them are later retired under
+      <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>. So the note is right
+      <em>because</em> the artifact is transient, not despite it — the same way <code>cr/v2</code> outlives
+      code that gets refactored away.
+      <br><br>
+      Two things I argued and withdraw. <em>"The subject is a doc, not a diff"</em> — the run doc <strong>is
+      in the diff</strong>; what Tier-3 needs is a rubric and a conditional finder, not a second
+      orchestrator. And the <strong>content pin</strong> I owed: unnecessary now, because a
+      <code>cr</code> note binds to a sha, so an edit after PASS invalidates the review the existing way.
+      <a href="#sweep">Sweep row 11</a>'s rulebook pin still stands on its own merits.
+    </div>
+    <p class="muted">Unchanged by the ruling: the Tier-3 verdict and
+      <a href="#sweep">finding 29's <code>review</code> closing item</a> stay <em>separate</em> artifacts.
+      One is an independent agent's verdict; the other records what a human reviewer's instruction moved
+      and what it cost. Merging them would lose the provenance half.</p>
+
+    <h3 id="d3">D3 · The registry index — a committed file, or emitted on demand?
+      <span class="badge id">answered — round 1</span></h3>
+    <p>W2 pinned the <em>behavior</em> (regenerate + diff, store nothing forgeable) and left the form to
+      the build WU. W6 then shipped a better answer to the same problem for the token vocabulary.</p>
+    <div class="callout" data-c="d3-ruling">
+      <strong>Ruled: emitted inline, nothing stored.</strong> The agent runs the generator at the moment
+      it needs the vocabulary — a 50 ms command — instead of reading a file something has to keep
+      consistent. Consistency stops being a thing anyone maintains, so <a href="#sweep">sweep rows 4 and
+      5 dissolve</a> rather than getting built.
+    </div>
+    <table data-c="tbl-d3">
+      <thead><tr><th>Option</th><th>What it costs</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Emit on demand, commit nothing</strong> — one script that reads the TSDoc out of
+          <code>ui/src/components/*.tsx</code>; the gate, the tests and the design run all call it
+          <span class="badge auto">chosen</span></td>
+          <td>the freshness gate <em>disappears</em>: nothing stored, nothing to diff, nothing to forge.
+            Exactly what <code>scripts/design-vocabulary.mjs</code> does for the token vocabulary, one
+            WU old and already load-bearing. Rows 3, 4 and 5 of the sweep collapse into one script, and
+            rows 6 and 8 become cheap because the data is finally in a program's hands</td></tr>
+        <tr><td>Commit a generated index and gate it with regenerate-and-diff, as W2 specified</td>
+          <td>a file an agent can open without running anything — the one real advantage, and it is
+            small when the agent can run a command. Costs the gate, the wiring, and a file that is wrong
+            between the edit and the regeneration</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="d3-note">
+      Either way the win is the same and it is bigger than the index: <strong>the two hand-transcribed
+      tables in <code>collection.test.tsx</code> stop being hand-transcribed.</strong> A 24-name
+      <code>ROSTER</code> and a 29-pair <code>REDIRECTS</code> literal exist today only because nothing
+      can read a TSDoc block. They are the registry predicates, written as a test, with the drift
+      hazard left in.
+    </div>
+
+    <h3 id="d4">D4 · The HTML scanner — replace it before adding predicates?
+      <span class="badge id">answered — round 1</span></h3>
+    <div class="callout" data-c="d4-ruling">
+      <strong>Ruled: replace it with a real parser.</strong> Step ⓪, before any new predicate is written.
+    </div>
+    <table data-c="tbl-d4">
+      <thead><tr><th>Option</th><th>Read</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Replace the four functions with a real parser, as W7 step ⓪</strong>
+          <span class="badge auto">chosen</span></td>
+          <td>W6 measured the cost of not doing it: six review rounds, six holes, every one the same
+            mistake — treating an attribute's <em>value</em> as markup. W7 adds predicates (rows 8, 9,
+            11 and the registry three), and the follow-up's own argument is that each new one buys
+            another round. Doing it first also means every existing predicate is re-proved against the
+            two archived runs, which is a regression net that already exists</td></tr>
+        <tr><td>Keep the scanner; W7's new predicates read TSDoc and TypeScript, not HTML</td>
+          <td>partly true — the registry predicates do not touch HTML. Rows 9 and 11 do. The question is
+            whether <em>partly</em> is enough to defer a defect that has hit six times running</td></tr>
+      </tbody>
+    </table>
+    <p class="muted"><code>xtask</code> currently depends on <code>serde</code>, <code>serde_yaml</code>
+      and <code>tempfile</code> only. A parser means one small dependency — and the house rule against
+      adding one is "never for what a few lines can do". Six rounds of evidence say these are not a few
+      lines.</p>
+
+    <h3 id="d5">D5 · Who runs the fourth design run?</h3>
+    <div class="callout" data-c="d5-what">
+      <strong>What this is, since it has not come up since epic planning.</strong> The epic plan promises
+      two <em>separate</em> pieces of end-to-end evidence, and only one of them is a test. The other is a
+      real design run, and the plan says it explicitly cannot be waived:
+      <br><br>
+      <em>Expected result:</em> "The flow <strong>run once on the flow detail panel</strong> to a passing,
+      receipted design spec (draft-mockup fidelity)."
+      <br>
+      <em>E2E plan · acceptance demonstration:</em> "The real hand/assisted run on the flow detail panel
+      (W1 then W4, <strong>gated in W7</strong>) standing as the concrete end-to-end proof that the flow
+      produces a passing, receipted draft-mockup spec. <strong>No waiver intended.</strong>"
+    </div>
+    <p><strong>Why it is still open.</strong> Three runs exist and not one of them is that artifact — each
+      was designed against a harness that did not yet exist:</p>
+    <table data-c="tbl-d5-runs">
+      <thead><tr><th>Run</th><th>WU</th><th>Judged by</th></tr></thead>
+      <tbody>
+        <tr><td><a href="2026-07-16-dflow-run-1.html">#1</a> — flow detail panel</td><td>W1</td>
+            <td>nothing. No registry, no rulebook, no gate</td></tr>
+        <tr><td><a href="2026-07-25-dflow-w4-run-2.html">#2</a> — the same panel, designed fresh</td><td>W4</td>
+            <td>one predicate of thirteen, no Tier-3. Reopened in W6 it reds on 30 checks</td></tr>
+        <tr><td><a href="2026-07-26-dflow-w4-run-3.html">#3</a> — the setup screen</td><td>W4</td>
+            <td>same. W6 re-ran the twelve new predicates over #2 and #3 together: <strong>49 reds</strong></td></tr>
+      </tbody>
+    </table>
+    <p>All three are <code>archived</code> — finished under an older contract, deliberately exempt. So the
+      epic's own expected-result bullet, <em>a passing receipted run</em>, is unmet today, and W7 is the
+      first WU where the harness it must pass through exists. Meanwhile W6's follow-ups point "the fourth
+      design run" at W9 for a different reason:</p>
+    <table data-c="tbl-d5">
+      <thead><tr><th>Position</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>W7 produces the acceptance demonstration — a passing receipted run on the flow detail
+          panel, "no waiver intended"</td><td>epic plan §expected-result + §e2e</td></tr>
+        <tr><td>The fourth design run is W9's, and it is where over-fit gets tested against a live
+          screen</td><td>W6 follow-ups 4, 5 and 9 — including the measured exposure: <strong>seven of
+            thirteen predicates have never red on a real artifact</strong></td></tr>
+      </tbody>
+    </table>
+    <h4 id="d5-ruling">The ruling <span class="badge id">answered — round 2</span></h4>
+    <p><strong>Both, and they are not the same evidence.</strong> Two artifacts, two receipts, two
+      authors:</p>
+    <table data-c="tbl-d5-ruling">
+      <thead><tr><th></th><th>The flow e2e</th><th>The fourth run</th></tr></thead>
+      <tbody>
+        <tr><td>Who</td><td>me</td><td><strong>you, by hand</strong></td></tr>
+        <tr><td>What</td><td>a scripted run with a fake human and a fake designing agent, driven through
+          all three tiers</td><td>a real design of the flow detail panel through the finished harness</td></tr>
+        <tr><td>Proves</td><td><strong>mechanics</strong> — the flow never stalls or emits an ambiguous
+          prompt, every stage yields its artifact, a violating input reds and a compliant one greens</td>
+          <td><strong>that it actually works on real work</strong> — the thing no stub can establish,
+            and the reason "no waiver intended" is in the epic plan</td></tr>
+        <tr><td>Receipt</td><td><code>test/v2</code>, the epic's e2e level — waived in identical words by
+          W1 through W6, paid here</td>
+          <td><code>mr/v1</code>, the note <strong>no agent may write</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="d5-consequence">
+      <strong>This puts a requirement on W7's output, not just on its evidence.</strong> If a human drives
+      the fourth run, the harness has to be <em>drivable by a human</em> at the end of this WU: the flow
+      spec executable start to finish, the review skill invocable by name, the receipt shape stated where
+      the run is written, and every red message saying what to do about it. A harness only its author can
+      operate would pass its own e2e and fail this.
+    </div>
+    <p class="muted">W9 is unaffected — its <em>fresh screen</em> answers a different question
+      (generalization and the over-fit exposure W6 measured at seven predicates never red on a real
+      artifact). Three runs, three questions: mechanics, reality, generality.</p>
+
+    <h3 id="d6">D6 · Does the flow doc get promoted to T1 in W7?
+      <span class="badge id">answered — round 1</span></h3>
+    <div class="callout" data-c="d6-ruling">
+      <strong>Ruled: promote at epic distillation.</strong> W7 keeps editing
+      <a href="design-flow-base.html">the flow spec</a> as a T3 doc; the T1 promotion happens once, after
+      W8 has settled where the design gate sits.
+    </div>
+    <table data-c="tbl-d6">
+      <thead><tr><th>Option</th><th>Read</th></tr></thead>
+      <tbody>
+        <tr><td><strong>No — promote at epic distillation</strong> <span class="badge auto">chosen</span></td>
+          <td>W8 changes where the design gate sits relative to a UI-touching WU, and the flow doc has to
+            say that. Promoting in W7 means editing a T1 process doc again one WU later — the exact
+            argument W4, W5 and W6 each used to defer it</td></tr>
+        <tr><td>Yes — W7 is the last WU that changes the flow itself</td>
+          <td>true of the <em>stages</em>, false of the <em>gate</em>, and the gate is half the doc</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="shape">The shape this suggests</h2>
+    <p>Not a plan — the ordering the dependencies force, so the forks can be judged against something
+      concrete. Each step is a dependency of the next, in the same sense W6's were.</p>
+    <table data-c="tbl-shape">
+      <thead><tr><th>Step</th><th>What</th><th>Why here</th></tr></thead>
+      <tbody>
+        <tr><td><strong>⓪</strong></td><td>Replace the four HTML-scanning functions; re-run every
+          predicate over the archived runs and require the reds to reproduce exactly</td>
+          <td>every later step adds a predicate. <a href="#d4">D4</a></td></tr>
+        <tr><td><strong>①</strong></td><td>The registry oracle: TSDoc out of the collection, emitted;
+          <code>collection.test.tsx</code>'s two literals derive from it</td>
+          <td>rows 3–6 and 8 all need one thing — a program that can read a TSDoc block. <a href="#d3">D3</a></td></tr>
+        <tr><td><strong>②</strong></td><td>The registry predicates: citations resolve against the real
+          TSDoc, the barrel exports every collection file, roster ↔ design file one-to-one, no design file
+          re-draws a shared class; plus DEC-16's retirement-order refusal, then the deletions it unblocks</td>
+          <td>requirement #1 gets its gate. Rows 5 (the surviving half), 6, 7, 8</td></tr>
+        <tr><td><strong>③</strong></td><td>The run closes: archive-on-close as an owned step, the guard
+          test stops enumerating by hand, the rulebook pin is verified, and the <code>review</code>
+          closing item lands with its predicate</td>
+          <td>rows 9, 10, 11 — small, and all three are "a run is a governed artifact" finishing its own
+            sentence</td></tr>
+        <tr><td><strong>④</strong></td><td>Tier-3 into the code review: the design rubric and its
+          exclusions, the finder that activates on a design-bearing diff, the <code>cr/v3</code> schema and
+          the <code>verify-dod</code> rule that requires the design section — run against the two archived
+          runs first</td>
+          <td>the substrate it judges is now stable, and there are two real artifacts to judge before it
+            meets a live one. <a href="#d2">D2</a></td></tr>
+        <tr><td><strong>⑤</strong></td><td>The flow e2e: fake human, fake agent, both a green and a
+          deliberately violating input</td>
+          <td>it exercises the complete flow, so it comes after the tiers exist. Precedent for the form:
+            <code>tests/e2e_manual_review.rs</code>, feature-gated out of the default suite</td></tr>
+        <tr><td><strong>⑥</strong></td><td>Hand the harness over: the flow spec executable end to end, the
+          review skill invocable, the receipt shape stated where a run is written — <strong>then you drive
+          the fourth run</strong> and sign <code>mr/v1</code></td>
+          <td><a href="#d5">D5</a>. My last step is making it drivable; the run itself is yours, so it is
+            the WU's closing gate rather than one of its steps</td></tr>
+        <tr><td><strong>⑦</strong></td><td>Distillation: DEC-15's tier table completed, DEC-16's
+          enforcement struck, the harness-runner question recorded as answered, the result report, the
+          review rounds</td><td>house form</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="not-w7">Explicitly not W7</h2>
+    <table data-c="tbl-not">
+      <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>Over-fit exposure — seven predicates that have never red on a real artifact; the 29 real
+          sites in the closed runs; the shared-prefix double-report (12% of reds, measured)</td>
+          <td><span class="badge id">W9</span> the fresh-screen run</td></tr>
+        <tr><td>Where the design gate sits relative to a UI-touching WU, and what evidence it hands to
+          development</td><td><span class="badge id">W8</span></td></tr>
+        <tr><td><code>BodyViewer</code>'s <code>decoded | raw</code> switch wearing
+          <code>raw | pretty</code>'s name</td>
+          <td><a href="../backlog/roadmap.html">deferred backlog</a> — folds into whichever epic next
+            opens BodyViewer</td></tr>
+        <tr><td>Rewiring <code>FlowList</code>/<code>FlowDetail</code> off the old
+          <code>StatusPill</code>; retiring <code>components.tsx</code></td><td>screen work</td></tr>
+        <tr><td><code>Field</code> and <code>StatusDot</code> joining the registry ·
+          <code>Select</code>'s flip-on-collision · <code>BodyRenderer</code>'s manual JSON override ·
+          <code>StepStatusView.short</code></td>
+          <td>a later build WU / the first call site that needs it — each recorded with its trigger in
+            the <a href="2026-07-29-dflow-w5-result.html#follow-ups">W5 follow-ups</a></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="answer">What I need from you</h2>
+    <table data-c="tbl-ask">
+      <thead><tr><th></th><th>Question</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#d3">D3</a></td><td>Index: committed file or emitted?</td>
+          <td><span class="badge auto">answered</span> emitted inline when the agent needs it, nothing
+            stored — rows 4 and 5 of the sweep dissolve</td></tr>
+        <tr><td><a href="#d4">D4</a></td><td>Replace the HTML scanner first?</td>
+          <td><span class="badge auto">answered</span> yes, a real parser, step ⓪</td></tr>
+        <tr><td><a href="#d6">D6</a></td><td>T1 promotion in W7?</td>
+          <td><span class="badge auto">answered</span> no — epic distillation</td></tr>
+        <tr><td><a href="#d2">D2</a></td><td>Tier-3's host and receipt</td>
+          <td><span class="badge auto">answered</span> a dimension of the existing code review ·
+            <code>cr/v3</code>, the design section required when the diff carries a design artifact ·
+            Tier-2's receipt stays inline. One dependency flagged for W8:
+            <a href="#d2-ruling">the gate is only upstream if design lands ahead of implementation</a></td></tr>
+        <tr><td><a href="#d5">D5</a></td><td>Who runs the acceptance run</td>
+          <td><span class="badge auto">answered</span> both receipts — the flow e2e is mine
+            (<code>test/v2</code>), the fourth run is yours by hand (<code>mr/v1</code>). W9 keeps the
+            fresh screen</td></tr>
+        <tr><td><a href="#d1">D1</a></td><td>Is Tier-2 done? — <em>what</em> it is, is now stated
+          <a href="#d1">at D1</a> and in the <a href="#tiers">tier table</a></td>
+          <td><span class="badge warn">open</span> default: yes, the W4 receipt is the tier — record it,
+            build nothing</td></tr>
+        <tr><td>—</td><td><strong>Scope check.</strong> This is the largest WU in the epic by a distance:
+          two tiers, a gate that does not exist, a parser swap, a design run and an e2e. Splitting the
+          registry gate (steps ①–②) into its own WU is defensible and I will do it if you say so</td>
+          <td>keep it as one WU — the pieces share the same oracle and the same review pass, and W6
+            proved a settle-then-check split costs a whole WU of drift</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
