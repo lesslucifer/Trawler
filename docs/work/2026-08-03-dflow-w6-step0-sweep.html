@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7030659f34851f0dfab0e8">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W6 step ⓪ sweep evidence</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W6 step ⓪ — the sweep</h1>
+      <p>Every size-bearing scale enumerated against the real config, every class in <code>ui/src/</code> classified against it, and the keyword-vs-value ruling confirmed against actual usage. The plan's site counts were estimates carried from an earlier draft; these are measured. <strong>Three of them are wrong, and one changes step ②'s worklist materially.</strong></p>
+      <div class="meta">Evidence · 2026-08-03 · Trawler · T3 (docs/work/) · <code>wu/design-flow/revise-rulebook</code> · plan: <a href="2026-08-03-dflow-w6-plan.html">W6 plan</a> step ⓪</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="verdict">Verdict</h2>
+
+    <div class="callout">
+      <strong>The ⓪ gate passes: the scale list is exhaustive, and the keyword ruling holds.</strong> 119 theme scales resolve; the project defines tokens in six; the discriminator "does a theme scale govern this prefix?" splits the real tree cleanly with <strong>no per-class exceptions</strong>. The relationship-keyword ruling was checked against all 31 of its real sightings and every one is a relationship or a reset, never a magnitude. <strong>But the plan's measured counts are stale</strong> — <a href="#corrections">four corrections</a> below, one of which adds ~19 sites to step ②.
+    </div>
+
+    <div class="callout warn" data-c="oracle-correction" id="oracle-correction">
+      <strong>Correction, added after the first draft of this doc: the class enumeration below was NOT exhaustive, and the method that produced it was unsound.</strong> The first pass scanned string literals <em>at <code>className=</code> sites only</em>. This codebase's dominant idiom is the opposite — classes live in module-level constants and lookup maps (<code>BASE</code>, <code>FRAME</code>, <code>TONE</code>, <code>METHOD_COLOR</code>, <code>DOT_CLASS</code>) that are interpolated in later, so their literals sit nowhere near a <code>className=</code>. <strong>41 classes were missed.</strong>
+      <br><br>
+      <strong>How it was caught, and the method that should have been used from the start:</strong> build the CSS (<code>npx tailwindcss</code>) and read the emitted selectors. Tailwind scans its own <code>content</code> globs, so <strong>the built stylesheet is ground truth for what classes exist</strong> — 242 emitted, against the scanner's 205. Any bespoke scanner must be diffed against it, never trusted alone. <a href="#oracle">Full reconciliation below.</a>
+      <br><br>
+      <strong>The one that matters:</strong> <code>text-method-get</code> · <code>-post</code> · <code>-put</code> · <code>-delete</code> · <code>-patch</code> were invisible to the scanner — <em>the exact five tokens step ① deletes and step ② must re-express in <code>MethodLabel</code></em>. A lint rule built on the scanner's design would have missed the primary deletion this WU exists to make.
+    </div>
+
+    <h2 id="corrections">What the plan got wrong</h2>
+
+    <p>Recorded before the work, because step ② is scoped off these numbers.</p>
+
+    <table data-c="tbl-corrections">
+      <thead><tr><th>Plan says</th><th>Measured</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>206</strong> <code>className</code> sites, <strong>164</strong> outside <code>src/components/</code></td>
+          <td><strong>235</strong> sites, <strong>~168</strong> outside</td>
+          <td><span class="badge auto">no decision changes</span> The argument it supports — most of the class surface is outside the collection, so the check must be tree-wide — holds and is if anything stronger (~71%).</td>
+        </tr>
+        <tr>
+          <td><strong>7</strong> computed <code>className={…}</code> sites</td>
+          <td><strong>29</strong></td>
+          <td><span class="badge approval">affects the lint rule</span> Four times the plan's figure. Still only 12% of sites, and the literals-inside-the-expression strategy still works — but "only 7" was load-bearing in the feasibility argument and is no longer true. See <a href="#computed">below</a>.</td>
+        </tr>
+        <tr>
+          <td><strong>180</strong> distinct classes, split <strong>103 / 77</strong></td>
+          <td><strong>200</strong> distinct, split <strong>144 / 56</strong></td>
+          <td><span class="badge approval">affects DEC-17</span> The plan's headline "103/77 split" is quoted into the distillation. The real split is <strong>144 scale-bearing / 56 structural</strong>. The <em>conclusion</em> is unchanged — a large structural population must stay out of scope — but the number recorded in DEC-17 must be the measured one.</td>
+        </tr>
+        <tr>
+          <td><strong>~39</strong> class sites to re-express</td>
+          <td><strong>43</strong> off-list + <strong>12</strong> arbitrary = <strong>55</strong> distinct classes, <strong>~150</strong> sites</td>
+          <td><span class="badge approval">step ② grows</span> The plan itemised ~15 collection + ~24 screen. The real off-list set is larger, and includes <a href="#unnamed">five scales the ruling never named</a>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="scales">⓪ᵃ Every scale, and which the project closes</h2>
+
+    <p><code>resolveConfig</code> exposes <strong>119</strong> theme scales. The project declares tokens in six; the rest inherit Tailwind's defaults wholesale.</p>
+
+    <table data-c="tbl-scales">
+      <thead><tr><th>Scale</th><th>Resolves</th><th>Project tokens</th><th>Status after ①</th></tr></thead>
+      <tbody>
+        <tr><td><code>spacing</code></td><td>50</td><td>21</td><td rowspan="6"><span class="badge auto">closes</span> project keys replace the inherited map</td></tr>
+        <tr><td><code>colors</code></td><td>44</td><td>17 → <strong>9</strong> after the 8 deletions</td></tr>
+        <tr><td><code>fontSize</code></td><td>20</td><td>7</td></tr>
+        <tr><td><code>borderRadius</code></td><td>12</td><td>4</td></tr>
+        <tr><td><code>opacity</code></td><td>22</td><td>1 (<code>disabled</code>)</td></tr>
+        <tr><td><code>boxShadow</code></td><td>9</td><td>1 (<code>pop</code>)</td></tr>
+        <tr><td><code>fontFamily</code></td><td>4</td><td>3 (<code>ui</code> <code>mono</code> <code>serif</code>)</td><td><span class="badge auto">already effectively closed</span> — all three uses resolve to project tokens</td></tr>
+        <tr><td><code>width</code> 85 · <code>size</code> 81 · <code>height</code> 74 · <code>maxWidth</code> 72 · <code>maxHeight</code> 59 · <code>inset</code> 58 · <code>minHeight</code> 58 · <code>translate</code> 57 · <code>minWidth</code> 54 · <code>flexBasis</code> 78</td><td>54–85 each</td><td><strong>0</strong></td><td><span class="badge auto">closes via <code>spacing</code></span> — these derive from <code>spacing</code> plus keywords, so closing <code>spacing</code> shuts the numeric half</td></tr>
+        <tr><td><code>gap</code> · <code>padding</code> · <code>margin</code> · <code>space</code> · <code>scrollMargin</code> · <code>scrollPadding</code> · <code>textIndent</code> · <code>borderSpacing</code></td><td>50–51</td><td>0</td><td><span class="badge auto">closed for free</span> — pure <code>spacing</code> derivatives</td></tr>
+        <tr><td><code>lineHeight</code> 14 · <code>letterSpacing</code> 6 · <code>borderWidth</code> 5 · <code>zIndex</code> 7 · <code>outlineWidth</code> 5 · <code>outlineOffset</code> 5</td><td>5–14</td><td>0</td><td><span class="badge approval">the ruling never named these</span> — <a href="#unnamed">resolved below</a></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="split">⓪ᵇ The discriminator, run over the real tree</h2>
+
+    <p><strong>200 distinct classes</strong> across 34 production <code>.tsx</code> files (tests excluded). A class is in scope <strong>iff its utility prefix maps to a key in the resolved theme</strong> — mechanical, no allowlist.</p>
+
+    <table data-c="tbl-split">
+      <thead><tr><th>Kind</th><th>Count</th><th>Examples</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>No theme scale governs it</strong> — structural, state, alignment</td>
+          <td><strong>56</strong></td>
+          <td><code>absolute</code> <code>flex</code> <code>grid</code> <code>truncate</code> <code>uppercase</code> <code>items-center</code> <code>justify-between</code> <code>sr-only</code> <code>animate-spin</code> <code>whitespace-pre</code> <code>tabular-nums</code> <code>text-center</code></td>
+          <td><span class="badge auto">out of scope</span> There is no value in <code>absolute</code> to pick wrongly.</td>
+        </tr>
+        <tr>
+          <td><strong>Scale-bearing</strong> — a spacing / size / colour / type value was chosen</td>
+          <td><strong>144</strong></td>
+          <td><code>px-2</code> <code>w-64</code> <code>text-chrome</code> <code>gap-1</code> <code>z-20</code> <code>max-h-64</code> <code>rounded-card</code></td>
+          <td><span class="badge approval">in scope</span> The only classes the rule judges.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>The prefix alone is not the discriminator — three prefixes are overloaded and must be resolved by value.</strong> The plan's "prefix maps to a theme key" rule is right in spirit but under-specified, and getting it wrong produces exactly the false positives it was designed to avoid:
+      <br><br>
+      <code>text-</code> spans <strong>three</strong> things — <code>text-chrome</code> (fontSize), <code>text-ink</code> (colour), and <code>text-center</code>/<code>text-left</code>/<code>text-right</code> (<strong>alignment, no scale at all</strong>). A naive prefix match reds the alignment trio. · <code>border-</code> spans width (<code>border</code>, <code>border-t</code>), colour (<code>border-hairline</code>) and the <code>border-none</code> reset. · <code>outline-</code> and <code>font-</code> likewise.
+      <br><br>
+      <strong>The lint rule in ②ᵃ must classify on the resolved (prefix, value) pair, not the prefix.</strong> Recorded here because it is a correctness requirement on the rule, not an implementation detail — and it is the single most likely source of false positives in the whole check.
+    </div>
+
+    <h2 id="keywords">⓪ᶜ The keyword ruling, confirmed against usage</h2>
+
+    <p>The plan's one self-made ruling: <em>a keyword expressing a relationship or a reset is always legal; anything with a number in it stays closed.</em> Checked against every sighting.</p>
+
+    <table data-c="tbl-keywords">
+      <thead><tr><th>Class</th><th>Sites</th><th>Is it a magnitude?</th></tr></thead>
+      <tbody>
+        <tr><td><code>w-full</code> · <code>h-full</code> · <code>max-w-full</code> · <code>min-w-full</code></td><td>8 · 7 · 2 · 1</td><td><span class="badge auto">no</span> "100% of the parent" — a relationship</td></tr>
+        <tr><td><code>rounded-full</code></td><td>3</td><td><span class="badge auto">no</span> "fully round" — a shape, not a radius pick</td></tr>
+        <tr><td><code>ml-auto</code></td><td>2</td><td><span class="badge auto">no</span> "whatever is left" — a relationship</td></tr>
+        <tr><td><code>border-none</code> · <code>outline-none</code> · <code>leading-none</code></td><td>2 · 2 · 3</td><td><span class="badge auto">no</span> resets to zero/one</td></tr>
+        <tr><td><code>w-px</code></td><td>1</td><td><span class="badge auto">no</span> the hairline unit, not a scale step</td></tr>
+        <tr><td class="meta"><code>leading-relaxed</code> (1.625) · <code>leading-normal</code> (1.5) · <code>tracking-wide</code> (0.025em)</td><td class="meta">1 · 2 · 5</td><td class="meta"><span class="badge approval">yes</span> named magnitudes — become project tokens in ①, exactly as the plan says</td></tr>
+      </tbody>
+    </table>
+
+    <p class="meta"><strong>31 keyword sightings, zero counter-examples.</strong> The ruling survives contact with the real tree; the fallback the plan offered ("if it is wrong the fix is 7 class usages") is not needed.</p>
+
+    <h2 id="unnamed">⓪ᵈ Five scales the ruling never named</h2>
+
+    <p>The plan flagged <code>lineHeight</code> · <code>letterSpacing</code> · <code>borderWidth</code> · <code>zIndex</code> as <em>"rule needed"</em>. The sweep confirms all four are in use and adds <code>outlineWidth</code>/<code>outlineOffset</code>. Each resolves under the existing keyword-vs-value test — <strong>no new ruling is required</strong>, which is the useful finding.</p>
+
+    <table data-c="tbl-unnamed">
+      <thead><tr><th>Scale</th><th>In use</th><th>Resolution under the ⓪ test</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>borderWidth</code></td>
+          <td><code>border</code> ×22 · <code>border-b</code> ×9 · <code>border-l</code> ×2 · <code>border-t</code> ×1</td>
+          <td><span class="badge auto">legal, no token needed</span> <strong>These carry no number.</strong> <code>border-t</code> selects a <em>side</em> and takes the <code>DEFAULT</code> 1px width — nobody picked 1px off a scale. Same class as <code>border-none</code>. Only a numeric <code>border-2</code> or arbitrary <code>border-[1.5px]</code> is a value.</td>
+        </tr>
+        <tr>
+          <td><code>lineHeight</code></td>
+          <td><code>leading-none</code> ×3 · <code>leading-normal</code> ×2 · <code>leading-relaxed</code> ×1</td>
+          <td><span class="badge approval">split</span> <code>none</code> is a reset (legal); <code>normal</code> and <code>relaxed</code> are magnitudes → project tokens in ①.</td>
+        </tr>
+        <tr>
+          <td><code>letterSpacing</code></td>
+          <td><code>tracking-wide</code> ×5</td>
+          <td><span class="badge approval">token</span> a named magnitude (0.025em) → project token in ①.</td>
+        </tr>
+        <tr>
+          <td><code>zIndex</code></td>
+          <td><code>z-10</code> ×1 · <code>z-20</code> ×1 · <code>z-50</code> ×1</td>
+          <td><span class="badge approval">tokens — and this one is a real finding</span> Three raw stacking numbers, three files, <strong>no shared meaning</strong>. <code>z-50</code> is the modal, <code>z-20</code> the Select popup, <code>z-10</code> a Gallery sticky. These want <em>named layers</em> (<code>z-popup</code>, <code>z-modal</code>, <code>z-sticky</code>), which is precisely what closing a scale is for.</td>
+        </tr>
+        <tr>
+          <td><code>outlineWidth</code> · <code>outlineOffset</code></td>
+          <td><code>outline-1</code> ×3 · <code>outline-offset-2</code> ×2 · <code>-outline-offset-1</code> ×1</td>
+          <td><span class="badge approval">tokens</span> The focus-ring geometry, picked numerically in 3 components. One <code>focus-ring</code> pair of tokens covers all six sightings.</td>
+        </tr>
+        <tr>
+          <td><code>opacity</code></td>
+          <td><code>opacity-40</code> ×2 · <code>opacity-60</code> ×1 (both <code>disabled:</code>)</td>
+          <td><span class="badge approval">token exists already</span> <code>opacity-disabled</code> (.38) is declared and used elsewhere. These three are <strong>drift</strong> — two different disabled opacities in Onboarding alongside the token. Straight fix.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="computed">⓪ᵉ The computed-className finding</h2>
+
+    <div class="callout warn">
+      <strong>29 computed sites, not 7.</strong> The plan's feasibility argument rested on "only 7 of 206 are computed <code>className={…}</code>; the other ~96% are plain literals". The real figure is <strong>29 of 235 (12%)</strong>.
+      <br><br>
+      <strong>The strategy still holds</strong> — every one inspected holds its classes as string literals inside the expression (template literals with interpolated <em>maps</em>, e.g. <code>${TONE[tone]}</code>, <code>${FRAME[frame]}</code>, <code>${METHOD_COLOR[verb]}</code>, and the maps themselves are literal objects). Reading literals inside the expression gets them right. <strong>What changes is the rule's obligation:</strong> at 12% the "report unresolvable fragments rather than silently pass" path is not an edge case — it is a routine path that needs its own <code>RuleTester</code> case, and the interpolation boundary must be handled (a naive scan of a template literal yields junk tokens like <code>${TONE[tone]}</code>, <code>?</code>, <code>:</code> as if they were classes).
+    </div>
+
+    <h2 id="worklist">⓪ᶠ The measured worklist for ②</h2>
+
+    <p>What the closed config actually reds. <strong>43 off-list classes</strong> (~130 sites) + <strong>12 arbitrary values</strong> (~16 sites).</p>
+
+    <table data-c="tbl-worklist">
+      <thead><tr><th>Family</th><th>Classes</th><th>Sites</th><th>Treatment</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Sub-8px chrome spacing</strong></td>
+          <td><code>py-1</code> <code>mt-1</code> <code>px-1</code> <code>gap-1</code> <code>pl-5</code> <code>py-0.5</code> <code>gap-y-1</code> <code>mt-0.5</code> <code>mt-1.5</code> <code>pt-1</code> <code>pt-0.5</code> <code>mx-1</code></td>
+          <td><strong>~56</strong></td>
+          <td>The chrome tokens ① introduces. <strong>This is the bulk of ②</strong> — <code>py-1</code> alone is 16 sites across 7 files.</td>
+        </tr>
+        <tr>
+          <td><strong>Inherited type sizes</strong></td>
+          <td><code>text-xs</code> ×15 · <code>text-sm</code> ×7 · <code>text-lg</code> ×6</td>
+          <td><strong>28</strong></td>
+          <td>Map to the 7 project sizes. <em>Not itemised in the plan at all</em> — the largest single omission.</td>
+        </tr>
+        <tr>
+          <td><strong>Inherited widths</strong></td>
+          <td><code>w-20</code> <code>w-24</code> <code>w-40</code> <code>w-52</code> <code>w-64</code> <code>w-2.5</code> <code>h-2.5</code> <code>min-w-32</code> <code>max-h-64</code> <code>max-w-sm</code></td>
+          <td><strong>11</strong></td>
+          <td>Tokens. Mostly <code>App.tsx</code> and <code>Gallery.tsx</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>Type / stacking / focus</strong></td>
+          <td><code>tracking-wide</code> <code>leading-*</code> <code>z-*</code> <code>outline-*</code> <code>opacity-40/60</code></td>
+          <td><strong>~20</strong></td>
+          <td><a href="#unnamed">Per the table above</a> — new project tokens.</td>
+        </tr>
+        <tr>
+          <td><strong>Colour strays</strong></td>
+          <td><code>bg-black/50</code> <code>bg-transparent</code> ×4 <code>text-transparent</code> <code>border-t-ink-mute</code></td>
+          <td><strong>8</strong></td>
+          <td><code>transparent</code> is arguably a reset (keyword ruling); <code>bg-black/50</code> is the modal scrim and wants a token.</td>
+        </tr>
+        <tr>
+          <td><strong>Arbitrary <code>[…]</code></strong></td>
+          <td><code>border-[1.5px]</code> <code>py-[5px]</code> <code>py-[2px]</code> <code>text-[11px]</code> <code>min-w-[132px]</code> <code>max-h-[184px]</code> <code>min-h-[18px]</code> <code>min-w-[4.5ch]</code> <code>w-[380px]</code> <code>underline-offset-[3px]</code></td>
+          <td><strong>~12</strong></td>
+          <td>Tokens — <strong>pragma unavailable</strong>, all carry a size.</td>
+        </tr>
+        <tr>
+          <td><strong>Arbitrary template shapes</strong></td>
+          <td><code>grid-cols-[auto_1fr]</code> ×4 · <code>grid-cols-[18px_1fr]</code> · <code>top-[calc(100%+4px)]</code></td>
+          <td><strong>6</strong></td>
+          <td><code>design-allow:</code> pragma — with the embedded <code>18px</code>/<code>4px</code> first becoming token references, per the plan.</td>
+        </tr>
+        <tr>
+          <td><strong>Zero &amp; keywords</strong></td>
+          <td><code>min-w-0</code> <code>p-0</code> <code>m-0</code> <code>inset-0</code> <code>top-0</code> <code>left-0</code> <code>min-h-0</code> <code>last:border-0</code> + the 8 keywords</td>
+          <td><strong>~39</strong></td>
+          <td><span class="badge auto">no change</span> legal by the ⓪ ruling.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>Two families the plan did not count at all: the 28 inherited type sizes and the ~20 type/stacking/focus values.</strong> Both are straightforward — they are the same three treatments the plan already sanctions — but they roughly double step ②'s re-expression surface over the "~39 sites" figure. Flagged now rather than discovered mid-②; this is what scoping the check tree-wide was supposed to buy, and it did.
+    </div>
+
+    <h2 id="oracle">⓪ᵍ Reconciliation against ground truth</h2>
+
+    <p>The scanner's completeness was an assumption. It was tested by building the real stylesheet and diffing — the only check that does not simply re-run the scanner's own premises.</p>
+
+    <table data-c="tbl-oracle">
+      <thead><tr><th>Source</th><th>Distinct classes</th><th>Trust</th></tr></thead>
+      <tbody>
+        <tr><td><code>npx tailwindcss</code> emitted selectors</td><td><strong>242</strong></td><td><span class="badge auto">ground truth</span> Tailwind scans its own <code>content</code> globs. If a class is not here, it produces no CSS and cannot affect the UI.</td></tr>
+        <tr><td>The bespoke <code>className=</code> scanner</td><td>205</td><td><span class="badge approval">incomplete</span> missed 41; the delta is entirely the constant/lookup-map idiom.</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="missed">The 41 missed classes</h3>
+
+    <table data-c="tbl-missed">
+      <thead><tr><th>Group</th><th>Classes</th><th>Effect on the worklist</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>The chromatic tokens this WU deletes</strong></td>
+          <td><code>text-method-get</code> <code>text-method-post</code> <code>text-method-put</code> <code>text-method-delete</code> <code>text-method-patch</code></td>
+          <td><span class="badge approval">critical</span> All five live in <code>MethodLabel.tsx</code>'s <code>METHOD_COLOR</code> map. Step ② must re-express them; the first pass reported them absent.</td>
+        </tr>
+        <tr>
+          <td><strong>Interactive-state colours</strong></td>
+          <td><code>hover:bg-wash-hover</code> <code>active:bg-wash-active</code> <code>active:bg-wash-tint</code> <code>active:text-ink</code> <code>hover:text-ok</code> <code>hover:text-warn</code> <code>focus-visible:text-ink</code> <code>hover:decoration-ink-mute</code></td>
+          <td>Resolve to project tokens — <strong>no re-expression needed</strong>. Note the variant handling itself was fine (it splits on <code>:</code> generically); these were missed for the <em>same single reason</em> as the rest — they live in <code>Button.tsx</code>'s <code>FRAME</code>/<code>TONE</code> maps. One root cause, not two.</td>
+        </tr>
+        <tr>
+          <td><strong>Status / wash colours</strong></td>
+          <td><code>bg-ok</code> <code>bg-warn</code> <code>bg-ink-mute</code> <code>bg-wash-tint</code> <code>border-ink-mute</code> <code>border-warn</code> <code>decoration-ok</code> <code>decoration-hairline</code></td>
+          <td>All project tokens. <code>decoration-*</code> is a colour scale the first pass never classified at all.</td>
+        </tr>
+        <tr>
+          <td><strong>Spacing</strong></td>
+          <td><code>gap-0</code> · <code>gap-control-gap</code> · <code>opacity-disabled</code></td>
+          <td><code>gap-0</code> is a zero (legal); the other two are project tokens.</td>
+        </tr>
+        <tr>
+          <td class="meta"><strong>Tailwind base/plugin artifacts</strong> — not authored classes</td>
+          <td class="meta"><code>container</code> <code>filter</code> <code>transform</code> <code>transition</code> <code>ring</code> <code>shadow</code> <code>rounded</code> <code>outline</code> <code>collapse</code> <code>table</code> <code>static</code> <code>visible</code> <code>hidden</code> <code>inline</code> <code>grow</code> <code>lowercase</code> <code>size-px</code> <code>!relative</code></td>
+          <td class="meta">Oracle noise: emitted by Tailwind's base layer or matched from non-class strings, not written by anyone. Excluded from the worklist — the reason the oracle is a <em>cross-check</em>, not a drop-in replacement.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>Net effect on the numbers.</strong> The <strong>off-list worklist is essentially unchanged</strong> — nearly every missed class resolves to a project token, so ②'s re-expression surface stands, with the <code>text-method-*</code> five restored to it (they were always in the plan; the sweep simply failed to re-confirm them). <strong>What does change is the distinct-class count and the split</strong>: the population is ~224 authored classes, not 200, so the 144/56 figure is itself provisional and <strong>must be recomputed by the ②ᵃ rule against the oracle before it is quoted into DEC-17</strong>. The plan's 103/77 was wrong; 144/56 is closer but not yet proven.
+      <br><br>
+      <strong>Binding requirement on the ②ᵃ lint rule:</strong> it must resolve classes held in module-level constants and lookup maps, not only literals at <code>className=</code>. That is the majority idiom in <code>src/components/</code>, and it is invisible to the naive approach. Its <code>RuleTester</code> suite needs a case for it, and <code>npm run lint</code>'s coverage should be reconciled against the built CSS at least once.
+    </div>
+
+    <h2 id="method">How this was measured</h2>
+
+    <table data-c="tbl-method">
+      <thead><tr><th>Step</th><th>Instrument</th></tr></thead>
+      <tbody>
+        <tr><td>Scale enumeration</td><td><code>resolveConfig</code> over <code>ui/tailwind.config.js</code>, counting keys per scale — the same entry point the six config-reading predicates and the lint rule will consume.</td></tr>
+        <tr><td>Class extraction <span class="badge approval">superseded</span></td><td>Brace-balanced scan of <code>className="…"</code> and <code>className={…}</code> across <code>ui/src/**/*.tsx</code>, tests excluded. <strong>Unsound — see <a href="#oracle">the reconciliation</a>:</strong> it cannot see classes held in constants and lookup maps, which is this codebase's dominant idiom, and it missed 41.</td></tr>
+        <tr><td>Ground truth <span class="badge auto">authoritative</span></td><td><code>npx tailwindcss -c tailwind.config.js</code> over a bare <code>@tailwind</code> entry, then parse the emitted selectors. Tailwind resolves its own <code>content</code> globs (<code>./index.html</code> + <code>./src/**/*.{ts,tsx}</code>), so anything absent here emits no CSS. Carries base-layer noise, so it cross-checks the scanner rather than replacing it.</td></tr>
+        <tr><td>Glob-coverage check</td><td>Confirmed the scanner's <code>.tsx</code>-only reach against Tailwind's wider <code>{ts,tsx}</code> + <code>index.html</code> globs. The two <code>.ts</code> hits (<code>onboardingMachine.ts</code>, <code>body.ts</code>) are prose and MIME strings, and <code>index.html</code> carries no <code>class=</code> — so this particular gap costs nothing, but it was a gap.</td></tr>
+        <tr><td>Classification</td><td>Longest-prefix match into a prefix→scale map, with the overloaded <code>text-</code>/<code>border-</code>/<code>outline-</code>/<code>font-</code> prefixes resolved by value.</td></tr>
+        <tr><td>Cross-check</td><td>Site counts independently confirmed by <code>grep -ro 'className=' --include='*.tsx'</code> → 235 / 29 computed, matching the scanner exactly.</td></tr>
+      </tbody>
+    </table>
+
+    <p class="meta">The scanner is scratch (not committed) — its classification logic is the draft of the ②ᵃ lint rule's discriminator, which is where it lands as tested code.</p>
+
+    <h2 id="next">Gate</h2>
+
+    <div class="callout">
+      <strong>⓪'s gate — "the list is exhaustive, not the six obvious ones" — is met, on its own terms.</strong> The gate is about <em>scales</em>, and that half is exhaustive by construction: the 119 come from <code>resolveConfig</code>, Tailwind's own resolution, not from a scan. 22 carry inherited values reachable from real classes; six are named for closure plus <code>lineHeight</code>/<code>letterSpacing</code>/<code>zIndex</code>/<code>outlineWidth</code>/<code>outlineOffset</code>. The keyword ruling is confirmed against all 31 sightings, not assumed.
+      <br><br>
+      <strong>The class enumeration is a different claim and a weaker one.</strong> It is now reconciled against the built CSS and no longer rests on the scanner alone — but the exact 144/56 split is <strong>provisional until the ②ᵃ rule recomputes it</strong>, and it must not be quoted into DEC-17 before then. <strong>Ready for ①</strong> (which depends only on the scale list and the ruling, both solid), carrying two binding requirements into ②ᵃ: the <a href="#split">overloaded-prefix rule</a> and the <a href="#oracle">constant/lookup-map requirement</a>.
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

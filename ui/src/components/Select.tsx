@@ -153,7 +153,7 @@ export function Select({
         aria-expanded={open}
         aria-label={label}
         onClick={() => (open ? close() : openWith())}
-        className="inline-flex min-h-control min-w-[132px] cursor-pointer select-none items-center justify-between gap-2 whitespace-nowrap rounded-button border border-hairline bg-transparent px-control-x py-control-y font-ui text-control text-ink-body transition-colors hover:border-ink-mute hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-disabled"
+        className="inline-flex min-h-control min-w-control-min cursor-pointer select-none items-center justify-between gap-2 whitespace-nowrap rounded-button border border-hairline bg-transparent px-control-x py-control-y font-ui text-control text-ink-body transition-colors hover:border-ink-mute hover:text-ink focus-visible:outline focus-visible:outline-focus focus-visible:outline-ink-mute focus-visible:outline-offset-focus disabled:pointer-events-none disabled:opacity-disabled"
       >
         <span className={selected ? "" : "text-ink-mute"}>{selected?.label ?? placeholder}</span>
         <span aria-hidden="true" className="shrink-0 text-glyph leading-none text-ink-mute">
@@ -162,9 +162,14 @@ export function Select({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-20 min-w-full overflow-hidden rounded-card border border-hairline bg-canvas shadow-pop">
+        <div
+          className={
+            // design-allow: top-[calc(100%+theme(spacing.chrome-y))] — an offset-from-the-trigger shape; the gap itself is a token
+            "absolute left-0 top-[calc(100%+theme(spacing.chrome-y))] z-popup min-w-full overflow-hidden rounded-card border border-hairline bg-canvas shadow-pop"
+          }
+        >
           {(searchable || typed) && (
-            <div className="flex items-center gap-chrome-gap border-b border-hairline px-2 py-1">
+            <div className="flex items-center gap-chrome-gap border-b border-hairline px-2 py-chrome-y">
               <input
                 autoFocus
                 value={filter}
@@ -183,17 +188,17 @@ export function Select({
           )}
 
           {message ? (
-            <p className="px-control-x py-[5px] font-ui text-control italic text-ink-mute">
+            <p className="px-control-x py-control-y font-ui text-control italic text-ink-mute">
               {isLoading && (
                 <span
                   aria-hidden="true"
-                  className="mr-chrome-gap inline-block h-spinner w-spinner animate-spin rounded-full border-[1.5px] border-hairline border-t-ink-mute"
+                  className="mr-chrome-gap inline-block h-spinner w-spinner animate-spin rounded-full border-emphasis border-hairline border-t-ink-mute"
                 />
               )}
               {message}
             </p>
           ) : (
-            <ul role="listbox" aria-label={label} className="max-h-[184px] overflow-y-auto py-0.5">
+            <ul role="listbox" aria-label={label} className="max-h-listing-max overflow-y-auto py-chrome-tight">
               {visible.map((option, i) => (
                 <li
                   key={option.id}
@@ -233,7 +238,7 @@ function Highlight({ text, match }: { text: string; match: string }) {
   return (
     <>
       {text.slice(0, at)}
-      <span className="text-ink underline decoration-ink-mute underline-offset-2">
+      <span className="text-ink underline decoration-ink-mute underline-offset-link">
         {text.slice(at, at + match.length)}
       </span>
       {text.slice(at + match.length)}

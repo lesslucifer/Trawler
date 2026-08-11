@@ -10,7 +10,7 @@ export function Field(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`rounded-button border border-hairline bg-canvas px-3 py-1 font-ui text-ink placeholder:text-ink-mute focus:border-ink-mute focus:outline-none ${props.className ?? ""}`}
+      className={`rounded-button border border-hairline bg-canvas px-3 py-chrome-y font-ui text-ink placeholder:text-ink-mute focus:border-ink-mute focus:outline-none ${props.className ?? ""}`}
     />
   );
 }
@@ -43,7 +43,7 @@ export function StatusDot({ status, onClick }: { status: DotStatus; onClick: () 
       data-status={status}
       title={COPY.dotTitle[status]}
       onClick={onClick}
-      className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${DOT_CLASS[status]}`}
+      className={`inline-block h-spinner w-spinner shrink-0 rounded-full ${DOT_CLASS[status]}`}
     />
   );
 }

@@ -52,6 +52,30 @@
   </header>
   <main>
 
+    <div class="callout warn" data-c="w6-supersede">
+      <strong>Re-expressed, not overturned — E-DFLOW.W6 step ②, 2026-08-09.</strong>
+      <strong>Fork D1 stands: verbs stay colour-coded, at exactly the same five hues.</strong>
+      What changed is where the colours live. The five <code>text-method-*</code> tokens are gone —
+      DEC-17 makes <code>ui/tailwind.config.js</code> the one closed vocabulary, and a token named
+      after its consumer cannot be part of a palette. Two of the five needed nothing at all:
+      <code>method-get</code> was byte-identical to <code>ok</code> and <code>method-delete</code> to
+      <code>warn</code>. The other three joined the palette named for what they mean.
+      <table>
+        <tr><th>verb</th><th>was</th><th>now</th><th>hex</th></tr>
+        <tr><td>GET</td><td><code>text-method-get</code></td><td><code>text-ok</code></td><td>#4cc38a — unchanged</td></tr>
+        <tr><td>POST</td><td><code>text-method-post</code></td><td><code>text-create</code></td><td>#e5bf4d — unchanged</td></tr>
+        <tr><td>PUT</td><td><code>text-method-put</code></td><td><code>text-replace</code></td><td>#e5924d — unchanged</td></tr>
+        <tr><td>PATCH</td><td><code>text-method-patch</code></td><td><code>text-amend</code></td><td>#a78bfa — unchanged</td></tr>
+        <tr><td>DELETE</td><td><code>text-method-delete</code></td><td><code>text-warn</code></td><td>#e5484d — unchanged</td></tr>
+        <tr><td>other</td><td colspan="2"><code>text-ink-body</code> — fork D3, unchanged</td><td>#c9c0ad</td></tr>
+      </table>
+      Every rendered pixel is identical to what W5 shipped. <code>min-w-[4.5ch]</code> is now the
+      <code>min-w-verb</code> token, same 4.5ch. Read the token names below as history, the colours
+      as current. Code is the truth: <code>ui/src/components/MethodLabel.tsx</code> ·
+      <a href="../2026-08-09-dflow-w6-step2-lint-and-reexpression.html">step ② evidence</a>.
+      This file is rewritten in full at the WU's distillation.
+    </div>
+
     <h2 id="identity">Identity &amp; frame</h2>
     <div class="callout" data-c="frame-claim">
       <strong>Why it exists:</strong> nine HTTP methods range 3–7 chars — without a fixed-width slot the list column wiggles on every render, shifting every column to its right; and the verb→color mapping is product logic that must live in one place, not per call site. A plain <code>&lt;span&gt;</code> cannot hold either contract.
@@ -350,7 +374,7 @@
 
     <h2 id="fit">Use / avoid</h2>
     <div class="cards" data-c="fit-cards">
-      <div class="card"><strong>✅ Use</strong><p>Any place a flow's HTTP method must appear: the virtualized list rows (<a href="../../FlowList.tsx">FlowList.tsx</a> col 2), the detail identity bar (<a href="../../FlowDetail.tsx">FlowDetail.tsx</a> header). The component owns the uppercase transform, the fixed-width contract, and the verb→color mapping — callers pass raw.</p></div>
+      <div class="card"><strong>✅ Use</strong><p>Any place a flow's HTTP method must appear: the virtualized list rows (<a href="../../../ui/src/FlowList.tsx">FlowList.tsx</a> col 2), the detail identity bar (<a href="../../../ui/src/FlowDetail.tsx">FlowDetail.tsx</a> header). The component owns the uppercase transform, the fixed-width contract, and the verb→color mapping — callers pass raw.</p></div>
       <div class="card"><strong>🚫 Avoid</strong><p>Do not restyle a verb at the call site — the verb→color mapping lives inside MethodLabel; a new or changed color is a token + mapping change here, never an inline tint (DEC-11 exceptions are token-named). Do not use for a non-method label just because it shares the visual style; reach for a plain <code>font-mono text-ink-body</code> span instead, and promote only when reuse evidence appears.</p></div>
     </div>
 

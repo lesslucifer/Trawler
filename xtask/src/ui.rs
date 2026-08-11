@@ -6,6 +6,10 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     match args {
         ["build"] => {
             pnpm(&dir, &["install"], &[])?;
+            // Tailwind drops an off-vocabulary class silently, so a bundle can
+            // be built, typed and tested green while rendering unstyled
+            // elements. The lint rule is the only alarm (E-DFLOW.W6, DEC-17).
+            pnpm(&dir, &["lint"], &[])?;
             pnpm(&dir, &["build"], &[])?;
             Ok((0, "ui build complete - bundle in ui/dist/".to_string()))
         }

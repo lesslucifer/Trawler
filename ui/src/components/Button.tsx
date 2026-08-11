@@ -20,7 +20,7 @@ export interface ButtonProps {
 }
 
 const BASE =
-  "inline-flex items-center justify-center rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink focus-visible:outline focus-visible:outline-1 focus-visible:outline-ink-mute focus-visible:outline-offset-2 focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none";
+  "inline-flex items-center justify-center rounded-button font-ui text-control cursor-pointer bg-transparent select-none whitespace-nowrap transition-colors hover:text-ink focus-visible:outline focus-visible:outline-focus focus-visible:outline-ink-mute focus-visible:outline-offset-focus focus-visible:text-ink disabled:opacity-disabled disabled:pointer-events-none";
 
 const FRAME: Record<ButtonFrame, string> = {
   border: "border border-hairline hover:border-ink-mute active:bg-wash-tint active:text-ink",

@@ -159,6 +159,7 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
     let dir = TempDir::new().unwrap();
     let rulebook = dir.path().join("docs/design-rules");
     std::fs::create_dir_all(&rulebook).unwrap();
+    stub_vocabulary(&dir);
     std::fs::write(
         rulebook.join("design-rules-index.html"),
         "<table data-c=\"hard-rules-table\"><tbody>\
@@ -190,7 +191,7 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
                  <table data-item=\"interaction\"><tr><td>land cold</td><td>orient</td>\
                  <td><div class=\"gist\">B renders the real verdicts</div>\
                  <details class=\"why\"><div>B -&gt; status</div></details></td></tr></table>\
-                 <div data-item=\"mockup\"><button data-state-toggle=\"m\">flip</button></div>\
+                 <div data-item=\"mockup\" data-wire=\"none\"><button data-state-toggle=\"m\">flip</button></div>\
                  <table data-item=\"tune\"><tr><td>weight</td><td><pre class=\"tb\">before</pre></td>\
                  <td><pre class=\"tb\">after</pre></td><td><code>data-ink-first</code></td></tr></table>\
                  {}<table data-item=\"capabilities\"><tr><td>CA install</td><td>used</td>\
@@ -212,7 +213,8 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
     let text = stdout(&out);
     assert!(out.status.success(), "expected green: {text}");
     assert!(text.contains("receipt 2/2 soft · 1 satisfied · 1 inherited"), "{text}");
-    assert!(text.contains("hard rules: 1/2 machine-checked"), "{text}");
+    assert!(text.contains("hard rules: 2/2 machine-checked (design)"), "{text}");
+    assert!(text.contains("design-allow: 0 live suppression"), "{text}");
 
     let out = run_verify(
         &dir,
@@ -226,6 +228,30 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
     assert!(text.contains("receipt·calm-microcopy"), "uncovered soft rule: {text}");
     assert!(text.contains("not one of the seven"), "bad verdict: {text}");
     assert!(text.contains("machine-checked, not receipted"), "hard rule row: {text}");
+}
+
+// The five vocabulary rules read ui/tailwind.config.js through a node emitter.
+// A temp repo has no ui/, so it gets the emitter's shape rather than its
+// content - what these tests assert is the doc contract, not the palette.
+fn stub_vocabulary(dir: &TempDir) {
+    let scripts = dir.path().join("scripts");
+    std::fs::create_dir_all(&scripts).unwrap();
+    std::fs::write(
+        scripts.join("design-vocabulary.mjs"),
+        "process.stdout.write(JSON.stringify({legal:[\"text-ink\"],         rules:{\"colour-tokens-only\":[\"text-\"]},values:{},modifiers:{},chromatic:[\"ok\"],chroma_floor:40}));",
+    )
+    .unwrap();
+}
+
+// A vocabulary that cannot be read is the same shape of hole as an unreadable
+// rulebook: five rules that report nothing look exactly like five rules with
+// nothing to say.
+#[test]
+fn a_design_run_without_the_vocabulary_emitter_is_red() {
+    let dir = TempDir::new().unwrap();
+    let out = run_verify(&dir, &[("run.html", &doc_main("<p data-item=\"frame\">d</p>"))]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(stdout(&out).contains("vocabulary·unreadable"), "{}", stdout(&out));
 }
 
 fn doc_main(body: &str) -> String {

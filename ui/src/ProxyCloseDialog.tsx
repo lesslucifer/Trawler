@@ -52,7 +52,7 @@ export function ProxyCloseDialog({
       aria-modal="true"
       aria-label={copy.title}
       onKeyDown={(e) => e.key === "Escape" && onCancel()}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-modal flex items-center justify-center bg-scrim"
     >
       <button
         type="button"
@@ -62,9 +62,9 @@ export function ProxyCloseDialog({
         onClick={onCancel}
         className="absolute inset-0 h-full w-full cursor-default"
       />
-      <div className="relative w-full max-w-sm rounded-lg border border-hairline bg-canvas p-4 text-ink">
+      <div className="relative w-full max-w-dialog-max rounded-lg border border-hairline bg-canvas p-4 text-ink">
         <div className="mb-3 flex items-start justify-between gap-2">
-          <h2 className="font-serif text-lg italic">{copy.title}</h2>
+          <h2 className="font-serif text-title italic">{copy.title}</h2>
           <button
             type="button"
             aria-label="Cancel"
@@ -75,16 +75,16 @@ export function ProxyCloseDialog({
             ✕
           </button>
         </div>
-        <p className="mb-3 text-sm text-ink-mute">{copy.body}</p>
+        <p className="mb-3 text-note text-ink-mute">{copy.body}</p>
 
         {mode === "notice" && (
           <>
-            <ol data-testid="proxy-close-steps" className="mb-3 list-decimal pl-5 text-sm text-ink-mute">
+            <ol data-testid="proxy-close-steps" className="mb-3 list-decimal pl-6 text-note text-ink-mute">
               {proxyOffSteps(defaultProxyTarget(os)).map((step) => (
                 <li key={step}>{step}</li>
               ))}
             </ol>
-            <label className="mb-3 flex items-center gap-2 text-sm text-ink-mute">
+            <label className="mb-3 flex items-center gap-2 text-note text-ink-mute">
               <input
                 type="checkbox"
                 data-testid="proxy-close-dont-show"
@@ -103,7 +103,7 @@ export function ProxyCloseDialog({
                 type="button"
                 data-testid="proxy-close-keep"
                 onClick={onKeep}
-                className="rounded-button border border-hairline px-3 py-1 text-ink-mute hover:text-ink"
+                className="rounded-button border border-hairline px-3 py-chrome-y text-ink-mute hover:text-ink"
               >
                 {CLOSE_COPY.remove.keep}
               </button>
@@ -111,7 +111,7 @@ export function ProxyCloseDialog({
                 type="button"
                 data-testid="proxy-close-remove"
                 onClick={onRemove}
-                className="rounded-button border border-hairline px-3 py-1 text-ink"
+                className="rounded-button border border-hairline px-3 py-chrome-y text-ink"
               >
                 {CLOSE_COPY.remove.confirm}
               </button>
@@ -121,7 +121,7 @@ export function ProxyCloseDialog({
               type="button"
               data-testid="proxy-close-quit"
               onClick={() => onAcknowledge(dontShowAgain)}
-              className="rounded-button border border-hairline px-3 py-1 text-ink"
+              className="rounded-button border border-hairline px-3 py-chrome-y text-ink"
             >
               {CLOSE_COPY.notice.confirm}
             </button>

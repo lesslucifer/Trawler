@@ -33,7 +33,7 @@ export function Notice({
   const { text, glyph } = TONE[tone];
 
   return (
-    <div data-tone={tone} className={`flex items-start gap-chrome-gap py-1 ${className}`}>
+    <div data-tone={tone} className={`flex items-start gap-chrome-gap py-chrome-y ${className}`}>
       {glyph && (
         <span aria-hidden="true" className={`shrink-0 font-ui text-body ${text}`}>
           {glyph}
@@ -42,7 +42,7 @@ export function Notice({
       <div className="min-w-0">
         <p className={`font-ui text-body leading-normal ${text}`}>{children}</p>
         {detail !== undefined && (
-          <p className="mt-0.5 font-ui text-control text-ink-mute">{detail}</p>
+          <p className="mt-chrome-tight font-ui text-control text-ink-mute">{detail}</p>
         )}
         {action !== undefined && <div className="mt-2 flex gap-2">{action}</div>}
       </div>

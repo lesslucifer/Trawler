@@ -19,7 +19,7 @@ export function Layout({
       <div className="flex min-h-0 flex-1">
         <main className="min-w-0 flex-1 overflow-hidden">{children}</main>
         {detail != null && (
-          <aside className="w-[380px] shrink-0 overflow-auto border-l border-hairline bg-canvas-soft">
+          <aside className="w-pane shrink-0 overflow-auto border-l border-hairline bg-canvas-soft">
             {detail}
           </aside>
         )}

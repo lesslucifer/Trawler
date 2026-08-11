@@ -74,6 +74,12 @@
           <td>Retiring a design file whose component is built runs in one order — <strong>distil the forks to <code>docs/decisions/</code>, verify the TSDoc block is complete, then remove</strong> — because code-as-truth carries the contract and never the <em>why</em>: the fork cards and frame drivers are the part nobody re-reads, which is exactly why the file looks redundant. W7 enforces the order as a predicate, not a paragraph</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-17-closed-vocabulary.html"><code>dec-17-closed-vocabulary.html</code></a></td>
+          <td><span class="badge id">DEC-17</span></td>
+          <td>The design vocabulary is <strong>closed</strong> and legality is membership of a scale the config <em>declares</em> — not of anything Tailwind can emit, because an undeclared scale inherits its whole default ladder and nothing drawn from it can ever red. <code>ui/tailwind.config.js</code> is the single source of truth (every scale replaces Tailwind's, never extends it); the rulebook points at it and never lists a member. Two enforcement surfaces off one derived oracle — Tier-1 predicates for the design run, a local <code>design/vocabulary</code> ESLint rule for <code>ui/src/</code> — with exactly two escapes: the <code>design-allow</code> pragma (next line only, size values rejected, count printed) and raw CSS configuring a third-party styling API, whose colours are still checked</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

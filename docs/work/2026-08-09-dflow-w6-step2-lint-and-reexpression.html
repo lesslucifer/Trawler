@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7803169f34851f0dfab2a2">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W6 step ② the rule and the re-expression</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W6 step ② — the rule, then the work it found</h1>
+      <p>ESLint 9 and a local <code>design/vocabulary</code> rule land first; its first red list <em>is</em> the worklist. 142 violations across 58 classes, then zero — every dead class re-expressed as a token, <code>MethodLabel</code>'s five hues moved into the palette at the same values, six template shapes pragma'd.</p>
+      <div class="meta">Evidence · 2026-08-09 · Trawler · T3 (docs/work/) · <code>wu/design-flow/revise-rulebook</code> · plan: <a href="2026-08-03-dflow-w6-plan.html#step2">W6 plan</a> step ② · input: <a href="2026-08-04-dflow-w6-step1-closed-config.html">the closed config</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="verdict">Verdict</h2>
+
+    <div class="callout">
+      <strong>②'s gate is met.</strong> <code>npm run lint</code> is green over all of <code>ui/src/</code>, and the rule's enumeration is reconciled against the built stylesheet: on all <strong>205</strong> non-arbitrary classes this tree authors, the rule's verdict and the CSS agree exactly. <strong>467 tests green across 39 files</strong> (447 → 448 app tests, plus the rule's own 19), <code>npx tsc -b</code> clean, <code>cargo xtask ui specimens --check</code> green.
+    </div>
+
+    <div class="callout warn">
+      <strong>The rule found 5 classes ①'s worklist did not.</strong> All five are variant-prefixed — <code>focus-visible:outline-1</code>, <code>focus-visible:outline-offset-2</code>, <code>focus-visible:-outline-offset-1</code>, <code>disabled:opacity-40</code>, <code>disabled:opacity-60</code>, 11 sites — and ① named every one of them in prose while listing none of them among its 42. This is requirement 5 paying off in the direction nobody planned for: the reconciliation was meant to check the rule against the build, and it also showed the rule was the more complete of the two enumerations.
+    </div>
+
+    <h2 id="built">What ② built</h2>
+
+    <table data-c="tbl-built">
+      <thead><tr><th>File</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>ui/eslint.config.js</code></td>
+          <td>ESLint 9 flat config. <code>typescript-eslint</code>'s parser, one plugin (<code>design</code>), one rule. Deliberately <strong>not</strong> the recommended rule set — this WU is about the vocabulary, and a hundred unrelated reds would bury it.</td>
+        </tr>
+        <tr>
+          <td><code>ui/eslint-rules/classes.js</code></td>
+          <td>The shared half: the class-list oracle, the classifier, and the AST walk that finds classes. Two consumers — the rule and the reconciler — so the enumeration cannot drift between what is enforced and what is verified.</td>
+        </tr>
+        <tr>
+          <td><code>ui/eslint-rules/vocabulary.js</code></td>
+          <td>The rule itself: reporting, and the <code>design-allow:</code> pragma with its three rejection paths.</td>
+        </tr>
+        <tr>
+          <td><code>ui/eslint-rules/vocabulary.test.js</code></td>
+          <td>ESLint's <code>RuleTester</code> — 9 valid, 8 invalid — plus the cross-scale collision assertion. Runs inside the existing <code>vitest</code> suite; no second runner.</td>
+        </tr>
+        <tr>
+          <td><code>ui/eslint-rules/reconcile.mjs</code></td>
+          <td>Requirement 5, as a re-runnable script rather than a session's shell history. Builds the stylesheet with PostCSS, parses the emitted selectors, and diffs them against the rule's verdict for every class the tree authors.</td>
+        </tr>
+        <tr>
+          <td><code>xtask/src/ui.rs</code></td>
+          <td><code>cargo xtask ui build</code> runs <code>pnpm lint</code> before <code>pnpm build</code>, so the Rust-side gate reaches the check too.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="oracle">How the rule decides — one list, no prefix table</h2>
+
+    <div class="callout">
+      <strong>A class is legal iff Tailwind's own <code>getClassList()</code> for the closed config contains it.</strong> That list is 5,129 entries generated <em>from</em> the config, not transcribed from it. Requirement 1 falls out for free: the list holds whole class names, so classification is on the resolved <strong>(prefix, value)</strong> pair by construction. <code>text-center</code> is in it, <code>text-body</code> is in it, <code>text-lg</code> is not — and no hand-written table of overloaded prefixes exists to go stale.
+    </div>
+
+    <div class="diagram" data-c="dia-decide">
+      <pre class="mermaid">flowchart TD
+  A["a class token"] --> B["strip variants and !<br/>hover:focus-visible:!text-ink → text-ink"]
+  B --> C{"in getClassList()?"}
+  C -->|yes| L["legal — silently"]
+  C -->|no| D{"carries [ … ]?"}
+  D -->|yes| E{"design-allow pragma<br/>on the line above?"}
+  E -->|"yes, and no bare size in it"| L
+  E -->|no| R1["RED — arbitrary value"]
+  D -->|no| F{"base/modifier split?"}
+  F -->|"base legal, modifier in opacity scale"| L
+  F -->|"base legal, modifier is not"| R2["RED — off-scale opacity step"]
+  F -->|otherwise| R3["RED — not in the vocabulary"]</pre>
+      <div class="caption">Hình 1 — the decision path. Every red names the class and points at <code>ui/tailwind.config.js</code>; the squiggle lands on the class itself, not on the line.</div>
+    </div>
+
+    <h2 id="reads">What the rule reads — and the two things it deliberately does not</h2>
+
+    <table data-c="tbl-reads">
+      <thead><tr><th>Scope</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Seeds at <code>className</code></strong>, then follows every identifier it references to that identifier's declaration, transitively, anywhere in the file</td>
+          <td><strong>Requirement 2.</strong> Anchoring on the attribute misses <code>MethodLabel</code>'s <code>METHOD_COLOR</code> map entirely — and that map holds the five classes this WU exists to retire. A rule with that blind spot reports the WU's headline change as already done. Function declarations are followed too, not just <code>const</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>Value positions only</strong> — comparisons, call arguments, conditional tests, object keys and TS type nodes are not classes and are not walked</td>
+          <td>Found empirically. Following <code>const outcomeClass = state === "confirming" ? … : …</code> into its <em>test</em> produced a red on the string <code>"confirming"</code>. The first run had 19 such false positives across <code>Button</code>, <code>CopyButton</code>, <code>CopyText</code> and <code>Onboarding</code>; scoping to value positions removed all 19 and cost nothing real.</td>
+        </tr>
+        <tr>
+          <td><strong>Not test files.</strong> <code>src/**/*.test.{ts,tsx}</code> has the rule off</td>
+          <td>Tests assert on class names, including deliberate fragments — <code>not.toContain("text-method-")</code>, <code>not.toContain("bg-")</code>, <code>/text-(ok|warn|ink-mute)/</code>. Judging them would red the very assertions that hold the vocabulary in place. Stated here rather than buried: this is a real hole, and a class that exists only inside a test file is invisible to the rule.</td>
+        </tr>
+        <tr>
+          <td><strong>Reported, never skipped:</strong> a class the rule cannot resolve</td>
+          <td>A template quasi that runs into an interpolation holds half a class name, and half a class name is exactly how an off-list value would hide. <code>{`text-${tone}`}</code> reds as <em>unresolvable</em>. This tree has zero such sites today; the case is covered by a <code>RuleTester</code> pair so it stays that way.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="reqs">The five binding requirements — how each is met and what proves it</h2>
+
+    <table data-c="tbl-reqs">
+      <thead><tr><th>#</th><th>How it is met</th><th>Proof</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>1</strong></td>
+          <td>Membership in <code>getClassList()</code>, which is keyed on whole class names — the (prefix, value) pair, never the prefix.</td>
+          <td>A <code>RuleTester</code> valid case carrying <code>text-center border-none outline-none font-mono</code> — one class per overloaded prefix, all four silent. Over the real tree: <strong>zero</strong> false positives.</td>
+        </tr>
+        <tr>
+          <td><strong>2</strong></td>
+          <td>Identifier-following from <code>className</code>, transitive, any scope.</td>
+          <td>The five <code>text-method-*</code> classes were in the first red list, reported at <code>MethodLabel.tsx:2-6</code> — inside the map, not at the attribute. They were also the reason the map was reachable at all. Mirrored by an invalid <code>RuleTester</code> case.</td>
+        </tr>
+        <tr>
+          <td><strong>3</strong></td>
+          <td>Any <code>[…]</code> in the base class reds, before any list lookup.</td>
+          <td>All 13 arbitrary classes were red on the first run while the built CSS emitted every one of them — <a href="#reconcile">the reconciliation</a> shows exactly this divergence, and it is the whole argument for the rule's existence.</td>
+        </tr>
+        <tr>
+          <td><strong>4</strong></td>
+          <td>Mechanised as a duplicate check: if two scales sharing a prefix share a token name, that class appears <strong>twice</strong> in <code>getClassList()</code>.</td>
+          <td>Two vitest cases: the shipped config has no duplicates; re-adding <code>borderWidth.hairline</code> puts <code>border-hairline</code> in the duplicate list. ①'s defect is now a failing test, not a diff someone has to remember to run.</td>
+        </tr>
+        <tr>
+          <td><strong>5</strong></td>
+          <td><code>node eslint-rules/reconcile.mjs</code> — re-runnable, exits non-zero on any unexplained divergence.</td>
+          <td>See below. It also found the 5 classes ① missed.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="reconcile">The reconciliation</h2>
+
+    <table data-c="tbl-reconcile">
+      <thead><tr><th>Measure</th><th>Before ②</th><th>After ②</th></tr></thead>
+      <tbody>
+        <tr><td>distinct classes authored in <code>ui/src/</code> (non-test)</td><td>224</td><td>208</td></tr>
+        <tr><td>— scale-bearing</td><td>177</td><td>161</td></tr>
+        <tr><td>— structural</td><td>47</td><td>47</td></tr>
+        <tr><td>classes the built stylesheet emits</td><td>203</td><td>235</td></tr>
+        <tr><td>classes the classifier reds</td><td>58</td><td>3, all pragma-covered</td></tr>
+        <tr><td><strong>rule ↔ built CSS</strong></td><td>agree on 211, 13 arbitrary diverge</td><td><strong>agree on 205, 3 arbitrary diverge</strong></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>The split is now measured: 161 scale-bearing / 47 structural, over 208 distinct classes.</strong> Not this plan's 103/77 and not ⓪'s provisional 144/56. The discriminator is mechanical and needs no allowlist: a class is <strong>structural</strong> iff Tailwind registers it whole (a static utility — <code>absolute</code>, <code>truncate</code>, <code>text-center</code>) rather than generating it from a theme key. Structural classes carry no value a scale could govern, so closing a scale can never reach them. This is the figure DEC-17 should quote.
+    </div>
+
+    <div class="callout warn">
+      <strong>The 3 remaining divergences are the point, not a leak.</strong> They are the pragma'd template shapes — Tailwind emits an arbitrary value whether or not the config is closed, so the CSS says "legal" and the rule says "declare your intent". Read the reconciliation as: on everything the config <em>can</em> govern, two independent instruments agree; on the 3 it cannot, the rule is the only instrument there is.
+    </div>
+
+    <h2 id="worklist">The first red list — 142 sites, 58 classes</h2>
+
+    <div class="callout">
+      Written before the re-expression, exactly as the plan requires. The rule ran against the tree ① left behind and produced <strong>142 violations over 58 distinct classes in 21 files</strong>. Every one was a genuine dead class: <strong>zero</strong> false positives survived the value-position scoping. That red list <em>was</em> the worklist — no scanner, no estimate, no reading of the plan's tables.
+    </div>
+
+    <table data-c="tbl-reexpress">
+      <thead><tr><th>Family</th><th>Dead → token</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Chromatic</strong><br>5 classes</td>
+          <td><code>text-method-get</code>→<code>text-ok</code> · <code>-post</code>→<code>text-create</code> · <code>-put</code>→<code>text-replace</code> · <code>-patch</code>→<code>text-amend</code> · <code>-delete</code>→<code>text-warn</code>. See <a href="#chromatic">the chromatic set</a>.</td>
+          <td>identical — every hex unchanged</td>
+        </tr>
+        <tr>
+          <td><strong>Type sizes</strong><br>3 classes, 28 sites</td>
+          <td><code>text-xs</code>→<code>text-body</code> · <code>text-sm</code>→<code>text-note</code> · <code>text-lg</code>→<code>text-title</code></td>
+          <td>identical — 12px · 14px · 18px</td>
+        </tr>
+        <tr>
+          <td><strong>Sub-8px chrome</strong><br>9 classes, 38 sites</td>
+          <td><code>py-1</code> <code>pt-1</code> <code>mt-1</code> → <code>*-chrome-y</code> · <code>py-0.5</code> <code>pt-0.5</code> <code>mt-0.5</code> <code>py-[2px]</code> → <code>*-chrome-tight</code> · <code>mt-1.5</code>→<code>mt-chrome-gap</code> · <code>gap-y-1</code>→<code>gap-y-grid-gap-y</code></td>
+          <td>identical — 4px · 2px · 6px · 4px</td>
+        </tr>
+        <tr>
+          <td><strong>Named extents</strong><br>9 classes, 10 sites</td>
+          <td><code>w-20</code>→<code>w-field-sm</code> · <code>w-40</code>→<code>w-field-lg</code> · <code>w-52</code>→<code>w-pane-narrow</code> · <code>w-64</code>→<code>w-pane-label</code> · <code>min-w-32</code>→<code>min-w-field</code> · <code>max-h-64</code>→<code>max-h-body-max</code> · <code>max-w-sm</code>→<code>max-w-dialog-max</code> · <code>w-2.5</code> <code>h-2.5</code>→<code>*-spinner</code></td>
+          <td>identical</td>
+        </tr>
+        <tr>
+          <td><strong>Type · stacking · focus</strong><br>7 classes</td>
+          <td><code>tracking-wide</code>→<code>tracking-label</code> · <code>leading-relaxed</code>→<code>leading-loose</code> · <code>z-10</code> <code>z-20</code> <code>z-50</code>→<code>z-sticky</code> <code>z-popup</code> <code>z-modal</code> · <code>outline-1</code>→<code>outline-focus</code> · <code>outline-offset-2</code>→<code>outline-offset-focus</code> · <code>-outline-offset-1</code>→<code>outline-offset-focus-inset</code></td>
+          <td>identical</td>
+        </tr>
+        <tr>
+          <td><strong>Slash opacity</strong><br>4 classes</td>
+          <td><code>bg-canvas-soft/30</code>→<code>/wash</code> · <code>border-hairline/40</code>→<code>/hairline</code> · <code>border-hairline/50</code>→<code>/scrim</code> · <code>bg-black/50</code>→<code>bg-scrim</code></td>
+          <td>identical</td>
+        </tr>
+        <tr>
+          <td><strong>Arbitrary, retired to tokens</strong><br>7 classes</td>
+          <td><code>text-[11px]</code>→<code>text-chrome</code> · <code>border-[1.5px]</code>→<code>border-emphasis</code> · <code>min-w-[132px]</code>→<code>min-w-control-min</code> · <code>max-h-[184px]</code>→<code>max-h-listing-max</code> · <code>w-[380px]</code>→<code>w-pane</code> · <code>underline-offset-[3px]</code>→<code>underline-offset-link</code> · <code>min-h-[18px]</code>→<code>min-h-line</code></td>
+          <td>identical</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="changed">Nine classes could not be re-expressed at the same value — named, not buried</h2>
+
+    <div class="callout warn">
+      A closed vocabulary has fewer members than an open one by construction, so some sites move to the nearest listed decision. <strong>17 sites across 9 classes change a value.</strong> Each is a decision, and each is recorded here so that a design review can overrule it rather than discover it.
+    </div>
+
+    <table data-c="tbl-changed">
+      <thead><tr><th>Was</th><th>Now</th><th>Change</th><th>Why this token</th></tr></thead>
+      <tbody>
+        <tr><td><code>px-1</code> ×3</td><td><code>px-chrome-x</code></td><td>4px → 8px</td><td>The only <em>horizontal</em> chrome pad the config names. The alternative — <code>chrome-y</code>, exact at 4px — names a vertical decision, and using it sideways is how a token stops meaning anything.</td></tr>
+        <tr><td><code>mx-1</code> ×1</td><td><code>mx-chrome-gap</code></td><td>4px → 6px</td><td>A separator dot's side margin <em>is</em> the gap between chrome elements.</td></tr>
+        <tr><td><code>gap-1</code> ×2</td><td><code>gap-chrome-gap</code></td><td>4px → 6px</td><td><code>BodyViewer</code>'s horizontal toolbars. The 7 vertical <code>flex flex-col gap-1</code> in <code>Gallery</code> took <code>gap-chrome-y</code> instead — exact at 4px, and a genuinely vertical gap.</td></tr>
+        <tr><td><code>pl-5</code> ×5</td><td><code>pl-6</code></td><td>20px → 24px</td><td>The <code>&lt;ol&gt;</code> marker gutter. 20px is off the 8px layout scale entirely; 24px is the step it sits between.</td></tr>
+        <tr><td><code>w-24</code> ×1</td><td><code>w-field-sm</code></td><td>96px → 80px</td><td>The method filter. The field ladder is 80/128/160; 96 is the one width with no rung. Method and status are both short-token filters, so they now share the small field.</td></tr>
+        <tr><td><code>underline-offset-2</code> ×1</td><td><code>underline-offset-link</code></td><td>2px → 3px</td><td>One link offset for the app; the other site already used 3px.</td></tr>
+        <tr><td><code>py-[5px]</code> ×1</td><td><code>py-control-y</code></td><td>5px → 3px</td><td><code>Select</code>'s message row now shares the vertical pad of the option rows beside it — which is the decision the one-off was avoiding.</td></tr>
+        <tr><td><code>disabled:opacity-40</code> ×2<br><code>disabled:opacity-60</code> ×1</td><td><code>disabled:opacity-disabled</code></td><td>.4/.6 → .38</td><td>Drift beside an existing token, exactly as ① called it. Three disabled buttons now dim identically.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="chromatic">The chromatic set — extended by three, on review</h2>
+
+    <div class="callout">
+      <strong>①'s reading of the D3 ruling was too strong, and step ② corrected it on review.</strong> "Only listed tokens are allowed" is not "delete what the list cannot yet express" — a colour that a component needs and the palette lacks is a gap in the palette. Fork D1 stands: <strong>verbs stay colour-coded, at exactly the five hues W5 shipped</strong>. What changed is that no token is named after its consumer any more.
+    </div>
+
+    <table data-c="tbl-chromatic">
+      <thead><tr><th>Verb</th><th>Was</th><th>Now</th><th>Hex</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td>GET</td><td><code>method-get</code></td><td><code>ok</code></td><td>#4cc38a</td><td><strong>no new token</strong> — byte-identical aliases</td></tr>
+        <tr><td>POST</td><td><code>method-post</code></td><td><code>create</code></td><td>#e5bf4d</td><td>new palette member</td></tr>
+        <tr><td>PUT</td><td><code>method-put</code></td><td><code>replace</code></td><td>#e5924d</td><td>new palette member</td></tr>
+        <tr><td>PATCH</td><td><code>method-patch</code></td><td><code>amend</code></td><td>#a78bfa</td><td>new palette member</td></tr>
+        <tr><td>DELETE</td><td><code>method-delete</code></td><td><code>warn</code></td><td>#e5484d</td><td><strong>no new token</strong> — byte-identical aliases</td></tr>
+        <tr><td>HEAD · OPTIONS · CONNECT · TRACE · other</td><td colspan="2"><code>ink-body</code> — fork D3, unchanged</td><td>#c9c0ad</td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Two of the five needed no extension at all.</strong> <code>method-get</code> was <code>#4cc38a</code> and so is <code>ok</code>; <code>method-delete</code> was <code>#e5484d</code> and so is <code>warn</code>. W2's fork D1 said as much in prose — <em>"GET shares the ok hue and DELETE the warn hue deliberately — same semantic family"</em> — and nobody had noticed that made two of the eight deleted tokens pure aliases. Verified against the built stylesheet: all five selectors emit their original RGB.
+    </div>
+
+    <div class="callout warn">
+      <strong>What this costs the rulebook, stated plainly.</strong> <code>zero-accent</code> cannot become the one-sentence rule the discussion wanted — the chromatic set is <strong>five</strong>, not two. The difference from the pre-W6 state is not the count: it is that the list now lives in <em>one</em> place, is mechanically enforced against <code>ui/src/</code>, and is named for meaning rather than for a consumer. A sixth tint still requires a config edit under review — it cannot arrive as an arbitrary value or an inherited default, which is how the previous three did. ③ writes <code>zero-accent</code> as a five-member set with a <code>chromatic-meanings</code> row per member, and adds the three new rows.
+    </div>
+
+    <h2 id="tokens">Three spacing/weight tokens added — and one scale ① left open</h2>
+
+    <table data-c="tbl-tokens">
+      <thead><tr><th>Added</th><th>For</th></tr></thead>
+      <tbody>
+        <tr><td><code>spacing.verb</code> = 4.5ch</td><td><code>MethodLabel</code>'s fixed slot. A ch value in a px scale on purpose — the slot is sized by its content, and the design file's fork D2 settled ch precisely so the slot self-calibrates with the mono font.</td></tr>
+        <tr><td><code>spacing.line</code> = 18px</td><td><code>StatusLine</code>'s minimum row height — one chrome line box that never collapses. Shares a value with <code>step-marker</code> and not a decision: that one is a marker column's width.</td></tr>
+        <tr><td><code>fontWeight</code> = <code>normal</code> 400</td><td><strong>A finding, and one the lint rule could never have made: <code>fontWeight</code> was still open.</strong> ① closed 16 scales and this was not among them, so all nine Tailwind magnitudes resolved — <code>font-bold</code> was legal and nothing would have said so. An open scale produces no red by construction; only reading the config finds it. Closed at one member because the UI renders one weight. <strong>③ owes a sweep for any other scale ① left open.</strong></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="pragmas">Six pragmas — every one a template shape</h2>
+
+    <table data-c="tbl-pragmas">
+      <thead><tr><th>Site</th><th>Class</th></tr></thead>
+      <tbody>
+        <tr><td><code>BodyViewer</code> · <code>FlowDetail</code> · <code>Gallery</code> · <code>FormRenderer</code></td><td><code>grid-cols-[auto_1fr]</code> — a two-column shape with no size in it at all</td></tr>
+        <tr><td><code>StepList</code></td><td><code>grid-cols-[theme(spacing.step-marker)_1fr]</code> — was <code>[18px_1fr]</code>; the 18px is now a token reference, so only the shape is suppressed</td></tr>
+        <tr><td><code>Select</code></td><td><code>top-[calc(100%+theme(spacing.chrome-y))]</code> — was <code>calc(100%+4px)</code>; same treatment</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>The pragma cannot cover a size, and the rule enforces that three ways</strong> rather than trusting the author: the class must carry an arbitrary value at all · that value must not be a bare length (<code>// design-allow: text-[11px] — …</code> is rejected, not suppressed) · and the named class must appear on the line below, so an edited line stops matching and reds. A missing reason reds. Each path has its own <code>RuleTester</code> case.
+    </div>
+
+    <div class="callout warn">
+      <strong>The pragma lives inside the <code>className</code> expression, not above the element.</strong> <code>className={ /* … */ "grid grid-cols-[auto_1fr]" }</code>. JSX has no comment position inside an opening tag, and a <code>{/* … */}</code> sibling is only available when the element has a parent — the expression container works everywhere and keeps the pragma adjacent to the class it excuses.
+    </div>
+
+    <h2 id="methodlabel">MethodLabel — what actually changed</h2>
+
+    <table data-c="tbl-methodlabel">
+      <thead><tr><th>Before</th><th>After</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>A <code>METHOD_COLOR</code> map onto five consumer-named tokens.</td>
+          <td>A <code>METHOD_TONE</code> map onto five palette tokens. Same shape, same five colours, same fallback — the map now points at the vocabulary instead of owning its own corner of it.</td>
+        </tr>
+        <tr>
+          <td>5 test rows asserting one token per verb; 5 asserting the fallback.</td>
+          <td>The same 5 rows with the new token names — <strong>exactly the "5 rows change by design" the plan predicted</strong> — the same 5 fallback rows, now also asserting the fallback carries <em>none</em> of the five tones, plus one test that no method-named token survives anywhere. <strong>+1 test.</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Nothing a user sees changed.</strong> <code>docs/work/components/method-label.html</code> carries a banner saying so: fork D1 stands and fork D3 is untouched; only the token names moved. The file is rewritten in full at the WU's distillation, as the plan schedules it.
+    </div>
+
+    <h2 id="gate">Gate</h2>
+
+    <table data-c="tbl-gate">
+      <thead><tr><th>Check</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><code>npm run lint</code> over all of <code>ui/src/</code></td><td>green — 142 → 0</td></tr>
+        <tr><td>reconciled once against the built CSS</td><td>agree on 205; 3 arbitrary diverge by design</td></tr>
+        <tr><td><code>npx vitest run</code></td><td>467 / 467 across 39 files</td></tr>
+        <tr><td><code>npx tsc -b</code></td><td>clean</td></tr>
+        <tr><td><code>cargo fmt --check</code> · <code>cargo clippy -D warnings</code> · <code>cargo test --all</code></td><td>clean · clean · 182 green</td></tr>
+        <tr><td><code>cargo xtask ui specimens --check</code></td><td>all migrated design files render</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <strong>Two holes, named at the gate rather than at review.</strong> The rule is off for test files, so a class that lives only in a test is unseen — accepted because tests assert on class-name fragments by design. And an <em>open</em> scale is invisible to the rule by construction: <code>fontWeight</code> was legal-because-unclosed, and nothing red until a human read the config. ③ owes a sweep for any other scale ① left open.
+    </div>
+
+    <h2 id="review">What code review found — two defects in the rule itself</h2>
+
+    <div class="callout warn">
+      <strong>The gate above was green and the rule was still wrong twice.</strong> Both defects are in <code>classify</code>/<code>collectClasses</code> — the rule's own judgement, the one thing no test in the app can reach. Neither was findable by running the rule over <code>ui/src/</code>, because both are <em>silences</em>: the rule said nothing where it should have spoken.
+    </div>
+
+    <table data-c="tbl-review">
+      <thead><tr><th>Defect</th><th>What it did</th><th>Why the gate missed it</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Identifier map keyed by bare name</td>
+          <td>Two functions in one file each holding <code>const cls = …</code> overwrote each other; only the last-declared binding's classes were ever checked, the earlier one dropped with no report.</td>
+          <td>The shape occurs nowhere in <code>ui/src/</code> — six names repeat in the tree (<code>stored</code>, <code>res</code>, <code>mime</code>, <code>live</code>, <code>auto</code>, <code>at</code>) and none hold a class string. A rule cannot red what nobody wrote.</td>
+          <td>Every declaration of a name is kept, not just the last. False-negative only, so no site changed verdict.</td>
+        </tr>
+        <tr>
+          <td><code>/step</code> checked against one global opacity list</td>
+          <td><code>rounded-full/wash</code>, <code>z-popup/wash</code>, <code>border/hairline</code> all classified <strong>legal</strong> while Tailwind emits <em>nothing at all</em> — not even the base utility. And <code>text-body/loose</code>, which is legal, was reported.</td>
+          <td>All four live <code>/</code> sites are colour-bearing (<code>bg-canvas-soft/wash</code>, <code>border-hairline/hairline</code>, <code>border-hairline/scrim</code> ×2), so the correct and the broken rule agree on every class the app actually authors.</td>
+          <td>Each base's modifier scale comes from <code>getClassList({includeMetadata:true})</code> — Tailwind's own per-class list, so the check needs no colour-prefix table any more than the base check needed a prefix table.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>The second defect falsifies a sentence the plan and this doc both wrote.</strong> Both said the split is "colour token + opacity modifier, each checked against its own scale". The code checked the base against the <em>undifferentiated</em> class list and the step against a global opacity set — so the modifier half was never checked against its own scale at all. <code>text-</code> is the prefix where that bites: it is a colour prefix and a size prefix at once, which is the same overload requirement 1 exists to handle, one level down. Fixing it turned out to <em>widen</em> the vocabulary as well as narrow it — <code>text-body/loose</code> sets a line height and was previously reported as a bad opacity step.
+    </div>
+
+    <div class="callout warn">
+      <strong>The honest lesson for ③.</strong> ①'s defects were found by diffing built CSS; ②'s were found only by an adversarial reader of the rule's source. Both of ②'s defects are invisible to <em>every</em> mechanism this WU built — the lint run, the reconciler, and the 467 tests all stayed green through both. The rule's own unit tests are the only surface that can hold them, which is why the fix for each landed as a failing RuleTester case first. The rule count is now 23.
+    </div>
+
+    <h2 id="next">What ② hands to ③</h2>
+
+    <div class="callout">
+      The vocabulary is closed <em>and</em> enforced against <code>ui/src/</code> — the first time either has been true. ③ revises the KB against a config that is now the only member list, with four facts it must carry: the measured <strong>161/47</strong> split (not 144/56), the <code>design-allow:</code> pragma's rules as the rule enforces them, <code>zero-accent</code> as a <strong>five</strong>-member chromatic set with a <code>chromatic-meanings</code> row for <code>create</code> · <code>replace</code> · <code>amend</code>, and <code>fontWeight</code> as evidence that "closed" is a property to be checked per scale rather than asserted once.
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

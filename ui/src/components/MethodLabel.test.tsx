@@ -9,23 +9,29 @@ const classOf = (method: string) => {
 
 describe("MethodLabel", () => {
   it.each([
-    ["GET", "text-method-get"],
-    ["POST", "text-method-post"],
-    ["PUT", "text-method-put"],
-    ["DELETE", "text-method-delete"],
-    ["PATCH", "text-method-patch"],
-  ])("%s carries its own token", (method, token) => {
-    expect(classOf(method)).toContain(token);
+    ["GET", "text-ok"],
+    ["POST", "text-create"],
+    ["PUT", "text-replace"],
+    ["PATCH", "text-amend"],
+    ["DELETE", "text-warn"],
+  ])("%s carries the tone of what it does to the resource", (method, tone) => {
+    expect(classOf(method)).toContain(tone);
   });
 
   it.each(["HEAD", "OPTIONS", "CONNECT", "TRACE", "PROPFIND"])(
-    "%s falls back to body tone rather than inventing a colour",
+    "%s falls back to body ink rather than inventing a tone",
     (method) => {
       const className = classOf(method);
       expect(className).toContain("text-ink-body");
-      expect(className).not.toContain("text-method-");
+      expect(className).not.toMatch(/text-(ok|create|replace|amend|warn)\b/);
     },
   );
+
+  it("draws every tone from the closed palette — no method-named token survives", () => {
+    for (const method of ["GET", "POST", "PUT", "PATCH", "DELETE", "PROPFIND"]) {
+      expect(classOf(method)).not.toContain("text-method-");
+    }
+  });
 
   it("renders the verb uppercase whatever the API's casing", () => {
     render(<MethodLabel method="get" />);
@@ -33,8 +39,8 @@ describe("MethodLabel", () => {
   });
 
   it("holds a fixed-width slot, so a 7-char verb never pushes the next column", () => {
-    expect(classOf("OPTIONS")).toContain("min-w-[4.5ch]");
-    expect(classOf("GET")).toContain("min-w-[4.5ch]");
+    expect(classOf("OPTIONS")).toContain("min-w-verb");
+    expect(classOf("GET")).toContain("min-w-verb");
   });
 
   it("never truncates or abbreviates the verb — the wire word is the whole word", () => {

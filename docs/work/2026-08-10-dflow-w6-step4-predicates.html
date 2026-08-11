@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a797a0f9f34851f0dfab407">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W6 step 4 (the twelve predicates + the pragma)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W6 step ④ — every hard rule is now machine-checked</h1>
+      <p>Twelve predicates, the <code>design-allow</code> pragma on the design surface, and a
+         vocabulary bridge that hands Rust the same closed config the lint rule reads. Run over
+         both archived runs before it was believed.</p>
+      <div class="meta">Step record · 2026-08-10 · Trawler · T3 (docs/work/) · wu/design-flow/revise-rulebook ·
+        plan: <a href="2026-08-03-dflow-w6-plan.html">W6 ④</a> ·
+        previous: <a href="2026-08-10-dflow-w6-step3-rulebook.html">③ the rulebook</a> ·
+        target: <a href="../design-rules/design-rules-index.html">the KB</a> · <code>xtask/src/doc.rs</code></div>
+    </div>
+  </header>
+
+  <main>
+    <h2 id="verdict">Verdict</h2>
+    <div class="cards" data-c="verdict-cards">
+      <div class="card"><h3>13 / 13</h3><p>hard rules machine-checked <strong>(design)</strong> — the gap line
+        prints the surface label and has no unchecked tail left to print</p></div>
+      <div class="card"><h3>12 + 1</h3><p>new predicates, plus the pragma. <code>colour-tokens-only</code>
+        was widened to read the config rather than only grep for literals</p></div>
+      <div class="card"><h3>49 reds</h3><p>over the two archived runs — every one judged, none from a
+        predicate that had to be softened</p></div>
+      <div class="card"><h3>2 defects</h3><p>found the only way anything in this WU has been found: by reading
+        the artifact. Both are step ① fallout, both live, both invisible to the gate</p></div>
+      <div class="card"><h3>621 tests</h3><p>147 Rust (87 in <code>doc.rs</code>) · 474 vitest · clippy, fmt,
+        tsc, eslint and the specimen render check all clean</p></div>
+    </div>
+
+    <h2 id="bridge">The vocabulary bridge — one oracle, two languages</h2>
+    <p>Five predicates judge classes against <code>ui/tailwind.config.js</code>. Rust cannot read an ES
+       module, and a transcribed copy is the drift DEC-17 exists to end.</p>
+
+    <div class="diagram" data-c="bridge-diagram">
+      <pre class="mermaid">
+flowchart LR
+  CFG["ui/tailwind.config.js
+  the closed vocabulary"] --> CL["ui/eslint-rules/classes.js
+  Tailwind's own getClassList()"]
+  CL --> LINT["design/vocabulary
+  judges ui/src/"]
+  CL --> EMIT["scripts/design-vocabulary.mjs
+  emits JSON"]
+  EMIT --> RS["xtask/src/doc.rs
+  judges the design run"]
+  CFG -.->|"scale emptied,
+  list re-generated"| EMIT
+  style CFG fill:#2b3a2b,stroke:#4cc38a
+      </pre>
+      <div class="caption">The same class list feeds both surfaces. Nothing about Tailwind is written twice —
+        which classes a rule owns is <em>derived</em>, by emptying its scale and diffing the list.</div>
+    </div>
+
+    <table data-c="bridge-table">
+      <thead><tr><th>What the emitter hands over</th><th>Derived how</th><th>Who reads it</th></tr></thead>
+      <tbody>
+        <tr><td><code>legal</code> — 4 817 emittable classes</td><td>Tailwind's <code>getClassList()</code> over the closed config, via the lint rule's own module</td><td>all five vocabulary rules</td></tr>
+        <tr><td><code>rules</code> — the prefixes each hard rule governs</td><td>a scale's classes are the ones that stop emitting when it is emptied; its prefixes are what remains once the token name is taken off</td><td>which rule a stray class answers to</td></tr>
+        <tr><td><code>values</code> — the literal magnitudes each rule's scales define</td><td>the resolved theme, flattened</td><td>the mockup's own <code>.a-</code> CSS</td></tr>
+        <tr><td><code>modifiers</code> — 492 bases that carry a <code>/step</code></td><td><code>getClassList({includeMetadata})</code></td><td>so <code>bg-canvas/wash</code> passes and <code>bg-canvas/loose</code> does not</td></tr>
+        <tr><td><code>chromatic</code> — the eight</td><td><strong>measured, not listed</strong>: a colour is chromatic when its channels disagree by more than 40. The palette's warmest neutral spans 28 (<code>ink-body</code>) and its faintest chromatic token 47 (<code>syn-str</code>) &mdash; <span class="badge id">⑥-corrected</span> the figures first recorded here, 27 and 57, matched no token in the config</td><td><code>zero-accent</code></td></tr>
+      </tbody>
+    </table>
+    <p class="meta">One hand-written table survives in the emitter, and it is a statement about the
+      <em>rulebook</em>, not about Tailwind: which scales each rule governs. <code>spacing-scale</code> owns
+      <code>maxWidth</code> because the rulebook says magnitudes come from one ladder.</p>
+
+    <h2 id="predicates">The twelve, and what each actually reads</h2>
+    <table data-c="predicate-table">
+      <thead><tr><th>Slug</th><th>What the predicate reads</th><th>Teeth on a shipped run</th></tr></thead>
+      <tbody>
+        <tr><td><code>spacing-scale</code></td><td>every spacing class ∈ the legal list; every magnitude in the mockup's own <code>.a-</code> CSS ∈ the config's spacing values</td><td><code>w-[4.5ch]</code> · <code>max-h-[200px]</code> · <code>min-h-[36px]</code> · <code>py-[2px]</code> · <code>max-w-[460px]</code> · <code>min-width:12ch</code> · <code>min-width:16ch</code></td></tr>
+        <tr><td><code>type-tokens-only</code></td><td>type classes and type declarations, same two surfaces</td><td><code>tracking-[.05em]</code> · <code>tracking-[.06em]</code> · <code>leading-[1.6]</code> · <code>leading-relaxed</code> · <code>letter-spacing:.05em</code> ×3 · <code>line-height:1.7</code></td></tr>
+        <tr><td><code>colour-tokens-only</code></td><td>literals in the doc's CSS <em>(shipped W4)</em> + every colour class resolves</td><td><code>outline-1</code> · <code>outline-offset-2</code> · <code>border-2</code> — classes that emit nothing at all since ① closed the config</td></tr>
+        <tr><td><code>radius-tokens</code></td><td><code>rounded-*</code> classes and <code>border-radius</code> declarations</td><td><code>rounded-[2px]</code>, in both runs</td></tr>
+        <tr><td><code>zero-accent</code></td><td>an inline chromatic value — see <a href="#narrowed">what closing the config did to this rule</a></td><td>none in either run, and the reason is a good one</td></tr>
+        <tr><td><code>uppercase-mute-labels</code></td><td>whatever is uppercase and is not <code>font-mono</code>, on both the class surface and the CSS surface</td><td><strong>8 sightings.</strong> Both runs wrote their labels' tracking by hand — one as an arbitrary class, one as a declaration</td></tr>
+        <tr><td><code>colour-plus-text</code></td><td>an element painted with a chromatic token carries text of its own</td><td>clean on both — the rule was already being kept</td></tr>
+        <tr><td><code>wrap-not-truncate</code></td><td>no payload element carries <code>truncate</code>/<code>text-ellipsis</code>/<code>whitespace-nowrap</code>; <code>data-wire</code> and <code>font-mono</code> both make an element one</td><td>clean on both. Run #2's <code>whitespace-nowrap</code> sits on a duration, which is chrome</td></tr>
+        <tr><td><code>mono-for-wire-data</code></td><td>every <code>data-wire</code> element carries the mono family — <a href="#contract">the one contract this step adds</a></td><td>both runs red as undeclared, which is the contract widening, not a defect in them</td></tr>
+        <tr><td><code>wire-order-preserved</code></td><td>ordering per <code>data-wire="collection"</code> row, n/a when a screen renders none</td><td>n/a on both</td></tr>
+        <tr><td><code>overflow-declared</code></td><td>an overflow line under the Layout sketch naming every zone the sketch draws — <strong>a range answers for what it spans</strong>, so "B–D" covers C</td><td>clean on both, and the range rule is why</td></tr>
+        <tr><td><code>state-declarations</code></td><td>every catalog row's states cell is filled; a <em>propose</em> row may not answer with an em dash, because it has no file to cite</td><td>clean on both</td></tr>
+        <tr><td><code>keyboard-parity</code></td><td>a keyboard path per use-case row; "— (passive)" is an answer</td><td>clean on both</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Run over both closed runs, before it was believed</h2>
+    <p>③ handed ④ a warning rather than a fact: every correction in this WU came from executing against the
+       real artifact, never from re-reading a document. So the predicates were pointed at run #2 and run #3
+       the moment they compiled, not at step ⑤.</p>
+
+    <table data-c="evidence-table">
+      <thead><tr><th>Red</th><th>Reds <span class="badge id">⑤-corrected</span></th><th>Judgement</th></tr></thead>
+      <tbody>
+        <tr><td>arbitrary <code>[…]</code> values</td><td>12 · <span class="meta">10 classes</span></td><td><strong>real.</strong> The rulebook says arbitrary sizes red, and most of these now <em>have</em> tokens — <code>w-[4.5ch]</code> became <code>w-verb</code>, <code>py-[2px]</code> became <code>py-chrome-tight</code>. The vocabulary was built out of these very runs</td></tr>
+        <tr><td>classes that emit nothing since ①</td><td>6 · <span class="meta">4 classes</span></td><td><strong>real.</strong> <code>outline-1</code>, <code>outline-offset-2</code>, <code>border-2</code>, <code>leading-relaxed</code> — closing the config killed them silently, exactly the failure mode ① documented and could not itself detect</td></tr>
+        <tr><td>raw magnitudes in the mockup's own CSS</td><td>7</td><td><strong>real, and the most interesting.</strong> Run #3's <code>.a-</code> block opens with a comment promising "zero component values re-typed" and then writes four. No class-reading check could ever have seen them</td></tr>
+        <tr><td>labels tracking by hand</td><td>8</td><td><strong>real.</strong> The same defect, found twice independently — an arbitrary class in run #2, a declaration in run #3</td></tr>
+        <tr><td><code>mono-for-wire-data</code> undeclared</td><td>2</td><td><strong>expected.</strong> A contract that did not exist when those runs were written. This is what <code>data-status="archived"</code> is for — <a href="2026-08-10-dflow-w6-step5-regression.html#finding">and ⑤ found run #3 never had it</a></td></tr>
+        <tr><td>receipt rows for ③'s three new soft rules</td><td>6</td><td><span class="badge id">⑤-corrected</span> <strong>expected, not pre-existing.</strong> <code>absence-names-itself</code>, <code>focus-returns-to-origin</code> and <code>choose-before-act</code> were adopted in this WU; a run written before them owes no row. Same class as the row above, and the residual below hid it</td></tr>
+        <tr><td>W4-era form checks — gists, <code>capabilities</code>, <code>avoid</code>-cited, <code>tune·drawn</code>, <code>frame·example</code></td><td>8</td><td><span class="badge id">⑤-corrected, was 18</span> pre-existing, run #2 only, and the same reason that run is archived</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="tally-corrected">
+      <strong>This table's total was right and its rows were not.</strong> <a href="2026-08-10-dflow-w6-step5-regression.html#judgement">⑤ re-ran the same 49 reds and counted them</a>: the first two rows counted distinct <em>classes</em> while the rest counted reds, and the last row was a residual computed to make the column add up rather than a count of anything. Six of that residual are the receipt rows now given their own row above — a contract <em>this WU</em> widened, filed as old debt. Real: <strong>33 reds across 29 distinct sites</strong>, which is where the <em>29</em> quoted throughout comes from.
+    </div>
+
+    <div class="callout" data-c="plan-deviation">
+      <strong>The plan said both runs would come back green; they did not, and the plan was wrong rather
+      than the predicates.</strong> ⑤'s rule — "a red here means the predicate is wrong, not the run" — holds
+      for a predicate that reds <em>correct</em> work. Twenty-nine of these reds are values that shipped past
+      a closed vocabulary, and the archived flag exists precisely so a tightened rule does not reopen a
+      closed record. Nothing was softened to make a number look better. Step ⑤ now has its input, and the
+      question it inherits is narrower than the plan expected: not "which predicate over-fits" but "which of
+      these twenty-nine, if any, is worth a follow-up against a live screen".
+    </div>
+
+    <h2 id="contract">The one contract this step adds: <code>data-wire</code></h2>
+    <p>Three rules turn on which elements render a verbatim payload. That is a fact about content, and no
+       static reader can recover it from markup — so the mockup declares it.</p>
+    <table data-c="wire-table">
+      <thead><tr><th>Written</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td><code>data-wire="&lt;what it is&gt;"</code></td><td>this element renders a verbatim payload — it must be mono, and it must wrap</td></tr>
+        <tr><td><code>data-wire="collection"</code></td><td>on a catalog row: this component renders a captured collection, so it owes an ordering</td></tr>
+        <tr><td><code>data-wire="none"</code></td><td>this screen renders no payload at all. The n/a path the rulebook already grants, said out loud</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">Silence is not the third answer. An unmarked mockup reads as correctly typed when nobody
+      looked — the same silence <code>capabilities·answered</code> and <code>elements·map</code> already
+      refuse.</p>
+
+    <h2 id="pragma">The pragma, on the second surface</h2>
+    <p>Step ② built <code>design-allow</code> for <code>ui/src/</code>. It is now the same escape on the
+       design run, deliberately with the same five rules, because two escapes that differ are two escapes to
+       learn.</p>
+    <table data-c="pragma-table">
+      <thead><tr><th>Rule</th><th>Why it is there</th></tr></thead>
+      <tbody>
+        <tr><td>names its class, and that class must be on the line below</td><td>an edited line stops matching, so a suppression cannot outlive the code it was written for</td></tr>
+        <tr><td>the reason is non-empty</td><td>mirrors the gate's <code>waived:</code> — an escape nobody justified is a hole</td></tr>
+        <tr><td>a pragma over a size is rejected, never honoured</td><td>a magnitude always has somewhere to be named. That is the whole point of closing the config</td></tr>
+        <tr><td>rejecting it suppresses nothing</td><td>the class still reds. A bad pragma must not be a working one</td></tr>
+        <tr><td>the live total prints on every run</td><td>suppressions are visible debt, not a silent hole</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="defects">Two defects, found by reading</h2>
+    <p>Neither is in ④'s scope. Both are step ① fallout, both were live on <code>main</code>'s branch tip,
+       and every check in the repo was green over them.</p>
+
+    <div class="diagram" data-c="defect-diagram">
+      <pre class="mermaid">
+flowchart TB
+  S1["W6 ① · theme.extend → theme
+  every scale moved up one level"] --> D1["doc-assets/components/tw-config.js
+  const { colors: c } = cfg.theme.extend"]
+  S1 --> D2["scripts/build-specimens.mjs
+  the same line, inside the bundle entry"]
+  D1 --> T1["throws on load —
+  every design doc's --a-* variables
+  never got published"]
+  D2 --> T2["throws on rebuild —
+  so the bundle was never rebuilt,
+  and shipped the pre-① palette"]
+  T1 --> G
+  T2 --> G
+  G["cargo xtask ui specimens --check: green
+  it rendered the stale bundle"]
+  style G fill:#3a2020,stroke:#e5484d
+      </pre>
+      <div class="caption">A generated artifact that cannot be regenerated stops being generated and starts
+        being a copy. The check passed because it read the copy.</div>
+    </div>
+
+    <table data-c="defect-table">
+      <thead><tr><th></th><th>Before</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td>the two files</td><td><code>cfg.theme.extend</code> — empty since ①, so <code>c.canvas</code> threw</td><td><code>cfg.theme</code>. Two words</td></tr>
+        <tr><td>the bundle</td><td>29 July, pre-①. Still carried <code>method-get</code> and the other deleted tokens</td><td>rebuilt; all six design files render, and the forced-rule counts drop where deleted tokens used to resolve</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="narrowed">Two honest limits, named rather than papered over</h2>
+    <table data-c="limits-table">
+      <thead><tr><th>Limit</th><th>What was chosen, and why</th></tr></thead>
+      <tbody>
+        <tr id="shared-prefix"><td><strong>A shared prefix reds under both rules that own it.</strong>
+          <code>text-pink-500</code> answers to <code>colour-tokens-only</code> and
+          <code>type-tokens-only</code> at once</td>
+          <td>An illegal class is illegal in <em>both</em> scales, and nothing in the string says which one
+            it meant to be. The alternative is a precedence rule, and a precedence rule silently exempts
+            whichever rule loses. Two truthful failures beat one arbitrary one. The visible cost: an outline
+            <em>width</em> like <code>outline-1</code> reports under the colour rule, because
+            <code>outline-</code> is a colour prefix</td></tr>
+        <tr><td><strong><code>zero-accent</code> is narrower than it reads.</strong> With the config closed,
+          no legal class can name a colour outside the chromatic set — the membership test is satisfied by
+          construction</td>
+          <td>What it still owns is the value written past the config: an inline chromatic colour, which the
+            vocabulary rule reds as untokenised and this one reds as chromatic. That is a real and separate
+            statement, and it is the honest remainder rather than a predicate pretending to more</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="hands-over">What ④ hands to ⑤</h2>
+    <ul>
+      <li>The predicates have <strong>already been run</strong> over both closed runs; ⑤ inherits the
+        judgement above rather than an unopened box — <a href="2026-08-10-dflow-w6-step5-regression.html">and
+        re-ran it, which is how the two corrections above were found</a>.</li>
+      <li>Twenty-nine real sites. <s>None reopens an archived run</s> — <span class="badge id">⑤-corrected</span>
+        <strong>run #3 was never archived</strong>, so its nineteen were live in the tree; ⑤ archives it on the
+        same grounds runs #1 and #2 were. The question for ⑤ was whether any of the twenty-nine is worth a
+        follow-up against a live screen, and the answer stayed no: the tokens that would fix most of them were
+        minted <em>from</em> these runs.</li>
+      <li>The two surfaces stay separate on purpose. Nothing here reads <code>ui/src/</code>; that is
+        <code>design/vocabulary</code>'s, which is why the gap line now says <strong>(design)</strong>.</li>
+      <li>The rulebook was edited to describe what ships — the <code>data-wire</code> marker, the CSS-value
+        half of three rules, and what closing the config did to <code>zero-accent</code>.</li>
+    </ul>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

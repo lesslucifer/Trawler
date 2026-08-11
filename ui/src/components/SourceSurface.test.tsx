@@ -64,20 +64,16 @@ describe("SourceSurface", () => {
     expect(container.querySelector(".cm-content")).toHaveAttribute("contenteditable", "true");
   });
 
-  it("colours only the three DEC-11 tokens — key, string, number", () => {
+  // Palette tokens by class, never a hex value: a colour written here is a
+  // second copy of the token, and no class-reading check can see it — which is
+  // how these three survived the config deletion that was meant to remove them.
+  it("colours only the three DEC-11 tokens — key, string, number — and does it with palette classes", () => {
     const { container } = render(<SourceSurface text={DOC} language={language} testId="surface" />);
-    const colours = new Set(
-      [...container.querySelectorAll<HTMLElement>(".cm-content span[style*=color]")].map(
-        (span) => span.style.color,
-      ),
-    );
+    const tokens = [...container.querySelectorAll<HTMLElement>(".cm-content span[class]")];
+    const classes = new Set(tokens.map((span) => span.className));
 
-    expect(colours.size).toBeLessThanOrEqual(4);
-    for (const colour of colours) {
-      expect(["rgb(143, 184, 222)", "rgb(158, 201, 154)", "rgb(217, 168, 102)", "rgb(174, 166, 156)"]).toContain(
-        colour,
-      );
-    }
+    expect(classes).toEqual(new Set(["text-syn-key", "text-syn-str", "text-syn-num", "text-ink-mute"]));
+    expect(container.querySelectorAll(".cm-content span[style*=color]")).toHaveLength(0);
   });
 
   it("offers the fold gutter", () => {

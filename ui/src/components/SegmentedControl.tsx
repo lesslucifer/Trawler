@@ -75,7 +75,7 @@ export function SegmentedControl({
                   moveFocus(i, -1);
                 }
               }}
-              className={`px-chrome-x py-[2px] font-ui text-chrome transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-ink-mute ${
+              className={`px-chrome-x py-chrome-tight font-ui text-chrome transition-colors focus-visible:outline focus-visible:outline-focus focus-visible:outline-offset-focus-inset focus-visible:outline-ink-mute ${
                 active ? "bg-canvas-soft text-ink" : "bg-transparent text-ink-mute hover:text-ink"
               }`}
             >

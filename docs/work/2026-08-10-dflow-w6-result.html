@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a797d8c9f34851f0dfab40c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W6 result (revise the rulebook + close the vocabulary)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W6 result — Revise the rulebook and close the vocabulary</h1>
+      <p>The result report this WU tip attests. <strong>The rulebook stopped describing a vocabulary and
+        started pointing at one that cannot be disobeyed.</strong> Every scale in
+        <code>ui/tailwind.config.js</code> now replaces Tailwind's rather than extending it, so an off-list
+        value emits no CSS; a local ESLint rule is the alarm that silence needs; and all thirteen hard rules
+        carry a Tier-1 predicate, so the gap line finally reads
+        <code>13/13 machine-checked (design)</code>. Ten live defects were found along the way —
+        <em>every one by executing against the real artifact, none by the type-checker and none by the
+        test suite</em> — the tenth by ⑤ re-running ④'s own regression instead of reading it. Then the code
+        review at ⑥ ran <strong>ten rounds, and only the tenth came back clean</strong> — ten of its findings were
+        inside the checkers this WU had just built.</p>
+      <div class="meta">Result report · 2026-08-10 · Trawler · T3 (docs/work/) ·
+        <code>wu/design-flow/revise-rulebook</code> → <code>epic/design-flow</code> ·
+        plan: <a href="2026-08-03-dflow-w6-plan.html">W6 plan</a> ·
+        direction: <a href="2026-08-03-dflow-w6-discussion.html">W6 discussion</a> ·
+        prior: <a href="2026-07-29-dflow-w5-result.html">W5 result</a> ·
+        target: <a href="../design-rules/design-rules-index.html">the rulebook</a></div>
+    </div>
+  </header>
+
+  <main data-artifact="wu-result">
+
+    <h2 id="outcome">Outcome</h2>
+    <div class="cards" data-item="outcome">
+      <div class="card"><h3>13 / 13</h3><p>hard rules machine-checked <strong>(design)</strong>. Twelve
+        predicates built here; <code>colour-tokens-only</code> widened from grepping literals to reading the
+        config</p></div>
+      <div class="card"><h3>0 off-list</h3><p><code>npm run lint</code> green over all of
+        <code>ui/src/</code> — 142 violations across 58 classes at the start, then none. The rule's verdict
+        and the built stylesheet agree on all 205 non-arbitrary classes the tree authors</p></div>
+      <div class="card"><h3>19 / 19</h3><p>carried W4 findings disposed — each landed, or recorded with the
+        reason it did not</p></div>
+      <div class="card"><h3>10 + 10 rounds</h3><p><strong>Ten</strong> found by the steps, in shipped code
+        or shipped docs — three in the closure, two in the lint rule, two in the rulebook's own subject
+        matter, two in the doc toolchain, one in the doc corpus. Then the code review at ⑥ ran
+        <a href="#review">ten rounds</a>, <strong>nine of which found something</strong> — the per-round
+        counts are in that table rather than summed here, because a total this report cannot recompute is the
+        defect it keeps finding elsewhere</p></div>
+      <div class="card"><h3>789 tests</h3><p>313 Rust (100 of them in <code>doc.rs</code>) · 476 vitest
+        across 39 files · clippy, fmt, tsc, eslint and the specimen render check all clean</p></div>
+    </div>
+
+    <h3 id="requirement">The requirement, leg by leg</h3>
+    <table data-c="requirement-table">
+      <thead><tr><th>What the plan required</th><th>Where it landed</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Every rulebook defect the two W4 runs found is fixed in the design-rules KB</td>
+            <td>19 findings applied; <code>binds</code> axis added; vocabularies stripped to pointers; three
+              rules added (all soft); <code>zero-accent</code>, <code>mono-for-wire-data</code>,
+              <code>spacing-scale</code>, <code>overflow-declared</code>,
+              <code>state-declarations</code>, <code>wire-order-preserved</code> and
+              <code>type-tokens-only</code> rewritten against what a predicate can actually check</td>
+            <td><span class="badge auto">met</span></td></tr>
+        <tr><td>The token vocabulary is closed — <code>theme.extend</code> → <code>theme</code>, Tailwind's
+          inherited scales no longer resolve</td>
+            <td>emitted stylesheet 225 → 183 classes, 42 dropped, zero surviving class changed meaning.
+              Then ③ found the closure was still half open — <strong>63 scales</strong> sat identical to
+              Tailwind's defaults, every member legal with nothing able to say so. Fixed at the root by
+              redefining legality as <em>membership of a scale the config declares</em>: 9 scales
+              declared, 54 latent ones now red on sight</td>
+            <td><span class="badge auto">met</span></td></tr>
+        <tr><td>The eight chromatic tokens are deleted and <code>MethodLabel</code> reverts to ink</td>
+            <td>Deleted in ①, <code>MethodLabel</code> reverted in ②. <strong>Then partly reversed on
+              evidence</strong> — see <a href="#deviations">the deviations</a>: the five verb hues came back
+              as palette tokens at the same values, and the three syntax tones came back because
+              <code>SourceSurface</code> had been painting them as hex literals the whole time</td>
+            <td><span class="badge approval">met, redirected</span></td></tr>
+        <tr><td>All twelve unimplemented hard rules carry a Tier-1 predicate in
+          <code>cargo xtask verify-doc</code></td>
+            <td>Built in ④, over two surfaces the rulebook did not previously distinguish: the class list,
+              and the mockup's own <code>.a-</code> CSS. A test asserts the live rulebook's hard table and
+              the predicate list are one list, so a rule cannot be added without its check</td>
+            <td><span class="badge auto">met</span></td></tr>
+        <tr><td>A local ESLint rule judges the same vocabulary against all of <code>ui/src/</code></td>
+            <td><code>design/vocabulary</code>, sharing one class-list oracle with the emitter that feeds
+              Rust — so the two surfaces cannot drift. 25 RuleTester cases plus a re-runnable reconciler
+              against the built CSS</td>
+            <td><span class="badge auto">met</span></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="ledger">The six steps, and what each one cost</h3>
+    <table data-c="step-ledger">
+      <thead><tr><th>Step</th><th>Shipped</th><th>What executing it changed</th></tr></thead>
+      <tbody>
+        <tr><td><strong>⓪</strong> <a href="2026-08-03-dflow-w6-step0-sweep.html">the sweep</a></td>
+            <td>every size-bearing scale enumerated from <code>resolveConfig</code> — 119, exhaustive by
+              construction. The keyword-vs-value ruling confirmed against all 31 sightings</td>
+            <td>Four of the plan's counts were stale. <strong>The step's own scanner was found unsound</strong>
+              and superseded by a built-CSS oracle — the method every later step reconciles against</td></tr>
+        <tr><td><strong>①</strong> <a href="2026-08-04-dflow-w6-step1-closed-config.html">the closed config</a></td>
+            <td><code>theme.extend</code> → <code>theme</code>; 8 chromatic tokens deleted; the scales ⓪
+              found unnamed gained project tokens</td>
+            <td><strong>3 defects in the closure itself</strong>, all found by diffing emitted stylesheets and
+              none by the build: a cross-scale name collision (<code>border-hairline</code> silently
+              re-widthing 22 borders), <code>maxWidth</code> surviving <code>spacing</code>'s closure, and
+              slash-opacity killed as collateral</td></tr>
+        <tr><td><strong>②</strong> <a href="2026-08-09-dflow-w6-step2-lint-and-reexpression.html">the rule, then the work it found</a></td>
+            <td>ESLint 9 + <code>design/vocabulary</code> + the <code>design-allow</code> pragma;
+              <code>MethodLabel</code> reverted; 142 violations across 58 classes re-expressed in 21 files</td>
+            <td>The rule found <strong>5 classes ①'s worklist missed</strong>, all variant-prefixed. Then
+              <a href="2026-08-10-dflow-w6-step2-review-result.html">code review</a> found
+              <strong>2 real defects inside the rule's own judgement</strong> out of 22 candidates</td></tr>
+        <tr><td><strong>③</strong> <a href="2026-08-10-dflow-w6-step3-rulebook.html">the rulebook</a></td>
+            <td>19 findings disposed; vocabularies stopped listing tokens and started pointing at the config;
+              13 hard / 17 soft; the promotion path and the pragma documented</td>
+            <td><strong>2 defects, both found while writing prose about the code</strong>: the three syntax
+              tones deleted as unreferenced and painted as hex anyway, and the body-view switch labelled two
+              different ways. Also the 63-open-scales sweep ② had owed</td></tr>
+        <tr><td><strong>④</strong> <a href="2026-08-10-dflow-w6-step4-predicates.html">the twelve predicates</a></td>
+            <td>12 predicates, the pragma on the design surface, the vocabulary bridge, the surface label on
+              the gap line</td>
+            <td><strong>2 defects</strong>: two files still destructuring the <code>theme.extend</code> ①
+              emptied, so every design doc's CSS variables were dead and the specimen bundle could not be
+              rebuilt — which is why it was still shipping the pre-① palette</td></tr>
+        <tr><td><strong>⑤</strong> <a href="2026-08-10-dflow-w6-step5-regression.html">the regression</a></td>
+            <td>all 12 predicates run over run #2 and run #3 — first <strong>inside ④</strong>, on ③'s
+              warning that a predicate never run over a real artifact is the bet that has already lost eleven
+              times; then <strong>re-run in ⑤</strong>, because ④ judging its own output is a claim</td>
+            <td>49 reds reproduce exactly and no predicate is wrong.
+              <a href="#deviations">The plan predicted green</a>; the plan was wrong and the predicates were
+              not. <strong>Run #3 turned out never to have been archived</strong> — the only red doc of 78,
+              live since W4; ⑤ archives it and names all three closed runs in the guard test. ④'s red
+              breakdown is corrected: 33 reds over 29 real sites, and six of its "pre-existing" were rules
+              ③ adopted this WU</td></tr>
+        <tr><td><strong>⑥</strong> <a href="#review">the review</a></td>
+            <td>DEC-17 and DEC-15's completion · the T1 lint row · the code-review skill over the whole WU
+              diff, ten rounds, each one re-run on the tip the last one produced</td>
+            <td><strong>defects in the work this WU had just finished, in nine of ten rounds</strong>, ten of them in the
+              instrument itself. <code>zero-accent</code> called <code>font-[900]</code> a colour;
+              <code>wire-order-preserved</code> accepted the word <code>border</code>; the pragma had two
+              dialects, so <code>h-[100dvh]</code> was excused on one surface and rejected on the other; the
+              emitter built a second unguarded Tailwind context. Then four rounds running, the fix for one
+              hole in the HTML scanning revealed the next — <a href="#follow-ups">follow-up 10</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="review">The ten review rounds</h3>
+    <p class="meta">Each round ran against the tip the previous round's fixes produced, so every fix was itself
+      reviewed. <strong>Nine of the ten found something</strong> — and rounds 3 through 8 all landed on the
+      same function, each on the previous round's repair. What stopped the sequence was scope: rounds 9 and 10
+      reviewed only the previous round's own handful of lines, which is the smallest diff a fix can be judged
+      against. What finally closed it was not a better patch but a
+      different bound, and then making the one input that bound cannot parse illegal; see
+      <a href="#follow-ups">follow-up 10</a>.</p>
+    <table data-c="review-rounds">
+      <thead><tr><th>Round</th><th>Verified</th><th>What it caught</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1</strong></td><td>7 of 10 candidates<br><span class="meta">2 refuted</span></td>
+            <td>Five important, in code that had passed every gate: <code>is_chromatic</code> without its
+              <code>#</code> anchor, <code>contains("order")</code>, the two pragma dialects, the second
+              Tailwind context, and DEC-17 holding a byte-identical copy of the rulebook's pragma table</td></tr>
+        <tr><td><strong>2</strong></td><td>1</td>
+            <td>Verified all seven round-1 fixes held — then found the <code>wire-order-preserved</code> fix
+              was <strong>wrong in kind</strong>. Narrowing a keyword to a word match left a keyword judging
+              prose, which fails in both directions. Replaced with <code>data-order</code>, a declaration</td></tr>
+        <tr><td><strong>3</strong></td><td>1 + 2 nits</td>
+            <td>An attribute quoted inside <em>another attribute's value</em> counted as that attribute, so a
+              doc could answer a rule by quoting it. In the shared reader, so it was one hole in every
+              declaration check at once</td></tr>
+        <tr><td><strong>4</strong></td><td>2 + 2 nits</td>
+            <td>A tag's end was found at a bracket inside a quoted value, so a clean element read as missing
+              its class — a <strong>false red</strong>. And two permanent records still said the newest design
+              run is never archived, which ⑤ had made false</td></tr>
+        <tr><td><strong>5</strong></td><td>1 + 5</td>
+            <td>The round-4 fix could re-sync past a malformed tag and lend one element another's classes.
+              Plus five rulebook rows claiming more than the predicate does — a partition test that is one
+              flat membership test, a binding surface the predicate never receives, and
+              <code>keyboard-parity</code> checking that a cell is answered rather than that the answer is a
+              convention</td></tr>
+        <tr><td><strong>6</strong></td><td>1 + 9</td>
+            <td>The round-5 fix again: quotes <em>re-pair</em> across a fault, so "stop where the quote
+              opened" could not see the fault at all. Closed by a different bound — a tag never reaches past
+              the next <code>&lt;</code>. Plus nine doc defects, including this report's own stale counts and
+              a commit table that omitted every commit of ⑥</td></tr>
+        <tr><td><strong>7</strong></td><td>2 + 5</td>
+            <td>A <strong>blocker of my own making</strong>: round 6's next-tag bound was not gated on quote
+              state, so a legal <code>title="a &lt; b"</code> truncated the tag and red a compliant element.
+              And <code>title="a &gt; b"</code> is indistinguishable from an unterminated
+              <code>title="oops&gt;</code> to any left-to-right scan — so the ambiguity is <em>closed</em>
+              rather than guessed: <code>markup·escaped</code> now reds a raw angle bracket in a value, the
+              spelling every doc in the corpus already used. Plus a third pragma dialect (the class is a token,
+              not everything left of the first <code>--</code>) and four more of this report's own numbers</td></tr>
+        <tr><td><strong>8</strong></td><td>2 + 4<br><span class="meta">1 refuted</span></td>
+            <td>Round 7's own two: the named snippet was cut at a <em>byte</em> length, so an em dash in a value
+              — which this project writes everywhere — <strong>panicked the whole run</strong> instead of
+              reding one doc; and the pragma fix left the Rust side demanding whitespace before a separator the
+              lint rule's regex accepts glued, a fourth dialect. Refuted: a raw <code>&lt;</code> in prose is a
+              tag open to every HTML parser alive, so reding it is correct and now pinned as such. Plus the
+              ninth declared scale, the RuleTester count, and a commit table whose last row cannot know its own
+              hash</td></tr>
+        <tr><td><strong>9</strong></td><td>1 + 1 nit</td>
+            <td>Scoped to round 8's own six lines, because eight rounds had already swept the diff. Round 8's
+              pragma fix made a reason-less class carrying its own <code>--</code> report
+              <em>&ldquo;<code>grid-cols-[</code> carries a value&rdquo;</em> — a truncated class and the wrong
+              cause. Which reading an author meant is <strong>undecidable</strong> from the string, and the
+              lint rule's regex resolves it identically, so the verdict stays and the message now names the
+              reading it took rather than guessing a cause. The nit: one of round 8's three tests is a pin on
+              refuted behaviour, not a regression net — kept deliberately, so round 10 does not re-litigate it</td></tr>
+        <tr><td><strong>10</strong></td><td><strong>0</strong></td>
+            <td>Scoped to round 9's three-line message change. <strong>Clean</strong> — and clean with evidence
+              rather than by inspection: the clause is proved verdict-neutral by diffing <code>verify-doc</code>'s
+              full output over all 80 docs between binaries built at both commits, round 9's test is proved to
+              fail when its fix is reverted, and every number in both notes and in this report is
+              re-measured from source</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="review-lesson">
+      <strong>Ten findings were in the checkers this WU built, and every gate was green the whole
+      time.</strong> 313 tests, clippy pedantic, <code>tsc</code>, ESLint and <code>verify-doc</code> over 80
+      docs all passed on code that reported a colour nobody wrote and accepted an answer nobody gave. That is
+      not an argument against the gates — it is the WU's own thesis arriving at its author: <em>a predicate
+      that has never been executed against an artifact built to break it is a claim</em>. The review is the
+      only step that built those artifacts.
+    </div>
+
+    <div class="callout" data-c="through-line">
+      <strong>The one finding that outranks every other in this WU.</strong> Every live defect in it, and the
+      instrument that found each of them was the same: executing against the real artifact, or reading it.
+      Zero were found by <code>tsc -b</code>. Zero were found by the 789-and-growing test suite. Four of the
+      first ten were invisible <em>by construction</em> — a value that is never a class cannot be seen by a
+      class-reading check, and an open scale cannot be red by a rule whose legality test is "Tailwind can
+      emit it". Both holes are closed at their root rather than one instance at a time.
+      <br><br>
+      The point arrives twice, each time by the same route. ⑤ existed only to re-run a regression ④ had
+      already run and judged, and re-running it found a closed run that had been red in the tree for two
+      Working Units. ⑥ existed to review work that was already green, and did not come back clean once in <a href="#review">seven
+      rounds</a> — seven of them inside the checkers built to catch exactly this class of thing. <strong>Both
+      steps were re-executions of something already believed done, and both paid.</strong>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <thead><tr><th>Plan said</th><th>Shipped</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>W6 revises the rulebook; W7 owns the "Tier-1 mechanical" tier</td>
+            <td>W6 built all twelve predicates</td>
+            <td><strong>Recorded at planning, not discovered.</strong> Two round-1 discussion answers
+              superseded the epic plan. Tier-1 reads the config and the doc's structure, and the closed
+              vocabulary this WU ships is precisely its input — the ordering is a dependency, not a
+              queue</td></tr>
+        <tr><td>A rulebook WU touches docs</td>
+            <td>It changed <code>ui/tailwind.config.js</code>, one component, 21 files of class
+              re-expression, and built two new checkers</td>
+            <td>The reviewer's closed-vocabulary ruling made the config the rulebook's subject. A rulebook
+              that describes a vocabulary nothing enforces is the drift this WU exists to end</td></tr>
+        <tr><td><code>zero-accent</code> becomes "the simplest rule in the book: chromatic colour is
+          <code>ok</code> and <code>warn</code>"</td>
+            <td>Eight members</td>
+            <td>The verb tones proved to be a palette gap rather than a deletion (②); the three DEC-11 syntax
+              tones proved to be <em>already painted</em> as hex literals (③). The rule's shape is what the
+              ruling asked for — one membership test, no exception list. Only the cardinality differs, and the
+              count was never the point</td></tr>
+        <tr><td>③ rewrites <code>zero-accent</code>; ④ checks it</td>
+            <td>④ found the check is nearly subsumed</td>
+            <td>With the config closed, no legal class can name an off-set colour — the membership test is
+              satisfied by construction. What the predicate still owns is the value written <em>past</em> the
+              config. Stated as a limit rather than dressed up</td></tr>
+        <tr><td>⑤: both archived runs come back green; a red means the predicate is wrong</td>
+            <td>49 reds, 29 real</td>
+            <td>The rule holds for a predicate that reds <em>correct</em> work. These are arbitrary values,
+              classes that stopped emitting when ① closed the config, and raw magnitudes in a mockup's own
+              CSS. <code>data-status="archived"</code> exists exactly so a tightened rule does not reopen a
+              closed record — <strong>and ⑤ found run #3 never carried it</strong>, so nineteen of the 49
+              were live rather than exempt until this step archived it. Nothing was softened to make a
+              number look better</td></tr>
+        <tr><td>Twelve predicates over the rules as ③ states them</td>
+            <td>Plus one new run-doc contract: <code>data-wire</code></td>
+            <td>Three rules turn on which elements render a verbatim payload, and no static reader can
+              recover that from markup — so the mockup declares it, with <code>data-wire="none"</code> as the
+              n/a path. <strong>Flagged for reversal</strong>: if an unmarked mockup should be a silent n/a
+              instead of a red, it is a two-line change</td></tr>
+        <tr><td>Three new rules from ③'s findings</td>
+            <td>All three entered as <em>soft</em></td>
+            <td>The hard list is deliberately frozen at thirteen so <code>13/13</code> is a statement about
+              this WU's scope. A new rule enters soft unless a predicate for it can be written — the
+              rulebook's own lifecycle rule, applied to itself</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="gate-table">
+        <thead><tr><th>Gate</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><code>cargo fmt --check</code> · <code>cargo clippy -D warnings</code> (pedantic)</td><td>clean</td></tr>
+          <tr><td><code>cargo test --workspace</code></td><td>313 passed, 0 failed — 100 of them the design predicates in <code>xtask/src/doc.rs</code></td></tr>
+          <tr><td><code>npx tsc -b</code></td><td>clean</td></tr>
+          <tr><td><code>npm run lint</code> (new this WU)</td><td>green over all of <code>ui/src/</code></td></tr>
+          <tr><td><code>npx vitest run</code></td><td>476 passed across 39 files</td></tr>
+          <tr><td><code>cargo xtask ui specimens --check</code></td><td>all six migrated design files render, against a bundle rebuilt from the closed config</td></tr>
+          <tr><td><code>cargo xtask verify-doc</code></td><td>green over <strong>all 80 tracked docs</strong>, not only the ones this WU wrote — the narrower wording is what let run #3 sit red; the live rulebook parses and every past-cited slug still resolves</td></tr>
+          <tr><td>reconciliation against the built stylesheet</td><td>AGREE on all 205 non-arbitrary classes; 3 arbitrary values diverge by design</td></tr>
+          <tr><td>the twelve predicates over both closed runs</td><td>run and <a href="2026-08-10-dflow-w6-step4-predicates.html#evidence">judged red by red</a> in ④, then <a href="2026-08-10-dflow-w6-step5-regression.html#judgement">re-run and recounted in ⑤</a> — 49 reds, 33 real over 29 sites, zero predicates wrong</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="test-levels">Test levels</h3>
+      <table data-c="levels-table">
+        <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+        <tbody>
+          <tr><td>unit · commit</td><td>Per predicate: a green case and a red per way the rule can be broken. Plus the emitter — a renamed or unreadable config fails loudly, never silently passes every token rule. Plus the pragma's four rejection paths</td></tr>
+          <tr><td>integration · WU</td><td><code>xtask/tests/verify_doc.rs</code>: a design run is receipted against the rulebook on disk, the gap line prints with its surface label and suppression count, and a run without the vocabulary emitter is red rather than quietly green</td></tr>
+          <tr><td>lint</td><td><code>ui/eslint-rules/vocabulary.test.js</code> — 25 RuleTester cases including one per false-positive family (structural, variant-prefixed, slash-opacity, zero, relationship keyword) so a future edit cannot silently re-widen the scope</td></tr>
+          <tr><td>regression</td><td>The existing suite as the net for reverting <code>MethodLabel</code> and re-expressing 58 classes; the archived runs as the net for the predicates</td></tr>
+          <tr><td>e2e</td><td><code>waived: "flow e2e is W7 per the epic plan"</code> — same wording as W4 and W5</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="commits">The tip</h3>
+      <table data-c="commit-table">
+        <thead><tr><th>Commit</th><th>What</th></tr></thead>
+        <tbody>
+          <tr><td><code>c39e4cd</code> … <code>ddf663e</code></td><td>the discussion, three rounds</td></tr>
+          <tr><td><code>1678582</code> · <code>971c345</code> · <code>fdaa967</code></td><td>the plan and its two revisions against executed evidence</td></tr>
+          <tr><td><code>8d422c4</code> · <code>2174da6</code></td><td>⓪ the sweep, and the correction that found its own method unsound</td></tr>
+          <tr><td><code>4835e95</code></td><td>① the closed config, and its three defects</td></tr>
+          <tr><td><code>e242af2</code> · <code>5338775</code></td><td>② the lint rule and the re-expression; then the fix for what review found</td></tr>
+          <tr><td><code>e82d872</code> · <code>87fbd4d</code> · <code>41f272e</code></td><td>③ the rulebook, its two rulings, and the tiering pass that moved this epic's case history out of the T2</td></tr>
+          <tr><td><code>5244e2e</code> · <code>b0a15d2</code> · <code>bb5481c</code></td><td>④ the twelve predicates, the emitter, the rulebook's contract additions, and this report</td></tr>
+          <tr><td><code>40ff32c</code></td><td>⑤ the regression re-run: run #3 archived, the guard test naming all three closed runs, and the corrections this step's evidence forced on ④ and on this report</td></tr>
+          <tr><td><code>c578673</code> · <code>8d871af</code></td><td>⑥ the distillation — DEC-17, DEC-15's Tier-1 completion, the index row, and the T1 lint row signed with a human <code>Reviewed-By</code></td></tr>
+          <tr><td><code>0726ff4</code></td><td>⑥ review round 1's seven verified findings: the <code>#</code> anchor, the <code>order</code> substring, the two pragma dialects, the second Tailwind context, DEC-17's copied table</td></tr>
+          <tr><td><code>ef4ff4f</code></td><td>⑥ round 2 — the ordering fix was wrong in kind; a keyword over prose becomes <code>data-order</code>, a declaration</td></tr>
+          <tr><td><code>fcbe2ba</code> · <code>5ac17d4</code> · <code>12a1699</code> · <code>a033d14</code></td><td>⑥ rounds 3&ndash;6 — the HTML scanning holes, five rulebook rows that claimed more than their predicate does, and two records this WU had made false</td></tr>
+          <tr><td><code>5c6b03a</code> · <code>25e0f36</code> · <code>aaae52a</code> · <em>the tip</em></td><td>⑥ rounds 7&ndash;10 — the ambiguity closed instead of guessed, then the panic and the pragma dialect that closing it introduced, then the message that dialect's fix made misleading, then a clean round. <strong>The tip itself is this report recording that</strong> — the last commit of a review is always the one the review cannot have read, which is why <code>mr/v1</code> and not <code>cr/v2</code> is what attests it. <strong>A commit cannot print its own hash</strong>, so the last row of a table like this was stale in three separate rounds; the list is <code>git log --oneline epic/design-flow..HEAD</code> and this row stops transcribing it</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warn" data-c="owed">
+        <strong>What this tip still owes before the merge gate — read off <code>verify-dod wu</code>, not
+        from memory.</strong> Seven commits carry a <code>test/v2</code> and five a <code>doc/v1</code>; what
+        is missing is on the <em>tip</em>, which is the only place the gate looks. Its four reds at ⑤'s close:
+        <strong>no <code>test/v2</code></strong> on the tip · <strong>no <code>cr/v2</code></strong> (②'s PASS
+        is bound to <code>18c99213…</code>, so ③+④+⑤ are unreviewed) · the tip's <code>doc</code> note was
+        <strong>not valid <code>doc/v1</code></strong> — a test-shaped body with no <code>schema</code> field
+        at all, so the note contract was broken by the very commit that reports on it · and
+        <strong>no <code>mr/v1</code></strong>, which only a human can write. Remaining, in order:
+        <s>commit ⑤</s> <code>40ff32c</code> · <s><strong>DEC-17</strong> with its index entry and DEC-15's
+        Tier-1 completion</s> <a href="../decisions/dec-17-closed-vocabulary.html">landed</a> ·
+        <s><code>test/v2</code> + a valid <code>doc/v1</code> on the tip</s> · <s>the code-review skill over
+        ③+④+⑤ → <code>cr/v2</code> PASS bound to that exact diff</s> <strong>PASS on round 10</strong> ·
+        <strong>the human's <code>mr confirm</code></strong> · <strong><code>--no-ff</code> merge into
+        <code>epic/design-flow</code></strong>. <code>verify-dod wu</code> is down to <strong>one red</strong>,
+        and it is the one no agent may write. The gate writes <code>dod/v1</code>; nothing here bypasses it.
+      </div>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation">
+      <thead><tr><th>Tier</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td><strong>T2 · design-rules</strong></td>
+            <td><span class="badge auto">done</span> The KB revision is this WU's primary output. Vocabularies
+              point at the config instead of copying it; the <code>binds</code> axis routes each rule to the
+              design run, to <code>ui/src/</code>, or both; the three closed-vocabulary traps and the two
+              sanctioned escapes are stated; ③'s tiering pass moved this epic's finding numbers and measured
+              counts out into the work docs, so the rulebook reads as a permanent contract rather than an
+              incident report</td></tr>
+        <tr><td><strong>T2 · decisions</strong></td>
+            <td><span class="badge auto">done</span>
+              <strong><a href="../decisions/dec-17-closed-vocabulary.html">DEC-17 — the closed
+              vocabulary</a></strong>, registered in <code>decisions-index</code>. Why the token list is
+              exhaustive · why legality is membership of a <em>declared</em> scale rather than of what
+              Tailwind can emit · why the config is the source of truth and the KB mirrors it · the two
+              enforcement surfaces and why the code-side check is a local ESLint rule, with the five
+              requirements on it and the defect each one is earned by · the <code>design-allow</code> pragma
+              with its five rules and its printed count · the styling-API escape and its colour guard · the
+              <code>data-wire</code> declaration and its n/a path · the three traps with the defect each one
+              now prevents · and the measured <strong>161/47</strong> split, recorded as an output of the rule
+              rather than the two estimates that preceded it.
+              <a href="../decisions/dec-15-design-run-enforcement.html#consequences">DEC-15 gains the Tier-1
+              completion</a>: its W7 consequence is struck, because Tier-1 reads the config and so the closed
+              vocabulary <em>is</em> its input</td></tr>
+        <tr><td><strong>T1</strong></td>
+            <td><span class="badge auto">one row</span> <code>architecture.html</code>'s <em>Lint</em> row named
+              <code>cargo clippy</code> and nothing else; the tree now has a second linter that is a gate, so
+              the row names <code>npm run lint</code> and the <code>design/vocabulary</code> rule. Otherwise
+              <strong>none, as planned</strong> — the design-flow doc is still the T1 candidate and still
+              moving, W7 adds the two judged tiers, and promoting it now means editing a T1 process doc twice
+              more inside the epic</td></tr>
+        <tr><td><strong>T4 · code</strong></td>
+            <td><span class="badge auto">done</span> <code>ui/tailwind.config.js</code> is the single source of
+              truth for the vocabulary · <code>xtask/src/doc.rs</code> is the truth for what a design must
+              satisfy · <code>ui/eslint-rules/vocabulary.js</code> for what the built UI must satisfy ·
+              <code>scripts/design-vocabulary.mjs</code> is the bridge, and it derives rather than
+              transcribes. Where the KB and the code disagree, the code wins</td></tr>
+        <tr><td><strong>T3</strong></td>
+            <td><span class="badge auto">done</span> The discussion, the plan and its two revisions, six step
+              records, the ② quiz, the ② review report, and this report. <code>MethodLabel</code>'s design
+              file edited in place (fork D3 re-opened)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups">
+      <thead><tr><th>#</th><th>Item</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>Nothing enforces a soft rule yet.</strong> After this WU the 13 hard rules
+          are design-time checked and the 17 soft rules rest entirely on reviewer attention. That is the
+          status quo, not a regression — but it is the whole reason W7 exists</td><td>W7 · Tier-2 + Tier-3</td></tr>
+        <tr><td>2</td><td><strong>The body-view switch is labelled two different ways.</strong>
+          <code>body-viewer.html</code> fork D4 confirms <code>raw | pretty</code> (the pretty-print switch);
+          <code>BodyViewer.tsx</code> ships <code>decoded | raw</code> (the transport switch). Two different
+          switches sharing the word <em>raw</em>, one wearing the other's name. Ruled: the doc is right and the
+          build changes. Deferred deliberately — a rulebook step that quietly edits UI copy is a rulebook step
+          nobody can trust. The rule that catches it meanwhile is
+          <code>one-term-per-concept</code>, which cites it as a live example</td><td>deferred backlog</td></tr>
+        <tr><td>3</td><td><s><strong>The <code>data-wire</code> ruling is open for reversal.</strong> An
+          unmarked mockup currently reds.</s> <strong>Ruled at ⑥: kept.</strong> An unmarked mockup reds, and
+          <code>data-wire="none"</code> stays the n/a path — the house precedent
+          (<code>capabilities·answered</code>, <code>elements·map</code>, <code>frame·example</code>) is to
+          force the answer, because silence reads as <em>correctly typed</em> when nobody looked. Reversal was
+          costed at two lines and declined, not deferred</td><td><span class="badge auto">closed</span>
+          reviewer at ⑥</td></tr>
+        <tr><td>4</td><td><strong>A shared prefix reds under both rules that own it.</strong>
+          <code>text-pink-500</code> answers to <code>colour-tokens-only</code> and
+          <code>type-tokens-only</code> at once, and an outline <em>width</em> like <code>outline-1</code>
+          reports under the colour rule because <code>outline-</code> is a colour prefix. Chosen over a
+          precedence rule, which would silently exempt whichever rule loses. Revisit only if the noise
+          actually costs a reader something — <span class="badge id">⑤ measured it</span> all six of
+          <code>colour-tokens-only</code>'s reds in the regression are sizes, not colours: <strong>12% of
+          49</strong></td><td>W9 · the fourth design run</td></tr>
+        <tr><td>5</td><td><strong>29 real sites (33 reds) in the two closed runs need no action, and that
+          should be said once rather than re-discovered.</strong> The tokens that would fix most of them were minted
+          <em>from</em> those runs. The honest default is no follow-up; the fourth design run is where a live
+          screen tests whether the predicates over-fit</td><td>W9</td></tr>
+        <tr><td>6</td><td><strong>The <code>steps?.size</code> guard in the lint rule has no test.</strong>
+          Re-measured after ③'s narrowing: zero bases carry an empty modifier list, so it is unreachable. Left
+          as a guard with no test, which is the honest state rather than a faked one</td><td>none — recorded</td></tr>
+        <tr><td>7</td><td><strong>W5's result report carries no <code>data-artifact</code></strong>, so
+          <code>verify-doc</code> never checked its five items. Found while matching this report to the house
+          form. One attribute</td><td>next docs touch</td></tr>
+        <tr><td>8</td><td><strong>Closing a design run is nobody's step.</strong> A run is archived as a
+          side effect of the <em>next</em> run being written, so run #3 — which never had a next run — stayed
+          unarchived and red for two WUs, and the guard test enumerates closed runs by hand. A sweep asserting
+          "every design run is archived or green" is wrong as a unit test: a run mid-design is legitimately
+          red for days and would hold the whole suite red with it. The home is the flow harness, where "the
+          run closes" can be a step something owns</td><td>W7 · Tier-2 + Tier-3</td></tr>
+        <tr><td>9</td><td><strong>Seven of the thirteen predicates have never red on a real artifact</strong>
+          — <code>zero-accent</code>, <code>overflow-declared</code>, <code>state-declarations</code>,
+          <code>wrap-not-truncate</code>, <code>wire-order-preserved</code>, <code>keyboard-parity</code>,
+          <code>colour-plus-text</code>. Clean on both runs for stated reasons, but their only failing
+          evidence is synthetic. This is the over-fit exposure the plan named, with a number on it</td>
+          <td>W9 · the fourth design run</td></tr>
+      <tr><td>10</td><td><strong>The predicates read HTML with hand-rolled string scanning, and six review
+          rounds each found a hole in it.</strong> An attribute quoted inside another attribute's value counted
+          as that attribute; a tag's end was found at a bracket inside a quoted value; then the fix for the
+          second could re-sync past a malformed tag and lend one element another's classes. Each fix was
+          correct and each revealed the next, which is the signal: the defects are not independent, they are
+          one missing abstraction. Every hole is in the same three functions —
+          <code>attr_positions</code>, <code>tag_end</code>, <code>element_content</code> — and every one is
+          the same mistake, treating an attribute's <em>value</em> as markup. A real parser would end the
+          class; it is a bigger change than a rulebook WU should absorb, and the cost of not making it is one
+          more round of this per predicate added — measured: rounds 3, 4, 5, 6, 7 and 8, six for six. Rounds 7
+          and 8 are the clearest evidence, because the round-7 fix that finally worked was itself a fourth
+          scanner (<code>check_escaped_markup</code>), and round 8 found two defects in it. <strong>The four
+          functions are now the whole surface</strong> — <code>attr_positions</code>, <code>tag_end</code>,
+          <code>element_content</code>, <code>check_escaped_markup</code> — so replacing them is a bounded job
+          rather than a rewrite</td><td>W7 · Tier-2 + Tier-3</td></tr>
+        </tbody>
+    </table>
+  </main>
+
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

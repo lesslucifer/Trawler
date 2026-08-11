@@ -13,7 +13,7 @@ export function CutMarker({ shown, total }: { shown: number; total: number }) {
   const [shownSize, totalSize] = humanBytePair(shown, total);
 
   return (
-    <span className="mt-1.5 block border-t border-hairline pt-1 font-ui text-chrome text-warn">
+    <span className="mt-chrome-gap block border-t border-hairline pt-chrome-y font-ui text-chrome text-warn">
       ⚠ showing {shownSize} of {totalSize} — save to see all
     </span>
   );
