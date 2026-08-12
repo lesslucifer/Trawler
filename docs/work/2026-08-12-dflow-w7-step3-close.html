@@ -191,6 +191,13 @@ flowchart LR
       </tbody>
     </table>
     <div class="callout warn" data-c="seams-waiver">
+      <strong>Ruled: all three are waived, with reasons that stay differentiated.</strong> Not a choice
+      between waiving and not — an unwaived seam failure lands in the report and <em>refuses the merge</em>,
+      so the only alternative to waiving all three is an epic that cannot land. What was decidable is what
+      the record says, and uniform boilerplate would flatten the one entry carrying real evidence: the W5
+      seam had run #3 in its hands and merged without closing it, which is the strongest argument on record
+      that this rule was worth building. Its <code>why</code> says so.
+      <br><br>
       <strong>Apply at the epic merge, not before.</strong> <code>walk()</code> runs only at
       <code>Level::Epic</code> — merging into <code>main</code> — and reads <code>walk_waivers</code>
       from the <code>cr</code> note <em>on the epic tip being verified</em>. That tip does not exist yet
@@ -203,7 +210,7 @@ flowchart LR
   - seam: 989f4bfacdee1d433b5b385d5227fd5e36a3281d
     why: "6·run-closed post-dates this seam (E-DFLOW.W7 ③). run-3 left open; closed at 40ff32c — the defect W6 follow-up 8 filed and this rule now refuses"
   - seam: f2a2b7ce75b2572390668c9de0c3a937b502aa18
-    why: "6·run-closed post-dates this seam (E-DFLOW.W7 ③). run-3 still open one WU later, edited but not closed; closed at 40ff32c"</pre>
+    why: "6·run-closed post-dates this seam (E-DFLOW.W7 ③). W5 edited run-3 here — 25 lines — and merged with it still open, one WU after W4 left it so; closed at 40ff32c. The clearest case the rule exists for, waived only because the seam is immutable"</pre>
       Each <code>why</code> is a real reason, which the waiver requires — a blank one does not suppress.
       What it says is <strong>not</strong> "this was fine": it is that the rule is newer than the seam,
       the seam is immutable, and the tree it produced is closed today. Never <code>--no-verify</code>,
@@ -253,6 +260,12 @@ flowchart LR
     <p><a href="2026-08-11-dflow-w7-plan.html#step4">④ Tier-3 as the design dimension of the code
       review</a> — the rubric, the conditional finder, <code>cr/v3</code>, and the calibration that
       requires it to surface the defects the three archived runs are already known to carry.</p>
+    <p class="meta"><strong>Follow-up for the result report.</strong> This is not a one-off: the epic walk
+      judges every landed seam against the <em>live</em> rule set, so <strong>every rule added mid-epic
+      reds history</strong>. Step ③ added one and cost three waivers; step ④'s <code>cr/v3</code> and
+      step ⑤ will likely add more. Three is fine — a dozen by the epic merge would mean the walk's verdict
+      has become mostly waiver, which is the state where nobody reads them. Filed with a number attached
+      rather than discovered at merge time.</p>
     <p class="meta"><strong>Carried to the WU's distillation.</strong> The three walk waivers above ·
       the flow spec now carries <a href="design-flow-base.html#close">step 7</a> and the eleventh run
       item, still T3 (D6) · <code>workflow.html</code>'s note table row for <code>cr/v3</code> stays with
