@@ -40,11 +40,12 @@
       <div class="card"><h3>1 tier unexercised</h3><p>Tier-3's finder has never judged a real
         artifact</p></div>
       <div class="card"><h3>417 + 492</h3><p>Rust · vitest. Every gate clean</p></div>
-      <div class="card"><h3>4 more holes</h3><p>found by the review, at ⑥ — 3 of them written that
-        same hour</p></div>
+      <div class="card"><h3>5 more holes</h3><p>found by the review over 3 rounds — most of them written
+        that same hour</p></div>
       <div class="card"><h3>clippy saw 1 of 2 crates</h3><p>for the whole epic. <code>xtask</code> was
         never linted</p></div>
-      <div class="card"><h3>1 item open</h3><p>your sign-off</p></div>
+      <div class="card"><h3>2 items open</h3><p>the <code>cr/v3</code> attach · your sign-off. <strong>A
+        report cannot print its own gate state</strong> — writing it moves the tip</p></div>
     </div>
 
     <h2 id="run">How to run any of it</h2>
@@ -252,8 +253,21 @@ flowchart LR
       <code>doc/v1</code> that never parsed). Every other line byte-identical.</p>
 
     <h2 id="review">What the review found</h2>
-    <p class="meta">Two rounds. Round 1 on <code>f6ebf6a</code> found 4 real defects; the fixes became
-      <code>d68aa22</code>, and round 2 re-swept that tip and confirmed none of its own 13 candidates but one.</p>
+    <table data-c="tbl-rounds">
+      <thead><tr><th>Round</th><th>Tip</th><th>Candidates</th><th>Real</th><th>Bought</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>f6ebf6a</code></td><td>7</td><td><strong>4</strong></td>
+          <td>all fixed → <code>d68aa22</code>. 3 were written that same hour; the 4th had been open the whole
+            epic</td></tr>
+        <tr><td>2</td><td><code>d68aa22</code></td><td>13</td><td>1</td>
+          <td>waived. 4 finders converged on one function and all 4 were wrong the same way</td></tr>
+        <tr><td>3</td><td><code>51e947a</code></td><td>9</td><td>4</td>
+          <td>the docs-only round. 2 defects in prose written minutes earlier, 1 code site where <strong>the WU
+            broke its own rule</strong>, and <strong>the round-2 waiver's reason was wrong</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="kd">Round 3's delta was one T3 document and <strong>zero code</strong> — the round that looked
+      ceremonial produced the correction to a waiver already recorded as evidence.</p>
     <table data-c="tbl-review-r1">
       <thead><tr><th>Round 1 · real</th><th>Class</th><th>What it would have cost</th></tr></thead>
       <tbody>
@@ -284,49 +298,72 @@ flowchart LR
       that enforces everything else, and no gate could see it.
     </div>
     <table data-c="tbl-review-r2">
-      <thead><tr><th>Round 2 · 13 candidates</th><th>Verdict</th></tr></thead>
+      <thead><tr><th>Rounds 2–3 · 22 candidates</th><th>Verdict</th></tr></thead>
       <tbody>
         <tr><td><code>nodes(html)</code> re-tokenises the whole document on <em>every</em>
-          <code>attrs</code>/<code>element_content</code> call, so the paths that call it per occurrence cost
+          <code>attrs</code>/<code>element_content</code> call, so paths calling it per occurrence cost
           O(occurrences × doc size) where ⓪'s predecessors did not</td>
-          <td><span class="badge approval">real · nit · waived</span></td></tr>
+          <td><span class="badge approval">real · nit · waived</span> — on
+            <a href="#review">size, not unreachability</a></td></tr>
+        <tr><td><code>run_paths</code> gated the two node oracles on a <strong>substring</strong>, so every doc
+          that merely <em>quotes</em> <code>data-artifact="design-run"</code> paid for both. ③'s own record
+          says <em>"read the declaration, never the string"</em> — fixed at the run-finder, missed here</td>
+          <td><span class="badge auto">fixed</span> <code>declares_a_design</code> tokenises;
+            <strong>0.19s → 0.026s</strong> on the 4 affected docs</td></tr>
+        <tr><td>this report claimed <code>cr/v3</code> was already attached, and counted
+          <strong>one</strong> open item where <code>verify-dod</code> reds <strong>two</strong></td>
+          <td><span class="badge auto">fixed</span> — the section now names the command, not its output</td></tr>
+        <tr><td>the refutation note was a 186-word prose wall where every sibling block is 36–78 words</td>
+          <td><span class="badge auto">fixed</span> — it is a table</td></tr>
         <tr><td>4 finders converged on <code>catalog_rows</code>/<code>row_key</code> hand-scanning markup</td>
           <td><span class="badge auto">all refuted</span></td></tr>
         <tr><td>a fourth un-collapsed blob fetch in <code>check_retirement_order</code></td>
           <td><span class="badge auto">refuted</span> — reusing <code>docs</code> there is
             <em>unsound</em></td></tr>
         <tr><td><code>design_scope</code>'s String return · its base derivation · pin-check duplication ·
-          tokeniser module placement</td><td><span class="badge auto">refuted</span></td></tr>
+          tokeniser module placement · <code>workflow.html</code> staleness · the clippy invariant's tier ·
+          two intra-doc duplications</td><td><span class="badge auto">refuted</span></td></tr>
       </tbody>
     </table>
     <details class="why" data-c="why-refuted">
       <summary>Why 4 finders agreeing on one function was worth <em>less</em>, not more</summary>
-      <p>Four of five finders independently flagged the same ~15 lines: <code>catalog_rows</code> and
-        <code>row_key</code> still scan HTML by substring search, while ⓪ of this very WU replaced four such
-        scanners with a tokeniser. The convergence looked like corroboration. It was correlation — every one
-        reasoned from <em>"hand-rolled scanning is fragile"</em> without testing whether the tokeniser
-        behaves differently.</p>
-      <p>Its verifier tested the counterfactual instead of asserting it, and ran the same input through both:
-        <code>nodes()</code>/<code>attrs()</code> produced the <strong>identical</strong> spurious row.
-        <code>&lt;pre&gt;</code>/<code>&lt;code&gt;</code> are ordinary parsed content in HTML5 —
-        <code>RAW_TEXT</code> covers only <code>&lt;script&gt;</code>/<code>&lt;style&gt;</code> — so any
-        conformant reader must treat an unescaped <code>&lt;</code> there as a tag open. The project already
-        names that case, via <code>check_escaped_markup</code>.</p>
-      <p>Two of the refutations are stronger still, because each found the <em>consequence</em> false rather
-        than the mechanism. The <code>&gt;</code>-in-attribute drop is real — a row does vanish — but
-        <code>markup·escaped</code> reds any raw <code>&gt;</code> inside a tag, runs first and
-        unconditionally, and the only fix it accepts (escaping) disarms the drop. And
-        <code>elements_of</code>, the helper two finders said to reuse, returns an element's
-        <em>body</em> — while <code>data-key</code> rides the opening tag it strips.</p>
+      <p>All four reasoned from <em>"hand-rolled scanning is fragile"</em> without testing the tokeniser.
+        Only verifiers that tested the counterfactual moved a verdict.</p>
+      <table data-c="tbl-refuted">
+        <thead><tr><th>Claim</th><th>Mechanism</th><th>Why it did not matter</th></tr></thead>
+        <tbody>
+          <tr><td>the scanner mis-reads a quoted <code>&lt;tr</code></td><td>real</td>
+            <td>the <strong>tokeniser produces the identical row</strong>. <code>&lt;pre&gt;</code>/<code>&lt;code&gt;</code>
+              are parsed content in HTML5 — <code>RAW_TEXT</code> is only <code>&lt;script&gt;</code>/<code>&lt;style&gt;</code></td></tr>
+          <tr><td>a <code>&gt;</code> in an earlier attribute drops the row</td><td>real — the row vanishes</td>
+            <td><code>markup·escaped</code> reds any raw <code>&gt;</code> in a tag, first and unconditionally;
+              its only accepted fix disarms the drop</td></tr>
+          <tr><td>reuse <code>elements_of</code></td><td>would not compile into working code</td>
+            <td>it returns an element's <em>body</em>; <code>data-key</code> rides the opening tag it strips</td></tr>
+        </tbody>
+      </table>
     </details>
     <div class="callout" data-c="waiver">
-      <strong>The one waiver, stated plainly.</strong> The quadratic path is <em>currently unreachable</em>:
-      every design-run doc in <code>docs/</code> is <code>draft</code> or <code>archived</code>, both of which
-      short-circuit to <code>Exempt</code> before <code>check_hard_rules</code> runs, and
-      <code>component-design</code> docs never call <code>check_colour_plus_text</code>. Forced onto the
-      largest real doc it adds ~100ms over a ~200ms floor already dominated by unconditional subprocess
-      spawns. The fix — caching the parsed nodes per document — threads state through ~25 predicates, which
-      is not a change to make at hand-over. <strong>Carried as follow-up 10.</strong>
+      <strong>The one waiver, and the premise round 3 corrected.</strong> Round 2 waived this as
+      <em>unreachable</em>. Round 3 measured that reason too narrow, so it is restated here as what is
+      actually true.
+      <table data-c="tbl-waiver">
+        <thead><tr><th>Instance</th><th>Reached today?</th><th>Cost measured</th></tr></thead>
+        <tbody>
+          <tr><td><code>check_hard_rules</code> → <code>check_colour_plus_text</code></td>
+            <td><span class="badge auto">no</span> all 6 real design-run declarations are
+              <code>draft</code>/<code>archived</code> → <code>Exempt</code> first; component designs never
+              call it</td><td>—</td></tr>
+          <tr><td><code>verify_html_against</code>'s entry path — <code>wu_blocks</code> ·
+            <code>top_items</code>/<code>sub_items</code>, <em>before</em> that gate</td>
+            <td><span class="badge approval">yes</span> <strong>11 real docs</strong>, on every write</td>
+            <td>worst real doc <strong>~40–90ms</strong> at 53 occurrences; superlinear only past hundreds of
+              items and megabytes, which no doc approaches</td></tr>
+        </tbody>
+      </table>
+      So the waiver rests on <strong>size, not unreachability</strong> — the honest ground. The fix, memoising
+      the parse per <code>verify_html_against</code> call, is a refactor and not a hand-over change.
+      <strong>Carried as follow-up 10.</strong>
     </div>
 
     <h2 id="gap">⚠ The gap — Tier-3 ships unexercised</h2>
@@ -482,8 +519,13 @@ no design artifact in 2bceacd71d..bfac33b2e1</pre>
       </table>
 
       <h3 id="owed">What this tip still owes</h3>
-      <p class="meta">Read off <code>verify-dod wu HEAD --target origin/epic/design-flow</code> — down to
-        <strong>one red</strong>: <code>8·manual-review</code>, which is yours alone.</p>
+      <p class="kd"><strong>A result report cannot state its own gate verdict.</strong> The
+        <code>cr/v3</code> note binds the diff sha of a diff that <em>contains this file</em>, so writing this
+        line moves the tip the note would bind — the same bootstrap the
+        <a href="#commits">commit table</a> hits. So this section names the command, never its output. Run
+        <code>cargo xtask verify-dod wu HEAD --target origin/epic/design-flow</code>. At the moment of
+        writing it reds twice: <code>1·notes</code> (no <code>cr/v3</code> yet — the attach below) and
+        <code>8·manual-review</code> (yours).</p>
       <table data-c="tbl-owed">
         <thead><tr><th>#</th><th>Owed</th><th>Who</th></tr></thead>
         <tbody>
@@ -499,11 +541,12 @@ no design artifact in 2bceacd71d..bfac33b2e1</pre>
             <a href="design-flow-base.html#commands">the command table</a> + the assertion</td><td>—</td></tr>
           <tr><td>5</td><td><s><code>test/v2</code> + <code>doc/v1</code> on the tip</s>
             <span class="badge auto">attached</span> unit 27 · integration 21 · e2e 2</td><td>—</td></tr>
-          <tr><td>6</td><td><s><strong>code-review skill</strong> over the WU diff → <code>cr/v3</code>
-            PASS</s> <span class="badge auto">2 rounds</span> — <a href="#review">4 fixed, 1 waived, 16
-            refuted</a>. No design section, <a href="#gap">correctly</a></td><td>—</td></tr>
-          <tr><td>7</td><td><code>mr confirm</code> — <strong>the only thing left.</strong> An agent must
-            never self-authorise</td><td><span class="badge approval">user</span></td></tr>
+          <tr><td>6</td><td><strong>code-review skill</strong> over the WU diff —
+            <a href="#review">3 rounds run</a>: 5 fixed, 1 waived, 17 refuted. <strong>The
+            <code>cr/v3</code> note itself is still owed</strong>, and can only be attached <em>after</em>
+            this file stops changing</td><td>agent</td></tr>
+          <tr><td>7</td><td><code>mr confirm</code>. An agent must never self-authorise</td>
+            <td><span class="badge approval">user</span></td></tr>
           <tr><td>8</td><td><code>--no-ff</code> merge into <code>epic/design-flow</code></td><td>agent</td></tr>
         </tbody>
       </table>
@@ -590,10 +633,10 @@ no design artifact in 2bceacd71d..bfac33b2e1</pre>
           one qualification short. T0 is edited only on request</td>
           <td><span class="badge approval">user</span></td></tr>
         <tr><td>10</td><td><strong>The tokeniser re-parses the whole document per call.</strong>
-          <span class="badge approval">waived</span> at ⑥ — <a href="#review">unreachable today</a>, ~100ms
-          when forced. Cache the parsed nodes per document rather than per
-          <code>attrs</code>/<code>element_content</code> call; the change touches ~25 predicates, so it wants
-          its own commit and its own review</td><td>backlog · tooling</td></tr>
+          <span class="badge approval">waived</span> at ⑥ on <a href="#review">size, not unreachability</a> —
+          reached by 11 real docs on every write, worst real case ~90ms, superlinear only past hundreds of
+          items. Memoise the parse once per <code>verify_html_against</code> call</td>
+          <td>backlog · tooling</td></tr>
         <tr><td>11</td><td><strong><code>catalog_rows</code> splits on a bare <code>"&lt;tr"</code> with no
           boundary check.</strong> Refuted on reachability — no tag beginning <code>tr</code> exists anywhere
           in the corpus, and <code>&lt;track&gt;</code> has no place in a proxy UI. But the mechanism a
@@ -610,6 +653,12 @@ no design artifact in 2bceacd71d..bfac33b2e1</pre>
           <code>cp .cargo-husky/hooks/* "$(git rev-parse --git-path hooks)/"</code>, though that directory is
           shared with the main <code>Trawler</code> checkout, so it is the user's call</td>
           <td><span class="badge approval">user</span></td></tr>
+        <tr><td>13</td><td><strong>A result report cannot state its own gate verdict</strong> — the
+          <code>cr/v3</code> note binds a diff sha of a diff containing the report, so any status it prints is
+          stale the moment it is written. Round 3 caught this report claiming a note that did not exist.
+          <code>#commits</code> already solved the same bootstrap for hashes by naming the command instead of
+          its output; the flow spec should say so once, for every future result report</td>
+          <td><a href="design-flow-base.html">flow spec</a></td></tr>
       </tbody>
     </table>
   </main>

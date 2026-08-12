@@ -2350,7 +2350,7 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
         let html =
             std::fs::read_to_string(&resolved).map_err(|e| format!("cannot read {path}: {e}"))?;
         let component = component_designed(path);
-        let designs = component.is_some() || html.contains("data-artifact=\"design-run\"");
+        let designs = declares_a_design(path, &html);
         if vocab.is_none() && designs {
             vocab = Some(vocabulary(repo));
         }
@@ -2374,6 +2374,14 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
         out = format!("verify-doc: {} doc(s) checked, none red", paths.len());
     }
     Ok((i32::from(any_red), out.trim_end().to_string()))
+}
+
+// Read the declaration, never the string: a substring scan says yes to every doc
+// that merely quotes the contract in prose, and each yes costs two node processes
+// nothing then reads. `design_run_status` is the same tokenised answer the gate's
+// run-finder already takes.
+fn declares_a_design(path: &str, html: &str) -> bool {
+    component_designed(path).is_some() || design_run_status(html).is_some()
 }
 
 pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
@@ -2408,10 +2416,10 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        attrs, check_frame_density, component_designed, edit_distance, elements_of, format_verdict,
-        rules_from_rulebook, verify_component, verify_html, verify_html_against, Component, Roster,
-        Verdict, Vocabulary, CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX,
-        FRAME_PROSE_WORDS, GIST_MAX_WORDS,
+        attrs, check_frame_density, component_designed, declares_a_design, edit_distance,
+        elements_of, format_verdict, rules_from_rulebook, verify_component, verify_html,
+        verify_html_against, Component, Roster, Verdict, Vocabulary, CAPABILITY_STATES,
+        FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -2727,6 +2735,34 @@ chroma_floor: 40
                 ("calm-microcopy".to_string(), false),
             ],
             "header rows and non-slug code spans must not become rules"
+        );
+    }
+
+    // Every doc that explains the design contract quotes the declaration, and a
+    // substring scan reads each quotation as a design - buying two node processes
+    // per doc that nothing goes on to read. The run-finder already tokenises; this
+    // is the same answer at the site that pays for it.
+    #[test]
+    fn a_doc_that_only_quotes_the_design_declaration_is_not_designing() {
+        let quoted = doc(
+            "wu-result",
+            "",
+            "<p>gate on <code>data-artifact=\"design-run\"</code> and never on the string</p>",
+        );
+        assert!(
+            !declares_a_design("docs/work/2026-08-12-notes.html", &quoted),
+            "a quoted declaration is prose, not an artifact"
+        );
+        assert!(
+            declares_a_design(
+                "docs/work/2026-08-13-run.html",
+                &doc("design-run", "draft", "<p>x</p>")
+            ),
+            "the real declaration still asks for the oracles"
+        );
+        assert!(
+            declares_a_design("docs/work/components/button.html", &quoted),
+            "a component design file is named by its path, whatever its body quotes"
         );
     }
 
