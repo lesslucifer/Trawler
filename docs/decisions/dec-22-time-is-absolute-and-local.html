@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7bd02a9f34851f0dfab756">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-22: time is absolute, local, 24 h</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-22 — every time Trawler shows is absolute, local, 24 h, seconds-precision</h1>
+      <p>One driver decides all four: a debugging proxy is read <em>side by side with</em> server logs,
+        a terminal and a system clock. Every rejected alternative makes the user do arithmetic before
+        they can correlate.</p>
+      <div class="meta">DEC-22 · 2026-08-12 · Trawler · E-DFLOW.W7 · distilled from TimestampText
+        F1–F4 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>Four independent forks on one component — absolute vs relative, ms vs seconds, local vs UTC,
+      24 h vs 12 h — settled the same way for the same reason. Read separately they look like four
+      formatting preferences; read together they are one product claim about what the app is
+      <em>for</em>, and it binds every future surface that shows a time.</p>
+
+    <h2 id="choice">Choice</h2>
+    <table data-c="tbl-forks">
+      <thead><tr><th>Fork</th><th>Settled</th><th>The correlation cost of the alternative</th></tr></thead>
+      <tbody>
+        <tr><td>absolute vs relative</td>
+          <td><strong>Absolute <code>HH:MM:SS</code></strong>; relative is opt-in per call site
+            (<code>format="relative"</code>)</td>
+          <td>"2 m ago" must be subtracted from now before it matches a log line, re-renders on a
+            timer for every visible row, and goes ambiguous after a few hours. Opt-in confines the
+            10 s re-render tick to surfaces that asked for it</td></tr>
+        <tr><td>milliseconds</td>
+          <td><strong>Seconds by default</strong>, truncated not rounded; ms via the custom
+            format</td>
+          <td>12 chars exceeds the list column at the current font size, pushing the host and path
+            columns or triggering truncation. Sub-second ordering within a burst is already carried by
+            <strong>list insertion order</strong>, so ms in the default adds width with no gain</td></tr>
+        <tr><td>timezone</td>
+          <td><strong>Always local</strong> — every mode, no UTC prop and none planned</td>
+          <td>UTC forces the user to add their own offset before matching a local log line. Useful
+            only if target servers always log UTC <em>and</em> users never use local tooling</td></tr>
+        <tr><td>12 h vs 24 h</td>
+          <td><strong>24 h</strong>, pinned by the format string over any locale default</td>
+          <td>An AM/PM suffix adds 3 chars, breaking the 8-char stability contract and the column.
+            The shipped <code>toLocaleTimeString()</code> call takes no options, so a US-English
+            locale produces "2:07:52 PM" — 11 chars with variable leading-zero behaviour</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="truncate">
+      <strong>Truncate, never round.</strong> Rounding to the nearest second can display a time one
+      second <em>ahead</em> of the event, which is the one error a log-correlation tool must not make.
+    </div>
+
+    <h2 id="rejected">Options rejected</h2>
+    <table data-c="tbl-rejected">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Relative as the list default</strong></td>
+          <td>Rejected as a default, kept as a mode. Recency matters on some surfaces; log
+            correlation matters on the list</td></tr>
+        <tr><td><strong>A hybrid default</strong> — relative for recent, absolute after a
+          threshold</td>
+          <td>A branch point with no gain for a debugging tool: it makes the same column mean two
+            things depending on age</td></tr>
+        <tr><td><strong>A UTC mode or preference</strong></td>
+          <td>Rejected outright, not deferred. A preference implies both readings are useful; only
+            one is, for this product</td></tr>
+        <tr><td><strong>Locale-default time</strong></td>
+          <td>Unstable width and an unfamiliar format for log correlation. The pinned format string
+            overrides it deliberately</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li>A new surface showing a time inherits all four defaults. Wanting something else means
+        wanting the <strong>custom format prop</strong> (<code>format="HH:mm:ss.SSS"</code>,
+        <code>format="hh:mm:ss A"</code>) — no new fork, and no new component.</li>
+      <li>The 8-char output width is a <strong>contract</strong>, not an observation: the list column
+        is sized to it, so anything that widens the default reopens the column.</li>
+      <li>The date library that renders all of it, and its exit path, is
+        <a href="dec-23-collection-dependencies.html">DEC-23</a>.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

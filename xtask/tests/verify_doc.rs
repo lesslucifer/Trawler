@@ -160,6 +160,7 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
     let rulebook = dir.path().join("docs/design-rules");
     std::fs::create_dir_all(&rulebook).unwrap();
     stub_vocabulary(&dir);
+    stub_registry(&dir, &[("Section", "rest · hover")]);
     std::fs::write(
         rulebook.join("design-rules-index.html"),
         "<table data-c=\"hard-rules-table\"><tbody>\
@@ -241,6 +242,33 @@ fn stub_vocabulary(dir: &TempDir) {
         "process.stdout.write(JSON.stringify({legal:[\"text-ink\"],         rules:{\"colour-tokens-only\":[\"text-\"]},values:{},modifiers:{},chromatic:[\"ok\"],chroma_floor:40}));",
     )
     .unwrap();
+}
+
+// The real oracle over a collection written into the temp tree, not a stub that
+// prints an answer: the bridge under test is node reading a TSDoc block, so a
+// canned JSON would assert only that serde works.
+fn stub_registry(dir: &TempDir, components: &[(&str, &str)]) {
+    let scripts = dir.path().join("scripts");
+    std::fs::create_dir_all(&scripts).unwrap();
+    std::fs::copy(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../scripts/design-registry.mjs"),
+        scripts.join("design-registry.mjs"),
+    )
+    .unwrap();
+    let collection = dir.path().join("ui/src/components");
+    std::fs::create_dir_all(&collection).unwrap();
+    std::fs::create_dir_all(dir.path().join("docs/work/components")).unwrap();
+    for (name, states) in components {
+        std::fs::write(
+            collection.join(format!("{name}.tsx")),
+            format!(
+                "/**\n * {name} does one thing.\n * @tier T1 — test entry\n * @use anywhere\n\
+                 \x20* @avoid nowhere\n * @states {states}\n * @madeof nothing\n */\n\
+                 export const {name} = () => null;\n"
+            ),
+        )
+        .unwrap();
+    }
 }
 
 // A vocabulary that cannot be read is the same shape of hole as an unreadable

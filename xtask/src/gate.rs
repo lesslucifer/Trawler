@@ -4,7 +4,8 @@ use std::process::Command;
 
 use crate::git::{diff_names, diff_sha256, git, note, write_note};
 use crate::notes::{
-    is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DocNote, TestNote,
+    is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DistilledTo,
+    DocChange, DocNote, TestNote,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -105,7 +106,7 @@ impl Gate<'_> {
         if level != Level::Commit {
             check_review(&mut report, parsed.cr.as_ref());
         }
-        Self::check_docs(&mut report, parsed.doc.as_ref(), &names);
+        self.check_docs(&mut report, parsed.doc.as_ref(), &names);
         if level == Level::Epic {
             self.walk(&mut report, target_ref)?;
         }
@@ -194,7 +195,7 @@ impl Gate<'_> {
         }
     }
 
-    fn check_docs(report: &mut Report, doc: Option<&DocNote>, names: &[String]) {
+    fn check_docs(&self, report: &mut Report, doc: Option<&DocNote>, names: &[String]) {
         let doc_paths: Vec<&String> = names.iter().filter(|p| is_doc(p)).collect();
         if let Some(doc) = doc {
             let entries: BTreeMap<&str, &crate::notes::DocChange> =
@@ -230,6 +231,7 @@ impl Gate<'_> {
                                 "record distilled_to: [paths] or a dead-end reason".to_string(),
                             ));
                         }
+                        self.check_retirement_order(report, path, entry);
                     }
                 }
             }
@@ -255,6 +257,35 @@ impl Gate<'_> {
                     ));
                 }
             }
+        }
+    }
+
+    // DEC-16's order, refused rather than remembered. Step ③ - removing a design
+    // file - is the irreversible one, and step ① is the only one that can lose
+    // data, so the gate holds ③ until ① has landed. The existing lineage rule
+    // accepts any recorded distilled_to including a dead-end reason: the right
+    // latitude for a scratch plan, and the wrong one for a file whose fork cards
+    // are the whole reason a removal loses something. Here the lineage must name
+    // a decision record that really exists at the tip.
+    fn check_retirement_order(&self, report: &mut Report, path: &str, entry: &DocChange) {
+        if !path.starts_with(crate::doc::COMPONENTS)
+            || crate::git::show_bytes(self.repo, &report.tip, path).is_ok()
+        {
+            return;
+        }
+        let distilled = match &entry.distilled_to {
+            Some(DistilledTo::Paths(paths)) => paths.iter().any(|to| {
+                to.starts_with("docs/decisions/")
+                    && crate::git::show_bytes(self.repo, &report.tip, to).is_ok()
+            }),
+            _ => false,
+        };
+        if !distilled {
+            report.failures.push(Failure::new(
+                "6·retirement-order",
+                format!("{path} is removed with its forks distilled nowhere"),
+                "DEC-16: distil the fork cards to docs/decisions/ first, then record distilled_to: [that record] - a dead-end reason does not cover a design file".to_string(),
+            ));
         }
     }
 

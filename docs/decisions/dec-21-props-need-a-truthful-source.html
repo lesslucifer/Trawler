@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7bd02a9f34851f0dfab754">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-21: a prop needs a truthful source</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-21 — a prop whose value can only be a guess does not exist, and the default is opt-<em>out</em></h1>
+      <p>Four components refused a prop and one reversed its own default. The test in both directions
+        is the same: which way does the component fail when the caller does not think about it?</p>
+      <div class="meta">DEC-21 · 2026-08-12 · Trawler · E-DFLOW.W7 · distilled from StepList D2 ·
+        DurationText D2 · Select D2 · Notice D2 · SegmentedControl D2 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>Every component fork reached a point where an extra prop would make the design more flexible and
+      cost nothing when unused. Five of them said no, for two different reasons that are easy to
+      conflate — <strong>the prop has no truthful source</strong>, and <strong>the prop has no
+      tenant</strong> — plus one reversal that shows what the default should be when a prop
+      <em>is</em> warranted.</p>
+
+    <h2 id="choice">Choice</h2>
+    <table data-c="tbl-tests">
+      <thead><tr><th>Test</th><th>The rule</th><th>Where it was applied</th></tr></thead>
+      <tbody>
+        <tr><td><strong>No truthful source</strong></td>
+          <td>If nothing in the system can observe the value, the first caller will fill it with a
+            guess. A component whose prop can only be filled with a guess should not have the
+            prop</td>
+          <td><code>StepList</code>'s per-step <code>done</code>: nothing observes which step you
+            did — only whether the CA is now trusted. A click would record "I read this", not "this is
+            done". <strong>One honest probed verdict beats four unverifiable ticks</strong></td></tr>
+        <tr><td><strong>Not this component's knowledge</strong></td>
+          <td>A threshold that varies by application belongs to the screen, not the primitive</td>
+          <td><code>DurationText</code>'s slow threshold — see
+            <a href="dec-19-chromatic-accent-closed.html">DEC-19</a> for the colour half</td></tr>
+        <tr><td><strong>No tenant</strong></td>
+          <td>A mode nobody has asked for is a different component wearing the same clothes. Add it as
+            a sibling when a real tenant appears, not before</td>
+          <td><code>SegmentedControl</code>'s multi-select: it would change the value shape to a set
+            and the ARIA pattern to independent toggles</td></tr>
+        <tr><td><strong>One component with a tone beats two components</strong></td>
+          <td>When two candidate components share an anatomy and differ by one colour, and the
+            boundary between them <em>moves</em>, they are one component</td>
+          <td><code>Notice</code> for absence and failure both: "not captured" is an absence, "could
+            not load" is a failure, and a fifth state sits between. Two components force every tenant
+            to pick — and a tenant picking wrong is a documented finding</td></tr>
+        <tr><td><strong>Opt out, never opt in</strong></td>
+          <td>When a prop <em>is</em> warranted, the default is the one whose failure is cheap</td>
+          <td><code>Select</code>'s <code>searchable</code>, defaulting <code>true</code> — see
+            below</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="asymmetry">
+      <strong>The asymmetry that sets a default.</strong> An unnecessary search row costs one line of
+      chrome. A missing one, on a list that grew, costs the user the ability to find their option at
+      all. So <code>searchable</code> defaults to <code>true</code> and a caller with two obvious
+      options opts out — <em>nobody has to opt in</em>, and the failure mode is a redundant filter box
+      rather than a missing one.
+    </div>
+
+    <h2 id="rejected">Options rejected</h2>
+    <table data-c="tbl-rejected">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A component-owned threshold</strong> — <code>Select</code> shows search above
+          8 options, no prop</td>
+          <td>The first draft settled this, to keep "is this list long?" out of every call site.
+            <strong>Reversed at review.</strong> The threshold is a guess about scannability that
+            varies by content — six near-identical mono strings are harder to scan than twelve
+            distinct words — so a fixed number is wrong on both sides of itself, and a caller who
+            disagrees has no recourse. What survived: typing filters even when
+            <code>searchable</code> is false, and the row appears the moment it is used</td></tr>
+        <tr><td><strong>An optional <code>done</code> flag</strong> on StepList — familiar, and free
+          when unused</td>
+          <td>"Free when unused" is the trap. The flag has no truthful source, so the first caller
+            drives it from a click</td></tr>
+        <tr><td><strong><code>EmptyState</code> + <code>ErrorState</code></strong> as two
+          components</td>
+          <td>Reads tidier in a roster and is how most systems do it. Rejected: it duplicates the
+            entire anatomy for one changed colour, and the first tenant needing "absence, but you can
+            retry" has to choose a parent arbitrarily</td></tr>
+        <tr><td><strong>A cycling button</strong> instead of a segment group</td>
+          <td>One touch target, but "show decoded" implies decoded is <em>not</em> current while
+            "decoded" implies it is — either reading is ambiguous. All options visible makes the
+            current state unambiguous at a glance</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li>A design run proposing a prop answers <strong>where its value comes from</strong>. "The
+        caller decides" is an answer only when the caller can actually know.</li>
+      <li>A proposed variant with no tenant is deferred with its <strong>escape path written
+        down</strong>, the way the shared-shell lift was (<a href="dec-18-one-control-box.html">DEC-18</a>)
+        — a deferral that names its trigger resolves itself later instead of being re-litigated.</li>
+      <li>Where a default is set, the record names <strong>which failure it prefers</strong>. That is
+        the reviewable part; the boolean itself is not.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

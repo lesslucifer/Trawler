@@ -67,6 +67,8 @@ const HARD_PREDICATES: &[&str] = &[
 ];
 const RULEBOOK: &str = "docs/design-rules/design-rules-index.html";
 const VOCABULARY: &str = "scripts/design-vocabulary.mjs";
+const REGISTRY: &str = "scripts/design-registry.mjs";
+pub const COMPONENTS: &str = "docs/work/components/";
 
 fn checklist(artifact: &str) -> Option<&'static [&'static str]> {
     match artifact {
@@ -164,21 +166,71 @@ impl Vocabulary {
     }
 }
 
-pub fn vocabulary(repo: &Path) -> Result<Vocabulary, String> {
-    let script = repo.join(VOCABULARY);
+// Both oracles are ES modules the design surfaces already read, so Rust reads
+// their answer rather than the config behind it - one source of truth, several
+// surfaces (DEC-17). JSON is YAML, so this needs no new parser.
+fn oracle<T: serde::de::DeserializeOwned>(repo: &Path, script: &str) -> Result<T, String> {
     let out = Command::new("node")
-        .arg(&script)
+        .arg(repo.join(script))
         .current_dir(repo)
         .output()
-        .map_err(|e| format!("cannot launch node for {VOCABULARY}: {e}"))?;
+        .map_err(|e| format!("cannot launch node for {script}: {e}"))?;
     if !out.status.success() {
-        return Err(format!(
-            "{VOCABULARY} failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        ));
+        return Err(format!("{script} failed: {}", String::from_utf8_lossy(&out.stderr).trim()));
     }
-    serde_yaml::from_slice(&out.stdout)
-        .map_err(|e| format!("{VOCABULARY} emitted no vocabulary: {e}"))
+    serde_yaml::from_slice(&out.stdout).map_err(|e| format!("{script} emitted nothing usable: {e}"))
+}
+
+pub fn vocabulary(repo: &Path) -> Result<Vocabulary, String> {
+    oracle(repo, VOCABULARY)
+}
+
+// The component vocabulary: the collection's own TSDoc, emitted by
+// scripts/design-registry.mjs (W7 ①) and never stored. `designed` is the other
+// half of the roster - a component whose contract still lives in its design
+// file because no code carries it yet (DEC-16: a design file with no code is
+// not retired, it is unbuilt). The two sets are disjoint, and check_retirement
+// is what keeps them that way.
+#[derive(Deserialize)]
+pub struct Component {
+    states: String,
+}
+
+pub struct Roster {
+    registry: BTreeMap<String, Component>,
+    designed: BTreeSet<String>,
+}
+
+impl Roster {
+    fn resolves(&self, name: &str) -> bool {
+        self.registry.contains_key(name) || self.designed.contains(name)
+    }
+
+    fn citable_states(&self, name: &str) -> bool {
+        self.registry.get(name).is_some_and(|c| !c.states.trim().is_empty())
+    }
+}
+
+pub fn roster(repo: &Path) -> Result<Roster, String> {
+    let designed = std::fs::read_dir(repo.join(COMPONENTS))
+        .map_err(|e| format!("cannot read {COMPONENTS}: {e}"))?
+        .filter_map(|entry| {
+            let name = entry.ok()?.file_name().into_string().ok()?;
+            Some(component_name(name.strip_suffix(".html")?))
+        })
+        .collect();
+    Ok(Roster { registry: oracle(repo, REGISTRY)?, designed })
+}
+
+// A catalog row keys itself by the slug of the component it names, which is the
+// name the roster carries: `copy-text` is CopyText.
+fn component_name(slug: &str) -> String {
+    slug.split('-')
+        .map(|part| {
+            let mut chars = part.chars();
+            chars.next().map_or_else(String::new, |c| c.to_uppercase().chain(chars).collect())
+        })
+        .collect()
 }
 
 pub enum Verdict {
@@ -203,13 +255,14 @@ struct Occurrence {
 type Tagged = (usize, Occurrence);
 
 pub fn verify_html(html: &str) -> Verdict {
-    verify_html_against(html, None, None)
+    verify_html_against(html, None, None, None)
 }
 
 pub fn verify_html_against(
     html: &str,
     rules: Option<&[Rule]>,
     vocabulary: Option<&Vocabulary>,
+    roster: Option<&Roster>,
 ) -> Verdict {
     let Some(artifact) = attrs(html, "data-artifact").into_iter().next() else {
         return Verdict::Ungoverned;
@@ -298,9 +351,9 @@ pub fn verify_html_against(
     if artifacts.iter().any(|a| a == "design-run") {
         let receipt = top_items.iter().find(|(_, o)| o.value == "receipt").map(|(_, o)| o);
         summary = check_receipt(&mut failures, receipt, html, rules);
-        check_composition(&mut failures, html, &top_items);
+        check_composition(&mut failures, html, &top_items, roster);
         let allowed = read_pragmas(&mut failures, html);
-        check_hard_rules(&mut failures, html, &top_items, vocabulary, &allowed);
+        check_hard_rules(&mut failures, html, &top_items, vocabulary, &allowed, roster);
         summary = summary.map(|s| format!("{s}\n{}", allowed.tally()));
     }
 
@@ -433,13 +486,19 @@ fn tally_line(soft: &[&str], missing: &[&str], counts: &[usize], hard: &[&str]) 
     )
 }
 
-fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) {
+fn check_composition(
+    failures: &mut Vec<Failure>,
+    html: &str,
+    items: &[Tagged],
+    roster: Option<&Roster>,
+) {
     let item = |name: &str| {
         items.iter().find(|(_, o)| o.value == name).map(|(_, o)| &html[o.span.0..o.span.1])
     };
     if let Some(elements) = item("elements") {
         check_elements_map(failures, elements);
         check_avoid_cited(failures, elements);
+        check_cited_components(failures, elements, roster);
         check_gist_and_collapse(
             failures,
             elements,
@@ -500,6 +559,96 @@ fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) 
     }
 }
 
+// ─── the design files ───────────────────────────────────────────────────────
+//
+// A component design file carries no data-artifact: the folder is the artifact
+// type, so these are keyed by path rather than by declaration.
+pub fn verify_component(
+    html: &str,
+    name: &str,
+    roster: Option<&Roster>,
+    vocabulary: Option<&Vocabulary>,
+) -> Verdict {
+    let mut failures = Vec::new();
+    check_escaped_markup(&mut failures, html);
+    match roster {
+        Some(roster) => check_retirement(&mut failures, name, roster),
+        None => failures.push(Failure {
+            check: "components·registry-unreadable".to_string(),
+            what: format!("cannot read the component roster via {REGISTRY}"),
+            fix: "run verify-doc from the repo root with node available - whether this file is a retired contract's leftover copy cannot be answered unread".to_string(),
+        }),
+    }
+    if let Some(vocabulary) = vocabulary {
+        check_redrawn(&mut failures, html, vocabulary);
+    }
+    Verdict::Checked { artifacts: vec!["component-design".to_string()], failures, summary: None }
+}
+
+fn component_designed(path: &str) -> Option<String> {
+    let file = path.split(COMPONENTS).nth(1)?.strip_suffix(".html")?;
+    (!file.contains('/')).then(|| component_name(file))
+}
+
+// The registry and the design files are DISJOINT, and retirement is what keeps
+// them so: once a component's contract is its TSDoc, the file holding the older
+// copy is a second contract with nothing checking it against the first - the
+// drift this epic exists to kill. So a file whose component has code is red
+// until DEC-16's order has run over it, and the four that have no roster entry
+// are not violations but the case DEC-16 names: a design file with no code is
+// not retired, it is unbuilt.
+fn check_retirement(failures: &mut Vec<Failure>, name: &str, roster: &Roster) {
+    if roster.registry.contains_key(name) {
+        failures.push(Failure {
+            check: "components·unretired".to_string(),
+            what: format!("{name}'s contract is its TSDoc, and this file still holds a copy"),
+            fix: format!("retire it in DEC-16's order: distil the forks to docs/decisions/, verify {name}'s TSDoc carries the whole contract, then remove the file"),
+        });
+    }
+}
+
+// The design docs and the app speak one Tailwind vocabulary because they read
+// one config (W5 dissolved the specimen sheet that was the second copy). A
+// stylesheet rule for a class the config already emits re-opens the gap from
+// the other side: the doc renders its own version of a shared utility, and
+// nothing says which one the build inherits.
+fn check_redrawn(failures: &mut Vec<Failure>, html: &str, vocabulary: &Vocabulary) {
+    let mut redrawn: Vec<(String, String)> = Vec::new();
+    for (selector, class) in stylesheet_classes(html) {
+        if vocabulary.emits(&class) && !redrawn.iter().any(|(_, c)| *c == class) {
+            redrawn.push((selector, class));
+        }
+    }
+    for (selector, class) in redrawn {
+        failures.push(Failure {
+            check: "components·redrawn".to_string(),
+            what: format!("`{selector}` re-draws `{class}`, which ui/tailwind.config.js emits"),
+            fix: "the shared vocabulary owns this class - drop the rule and let the config render it, or name the doc's own class something the config does not emit".to_string(),
+        });
+    }
+}
+
+fn stylesheet_classes(html: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for block in html.split("<style").skip(1) {
+        let css = strip_css_comments(block.split("</style>").next().unwrap_or(block));
+        for rule in css.split('}') {
+            let Some((selector, _)) = rule.split_once('{') else { continue };
+            let selector = selector.trim().replace('\n', " ");
+            for (at, _) in selector.match_indices('.') {
+                let class: String = selector[at + 1..]
+                    .chars()
+                    .take_while(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
+                    .collect();
+                if !class.is_empty() {
+                    out.push((selector.clone(), class));
+                }
+            }
+        }
+    }
+    out
+}
+
 // ─── the thirteen hard rules ────────────────────────────────────────────────
 //
 // Each predicate is named for its slug and judges the DESIGN RUN, never
@@ -511,6 +660,7 @@ fn check_hard_rules(
     items: &[Tagged],
     vocabulary: Option<&Vocabulary>,
     allowed: &Allowances,
+    roster: Option<&Roster>,
 ) {
     let item = |name: &str| {
         items.iter().find(|(_, o)| o.value == name).map(|(_, o)| &html[o.span.0..o.span.1])
@@ -531,7 +681,7 @@ fn check_hard_rules(
         check_overflow_declared(failures, layout);
     }
     if let Some(elements) = item("elements") {
-        check_state_declarations(failures, elements);
+        check_state_declarations(failures, elements, roster);
         check_wire_order_preserved(failures, elements);
     }
     if let Some(interaction) = item("interaction") {
@@ -908,20 +1058,46 @@ fn names_zone(declaration: &str, zone: char) -> bool {
 // state-declarations. Every catalog row answers empty · loading · error ·
 // overflow. A reuse may answer by citation - its file already decided; a propose
 // has no file to cite, so an em dash there is a component nobody has designed.
-fn check_state_declarations(failures: &mut Vec<Failure>, elements: &str) {
+//
+// W4 finding 12: which of the two a row is was read off the VERDICT WORD, which
+// is a guess about the registry rather than a reading of it. With the oracle it
+// is a lookup - a bare citation is complete when the component it names really
+// declares @states, and empty when nothing does.
+fn check_state_declarations(failures: &mut Vec<Failure>, elements: &str, roster: Option<&Roster>) {
     let rows = data_rows(elements);
     let mut blank = 0usize;
-    let mut uncited = 0usize;
-    for row in &rows {
-        let cell =
-            elements_of(row, "td").last().map(|c| inner_text(c, (0, c.len()))).unwrap_or_default();
+    let mut proposed = 0usize;
+    let mut uncitable: Vec<String> = Vec::new();
+    // Key and cells are read off the same chunk: pairing two row lists by index
+    // holds only while every catalog row is both keyed and three cells wide,
+    // which is an assumption the map check enforces elsewhere and this one
+    // would silently inherit.
+    for (name, row) in catalog_rows(elements) {
+        let cells = elements_of(row, "td");
+        if cells.len() < 3 {
+            continue;
+        }
+        let cell = cells.last().map(|c| inner_text(c, (0, c.len()))).unwrap_or_default();
         let states = cell.trim();
         if states.is_empty() {
             blank += 1;
-        } else if states.chars().all(|c| c == '—' || c.is_whitespace())
-            && ["propose", "extend"].iter().any(|v| row.contains(&format!(">{v}<")))
-        {
-            uncited += 1;
+            continue;
+        }
+        if !states.chars().all(|c| c == '—' || c.is_whitespace()) {
+            continue;
+        }
+        // Two ways a dash can be empty, and they are not the same red. A verdict
+        // with no file yet has none to cite whatever the registry holds -
+        // proposing a name that happens to be taken does not make the proposal's
+        // states someone else's. A verdict that answers FROM a file is checked
+        // against the registry rather than against its own verdict word (W4
+        // finding 12). A row that is neither - dissolved, or placed by nothing -
+        // designs no component, so it declares no states.
+        let verdicted = |set: &[&str]| set.iter().any(|v| row.contains(&format!(">{v}<")));
+        if verdicted(UNBUILT) {
+            proposed += 1;
+        } else if verdicted(CITES_ITS_FILE) && !roster.is_some_and(|r| r.citable_states(&name)) {
+            uncitable.push(name);
         }
     }
     if blank > 0 {
@@ -931,11 +1107,18 @@ fn check_state_declarations(failures: &mut Vec<Failure>, elements: &str) {
             fix: "every component answers empty · loading · error · overflow - \"—\" counts, blank does not".to_string(),
         });
     }
-    if uncited > 0 {
+    if proposed > 0 {
         failures.push(Failure {
             check: "state-declarations·proposed".to_string(),
-            what: format!("{uncited} proposed components answer their states with \"—\""),
+            what: format!("{proposed} proposed components answer their states with \"—\""),
             fix: "a citation completes the cell for a reuse, never for a propose - a component that does not exist yet has no file to cite".to_string(),
+        });
+    }
+    if !uncitable.is_empty() {
+        failures.push(Failure {
+            check: "state-declarations·uncitable".to_string(),
+            what: format!("\"—\" cites a @states nothing declares: {}", uncitable.join(" ")),
+            fix: "the cell cites the component's own file - name a component whose TSDoc declares @states, or state the states here".to_string(),
         });
     }
 }
@@ -1186,6 +1369,70 @@ fn check_avoid_cited(failures: &mut Vec<Failure>, elements: &str) {
             fix: "a reuse names the @avoid it clears, not only the @use it matches - the @avoid is the half that discriminates".to_string(),
         });
     }
+}
+
+// The registry gate requirement #1 never had: until W7 ① nothing here could read
+// a TSDoc block, so a catalog was checked for SHAPE and never for TRUTH and a
+// reuse could name a component that does not exist. A row claiming a component
+// is already available - reuse, extend, or considered-and-rejected - must name
+// one; propose, build local and dissolved name what is deliberately absent.
+//
+// What a citation SAYS stays Tier-3's (W7 ④). The text is a paraphrase of the
+// clause, and a row legitimately cites OTHER components' contracts - run #2's
+// SectionBand row cites Section's @avoid, run #3's StepList row cites
+// CopyText's - so no match between a quote and a clause is decidable here.
+fn check_cited_components(failures: &mut Vec<Failure>, elements: &str, roster: Option<&Roster>) {
+    let Some(roster) = roster else {
+        failures.push(Failure {
+            check: "elements·registry-unreadable".to_string(),
+            what: format!("cannot read the component roster via {REGISTRY}"),
+            fix: format!("run verify-doc from the repo root with node available - every reuse resolves against {COMPONENTS} and the collection's TSDoc, and cannot pass unread"),
+        });
+        return;
+    };
+    let mut unresolved: Vec<String> = catalog_rows(elements)
+        .into_iter()
+        .filter(|(_, row)| PLACED.iter().any(|v| row.contains(&format!(">{v}<"))))
+        .map(|(name, _)| name)
+        .filter(|name| !roster.resolves(name))
+        .collect();
+    unresolved.sort_unstable();
+    unresolved.dedup();
+    if !unresolved.is_empty() {
+        failures.push(Failure {
+            check: "elements·unresolved".to_string(),
+            what: format!("no component exists for: {}", unresolved.join(" ")),
+            fix: format!("a reuse resolves to the collection's TSDoc or to a design file in {COMPONENTS} - name the component that exists, or verdict the row propose"),
+        });
+    }
+}
+
+// Verdicts that claim the component is already available to reuse. `n/a` is one
+// of them: a row that considered and rejected a component is a rejection OF
+// something, and run #3's two are both real roster entries.
+const PLACED: &[&str] = &["reuse", "extend", "n/a"];
+// A component this run still owes a design: nothing to cite, so its states are
+// stated here. An `extend` owes the delta even though its base has a file.
+const UNBUILT: &[&str] = &["propose", "extend"];
+// The verdicts whose states really do live in the component's own TSDoc.
+const CITES_ITS_FILE: &[&str] = &["reuse", "n/a"];
+
+// Rows do not nest, so the catalog is split on the opening tag rather than
+// matched: data-key rides that tag, and an element's body - which is what
+// elements_of returns - is exactly where it is not.
+fn catalog_rows(elements: &str) -> Vec<(String, &str)> {
+    elements
+        .split("<tr")
+        .skip(1)
+        .filter_map(|row| Some((component_name(row_key(row)?), row)))
+        .collect()
+}
+
+fn row_key(row: &str) -> Option<&str> {
+    const KEY: &str = "data-key=\"";
+    let head = row.split_once('>')?.0;
+    let at = head.find(KEY)? + KEY.len();
+    head[at..].find('"').map(|end| &head[at..at + end])
 }
 
 // A highlight that lights one place traces nothing: the map's whole value is
@@ -1925,10 +2172,10 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
         .ok()
         .map(|html| rules_from_rulebook(&html))
         .filter(|rules| !rules.is_empty());
-    // Read once for the whole invocation, and only when a design run is in the
-    // batch: the vocabulary costs a node process, and no other artifact has a
-    // rule that reads it.
+    // Read once for the whole invocation, and only when a doc in the batch has a
+    // rule that reads them: each oracle costs a node process.
     let mut vocab: Option<Result<Vocabulary, String>> = None;
+    let mut names: Option<Result<Roster, String>> = None;
     let mut out = String::new();
     let mut any_red = false;
     for path in paths {
@@ -1936,14 +2183,20 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
             if Path::new(path).exists() { Path::new(path).to_path_buf() } else { repo.join(path) };
         let html =
             std::fs::read_to_string(&resolved).map_err(|e| format!("cannot read {path}: {e}"))?;
-        if vocab.is_none() && html.contains("data-artifact=\"design-run\"") {
+        let component = component_designed(path);
+        let designs = component.is_some() || html.contains("data-artifact=\"design-run\"");
+        if vocab.is_none() && designs {
             vocab = Some(vocabulary(repo));
         }
-        let verdict = verify_html_against(
-            &html,
-            rules.as_deref(),
-            vocab.as_ref().and_then(|read| read.as_ref().ok()),
-        );
+        if names.is_none() && designs {
+            names = Some(roster(repo));
+        }
+        let vocab_read = vocab.as_ref().and_then(|read| read.as_ref().ok());
+        let roster_read = names.as_ref().and_then(|read| read.as_ref().ok());
+        let verdict = match component {
+            Some(name) => verify_component(&html, &name, roster_read, vocab_read),
+            None => verify_html_against(&html, rules.as_deref(), vocab_read, roster_read),
+        };
         if verdict.red() {
             any_red = true;
         }
@@ -1989,10 +2242,10 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        attrs, check_frame_density, edit_distance, elements_of, format_verdict,
-        rules_from_rulebook, verify_html, verify_html_against, Verdict, Vocabulary,
-        CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS,
-        GIST_MAX_WORDS,
+        attrs, check_frame_density, component_designed, edit_distance, elements_of, format_verdict,
+        rules_from_rulebook, verify_component, verify_html, verify_html_against, Component, Roster,
+        Verdict, Vocabulary, CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX,
+        FRAME_PROSE_WORDS, GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -2067,6 +2320,18 @@ chroma_floor: 40
         serde_yaml::from_str(VOCABULARY).expect("the test vocabulary parses like the real one")
     }
 
+    // Two components with code and one whose contract is still its design file -
+    // the two halves of the roster, and the disjointness check_retirement keeps.
+    fn roster() -> Roster {
+        Roster {
+            registry: ["Section", "CopyText"]
+                .into_iter()
+                .map(|name| (name.to_string(), Component { states: "rest · hover".to_string() }))
+                .collect(),
+            designed: ["BodyViewer"].into_iter().map(str::to_string).collect(),
+        }
+    }
+
     fn receipt(rows: &str) -> String {
         format!("<pre data-item=\"receipt\">rulebook: 28f5437\nsoft:\n{rows}</pre>")
     }
@@ -2119,7 +2384,13 @@ chroma_floor: 40
             "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
             cells(20, FRAME_CELL_MEAN)
         );
-        assert!(!verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab())).red());
+        assert!(!verify_html_against(
+            &frame_run(&body),
+            Some(&rules()),
+            Some(&vocab()),
+            Some(&roster())
+        )
+        .red());
     }
 
     #[test]
@@ -2128,7 +2399,8 @@ chroma_floor: 40
             "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
             cells(20, FRAME_CELL_MEAN + 6)
         );
-        let v = verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()));
+        let v =
+            verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(v.red());
         assert!(
             what(&v, "frame·cell-density").contains("average 18.0 words"),
@@ -2145,7 +2417,12 @@ chroma_floor: 40
             "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
             cells(20, FRAME_CELL_MAX / 2)
         );
-        let v = verify_html_against(&frame_run(&split), Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(
+            &frame_run(&split),
+            Some(&rules()),
+            Some(&vocab()),
+            Some(&roster()),
+        );
         assert!(v.red(), "half-length cells still average over the mean");
         let checks = failures(&v);
         assert!(checks.contains(&"frame·cell-density".to_string()), "{checks:?}");
@@ -2159,7 +2436,8 @@ chroma_floor: 40
             cells(40, 1),
             "word ".repeat(FRAME_CELL_MAX + 1)
         );
-        let v = verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()));
+        let v =
+            verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(v.red());
         assert!(what(&v, "frame·cell-length").contains("41 words"), "{:?}", failures(&v));
     }
@@ -2168,7 +2446,8 @@ chroma_floor: 40
     fn commentary_bolted_onto_the_frame_is_red() {
         let body = "<div data-item=\"frame\"><p>purpose</p><p>given</p><p>not given</p>\
                     <p>why this screen matters</p><table><td>clause</td></table></div>";
-        let v = verify_html_against(&frame_run(body), Some(&rules()), Some(&vocab()));
+        let v =
+            verify_html_against(&frame_run(body), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(v.red());
         assert!(what(&v, "frame·prose-blocks").contains("4 prose blocks"), "{:?}", failures(&v));
     }
@@ -2179,7 +2458,8 @@ chroma_floor: 40
             "<div data-item=\"frame\"><p>{}</p><table><td>clause</td></table></div>",
             "word ".repeat(FRAME_PROSE_WORDS + 1)
         );
-        let v = verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()));
+        let v =
+            verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(v.red());
         assert!(what(&v, "frame·prose-length").contains("61 words"), "{:?}", failures(&v));
     }
@@ -2218,7 +2498,8 @@ chroma_floor: 40
                     <td><span>✓ concrete</span><span>✗ concrete</span></td></tr>\
                     <tr><td>driver</td><td>why</td><td>therefore</td><td>a criterion</td></tr>\
                     </table></div>";
-        let v = verify_html_against(&frame_run(body), Some(&rules()), Some(&vocab()));
+        let v =
+            verify_html_against(&frame_run(body), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(v.red());
         assert!(what(&v, "frame·example").contains("1 of 2"), "{:?}", failures(&v));
     }
@@ -2272,7 +2553,7 @@ chroma_floor: 40
 
     #[test]
     fn conforming_design_run_is_green_with_a_computed_tally() {
-        let v = verify_html_against(&green_run(), Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&green_run(), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(!v.red(), "{:?}", failures(&v));
         let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
         assert!(summary.contains("receipt 2/2 soft · 1 satisfied · 1 inherited"), "{summary}");
@@ -2290,7 +2571,7 @@ chroma_floor: 40
              <tr><td><code>spacing-scale</code></td>",
         );
         let rules = rules_from_rulebook(&widened);
-        let v = verify_html_against(&green_run(), Some(&rules), Some(&vocab()));
+        let v = verify_html_against(&green_run(), Some(&rules), Some(&vocab()), Some(&roster()));
         let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
         assert!(
             summary.contains("2/3 machine-checked (design) — 1 unchecked: not-a-predicate"),
@@ -2301,7 +2582,7 @@ chroma_floor: 40
     #[test]
     fn a_missing_soft_slug_fails_by_name() {
         let doc = design_run(&receipt("  data-ink-first: satisfied — no card frames\n"));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert_eq!(failures(&v), vec!["receipt·calm-microcopy"]);
     }
 
@@ -2310,7 +2591,7 @@ chroma_floor: 40
         let doc = design_run(&receipt(
             "  data-ink-first: satisfied — x\n  calm-microcopy: satisfied — y\n  spacing-scale: satisfied — z\n",
         ));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(what(&v, "receipt·unknown-slug").contains("machine-checked, not receipted"));
     }
 
@@ -2319,7 +2600,7 @@ chroma_floor: 40
         let doc = design_run(&receipt(
             "  data-ink-first: satisfied — x\n  calm-microcopi: satisfied — y\n",
         ));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         let msg = what(&v, "receipt·unknown-slug");
         assert!(msg.contains("calm-microcopi") && msg.contains("calm-microcopy"), "{msg}");
     }
@@ -2329,7 +2610,7 @@ chroma_floor: 40
         let doc = design_run(&receipt(
             "  data-ink-first: probably-fine — x\n  calm-microcopy: satisfied\n",
         ));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(what(&v, "receipt·data-ink-first").contains("not one of the seven"));
         assert!(what(&v, "receipt·calm-microcopy").contains("no citation"));
     }
@@ -2339,7 +2620,7 @@ chroma_floor: 40
         let doc = design_run(
             "<pre data-item=\"receipt\">rulebook: 28f5437\nsoft:\n  data-ink-first: ok\n   calm-microcopy: ok\n</pre>",
         );
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         let msg = what(&v, "receipt·yaml");
         assert!(msg.contains("line"), "serde_yaml's own position is the error text: {msg}");
     }
@@ -2354,14 +2635,14 @@ chroma_floor: 40
     #[test]
     fn an_unpinned_rulebook_version_is_red() {
         let doc = green_run().replace("rulebook: 28f5437", "rulebook: \"\"");
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(failures(&v).contains(&"receipt·rulebook".to_string()));
     }
 
     #[test]
     fn an_unkeyed_elements_catalog_is_red() {
         let doc = green_run().replace(" data-map", "").replace("data-key=\"section\"", "");
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(what(&v, "elements·map").contains("specimen.js"));
     }
 
@@ -2522,7 +2803,7 @@ chroma_floor: 40
     }
 
     fn doc_verdict(html: &str) -> Verdict {
-        verify_html_against(html, Some(&rules()), Some(&vocab()))
+        verify_html_against(html, Some(&rules()), Some(&vocab()), Some(&roster()))
     }
 
     #[test]
@@ -2746,7 +3027,7 @@ chroma_floor: 40
     }
 
     fn reds(html: &str) -> Vec<String> {
-        failures(&verify_html_against(html, Some(&rules()), Some(&vocab())))
+        failures(&verify_html_against(html, Some(&rules()), Some(&vocab()), Some(&roster())))
     }
 
     #[test]
@@ -2755,6 +3036,7 @@ chroma_floor: 40
             &mockup("<span class=\"text-pink-500\">x</span>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "colour-tokens-only·off-vocabulary").contains("resolves to nothing"));
         assert!(
@@ -2769,6 +3051,7 @@ chroma_floor: 40
             &mockup("<span class=\"p-[13px]\">x</span>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "spacing-scale·off-vocabulary").contains("names 13px inline"));
     }
@@ -2781,6 +3064,7 @@ chroma_floor: 40
             &mockup("<span class=\"text-[#ff00aa]\">x</span>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "zero-accent·off-set").contains("chromatic colour outside the set"));
 
@@ -2810,6 +3094,7 @@ chroma_floor: 40
             &mockup("<div class=\"rounded-md\">x</div>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "radius-tokens·off-vocabulary").contains("rounded-md"));
     }
@@ -2821,7 +3106,7 @@ chroma_floor: 40
         let legal =
             mockup("<span class=\"hover:focus-visible:text-ink !p-2 bg-canvas/wash\">x</span>");
         assert!(
-            !verify_html_against(&legal, Some(&rules()), Some(&vocab())).red(),
+            !verify_html_against(&legal, Some(&rules()), Some(&vocab()), Some(&roster())).red(),
             "{:?}",
             reds(&legal)
         );
@@ -2829,7 +3114,7 @@ chroma_floor: 40
         let wrong_step = mockup("<span class=\"bg-canvas/loose\">x</span>");
         assert!(
             what(
-                &verify_html_against(&wrong_step, Some(&rules()), Some(&vocab())),
+                &verify_html_against(&wrong_step, Some(&rules()), Some(&vocab()), Some(&roster())),
                 "colour-tokens-only·off-vocabulary"
             )
             .contains("bg-canvas/loose"),
@@ -2845,7 +3130,7 @@ chroma_floor: 40
             "<style>.mock{color:var(--a-ink);}</style>",
             "<style>.a-measure{max-width:460px;padding:16px;font-size:12px;}</style>",
         );
-        let v = verify_html_against(&raw, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&raw, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(what(&v, "spacing-scale·raw-value").contains("max-width: 460px"));
         assert!(
             !failures(&v).contains(&"type-tokens-only·raw-value".to_string()),
@@ -2859,7 +3144,11 @@ chroma_floor: 40
             "<style>.mock{color:var(--a-ink);}</style>",
             "<style>.a-win{margin:0 auto;max-width:100%;padding:8px 24px;color:var(--a-ink);}</style>",
         );
-        assert!(!verify_html_against(&ok, Some(&rules()), Some(&vocab())).red(), "{:?}", reds(&ok));
+        assert!(
+            !verify_html_against(&ok, Some(&rules()), Some(&vocab()), Some(&roster())).red(),
+            "{:?}",
+            reds(&ok)
+        );
     }
 
     // Both archived runs wrote their labels' tracking by hand - one as an
@@ -2868,7 +3157,7 @@ chroma_floor: 40
     fn an_uppercase_label_that_tracks_by_hand_is_red_on_either_surface() {
         let by_class = mockup("<div class=\"uppercase tracking-[.06em] text-ink-mute\">zone</div>");
         assert!(what(
-            &verify_html_against(&by_class, Some(&rules()), Some(&vocab())),
+            &verify_html_against(&by_class, Some(&rules()), Some(&vocab()), Some(&roster())),
             "uppercase-mute-labels·pattern"
         )
         .contains("tracking-[.06em]"));
@@ -2878,7 +3167,7 @@ chroma_floor: 40
             "<style>.a-zone-lbl{text-transform:uppercase;letter-spacing:0.05em;}</style>",
         );
         assert!(what(
-            &verify_html_against(&by_css, Some(&rules()), Some(&vocab())),
+            &verify_html_against(&by_css, Some(&rules()), Some(&vocab()), Some(&roster())),
             "uppercase-mute-labels·pattern"
         )
         .contains(".a-zone-lbl"));
@@ -2902,6 +3191,7 @@ chroma_floor: 40
             &mockup("<span class=\"text-ok\"></span>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "colour-plus-text·channel").contains("says nothing"));
 
@@ -2923,6 +3213,7 @@ chroma_floor: 40
             &mockup("<span data-wire=\"uri\" class=\"text-ink\">https://x</span>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "mono-for-wire-data·family").contains("does not render mono"));
 
@@ -3072,7 +3363,7 @@ chroma_floor: 40
             "<script>const NT = 'p-[13px]'; if (a < b) render(`<span class=\"${NT}\">x</span>`);</script>",
         );
         assert!(
-            !verify_html_against(&doc, Some(&rules()), Some(&vocab())).red(),
+            !verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())).red(),
             "{:?}",
             reds(&doc)
         );
@@ -3153,6 +3444,69 @@ chroma_floor: 40
         );
     }
 
+    // The gate requirement #1 never had. Until the oracle, a catalog was checked
+    // for shape and never for truth: a reuse could name a component that does
+    // not exist and nothing said so.
+    #[test]
+    fn a_reuse_of_a_component_that_does_not_exist_is_red() {
+        let fabricated = green_run().replace("data-key=\"section\"", "data-key=\"section-band\"");
+        assert!(what(&doc_verdict(&fabricated), "elements·unresolved")
+            .contains("no component exists for: SectionBand"));
+
+        // Run #2's real defect, replayed: a reuse of a component whose contract
+        // is nowhere, beside an extend of one that was never built.
+        assert!(reds(&green_run()).iter().all(|check| check != "elements·unresolved"));
+    }
+
+    // The roster has two halves. A component whose contract moved to code is in
+    // the collection's TSDoc; one still designed and unbuilt is its design file,
+    // and citing it is not a defect (DEC-16).
+    #[test]
+    fn a_component_designed_but_not_yet_built_resolves() {
+        let designed = green_run().replace("data-key=\"section\"", "data-key=\"body-viewer\"");
+        assert!(!reds(&designed).contains(&"elements·unresolved".to_string()));
+    }
+
+    // A propose names what is deliberately absent, so it is never asked to
+    // resolve - the whole point of the verdict is that the component is owed.
+    #[test]
+    fn a_propose_may_name_a_component_that_does_not_exist() {
+        let proposed = green_run()
+            .replace("data-key=\"section\"", "data-key=\"step-list\"")
+            .replace("<td>reuse</td>", "<td>propose</td>");
+        assert!(!reds(&proposed).contains(&"elements·unresolved".to_string()));
+    }
+
+    // Silence must not read as green: five citations that resolve against
+    // nothing look exactly like five that resolve.
+    #[test]
+    fn a_run_without_the_registry_emitter_is_red() {
+        let v = verify_html_against(&green_run(), Some(&rules()), Some(&vocab()), None);
+        assert!(
+            what(&v, "elements·registry-unreadable").contains("cannot read the component roster")
+        );
+    }
+
+    // W4 finding 12: which rows may answer by citation was read off the VERDICT
+    // WORD, which is a guess about the registry rather than a reading of it.
+    #[test]
+    fn a_citation_resolves_against_the_registry_not_the_verdict_word() {
+        let cited = |key: &str| {
+            green_run()
+                .replace("data-key=\"section\"", &format!("data-key=\"{key}\""))
+                .replace(
+                    "<details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td>",
+                    "<details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td><td>—</td>",
+                )
+        };
+        assert!(!reds(&cited("copy-text")).contains(&"state-declarations·uncitable".to_string()));
+
+        // BodyViewer is designed, not coded - there is no TSDoc holding states
+        // for the cell to be citing.
+        assert!(what(&doc_verdict(&cited("body-viewer")), "state-declarations·uncitable")
+            .contains("cites a @states nothing declares: BodyViewer"));
+    }
+
     // A reuse may answer by citation - its file already decided. A propose has
     // no file to cite, so an em dash there is a component nobody has designed.
     #[test]
@@ -3166,6 +3520,69 @@ chroma_floor: 40
         let proposed = cited.replace("<td>reuse</td>", "<td>propose</td>");
         assert!(what(&doc_verdict(&proposed), "state-declarations·proposed")
             .contains("no file to cite"));
+    }
+
+    // ─── the design files ───────────────────────────────────────────────────
+
+    // The registry and the design files are disjoint sets, and retirement is
+    // what keeps them so: two contracts for one component, with nothing checking
+    // them against each other, is the drift this epic exists to kill (DEC-16).
+    #[test]
+    fn a_design_file_whose_component_has_code_must_be_retired() {
+        let v = verify_component("<html><body>x</body></html>", "Section", Some(&roster()), None);
+        assert!(what(&v, "components·unretired").contains("still holds a copy"));
+        assert!(what(&v, "components·unretired").contains("distil the forks"));
+    }
+
+    // The other half of DEC-16: a design file with no code is not retired, it is
+    // unbuilt, and the four T3/T4 files are exactly that case.
+    #[test]
+    fn a_design_file_for_an_unbuilt_component_is_green() {
+        let v =
+            verify_component("<html><body>x</body></html>", "BodyViewer", Some(&roster()), None);
+        assert!(failures(&v).is_empty(), "{:?}", failures(&v));
+    }
+
+    #[test]
+    fn a_design_file_without_the_registry_emitter_is_red() {
+        let v = verify_component("<html><body>x</body></html>", "Section", None, None);
+        assert!(what(&v, "components·registry-unreadable").contains("cannot be answered unread"));
+    }
+
+    // W5 dissolved the specimen sheet so the docs and the app read one config. A
+    // stylesheet rule for a class that config already emits re-opens the gap
+    // from the other side.
+    #[test]
+    fn a_design_file_may_not_re_draw_a_class_the_vocabulary_owns() {
+        let redrawn =
+            "<html><head><style>.row .text-ink{color:#111;}</style></head><body>x</body></html>";
+        let v = verify_component(redrawn, "BodyViewer", Some(&roster()), Some(&vocab()));
+        assert!(what(&v, "components·redrawn").contains("re-draws `text-ink`"));
+
+        let own = "<html><head><style>.row-sim .cap{color:var(--muted);}</style></head><body>x</body></html>";
+        let v = verify_component(own, "BodyViewer", Some(&roster()), Some(&vocab()));
+        assert!(
+            failures(&v).is_empty(),
+            "a doc's own chrome is not the vocabulary's: {:?}",
+            failures(&v)
+        );
+    }
+
+    // The folder is the artifact type: a design file declares no data-artifact,
+    // so nothing but its path says what it is.
+    #[test]
+    fn a_component_file_is_recognised_by_its_path_and_named_by_its_stem() {
+        assert_eq!(
+            component_designed("docs/work/components/copy-text.html").as_deref(),
+            Some("CopyText")
+        );
+        assert_eq!(
+            component_designed("/abs/repo/docs/work/components/status-pill.html").as_deref(),
+            Some("StatusPill")
+        );
+        assert_eq!(component_designed("docs/work/components/nested/x.html"), None);
+        assert_eq!(component_designed("docs/work/2026-07-16-dflow-run-1.html"), None);
+        assert_eq!(component_designed("docs/work/components/README.md"), None);
     }
 
     #[test]
@@ -3206,7 +3623,7 @@ chroma_floor: 40
             "grid-cols-[auto_1fr] — the two-column payload grid has no token shape",
             "<div class=\"grid-cols-[auto_1fr]\">x</div>",
         );
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(!v.red(), "{:?}", failures(&v));
         let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
         assert!(summary.contains("design-allow: 1 live suppression"), "{summary}");
@@ -3263,7 +3680,7 @@ chroma_floor: 40
             "grid-cols-[auto_1fr] -- the two-column payload grid has no token shape",
             "<div class=\"grid-cols-[auto_1fr]\">x</div>",
         );
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(!v.red(), "{:?}", failures(&v));
     }
 
@@ -3276,7 +3693,8 @@ chroma_floor: 40
             "grid-cols-[--tw-cols] -- the template shape comes from a custom property",
             "<div class=\"grid-cols-[--tw-cols]\">x</div>",
         );
-        let reds = failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab())));
+        let reds =
+            failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())));
         assert!(!reds.contains(&"design-allow".to_string()), "{reds:?}");
     }
 
@@ -3289,7 +3707,8 @@ chroma_floor: 40
             "grid-cols-[auto_1fr]--the two-column payload grid has no token shape",
             "<div class=\"grid-cols-[auto_1fr]\">x</div>",
         );
-        let reds = failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab())));
+        let reds =
+            failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())));
         assert!(!reds.contains(&"design-allow".to_string()), "{reds:?}");
     }
 
@@ -3329,7 +3748,7 @@ chroma_floor: 40
 
     #[test]
     fn a_vocabulary_that_cannot_be_read_is_red_never_silently_green() {
-        let v = verify_html_against(&green_run(), Some(&rules()), None);
+        let v = verify_html_against(&green_run(), Some(&rules()), None, None);
         assert!(v.red(), "five rules that cannot be checked must not pass");
         assert!(what(&v, "vocabulary·unreadable").contains("cannot pass unread"));
     }
@@ -3354,7 +3773,10 @@ chroma_floor: 40
     #[test]
     fn a_reasonless_class_carrying_its_own_dashes_is_red_and_says_which_reading_it_took() {
         let doc = pragma("grid-cols-[--tw-cols]", "<div class=\"grid-cols-[--tw-cols]\">x</div>");
-        let said = what(&verify_html_against(&doc, Some(&rules()), Some(&vocab())), "design-allow");
+        let said = what(
+            &verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())),
+            "design-allow",
+        );
         assert!(said.contains("grid-cols-[--tw-cols]` read as this class plus a reason"), "{said}");
     }
 }

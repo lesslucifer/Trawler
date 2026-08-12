@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7bd0249f34851f0dfab74e">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-18: one small-control box</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-18 — the collection has <em>one</em> small-control box, and a new control composes it</h1>
+      <p>Copying, acting and picking are the same weight of thing, so they are the same box. A second
+        box would teach a hierarchy the rulebook does not have — and a rule that two files must match
+        is only as good as the next edit.</p>
+      <div class="meta">DEC-18 · 2026-08-12 · Trawler · E-DFLOW.W7 · distilled from Button D1/D3 ·
+        CopyButton D4 · Select D1 · IconButton D2 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>Four components in the collection draw a small control: <code>CopyButton</code>,
+      <code>Button</code>, <code>IconButton</code>, <code>Select</code>. Each was designed on its own
+      file, and each fork reached the same question independently — <em>does this one get its own
+      box?</em> The first answer, in W4, was <strong>"clone CopyButton's box"</strong>. W5 built the
+      collection and found the clone had already failed.</p>
+    <div class="callout warn" data-c="drift">
+      <strong>Three token values had drifted while both files still claimed identity.</strong> Nothing
+      compared them: the rule lived in prose in two design files, and prose is not a comparison. This
+      is the whole argument — <em>a rule that two files must match is only as good as the next
+      edit</em>.
+    </div>
+
+    <h2 id="choice">Choice</h2>
+    <div class="diagram" data-c="dia-shell">
+      <pre class="mermaid">
+flowchart TD
+  BOX["Button<br/>the small-control box<br/>border · radius · padding · family · size"]
+  BOX --> CB["CopyButton<br/>renders a Button"]
+  BOX --> SEL["Select<br/>trigger is the same box"]
+  BOX -.->|"borderless at rest,<br/>same metrics"| IB["IconButton"]
+      </pre>
+      <div class="caption">One box, one token table. The differences between these four are the word,
+        the tone and the affordance — never the shape.</div>
+    </div>
+    <table data-c="tbl-choice">
+      <thead><tr><th>What is shared</th><th>What each still owns</th></tr></thead>
+      <tbody>
+        <tr><td>The shell — border, radius, padding, font family, min-height. Shared by
+          <strong>composition</strong>, not by a matching rule: <code>CopyButton</code> renders a
+          <code>Button</code>, <code>Select</code>'s trigger is the same box</td>
+          <td><code>CopyButton</code>: the clipboard write, the confirm, the timer hook</td></tr>
+        <tr><td>The weight. Side by side the only difference is the word, because the only difference
+          <em>is</em> the word</td>
+          <td><code>Button</code>: label tone <code>ink-body</code>, one notch above
+            <code>CopyButton</code>'s <code>ink-mute</code> — a Button is usually the only way out of
+            its zone, a CopyButton is a convenience beside content already readable</td></tr>
+        <tr><td>The refusal: no primary/filled variant anywhere in the family. Emphasis is expressed
+          by which actions are offered, never by button weight</td>
+          <td><code>IconButton</code>: borderless at rest — its glyph is self-contained, so the frame
+            adds chrome without aiding recognition</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Options rejected</h2>
+    <table data-c="tbl-rejected">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A distinct, heavier box for actions</strong> so they read as more consequential
+          than copies</td>
+          <td>It invents a weight hierarchy the rulebook does not have, and every screen would then
+            have to decide which of two boxes an action deserves. <em>Drawn, then rejected</em></td></tr>
+        <tr><td><strong>A filled input look for <code>Select</code></strong>, so picking reads as data
+          entry rather than as an action</td>
+          <td>Genuinely arguable — a Select <em>is</em> an input. Rejected because its real host puts a
+            Select and a Button side by side in one row: a filled box beside a transparent one at the
+            same size reads as a hierarchy that does not exist, and <code>data-ink-first</code> prefers
+            the hairline. <strong>Revisit if the app grows a real form</strong>, where every control is
+            an input and the row has no buttons</td></tr>
+        <tr><td><strong><code>ink-mute</code> label on Button</strong>, exact CopyButton parity</td>
+          <td>Simpler rule, one fewer divergence to remember — but a panel's only recovery action
+            would then be the quietest text in the zone</td></tr>
+        <tr><td><strong>A hairline border on IconButton at rest</strong>, CopyButton style</td>
+          <td>CopyButton carries a border because its <em>label</em> needs the frame to read as a
+            button; a glyph does not</td></tr>
+        <tr><td><strong>Keep "clone CopyButton's box" as a written rule</strong></td>
+          <td>Measured and failed: three values drifted while both files claimed identity. A shared
+            shell needs no rule</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li><strong>A new small control composes the shell; it does not redraw it.</strong> A design run
+        proposing a control with its own box is proposing a second box, and the burden is on the
+        proposal.</li>
+      <li>The generic <em>FlashButton</em> this family once deferred is <strong>resolved, not
+        pending</strong>: the shared piece turned out to be the shell, not a flash mechanic. Button
+        carries no timer and never flashes — the confirm hook stayed with CopyButton.</li>
+      <li>Weight differences are expressed in <strong>tone</strong> (<code>ink-body</code> vs
+        <code>ink-mute</code>) and in <strong>which actions exist</strong> — never in a second shape.</li>
+      <li>The one open door is named above: a real form, where the whole row is inputs, may reopen
+        <code>Select</code>'s box.</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

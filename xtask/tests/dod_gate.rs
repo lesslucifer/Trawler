@@ -288,6 +288,65 @@ fn doc_note_must_account_for_every_changed_doc_file() {
     assert!(format_report(&report).contains("docs/use-cases/api.html"));
 }
 
+// DEC-16: removing a design file is the irreversible step and its fork cards are
+// what the removal loses, so the gate holds it until the distillation has landed.
+// A dead-end reason clears the general lineage rule and must not clear this one.
+fn wu_retiring_a_design_file(distilled_to: &str, with_decision: bool) -> Repo {
+    let repo = Repo::new();
+    repo.write("docs/work/components/button.html", "<html>the Button design</html>\n");
+    repo.commit("the design file exists");
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\n");
+    repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
+    if with_decision {
+        repo.write("docs/decisions/dec-19-button-forks.html", "<html>why the label swap</html>\n");
+    }
+    std::fs::remove_file(repo.path.join("docs/work/components/button.html")).unwrap();
+    repo.commit("retire the Button design file");
+
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    let decision = if with_decision {
+        "  - path: docs/decisions/dec-19-button-forks.html\n    tier: T2\n    action: added\n    distills: \"Button's forks\"\n"
+    } else {
+        ""
+    };
+    let changes = format!(
+        "{WU_CHANGES}{decision}  - path: docs/work/components/button.html\n    tier: T3\n    action: archived\n    distilled_to: {distilled_to}\n"
+    );
+    repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &changes, None));
+    repo
+}
+
+#[test]
+fn a_design_file_may_not_be_removed_before_its_forks_are_distilled() {
+    let repo = wu_retiring_a_design_file("\"none: local prop naming\"", false);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"6·retirement-order"),
+        "a dead-end reason must not retire a design file: {}",
+        format_report(&report)
+    );
+
+    let named_but_absent =
+        wu_retiring_a_design_file("[docs/decisions/dec-19-button-forks.html]", false);
+    let report = named_but_absent.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"6·retirement-order"),
+        "naming a record that does not exist is not distilling to it: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn a_design_file_retired_in_dec_16_order_passes() {
+    let repo = wu_retiring_a_design_file("[docs/decisions/dec-19-button-forks.html]", true);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+}
+
 fn epic_with_merged_wu() -> (Repo, String) {
     let repo = wu_with_change();
     let wu_tip = repo.sha("wu/x/one");

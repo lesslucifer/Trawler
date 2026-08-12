@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7bd02a9f34851f0dfab752">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-20: business logic lives where its inputs live</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-20 — business logic lives where its inputs live, and a T1 states what it cannot enforce</h1>
+      <p><code>StatusPill</code> takes a raw status and resolves it. <code>StatusLine</code> refuses the
+        raw inputs and takes a resolved verdict. A reviewer reads those two as a contradiction — they
+        are one rule, and this record is here so nobody "fixes" the asymmetry.</p>
+      <div class="meta">DEC-20 · 2026-08-12 · Trawler · E-DFLOW.W7 · distilled from StatusLine D1 ·
+        StatusPill D4 · TonedText D1/D2 · Notice D3 · StepList D1 · Select D4 · Section F2 ·
+        status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>Two T2 components sit beside each other in the collection and answer the same API question in
+      opposite directions. The design file that settled the second one named the problem itself:
+      <em>"a reviewer will read D1 against StatusPill's D4 and see a contradiction"</em>. Code cannot
+      hold that sentence — both components just look like normal components — so the only place it
+      survives is here.</p>
+
+    <h2 id="choice">Choice</h2>
+    <div class="diagram" data-c="dia-boundary">
+      <pre class="mermaid">
+flowchart LR
+  N["one number<br/>HTTP 404"] -->|"pure total function"| SP["StatusPill<br/>absorbs the mapping"]
+  A["probe + observations<br/>+ running + error"] -->|"function of app state"| DOM["the domain resolves it<br/>trustStatus / proxyStatus"]
+  DOM -->|"one resolved verdict"| SL["StatusLine<br/>renders the shape"]
+      </pre>
+      <div class="caption">Both put the logic where the inputs live. Only the inputs differ.</div>
+    </div>
+    <table data-c="tbl-rule">
+      <thead><tr><th>Case</th><th>Where the logic goes</th><th>Test</th></tr></thead>
+      <tbody>
+        <tr><td><code>StatusPill</code> — status in, full display out</td>
+          <td><strong>Inside the component.</strong> It owns the mapping, the formatting ("…" for
+            null) and the alt text; call sites shrink to one prop and a wrong tone/value pairing is
+            unrepresentable</td>
+          <td>Status → display is a <strong>pure total function of one number</strong>. Nothing to
+            import, nothing to observe</td></tr>
+        <tr><td><code>StatusLine</code> — one resolved verdict in</td>
+          <td><strong>Outside the component.</strong> The domain's resolvers are pure and unit-tested
+            and read probes plus observations. StatusLine owns the shape and the promise of the
+            order; the domain owns which verdict is true</td>
+          <td>Probe + observations + running + error → verdict is a <strong>function of app
+            state</strong>. Absorbing it would import domain state and duplicate three tested
+            resolvers, letting two copies drift on the one rule that must not</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="states-not-enforces">A T1 states the obligation it cannot enforce</h2>
+    <p>The same boundary, one tier down. A primitive can only enforce a rule about its children by
+      inspecting them — and a component that inspects its children is not a primitive.</p>
+    <table data-c="tbl-t1">
+      <thead><tr><th>Obligation</th><th>Who states it</th><th>Who discharges it</th></tr></thead>
+      <tbody>
+        <tr><td><code>colour-plus-text</code> — colour never carries meaning alone</td>
+          <td><code>TonedText</code>, as an <code>@avoid</code> line</td>
+          <td>Its tenants: <code>StatusPill</code>'s text is the code,
+            <code>StatusLine</code>'s is a glyph plus words</td></tr>
+        <tr><td>Which actions a failure offers (close · retry · both)</td>
+          <td><code>Notice</code>, as <code>action?: ReactNode</code> — a slot, not named handlers</td>
+          <td>The panel, which knows <em>why</em> the fetch failed — knowledge the primitive must
+            not have</td></tr>
+        <tr><td>What a step contains (prose · command · a path · a caveat)</td>
+          <td><code>StepList</code>, as <code>ReactNode[]</code> — it renders children in order and
+            inspects nothing</td>
+          <td>The screen. Owning "commands get a CopyText" is business logic, which would make it a
+            T2</td></tr>
+        <tr><td>What an option row draws</td>
+          <td><code>Select</code>, as an optional <code>element</code> — with <code>label</code>
+            still required, because the trigger renders one line and the filter matches
+            characters</td>
+          <td>The caller. The component renders the slot and asserts nothing about it</td></tr>
+        <tr><td>Whether the last <code>Section</code>'s hairline shows</td>
+          <td><code>Section</code> — every one carries <code>border-b</code></td>
+          <td>The scroll container, which clips it. A component that detects its last sibling knows
+            about its siblings' rendering, which is coupling that belongs outside</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Options rejected</h2>
+    <table data-c="tbl-rejected">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Symmetry</strong> — give <code>StatusLine</code> the raw inputs too, since
+          <code>StatusPill</code> takes raw status</td>
+          <td>The real argument for it, and the reason this record exists. Rejected: it imports
+            domain state into a component and duplicates three tested resolvers. Symmetry of
+            <em>signature</em> at the cost of splitting the one rule that must not drift</td></tr>
+        <tr><td><strong>Tone in, children out</strong> for <code>StatusPill</code> (what shipped
+          first)</td>
+          <td>A generic toned mono span with no business logic is a T1 primitive, not this component.
+            It survives — as <code>TonedText</code>, the primitive StatusPill is made of</td></tr>
+        <tr><td><strong>Named <code>onRetry</code>/<code>onClose</code> props</strong> on Notice</td>
+          <td>Guarantees consistent order and wording, which is real. But it hard-codes the two
+            actions today's tenants need; the third either adds a prop or renders its own row</td></tr>
+        <tr><td><strong>A structured step</strong> — <code>{text, command?}</code> — so StepList
+          renders the CopyText and no caller can forget it</td>
+          <td>Tempting for exactly that reason. Rejected: the first step that is neither (a settings
+            path, a caveat) needs a third field or an escape hatch, and the screen still needs the
+            free case</td></tr>
+        <tr><td><strong><code>{id, element}</code></strong> — element instead of label</td>
+          <td>The trigger would have nothing to render but a duplicated element and the filter no
+            text to match, so the component needs <code>searchText</code> anyway — which is
+            <code>label</code> with a worse name. It also silently breaks the accessible name</td></tr>
+        <tr><td><strong>A <code>glyph</code> prop on TonedText</strong> beside children</td>
+          <td>Both T2 tenants pair a glyph with words, so it looks natural. Rejected: it makes the
+            primitive responsible for the gap between them, and invites a default glyph per tone —
+            the mapping that was just removed</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li><strong>The asymmetry is load-bearing.</strong> A code review that files "StatusLine should
+        take raw inputs like StatusPill does" is refuted by this record, which is the case DEC-5's
+        index note describes: the oddity is the decision.</li>
+      <li>A design run proposing a T1 that inspects its children is proposing a T2. The tier follows
+        the inputs, not the size of the component.</li>
+      <li>A rule a primitive can only state — not enforce — belongs in its <code>@avoid</code>, and
+        the design run's reuse trace is where a tenant shows it discharged it.</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -66,10 +66,21 @@
       </tbody>
     </table>
 
-    <h2 id="enforcement">Enforcement is W7's, and it must be a predicate</h2>
-    <p>The same reasoning as DEC-15: a convention an agent must remember is a convention an agent forgets. The order is machine-checkable, so it is a check rather than a paragraph — <strong>W7's registry harness must refuse step ③ until step ① has landed</strong>. The existing <code>doc/v1</code> lineage rule is the half of it that already works; what is missing is the part that knows a design file's forks are not yet anywhere else.</p>
+    <h2 id="enforcement">Enforcement — two predicates, landed in E-DFLOW.W7</h2>
+    <p>The same reasoning as DEC-15: a convention an agent must remember is a convention an agent forgets. The order is machine-checkable, so it is a check rather than a paragraph. Both halves now exist:</p>
+    <table data-c="predicates">
+      <thead><tr><th>Check</th><th>Refuses</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><code>6·retirement-order</code></td>
+          <td>Step ③ before step ①: a <code>docs/work/components/</code> file absent at the tip whose <code>doc/v1</code> <code>distilled_to</code> does not name a <code>docs/decisions/</code> record that really exists there. The general lineage rule accepts a dead-end reason — the right latitude for a scratch plan, and the wrong one for a file whose fork cards are the whole reason a removal loses something.</td>
+          <td><code>xtask/src/gate.rs</code></td></tr>
+        <tr><td><code>components·unretired</code></td>
+          <td>Step ③ never happening: a design file whose component <em>has</em> a roster entry is red until it is retired. The registry and the design files are disjoint sets, and this is what keeps them so — two contracts for one component, with nothing comparing them, is the drift this record exists to prevent.</td>
+          <td><code>xtask/src/doc.rs</code></td></tr>
+      </tbody>
+    </table>
     <div class="callout" data-c="w5-position">
-      <p><strong>W5 removed nothing.</strong> It built the code and left every design file in place — Q1 confirms the direction, W7 owns the removal. This record exists so the WU that does the deleting inherits the order instead of re-deriving it, and so it is judged by a gate rather than by whoever is holding the delete key.</p>
+      <p><strong>W5 removed nothing</strong> — it built the code and left every design file in place. <strong>W7 removed sixteen</strong>, distilling their forks to <a href="dec-18-one-control-box.html">DEC-18</a> · <a href="dec-19-chromatic-accent-closed.html">DEC-19</a> · <a href="dec-20-logic-lives-with-its-inputs.html">DEC-20</a> · <a href="dec-21-props-need-a-truthful-source.html">DEC-21</a> · <a href="dec-22-time-is-absolute-and-local.html">DEC-22</a> · <a href="dec-23-collection-dependencies.html">DEC-23</a> first. Four files remain and are not violations: <code>BodyViewer</code>, <code>BodyRenderer</code>, <code>HeaderTable</code> and <code>CopyAllHeadersButton</code> have no roster entry, so their contract still lives in the file — the unbuilt case named below.</p>
     </div>
 
     <h2 id="options">Options rejected</h2>

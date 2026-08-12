@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7bd02a9f34851f0dfab758">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-23: the collection's two UI dependencies</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-23 — the two dependencies the component collection added, and how each one leaves</h1>
+      <p>Both were taken because the browser has no equivalent and the hand-built version is a table
+        that drifts. Each carries its exit path, written before anyone needs it.</p>
+      <div class="meta">DEC-23 · 2026-08-12 · Trawler · E-DFLOW.W7 · distilled from StatusPill D5 ·
+        TimestampText F5 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>The house rule is never to add a dependency for what a few lines can do. Two component forks
+      argued past it, and both arguments turn on the same thing: the "few lines" is a
+      <strong>table of external facts</strong>, and a copied table is a table that goes stale
+      silently. A later reader asking "why is this here?" gets the answer once, here.</p>
+
+    <h2 id="choice">Choice</h2>
+    <table data-c="tbl-deps">
+      <thead><tr><th>Dependency</th><th>For</th><th>Why not by hand</th><th>Exit path</th></tr></thead>
+      <tbody>
+        <tr><td><code>statuses</code> (jshttp)<br><span class="badge id">~2 kB</span></td>
+          <td><code>StatusPill</code>'s reason phrases — <code>statuses.message[404]</code> →
+            "Not Found"</td>
+          <td>The alternative is ~60 lines of copied IANA table that drifts as codes are added, with
+            nothing checking it. <strong>No stdlib alternative exists in the browser</strong>:
+            <code>http.STATUS_CODES</code> is Node-only and unavailable in the Tauri webview bundle.
+            The package is zero-dependency, IANA-sourced, and is the map Express itself uses — so it
+            is maintained upstream and there is nothing to keep in sync here</td>
+          <td>None needed; the upstream is stable and the surface is one lookup</td></tr>
+        <tr><td><code>moment</code></td>
+          <td><code>TimestampText</code>'s three modes — lenient parsing (ISO 8601 · epoch ms ·
+            <code>Date</code>), format-token rendering for the default and custom strings, and
+            <code>fromNow()</code> for relative</td>
+          <td>Native <code>Date</code> + <code>Intl</code> is zero-dependency but three hand-built
+            pieces: <code>Date.parse</code> accepts fewer input shapes, custom formatting means
+            inventing a token syntax for the <code>format</code> prop, and relative mode needs
+            hand-rolled unit selection around <code>Intl.RelativeTimeFormat</code></td>
+          <td><strong>Named at the fork:</strong> moment is in upstream maintenance mode. If that ever
+            matters, <code>dayjs</code> shares the same format-token API and <strong>the swap is
+            confined to this one component</strong> — which is why the format-token syntax was worth
+            paying for rather than inventing</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Options rejected</h2>
+    <table data-c="tbl-rejected">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A hardcoded status→phrase map</strong></td>
+          <td>Copied IANA data with no upstream. It reads as "a few lines" precisely because the
+            drift is invisible until a reader hits a code the table predates</td></tr>
+        <tr><td><strong>Native <code>Date</code> + <code>Intl</code></strong></td>
+          <td>Zero-dependency, and genuinely the lazier-looking answer. Rejected because it trades
+            one dependency for three hand-built subsystems, one of which is a bespoke format-token
+            parser — the thing the dependency exists to not write</td></tr>
+        <tr><td><strong><code>dayjs</code> from the start</strong></td>
+          <td>Not rejected on merit — moment was manager direction, and the API compatibility means
+            choosing it now costs nothing later. The swap is a one-component change, recorded above
+            so it stays one</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li>These two are the whole dependency surface the component collection added. A third
+        component reaching for a library is a new argument, not a precedent set by these.</li>
+      <li>The <code>moment</code> exit path is a <strong>constraint on the component</strong>, not an
+        intention: anything that leaks moment's API past
+        <code>TimestampText</code>'s boundary makes the swap stop being confined, and is a finding.</li>
+      <li>Both land in <code>ui/package.json</code>; the house rule that argued against them is
+        <a href="../../CLAUDE.md">CLAUDE.md</a>'s, and this record is the exception it allows for.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
