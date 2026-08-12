@@ -35,7 +35,7 @@ flowchart LR
   DES -->|"built in W5"| CODE["ui/src/components/*.tsx<br/>TSDoc = usage truth"]
   CODE -.->|"② generator — still owed (W7)"| IDX["index (generated)<br/>agent loads 1 file<br/>= whole vocabulary"]
       </pre>
-      <div class="caption">Solid = done. Each design file compiles down to its TSDoc block (API section): W5 built every confirmed T1/T2, carrying that block into the code verbatim, so the TSDoc is now the usage truth a reuse decision reads. Dashed = the generator and its freshness gate, still owed by W7 — until then this table is the hand-maintained index.</div>
+      <div class="caption">Solid = done. Each design file compiles down to its TSDoc block (API section): W5 built every confirmed T1/T2, carrying that block into the code verbatim, so the TSDoc is now the usage truth a reuse decision reads. Dashed = <s>the generator and its freshness gate, still owed by W7 — until then this table is the hand-maintained index</s>. <strong>Landed in W7 ①</strong>: <code>node scripts/design-registry.mjs</code> emits the whole vocabulary from those TSDoc blocks, so <strong>the index is neither stored nor hand-maintained</strong> — and the freshness gate <em>dissolved</em>, because nothing stored cannot be stale. This table is a snapshot of what W2 seeded; the command is the truth.</div>
     </div>
 
     <h2 id="template">① The design format</h2>

@@ -30,6 +30,52 @@
     <p>The <strong>written base flow</strong>: six stages, <a href="#close">a close</a> and
       <a href="#review-tier">an independent review</a>, each with the concrete artifact <em>template</em> a real run converged on, plus the conventions that make an artifact reviewable. W1 produced the first cut from a bare hand-run; <strong>W4 wired it to the substrate</strong> — the design now <em>consumes</em> the <a href="2026-07-22-dflow-w2-registry-seed.html">component registry</a> (reuse-or-propose per element) and the <a href="../design-rules/design-rules-index.html">design rulebook</a> (rules cited per stage, all slugs receipted at the end) — and re-ran it on the flow detail panel (<a href="2026-07-25-dflow-w4-run-2.html">run #2</a>). It is distilled into the T1 process doc at epic distillation; until then it lives here in T3.</p>
 
+    <h2 id="commands">Run it — every command, in flow order <span class="badge id">the whole harness</span></h2>
+    <p>A flow only its author can drive is not a flow. Each command below is named again at the stage that
+      needs it; this table is the single place they are all together, so a run can be started from here
+      without reading the rest first.</p>
+    <table data-c="tbl-commands">
+      <thead><tr><th>When</th><th>Run</th><th>What it gives you</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Before stage 1</strong><br><span class="kd">load the substrate</span></td>
+          <td><code>node scripts/design-registry.mjs</code></td>
+          <td>the whole component vocabulary — tier, <code>@use</code>, <code>@avoid</code>,
+            <code>@states</code>, <code>@madeof</code> — read from the components' own TSDoc. Emitted, never
+            stored, so it cannot be stale. <strong>Read <code>@avoid</code> first</strong></td></tr>
+        <tr><td></td><td><code>git hash-object docs/design-rules/design-rules-index.html</code></td>
+          <td>the rulebook blob to pin in the receipt. Read the rulebook itself for the rules and their
+            <em>Binds at</em> column</td></tr>
+        <tr><td><strong>After every write</strong><br><span class="kd">Tier-1</span></td>
+          <td><code>cargo xtask verify-doc &lt;the run&gt;</code></td>
+          <td>what the run still owes. Fires automatically on PostToolUse and at turn end, so a red is fed
+            back before the next stage — <a href="#flow-e2e">the e2e asserts it names exactly the stages not
+            yet written</a></td></tr>
+        <tr><td><strong>At <a href="#close">the close</a></strong></td>
+          <td><code>cargo xtask verify-doc &lt;the run&gt;</code> → green, <em>then</em>
+            <code>data-status="archived"</code></td>
+          <td>step ③ before step ④: a red run is not closeable, and archiving first would hide the reds</td></tr>
+        <tr><td><strong>At the review</strong><br><span class="kd">Tier-3</span></td>
+          <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code></td>
+          <td>every artifact the design dimension must judge, and the rulebook pin its verdict is a claim
+            about. <strong>The same function the merge gate calls</strong> — the note is written from this
+            output and nothing else</td></tr>
+        <tr><td></td><td>the <strong>code-review skill</strong> on the tip</td>
+          <td>a <code>cr/v3</code> note whose <code>design:</code> section carries the verdict. The design
+            finder activates only when <code>design-scope</code> reports artifacts</td></tr>
+        <tr><td><strong>At the merge</strong></td>
+          <td><code>cargo xtask verify-dod wu &lt;tip&gt; --target &lt;epic&gt;</code></td>
+          <td>every red the merge will refuse, before attempting it. The
+            <code>pre-merge-commit</code> hook runs the same thing</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="stale-base">
+      <strong>Pass the base explicitly, and make sure it is current.</strong> <code>design-scope</code> and
+      <code>verify-dod</code> both measure from a branch ref. A local epic ref behind its remote silently
+      measures the wrong diff — it produced a false <em>"1 design artifact to judge"</em> in W7 ④, which a
+      whole acceptance argument then rested on. <code>git fetch</code> and pass
+      <code>origin/epic/&lt;slug&gt;</code> when in doubt.
+    </div>
+
     <h2 id="principles">Principles (apply to every stage)</h2>
     <ul data-c="principles">
       <li><strong>Load the substrate before stage 1.</strong> The registry index (the whole component vocabulary in one file) and the rulebook are <em>inputs</em>, read once at the start and never edited mid-run — a run that changes the rules it is judged by proves nothing. The versions read are named in the receipt.</li>

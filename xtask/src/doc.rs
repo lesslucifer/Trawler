@@ -3383,6 +3383,71 @@ chroma_floor: 40
         failures(&verify_html_against(html, Some(&rules()), Some(&vocab()), Some(&roster())))
     }
 
+    fn raised(html: &str) -> Vec<crate::gate::Failure> {
+        match verify_html_against(html, Some(&rules()), Some(&vocab()), Some(&roster())) {
+            Verdict::Checked { failures, .. } => failures,
+            _ => panic!("expected a checked verdict"),
+        }
+    }
+
+    // "Every red says what to do about it" is the harness's hand-over rule
+    // (E-DFLOW.W7 ⑥), and a rule an author has to remember is one an author
+    // forgets - which is this epic's own thesis. So it is asserted rather than
+    // audited: over every failure a broken run can raise, the fix must exist, be
+    // an instruction rather than a restatement of the observation, and not repeat
+    // the `what` it follows. W6's round 9 is the precedent for the third clause -
+    // a message that restated its own observation named a cause it could not know.
+    #[test]
+    fn every_red_a_run_can_raise_says_what_to_do_about_it() {
+        // Every mangling below keeps the markup balanced. An unclosed tag empties
+        // the section instead of breaking the rule inside it, which trades a whole
+        // family of checks for one `item·` red and quietly narrows the guard.
+        let bare = doc("design-run", "", "<p>nothing tagged at all</p>");
+        let broken = green_run()
+            .replace("class=\"gist\"", "class=\"gistx\"")
+            .replace("<details class=\"why\">", "<b>")
+            .replace("</details>", "</b>")
+            .replace(" data-map", "")
+            .replace(" data-wire=\"none\"", "")
+            .replace("data-state-toggle=\"mock\"", "static")
+            .replace("class=\"tb\"", "class=\"prose\"")
+            .replace("@avoid nesting", "a good fit")
+            .replace("src=\"../../doc-assets/components/specimen.js\"", "src=\"mine.js\"")
+            .replace("rulebook: 28f5437", "rulebook: x")
+            .replace("<td>used</td>", "<td>maybe</td>")
+            .replace("<td>elements · mockup</td>", "<td>the reviewer changed things</td>")
+            .replace(".mock{color:var(--a-ink);}", ".mock{color:#f7f5f0;}");
+        let unresolved = green_run()
+            .replace("data-key=\"section\"", "data-key=\"ghost\"")
+            .replace(">Section<", ">Ghost<");
+        let off_vocabulary = mockup("<span class=\"text-pink-500 font-mono truncate\">x</span>");
+        let hard_slug = design_run(&receipt("  spacing-scale: satisfied — a hard slug\n"));
+        let prose_frame = frame_run(&format!(
+            "<div data-item=\"frame\"><p>{}</p><p>b</p><p>c</p><p>d</p><table>{}</table></div>",
+            "word ".repeat(FRAME_PROSE_WORDS + 1),
+            cells(4, FRAME_CELL_MAX + 1)
+        ));
+
+        let fixtures = [bare, broken, unresolved, off_vocabulary, hard_slug, prose_frame];
+        let raised: Vec<crate::gate::Failure> = fixtures.iter().flat_map(|d| raised(d)).collect();
+        let distinct: super::BTreeSet<&str> = raised.iter().map(|f| f.check.as_str()).collect();
+        assert!(
+            distinct.len() >= 30,
+            "the fixtures must exercise a real spread of checks, got {}: {distinct:?}",
+            distinct.len()
+        );
+        for f in &raised {
+            assert!(!f.fix.trim().is_empty(), "{} raises no fix", f.check);
+            assert_ne!(f.fix.trim(), f.what.trim(), "{}'s fix restates its what", f.check);
+            assert!(
+                f.fix.split_whitespace().count() >= 4,
+                "{}'s fix is too short to be an instruction: {:?}",
+                f.check,
+                f.fix
+            );
+        }
+    }
+
     #[test]
     fn a_class_the_config_cannot_emit_reds_every_rule_whose_scale_owns_its_prefix() {
         let v = verify_html_against(

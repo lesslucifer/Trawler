@@ -40,7 +40,7 @@
       <div class="card"><h3>1 tier unexercised</h3><p>Tier-3's finder has never judged a real
         artifact</p></div>
       <div class="card"><h3>417 + 492</h3><p>Rust · vitest. Every gate clean</p></div>
-      <div class="card"><h3>1 step open</h3><p>⑥ — hand over, DEC-24, review, merge</p></div>
+      <div class="card"><h3>3 items open</h3><p>the tip's notes · the review · your sign-off</p></div>
     </div>
 
     <h2 id="run">How to run any of it</h2>
@@ -60,9 +60,10 @@
         <tr><td>the component vocabulary</td><td><code>node scripts/design-registry.mjs</code></td></tr>
       </tbody>
     </table>
-    <p class="kd"><strong>Always pass <code>origin/epic/design-flow</code>.</strong> The local
-      <code>epic/design-flow</code> ref is stale at <code>fdce56d</code>, one merge behind
-      <code>2bceacd</code> — and that staleness is what produced <a href="#gap">the gap below</a>.</p>
+    <p class="kd"><strong>Pass the base explicitly.</strong> The local <code>epic/design-flow</code> ref sat
+      at <code>fdce56d</code> for this whole WU, one merge behind <code>2bceacd</code>, and every command
+      that defaulted to it measured the wrong diff — which is what produced
+      <a href="#gap">the gap below</a>. Fast-forwarded at ⑥; the habit is still to name the ref.</p>
 
     <h2 id="e2e">The e2e — 2 tests, feature-gated</h2>
     <div class="diagram" data-c="dia-e2e">
@@ -194,8 +195,17 @@ flowchart LR
             <details class="why"><summary>see the table below</summary><div>
               <a href="#holes">What the e2e found</a> — and why no fixture in the suite could have seen
               either.</div></details></td></tr>
-        <tr><td><strong>⑥</strong> hand over</td><td><span class="badge approval">outstanding</span></td>
-          <td>DEC-24 · the review · the merge — <a href="#owed">owed</a></td></tr>
+        <tr><td><strong>⑥</strong> hand over</td>
+          <td><a href="design-flow-base.html#commands">the command table</a> · DEC-24 · DEC-15's tiers ·
+            DEC-16's predicate · 1 test</td>
+          <td><div class="gist">"Every red says what to do about it" is asserted, not audited.</div>
+            <details class="why"><summary>why a test and not a checklist</summary><div>
+              A rule an author has to remember is a rule an author forgets — this epic's own thesis, so the
+              hand-over rule gets a predicate like everything else.
+              <code>every_red_a_run_can_raise_says_what_to_do_about_it</code> pools six deliberately broken
+              fixtures, reaches <strong>33 distinct checks</strong>, and requires every failure's fix to be
+              non-empty, ≥4 words, and not a restatement of its own <code>what</code> (W6 round 9's defect
+              class). Mutation-verified: blanking one fix kills it.</div></details></td></tr>
       </tbody>
     </table>
 
@@ -390,16 +400,16 @@ no design artifact in 2bceacd71d..bfac33b2e1</pre>
       <table data-c="tbl-owed">
         <thead><tr><th>#</th><th>Owed</th><th>Who</th></tr></thead>
         <tbody>
-          <tr><td>1</td><td><strong>fast-forward local <code>epic/design-flow</code></strong> to
-            <code>origin</code> — every defaulting gate command measures the wrong base until then</td>
-            <td>agent</td></tr>
-          <tr><td>2</td><td><code>workflow.html</code> <strong>v10 is staged, uncommitted</strong> — a
-            rule-bearing T1 edit needs <code>mr commit</code> and your key</td>
-            <td><span class="badge approval">user</span></td></tr>
-          <tr><td>3</td><td><strong>DEC-24</strong> + index entry · DEC-15's tier table reading finished ·
-            DEC-16's enforcement naming its predicate</td><td>agent</td></tr>
-          <tr><td>4</td><td>⑥ <strong>hand-over</strong>: the flow spec executable start to finish, every
-            red naming what to do about it</td><td>agent</td></tr>
+          <tr><td>1</td><td><s><strong>fast-forward local <code>epic/design-flow</code></strong></s>
+            <span class="badge auto">done</span> now at <code>2bceacd</code></td><td>—</td></tr>
+          <tr><td>2</td><td><s><code>workflow.html</code> <strong>v10</strong></s>
+            <span class="badge auto">committed</span> <code>84bbf68</code>, <code>Reviewed-By: key
+            vuluu</code>, SSH-signed</td><td>—</td></tr>
+          <tr><td>3</td><td><s><strong>DEC-24</strong> + index entry · DEC-15's tiers · DEC-16's
+            predicate</s> <span class="badge auto">landed</span></td><td>—</td></tr>
+          <tr><td>4</td><td><s>⑥ <strong>hand-over</strong>: the flow spec executable, every red naming its
+            fix</s> <span class="badge auto">landed</span> —
+            <a href="design-flow-base.html#commands">the command table</a> + the assertion</td><td>—</td></tr>
           <tr><td>5</td><td><code>test/v2</code> + <code>doc/v1</code> on the tip</td><td>agent</td></tr>
           <tr><td>6</td><td><strong>code-review skill</strong> over the WU diff → <code>cr/v3</code> PASS
             bound to it. Its design section will be <a href="#gap">empty, correctly</a></td><td>agent</td></tr>
