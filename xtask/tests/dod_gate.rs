@@ -403,6 +403,43 @@ fn a_rulebook_slug_carries_a_fork_only_while_the_rulebook_declares_it() {
     assert!(report.green(), "now the citation resolves: {}", format_report(&report));
 }
 
+// The walk re-judges every landed seam with the working tree at the epic tip, so a
+// citation has to be followed in the rulebook THAT SEAM shipped - what a slug means
+// today is not what it meant when the retirement was reviewed. Reading the tree
+// instead reddens history no one can fix: a gated branch is never amended, leaving
+// a walk waiver as the only exit.
+#[test]
+fn a_seam_is_judged_against_the_rulebook_it_shipped_not_the_one_in_the_tree() {
+    let repo = wu_retiring_a_design_file("\"superseded by wrap-not-truncate\"", false);
+    repo.write(
+        RULEBOOK,
+        "<table data-c=\"hard-rules-table\"><tbody>\
+         <tr><td><code>wrap-not-truncate</code></td></tr></tbody></table>\n",
+    );
+    repo.commit("the rulebook declares the slug the reason cites");
+    let seam = repo.sha("wu/x/one");
+    bless_wu(&repo, &seam);
+    let changes = format!(
+        "{WU_CHANGES}  - path: docs/work/components/button.html\n    tier: T3\n    action: archived\n    distilled_to: \"superseded by wrap-not-truncate\"\n  - path: {RULEBOOK}\n    tier: T2\n    action: updated\n    distills: \"the slug\"\n"
+    );
+    repo.note("doc", &seam, &doc_note("E9", Some("E9.W1"), &changes, None));
+    let report = repo.gate().verify(Level::Wu, &seam, "epic/x").unwrap();
+    assert!(report.green(), "the seam ships the slug it cites: {}", format_report(&report));
+
+    repo.write(
+        RULEBOOK,
+        "<table data-c=\"hard-rules-table\"><tbody>\
+         <tr><td><code>wrap-not-clip</code></td></tr></tbody></table>\n",
+    );
+    repo.commit("a later Working Unit renames the slug");
+    let report = repo.gate().verify(Level::Wu, &seam, "epic/x").unwrap();
+    assert!(
+        report.green(),
+        "the rename landed after this seam and cannot redden it: {}",
+        format_report(&report)
+    );
+}
+
 // Closing a run was nobody's step, so run #3 rode two Working Units open and red.
 // The merge is where the tree becomes answerable for it: a run the diff carries is
 // this seam's, and a seam that ends with it still open never closed it.

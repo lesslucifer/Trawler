@@ -41,12 +41,19 @@ fn nextest_available() -> bool {
     Command::new("cargo").args(["nextest", "--version"]).output().is_ok_and(|o| o.status.success())
 }
 
+// `--workspace` is the load-bearing flag, not boilerplate: the repo root is both
+// the workspace and a package, so plain `cargo clippy` lints only `trawler` - and
+// every gate, hook and design check lives in the `xtask` member, which then goes
+// unlinted by the very gate that proves the tree green. `fmt --all` and
+// `nextest --all` are already workspace-wide; this makes the three agree.
+const CLIPPY: &[&str] =
+    &["clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"];
+
 fn run_checks(repo: &Path) -> Result<bool, String> {
     if !run(repo, "cargo", &["fmt", "--all", "--", "--check"])? {
         return Ok(false);
     }
-    if !run(repo, "cargo", &["clippy", "--all-targets", "--all-features", "--", "-D", "warnings"])?
-    {
+    if !run(repo, "cargo", CLIPPY)? {
         return Ok(false);
     }
     let tests = if nextest_available() {
@@ -75,8 +82,18 @@ pub fn gate0(repo: &Path) -> Result<(i32, String), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{cache_path, cached_key, store_key};
+    use super::{cache_path, cached_key, store_key, CLIPPY};
     use tempfile::TempDir;
+
+    // The gate's own implementation is a workspace member, so a package-scoped
+    // lint would exempt exactly the code that enforces everything else.
+    #[test]
+    fn clippy_lints_every_workspace_member() {
+        assert!(
+            CLIPPY.contains(&"--workspace"),
+            "without --workspace the root package is linted and xtask is not: {CLIPPY:?}"
+        );
+    }
 
     fn repo() -> (TempDir, std::path::PathBuf) {
         let dir = TempDir::new().unwrap();

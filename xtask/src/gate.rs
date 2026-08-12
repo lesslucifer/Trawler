@@ -17,11 +17,11 @@ const CARRIERS: &[&str] = &["@use", "@avoid", "@states", "@madeof", "@tier"];
 // A slug counts only while the rulebook really holds it: a citation nobody can
 // follow is the same silence as no citation, and the rulebook is the one place that
 // can say whether `wrap-not-truncate` is a rule or a phrase.
-fn names_a_carrier(repo: &Path, reason: &str) -> bool {
+fn names_a_carrier(repo: &Path, rev: &str, reason: &str) -> bool {
     if CARRIERS.iter().any(|tag| reason.contains(tag)) {
         return true;
     }
-    crate::doc::rulebook_slugs(repo).iter().any(|slug| reason.contains(slug.as_str()))
+    crate::doc::rulebook_slugs(repo, rev).iter().any(|slug| reason.contains(slug.as_str()))
 }
 
 // A cr/v2 note carries no design section and cannot be made to carry one: the
@@ -105,12 +105,17 @@ impl Gate<'_> {
         let names = diff_names(self.repo, &base, &tip)?;
         let sha = diff_sha256(self.repo, &base, &tip)?;
         let code_changed = names.iter().any(|p| is_code(p));
+        // Three checks below read every doc the diff touches, at the same tip, for
+        // the same immutable blobs. Fetched once per verify and threaded through:
+        // the walk calls verify once per seam, so a per-site fetch multiplies whole
+        // sweeps of `git show` by the number of seams.
+        let docs = if level == Level::Commit { Vec::new() } else { self.doc_blobs(&tip, &names) };
         // A design is a docs-only deliverable, so the docs/infra exemption would
         // hand the design dimension exactly the diffs it exists to judge - the
         // most common design Working Unit writes a run and no code at all. The
         // merge that closes a design is answerable for it whether or not any
         // code moved, for the same reason `6·run-closed` already is.
-        let designs = level != Level::Commit && !self.design_artifacts(&tip, &names).is_empty();
+        let designs = !design_artifacts_of(&docs).is_empty();
         let gated = code_changed || designs;
         let mut report = Report {
             level,
@@ -128,7 +133,7 @@ impl Gate<'_> {
             self.check_tracked_docs(&mut report);
         }
         if level != Level::Commit {
-            self.check_runs_closed(&mut report, &names);
+            check_runs_closed(&mut report, &docs);
         }
         self.check_manual_review(&mut report);
         report.exempt = report.exempt && report.failures.is_empty();
@@ -139,7 +144,7 @@ impl Gate<'_> {
         check_manifest(&mut report, parsed.test.as_ref());
         if level != Level::Commit {
             check_review(&mut report, parsed.cr.as_ref());
-            self.check_design(&mut report, parsed.cr.as_ref(), &names);
+            self.check_design(&mut report, parsed.cr.as_ref(), &docs);
         }
         self.check_docs(&mut report, parsed.doc.as_ref(), &names);
         if level == Level::Epic {
@@ -323,7 +328,7 @@ impl Gate<'_> {
                 to.starts_with("docs/decisions/")
                     && crate::git::show_bytes(self.repo, &report.tip, to).is_ok()
             }),
-            Some(DistilledTo::DeadEnd(reason)) => names_a_carrier(self.repo, reason),
+            Some(DistilledTo::DeadEnd(reason)) => names_a_carrier(self.repo, &report.tip, reason),
             None => false,
         };
         if !distilled {
@@ -335,18 +340,19 @@ impl Gate<'_> {
         }
     }
 
-    pub fn design_artifacts(&self, tip: &str, names: &[String]) -> Vec<String> {
+    fn doc_blobs(&self, tip: &str, names: &[String]) -> Vec<(String, String)> {
         names
             .iter()
             .filter(|p| is_doc(p))
-            .filter(|path| {
-                crate::git::show_bytes(self.repo, tip, path)
-                    .ok()
-                    .and_then(|bytes| String::from_utf8(bytes).ok())
-                    .is_some_and(|html| crate::doc::design_artifact(path, &html).is_some())
+            .filter_map(|path| {
+                let bytes = crate::git::show_bytes(self.repo, tip, path).ok()?;
+                Some((path.clone(), String::from_utf8(bytes).ok()?))
             })
-            .cloned()
             .collect()
+    }
+
+    pub fn design_artifacts(&self, tip: &str, names: &[String]) -> Vec<String> {
+        design_artifacts_of(&self.doc_blobs(tip, names))
     }
 
     // Tier-3, enforced where Tier-2 could not be: the design dimension of the
@@ -355,9 +361,9 @@ impl Gate<'_> {
     // against the rulebook that diff ships. Everything below refuses a silence -
     // a design-bearing PASS that never mentions the design is exactly the
     // failure the schema bump exists to make visible.
-    fn check_design(&self, report: &mut Report, cr: Option<&CrNote>, names: &[String]) {
+    fn check_design(&self, report: &mut Report, cr: Option<&CrNote>, docs: &[(String, String)]) {
         let Some(cr) = cr else { return };
-        let artifacts = self.design_artifacts(&report.tip, names);
+        let artifacts = design_artifacts_of(docs);
         let Some(design) = &cr.design else {
             if artifacts.is_empty() {
                 return;
@@ -408,7 +414,7 @@ impl Gate<'_> {
             ));
             return;
         };
-        let short_blob = blob.get(..crate::doc::PIN_MIN).unwrap_or(blob.as_str());
+        let short_blob = crate::doc::pin_of(&blob);
         if design.rulebook.len() < crate::doc::PIN_MIN {
             report.failures.push(Failure::new(
                 DESIGN,
@@ -427,27 +433,6 @@ impl Gate<'_> {
                 ),
                 format!("the rulebook moved under the review - re-run it against this tip's rulebook and re-pin: design.rulebook: {short_blob}"),
             ));
-        }
-    }
-
-    // Closing a design run was nobody's step: a run was archived as a side effect
-    // of the NEXT run being written, so run #3 - which had no next run - stayed
-    // open and red in the tree for two Working Units. The merge is where that
-    // stops being invisible, because a run the diff touched is a run this seam is
-    // answerable for. A commit mid-design is not: a run is legitimately open, and
-    // red, for as long as it is being designed.
-    fn check_runs_closed(&self, report: &mut Report, names: &[String]) {
-        for path in names.iter().filter(|p| is_doc(p)) {
-            let Ok(bytes) = crate::git::show_bytes(self.repo, &report.tip, path) else { continue };
-            let Ok(html) = String::from_utf8(bytes) else { continue };
-            let Some(status) = crate::doc::design_run_status(&html) else { continue };
-            if status.is_empty() {
-                report.failures.push(Failure::new(
-                    "6·run-closed",
-                    format!("{path} is a design run left open at the tip"),
-                    "close the run when it finishes: archive it (data-status=\"archived\" beside its data-artifact), which is what keeps a later rule from re-opening it - a run still mid-design across a merge declares data-status=\"draft\" instead".to_string(),
-                ));
-            }
         }
     }
 
@@ -710,6 +695,32 @@ impl Gate<'_> {
         line(format!("date: {}", today()));
         write_note(self.repo, "dod", &report.tip, &body)?;
         Ok(body)
+    }
+}
+
+fn design_artifacts_of(docs: &[(String, String)]) -> Vec<String> {
+    docs.iter()
+        .filter(|(path, html)| crate::doc::design_artifact(path, html).is_some())
+        .map(|(path, _)| path.clone())
+        .collect()
+}
+
+// Closing a design run was nobody's step: a run was archived as a side effect
+// of the NEXT run being written, so run #3 - which had no next run - stayed
+// open and red in the tree for two Working Units. The merge is where that
+// stops being invisible, because a run the diff touched is a run this seam is
+// answerable for. A commit mid-design is not: a run is legitimately open, and
+// red, for as long as it is being designed.
+fn check_runs_closed(report: &mut Report, docs: &[(String, String)]) {
+    for (path, html) in docs {
+        let Some(status) = crate::doc::design_run_status(html) else { continue };
+        if status.is_empty() {
+            report.failures.push(Failure::new(
+                "6·run-closed",
+                format!("{path} is a design run left open at the tip"),
+                "close the run when it finishes: archive it (data-status=\"archived\" beside its data-artifact), which is what keeps a later rule from re-opening it - a run still mid-design across a merge declares data-status=\"draft\" instead".to_string(),
+            ));
+        }
     }
 }
 

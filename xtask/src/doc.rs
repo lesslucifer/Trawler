@@ -106,6 +106,13 @@ pub fn pin_matches(pinned: &str, blob: &str) -> bool {
     pin.len() >= PIN_MIN && blob.starts_with(&pin)
 }
 
+// What a receipt or a note should have pinned, for every message that tells an
+// author to go and pin it. A blob already shorter than the floor is shown whole:
+// nothing longer exists to offer.
+pub fn pin_of(blob: &str) -> &str {
+    blob.get(..PIN_MIN).unwrap_or(blob)
+}
+
 // What pulls the design dimension into a code review. Tier-3 judges a FINISHED
 // design, so a run doc counts once it is closed at the tip - the merge that
 // closes it is the first one answerable for it, and a run still `draft` is
@@ -123,10 +130,13 @@ pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
 }
 
 // Every slug the rulebook declares, hard and soft. The gate reads it to check a
-// citation is followable rather than merely well-shaped.
-pub fn rulebook_slugs(repo: &Path) -> Vec<String> {
-    std::fs::read_to_string(repo.join(RULEBOOK))
+// citation is followable rather than merely well-shaped - at the revision it is
+// judging, never the working tree, so a later rename cannot unfollow a citation
+// that resolved when its seam was reviewed.
+pub fn rulebook_slugs(repo: &Path, rev: &str) -> Vec<String> {
+    crate::git::show_bytes(repo, rev, RULEBOOK)
         .ok()
+        .and_then(|bytes| String::from_utf8(bytes).ok())
         .map(|html| rules_from_rulebook(&html).into_iter().map(|rule| rule.slug).collect())
         .unwrap_or_default()
 }
@@ -532,7 +542,7 @@ fn check_pin(failures: &mut Vec<Failure>, pinned: &str, rulebook: &Rulebook) {
         return;
     };
     let pin = pinned.to_ascii_lowercase();
-    let short = blob.get(..PIN_MIN).unwrap_or(blob.as_str());
+    let short = pin_of(blob);
     if pin.len() < PIN_MIN {
         fail(
             "receipt·rulebook",

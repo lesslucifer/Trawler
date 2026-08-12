@@ -16,6 +16,7 @@
 #![cfg(all(unix, feature = "design-e2e"))]
 #![allow(clippy::unwrap_used)] // test code - panicking on setup failure is the assertion
 
+use std::fmt::Write as _;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -34,7 +35,11 @@ const SOFT_RULES: &[&str] = &["data-ink-first", "calm-microcopy"];
 
 fn rulebook_html(soft: &[&str]) -> String {
     let rows = |slugs: &[&str]| {
-        slugs.iter().map(|s| format!("<tr><td><code>{s}</code></td></tr>")).collect::<String>()
+        let mut out = String::new();
+        for slug in slugs {
+            let _ = write!(out, "<tr><td><code>{slug}</code></td></tr>");
+        }
+        out
     };
     format!(
         "<html><body><table data-c=\"hard-rules-table\"><tbody>{}</tbody></table>\
@@ -173,7 +178,7 @@ impl Flow {
             .expect("spawn xtask")
     }
 
-    /// Tier-1 over the run doc — what the PostToolUse hook runs on every write.
+    /// Tier-1 over the run doc — what the `PostToolUse` hook runs on every write.
     fn verify_run(&self) -> Output {
         self.xtask(&["verify-doc", RUN])
     }
@@ -208,12 +213,10 @@ const REVIEWER: &[[&str; 3]] = &[
 ];
 
 fn review_artifact() -> String {
-    let rows: String = REVIEWER
-        .iter()
-        .map(|[said, moved, contract]| {
-            format!("<tr><td>{said}</td><td>{moved}</td><td>{contract}</td></tr>")
-        })
-        .collect();
+    let mut rows = String::new();
+    for [said, moved, contract] in REVIEWER {
+        let _ = write!(rows, "<tr><td>{said}</td><td>{moved}</td><td>{contract}</td></tr>");
+    }
     format!(
         "<table data-item=\"review\"><tr><th>Said</th><th>Moved</th><th>Contract</th></tr>{rows}</table>"
     )
@@ -315,13 +318,11 @@ const WHY: &[(&str, &str)] = &[
 ];
 
 fn receipt(pin: &str, soft: &[&str]) -> String {
-    let rows: String = soft
-        .iter()
-        .map(|slug| {
-            let why = WHY.iter().find(|(s, _)| s == slug).map(|(_, w)| *w).unwrap();
-            format!("  {slug}: {why}\n")
-        })
-        .collect();
+    let mut rows = String::new();
+    for slug in soft {
+        let why = WHY.iter().find(|(s, _)| s == slug).map(|(_, w)| *w).unwrap();
+        let _ = writeln!(rows, "  {slug}: {why}");
+    }
     format!("<pre data-item=\"receipt\">rulebook: {pin}\nsoft:\n{rows}</pre>")
 }
 

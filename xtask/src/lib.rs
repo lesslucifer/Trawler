@@ -101,7 +101,7 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
     }
     let pin = doc::rulebook_blob(repo, &tip).map_or_else(
         || "<unreadable - the design pin cannot be written>".to_string(),
-        |blob| blob.get(..doc::PIN_MIN).unwrap_or(&blob).to_string(),
+        |blob| doc::pin_of(&blob).to_string(),
     );
     Ok((
         0,
