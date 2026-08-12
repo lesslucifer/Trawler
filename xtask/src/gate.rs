@@ -4,8 +4,33 @@ use std::process::Command;
 
 use crate::git::{diff_names, diff_sha256, git, note, write_note};
 use crate::notes::{
-    is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DocNote, TestNote,
+    is_code, is_doc, is_expected_tracked_doc, is_rule_bearing, tier_of, CrNote, DistilledTo,
+    DocChange, DocNote, TestNote, CR_SCHEMAS,
 };
+
+// What a fork card may be carried by when no decision record carries it: the TSDoc
+// tags a contract compiles into, or a rulebook slug that outranks it. Both are
+// things a reader can go and read - the whole difference between a dead end named
+// and a dead end assumed (DEC-16).
+const CARRIERS: &[&str] = &["@use", "@avoid", "@states", "@madeof", "@tier"];
+
+// A slug counts only while the rulebook really holds it: a citation nobody can
+// follow is the same silence as no citation, and the rulebook is the one place that
+// can say whether `wrap-not-truncate` is a rule or a phrase.
+fn names_a_carrier(repo: &Path, rev: &str, reason: &str) -> bool {
+    if CARRIERS.iter().any(|tag| reason.contains(tag)) {
+        return true;
+    }
+    crate::doc::rulebook_slugs(repo, rev).iter().any(|slug| reason.contains(slug.as_str()))
+}
+
+// A cr/v2 note carries no design section and cannot be made to carry one: the
+// review that wrote it ran before the dimension existed, and editing it after
+// the fact would claim a judgment nobody made. The epic walk therefore drops
+// this one check at seams (immutable history), while every design check that
+// only a cr/v3 note can fail keeps applying there.
+const DESIGN_SCHEMA: &str = "9·design-schema";
+const DESIGN: &str = "9·design";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Level {
@@ -80,6 +105,18 @@ impl Gate<'_> {
         let names = diff_names(self.repo, &base, &tip)?;
         let sha = diff_sha256(self.repo, &base, &tip)?;
         let code_changed = names.iter().any(|p| is_code(p));
+        // Three checks below read every doc the diff touches, at the same tip, for
+        // the same immutable blobs. Fetched once per verify and threaded through:
+        // the walk calls verify once per seam, so a per-site fetch multiplies whole
+        // sweeps of `git show` by the number of seams.
+        let docs = if level == Level::Commit { Vec::new() } else { self.doc_blobs(&tip, &names) };
+        // A design is a docs-only deliverable, so the docs/infra exemption would
+        // hand the design dimension exactly the diffs it exists to judge - the
+        // most common design Working Unit writes a run and no code at all. The
+        // merge that closes a design is answerable for it whether or not any
+        // code moved, for the same reason `6·run-closed` already is.
+        let designs = !design_artifacts_of(&docs).is_empty();
+        let gated = code_changed || designs;
         let mut report = Report {
             level,
             tip_ref: tip_ref.to_string(),
@@ -88,24 +125,28 @@ impl Gate<'_> {
             diff_sha256: sha,
             epic: None,
             wu: None,
-            exempt: !code_changed,
+            exempt: !gated,
             failures: Vec::new(),
             waived: Vec::new(),
         };
         if level == Level::Epic {
             self.check_tracked_docs(&mut report);
         }
+        if level != Level::Commit {
+            check_runs_closed(&mut report, &docs);
+        }
         self.check_manual_review(&mut report);
         report.exempt = report.exempt && report.failures.is_empty();
-        if !code_changed {
+        if !gated {
             return Ok(report);
         }
         let parsed = self.load_notes(&mut report, &names);
         check_manifest(&mut report, parsed.test.as_ref());
         if level != Level::Commit {
             check_review(&mut report, parsed.cr.as_ref());
+            self.check_design(&mut report, parsed.cr.as_ref(), &docs);
         }
-        Self::check_docs(&mut report, parsed.doc.as_ref(), &names);
+        self.check_docs(&mut report, parsed.doc.as_ref(), &names);
         if level == Level::Epic {
             self.walk(&mut report, target_ref)?;
         }
@@ -116,14 +157,15 @@ impl Gate<'_> {
         let tip = report.tip.clone();
         let doc_needed = report.level != Level::Commit || names.iter().any(|p| is_doc(p));
         let test = self
-            .parse_note::<TestNote>(report, &tip, "test", "test/v2", true, |n| n.schema.clone());
+            .parse_note::<TestNote>(report, &tip, "test", &["test/v2"], true, |n| n.schema.clone());
         let cr = if report.level == Level::Commit {
             None
         } else {
-            self.parse_note::<CrNote>(report, &tip, "cr", "cr/v2", true, |n| n.schema.clone())
+            self.parse_note::<CrNote>(report, &tip, "cr", CR_SCHEMAS, true, |n| n.schema.clone())
         };
-        let doc = self
-            .parse_note::<DocNote>(report, &tip, "doc", "doc/v1", doc_needed, |n| n.schema.clone());
+        let doc = self.parse_note::<DocNote>(report, &tip, "doc", &["doc/v1"], doc_needed, |n| {
+            n.schema.clone()
+        });
         if let Some(t) = &test {
             report.epic.clone_from(&t.epic);
             report.wu.clone_from(&t.wu);
@@ -139,15 +181,19 @@ impl Gate<'_> {
         ParsedNotes { test, cr, doc }
     }
 
+    // `accepted` is the contract history, oldest first: an older schema still
+    // parses (its note is immutable evidence) while every message names the
+    // current one, which is what a fix must be written to.
     fn parse_note<T: serde::de::DeserializeOwned>(
         &self,
         report: &mut Report,
         tip: &str,
         note_ref: &str,
-        schema: &str,
+        accepted: &[&str],
         required: bool,
         schema_of: impl Fn(&T) -> String,
     ) -> Option<T> {
+        let schema = accepted.last().copied().unwrap_or_default();
         let Some(raw) = note(self.repo, note_ref, tip) else {
             if required {
                 report.failures.push(Failure::new(
@@ -172,7 +218,7 @@ impl Gate<'_> {
         match serde_yaml::from_str::<T>(&raw) {
             Ok(parsed) => {
                 let found = schema_of(&parsed);
-                if found == schema {
+                if accepted.contains(&found.as_str()) {
                     Some(parsed)
                 } else {
                     report.failures.push(Failure::new(
@@ -194,7 +240,7 @@ impl Gate<'_> {
         }
     }
 
-    fn check_docs(report: &mut Report, doc: Option<&DocNote>, names: &[String]) {
+    fn check_docs(&self, report: &mut Report, doc: Option<&DocNote>, names: &[String]) {
         let doc_paths: Vec<&String> = names.iter().filter(|p| is_doc(p)).collect();
         if let Some(doc) = doc {
             let entries: BTreeMap<&str, &crate::notes::DocChange> =
@@ -230,6 +276,7 @@ impl Gate<'_> {
                                 "record distilled_to: [paths] or a dead-end reason".to_string(),
                             ));
                         }
+                        self.check_retirement_order(report, path, entry);
                     }
                 }
             }
@@ -255,6 +302,137 @@ impl Gate<'_> {
                     ));
                 }
             }
+        }
+    }
+
+    // DEC-16's order, refused rather than remembered. Step ③ - removing a design
+    // file - is the irreversible one, and step ① is the only one that can lose
+    // data, so the gate holds ③ until ① has landed.
+    //
+    // Two lineages are accepted, and the second exists because the first was too
+    // narrow: W7 ⑥ measured it over the sixteen files W7 retired and 2 of them had
+    // NO surviving record, correctly - every fork was carried by the contract or
+    // superseded by a rule. DEC-16 says so itself ("most are local and die with the
+    // file"), so demanding a record refused the case that record calls the
+    // majority. What the check still refuses is the reason that names nothing:
+    // "none", "nothing survives", "local" - a dead end ASSUMED, which is the loss
+    // DEC-16 exists to prevent. A dead end NAMED cites what carries the fork.
+    fn check_retirement_order(&self, report: &mut Report, path: &str, entry: &DocChange) {
+        if !path.starts_with(crate::doc::COMPONENTS)
+            || crate::git::show_bytes(self.repo, &report.tip, path).is_ok()
+        {
+            return;
+        }
+        let distilled = match &entry.distilled_to {
+            Some(DistilledTo::Paths(paths)) => paths.iter().any(|to| {
+                to.starts_with("docs/decisions/")
+                    && crate::git::show_bytes(self.repo, &report.tip, to).is_ok()
+            }),
+            Some(DistilledTo::DeadEnd(reason)) => names_a_carrier(self.repo, &report.tip, reason),
+            None => false,
+        };
+        if !distilled {
+            report.failures.push(Failure::new(
+                "6·retirement-order",
+                format!("{path} is removed with its forks distilled nowhere"),
+                format!("DEC-16: distil the fork cards to docs/decisions/ and record distilled_to: [that record] - or, where every fork really is a dead end, say what carries it: a TSDoc tag ({}) or a rulebook slug. A reason that names nothing is a dead end assumed, not named", CARRIERS.join(" ")),
+            ));
+        }
+    }
+
+    fn doc_blobs(&self, tip: &str, names: &[String]) -> Vec<(String, String)> {
+        names
+            .iter()
+            .filter(|p| is_doc(p))
+            .filter_map(|path| {
+                let bytes = crate::git::show_bytes(self.repo, tip, path).ok()?;
+                Some((path.clone(), String::from_utf8(bytes).ok()?))
+            })
+            .collect()
+    }
+
+    pub fn design_artifacts(&self, tip: &str, names: &[String]) -> Vec<String> {
+        design_artifacts_of(&self.doc_blobs(tip, names))
+    }
+
+    // Tier-3, enforced where Tier-2 could not be: the design dimension of the
+    // code review is an independent agent's judgment, so the only thing a gate
+    // can hold is that it ran, over every design artifact the diff carries, and
+    // against the rulebook that diff ships. Everything below refuses a silence -
+    // a design-bearing PASS that never mentions the design is exactly the
+    // failure the schema bump exists to make visible.
+    fn check_design(&self, report: &mut Report, cr: Option<&CrNote>, docs: &[(String, String)]) {
+        let Some(cr) = cr else { return };
+        let artifacts = design_artifacts_of(docs);
+        let Some(design) = &cr.design else {
+            if artifacts.is_empty() {
+                return;
+            }
+            let check = if cr.schema == "cr/v3" { DESIGN } else { DESIGN_SCHEMA };
+            report.failures.push(Failure::new(
+                check,
+                format!(
+                    "{} design artifact(s) in the diff and the {} note carries no design section",
+                    artifacts.len(),
+                    cr.schema
+                ),
+                format!(
+                    "re-run the code-review skill on {}: a diff carrying a design artifact activates the design finder, and its verdict is the cr/v3 note's design section",
+                    report.tip_ref
+                ),
+            ));
+            return;
+        };
+        for path in artifacts.iter().filter(|p| !design.judged(p)) {
+            report.failures.push(Failure::new(
+                DESIGN,
+                format!("{path} is a design artifact the design section does not name"),
+                "the design dimension judges every design artifact in the diff - review it and list it under design.artifacts, or the PASS covers a design nobody read".to_string(),
+            ));
+        }
+        if design.verdict != "PASS" {
+            report.failures.push(Failure::new(
+                DESIGN,
+                format!("design verdict is {}", design.verdict),
+                "fix the verified design findings and re-run the review until its design dimension passes".to_string(),
+            ));
+        }
+        self.check_design_pin(report, design);
+    }
+
+    // The design verdict is a claim against a specific rulebook - the same claim
+    // the run's own receipt makes, and the same way it went unchecked for three
+    // Working Units. Read at the TIP, never the working tree: a seam is judged
+    // against the rulebook that seam shipped.
+    fn check_design_pin(&self, report: &mut Report, design: &crate::notes::Design) {
+        let Some(blob) = crate::doc::rulebook_blob(self.repo, &report.tip) else {
+            report.failures.push(Failure::new(
+                DESIGN,
+                "the tip carries no readable design rulebook to check the design pin against"
+                    .to_string(),
+                "run the gate from a checkout where the tip's docs/design-rules/design-rules-index.html resolves".to_string(),
+            ));
+            return;
+        };
+        let short_blob = crate::doc::pin_of(&blob);
+        if design.rulebook.len() < crate::doc::PIN_MIN {
+            report.failures.push(Failure::new(
+                DESIGN,
+                format!(
+                    "the design section pins \"{}\", which names no rulebook blob",
+                    design.rulebook
+                ),
+                format!("pin what the design dimension read: design.rulebook: {short_blob}"),
+            ));
+        } else if !crate::doc::pin_matches(&design.rulebook, &blob) {
+            report.failures.push(Failure::new(
+                DESIGN,
+                format!(
+                    "the design dimension judged against rulebook {}; this tip ships {short_blob}",
+                    design.rulebook
+                ),
+                format!("the rulebook moved under the review - re-run it against this tip's rulebook and re-pin: design.rulebook: {short_blob}"),
+            ));
         }
     }
 
@@ -438,7 +616,7 @@ impl Gate<'_> {
                     let failures = inner
                         .failures
                         .into_iter()
-                        .filter(|f| f.check != "8·manual-review")
+                        .filter(|f| f.check != "8·manual-review" && f.check != DESIGN_SCHEMA)
                         .map(|f| {
                             Failure::new(
                                 &format!("7·walk·{}", f.check),
@@ -510,15 +688,39 @@ impl Gate<'_> {
         line(format!("tip: {}", report.tip));
         line(format!("diff_sha256: {}", report.diff_sha256));
         let checks = match report.level {
-            Level::Epic => {
-                "[notes, manifest, review, review-base, diff-binding, doc-note, manual-review, walk]"
-            }
-            _ => "[notes, manifest, review, review-base, diff-binding, doc-note, manual-review]",
+            Level::Epic => "[notes, manifest, review, review-base, diff-binding, doc-note, design, manual-review, walk]",
+            _ => "[notes, manifest, review, review-base, diff-binding, doc-note, design, manual-review]",
         };
         line(format!("checks: {checks}"));
         line(format!("date: {}", today()));
         write_note(self.repo, "dod", &report.tip, &body)?;
         Ok(body)
+    }
+}
+
+fn design_artifacts_of(docs: &[(String, String)]) -> Vec<String> {
+    docs.iter()
+        .filter(|(path, html)| crate::doc::design_artifact(path, html).is_some())
+        .map(|(path, _)| path.clone())
+        .collect()
+}
+
+// Closing a design run was nobody's step: a run was archived as a side effect
+// of the NEXT run being written, so run #3 - which had no next run - stayed
+// open and red in the tree for two Working Units. The merge is where that
+// stops being invisible, because a run the diff touched is a run this seam is
+// answerable for. A commit mid-design is not: a run is legitimately open, and
+// red, for as long as it is being designed.
+fn check_runs_closed(report: &mut Report, docs: &[(String, String)]) {
+    for (path, html) in docs {
+        let Some(status) = crate::doc::design_run_status(html) else { continue };
+        if status.is_empty() {
+            report.failures.push(Failure::new(
+                "6·run-closed",
+                format!("{path} is a design run left open at the tip"),
+                "close the run when it finishes: archive it (data-status=\"archived\" beside its data-artifact), which is what keeps a later rule from re-opening it - a run still mid-design across a merge declares data-status=\"draft\" instead".to_string(),
+            ));
+        }
     }
 }
 

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7afbd09f34851f0dfab709">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W7 plan (the harness)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W7 plan — the harness</h1>
+      <p>Finish the design gate: the independent tier as a dimension of the code review, the registry
+        gate that has never existed, the step where a run closes — and the flow e2e this epic has waived
+        six times.</p>
+      <div class="meta">WU plan · 2026-08-11 · Trawler · T3 (docs/work/) ·
+        <code>wu/design-flow/harness</code> → <code>epic/design-flow</code> ·
+        epic plan: <a href="2026-07-16-design-flow-plan.html">E-DFLOW</a> ·
+        direction: <a href="2026-08-11-dflow-w7-discussion.html">W7 discussion</a> (D1–D6, resolved) ·
+        prior: <a href="2026-08-10-dflow-w6-result.html">W6 result</a></div>
+    </div>
+  </header>
+  <main data-artifact="wu-plan">
+
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement">
+      The design flow is <strong>complete and gated end to end</strong>: Tier-3 lands as a
+      <strong>dimension of the code review</strong>, its verdict in <code>cr/v3</code> and
+      <code>verify-dod</code> refusing a design-bearing tip whose note carries no design section; the
+      <strong>component registry gets the gate it has never had</strong> — an index emitted from the
+      collection's own TSDoc, every registry citation in a design run resolved against it, and
+      <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>'s retirement order refused
+      mechanically rather than remembered; a design run <strong>closes as an owned step</strong>, with its
+      rulebook pin verified and its review-driven changes recorded; and a <strong>flow e2e</strong> drives
+      a fake human and a fake designing agent through all three tiers, proving the plumbing never stalls,
+      that a rule-violating input reds and a compliant one greens.
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <div data-item="maps-to">
+      <p>Requirement <strong>#3</strong> (the harness) and the unbuilt half of <strong>#1</strong> (the
+        registry's gate). Extends the enforcement model of
+        <a href="../decisions/dec-15-design-run-enforcement.html">DEC-15</a>, enforces
+        <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>, and consumes
+        <a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a>'s closed vocabulary.
+        <strong>Depends on: W5, W6.</strong> Hands to W8 the receipt its integration reads.</p>
+      <table data-c="tbl-mapping">
+        <thead><tr><th>Deferred here by</th><th>Rows it carries</th></tr></thead>
+        <tbody>
+          <tr><td>epic plan · direction doc</td><td>the three tiers, the receipt, the wiring, the flow
+            e2e, the acceptance demonstration, <code>index-covers-folder</code>, and the harness-runner
+            open question</td></tr>
+          <tr><td>W2 (plan · seed · result)</td><td>the generated index, its freshness gate, the
+            index/generator form left to the build WU</td></tr>
+          <tr><td>W3 result · DEC-14</td><td>the receipt pins the rulebook blob hash it ran against</td></tr>
+          <tr><td>W4 result (runs #2 and #3)</td><td>Tier-2 and Tier-3, the flow e2e, the
+            <em>whose violation</em> distinction inside a predicate, <code>state-declarations</code>
+            against the registry verdict, and finding 29's <code>review</code> closing item</td></tr>
+          <tr><td>W5 result · DEC-16</td><td>four registry rows: the index, the DoD wiring, the three D4
+            predicates, and the retirement order plus the deletions it unblocks</td></tr>
+          <tr><td>W6 result</td><td>follow-up 1 (nothing enforces a soft rule), 8 (closing a run is
+            nobody's step), 10 (the hand-rolled HTML scanner)</td></tr>
+          <tr><td>this WU's own sweep</td><td>a reuse can cite a component that does not exist; the
+            rulebook pin is never verified</td></tr>
+        </tbody>
+      </table>
+      <p class="meta">The full inventory, with each item's source and state, is the
+        <a href="2026-08-11-dflow-w7-discussion.html#sweep">discussion's sweep table</a>. Two of its rows
+        were <strong>dissolved rather than built</strong> by the D3 ruling — see
+        <a href="#step1">step ①</a>.</p>
+    </div>
+
+    <h2 id="rulings">What the discussion settled</h2>
+    <table data-c="tbl-rulings">
+      <thead><tr><th></th><th>Ruled</th><th>Consequence for this plan</th></tr></thead>
+      <tbody>
+        <tr><td><strong>D1</strong></td><td>Tier-2 is already shipped — the W4 receipt <em>is</em> the
+          self-reflex tier <span class="badge id">default held</span></td>
+          <td>nothing is built for it. The tier is recorded as complete in DEC-15, and the two real gaps
+            filed under its heading (the run never closes, the pin is never verified) are
+            <a href="#step3">step ③</a></td></tr>
+        <tr><td><strong>D2</strong></td><td>Tier-3 is a <strong>dimension of the code review</strong>, not
+          a separate skill; its verdict is <code>cr/v3</code>; Tier-2's receipt stays inline in the run
+          doc; it runs before the design reaches development</td>
+          <td><a href="#step4">step ④</a>. Independence, freshness and sha-binding are inherited rather
+            than rebuilt; the schema bump exists so a PASS on a design-bearing diff cannot be silent
+            about the design</td></tr>
+        <tr><td><strong>D3</strong></td><td>The registry index is <strong>emitted inline, never
+          stored</strong> — the agent runs the generator when it needs the vocabulary</td>
+          <td><a href="#step1">step ①</a>. The freshness gate and <code>index-covers-folder</code>
+            <strong>dissolve</strong>: nothing stored can be stale, and the emitted index is the folder</td></tr>
+        <tr><td><strong>D4</strong></td><td>Replace the hand-rolled HTML scanning with a real parser,
+          before any new predicate</td>
+          <td><a href="#step0">step ⓪</a>, and its acceptance is that the archived runs' reds reproduce
+            exactly</td></tr>
+        <tr><td><strong>D5</strong></td><td>Two acceptances, two receipts: the flow e2e is the agent's
+          (<code>test/v2</code>), the fourth design run is the human's by hand (<code>mr/v1</code>)</td>
+          <td><a href="#step5">step ⑤</a> and <a href="#step6">step ⑥</a>. Making the harness
+            <em>human-drivable</em> becomes a deliverable, not a courtesy</td></tr>
+        <tr><td><strong>D6</strong></td><td>The flow spec is promoted to T1 at epic distillation, not here</td>
+          <td><a href="design-flow-base.html">design-flow-base.html</a> stays T3 and is edited freely</td></tr>
+        <tr><td><strong>scope</strong></td><td>one WU <span class="badge id">default held</span></td>
+          <td>the pieces share one oracle and one review pass. The split point, if it is ever needed, is
+            between ② and ③ — steps ⓪–② are the registry gate and stand alone</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="tbl-expected">
+      <thead><tr><th>Observable</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The predicates read parsed HTML.</strong> <code>attr_positions</code>,
+          <code>tag_end</code>, <code>element_content</code> and <code>check_escaped_markup</code> are
+          gone, and the six defects six review rounds found in them are regression cases rather than
+          comments</td><td><code>xtask/src/doc.rs</code></td></tr>
+        <tr><td><strong>The registry has an oracle.</strong> One command emits the collection's whole
+          vocabulary — tier, <code>@use</code>, <code>@avoid</code>, <code>@states</code>,
+          <code>@madeof</code> — read from the components' own TSDoc. Nothing is committed, so nothing can
+          be stale, and a component with no TSDoc block is simply not in the vocabulary: the
+          <em>waiver</em>, stated where it cannot drift from the thing it waives</td>
+          <td><code>scripts/design-registry.mjs</code></td></tr>
+        <tr><td><strong>A design run's registry citations are checked against the registry.</strong> A
+          reuse naming a component that does not exist, or an <code>@avoid</code> that component does not
+          have, reds — the defect run #3 shipped for a whole stage. Plus the two remaining W5 D4
+          predicates: roster ↔ design file one-to-one, and no design file re-drawing a class the shared
+          vocabulary owns</td><td><code>xtask/src/doc.rs</code></td></tr>
+        <tr><td><strong>Retirement order is refused, not remembered.</strong> Removing a design file whose
+          forks are not yet in <code>docs/decisions/</code> is red; the files whose forks <em>are</em>
+          distilled are deleted in this WU</td>
+          <td><code>xtask/src/doc.rs</code> · <code>docs/work/components/</code></td></tr>
+        <tr><td><strong>A run closes.</strong> Archiving is a step the flow owns rather than a side effect
+          of the next run being written; the guard test stops enumerating closed runs by hand; the
+          receipt's <code>rulebook:</code> pin is verified against the file it names instead of merely
+          being non-empty</td><td>flow spec · <code>xtask/src/doc.rs</code></td></tr>
+        <tr><td><strong>A review-driven change has somewhere to land.</strong> The
+          <code>review</code> closing item: one row per reviewer instruction, what it moved, and the
+          contract it hit — machine-checked like the other four</td>
+          <td>flow spec · <code>xtask/src/doc.rs</code></td></tr>
+        <tr><td><strong>Soft rules are enforced by something.</strong> The code review gains a design
+          dimension — a rubric, and a finder that activates when the diff carries a design artifact —
+          scoped to soft rules and the new-component warrant. <code>cr/v3</code> carries its verdict, and
+          <code>verify-dod</code> reds a design-bearing tip whose note has no design section</td>
+          <td><code>.claude/skills/code-review/</code> · <code>xtask/src/notes.rs</code> ·
+            <code>xtask/src/gate.rs</code></td></tr>
+        <tr><td><strong>The flow e2e is green</strong> — fake human, fake designing agent, all three
+          tiers, a compliant input green and a violating one red. Feature-gated out of the default suite,
+          like the manual-review e2e</td><td><code>xtask/tests/e2e_design_flow.rs</code></td></tr>
+        <tr><td><strong>The harness is drivable by a human</strong> — the flow spec executable start to
+          finish, the review invocable by name, the receipt shape stated where a run is written, and every
+          red naming what to do about it</td><td>flow spec · gate messages</td></tr>
+      </tbody>
+    </table>
+    <p class="meta"><strong>Out of scope:</strong> where the design gate sits relative to a UI-touching WU
+      and what evidence it hands development (W8) · the fresh-screen run and the over-fit exposure W6
+      measured (W9) · <code>BodyViewer</code>'s mislabelled switch (deferred backlog) · rewiring the
+      screens off the old <code>StatusPill</code> · <code>Field</code> and <code>StatusDot</code> joining
+      the registry · <code>Select</code>'s flip-on-collision · <code>BodyRenderer</code>'s manual JSON
+      override · <code>StepStatusView.short</code>.</p>
+
+    <h2 id="worklist">The worklist</h2>
+
+    <h3 id="step0">⓪ The parser swap</h3>
+    <p>Four functions read HTML by hand. Six code-review rounds each found a hole in them, and each fix
+      revealed the next — the signal that they are one missing abstraction rather than six bugs. Every
+      later step in this WU adds a predicate, and the measured price of not doing this first is one more
+      round of it per predicate.</p>
+    <table data-c="tbl-step0">
+      <thead><tr><th>Does</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Replace the four functions with a real HTML parser</td>
+          <td>one small dependency. The house rule is "never add one for what a few lines can do" — six
+            rounds of evidence say these are not a few lines. <code>xtask</code> today carries
+            <code>serde</code>, <code>serde_yaml</code> and <code>tempfile</code> only</td></tr>
+        <tr><td>Turn the six known holes into tests</td>
+          <td>an attribute quoted inside another attribute's value · a tag end found at a bracket inside a
+            quoted value · re-syncing past a malformed tag and lending one element another's classes ·
+            quotes re-pairing across a fault · a legal <code>title</code> holding an escaped angle bracket
+            · a snippet cut at a byte boundary mid-character</td></tr>
+        <tr><td>Keep <code>markup·escaped</code>'s verdict</td>
+          <td>a raw angle bracket in an attribute value stays red — round 8 refuted the argument for
+            allowing it, and the pin says so</td></tr>
+      </tbody>
+    </table>
+    <p class="kd"><strong>Gate:</strong> every predicate re-run over all three archived runs and the reds
+      <strong>reproduce exactly</strong> — W6 recorded 49, of which 33 are real over 29 sites. A different
+      number means the swap changed a verdict, which is the one thing it must not do.</p>
+
+    <h3 id="step1">① The registry oracle</h3>
+    <p>Five rows of the sweep need the same missing thing: a program that can read a TSDoc block. One
+      script provides it, and two of those rows then dissolve instead of being built.</p>
+    <div class="diagram" data-c="dia-oracle">
+      <pre class="mermaid">
+flowchart LR
+  TSDOC["ui/src/components/*.tsx<br/>@tier @use @avoid @states @madeof<br/>= the truth"]
+  TSDOC --> GEN["scripts/design-registry.mjs<br/>emitted, never stored"]
+  GEN --> AGENT["the design run<br/>one command = whole vocabulary"]
+  GEN --> PRED["xtask verify-doc<br/>citations resolve"]
+  GEN --> TEST["collection.test.tsx<br/>roster + redirects derived"]
+      </pre>
+      <div class="caption">The same shape <code>scripts/design-vocabulary.mjs</code> already uses for the
+        token vocabulary — one source, several surfaces, nothing committed. <strong>Store nothing
+        forgeable</strong> becomes <strong>store nothing</strong>.</div>
+    </div>
+    <table data-c="tbl-step1">
+      <thead><tr><th>Row</th><th>Outcome</th></tr></thead>
+      <tbody>
+        <tr><td>the generated index</td><td><span class="badge auto">built</span> as the emitter</td></tr>
+        <tr><td>wire regenerate-and-diff into the DoD gate</td>
+          <td><span class="badge auto">dissolved</span> nothing stored can go stale</td></tr>
+        <tr><td><code>index-covers-folder</code></td>
+          <td><span class="badge auto">dissolved</span> the emitted index <em>is</em> the folder. What
+            survives is the different check underneath — a collection file the <em>barrel</em> does not
+            export is unreachable to a caller — and <code>collection.test.tsx</code> already asserts it,
+            against a hand-typed literal this step makes derived</td></tr>
+        <tr><td><code>ROSTER</code> and <code>REDIRECTS</code> in <code>collection.test.tsx</code></td>
+          <td>24 names and 29 pairs stop being transcribed by hand. They exist today only because nothing
+            could read a TSDoc block</td></tr>
+      </tbody>
+    </table>
+    <p class="kd"><strong>Gate:</strong> the emitter's roster equals the barrel's exports, proved by the
+      test rather than by inspection; a component with no TSDoc block is absent from the vocabulary and a
+      <em>malformed</em> block fails loudly — the failure mode W6's config helper earned the hard way.</p>
+
+    <h3 id="step2">② The registry gate</h3>
+    <p>Requirement #1 has had a registry since W2 and a gate never. <code>xtask/src/doc.rs</code> does not
+      open <code>ui/src/components/</code> at all, so today a design run's registry citations are checked
+      for <em>shape</em> and never for <em>truth</em>.</p>
+    <table data-c="tbl-step2">
+      <thead><tr><th>Check</th><th>The defect it catches</th></tr></thead>
+      <tbody>
+        <tr><td>Every component a run names resolves to a roster entry</td>
+          <td>a reuse of something that does not exist. <code>elements·avoid-cited</code> today checks the
+            row contains the string <code>@avoid</code></td></tr>
+        <tr><td>Every cited <code>@avoid</code> is one that component actually has</td>
+          <td>run #3, finding 21: <code>CopyButton</code>'s <code>@use</code> cited correctly while both
+            components' <code>@avoid</code> lines excluded the reuse — a whole stage shipped wrong</td></tr>
+        <tr><td>A reuse's <code>States</code> citation resolves; a propose still may not cite</td>
+          <td>W4 finding 12, the half W6 could not build without the oracle</td></tr>
+        <tr><td>Roster ↔ design file one-to-one</td><td>W5 D4</td></tr>
+        <tr><td>No design file re-draws a class the shared vocabulary owns</td><td>W5 D4</td></tr>
+        <tr><td><strong>DEC-16's order</strong>: a design file may not be removed while its forks are
+          absent from <code>docs/decisions/</code></td>
+          <td>the silent loss DEC-16 exists to prevent — the fork cards are the part nobody re-reads,
+            which is exactly why the file looks redundant</td></tr>
+      </tbody>
+    </table>
+    <p class="kd"><strong>Then the deletions.</strong> With the refusal in place, the design files whose
+      forks are distilled are removed — DEC-16 gives W7 both halves, and the predicate has to exist before
+      the delete key does.</p>
+
+    <h3 id="step3">③ A run closes</h3>
+    <table data-c="tbl-step3">
+      <thead><tr><th>Item</th><th>Shape</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Archive-on-close</strong></td>
+          <td>a step the flow owns. Today a run is archived as a side effect of the <em>next</em> run
+            being written, which is how run #3 sat red in the tree for two Working Units. A blanket
+            "every run is archived or green" sweep is the wrong instrument — a run mid-design is
+            legitimately red for days — so the check is on the <em>closing step</em>, and the guard test
+            stops enumerating closed runs by hand</td></tr>
+        <tr><td><strong>The rulebook pin</strong></td>
+          <td><code>receipt·rulebook</code> checks the field is non-empty; any string passes. It becomes a
+            comparison against the file it names, so a receipt cannot claim a rulebook version it never
+            read. <code>git hash-object</code>, already reachable from <code>xtask</code></td></tr>
+        <tr><td><strong>The <code>review</code> closing item</strong></td>
+          <td>W4 finding 29, the last outstanding flow-spec finding: one row per reviewer instruction,
+            what it moved, and the contract it hit. Machine-checked like receipt · capabilities ·
+            proposals · blocked-on. <strong>Not</strong> the Tier-3 verdict — one is provenance, the other
+            is a judgment, and merging them loses the provenance</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="step4">④ Tier-3 — the design dimension of the code review</h3>
+    <p>Once Tier-3 is named as the design-side <code>cr/v2</code>, hosting it elsewhere means
+      re-implementing independence, freshness, binding-to-exact-bytes and merge-time enforcement, all of
+      which already exist. So it goes where those already are.</p>
+    <table data-c="tbl-step4">
+      <thead><tr><th>Piece</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td>The design rubric</td>
+          <td>a sibling to <code>rubric.md</code>: what a design finder looks for (soft rules and the
+            new-component warrant only — Tier-1 owns all thirteen hard rules, so a second opinion on them
+            is noise) and, as important, its <strong>exclusions</strong></td></tr>
+        <tr><td>The finder</td>
+          <td>activates when the diff carries a design artifact; loads the rulebook and the step-①
+            registry oracle; reports findings or PASS, citing the exact slug — never a per-rule verdict
+            table, which is Tier-2's job and would double it</td></tr>
+        <tr><td><code>cr/v3</code></td>
+          <td>the note gains a design section. The bump is <strong>for enforcement</strong>: without a
+            field recording that the design dimension ran, a PASS on a design-bearing diff cannot be told
+            from one where nobody looked at the design — silence reading as <em>correctly typed</em> is
+            the defect this epic keeps rediscovering</td></tr>
+        <tr><td><code>verify-dod</code></td>
+          <td>a design-bearing tip needs a <code>cr/v3</code> whose design section is present. Existing
+            <code>cr/v2</code> notes on already-merged tips stay valid; only new tips are held to v3</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="tier3-risk">
+      <strong>The risk this step carries, named at planning.</strong> Tier-3 is an LLM judging prose rules;
+      no unit test can assert that a judgment is correct. So its acceptance is
+      <strong>calibration against known defects</strong>: run it over the three archived runs, where the
+      real defects are already documented, and require it to surface them — run #3's wrong reuse (finding
+      21), run #2's false <code>satisfied</code>, the capability designed away that only the cross-check
+      caught. A reviewer that passes a run known to be defective is not ready to judge a live one.
+    </div>
+
+    <h3 id="step5">⑤ The flow e2e</h3>
+    <p>Waived in identical words by W1, W2, W3, W4, W5 and W6. Paid here.</p>
+    <table data-c="tbl-step5">
+      <thead><tr><th>Asserts</th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td>The flow never stalls or emits a misleading prompt</td>
+          <td>a scripted fake human returning taste feedback at each stage, and a fake designing agent
+            emitting each stage's artifact. Every stage must yield its artifact or the test fails at that
+            stage, not at the end</td></tr>
+        <tr><td>A violating input reds and a compliant one greens</td>
+          <td>two runs through the same harness: one deliberately breaking a hard rule and one clean.
+            Mechanics, never design quality</td></tr>
+        <tr><td>The receipt covers every rule id</td>
+          <td>against the rulebook on disk, so adding a rule re-opens the assertion</td></tr>
+        <tr><td>It stays out of the default suite</td>
+          <td>feature-gated, the shape <code>tests/e2e_manual_review.rs</code> already uses — run once,
+            re-run manually when the flow or harness changes</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="step6">⑥ Hand over, then the human's run</h3>
+    <p>D5 makes the fourth run the human's, which turns "usable by someone other than its author" from a
+      courtesy into a deliverable. A harness only its author can drive would pass its own e2e and fail
+      this.</p>
+    <ul>
+      <li>The flow spec executable start to finish — the substrate-load command, the review invocation,
+        the closing step, each named where a run is written.</li>
+      <li>Every red message says what to do about it. W6's round 9 is the precedent: a message that named
+        a cause it could not know was itself the defect.</li>
+      <li>Then the run: the flow detail panel, through all three tiers, receipted — and
+        <code>mr/v1</code>, the note no agent may write.</li>
+    </ul>
+
+    <h2 id="test-plan">Test plan <span class="badge id">no waiver at any level</span></h2>
+    <table data-item="test-plan" data-c="tbl-tests">
+      <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">unit</span> commit</td>
+          <td><strong>The parser swap</strong>: one case per hole the six review rounds found, each proved
+            to fail against the old scanner. <strong>The oracle</strong>: a component with no TSDoc block
+            is absent from the vocabulary; a malformed block fails loudly rather than silently emitting a
+            short roster; the roster equals the barrel's exports. <strong>Each new predicate</strong>: one
+            green case and one red per way the rule can be broken — the shape W4 and W6 already use.
+            <strong>The note</strong>: <code>cr/v3</code> parses, and a design-bearing diff whose note has
+            no design section is rejected by the parser rather than defaulted.</td></tr>
+        <tr><td><span class="badge id">integration</span> WU</td>
+          <td>The bounded contract, driven through the real binary against a temp tree:
+            <code>verify-doc</code> resolves a run's registry citations against a collection written into
+            a <code>TempDir</code> — a fabricated component name reds, a real one passes ·
+            <code>verify-dod wu</code> reds a design-bearing tip whose note is <code>cr/v2</code> or whose
+            design section is absent, and greens on a complete <code>cr/v3</code> · the receipt's rulebook
+            pin is compared against the file on disk, so a stale pin reds · a design file whose forks are
+            not in <code>docs/decisions/</code> cannot be removed.</td></tr>
+        <tr><td><span class="badge id">e2e</span> epic</td>
+          <td><strong>Not waived.</strong> <code>xtask/tests/e2e_design_flow.rs</code> — fake human, fake
+            designing agent, all three tiers, a compliant run green and a violating run red, feature-gated
+            out of the default suite. This is the epic's own e2e level, deferred here since W1.</td></tr>
+        <tr><td><span class="badge id">regression</span></td>
+          <td><strong>The parser swap's acceptance</strong>: every predicate re-run over all three
+            archived runs, with the reds reproducing <em>exactly</em> — W6's recorded 49, of which 33 are
+            real over 29 sites. Any difference is a changed verdict, which the swap must not produce.
+            <strong>Tier-3's acceptance</strong>: calibrated against the same three runs, required to
+            surface the defects already documented in them.</td></tr>
+        <tr><td><span class="badge id">lint</span></td>
+          <td><code>npm run lint</code> stays green over <code>ui/src/</code>; the oracle's TSDoc parsing
+            is covered by vitest alongside <code>collection.test.tsx</code>, whose two hand-written
+            literals it replaces.</td></tr>
+        <tr><td><span class="badge id">gate 0</span></td>
+          <td><code>cargo fmt --check</code> · <code>cargo clippy -D warnings</code> (pedantic) ·
+            <code>cargo test --workspace</code> · <code>npx tsc -b</code> · <code>npm run lint</code> ·
+            <code>npx vitest run</code> · <code>cargo xtask ui specimens --check</code> ·
+            <code>verify-doc</code> green over every tracked doc, not only the ones this WU writes — the
+            narrower wording is what let run #3 sit red.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-c="tbl-distil">
+      <thead><tr><th>Tier</th><th>What lands</th></tr></thead>
+      <tbody>
+        <tr><td><strong>T2 · decisions</strong></td>
+          <td><strong>DEC-18 — the design review is a dimension of the code review</strong>: why not a
+            separate skill (independence, freshness and sha-binding already exist there), why the receipt
+            is <code>cr/v3</code> and what its design section must record, why <strong>Tier-2's receipt
+            stays inline</strong> while Tier-3's verdict does not — a claim about a transient artifact
+            belongs in it, a verdict is about a commit and commits outlive the files DEC-16 retires — and
+            the timing dependency W8 inherits. Registered in <code>decisions-index</code>.
+            <strong>DEC-15 gains the completion of Tiers 2 and 3</strong>, so its tier table reads finished
+            rather than half-struck. <strong>DEC-16's enforcement section</strong> stops saying "W7 must"
+            and names the predicate that does it.</td></tr>
+        <tr><td><strong>T1</strong></td>
+          <td>One row, and it is rule-bearing: <code>workflow.html</code>'s note table gains
+            <code>cr/v3</code> and what makes a diff design-bearing. A T1 doc commit needs a listed
+            <code>Reviewed-By</code> trailer at commit time (DEC-7/9/10) — the same signature W6's lint row
+            carried. <strong>The design-flow doc is still not promoted</strong> (D6): W8 changes where the
+            gate sits, and promoting now means editing a T1 process doc again one WU later.</td></tr>
+        <tr><td><strong>T2 · design-rules</strong></td>
+          <td>None expected — W6 revised the rulebook and this WU does not change a rule. If Tier-3's
+            calibration finds a soft rule that cannot be judged as written, that is a finding for W9, not
+            a same-WU edit: loosening a rule to accommodate the artifact that tripped it is the failure
+            DEC-15 names.</td></tr>
+        <tr><td><strong>T4 · code</strong></td>
+          <td><code>scripts/design-registry.mjs</code> becomes the truth for the component vocabulary, as
+            <code>scripts/design-vocabulary.mjs</code> is for tokens; <code>xtask/src/doc.rs</code> remains
+            the truth for what a design must satisfy. Where a doc and the code disagree, the code wins.</td></tr>
+        <tr><td><strong>T3</strong></td>
+          <td>The discussion, this plan, a step record per step, and the result report. The flow spec
+            (<a href="design-flow-base.html">design-flow-base.html</a>) gains the closing step, the
+            <code>review</code> item and the completed harness sections — edited in place, still T3.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="order">Order of work</h2>
+    <table data-c="tbl-order">
+      <thead><tr><th>#</th><th>Step</th><th>Gate</th></tr></thead>
+      <tbody>
+        <tr><td>⓪</td><td><a href="#step0">The parser swap</a></td>
+          <td>the archived runs' reds reproduce exactly; each of the six known holes has a test that fails
+            against the old scanner</td></tr>
+        <tr><td>①</td><td><a href="#step1">The registry oracle</a></td>
+          <td>the emitted roster equals the barrel's exports; a malformed TSDoc block fails loudly;
+            <code>collection.test.tsx</code>'s two literals are gone</td></tr>
+        <tr><td>②</td><td><a href="#step2">The registry gate</a>, then the deletions it unblocks</td>
+          <td>a fabricated component name reds; run #3's finding-21 reuse reds when replayed; no design
+            file is removed without its forks distilled</td></tr>
+        <tr><td>③</td><td><a href="#step3">A run closes</a></td>
+          <td>a stale rulebook pin reds; the guard test names no run by hand; the <code>review</code> item
+            is checked</td></tr>
+        <tr><td>④</td><td><a href="#step4">Tier-3 into the code review</a></td>
+          <td>calibration: the three archived runs' known defects are surfaced;
+            <code>verify-dod</code> reds a design-bearing tip with no design section</td></tr>
+        <tr><td>⑤</td><td><a href="#step5">The flow e2e</a></td>
+          <td>green on the compliant run, red on the violating one, and excluded from the default
+            suite</td></tr>
+        <tr><td>⑥</td><td><a href="#step6">Hand over</a> · result report · DEC-18 · code review ·
+          <code>--no-ff</code> merge</td>
+          <td><code>cr/v3</code> PASS bound to the committed tip, then the human's fourth run and
+            <code>mr/v1</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="closing">
+      Direction resolved in the <a href="2026-08-11-dflow-w7-discussion.html">W7 discussion</a>; work lands
+      on <code>wu/design-flow/harness</code>. Two defaults were held rather than answered —
+      <strong>Tier-2 is complete</strong> and <strong>this stays one WU</strong> — and both are recorded
+      above where a later reader can find them, because a default that nobody wrote down is
+      indistinguishable from a decision nobody made.
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -3,6 +3,8 @@ use std::fmt::Write as _;
 use std::path::Path;
 use std::process::Command;
 
+use quick_xml::events::{BytesStart, Event};
+use quick_xml::Reader;
 use serde::Deserialize;
 
 use crate::gate::Failure;
@@ -33,6 +35,7 @@ const DESIGN_RUN: &[&str] = &[
     "capabilities",
     "proposals",
     "blocked-on",
+    "review",
 ];
 const VERDICTS: &[&str] = &[
     "satisfied",
@@ -65,6 +68,8 @@ const HARD_PREDICATES: &[&str] = &[
 ];
 const RULEBOOK: &str = "docs/design-rules/design-rules-index.html";
 const VOCABULARY: &str = "scripts/design-vocabulary.mjs";
+const REGISTRY: &str = "scripts/design-registry.mjs";
+pub const COMPONENTS: &str = "docs/work/components/";
 
 fn checklist(artifact: &str) -> Option<&'static [&'static str]> {
     match artifact {
@@ -82,6 +87,68 @@ pub struct Rule {
     pub hard: bool,
 }
 
+// The rulebook a run is judged against: its slugs, and the blob the receipt must
+// pin. Read together because a receipt pinning a version nobody hashed is the
+// same claim as a receipt pinning nothing - `rulebook: <anything>` passed for
+// three Working Units, which is what W3's promise ("the receipt pins the blob it
+// ran against") actually bought.
+pub struct Rulebook {
+    rules: Vec<Rule>,
+    blob: Option<String>,
+}
+
+// A pin shorter than this names no blob: git's own abbreviation floor, and the
+// length every receipt in the corpus already writes.
+pub const PIN_MIN: usize = 7;
+
+pub fn pin_matches(pinned: &str, blob: &str) -> bool {
+    let pin = pinned.to_ascii_lowercase();
+    pin.len() >= PIN_MIN && blob.starts_with(&pin)
+}
+
+// What a receipt or a note should have pinned, for every message that tells an
+// author to go and pin it. A blob already shorter than the floor is shown whole:
+// nothing longer exists to offer.
+pub fn pin_of(blob: &str) -> &str {
+    blob.get(..PIN_MIN).unwrap_or(blob)
+}
+
+// What pulls the design dimension into a code review. Tier-3 judges a FINISHED
+// design, so a run doc counts once it is closed at the tip - the merge that
+// closes it is the first one answerable for it, and a run still `draft` is
+// judged at the merge that finishes it, which touches the file again. A
+// component design file is a finished contract the moment it is in the tree.
+pub fn design_artifact(path: &str, html: &str) -> Option<&'static str> {
+    if component_designed(path).is_some() {
+        return Some("component-design");
+    }
+    (design_run_status(html)? == "archived").then_some("design-run")
+}
+
+pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
+    crate::git::git(repo, &["rev-parse", &format!("{rev}:{RULEBOOK}")]).ok()
+}
+
+// Every slug the rulebook declares, hard and soft. The gate reads it to check a
+// citation is followable rather than merely well-shaped - at the revision it is
+// judging, never the working tree, so a later rename cannot unfollow a citation
+// that resolved when its seam was reviewed.
+pub fn rulebook_slugs(repo: &Path, rev: &str) -> Vec<String> {
+    crate::git::show_bytes(repo, rev, RULEBOOK)
+        .ok()
+        .and_then(|bytes| String::from_utf8(bytes).ok())
+        .map(|html| rules_from_rulebook(&html).into_iter().map(|rule| rule.slug).collect())
+        .unwrap_or_default()
+}
+
+pub fn rulebook(repo: &Path) -> Option<Rulebook> {
+    let rules = std::fs::read_to_string(repo.join(RULEBOOK))
+        .ok()
+        .map(|html| rules_from_rulebook(&html))
+        .filter(|rules| !rules.is_empty())?;
+    Some(Rulebook { rules, blob: crate::git::git(repo, &["hash-object", RULEBOOK]).ok() })
+}
+
 #[derive(Deserialize)]
 struct Receipt {
     rulebook: String,
@@ -91,11 +158,10 @@ struct Receipt {
 pub fn rules_from_rulebook(html: &str) -> Vec<Rule> {
     let mut out = Vec::new();
     for (table, hard) in [("hard-rules-table", true), ("soft-rules-table", false)] {
-        let Some((pos, _)) = attr_positions(html, "data-c").into_iter().find(|(_, v)| v == table)
-        else {
+        let Some(declared) = attrs(html, "data-c").into_iter().find(|a| a.value == table) else {
             continue;
         };
-        let ((start, end), _) = element_content(html, pos);
+        let ((start, end), _) = element_content(html, declared.tag);
         for row in html[start..end].split("<tr").skip(1) {
             if let Some(slug) = row_slug(row) {
                 out.push(Rule { slug, hard });
@@ -163,21 +229,71 @@ impl Vocabulary {
     }
 }
 
-pub fn vocabulary(repo: &Path) -> Result<Vocabulary, String> {
-    let script = repo.join(VOCABULARY);
+// Both oracles are ES modules the design surfaces already read, so Rust reads
+// their answer rather than the config behind it - one source of truth, several
+// surfaces (DEC-17). JSON is YAML, so this needs no new parser.
+fn oracle<T: serde::de::DeserializeOwned>(repo: &Path, script: &str) -> Result<T, String> {
     let out = Command::new("node")
-        .arg(&script)
+        .arg(repo.join(script))
         .current_dir(repo)
         .output()
-        .map_err(|e| format!("cannot launch node for {VOCABULARY}: {e}"))?;
+        .map_err(|e| format!("cannot launch node for {script}: {e}"))?;
     if !out.status.success() {
-        return Err(format!(
-            "{VOCABULARY} failed: {}",
-            String::from_utf8_lossy(&out.stderr).trim()
-        ));
+        return Err(format!("{script} failed: {}", String::from_utf8_lossy(&out.stderr).trim()));
     }
-    serde_yaml::from_slice(&out.stdout)
-        .map_err(|e| format!("{VOCABULARY} emitted no vocabulary: {e}"))
+    serde_yaml::from_slice(&out.stdout).map_err(|e| format!("{script} emitted nothing usable: {e}"))
+}
+
+pub fn vocabulary(repo: &Path) -> Result<Vocabulary, String> {
+    oracle(repo, VOCABULARY)
+}
+
+// The component vocabulary: the collection's own TSDoc, emitted by
+// scripts/design-registry.mjs (W7 ①) and never stored. `designed` is the other
+// half of the roster - a component whose contract still lives in its design
+// file because no code carries it yet (DEC-16: a design file with no code is
+// not retired, it is unbuilt). The two sets are disjoint, and check_retirement
+// is what keeps them that way.
+#[derive(Deserialize)]
+pub struct Component {
+    states: String,
+}
+
+pub struct Roster {
+    registry: BTreeMap<String, Component>,
+    designed: BTreeSet<String>,
+}
+
+impl Roster {
+    fn resolves(&self, name: &str) -> bool {
+        self.registry.contains_key(name) || self.designed.contains(name)
+    }
+
+    fn citable_states(&self, name: &str) -> bool {
+        self.registry.get(name).is_some_and(|c| !c.states.trim().is_empty())
+    }
+}
+
+pub fn roster(repo: &Path) -> Result<Roster, String> {
+    let designed = std::fs::read_dir(repo.join(COMPONENTS))
+        .map_err(|e| format!("cannot read {COMPONENTS}: {e}"))?
+        .filter_map(|entry| {
+            let name = entry.ok()?.file_name().into_string().ok()?;
+            Some(component_name(name.strip_suffix(".html")?))
+        })
+        .collect();
+    Ok(Roster { registry: oracle(repo, REGISTRY)?, designed })
+}
+
+// A catalog row keys itself by the slug of the component it names, which is the
+// name the roster carries: `copy-text` is CopyText.
+fn component_name(slug: &str) -> String {
+    slug.split('-')
+        .map(|part| {
+            let mut chars = part.chars();
+            chars.next().map_or_else(String::new, |c| c.to_uppercase().chain(chars).collect())
+        })
+        .collect()
 }
 
 pub enum Verdict {
@@ -202,20 +318,19 @@ struct Occurrence {
 type Tagged = (usize, Occurrence);
 
 pub fn verify_html(html: &str) -> Verdict {
-    verify_html_against(html, None, None)
+    verify_html_against(html, None, None, None)
 }
 
 pub fn verify_html_against(
     html: &str,
-    rules: Option<&[Rule]>,
+    rulebook: Option<&Rulebook>,
     vocabulary: Option<&Vocabulary>,
+    roster: Option<&Roster>,
 ) -> Verdict {
-    let Some((artifact_pos, artifact_decl)) =
-        attr_positions(html, "data-artifact").into_iter().next()
-    else {
+    let Some(artifact) = attrs(html, "data-artifact").into_iter().next() else {
         return Verdict::Ungoverned;
     };
-    if let Some(status) = exempt_declared(html, artifact_pos) {
+    if let Some(status) = exempt_declared(html, &artifact) {
         return Verdict::Exempt(status);
     }
 
@@ -223,14 +338,14 @@ pub fn verify_html_against(
     check_escaped_markup(&mut failures, html);
     let mut artifacts: Vec<String> = Vec::new();
     let mut required: Vec<&str> = Vec::new();
-    if artifact_decl.split_whitespace().next().is_none() {
+    if artifact.value.split_whitespace().next().is_none() {
         failures.push(Failure {
             check: "artifact".to_string(),
             what: "data-artifact is declared but empty".to_string(),
             fix: "declare one of: epic-plan, wu-plan, wu-result, epic-result (space-separated when combined)".to_string(),
         });
     }
-    for token in artifact_decl.split_whitespace() {
+    for token in artifact.value.split_whitespace() {
         if let Some(items) = checklist(token) {
             artifacts.push(token.to_string());
             for item in items {
@@ -250,19 +365,19 @@ pub fn verify_html_against(
         return Verdict::Checked { artifacts, failures, summary: None };
     }
 
-    let wu_blocks: Vec<Occurrence> = attr_positions(html, "data-wu")
+    let wu_blocks: Vec<Occurrence> = attrs(html, "data-wu")
         .into_iter()
-        .map(|(pos, value)| {
-            let (span, filled) = element_content(html, pos);
-            Occurrence { value, span, filled }
+        .map(|block| {
+            let (span, filled) = element_content(html, block.tag);
+            Occurrence { value: block.value, span, filled }
         })
         .collect();
     let in_wu_block = |pos: usize| wu_blocks.iter().any(|b| pos >= b.span.0 && pos < b.span.1);
-    let (sub_items, top_items): (Vec<Tagged>, Vec<Tagged>) = attr_positions(html, "data-item")
+    let (sub_items, top_items): (Vec<Tagged>, Vec<Tagged>) = attrs(html, "data-item")
         .into_iter()
-        .map(|(pos, value)| {
-            let (span, filled) = element_content(html, pos);
-            (pos, Occurrence { value, span, filled })
+        .map(|item| {
+            let (span, filled) = element_content(html, item.tag);
+            (item.at, Occurrence { value: item.value, span, filled })
         })
         .partition(|(pos, _)| in_wu_block(*pos));
 
@@ -298,10 +413,10 @@ pub fn verify_html_against(
     let mut summary = None;
     if artifacts.iter().any(|a| a == "design-run") {
         let receipt = top_items.iter().find(|(_, o)| o.value == "receipt").map(|(_, o)| o);
-        summary = check_receipt(&mut failures, receipt, html, rules);
-        check_composition(&mut failures, html, &top_items);
+        summary = check_receipt(&mut failures, receipt, html, rulebook);
+        check_composition(&mut failures, html, &top_items, roster);
         let allowed = read_pragmas(&mut failures, html);
-        check_hard_rules(&mut failures, html, &top_items, vocabulary, &allowed);
+        check_hard_rules(&mut failures, html, &top_items, vocabulary, &allowed, roster);
         summary = summary.map(|s| format!("{s}\n{}", allowed.tally()));
     }
 
@@ -314,7 +429,7 @@ fn check_receipt(
     failures: &mut Vec<Failure>,
     receipt: Option<&Occurrence>,
     html: &str,
-    rules: Option<&[Rule]>,
+    rulebook: Option<&Rulebook>,
 ) -> Option<String> {
     let receipt = receipt?;
     let parsed: Receipt = match serde_yaml::from_str(&inner_text(html, receipt.span)) {
@@ -328,15 +443,7 @@ fn check_receipt(
             return None;
         }
     };
-    if parsed.rulebook.trim().is_empty() {
-        failures.push(Failure {
-            check: "receipt·rulebook".to_string(),
-            what: "the receipt names no rulebook version".to_string(),
-            fix: "pin it: rulebook: <blob sha of docs/design-rules/design-rules-index.html>"
-                .to_string(),
-        });
-    }
-    let Some(rules) = rules else {
+    let Some(rulebook) = rulebook else {
         failures.push(Failure {
             check: "receipt·rulebook-unreadable".to_string(),
             what: format!("cannot read {RULEBOOK} - receipt coverage is unverifiable"),
@@ -345,7 +452,9 @@ fn check_receipt(
         });
         return None;
     };
+    check_pin(failures, parsed.rulebook.trim(), rulebook);
 
+    let rules = &rulebook.rules;
     let soft: Vec<&str> = rules.iter().filter(|r| !r.hard).map(|r| r.slug.as_str()).collect();
     let hard: Vec<&str> = rules.iter().filter(|r| r.hard).map(|r| r.slug.as_str()).collect();
     let missing: Vec<&str> =
@@ -407,6 +516,48 @@ fn check_receipt(
     Some(tally_line(&soft, &missing, &counts, &hard))
 }
 
+// The pin, compared against the rulebook it names rather than merely being
+// present. A stale pin is the one receipt claim that reads as evidence while
+// being unread: every verdict under it was written against rules that have since
+// moved. An archived run is exempt before this runs - a run that closed under an
+// older rulebook is a record, not a stale claim.
+fn check_pin(failures: &mut Vec<Failure>, pinned: &str, rulebook: &Rulebook) {
+    let mut fail = |check: &str, what: String, fix: String| {
+        failures.push(Failure { check: check.to_string(), what, fix });
+    };
+    if pinned.is_empty() {
+        fail(
+            "receipt·rulebook",
+            "the receipt names no rulebook version".to_string(),
+            format!("pin it: rulebook: $(git hash-object {RULEBOOK})"),
+        );
+        return;
+    }
+    let Some(blob) = &rulebook.blob else {
+        fail(
+            "receipt·rulebook-unverifiable",
+            format!("cannot hash {RULEBOOK} - the pin names a version nothing here can check"),
+            "run verify-doc from the repo root with git on PATH".to_string(),
+        );
+        return;
+    };
+    let pin = pinned.to_ascii_lowercase();
+    let short = pin_of(blob);
+    if pin.len() < PIN_MIN {
+        fail(
+            "receipt·rulebook",
+            format!("the pin \"{pinned}\" is too short to name a blob"),
+            format!("pin at least {PIN_MIN} characters: rulebook: {short}"),
+        );
+    } else if !pin_matches(&pin, blob) {
+        fail(
+            "receipt·rulebook-stale",
+            format!("the receipt ran against rulebook {pinned}; {RULEBOOK} is now {short}"),
+            format!("re-read the rulebook, re-judge every soft row against it and re-pin: rulebook: {short} - or archive the run if it closed under the older one"),
+        );
+    }
+}
+
 fn tally_line(soft: &[&str], missing: &[&str], counts: &[usize], hard: &[&str]) -> String {
     let verdicts: Vec<String> = VERDICTS
         .iter()
@@ -434,13 +585,19 @@ fn tally_line(soft: &[&str], missing: &[&str], counts: &[usize], hard: &[&str]) 
     )
 }
 
-fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) {
+fn check_composition(
+    failures: &mut Vec<Failure>,
+    html: &str,
+    items: &[Tagged],
+    roster: Option<&Roster>,
+) {
     let item = |name: &str| {
         items.iter().find(|(_, o)| o.value == name).map(|(_, o)| &html[o.span.0..o.span.1])
     };
     if let Some(elements) = item("elements") {
         check_elements_map(failures, elements);
         check_avoid_cited(failures, elements);
+        check_cited_components(failures, elements, roster);
         check_gist_and_collapse(
             failures,
             elements,
@@ -463,6 +620,9 @@ fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) 
     }
     if let Some(capabilities) = item("capabilities") {
         check_capabilities(failures, capabilities);
+    }
+    if let Some(review) = item("review") {
+        check_review_record(failures, review);
     }
     if let Some(mockup) = item("mockup") {
         if !mockup.contains("data-state-toggle") {
@@ -501,6 +661,96 @@ fn check_composition(failures: &mut Vec<Failure>, html: &str, items: &[Tagged]) 
     }
 }
 
+// ─── the design files ───────────────────────────────────────────────────────
+//
+// A component design file carries no data-artifact: the folder is the artifact
+// type, so these are keyed by path rather than by declaration.
+pub fn verify_component(
+    html: &str,
+    name: &str,
+    roster: Option<&Roster>,
+    vocabulary: Option<&Vocabulary>,
+) -> Verdict {
+    let mut failures = Vec::new();
+    check_escaped_markup(&mut failures, html);
+    match roster {
+        Some(roster) => check_retirement(&mut failures, name, roster),
+        None => failures.push(Failure {
+            check: "components·registry-unreadable".to_string(),
+            what: format!("cannot read the component roster via {REGISTRY}"),
+            fix: "run verify-doc from the repo root with node available - whether this file is a retired contract's leftover copy cannot be answered unread".to_string(),
+        }),
+    }
+    if let Some(vocabulary) = vocabulary {
+        check_redrawn(&mut failures, html, vocabulary);
+    }
+    Verdict::Checked { artifacts: vec!["component-design".to_string()], failures, summary: None }
+}
+
+fn component_designed(path: &str) -> Option<String> {
+    let file = path.split(COMPONENTS).nth(1)?.strip_suffix(".html")?;
+    (!file.contains('/')).then(|| component_name(file))
+}
+
+// The registry and the design files are DISJOINT, and retirement is what keeps
+// them so: once a component's contract is its TSDoc, the file holding the older
+// copy is a second contract with nothing checking it against the first - the
+// drift this epic exists to kill. So a file whose component has code is red
+// until DEC-16's order has run over it, and the four that have no roster entry
+// are not violations but the case DEC-16 names: a design file with no code is
+// not retired, it is unbuilt.
+fn check_retirement(failures: &mut Vec<Failure>, name: &str, roster: &Roster) {
+    if roster.registry.contains_key(name) {
+        failures.push(Failure {
+            check: "components·unretired".to_string(),
+            what: format!("{name}'s contract is its TSDoc, and this file still holds a copy"),
+            fix: format!("retire it in DEC-16's order: distil the forks to docs/decisions/, verify {name}'s TSDoc carries the whole contract, then remove the file"),
+        });
+    }
+}
+
+// The design docs and the app speak one Tailwind vocabulary because they read
+// one config (W5 dissolved the specimen sheet that was the second copy). A
+// stylesheet rule for a class the config already emits re-opens the gap from
+// the other side: the doc renders its own version of a shared utility, and
+// nothing says which one the build inherits.
+fn check_redrawn(failures: &mut Vec<Failure>, html: &str, vocabulary: &Vocabulary) {
+    let mut redrawn: Vec<(String, String)> = Vec::new();
+    for (selector, class) in stylesheet_classes(html) {
+        if vocabulary.emits(&class) && !redrawn.iter().any(|(_, c)| *c == class) {
+            redrawn.push((selector, class));
+        }
+    }
+    for (selector, class) in redrawn {
+        failures.push(Failure {
+            check: "components·redrawn".to_string(),
+            what: format!("`{selector}` re-draws `{class}`, which ui/tailwind.config.js emits"),
+            fix: "the shared vocabulary owns this class - drop the rule and let the config render it, or name the doc's own class something the config does not emit".to_string(),
+        });
+    }
+}
+
+fn stylesheet_classes(html: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for block in html.split("<style").skip(1) {
+        let css = strip_css_comments(block.split("</style>").next().unwrap_or(block));
+        for rule in css.split('}') {
+            let Some((selector, _)) = rule.split_once('{') else { continue };
+            let selector = selector.trim().replace('\n', " ");
+            for (at, _) in selector.match_indices('.') {
+                let class: String = selector[at + 1..]
+                    .chars()
+                    .take_while(|c| c.is_alphanumeric() || *c == '-' || *c == '_')
+                    .collect();
+                if !class.is_empty() {
+                    out.push((selector.clone(), class));
+                }
+            }
+        }
+    }
+    out
+}
+
 // ─── the thirteen hard rules ────────────────────────────────────────────────
 //
 // Each predicate is named for its slug and judges the DESIGN RUN, never
@@ -512,6 +762,7 @@ fn check_hard_rules(
     items: &[Tagged],
     vocabulary: Option<&Vocabulary>,
     allowed: &Allowances,
+    roster: Option<&Roster>,
 ) {
     let item = |name: &str| {
         items.iter().find(|(_, o)| o.value == name).map(|(_, o)| &html[o.span.0..o.span.1])
@@ -527,12 +778,12 @@ fn check_hard_rules(
     check_vocabulary(failures, html, vocabulary, allowed);
     check_uppercase_mute_labels(failures, html, vocabulary);
     check_colour_plus_text(failures, html, vocabulary);
-    check_wire_data(failures, html);
+    check_wire_data(failures, html, item("mockup").is_some());
     if let Some(layout) = item("layout") {
         check_overflow_declared(failures, layout);
     }
     if let Some(elements) = item("elements") {
-        check_state_declarations(failures, elements);
+        check_state_declarations(failures, elements, roster);
         check_wire_order_preserved(failures, elements);
     }
     if let Some(interaction) = item("interaction") {
@@ -694,8 +945,8 @@ fn check_uppercase_mute_labels(failures: &mut Vec<Failure>, html: &str, vocabula
             fix: "a zone or column label is the uppercase-mute set: uppercase + tracking-label + a mute ink - never a tracking written by hand".to_string(),
         });
     };
-    for (_, class_attr) in attr_positions(html, "class") {
-        let classes: Vec<&str> = class_attr.split_whitespace().map(base_class).collect();
+    for declared in attrs(html, "class") {
+        let classes: Vec<&str> = declared.value.split_whitespace().map(base_class).collect();
         if !classes.contains(&"uppercase") || classes.contains(&"font-mono") {
             continue;
         }
@@ -728,13 +979,13 @@ fn check_uppercase_mute_labels(failures: &mut Vec<Failure>, html: &str, vocabula
 // a chromatic token says in words what the colour says in hue. A tinted glyph
 // counts - it is a character; an empty span painted `ok` does not.
 fn check_colour_plus_text(failures: &mut Vec<Failure>, html: &str, vocabulary: &Vocabulary) {
-    for (pos, class_attr) in attr_positions(html, "class") {
-        let chromatic = class_attr.split_whitespace().map(base_class).find(|cls| {
+    for declared in attrs(html, "class") {
+        let chromatic = declared.value.split_whitespace().map(base_class).find(|cls| {
             vocabulary.emits(cls)
                 && vocabulary.token(cls).is_some_and(|t| vocabulary.chromatic.contains(t))
         });
         let Some(cls) = chromatic else { continue };
-        let (_, filled) = element_content(html, pos);
+        let (_, filled) = element_content(html, declared.tag);
         if !filled {
             failures.push(Failure {
                 check: "colour-plus-text·channel".to_string(),
@@ -752,22 +1003,37 @@ fn check_colour_plus_text(failures: &mut Vec<Failure>, html: &str, vocabulary: &
 // correctly typed when nobody looked.
 const WIRE_HOSTILE: &[&str] = &["truncate", "text-ellipsis", "whitespace-nowrap"];
 
-fn check_wire_data(failures: &mut Vec<Failure>, html: &str) {
-    let marked = attr_positions(html, "data-wire");
+// The marking rule reads the whole doc - a payload can be marked outside the
+// mockup, and the wrapping half scans every class - but the DEMAND for a marking
+// waits for the mockup, the way overflow waits for the layout and keyboard parity
+// for the interaction. A run five stages from its mockup being told the mockup
+// marks no payload is a prompt for work the flow has not reached (E-DFLOW.W7 ⑤).
+fn check_wire_data(failures: &mut Vec<Failure>, html: &str, mockup_written: bool) {
+    let marked = attrs(html, "data-wire");
+    let declared = attrs(html, "class");
+    let bases = |declared: &Attr| -> Vec<String> {
+        declared.value.split_whitespace().map(|c| base_class(c).to_string()).collect()
+    };
     if marked.is_empty() {
-        failures.push(Failure {
-            check: "mono-for-wire-data·undeclared".to_string(),
-            what: "the mockup marks no payload element and does not say it has none".to_string(),
-            fix: "mark every verbatim payload data-wire=\"<what it is>\", or declare data-wire=\"none\" once - a payload is anything the user reads or copies exactly".to_string(),
-        });
+        if mockup_written {
+            failures.push(Failure {
+                check: "mono-for-wire-data·undeclared".to_string(),
+                what: "the mockup marks no payload element and does not say it has none".to_string(),
+                fix: "mark every verbatim payload data-wire=\"<what it is>\", or declare data-wire=\"none\" once - a payload is anything the user reads or copies exactly".to_string(),
+            });
+        }
         return;
     }
-    for (pos, kind) in &marked {
+    for wire in &marked {
+        let kind = &wire.value;
         if kind == "none" || kind == "collection" {
             continue;
         }
-        let classes = classes_at(html, *pos);
-        if !classes.iter().any(|c| c == "font-mono") {
+        let mono = declared
+            .iter()
+            .filter(|c| c.tag == wire.tag)
+            .any(|c| bases(c).iter().any(|b| b == "font-mono"));
+        if !mono {
             failures.push(Failure {
                 check: "mono-for-wire-data·family".to_string(),
                 what: format!("the {kind} payload does not render mono"),
@@ -777,13 +1043,13 @@ fn check_wire_data(failures: &mut Vec<Failure>, html: &str) {
     }
     // A payload is anything mono, whether or not it is marked: the two ways of
     // saying "this is wire data" both bind the wrapping rule.
-    for (pos, class_attr) in attr_positions(html, "class") {
-        let classes: Vec<&str> = class_attr.split_whitespace().map(base_class).collect();
-        let payload = classes.contains(&"font-mono")
-            || marked
-                .iter()
-                .any(|(at, kind)| kind != "none" && *at > pos && same_tag(html, pos, *at));
-        let Some(hostile) = classes.iter().find(|c| WIRE_HOSTILE.contains(c)) else { continue };
+    for class in &declared {
+        let classes = bases(class);
+        let payload = classes.iter().any(|c| c == "font-mono")
+            || marked.iter().any(|w| w.value != "none" && w.at > class.at && w.tag == class.tag);
+        let Some(hostile) = classes.iter().find(|c| WIRE_HOSTILE.contains(&c.as_str())) else {
+            continue;
+        };
         if payload {
             failures.push(Failure {
                 check: "wrap-not-truncate·payload".to_string(),
@@ -802,21 +1068,16 @@ fn check_wire_data(failures: &mut Vec<Failure>, html: &str) {
 // keyword that scans markup instead reads `border` as an answer. So the row says
 // so - the same shape `data-wire` itself uses, one attribute beside it.
 fn check_wire_order_preserved(failures: &mut Vec<Failure>, elements: &str) {
-    let collections: Vec<usize> = attr_positions(elements, "data-wire")
-        .into_iter()
-        .filter(|(_, kind)| kind == "collection")
-        .map(|(pos, _)| pos)
-        .collect();
+    let collections: Vec<Attr> =
+        attrs(elements, "data-wire").into_iter().filter(|w| w.value == "collection").collect();
     if collections.is_empty() {
         return;
     }
-    let declared = attr_positions(elements, "data-order");
+    let declared = attrs(elements, "data-order");
     let silent = collections
         .iter()
-        .filter(|pos| {
-            !declared
-                .iter()
-                .any(|(at, how)| !how.trim().is_empty() && same_tag(elements, **pos, *at))
+        .filter(|row| {
+            !declared.iter().any(|how| !how.value.trim().is_empty() && how.tag == row.tag)
         })
         .count();
     if silent > 0 {
@@ -906,20 +1167,46 @@ fn names_zone(declaration: &str, zone: char) -> bool {
 // state-declarations. Every catalog row answers empty · loading · error ·
 // overflow. A reuse may answer by citation - its file already decided; a propose
 // has no file to cite, so an em dash there is a component nobody has designed.
-fn check_state_declarations(failures: &mut Vec<Failure>, elements: &str) {
+//
+// W4 finding 12: which of the two a row is was read off the VERDICT WORD, which
+// is a guess about the registry rather than a reading of it. With the oracle it
+// is a lookup - a bare citation is complete when the component it names really
+// declares @states, and empty when nothing does.
+fn check_state_declarations(failures: &mut Vec<Failure>, elements: &str, roster: Option<&Roster>) {
     let rows = data_rows(elements);
     let mut blank = 0usize;
-    let mut uncited = 0usize;
-    for row in &rows {
-        let cell =
-            elements_of(row, "td").last().map(|c| inner_text(c, (0, c.len()))).unwrap_or_default();
+    let mut proposed = 0usize;
+    let mut uncitable: Vec<String> = Vec::new();
+    // Key and cells are read off the same chunk: pairing two row lists by index
+    // holds only while every catalog row is both keyed and three cells wide,
+    // which is an assumption the map check enforces elsewhere and this one
+    // would silently inherit.
+    for (name, row) in catalog_rows(elements) {
+        let cells = elements_of(row, "td");
+        if cells.len() < 3 {
+            continue;
+        }
+        let cell = cells.last().map(|c| inner_text(c, (0, c.len()))).unwrap_or_default();
         let states = cell.trim();
         if states.is_empty() {
             blank += 1;
-        } else if states.chars().all(|c| c == '—' || c.is_whitespace())
-            && ["propose", "extend"].iter().any(|v| row.contains(&format!(">{v}<")))
-        {
-            uncited += 1;
+            continue;
+        }
+        if !states.chars().all(|c| c == '—' || c.is_whitespace()) {
+            continue;
+        }
+        // Two ways a dash can be empty, and they are not the same red. A verdict
+        // with no file yet has none to cite whatever the registry holds -
+        // proposing a name that happens to be taken does not make the proposal's
+        // states someone else's. A verdict that answers FROM a file is checked
+        // against the registry rather than against its own verdict word (W4
+        // finding 12). A row that is neither - dissolved, or placed by nothing -
+        // designs no component, so it declares no states.
+        let verdicted = |set: &[&str]| set.iter().any(|v| row.contains(&format!(">{v}<")));
+        if verdicted(UNBUILT) {
+            proposed += 1;
+        } else if verdicted(CITES_ITS_FILE) && !roster.is_some_and(|r| r.citable_states(&name)) {
+            uncitable.push(name);
         }
     }
     if blank > 0 {
@@ -929,11 +1216,18 @@ fn check_state_declarations(failures: &mut Vec<Failure>, elements: &str) {
             fix: "every component answers empty · loading · error · overflow - \"—\" counts, blank does not".to_string(),
         });
     }
-    if uncited > 0 {
+    if proposed > 0 {
         failures.push(Failure {
             check: "state-declarations·proposed".to_string(),
-            what: format!("{uncited} proposed components answer their states with \"—\""),
+            what: format!("{proposed} proposed components answer their states with \"—\""),
             fix: "a citation completes the cell for a reuse, never for a propose - a component that does not exist yet has no file to cite".to_string(),
+        });
+    }
+    if !uncitable.is_empty() {
+        failures.push(Failure {
+            check: "state-declarations·uncitable".to_string(),
+            what: format!("\"—\" cites a @states nothing declares: {}", uncitable.join(" ")),
+            fix: "the cell cites the component's own file - name a component whose TSDoc declares @states, or state the states here".to_string(),
         });
     }
 }
@@ -962,26 +1256,16 @@ fn check_keyboard_parity(failures: &mut Vec<Failure>, interaction: &str) {
 // ─── the surfaces the predicates read ───────────────────────────────────────
 
 fn authored_classes(html: &str) -> Vec<(usize, String)> {
-    attr_positions(html, "class")
+    attrs(html, "class")
         .into_iter()
-        .flat_map(|(pos, value)| {
-            value.split_whitespace().map(|cls| (pos, cls.to_string())).collect::<Vec<_>>()
+        .flat_map(|declared| {
+            declared
+                .value
+                .split_whitespace()
+                .map(|cls| (declared.at, cls.to_string()))
+                .collect::<Vec<_>>()
         })
         .collect()
-}
-
-fn classes_at(html: &str, attr_pos: usize) -> Vec<String> {
-    let start = html[..attr_pos].rfind('<').unwrap_or(0);
-    attr_positions(&html[start..tag_end(html, start)], "class")
-        .into_iter()
-        .flat_map(|(_, value)| {
-            value.split_whitespace().map(|c| base_class(c).to_string()).collect::<Vec<_>>()
-        })
-        .collect()
-}
-
-fn same_tag(html: &str, a: usize, b: usize) -> bool {
-    html[..a].rfind('<') == html[..b].rfind('<')
 }
 
 // A variant chain decorates a class, it never changes which token it names:
@@ -1139,9 +1423,11 @@ fn read_pragmas(failures: &mut Vec<Failure>, html: &str) -> Allowances {
                 // Which reading an author meant is undecidable from the string, and the
                 // lint rule's regex resolves it the same way, so the message names the
                 // reading rather than the checker guessing a cause it cannot know.
-                let read_inside = (cls != token)
-                    .then(|| format!(" - `{token}` read as this class plus a reason, its own rightmost separator being the split"))
-                    .unwrap_or_default();
+                let read_inside = if cls == token {
+                    String::new()
+                } else {
+                    format!(" - `{token}` read as this class plus a reason, its own rightmost separator being the split")
+                };
                 fail(
                     format!("`{cls}` carries a value, and the pragma never excuses one{read_inside}"),
                     "the pragma covers a template shape only - name the magnitude as a token in ui/tailwind.config.js, and spell a reason after a space so the dashes a class carries stay inside it",
@@ -1194,6 +1480,70 @@ fn check_avoid_cited(failures: &mut Vec<Failure>, elements: &str) {
     }
 }
 
+// The registry gate requirement #1 never had: until W7 ① nothing here could read
+// a TSDoc block, so a catalog was checked for SHAPE and never for TRUTH and a
+// reuse could name a component that does not exist. A row claiming a component
+// is already available - reuse, extend, or considered-and-rejected - must name
+// one; propose, build local and dissolved name what is deliberately absent.
+//
+// What a citation SAYS stays Tier-3's (W7 ④). The text is a paraphrase of the
+// clause, and a row legitimately cites OTHER components' contracts - run #2's
+// SectionBand row cites Section's @avoid, run #3's StepList row cites
+// CopyText's - so no match between a quote and a clause is decidable here.
+fn check_cited_components(failures: &mut Vec<Failure>, elements: &str, roster: Option<&Roster>) {
+    let Some(roster) = roster else {
+        failures.push(Failure {
+            check: "elements·registry-unreadable".to_string(),
+            what: format!("cannot read the component roster via {REGISTRY}"),
+            fix: format!("run verify-doc from the repo root with node available - every reuse resolves against {COMPONENTS} and the collection's TSDoc, and cannot pass unread"),
+        });
+        return;
+    };
+    let mut unresolved: Vec<String> = catalog_rows(elements)
+        .into_iter()
+        .filter(|(_, row)| PLACED.iter().any(|v| row.contains(&format!(">{v}<"))))
+        .map(|(name, _)| name)
+        .filter(|name| !roster.resolves(name))
+        .collect();
+    unresolved.sort_unstable();
+    unresolved.dedup();
+    if !unresolved.is_empty() {
+        failures.push(Failure {
+            check: "elements·unresolved".to_string(),
+            what: format!("no component exists for: {}", unresolved.join(" ")),
+            fix: format!("a reuse resolves to the collection's TSDoc or to a design file in {COMPONENTS} - name the component that exists, or verdict the row propose"),
+        });
+    }
+}
+
+// Verdicts that claim the component is already available to reuse. `n/a` is one
+// of them: a row that considered and rejected a component is a rejection OF
+// something, and run #3's two are both real roster entries.
+const PLACED: &[&str] = &["reuse", "extend", "n/a"];
+// A component this run still owes a design: nothing to cite, so its states are
+// stated here. An `extend` owes the delta even though its base has a file.
+const UNBUILT: &[&str] = &["propose", "extend"];
+// The verdicts whose states really do live in the component's own TSDoc.
+const CITES_ITS_FILE: &[&str] = &["reuse", "n/a"];
+
+// Rows do not nest, so the catalog is split on the opening tag rather than
+// matched: data-key rides that tag, and an element's body - which is what
+// elements_of returns - is exactly where it is not.
+fn catalog_rows(elements: &str) -> Vec<(String, &str)> {
+    elements
+        .split("<tr")
+        .skip(1)
+        .filter_map(|row| Some((component_name(row_key(row)?), row)))
+        .collect()
+}
+
+fn row_key(row: &str) -> Option<&str> {
+    const KEY: &str = "data-key=\"";
+    let head = row.split_once('>')?.0;
+    let at = head.find(KEY)? + KEY.len();
+    head[at..].find('"').map(|end| &head[at..at + end])
+}
+
 // A highlight that lights one place traces nothing: the map's whole value is
 // clicking a component in the tree and seeing its catalog row light up too. The
 // old check passed on data-map plus any single data-key, so a keyed tree over an
@@ -1221,10 +1571,8 @@ fn check_elements_map(failures: &mut Vec<Failure>, elements: &str) {
         .collect();
     let in_tree = |at: usize| tree_spans.iter().any(|&(s, e)| at >= s && at < e);
     let (tree, catalog): (Vec<_>, Vec<_>) =
-        attr_positions(elements, "data-key").into_iter().partition(|&(at, _)| in_tree(at));
-    let keys = |half: Vec<(usize, String)>| -> Vec<String> {
-        half.into_iter().map(|(_, value)| value).collect()
-    };
+        attrs(elements, "data-key").into_iter().partition(|key| in_tree(key.at));
+    let keys = |half: Vec<Attr>| -> Vec<String> { half.into_iter().map(|key| key.value).collect() };
     let (tree_keys, row_keys) = (keys(tree), keys(catalog));
     for (half, keys, fix) in [
         (
@@ -1380,6 +1728,54 @@ fn check_capabilities(failures: &mut Vec<Failure>, capabilities: &str) {
         fail(
             format!("{unanswered} of {} capabilities carry no state", rows.len()),
             "each Given ends the run used · deliberately unused · blocked - an unmentioned one reads as correctly constrained rather than under-designed",
+        );
+    }
+}
+
+// W4 run #2, finding 29: two reviewer instructions moved the Layout sketch, two
+// catalog rows, two use-cases, the mockup, four receipt rows and the cross-check,
+// and the run read as if the stages had produced all of it. The strongest signal
+// a run carries - a human overrode the design, and here is the contract it hit -
+// was the one the artifact dropped. So the moved column is answered from the
+// run's own item names: "the reviewer changed things" is not an answer, and
+// `nothing` (the instruction was argued and the design held) is.
+fn check_review_record(failures: &mut Vec<Failure>, review: &str) {
+    let rows = data_rows(review);
+    let mut fail = |what: String, fix: &str| {
+        failures
+            .push(Failure { check: "review·recorded".to_string(), what, fix: fix.to_string() });
+    };
+    if rows.is_empty() {
+        fail(
+            "the review item records no instruction".to_string(),
+            "one row per reviewer instruction: what was said | what it moved (the stages, or `nothing`) | the contract it hit",
+        );
+        return;
+    }
+    let cell = |row: &str, at: usize| {
+        elements_of(row, "td").get(at).map_or_else(String::new, |c| c.to_lowercase())
+    };
+    let unmoved = rows
+        .iter()
+        .filter(|r| {
+            let moved = cell(r, 1);
+            !moved.contains("nothing") && !DESIGN_RUN.iter().any(|stage| moved.contains(stage))
+        })
+        .count();
+    if unmoved > 0 {
+        fail(
+            format!("{unmoved} of {} review rows name no stage they moved", rows.len()),
+            "name the stages the instruction moved, or `nothing` if the design held - a run that rewrites its own history silently is the defect this item exists to refuse",
+        );
+    }
+    let uncited = rows
+        .iter()
+        .filter(|r| elements_of(r, "td").get(2).is_none_or(|hit| !hit.contains("<code>")))
+        .count();
+    if uncited > 0 {
+        fail(
+            format!("{uncited} of {} review rows cite no contract", rows.len()),
+            "cite what the change hit: a rule slug, a component's @use/@avoid, or a decision record - <code>taste</code> when the design genuinely had latitude there",
         );
     }
 }
@@ -1591,7 +1987,7 @@ fn colour_literal(html: &str) -> Option<String> {
 }
 
 fn inner_text(html: &str, span: (usize, usize)) -> String {
-    let open_end = html[span.0..].find('>').map_or(span.0, |rel| span.0 + rel + 1);
+    let open_end = html[span.0..].find('>').map_or(span.0, |rel| span.0 + rel + 1).min(span.1);
     let mut out = String::new();
     let mut in_tag = false;
     for c in html[open_end..span.1].chars() {
@@ -1680,174 +2076,247 @@ fn check_unknown(
 // run #3's checks red runs #1 and #2, which are records of what the flow was, not
 // artifacts anyone will fix. A run still open is never archived: that would hide
 // exactly the reds the flow exists to surface.
-fn exempt_declared(html: &str, artifact_pos: usize) -> Option<String> {
-    let start = html[..artifact_pos].rfind('<').unwrap_or(0);
-    let close = html[start..].find('>')?;
-    attr_positions(&html[start..start + close], "data-status")
+// What a doc declares itself to be, read the way the checks read it: a mention of
+// `data-artifact="design-run"` inside a <code> block - which the flow spec and two
+// plans carry - declares nothing. `Some("")` is a run still open.
+pub fn design_run_status(html: &str) -> Option<String> {
+    let artifact = attrs(html, "data-artifact").into_iter().next()?;
+    artifact
+        .value
+        .split_whitespace()
+        .any(|token| token == "design-run")
+        .then(|| exempt_declared(html, &artifact).unwrap_or_default())
+}
+
+fn exempt_declared(html: &str, artifact: &Attr) -> Option<String> {
+    if !artifact.closed {
+        return None;
+    }
+    attrs(html, "data-status")
         .into_iter()
-        .next()
-        .map(|(_, v)| v)
+        .find(|status| status.tag == artifact.tag)
+        .map(|status| status.value)
         .filter(|v| v == "draft" || v == "archived")
 }
 
-// A tag's own text can quote an attribute without carrying one - a doc that
-// documents the contract judging it is the likeliest place for that - so a match
-// still inside an open value is text, not a declaration.
-fn quoting(tag: &str) -> bool {
-    let mut open = None;
-    for c in tag.chars() {
-        match (open, c) {
-            (None, '"' | '\'') => open = Some(c),
-            (Some(q), c) if c == q => open = None,
-            _ => {}
-        }
-    }
-    open.is_some()
-}
-
-// A tag ends at its first UNQUOTED `>`, because an attribute value may hold one -
-// and a scan that stops at the quoted one reads half the tag's attributes and
-// reports the rest missing.
+// ─── the markup, tokenised once ─────────────────────────────────────────────
 //
-// A tag ends at its first UNQUOTED `>`, because an attribute value may hold one,
-// and in no case later than the NEXT `<`. That second bound is what makes this
-// safe on malformed markup rather than merely correct on clean markup: quotes
-// re-pair across a fault - an unclosed value's quote is closed by the next tag's
-// - so "stop where the quote opened" cannot even see the fault, and a scan with
-// only the first bound walks into the neighbouring element and reads ITS
-// attributes as this one's. Borrowing a class is a false green; truncating at the
-// next tag is a false red on markup that is already broken.
-//
-// Running out of input means no tag close in the fragment, which callers pass
-// deliberately - `classes_at` hands over an opening tag with the `>` removed.
-// The convention `tag_end` rests on, enforced instead of assumed. A raw angle
-// bracket inside an attribute value is invalid HTML - it belongs written `&lt;` or
-// `&gt;` - and it is also the one shape no local rule can tell from a genuine
-// fault: `title="a > b"` and an unterminated `title="oops>` look identical to any
-// scan reading left to right. So rather than guess, the reader takes the safe
-// bound and this check makes the case it cannot parse impossible to write
-// silently. Zero sites in the corpus when it landed; it costs nothing to keep shut.
-fn check_escaped_markup(failures: &mut Vec<Failure>, html: &str) {
-    let bytes = html.as_bytes();
-    let (mut tag_from, mut quote) = (None, None);
-    for (i, c) in html.char_indices() {
-        match (tag_from, quote, c) {
-            (None, _, '<')
-                if bytes.get(i + 1).is_some_and(|b| b.is_ascii_alphabetic() || *b == b'/') =>
-            {
-                tag_from = Some(i);
-            }
-            (Some(_), None, '"' | '\'') => quote = Some(c),
-            (Some(_), Some(q), c) if c == q => quote = None,
-            (Some(_), None, '>') => tag_from = None,
-            (Some(from), Some(_), '<' | '>') => {
-                let seen: String = html[from..i].chars().take(80).collect();
-                failures.push(Failure {
-                    check: "markup·escaped".to_string(),
-                    what: format!("an attribute value holds a raw `{c}`: {seen}"),
-                    fix: "write it `&lt;` or `&gt;` - a raw angle bracket in a value is invalid HTML, and no reader can tell it from an unterminated attribute".to_string(),
-                });
-                (tag_from, quote) = (None, None);
-            }
-            _ => {}
-        }
-    }
+// Every predicate reads HTML through this. What it replaced were four scanners
+// that read markup by hand - find a `<`, count the quotes, guess where the tag
+// ends - and six code-review rounds found six holes in them, each fix revealing
+// the next: an attribute quoted inside another's value read as a declaration · a
+// tag end taken from a bracket inside a value · quotes re-pairing across a fault
+// so one element was lent the next one's classes · a snippet cut mid-character.
+// Every one is a case a tokeniser already owns, so one owns them: quick-xml,
+// already in this repo's tree.
+#[derive(PartialEq)]
+enum Shape {
+    Open,
+    Close,
+    Void,
+    Other,
 }
 
-fn tag_end(html: &str, start: usize) -> usize {
-    let mut quote = None;
-    for (i, c) in html[start..].char_indices() {
-        let at = start + i;
-        match (quote, c) {
-            (None, '"' | '\'') => quote = Some(c),
-            (Some(q), c) if c == q => quote = None,
-            (None, '>') => return at,
-            (_, '<') if at > start => return at,
-            _ => {}
-        }
-    }
-    html.len()
+struct Node {
+    name: String,
+    shape: Shape,
+    // `<` .. one past the `>` that closes it
+    span: (usize, usize),
+    // false only for a tag that never reaches its `>`. What it declared is still
+    // read, so a truncated doc is checked rather than silently ungoverned.
+    closed: bool,
+    attrs: Vec<(usize, String, String)>,
 }
 
-fn attr_positions(html: &str, name: &str) -> Vec<(usize, String)> {
-    let needle = format!("{name}=\"");
+// One attribute declaration: where its owning tag opens - two attributes of one
+// element share it, which is how "on the same element" is asked - where the name
+// itself sits, and the raw value.
+struct Attr {
+    tag: usize,
+    at: usize,
+    value: String,
+    closed: bool,
+}
+
+// A `<` inside a script or a stylesheet is data, not markup - HTML's raw-text
+// rule. Tokenising those bodies invents tags out of `a < b`.
+const RAW_TEXT: &[&str] = &["script", "style"];
+
+fn nodes(html: &str) -> Vec<Node> {
     let mut out = Vec::new();
-    let mut from = 0;
-    while let Some(rel) = html[from..].find(&needle) {
-        let pos = from + rel;
-        from = pos + needle.len();
-        let before = &html[..pos];
-        let preceded = before.chars().next_back().is_some_and(char::is_whitespace);
-        let in_tag =
-            before.rfind('<').is_some_and(|lt| pos < tag_end(html, lt) && !quoting(&before[lt..]));
-        if !preceded || !in_tag {
-            continue;
+    let mut base = 0usize;
+    while base < html.len() {
+        let mut reader = Reader::from_str(&html[base..]);
+        let config = reader.config_mut();
+        config.check_end_names = false;
+        config.allow_unmatched_ends = true;
+        config.check_comments = false;
+        let mut resume = None;
+        loop {
+            let from = base + offset(reader.buffer_position());
+            let event = reader.read_event();
+            let to = base + offset(reader.buffer_position());
+            match event {
+                Ok(Event::Eof) => break,
+                Ok(Event::Text(_)) => {}
+                Ok(event) => {
+                    let node = node_of(html, &event, (from, to));
+                    if node.shape == Shape::Open && RAW_TEXT.contains(&node.name.as_str()) {
+                        let end = format!("</{}", node.name);
+                        resume = Some(html[to..].find(&end).map_or(html.len(), |rel| to + rel));
+                    }
+                    out.push(node);
+                    if resume.is_some() {
+                        break;
+                    }
+                }
+                // A tag that never closes has no honest reading, so the reader
+                // takes what it declared and picks up at the next tag: a fault
+                // must not silence the markup after it. `markup·escaped` names it.
+                Err(_) => {
+                    out.extend(truncated(html, from));
+                    resume = html[from + 1..].find('<').map(|rel| from + 1 + rel);
+                    break;
+                }
+            }
         }
-        let vstart = pos + needle.len();
-        if let Some(vlen) = html[vstart..].find('"') {
-            out.push((pos, html[vstart..vstart + vlen].to_string()));
+        match resume {
+            Some(next) if next > base => base = next,
+            _ => break,
         }
     }
     out
 }
 
-fn element_content(html: &str, attr_pos: usize) -> ((usize, usize), bool) {
-    let empty = ((attr_pos, attr_pos), false);
-    let Some(start) = html[..attr_pos].rfind('<') else { return empty };
-    let name: String = html[start + 1..].chars().take_while(char::is_ascii_alphanumeric).collect();
-    let open_end = tag_end(html, start);
-    if open_end == html.len() {
-        return empty;
+fn node_of(html: &str, event: &Event<'_>, span: (usize, usize)) -> Node {
+    let (shape, open) = match event {
+        Event::Start(tag) => (Shape::Open, Some(tag)),
+        Event::Empty(tag) => (Shape::Void, Some(tag)),
+        Event::End(_) => (Shape::Close, None),
+        _ => (Shape::Other, None),
+    };
+    let name = match event {
+        Event::Start(tag) | Event::Empty(tag) => text(tag.name().as_ref()),
+        Event::End(tag) => text(tag.name().as_ref()),
+        _ => String::new(),
+    };
+    let attrs = open.map(|tag| attrs_of(html, tag)).unwrap_or_default();
+    Node { name, shape, span, closed: true, attrs }
+}
+
+fn attrs_of(html: &str, tag: &BytesStart<'_>) -> Vec<(usize, String, String)> {
+    let mut attributes = tag.attributes();
+    attributes.with_checks(false);
+    // A valueless attribute (`data-map`, `defer`) is an error to an XML reader
+    // and a declaration no predicate here reads, so it is skipped, not reported.
+    attributes
+        .flatten()
+        .map(|a| (offset_in(html, a.key.as_ref()), text(a.key.as_ref()), text(&a.value)))
+        .collect()
+}
+
+fn truncated(html: &str, from: usize) -> Option<Node> {
+    let content = html[from..].strip_prefix('<')?;
+    let len = content.find(char::is_whitespace).unwrap_or(content.len());
+    let name = content[..len].to_string();
+    if !name.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        return None;
     }
-    if name.is_empty() || html[..open_end].ends_with('/') {
-        return empty;
-    }
-    let open_tag = format!("<{name}");
-    let close_tag = format!("</{name}");
-    let mut depth = 1usize;
-    let mut cursor = open_end + 1;
-    loop {
-        let rest = &html[cursor..];
-        let Some(close_rel) = find_tag(rest, &close_tag) else { return empty };
-        if let Some(open_inner) = find_tag(&rest[..close_rel], &open_tag) {
-            depth += 1;
-            cursor += open_inner + open_tag.len();
-        } else {
-            depth -= 1;
-            let close_abs = cursor + close_rel;
-            if depth == 0 {
-                let inner = &html[open_end + 1..close_abs];
-                return ((start, close_abs), has_text(inner));
+    let attrs = attrs_of(html, &BytesStart::from_content(content, len));
+    Some(Node { name, shape: Shape::Open, span: (from, html.len()), closed: false, attrs })
+}
+
+fn text(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes).into_owned()
+}
+
+// quick-xml hands back subslices of the input, so this is arithmetic, not a
+// search - the reading `check_elements_map` already takes of its tree spans.
+fn offset_in(html: &str, part: &[u8]) -> usize {
+    part.as_ptr() as usize - html.as_ptr() as usize
+}
+
+fn offset(position: u64) -> usize {
+    usize::try_from(position).unwrap_or(usize::MAX)
+}
+
+fn attrs(html: &str, name: &str) -> Vec<Attr> {
+    let mut out = Vec::new();
+    for node in nodes(html) {
+        let (tag, closed) = (node.span.0, node.closed);
+        for (at, key, value) in node.attrs {
+            if key == name {
+                out.push(Attr { tag, at, value, closed });
             }
-            cursor = close_abs + close_tag.len();
         }
+    }
+    out
+}
+
+// A raw angle bracket inside a tag is invalid HTML - it belongs written `&lt;` or
+// `&gt;` - and it is the one shape no reader can resolve: `title="a > b"` and an
+// unterminated `title="oops>` look identical left to right, and a raw `<` in
+// prose opens a tag that swallows the sentence after it, classes and all. So
+// rather than guess, the case that cannot be parsed is named. Zero sites in the
+// corpus when it landed; it costs nothing to keep shut.
+fn check_escaped_markup(failures: &mut Vec<Failure>, html: &str) {
+    for node in nodes(html).iter().filter(|n| n.shape != Shape::Other) {
+        // between the `<` and the `>` that closed it - and for a tag that never
+        // closed, everything it swallowed, which is the case being named
+        let inside = html[node.span.0 + 1..node.span.1].trim_end_matches('>');
+        let Some(raw) = inside.chars().find(|c| *c == '<' || *c == '>') else { continue };
+        let seen: String = inside.chars().take(80).collect();
+        failures.push(Failure {
+            check: "markup·escaped".to_string(),
+            what: format!("a tag holds a raw `{raw}`: {seen}"),
+            fix: "write it `&lt;` or `&gt;` - a raw angle bracket inside a tag is invalid HTML, and no reader can tell it from an unterminated attribute".to_string(),
+        });
     }
 }
 
-fn find_tag(hay: &str, tag: &str) -> Option<usize> {
-    let mut from = 0;
-    while let Some(rel) = hay[from..].find(tag) {
-        let pos = from + rel;
-        let after = hay[pos + tag.len()..].chars().next();
-        if after.is_none_or(|c| c == '>' || c == '/' || c.is_whitespace()) {
-            return Some(pos);
-        }
-        from = pos + tag.len();
+fn element_content(html: &str, tag: usize) -> ((usize, usize), bool) {
+    let empty = ((tag, tag), false);
+    let nodes = nodes(html);
+    let Some(open) = nodes.iter().position(|n| n.span.0 == tag) else { return empty };
+    if nodes[open].shape != Shape::Open || !nodes[open].closed {
+        return empty;
     }
-    None
-}
-
-fn has_text(inner: &str) -> bool {
-    let mut in_tag = false;
-    for c in inner.chars() {
-        match c {
-            '<' => in_tag = true,
-            '>' => in_tag = false,
-            c if !in_tag && !c.is_whitespace() => return true,
+    let mut depth = 1usize;
+    for (i, node) in nodes.iter().enumerate().skip(open + 1) {
+        if node.name != nodes[open].name {
+            continue;
+        }
+        match node.shape {
+            Shape::Open => depth += 1,
+            Shape::Close => {
+                depth -= 1;
+                if depth == 0 {
+                    let filled =
+                        has_text(html, &nodes[open + 1..i], nodes[open].span.1, node.span.0);
+                    return ((tag, node.span.0), filled);
+                }
+            }
             _ => {}
         }
     }
-    false
+    empty
+}
+
+// Text is what the tokeniser did not claim: the gaps between nodes. A comment or
+// an empty nested element is markup, so an element holding only those is empty -
+// the reading `check_items` needs to tell a written section from a tagged one.
+fn has_text(html: &str, inner: &[Node], from: usize, to: usize) -> bool {
+    let mut at = from;
+    for node in inner {
+        if node.span.0 < at || node.span.0 >= to {
+            continue;
+        }
+        if !html[at..node.span.0].trim().is_empty() {
+            return true;
+        }
+        at = node.span.1.clamp(at, to);
+    }
+    at < to && !html[at..to].trim().is_empty()
 }
 
 fn edit_distance(a: &str, b: &str) -> usize {
@@ -1868,14 +2337,11 @@ fn edit_distance(a: &str, b: &str) -> usize {
 
 pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
     let single = paths.len() == 1;
-    let rules = std::fs::read_to_string(repo.join(RULEBOOK))
-        .ok()
-        .map(|html| rules_from_rulebook(&html))
-        .filter(|rules| !rules.is_empty());
-    // Read once for the whole invocation, and only when a design run is in the
-    // batch: the vocabulary costs a node process, and no other artifact has a
-    // rule that reads it.
+    let rules = rulebook(repo);
+    // Read once for the whole invocation, and only when a doc in the batch has a
+    // rule that reads them: each oracle costs a node process.
     let mut vocab: Option<Result<Vocabulary, String>> = None;
+    let mut names: Option<Result<Roster, String>> = None;
     let mut out = String::new();
     let mut any_red = false;
     for path in paths {
@@ -1883,14 +2349,20 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
             if Path::new(path).exists() { Path::new(path).to_path_buf() } else { repo.join(path) };
         let html =
             std::fs::read_to_string(&resolved).map_err(|e| format!("cannot read {path}: {e}"))?;
-        if vocab.is_none() && html.contains("data-artifact=\"design-run\"") {
+        let component = component_designed(path);
+        let designs = declares_a_design(component.is_some(), &html);
+        if vocab.is_none() && designs {
             vocab = Some(vocabulary(repo));
         }
-        let verdict = verify_html_against(
-            &html,
-            rules.as_deref(),
-            vocab.as_ref().and_then(|read| read.as_ref().ok()),
-        );
+        if names.is_none() && designs {
+            names = Some(roster(repo));
+        }
+        let vocab_read = vocab.as_ref().and_then(|read| read.as_ref().ok());
+        let roster_read = names.as_ref().and_then(|read| read.as_ref().ok());
+        let verdict = match component {
+            Some(name) => verify_component(&html, &name, roster_read, vocab_read),
+            None => verify_html_against(&html, rules.as_ref(), vocab_read, roster_read),
+        };
         if verdict.red() {
             any_red = true;
         }
@@ -1902,6 +2374,14 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
         out = format!("verify-doc: {} doc(s) checked, none red", paths.len());
     }
     Ok((i32::from(any_red), out.trim_end().to_string()))
+}
+
+// Read the declaration, never the string: a substring scan says yes to every doc
+// that merely quotes the contract in prose, and each yes costs two node processes
+// nothing then reads. `design_run_status` is the same tokenised answer the gate's
+// run-finder already takes.
+fn declares_a_design(is_component: bool, html: &str) -> bool {
+    is_component || design_run_status(html).is_some()
 }
 
 pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
@@ -1936,10 +2416,10 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        attr_positions, check_frame_density, edit_distance, elements_of, format_verdict,
-        rules_from_rulebook, verify_html, verify_html_against, Verdict, Vocabulary,
-        CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS,
-        GIST_MAX_WORDS,
+        attrs, check_frame_density, component_designed, declares_a_design, edit_distance,
+        elements_of, format_verdict, rules_from_rulebook, verify_component, verify_html,
+        verify_html_against, Component, Roster, Verdict, Vocabulary, CAPABILITY_STATES,
+        FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -1983,8 +2463,19 @@ mod tests {
          <tr><td><code>calm-microcopy</code></td><td>calm</td></tr>\
          </tbody></table>";
 
-    fn rules() -> Vec<super::Rule> {
-        rules_from_rulebook(RULEBOOK)
+    // The pin is the fixture receipt's, so the unit tests judge coverage against a
+    // rulebook the receipt genuinely names; the pin's own checks move it.
+    const PIN: &str = "28f5437";
+
+    fn rules() -> super::Rulebook {
+        rulebook_of(RULEBOOK)
+    }
+
+    fn rulebook_of(html: &str) -> super::Rulebook {
+        super::Rulebook {
+            rules: rules_from_rulebook(html),
+            blob: Some(format!("{PIN}c0ffee1a2b3c4d5e6f708192a3b4c5d6e7f8")),
+        }
     }
 
     // A hand-written stand-in for what scripts/design-vocabulary.mjs emits, so
@@ -2014,6 +2505,18 @@ chroma_floor: 40
         serde_yaml::from_str(VOCABULARY).expect("the test vocabulary parses like the real one")
     }
 
+    // Two components with code and one whose contract is still its design file -
+    // the two halves of the roster, and the disjointness check_retirement keeps.
+    fn roster() -> Roster {
+        Roster {
+            registry: ["Section", "CopyText"]
+                .into_iter()
+                .map(|name| (name.to_string(), Component { states: "rest · hover".to_string() }))
+                .collect(),
+            designed: ["BodyViewer"].into_iter().map(str::to_string).collect(),
+        }
+    }
+
     fn receipt(rows: &str) -> String {
         format!("<pre data-item=\"receipt\">rulebook: 28f5437\nsoft:\n{rows}</pre>")
     }
@@ -2041,7 +2544,9 @@ chroma_floor: 40
              {receipt_block}\
              <table data-item=\"capabilities\"><tr><td>CA install</td><td>used</td>\
              <td>B1's button</td></tr></table>\
-             <p data-item=\"proposals\">band</p><p data-item=\"blocked-on\">verb tokens</p></main>"
+             <p data-item=\"proposals\">band</p><p data-item=\"blocked-on\">verb tokens</p>\
+             <table data-item=\"review\"><tr><td>copy icon only</td><td>elements · mockup</td>\
+             <td><code>CopyButton</code> @avoid</td></tr></table></main>"
         );
         format!("<html><body>{body}</body></html>")
     }
@@ -2066,7 +2571,13 @@ chroma_floor: 40
             "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
             cells(20, FRAME_CELL_MEAN)
         );
-        assert!(!verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab())).red());
+        assert!(!verify_html_against(
+            &frame_run(&body),
+            Some(&rules()),
+            Some(&vocab()),
+            Some(&roster())
+        )
+        .red());
     }
 
     #[test]
@@ -2075,7 +2586,8 @@ chroma_floor: 40
             "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
             cells(20, FRAME_CELL_MEAN + 6)
         );
-        let v = verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()));
+        let v =
+            verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(v.red());
         assert!(
             what(&v, "frame·cell-density").contains("average 18.0 words"),
@@ -2092,7 +2604,12 @@ chroma_floor: 40
             "<div data-item=\"frame\"><p>purpose</p><table>{}</table></div>",
             cells(20, FRAME_CELL_MAX / 2)
         );
-        let v = verify_html_against(&frame_run(&split), Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(
+            &frame_run(&split),
+            Some(&rules()),
+            Some(&vocab()),
+            Some(&roster()),
+        );
         assert!(v.red(), "half-length cells still average over the mean");
         let checks = failures(&v);
         assert!(checks.contains(&"frame·cell-density".to_string()), "{checks:?}");
@@ -2106,7 +2623,8 @@ chroma_floor: 40
             cells(40, 1),
             "word ".repeat(FRAME_CELL_MAX + 1)
         );
-        let v = verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()));
+        let v =
+            verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(v.red());
         assert!(what(&v, "frame·cell-length").contains("41 words"), "{:?}", failures(&v));
     }
@@ -2115,7 +2633,8 @@ chroma_floor: 40
     fn commentary_bolted_onto_the_frame_is_red() {
         let body = "<div data-item=\"frame\"><p>purpose</p><p>given</p><p>not given</p>\
                     <p>why this screen matters</p><table><td>clause</td></table></div>";
-        let v = verify_html_against(&frame_run(body), Some(&rules()), Some(&vocab()));
+        let v =
+            verify_html_against(&frame_run(body), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(v.red());
         assert!(what(&v, "frame·prose-blocks").contains("4 prose blocks"), "{:?}", failures(&v));
     }
@@ -2126,7 +2645,8 @@ chroma_floor: 40
             "<div data-item=\"frame\"><p>{}</p><table><td>clause</td></table></div>",
             "word ".repeat(FRAME_PROSE_WORDS + 1)
         );
-        let v = verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()));
+        let v =
+            verify_html_against(&frame_run(&body), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(v.red());
         assert!(what(&v, "frame·prose-length").contains("61 words"), "{:?}", failures(&v));
     }
@@ -2165,7 +2685,8 @@ chroma_floor: 40
                     <td><span>✓ concrete</span><span>✗ concrete</span></td></tr>\
                     <tr><td>driver</td><td>why</td><td>therefore</td><td>a criterion</td></tr>\
                     </table></div>";
-        let v = verify_html_against(&frame_run(body), Some(&rules()), Some(&vocab()));
+        let v =
+            verify_html_against(&frame_run(body), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(v.red());
         assert!(what(&v, "frame·example").contains("1 of 2"), "{:?}", failures(&v));
     }
@@ -2204,7 +2725,7 @@ chroma_floor: 40
     #[test]
     fn rulebook_slugs_are_read_from_the_rulebook_tables() {
         let extracted: Vec<(String, bool)> =
-            rules().into_iter().map(|r| (r.slug, r.hard)).collect();
+            rules().rules.into_iter().map(|r| (r.slug, r.hard)).collect();
         assert_eq!(
             extracted,
             vec![
@@ -2217,9 +2738,34 @@ chroma_floor: 40
         );
     }
 
+    // Every doc that explains the design contract quotes the declaration, and a
+    // substring scan reads each quotation as a design - buying two node processes
+    // per doc that nothing goes on to read. The run-finder already tokenises; this
+    // is the same answer at the site that pays for it.
+    #[test]
+    fn a_doc_that_only_quotes_the_design_declaration_is_not_designing() {
+        let quoted = doc(
+            "wu-result",
+            "",
+            "<p>gate on <code>data-artifact=\"design-run\"</code> and never on the string</p>",
+        );
+        assert!(
+            !declares_a_design(false, &quoted),
+            "a quoted declaration is prose, not an artifact"
+        );
+        assert!(
+            declares_a_design(false, &doc("design-run", "draft", "<p>x</p>")),
+            "the real declaration still asks for the oracles, draft or not"
+        );
+        assert!(
+            declares_a_design(true, &quoted),
+            "a component design file is named by its path, whatever its body quotes"
+        );
+    }
+
     #[test]
     fn conforming_design_run_is_green_with_a_computed_tally() {
-        let v = verify_html_against(&green_run(), Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&green_run(), Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(!v.red(), "{:?}", failures(&v));
         let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
         assert!(summary.contains("receipt 2/2 soft · 1 satisfied · 1 inherited"), "{summary}");
@@ -2236,8 +2782,8 @@ chroma_floor: 40
             "<tr><td><code>not-a-predicate</code></td><td>x</td></tr>\
              <tr><td><code>spacing-scale</code></td>",
         );
-        let rules = rules_from_rulebook(&widened);
-        let v = verify_html_against(&green_run(), Some(&rules), Some(&vocab()));
+        let rules = rulebook_of(&widened);
+        let v = verify_html_against(&green_run(), Some(&rules), Some(&vocab()), Some(&roster()));
         let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
         assert!(
             summary.contains("2/3 machine-checked (design) — 1 unchecked: not-a-predicate"),
@@ -2248,7 +2794,7 @@ chroma_floor: 40
     #[test]
     fn a_missing_soft_slug_fails_by_name() {
         let doc = design_run(&receipt("  data-ink-first: satisfied — no card frames\n"));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert_eq!(failures(&v), vec!["receipt·calm-microcopy"]);
     }
 
@@ -2257,7 +2803,7 @@ chroma_floor: 40
         let doc = design_run(&receipt(
             "  data-ink-first: satisfied — x\n  calm-microcopy: satisfied — y\n  spacing-scale: satisfied — z\n",
         ));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(what(&v, "receipt·unknown-slug").contains("machine-checked, not receipted"));
     }
 
@@ -2266,7 +2812,7 @@ chroma_floor: 40
         let doc = design_run(&receipt(
             "  data-ink-first: satisfied — x\n  calm-microcopi: satisfied — y\n",
         ));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         let msg = what(&v, "receipt·unknown-slug");
         assert!(msg.contains("calm-microcopi") && msg.contains("calm-microcopy"), "{msg}");
     }
@@ -2276,7 +2822,7 @@ chroma_floor: 40
         let doc = design_run(&receipt(
             "  data-ink-first: probably-fine — x\n  calm-microcopy: satisfied\n",
         ));
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(what(&v, "receipt·data-ink-first").contains("not one of the seven"));
         assert!(what(&v, "receipt·calm-microcopy").contains("no citation"));
     }
@@ -2286,7 +2832,7 @@ chroma_floor: 40
         let doc = design_run(
             "<pre data-item=\"receipt\">rulebook: 28f5437\nsoft:\n  data-ink-first: ok\n   calm-microcopy: ok\n</pre>",
         );
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         let msg = what(&v, "receipt·yaml");
         assert!(msg.contains("line"), "serde_yaml's own position is the error text: {msg}");
     }
@@ -2301,14 +2847,51 @@ chroma_floor: 40
     #[test]
     fn an_unpinned_rulebook_version_is_red() {
         let doc = green_run().replace("rulebook: 28f5437", "rulebook: \"\"");
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(failures(&v).contains(&"receipt·rulebook".to_string()));
+    }
+
+    // W3 promised the receipt pins the rulebook blob it ran against; until now
+    // any string passed, so every verdict under a moved rulebook read as evidence
+    // while being unread.
+    #[test]
+    fn a_receipt_pinning_a_version_that_is_not_the_rulebook_on_disk_is_red() {
+        let doc = green_run().replace("rulebook: 28f5437", "rulebook: 9999999");
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
+        let hit = what(&v, "receipt·rulebook-stale");
+        assert!(hit.contains("9999999") && hit.contains(PIN), "names both versions: {hit}");
+        assert!(hit.contains("re-judge"), "the fix is a re-run, not a re-typed sha: {hit}");
+    }
+
+    #[test]
+    fn a_full_length_pin_of_the_same_blob_resolves() {
+        let full = rules().blob.expect("the fixture rulebook is hashed");
+        let doc = green_run().replace("rulebook: 28f5437", &format!("rulebook: {full}"));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
+        assert!(!v.red(), "{:?}", failures(&v));
+    }
+
+    #[test]
+    fn a_pin_too_short_to_name_a_blob_is_red() {
+        let doc = green_run().replace("rulebook: 28f5437", "rulebook: 28f");
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
+        assert!(what(&v, "receipt·rulebook").contains("too short"));
+    }
+
+    // The rulebook read but not hashable is the same shape of hole as one that
+    // could not be read at all: a pin nothing can check is not a pin.
+    #[test]
+    fn a_pin_that_cannot_be_hashed_is_red_never_silently_green() {
+        let unhashable = super::Rulebook { rules: rules_from_rulebook(RULEBOOK), blob: None };
+        let v =
+            verify_html_against(&green_run(), Some(&unhashable), Some(&vocab()), Some(&roster()));
+        assert!(what(&v, "receipt·rulebook-unverifiable").contains("nothing here can check"));
     }
 
     #[test]
     fn an_unkeyed_elements_catalog_is_red() {
         let doc = green_run().replace(" data-map", "").replace("data-key=\"section\"", "");
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(what(&v, "elements·map").contains("specimen.js"));
     }
 
@@ -2442,6 +3025,46 @@ chroma_floor: 40
         assert!(failures(&doc_verdict(&doc)).contains(&"item·capabilities".to_string()));
     }
 
+    // W4 finding 29: the run doc read as if the stages had produced what two
+    // reviewer instructions moved. The item is required, so a run that had a
+    // reviewer and says nothing about them cannot be told from one that did not.
+    #[test]
+    fn a_run_that_records_no_review_is_red() {
+        let doc = green_run().replace(" data-item=\"review\"", "");
+        assert!(failures(&doc_verdict(&doc)).contains(&"item·review".to_string()));
+    }
+
+    #[test]
+    fn a_review_item_with_no_instruction_row_is_red() {
+        let doc = green_run().replace(
+            "<tr><td>copy icon only</td><td>elements · mockup</td>\
+             <td><code>CopyButton</code> @avoid</td></tr>",
+            "<tr><td>the reviewer had notes</td></tr>",
+        );
+        assert!(what(&doc_verdict(&doc), "review·recorded").contains("no instruction"));
+    }
+
+    #[test]
+    fn a_review_row_that_names_no_stage_it_moved_is_red() {
+        let doc = green_run().replace("<td>elements · mockup</td>", "<td>several things</td>");
+        assert!(what(&doc_verdict(&doc), "review·recorded").contains("no stage"));
+    }
+
+    // An instruction the design argued and held is a first-class outcome - the
+    // row exists to record that it was heard, not that it won.
+    #[test]
+    fn a_review_row_that_moved_nothing_says_so_and_passes() {
+        let doc = green_run().replace("<td>elements · mockup</td>", "<td>nothing</td>");
+        assert!(!doc_verdict(&doc).red(), "{:?}", failures(&doc_verdict(&doc)));
+    }
+
+    #[test]
+    fn a_review_row_citing_no_contract_is_red() {
+        let doc =
+            green_run().replace("<td><code>CopyButton</code> @avoid</td>", "<td>it fits</td>");
+        assert!(what(&doc_verdict(&doc), "review·recorded").contains("cite no contract"));
+    }
+
     // A cell holding a nested table ends at its OWN close tag: the naive scan
     // stopped at the inner one and measured every word count on a fragment.
     #[test]
@@ -2469,7 +3092,7 @@ chroma_floor: 40
     }
 
     fn doc_verdict(html: &str) -> Verdict {
-        verify_html_against(html, Some(&rules()), Some(&vocab()))
+        verify_html_against(html, Some(&rules()), Some(&vocab()), Some(&roster()))
     }
 
     #[test]
@@ -2543,18 +3166,134 @@ chroma_floor: 40
         assert!(line.contains("archived") && !line.contains("until ready"), "{line}");
     }
 
+    // What activates the review's design dimension. The asymmetry is the point:
+    // Tier-1 goes SILENT on an archived run (closed under an older contract) and
+    // Tier-3 wakes up on exactly that file, because a finished design is the only
+    // kind there is anything independent to say about.
     #[test]
-    fn the_closed_runs_are_archived_so_a_new_rule_does_not_reopen_them() {
-        for run in [
-            include_str!("../../docs/work/2026-07-16-dflow-run-1.html"),
-            include_str!("../../docs/work/2026-07-25-dflow-w4-run-2.html"),
-            include_str!("../../docs/work/2026-07-26-dflow-w4-run-3.html"),
-        ] {
+    fn only_a_closed_run_or_a_component_file_is_a_design_artifact() {
+        let run = design_run(&receipt("  data-ink-first: satisfied — x\n"));
+        let archived = run.replace(
+            "data-artifact=\"design-run\"",
+            "data-artifact=\"design-run\" data-status=\"archived\"",
+        );
+        let draft = run.replace(
+            "data-artifact=\"design-run\"",
+            "data-artifact=\"design-run\" data-status=\"draft\"",
+        );
+        let path = "docs/work/2026-08-13-dflow-run-4.html";
+        assert_eq!(super::design_artifact(path, &archived), Some("design-run"));
+        assert_eq!(super::design_artifact(path, &draft), None, "a draft run is unfinished");
+        assert_eq!(super::design_artifact(path, &run), None, "an open run is unfinished");
+        assert_eq!(
+            super::design_artifact("docs/work/components/button.html", "<html></html>"),
+            Some("component-design"),
+            "a component design file is a finished contract whatever it contains"
+        );
+        assert_eq!(super::design_artifact("docs/work/components/specimen.js", ""), None);
+        assert_eq!(
+            super::design_artifact(
+                "docs/workflow.html",
+                &archived.replace("design-run", "wu-plan")
+            ),
+            None
+        );
+        assert_eq!(
+            super::design_artifact(
+                "docs/work/flow-spec.html",
+                "<html><body><main data-artifact=\"wu-plan\"><code>data-artifact=\"design-run\" data-status=\"archived\"</code></main></body></html>"
+            ),
+            None,
+            "a doc that quotes the declaration is not a run"
+        );
+    }
+
+    #[test]
+    fn a_pin_names_a_blob_only_at_git_s_own_abbreviation_floor() {
+        let blob = "796c547cb1de0f21e5a1b1a1c0ffee0123456789";
+        assert!(super::pin_matches("796c547", blob));
+        assert!(super::pin_matches("796C547", blob), "case is not the claim");
+        assert!(super::pin_matches(blob, blob));
+        assert!(!super::pin_matches("796c54", blob), "under the floor names ~1 blob in 16");
+        assert!(!super::pin_matches("28f5437", blob), "another blob is another judgment");
+    }
+
+    // Every design run in the tree, found rather than listed: the hand-typed trio
+    // this replaces had to be extended by whoever added a run, which is the same
+    // "somebody remembers" that left run #3 open. What it asserts is that the
+    // archived flag is load-bearing on each file it finds - lifted, the run is
+    // governed again - so an archived run can never pass a check vacuously.
+    //
+    // It does NOT assert every run is archived: a run mid-design is open, and red,
+    // for as long as it is being designed. Closing is enforced where the tree is
+    // answerable for it, at the merge (6·run-closed).
+    #[test]
+    fn every_archived_run_is_exempt_by_a_flag_that_is_doing_work() {
+        let runs: Vec<(String, String)> = design_runs_in_the_tree();
+        assert!(runs.len() >= 3, "the discovery found no runs: {}", runs.len());
+        for (path, html) in runs {
+            let Some(status) = super::design_run_status(&html) else {
+                panic!("{path} is not a run")
+            };
+            if status != "archived" {
+                continue;
+            }
             assert!(
-                matches!(verify_html(run), Verdict::Exempt(s) if s == "archived"),
-                "a closed run must be archived"
+                matches!(verify_html(&html), Verdict::Exempt(s) if s == "archived"),
+                "{path} declares archived but is not exempt"
+            );
+            let reopened = html.replace(" data-status=\"archived\"", "");
+            assert_ne!(reopened, html, "{path}: lifting the flag changed nothing");
+            assert!(
+                !matches!(verify_html(&reopened), Verdict::Exempt(_)),
+                "{path} is silent for some other reason - the archived flag proves nothing here"
             );
         }
+    }
+
+    fn design_runs_in_the_tree() -> Vec<(String, String)> {
+        let work = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/work");
+        let mut found: Vec<(String, String)> = std::fs::read_dir(work)
+            .expect("docs/work is where runs live")
+            .filter_map(|entry| {
+                let path = entry.ok()?.path();
+                let html = std::fs::read_to_string(&path).ok()?;
+                super::design_run_status(&html)?;
+                Some((path.file_name()?.to_string_lossy().to_string(), html))
+            })
+            .collect();
+        found.sort_by(|a, b| a.0.cmp(&b.0));
+        found
+    }
+
+    // The flow spec and two plans quote `data-artifact="design-run"` inside a
+    // <code> block; a scan for the string would call all three runs and gate them.
+    #[test]
+    fn a_quoted_artifact_declaration_is_not_a_run() {
+        assert_eq!(
+            super::design_run_status(
+                "<p>a run declares <code>data-artifact=\"design-run\"</code></p>"
+            ),
+            None
+        );
+        assert_eq!(super::design_run_status(&green_run()).as_deref(), Some(""));
+        assert_eq!(
+            super::design_run_status(&green_run().replace(
+                "data-artifact=\"design-run\"",
+                "data-artifact=\"design-run\" data-status=\"archived\"",
+            ))
+            .as_deref(),
+            Some("archived")
+        );
+        // `ready` is a declaration that the run is open and checked, not a close.
+        assert_eq!(
+            super::design_run_status(&green_run().replace(
+                "data-artifact=\"design-run\"",
+                "data-artifact=\"design-run\" data-status=\"ready\"",
+            ))
+            .as_deref(),
+            Some("")
+        );
     }
 
     #[test]
@@ -2668,8 +3407,7 @@ chroma_floor: 40
     fn attr_scan_requires_a_real_tag_position() {
         let html =
             "<p data-item=\"a\">x</p><p>text data-item=\"b\" more</p><code>data-item=\"c\"</code>";
-        let values: Vec<String> =
-            attr_positions(html, "data-item").into_iter().map(|(_, v)| v).collect();
+        let values: Vec<String> = attrs(html, "data-item").into_iter().map(|a| a.value).collect();
         assert_eq!(values, vec!["a"]);
     }
 
@@ -2694,7 +3432,72 @@ chroma_floor: 40
     }
 
     fn reds(html: &str) -> Vec<String> {
-        failures(&verify_html_against(html, Some(&rules()), Some(&vocab())))
+        failures(&verify_html_against(html, Some(&rules()), Some(&vocab()), Some(&roster())))
+    }
+
+    fn raised(html: &str) -> Vec<crate::gate::Failure> {
+        match verify_html_against(html, Some(&rules()), Some(&vocab()), Some(&roster())) {
+            Verdict::Checked { failures, .. } => failures,
+            _ => panic!("expected a checked verdict"),
+        }
+    }
+
+    // "Every red says what to do about it" is the harness's hand-over rule
+    // (E-DFLOW.W7 ⑥), and a rule an author has to remember is one an author
+    // forgets - which is this epic's own thesis. So it is asserted rather than
+    // audited: over every failure a broken run can raise, the fix must exist, be
+    // an instruction rather than a restatement of the observation, and not repeat
+    // the `what` it follows. W6's round 9 is the precedent for the third clause -
+    // a message that restated its own observation named a cause it could not know.
+    #[test]
+    fn every_red_a_run_can_raise_says_what_to_do_about_it() {
+        // Every mangling below keeps the markup balanced. An unclosed tag empties
+        // the section instead of breaking the rule inside it, which trades a whole
+        // family of checks for one `item·` red and quietly narrows the guard.
+        let bare = doc("design-run", "", "<p>nothing tagged at all</p>");
+        let broken = green_run()
+            .replace("class=\"gist\"", "class=\"gistx\"")
+            .replace("<details class=\"why\">", "<b>")
+            .replace("</details>", "</b>")
+            .replace(" data-map", "")
+            .replace(" data-wire=\"none\"", "")
+            .replace("data-state-toggle=\"mock\"", "static")
+            .replace("class=\"tb\"", "class=\"prose\"")
+            .replace("@avoid nesting", "a good fit")
+            .replace("src=\"../../doc-assets/components/specimen.js\"", "src=\"mine.js\"")
+            .replace("rulebook: 28f5437", "rulebook: x")
+            .replace("<td>used</td>", "<td>maybe</td>")
+            .replace("<td>elements · mockup</td>", "<td>the reviewer changed things</td>")
+            .replace(".mock{color:var(--a-ink);}", ".mock{color:#f7f5f0;}");
+        let unresolved = green_run()
+            .replace("data-key=\"section\"", "data-key=\"ghost\"")
+            .replace(">Section<", ">Ghost<");
+        let off_vocabulary = mockup("<span class=\"text-pink-500 font-mono truncate\">x</span>");
+        let hard_slug = design_run(&receipt("  spacing-scale: satisfied — a hard slug\n"));
+        let prose_frame = frame_run(&format!(
+            "<div data-item=\"frame\"><p>{}</p><p>b</p><p>c</p><p>d</p><table>{}</table></div>",
+            "word ".repeat(FRAME_PROSE_WORDS + 1),
+            cells(4, FRAME_CELL_MAX + 1)
+        ));
+
+        let fixtures = [bare, broken, unresolved, off_vocabulary, hard_slug, prose_frame];
+        let raised: Vec<crate::gate::Failure> = fixtures.iter().flat_map(|d| raised(d)).collect();
+        let distinct: super::BTreeSet<&str> = raised.iter().map(|f| f.check.as_str()).collect();
+        assert!(
+            distinct.len() >= 30,
+            "the fixtures must exercise a real spread of checks, got {}: {distinct:?}",
+            distinct.len()
+        );
+        for f in &raised {
+            assert!(!f.fix.trim().is_empty(), "{} raises no fix", f.check);
+            assert_ne!(f.fix.trim(), f.what.trim(), "{}'s fix restates its what", f.check);
+            assert!(
+                f.fix.split_whitespace().count() >= 4,
+                "{}'s fix is too short to be an instruction: {:?}",
+                f.check,
+                f.fix
+            );
+        }
     }
 
     #[test]
@@ -2703,6 +3506,7 @@ chroma_floor: 40
             &mockup("<span class=\"text-pink-500\">x</span>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "colour-tokens-only·off-vocabulary").contains("resolves to nothing"));
         assert!(
@@ -2717,6 +3521,7 @@ chroma_floor: 40
             &mockup("<span class=\"p-[13px]\">x</span>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "spacing-scale·off-vocabulary").contains("names 13px inline"));
     }
@@ -2729,6 +3534,7 @@ chroma_floor: 40
             &mockup("<span class=\"text-[#ff00aa]\">x</span>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "zero-accent·off-set").contains("chromatic colour outside the set"));
 
@@ -2758,6 +3564,7 @@ chroma_floor: 40
             &mockup("<div class=\"rounded-md\">x</div>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "radius-tokens·off-vocabulary").contains("rounded-md"));
     }
@@ -2769,7 +3576,7 @@ chroma_floor: 40
         let legal =
             mockup("<span class=\"hover:focus-visible:text-ink !p-2 bg-canvas/wash\">x</span>");
         assert!(
-            !verify_html_against(&legal, Some(&rules()), Some(&vocab())).red(),
+            !verify_html_against(&legal, Some(&rules()), Some(&vocab()), Some(&roster())).red(),
             "{:?}",
             reds(&legal)
         );
@@ -2777,7 +3584,7 @@ chroma_floor: 40
         let wrong_step = mockup("<span class=\"bg-canvas/loose\">x</span>");
         assert!(
             what(
-                &verify_html_against(&wrong_step, Some(&rules()), Some(&vocab())),
+                &verify_html_against(&wrong_step, Some(&rules()), Some(&vocab()), Some(&roster())),
                 "colour-tokens-only·off-vocabulary"
             )
             .contains("bg-canvas/loose"),
@@ -2793,7 +3600,7 @@ chroma_floor: 40
             "<style>.mock{color:var(--a-ink);}</style>",
             "<style>.a-measure{max-width:460px;padding:16px;font-size:12px;}</style>",
         );
-        let v = verify_html_against(&raw, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&raw, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(what(&v, "spacing-scale·raw-value").contains("max-width: 460px"));
         assert!(
             !failures(&v).contains(&"type-tokens-only·raw-value".to_string()),
@@ -2807,7 +3614,11 @@ chroma_floor: 40
             "<style>.mock{color:var(--a-ink);}</style>",
             "<style>.a-win{margin:0 auto;max-width:100%;padding:8px 24px;color:var(--a-ink);}</style>",
         );
-        assert!(!verify_html_against(&ok, Some(&rules()), Some(&vocab())).red(), "{:?}", reds(&ok));
+        assert!(
+            !verify_html_against(&ok, Some(&rules()), Some(&vocab()), Some(&roster())).red(),
+            "{:?}",
+            reds(&ok)
+        );
     }
 
     // Both archived runs wrote their labels' tracking by hand - one as an
@@ -2816,7 +3627,7 @@ chroma_floor: 40
     fn an_uppercase_label_that_tracks_by_hand_is_red_on_either_surface() {
         let by_class = mockup("<div class=\"uppercase tracking-[.06em] text-ink-mute\">zone</div>");
         assert!(what(
-            &verify_html_against(&by_class, Some(&rules()), Some(&vocab())),
+            &verify_html_against(&by_class, Some(&rules()), Some(&vocab()), Some(&roster())),
             "uppercase-mute-labels·pattern"
         )
         .contains("tracking-[.06em]"));
@@ -2826,7 +3637,7 @@ chroma_floor: 40
             "<style>.a-zone-lbl{text-transform:uppercase;letter-spacing:0.05em;}</style>",
         );
         assert!(what(
-            &verify_html_against(&by_css, Some(&rules()), Some(&vocab())),
+            &verify_html_against(&by_css, Some(&rules()), Some(&vocab()), Some(&roster())),
             "uppercase-mute-labels·pattern"
         )
         .contains(".a-zone-lbl"));
@@ -2850,6 +3661,7 @@ chroma_floor: 40
             &mockup("<span class=\"text-ok\"></span>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "colour-plus-text·channel").contains("says nothing"));
 
@@ -2865,12 +3677,28 @@ chroma_floor: 40
         assert!(what(&doc_verdict(&silent), "mono-for-wire-data·undeclared").contains("has none"));
     }
 
+    // ...but a run that has not written its mockup yet is owed nothing about
+    // payloads: the demand waits for the stage that answers it, the way overflow
+    // waits for the layout. The mid-flow run is red for the mockup it still owes
+    // and for nothing beyond that.
+    #[test]
+    fn a_run_that_has_not_reached_its_mockup_is_not_asked_to_mark_payloads() {
+        let mid_flow = green_run().replace(
+            "<div data-item=\"mockup\" data-wire=\"none\"><button data-state-toggle=\"mock\">flip</button></div>",
+            "",
+        );
+        let checks = reds(&mid_flow);
+        assert!(checks.contains(&"item·mockup".to_string()), "{checks:?}");
+        assert!(!checks.contains(&"mono-for-wire-data·undeclared".to_string()), "{checks:?}");
+    }
+
     #[test]
     fn a_marked_payload_that_is_not_mono_is_red() {
         let v = verify_html_against(
             &mockup("<span data-wire=\"uri\" class=\"text-ink\">https://x</span>"),
             Some(&rules()),
             Some(&vocab()),
+            Some(&roster()),
         );
         assert!(what(&v, "mono-for-wire-data·family").contains("does not render mono"));
 
@@ -3011,6 +3839,50 @@ chroma_floor: 40
         );
     }
 
+    // A script writes markup; it does not carry it. Every component design file
+    // in the corpus builds its specimen from template literals, so tokenising a
+    // script body reads `class="${NT}"` as a declaration and `a < b` as a tag.
+    #[test]
+    fn a_class_a_script_writes_is_not_a_declaration() {
+        let doc = mockup(
+            "<script>const NT = 'p-[13px]'; if (a < b) render(`<span class=\"${NT}\">x</span>`);</script>",
+        );
+        assert!(
+            !verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())).red(),
+            "{:?}",
+            reds(&doc)
+        );
+    }
+
+    // A fault is local: the tag that carries it has no honest reading, and every
+    // declaration after it still does. Silencing the rest of the doc would turn
+    // one malformed tag into a green run with nine sections nobody checked.
+    #[test]
+    fn a_fault_does_not_silence_the_declarations_after_it() {
+        let doc = green_run().replace(
+            "<p data-item=\"frame\">",
+            "<span title=\"oops>x</span><p data-item=\"frame\">",
+        );
+        let reported = reds(&doc);
+        assert!(reported.contains(&"markup·escaped".to_string()), "{reported:?}");
+        for silenced in ["item·receipt", "item·capabilities", "item·proposals"] {
+            assert!(!reported.contains(&silenced.to_string()), "{silenced} lost: {reported:?}");
+        }
+    }
+
+    // An item is filled by TEXT. Markup the tokeniser claimed is not text, so a
+    // section holding only a comment is as empty as an untouched one - the
+    // reading that keeps a tagged-but-unwritten section from passing.
+    #[test]
+    fn a_section_holding_only_a_comment_is_empty() {
+        let commented = wu_result_body().replace(
+            "<p data-item=\"evidence\">tests</p>",
+            "<p data-item=\"evidence\"><!-- soon --></p>",
+        );
+        let v = verify_html(&doc("wu-result", "", &commented));
+        assert_eq!(failures(&v), vec!["item·evidence"]);
+    }
+
     fn layout(sketch: &str) -> String {
         green_run().replace(
             "<p data-item=\"layout\">zones</p>",
@@ -3057,6 +3929,69 @@ chroma_floor: 40
         );
     }
 
+    // The gate requirement #1 never had. Until the oracle, a catalog was checked
+    // for shape and never for truth: a reuse could name a component that does
+    // not exist and nothing said so.
+    #[test]
+    fn a_reuse_of_a_component_that_does_not_exist_is_red() {
+        let fabricated = green_run().replace("data-key=\"section\"", "data-key=\"section-band\"");
+        assert!(what(&doc_verdict(&fabricated), "elements·unresolved")
+            .contains("no component exists for: SectionBand"));
+
+        // Run #2's real defect, replayed: a reuse of a component whose contract
+        // is nowhere, beside an extend of one that was never built.
+        assert!(reds(&green_run()).iter().all(|check| check != "elements·unresolved"));
+    }
+
+    // The roster has two halves. A component whose contract moved to code is in
+    // the collection's TSDoc; one still designed and unbuilt is its design file,
+    // and citing it is not a defect (DEC-16).
+    #[test]
+    fn a_component_designed_but_not_yet_built_resolves() {
+        let designed = green_run().replace("data-key=\"section\"", "data-key=\"body-viewer\"");
+        assert!(!reds(&designed).contains(&"elements·unresolved".to_string()));
+    }
+
+    // A propose names what is deliberately absent, so it is never asked to
+    // resolve - the whole point of the verdict is that the component is owed.
+    #[test]
+    fn a_propose_may_name_a_component_that_does_not_exist() {
+        let proposed = green_run()
+            .replace("data-key=\"section\"", "data-key=\"step-list\"")
+            .replace("<td>reuse</td>", "<td>propose</td>");
+        assert!(!reds(&proposed).contains(&"elements·unresolved".to_string()));
+    }
+
+    // Silence must not read as green: five citations that resolve against
+    // nothing look exactly like five that resolve.
+    #[test]
+    fn a_run_without_the_registry_emitter_is_red() {
+        let v = verify_html_against(&green_run(), Some(&rules()), Some(&vocab()), None);
+        assert!(
+            what(&v, "elements·registry-unreadable").contains("cannot read the component roster")
+        );
+    }
+
+    // W4 finding 12: which rows may answer by citation was read off the VERDICT
+    // WORD, which is a guess about the registry rather than a reading of it.
+    #[test]
+    fn a_citation_resolves_against_the_registry_not_the_verdict_word() {
+        let cited = |key: &str| {
+            green_run()
+                .replace("data-key=\"section\"", &format!("data-key=\"{key}\""))
+                .replace(
+                    "<details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td>",
+                    "<details class=\"why\"><div>@use every labelled zone · @avoid nesting</div></details></td><td>—</td>",
+                )
+        };
+        assert!(!reds(&cited("copy-text")).contains(&"state-declarations·uncitable".to_string()));
+
+        // BodyViewer is designed, not coded - there is no TSDoc holding states
+        // for the cell to be citing.
+        assert!(what(&doc_verdict(&cited("body-viewer")), "state-declarations·uncitable")
+            .contains("cites a @states nothing declares: BodyViewer"));
+    }
+
     // A reuse may answer by citation - its file already decided. A propose has
     // no file to cite, so an em dash there is a component nobody has designed.
     #[test]
@@ -3070,6 +4005,69 @@ chroma_floor: 40
         let proposed = cited.replace("<td>reuse</td>", "<td>propose</td>");
         assert!(what(&doc_verdict(&proposed), "state-declarations·proposed")
             .contains("no file to cite"));
+    }
+
+    // ─── the design files ───────────────────────────────────────────────────
+
+    // The registry and the design files are disjoint sets, and retirement is
+    // what keeps them so: two contracts for one component, with nothing checking
+    // them against each other, is the drift this epic exists to kill (DEC-16).
+    #[test]
+    fn a_design_file_whose_component_has_code_must_be_retired() {
+        let v = verify_component("<html><body>x</body></html>", "Section", Some(&roster()), None);
+        assert!(what(&v, "components·unretired").contains("still holds a copy"));
+        assert!(what(&v, "components·unretired").contains("distil the forks"));
+    }
+
+    // The other half of DEC-16: a design file with no code is not retired, it is
+    // unbuilt, and the four T3/T4 files are exactly that case.
+    #[test]
+    fn a_design_file_for_an_unbuilt_component_is_green() {
+        let v =
+            verify_component("<html><body>x</body></html>", "BodyViewer", Some(&roster()), None);
+        assert!(failures(&v).is_empty(), "{:?}", failures(&v));
+    }
+
+    #[test]
+    fn a_design_file_without_the_registry_emitter_is_red() {
+        let v = verify_component("<html><body>x</body></html>", "Section", None, None);
+        assert!(what(&v, "components·registry-unreadable").contains("cannot be answered unread"));
+    }
+
+    // W5 dissolved the specimen sheet so the docs and the app read one config. A
+    // stylesheet rule for a class that config already emits re-opens the gap
+    // from the other side.
+    #[test]
+    fn a_design_file_may_not_re_draw_a_class_the_vocabulary_owns() {
+        let redrawn =
+            "<html><head><style>.row .text-ink{color:#111;}</style></head><body>x</body></html>";
+        let v = verify_component(redrawn, "BodyViewer", Some(&roster()), Some(&vocab()));
+        assert!(what(&v, "components·redrawn").contains("re-draws `text-ink`"));
+
+        let own = "<html><head><style>.row-sim .cap{color:var(--muted);}</style></head><body>x</body></html>";
+        let v = verify_component(own, "BodyViewer", Some(&roster()), Some(&vocab()));
+        assert!(
+            failures(&v).is_empty(),
+            "a doc's own chrome is not the vocabulary's: {:?}",
+            failures(&v)
+        );
+    }
+
+    // The folder is the artifact type: a design file declares no data-artifact,
+    // so nothing but its path says what it is.
+    #[test]
+    fn a_component_file_is_recognised_by_its_path_and_named_by_its_stem() {
+        assert_eq!(
+            component_designed("docs/work/components/copy-text.html").as_deref(),
+            Some("CopyText")
+        );
+        assert_eq!(
+            component_designed("/abs/repo/docs/work/components/status-pill.html").as_deref(),
+            Some("StatusPill")
+        );
+        assert_eq!(component_designed("docs/work/components/nested/x.html"), None);
+        assert_eq!(component_designed("docs/work/2026-07-16-dflow-run-1.html"), None);
+        assert_eq!(component_designed("docs/work/components/README.md"), None);
     }
 
     #[test]
@@ -3110,7 +4108,7 @@ chroma_floor: 40
             "grid-cols-[auto_1fr] — the two-column payload grid has no token shape",
             "<div class=\"grid-cols-[auto_1fr]\">x</div>",
         );
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(!v.red(), "{:?}", failures(&v));
         let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
         assert!(summary.contains("design-allow: 1 live suppression"), "{summary}");
@@ -3167,7 +4165,7 @@ chroma_floor: 40
             "grid-cols-[auto_1fr] -- the two-column payload grid has no token shape",
             "<div class=\"grid-cols-[auto_1fr]\">x</div>",
         );
-        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(!v.red(), "{:?}", failures(&v));
     }
 
@@ -3180,7 +4178,8 @@ chroma_floor: 40
             "grid-cols-[--tw-cols] -- the template shape comes from a custom property",
             "<div class=\"grid-cols-[--tw-cols]\">x</div>",
         );
-        let reds = failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab())));
+        let reds =
+            failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())));
         assert!(!reds.contains(&"design-allow".to_string()), "{reds:?}");
     }
 
@@ -3193,7 +4192,8 @@ chroma_floor: 40
             "grid-cols-[auto_1fr]--the two-column payload grid has no token shape",
             "<div class=\"grid-cols-[auto_1fr]\">x</div>",
         );
-        let reds = failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab())));
+        let reds =
+            failures(&verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())));
         assert!(!reds.contains(&"design-allow".to_string()), "{reds:?}");
     }
 
@@ -3233,7 +4233,7 @@ chroma_floor: 40
 
     #[test]
     fn a_vocabulary_that_cannot_be_read_is_red_never_silently_green() {
-        let v = verify_html_against(&green_run(), Some(&rules()), None);
+        let v = verify_html_against(&green_run(), Some(&rules()), None, None);
         assert!(v.red(), "five rules that cannot be checked must not pass");
         assert!(what(&v, "vocabulary·unreadable").contains("cannot pass unread"));
     }
@@ -3258,7 +4258,10 @@ chroma_floor: 40
     #[test]
     fn a_reasonless_class_carrying_its_own_dashes_is_red_and_says_which_reading_it_took() {
         let doc = pragma("grid-cols-[--tw-cols]", "<div class=\"grid-cols-[--tw-cols]\">x</div>");
-        let said = what(&verify_html_against(&doc, Some(&rules()), Some(&vocab())), "design-allow");
+        let said = what(
+            &verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster())),
+            "design-allow",
+        );
         assert!(said.contains("grid-cols-[--tw-cols]` read as this class plus a reason"), "{said}");
     }
 }

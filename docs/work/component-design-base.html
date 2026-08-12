@@ -20,13 +20,13 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>Component design — base spec &amp; template</h1>
-      <p>The file format an AI agent follows to design <strong>one component = one file</strong>, and the review loop that confirms it. Component-agnostic: the reusable method, not one design. Canonical exemplar: <a href="components/copy-text.html">CopyText</a> — copy its structure, replace its content.</p>
+      <p>The file format an AI agent follows to design <strong>one component = one file</strong>, and the review loop that confirms it. Component-agnostic: the reusable method, not one design. Canonical exemplar: <a href="components/header-table.html">HeaderTable</a> — copy its structure, replace its content.</p>
       <div class="meta">Base spec · 2026-07-22 · Trawler · T3 (docs/work/) → promotion decided at W4 distillation · from E-DFLOW.W2 · sibling: <a href="design-flow-base.html">design-flow-base</a> (screens)</div>
     </div>
   </header>
   <main>
     <h2 id="what">What this is</h2>
-    <p>The per-component design format E-DFLOW.W2 converged on by piloting <a href="components/copy-text.html">CopyText</a> through live review rounds. A screen run's Elements stage names components; <strong>this file is where one of them actually gets designed</strong> — deeply enough that the build WU implements it without further decisions. The file compiles down to the component's registry TSDoc (code-as-truth): the doc is the long form with rationale and examples; the TSDoc is its usage summary; the generated index derives from that.</p>
+    <p>The per-component design format E-DFLOW.W2 converged on by piloting CopyText through live review rounds. A screen run's Elements stage names components; <strong>this file is where one of them actually gets designed</strong> — deeply enough that the build WU implements it without further decisions. The file compiles down to the component's registry TSDoc (code-as-truth): the doc is the long form with rationale and examples; the TSDoc is its usage summary; the generated index derives from that.</p>
     <div class="diagram" data-c="compile-path">
       <pre class="mermaid">
 flowchart LR
@@ -111,7 +111,7 @@ specimen  <span class="ph">live demo (or simplified sample) — last</span></pre
     </table>
 
     <h2 id="provenance">Provenance</h2>
-    <p>Extracted from the <a href="components/copy-text.html">CopyText pilot</a> (E-DFLOW.W2) after three review rounds; the rounds live in that doc's snapshots. The format's review-driven rules — example-first, spec-first/demo-last, why columns, the specimen scale-down rule — all came out of those rounds, not theory. T3 until W4 validates the flow that consumes these designs; whether this becomes a T1 process doc (or a section of the promoted design-flow doc) is decided at that distillation.</p>
+    <p>Extracted from the CopyText pilot (E-DFLOW.W2 — that file was retired in W7 under <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>, its forks in <a href="../decisions/dec-20-logic-lives-with-its-inputs.html">DEC-20</a>) after three review rounds; the rounds live in that doc's snapshots. The format's review-driven rules — example-first, spec-first/demo-last, why columns, the specimen scale-down rule — all came out of those rounds, not theory. T3 until W4 validates the flow that consumes these designs; whether this becomes a T1 process doc (or a section of the promoted design-flow doc) is decided at that distillation.</p>
   </main>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';

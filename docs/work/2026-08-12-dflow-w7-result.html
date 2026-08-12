@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7c05dc9f34851f0dfab80d">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W7 result (the harness)</title>
+  <style>
+    .gist{font-weight:600;}
+    details.why{margin-top:4px;}
+    details.why summary{cursor:pointer;color:var(--muted);font-size:12px;}
+    details.why > div,details.why > ul{margin-top:4px;color:var(--muted);font-size:12px;}
+    table{font-size:13px;}
+    td code{white-space:nowrap;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W7 result — the harness</h1>
+      <p>The design flow is gated end to end. Six steps, two holes found in the gate this WU built, and
+        <strong>one tier that ships unexercised</strong> — <a href="#gap">read that first</a>.</p>
+      <div class="meta">Result report · 2026-08-12 · Trawler · T3 ·
+        <code>wu/design-flow/harness</code> → <code>epic/design-flow</code> ·
+        <a href="2026-08-11-dflow-w7-plan.html">plan</a> ·
+        <a href="2026-08-11-dflow-w7-discussion.html">discussion</a> ·
+        <a href="design-flow-base.html">the flow</a> ·
+        <a href="2026-08-10-dflow-w6-result.html">W6 result</a></div>
+    </div>
+  </header>
+
+  <main data-artifact="wu-result">
+
+    <h2 id="outcome">Outcome</h2>
+    <div class="cards" data-item="outcome">
+      <div class="card"><h3>3 / 3 tiers gated</h3><p>write-time · the receipt · the merge</p></div>
+      <div class="card"><h3>e2e paid</h3><p>waived by W1–W6, built here</p></div>
+      <div class="card"><h3>2 gate holes</h3><p>found <em>by</em> the e2e, not by review</p></div>
+      <div class="card"><h3>0 verdicts moved</h3><p>the parser swap, 85 files, empty diff</p></div>
+      <div class="card"><h3>16 files retired</h3><p>48 forks judged → DEC-18…23</p></div>
+      <div class="card"><h3>1 tier unexercised</h3><p>Tier-3's finder has never judged a real
+        artifact</p></div>
+      <div class="card"><h3>417 + 492</h3><p>Rust · vitest. Every gate clean</p></div>
+      <div class="card"><h3>5 more holes</h3><p>found by the review over 3 rounds — most of them written
+        that same hour</p></div>
+      <div class="card"><h3>clippy saw 1 of 2 crates</h3><p>for the whole epic. <code>xtask</code> was
+        never linted</p></div>
+      <div class="card"><h3>2 items open</h3><p>the <code>cr/v3</code> attach · your sign-off. <strong>A
+        report cannot print its own gate state</strong> — writing it moves the tip</p></div>
+    </div>
+
+    <h2 id="run">How to run any of it</h2>
+    <table data-c="tbl-run">
+      <thead><tr><th>To check</th><th>Command</th></tr></thead>
+      <tbody>
+        <tr><td><strong>the flow e2e</strong> — this WU's headline deliverable</td>
+          <td><code>cargo test -p xtask --features design-e2e --test e2e_design_flow</code></td></tr>
+        <tr><td>everything else</td><td><code>cargo test --workspace --features hook-tests</code></td></tr>
+        <tr><td>Tier-1 over one run doc</td><td><code>cargo xtask verify-doc &lt;path&gt;</code></td></tr>
+        <tr><td>Tier-1 over every tracked doc</td>
+          <td><code>git ls-files '*.html' | xargs cargo run -q -p xtask -- verify-doc</code></td></tr>
+        <tr><td>what Tier-3 must judge, and the pin it writes</td>
+          <td><code>cargo xtask design-scope origin/epic/design-flow HEAD</code></td></tr>
+        <tr><td>the merge gate, without merging</td>
+          <td><code>cargo xtask verify-dod wu HEAD --target origin/epic/design-flow</code></td></tr>
+        <tr><td>the component vocabulary</td><td><code>node scripts/design-registry.mjs</code></td></tr>
+      </tbody>
+    </table>
+    <p class="kd"><strong>Pass the base explicitly.</strong> The local <code>epic/design-flow</code> ref sat
+      at <code>fdce56d</code> for this whole WU, one merge behind <code>2bceacd</code>, and every command
+      that defaulted to it measured the wrong diff — which is what produced
+      <a href="#gap">the gap below</a>. Fast-forwarded at ⑥; the habit is still to name the ref.</p>
+
+    <h2 id="e2e">The e2e — 2 tests, feature-gated</h2>
+    <div class="diagram" data-c="dia-e2e">
+      <pre class="mermaid">
+flowchart LR
+  H["fake human<br/>3 instructions + mr/v1"] -.-> A
+  A["fake designing agent<br/>1 artifact per stage"] --> T1{"Tier-1<br/>after every stage"}
+  T1 -->|"red = exactly<br/>the stages still owed"| A
+  T1 -->|11 of 11| T2["Tier-2<br/>receipt vs rulebook ON DISK"]
+  T2 --> C["close · archive · commit"]
+  C --> S["design-scope<br/>what to judge · the pin"]
+  S --> T3["cr/v3<br/>written from S alone"]
+  T3 --> M{"git merge --no-ff<br/>the real hook"}
+  M -->|"cr/v2 · no section · FAIL"| RED["refused"]
+  M -->|complete| GREEN["merged · dod/v1"]
+  style RED fill:#3a2b2b,stroke:#e5484d
+      </pre>
+      <div class="caption">Real binary · real <code>node</code> oracles over a real component collection ·
+        real git · real <code>pre-merge-commit</code> hook. Built in a tempdir, touches nothing.</div>
+    </div>
+    <table data-c="tbl-e2e">
+      <thead><tr><th>Test</th><th>Asserts</th><th>The failure it refuses</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="4"><code>the_whole_design_flow<br/>_runs_green_and_the<br/>_three_tiers_land_it</code></td>
+          <td>after stage <em>n</em>, red for <strong>exactly</strong> the stages not yet written</td>
+          <td>fewer = the flow went quiet · more = it refused a stage that was not wrong. Both were
+            live</td></tr>
+        <tr><td>the rulebook moving under an open run reds the pin <em>and</em> the new rule</td>
+          <td>a receipt complete against a rulebook nobody has read since</td></tr>
+        <tr><td>the <code>cr/v3</code> note is built from <code>design-scope</code>'s output and nothing
+          else</td><td>reviewer and gate each deciding what counts as design-bearing</td></tr>
+        <tr><td>4 merges: <code>cr/v2</code> ✗ · no design section ✗ · FAIL verdict ✗ · complete ✓</td>
+          <td>a PASS covering a design nobody read</td></tr>
+        <tr><td><code>a_rule_violating_mockup<br/>_reds_at_its_own_stage<br/>_and_never_reaches<br/>_the_epic</code></td>
+          <td>breach reds <strong>at the mockup stage</strong>, naming <code>text-crimson</code>; stays the
+            only red; unclosable; merge refused by <code>6·run-closed</code></td>
+          <td>a breach surfacing at the end, where it is expensive — or not at all</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">Feature-gated because each stage spawns the binary and each spawn spawns
+      <code>node</code> twice. Same shape as <code>tests/e2e_manual_review.rs</code>: run it when the flow
+      or the harness changes.</p>
+
+    <h2 id="requirement">The requirement, leg by leg</h2>
+    <table data-c="tbl-req">
+      <thead><tr><th></th><th>The plan required</th><th>Landed</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge auto">met</span></td>
+          <td>Tier-3 as a <strong>dimension of the code review</strong>, verdict in <code>cr/v3</code>,
+            merge refusing a silent design-bearing tip</td>
+          <td>rubric · conditional finder · <code>design-scope</code> (one function, two callers) ·
+            <code>9·design</code></td>
+          <td><a href="2026-08-12-dflow-w7-step4-tier3.html">④</a> + ⑤</td></tr>
+        <tr><td><span class="badge auto">met</span></td>
+          <td>the <strong>registry gate requirement #1 never had</strong> — index from TSDoc, citations
+            resolved, DEC-16's order refused</td>
+          <td><code>scripts/design-registry.mjs</code> (emitted, never stored) · 4 predicates ·
+            <code>6·retirement-order</code> · 16 deletions</td>
+          <td><a href="2026-08-11-dflow-w7-step1-registry.html">①</a>
+            <a href="2026-08-12-dflow-w7-step2-registry-gate.html">②</a></td></tr>
+        <tr><td><span class="badge auto">met</span></td>
+          <td>a run <strong>closes as an owned step</strong>, pin verified, review changes recorded</td>
+          <td><code>6·run-closed</code> at the merge · <code>receipt·rulebook-stale</code> · the
+            <code>review</code> item (W4 finding 29)</td>
+          <td><a href="2026-08-12-dflow-w7-step3-close.html">③</a></td></tr>
+        <tr><td><span class="badge auto">met</span></td>
+          <td>a <strong>flow e2e</strong> through all three tiers, violating red and compliant green</td>
+          <td><a href="#e2e">2 tests</a>, <code>xtask/tests/e2e_design_flow.rs</code></td>
+          <td><a href="2026-08-12-dflow-w7-step5-e2e.html">⑤</a></td></tr>
+        <tr><td><span class="badge auto">met</span></td>
+          <td><em>enabling</em> — replace the hand-rolled HTML scanning first</td>
+          <td>4 scanners + 5 helpers → one <code>quick-xml</code> tokeniser. 0 new dependencies</td>
+          <td><a href="2026-08-11-dflow-w7-step0-parser.html">⓪</a></td></tr>
+        <tr><td><span class="badge approval">open</span></td>
+          <td>the harness <strong>drivable by a human</strong>, then the human's fourth run</td>
+          <td>step ⑥ — <a href="#owed">see what is owed</a></td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="ledger">What each step cost</h2>
+    <table data-c="tbl-ledger">
+      <thead><tr><th>Step</th><th>Shipped</th><th>What executing it changed</th></tr></thead>
+      <tbody>
+        <tr><td><strong>⓪</strong> parser swap</td>
+          <td>one tokeniser; 6 review-round holes become tests</td>
+          <td><div class="gist">Nothing — deliberately. Empty output diff over 85 files.</div>
+            <details class="why"><summary>the 3 differences it did find</summary><ul>
+              <li>19 declarations a <em>script</em> writes stop counting — those 4 files declare no
+                <code>data-artifact</code>, so nothing read them</li>
+              <li>single-quoted attributes become visible — the corpus's one instance is a draft doc</li>
+              <li><code>markup·escaped</code> stated one level out: a raw bracket <em>in a tag</em>, not
+                <em>in a value</em>. Same sites red</li></ul></details></td></tr>
+        <tr><td><strong>①</strong> registry oracle</td>
+          <td>24 entries from <code>@tier</code> blocks; 53 hand-typed literals deleted</td>
+          <td><div class="gist">7 of 29 hand-typed pairs were wrong.</div>
+            <details class="why"><summary>and 2 were not merely stale</summary><div>
+              <code>JsonRenderer → TextRenderer</code> and <code>XmlRenderer → TextRenderer</code> came
+              from <code>@madeof</code> while the table claimed to read <code>@avoid</code>. A true fact
+              about the wrong relation — the test passed, and passing could never surface it.</div></details></td></tr>
+        <tr><td><strong>②</strong> registry gate</td>
+          <td>4 predicates + <code>6·retirement-order</code>; 16 files retired, DEC-18…23</td>
+          <td><div class="gist">3 of the plan's 6 rows did not survive the tree.</div>
+            <details class="why"><summary>each measured before code was written</summary><ul>
+              <li><strong>undecidable</strong> — citations are paraphrases; word overlap 0.00–1.00 with
+                legitimate citations at both ends → Tier-3</li>
+              <li><strong>false by 12</strong> — 8 roster entries have no design file, 4 design files have
+                no roster entry; both correct end states → restated as <em>zero overlap</em></li>
+              <li><strong>0 eligible</strong> — no fork had ever been distilled → distil and delete all 16
+                here</li></ul>
+              One probe script; three predicates that would have been wrong in the tree.</details></td></tr>
+        <tr><td><strong>③</strong> a run closes</td>
+          <td>pin vs the file it names · the <code>review</code> item · <code>6·run-closed</code></td>
+          <td><div class="gist">The pin had been wrong since W6 merged. Cost 3 walk waivers.</div>
+            <details class="why"><summary>what the pin was doing</summary><div>
+              <code>receipt·rulebook</code> checked the field was non-empty, so <code>rulebook: x</code>
+              passed. Both receipted runs pin <code>28f5437</code>; the rulebook is
+              <code>796c547</code>. Every soft verdict above that pin was a claim against a rulebook
+              nobody had hashed, for three Working Units.</div></details></td></tr>
+        <tr><td><strong>④</strong> Tier-3</td>
+          <td>rubric · finder · <code>cr/v3</code> · <code>9·design</code> · <code>design-scope</code></td>
+          <td><div class="gist">0 walk waivers — the schema string <em>is</em> the grandfather rule. Plus
+            one measurement taken against a stale ref.</div>
+            <details class="why"><summary>why zero</summary><div>A <code>cr/v2</code> note says in its own
+              bytes that it predates the design dimension, so the walk drops that one check at seams. No
+              date cutoff, no remembered list. The stale-ref defect is <a href="#gap">the gap</a>.</div></details></td></tr>
+        <tr><td><strong>⑤</strong> the flow e2e</td>
+          <td><a href="#e2e">2 e2e</a> + 2 fixes + 3 tests for them</td>
+          <td><div class="gist">2 live holes in the gate this WU had just built.</div>
+            <details class="why"><summary>see the table below</summary><div>
+              <a href="#holes">What the e2e found</a> — and why no fixture in the suite could have seen
+              either.</div></details></td></tr>
+        <tr><td><strong>⑥</strong> hand over</td>
+          <td><a href="design-flow-base.html#commands">the command table</a> · DEC-24 · DEC-15's tiers ·
+            DEC-16's predicate · 1 test</td>
+          <td><div class="gist">"Every red says what to do about it" is asserted, not audited.</div>
+            <details class="why"><summary>why a test and not a checklist</summary><div>
+              A rule an author has to remember is a rule an author forgets — this epic's own thesis, so the
+              hand-over rule gets a predicate like everything else.
+              <code>every_red_a_run_can_raise_says_what_to_do_about_it</code> pools six deliberately broken
+              fixtures, reaches <strong>33 distinct checks</strong>, and requires every failure's fix to be
+              non-empty, ≥4 words, and not a restatement of its own <code>what</code> (W6 round 9's defect
+              class). Mutation-verified: blanking one fix kills it.</div></details></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="holes">What the e2e found</h2>
+    <table data-c="tbl-holes">
+      <thead><tr><th>Hole</th><th>Why the suite was blind to it</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td><code>mono-for-wire-data·undeclared</code> reds at the <strong>Frame</strong> stage —
+          <em>"the mockup marks no payload"</em> — 4 stages before any mockup is due</td>
+          <td>every design-run fixture is a <strong>complete</strong> run, and a complete run always has a
+            mockup. The defect lives only in the states a run passes <em>through</em></td>
+          <td>the demand waits for the mockup item, as its 3 siblings already do. No complete run changes
+            verdict</td></tr>
+        <tr><td>a design-bearing tip on a <code>cr/v2</code> note <strong>merged clean</strong>:
+          <em>"exempt — docs/infra-only, gate not required"</em></td>
+          <td>every gate fixture is a <strong>code-bearing</strong> WU. A design is a docs-only
+            <em>deliverable</em>, and <code>9·design</code> sits after the exemption's short-circuit</td>
+          <td><code>code_changed || designs</code>, beside <code>6·run-closed</code>. Exemption narrowed,
+            not removed</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="w2">
+      <strong>Hole 2 was not hypothetical.</strong> Re-running the epic gate turned exactly one landed seam
+      red: <code>8173f47</code>, the <strong>E-DFLOW.W2 merge</strong> — <code>component-design-base.html</code>
+      + <strong>14 component design files</strong>, the whole registry three runs design against, with
+      <strong>no <code>cr</code> note at all</strong>. Not a stale review; no review. Its
+      <code>test/v2</code> note names the reason — <em>"design/docs-only WU"</em> — which is the claim the
+      new rule refuses.
+    </div>
+    <table data-c="tbl-census">
+      <thead><tr><th>Epic census · <code>main..origin/epic/design-flow</code></th><th>before ⑤</th><th>after ⑤</th></tr></thead>
+      <tbody>
+        <tr><td><code>6·doc-note</code></td><td>58</td><td>58</td></tr>
+        <tr><td><code>7·walk·1·notes</code></td><td>7</td><td><strong>9</strong></td></tr>
+        <tr><td><code>7·walk·6·run-closed</code> · <code>1·notes</code></td><td>3 · 3</td><td>3 · 3</td></tr>
+        <tr><td><code>7·walk·2·manifest</code> · <code>8·manual-review</code></td><td>1 · 1</td><td>1 · 1</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">Delta = <strong>one seam reporting twice</strong> (no <code>cr</code> note; a
+      <code>doc/v1</code> that never parsed). Every other line byte-identical.</p>
+
+    <h2 id="review">What the review found</h2>
+    <table data-c="tbl-rounds">
+      <thead><tr><th>Round</th><th>Tip</th><th>Candidates</th><th>Real</th><th>Bought</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>f6ebf6a</code></td><td>7</td><td><strong>4</strong></td>
+          <td>all fixed → <code>d68aa22</code>. 3 were written that same hour; the 4th had been open the whole
+            epic</td></tr>
+        <tr><td>2</td><td><code>d68aa22</code></td><td>13</td><td>1</td>
+          <td>waived. 4 finders converged on one function and all 4 were wrong the same way</td></tr>
+        <tr><td>3</td><td><code>51e947a</code></td><td>9</td><td>4</td>
+          <td>the docs-only round. 2 defects in prose written minutes earlier, 1 code site where <strong>the WU
+            broke its own rule</strong>, and <strong>the round-2 waiver's reason was wrong</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="kd">Round 3's delta was one T3 document and <strong>zero code</strong> — the round that looked
+      ceremonial produced the correction to a waiver already recorded as evidence.</p>
+    <table data-c="tbl-review-r1">
+      <thead><tr><th>Round 1 · real</th><th>Class</th><th>What it would have cost</th></tr></thead>
+      <tbody>
+        <tr><td><code>6·retirement-order</code> followed a slug citation in the <strong>working
+          tree</strong></td><td>correctness</td>
+          <td>A later slug rename reddens an <em>already-merged</em> retirement. A gated branch may never be
+            amended, so a walk waiver is the only exit — the retroactive reddening
+            <code>check_design_pin</code>'s tip-read exists to prevent, in code written an hour after that
+            comment. <strong>Regression test first</strong>; it fails against the old read</td></tr>
+        <tr><td><code>verify()</code> fetched every doc blob <strong>2–3×</strong> per call</td>
+          <td>efficiency</td>
+          <td><code>walk()</code> multiplies it per seam. One fetch, threaded:
+            <strong>1.1s → 0.79s</strong> at WU scope, <strong>4.8s → 3.26s</strong> at epic scope</td></tr>
+        <tr><td>the pin floor re-derived at 3 sites</td><td>nit</td>
+          <td><code>doc::pin_of</code> owns it</td></tr>
+        <tr><td><code>cargo clippy</code> ran <strong>without <code>--workspace</code></strong> — in gate 0
+          <em>and</em> the pre-commit hook</td><td>correctness</td>
+          <td>The root is a package as well as a workspace, so only <code>trawler</code> was linted.
+            <strong>Every gate, hook and design check W1–W7 wrote has never been clippy-linted.</strong>
+            Adding the flag surfaced 4 pedantic reds immediately. A test at each call site now refuses its
+            removal</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="lint-hole">
+      <strong>The lint hole is the one that generalises.</strong> It was not found by a finder — it surfaced
+      while fixing a nit, because a workspace-wide clippy run was needed to check the fix. Three of the four
+      round-1 defects were written during ⑥ itself; this one had been open for the whole epic, in the crate
+      that enforces everything else, and no gate could see it.
+    </div>
+    <table data-c="tbl-review-r2">
+      <thead><tr><th>Rounds 2–3 · 22 candidates</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><code>nodes(html)</code> re-tokenises the whole document on <em>every</em>
+          <code>attrs</code>/<code>element_content</code> call, so paths calling it per occurrence cost
+          O(occurrences × doc size) where ⓪'s predecessors did not</td>
+          <td><span class="badge approval">real · nit · waived</span> — on
+            <a href="#review">size, not unreachability</a></td></tr>
+        <tr><td><code>run_paths</code> gated the two node oracles on a <strong>substring</strong>, so every doc
+          that merely <em>quotes</em> <code>data-artifact="design-run"</code> paid for both. ③'s own record
+          says <em>"read the declaration, never the string"</em> — fixed at the run-finder, missed here</td>
+          <td><span class="badge auto">fixed</span> <code>declares_a_design</code> tokenises;
+            <strong>0.19s → 0.026s</strong> on the <strong>5</strong> affected docs — 8 quote the string, 3
+            declare it. The 5th is <em>this report</em>, which became a false positive by quoting the
+            declaration to describe the fix</td></tr>
+        <tr><td>this report claimed <code>cr/v3</code> was already attached, and counted
+          <strong>one</strong> open item where <code>verify-dod</code> reds <strong>two</strong></td>
+          <td><span class="badge auto">fixed</span> — the section now names the command, not its output</td></tr>
+        <tr><td>the refutation note was a 186-word prose wall where every sibling block is 36–78 words</td>
+          <td><span class="badge auto">fixed</span> — it is a table</td></tr>
+        <tr><td>4 finders converged on <code>catalog_rows</code>/<code>row_key</code> hand-scanning markup</td>
+          <td><span class="badge auto">all refuted</span></td></tr>
+        <tr><td>a fourth un-collapsed blob fetch in <code>check_retirement_order</code></td>
+          <td><span class="badge auto">refuted</span> — reusing <code>docs</code> there is
+            <em>unsound</em></td></tr>
+        <tr><td><code>design_scope</code>'s String return · its base derivation · pin-check duplication ·
+          tokeniser module placement · <code>workflow.html</code> staleness · the clippy invariant's tier ·
+          two intra-doc duplications</td><td><span class="badge auto">refuted</span></td></tr>
+      </tbody>
+    </table>
+    <details class="why" data-c="why-refuted">
+      <summary>Why 4 finders agreeing on one function was worth <em>less</em>, not more</summary>
+      <p>All four reasoned from <em>"hand-rolled scanning is fragile"</em> without testing the tokeniser.
+        Only verifiers that tested the counterfactual moved a verdict.</p>
+      <table data-c="tbl-refuted">
+        <thead><tr><th>Claim</th><th>Mechanism</th><th>Why it did not matter</th></tr></thead>
+        <tbody>
+          <tr><td>the scanner mis-reads a quoted <code>&lt;tr</code></td><td>real</td>
+            <td>the <strong>tokeniser produces the identical row</strong>. <code>&lt;pre&gt;</code>/<code>&lt;code&gt;</code>
+              are parsed content in HTML5 — <code>RAW_TEXT</code> is only <code>&lt;script&gt;</code>/<code>&lt;style&gt;</code></td></tr>
+          <tr><td>a <code>&gt;</code> in an earlier attribute drops the row</td><td>real — the row vanishes</td>
+            <td><code>markup·escaped</code> reds any raw <code>&gt;</code> in a tag, first and unconditionally;
+              its only accepted fix disarms the drop</td></tr>
+          <tr><td>reuse <code>elements_of</code></td><td>would not compile into working code</td>
+            <td>it returns an element's <em>body</em>; <code>data-key</code> rides the opening tag it strips</td></tr>
+        </tbody>
+      </table>
+    </details>
+    <div class="callout" data-c="waiver">
+      <strong>The one waiver, and the premise round 3 corrected.</strong> Round 2 waived this as
+      <em>unreachable</em>. Round 3 measured that reason too narrow, so it is restated here as what is
+      actually true.
+      <table data-c="tbl-waiver">
+        <thead><tr><th>Instance</th><th>Reached today?</th><th>Cost measured</th></tr></thead>
+        <tbody>
+          <tr><td><code>check_hard_rules</code> → <code>check_colour_plus_text</code></td>
+            <td><span class="badge auto">no</span> all 6 real design-run declarations are
+              <code>draft</code>/<code>archived</code> → <code>Exempt</code> first; component designs never
+              call it</td><td>—</td></tr>
+          <tr><td><code>verify_html_against</code>'s entry path — <code>wu_blocks</code> ·
+            <code>top_items</code>/<code>sub_items</code>, <em>before</em> that gate</td>
+            <td><span class="badge approval">yes</span> <strong>11 real docs</strong>, on every write</td>
+            <td>worst real doc <strong>~40–90ms</strong> at 53 occurrences; superlinear only past hundreds of
+              items and megabytes, which no doc approaches</td></tr>
+        </tbody>
+      </table>
+      So the waiver rests on <strong>size, not unreachability</strong> — the honest ground, and it covers
+      <em>every</em> <code>attrs</code>/<code>element_content</code> call site, not only the two rows above.
+      Round 4 found a third (<code>declares_a_design</code> and <code>verify_html_against</code> asking
+      <code>data-artifact</code> twice per pass) and it folds in here: one extra parse over 8 docs, against a
+      fix that would re-signature 40+ call sites. <strong>Carried as follow-up 10.</strong>
+    </div>
+
+    <h2 id="gap">⚠ The gap — Tier-3 ships unexercised</h2>
+    <table data-c="tbl-gap">
+      <thead><tr><th></th><th></th></tr></thead>
+      <tbody>
+        <tr><td><strong>Plan's acceptance for ④</strong></td>
+          <td>run the design finder over the 3 archived runs; require it to surface their known
+            defects</td></tr>
+        <tr><td><strong>Waived</strong></td>
+          <td><span class="badge approval">your ruling, stands</span> those runs are closed under older
+            contracts</td></tr>
+        <tr><td><strong>Replacement claimed</strong></td>
+          <td>"this WU's diff is design-bearing, so ⑥'s review is the tier's first real exercise"</td></tr>
+        <tr><td><strong>Status</strong></td>
+          <td><span class="badge">false</span> measured, not suspected</td></tr>
+      </tbody>
+    </table>
+    <pre>$ xtask design-scope epic/design-flow        wu/…/harness   # local ref fdce56d — what ④ ran
+1 design artifact(s) to judge, against rulebook 796c547:
+docs/work/2026-07-26-dflow-w4-run-3.html
+
+$ xtask design-scope origin/epic/design-flow wu/…/harness   # the real base 2bceacd
+no design artifact in 2bceacd71d..bfac33b2e1</pre>
+    <p class="kd">The stale base still contains W6's work, including the commit that archived run #3. W7's
+      16 component design files are all <strong>removals</strong>, which <code>design_artifact</code>
+      correctly excludes — retirement is <code>6·retirement-order</code>'s business.</p>
+    <table data-c="tbl-gap2">
+      <thead><tr><th>Proved by <a href="#e2e">⑤</a></th><th>Not proved by anything</th></tr></thead>
+      <tbody>
+        <tr><td>the dimension runs over everything <code>design-scope</code> names · against the rulebook
+          the tip ships · its absence is loud · a FAIL refuses the merge</td>
+          <td><strong>that the finder finds anything.</strong> The first <code>cr/v3</code> in the repo will
+            have an empty design section, correctly</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="gap-call">
+      <strong>Ruled: deferred to W9's fresh-screen run.</strong> The tier ships with its plumbing proved and
+      its judgment unexercised, and <strong>W9 is where the finder first judges a real artifact</strong> —
+      "proved by use", one Working Unit later than the plan intended. Calibration over the archived runs
+      stays waived: ④'s reason for waiving it (those runs are closed under older contracts) survives the
+      collapse of ④'s <em>replacement</em> argument. Step ⑥ therefore writes a <code>cr/v3</code> whose
+      design section is <strong>absent</strong>, which is the correct reading of this diff and not a gap in
+      the note.
+      <br><br>
+      <strong>What W9 inherits, stated so it cannot be lost:</strong> the finder is unproven, and the defect
+      class it is the sole owner of — <a href="#follow-ups">follow-up 4</a>, whether a cited
+      <code>@avoid</code> is faithfully paraphrased — is the one run #3 actually shipped. W9's run is the
+      tier's acceptance test, not merely its first use.
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <thead><tr><th>Plan said</th><th>Shipped</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>④'s acceptance is calibration over the 3 archived runs</td>
+          <td>waived, and its replacement <a href="#gap">does not hold</a></td>
+          <td>the waiver was ruled and stands; the replacement was an inference from a stale branch
+            ref</td></tr>
+        <tr><td>② builds 6 checks</td><td>4 predicates + the gate check; 3 rows re-ruled first</td>
+          <td>each measured against the corpus before code — <a href="#ledger">the three reasons</a></td></tr>
+        <tr><td>⑤ is the flow e2e</td><td>the e2e <strong>plus 2 gate fixes</strong> and 3 tests</td>
+          <td>the e2e's job is to prove the plumbing; it found it broken twice. Adding a dummy code file to
+            keep ⑤'s scope tidy would have hidden a live hole</td></tr>
+        <tr><td>DEC-18 is reserved for the design-review record</td>
+          <td>that record is <strong>DEC-24</strong></td>
+          <td>②'s fork distillations landed first and took 18–23. Append-only beats a reserved number and a
+            gap. <strong>Two of ④'s notes still say DEC-18</strong> — corrected here</td></tr>
+        <tr><td>①'s freshness gate and <code>index-covers-folder</code></td><td>dissolved, not built</td>
+          <td>ruled at planning (D3): nothing stored can go stale, and the emitted index <em>is</em> the
+            folder. Listed so a plan-to-tree reader is not left hunting two rows</td></tr>
+        <tr><td>test plan: <strong>no waiver at any level</strong></td><td>held</td>
+          <td>the one line with no give in it, and the only one this WU could not defer again without the
+            epic's e2e level being vacuous</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="tbl-gates">
+        <thead><tr><th>Gate</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><code>fmt --check</code> · <code>clippy --all-targets --all-features -D warnings</code></td>
+            <td>clean</td></tr>
+          <tr><td><code>cargo test --workspace --features hook-tests</code></td>
+            <td><strong>417</strong> — xtask lib 187 · <code>dod_gate</code> 63 · <code>verify_doc</code> 9</td></tr>
+          <tr><td><code>cargo test -p xtask --features design-e2e --test e2e_design_flow</code></td>
+            <td><strong>2</strong> — the epic's e2e level</td></tr>
+          <tr><td><code>npx tsc -b</code> · <code>npm run lint</code> · <code>npx vitest run</code></td>
+            <td>clean · clean · <strong>492</strong> across 40 files</td></tr>
+          <tr><td><code>cargo xtask ui specimens --check</code></td><td>all render</td></tr>
+          <tr><td><code>verify-doc</code> over every tracked doc</td>
+            <td><strong>79 checked, none red</strong> — not only the ones this WU wrote</td></tr>
+          <tr><td>parser swap · old binary vs new</td>
+            <td><strong>empty output diff</strong>, 82 docs + 3 runs flag-lifted (12 · 30 · 19)</td></tr>
+          <tr><td>new predicates over the archived runs</td>
+            <td>#1 12→13 · #2 30→33 · #3 19→21 — every new red itemised and true</td></tr>
+          <tr><td>epic gate · old binary vs new</td>
+            <td><a href="#holes">one seam</a>; every other line byte-identical</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="levels">Test levels</h3>
+      <table data-c="tbl-levels">
+        <thead><tr><th>Level</th><th>Asserts</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge id">unit</span></td>
+            <td>green + one red per way each rule breaks · the 6 review-round HTML holes as cases the
+              tokeniser cannot re-open · the oracle's absent-vs-throws split · the pin at git's
+              abbreviation floor · a partial run is not asked to mark payloads ·
+              <strong>②'s 4 predicates mutation-verified</strong></td></tr>
+          <tr><td><span class="badge id">integration</span></td>
+            <td>real binary, real git trees, a real collection in a <code>TempDir</code> — the actual
+              <code>node</code> oracle over real TSDoc, never a stub. <code>design-scope</code>'s output ·
+              <code>cr/v2</code> on a closed run refused · a skipped artifact refused, naming the file · a
+              stale pin red · a later rulebook leaves the reviewed tip green · the walk grandfathers v2 and
+              reds v3 · <strong>docs-only + design = not exempt; docs-only alone = still exempt</strong></td></tr>
+          <tr><td><span class="badge id">e2e</span></td>
+            <td><strong>not waived — paid.</strong> <a href="#e2e">2 tests</a></td></tr>
+          <tr><td><span class="badge id">regression</span></td>
+            <td>the archived runs as the net for every predicate (⓪ ② ③); the whole epic gate as the net for
+              every gate rule (③ ④ ⑤)</td></tr>
+          <tr><td><span class="badge id">front end</span></td>
+            <td>12 new over the oracle · <code>collection.test.tsx</code> 62 → 66, its two literals now
+              derived</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="commits">The tip</h3>
+      <table data-c="tbl-commits">
+        <thead><tr><th>Commit</th><th>What</th></tr></thead>
+        <tbody>
+          <tr><td><code>33a3f32</code> <code>7884bc0</code></td><td>discussion (D1–D6) · plan</td></tr>
+          <tr><td><code>f132e87</code></td><td>⓪ one tokeniser, every red reproducing exactly</td></tr>
+          <tr><td><code>ff238d2</code></td><td>① the TSDoc is the registry; 7 of 29 pairs wrong</td></tr>
+          <tr><td><code>c908f54</code></td><td>② the gate, 16 retirements, DEC-18…23</td></tr>
+          <tr><td><code>accb6da</code> <code>c0a7c36</code> <code>94a6f8c</code></td>
+            <td>③ a run closes; the 3 seams' waiver text, pinned to shas</td></tr>
+          <tr><td><code>4517354</code> <code>0c6975f</code></td>
+            <td>④ Tier-3 · <code>workflow.html</code> v9 with its human <code>Reviewed-By</code></td></tr>
+          <tr><td><code>bfac33b</code></td><td>⑤ the e2e, and the exemption that let 14 files land
+            unreviewed</td></tr>
+          <tr><td><code>d913518</code> <code>f6ebf6a</code></td>
+            <td>⑥ DEC-24 · the hand-over predicate · a dead end <em>named</em> retires the file</td></tr>
+          <tr><td><code>d68aa22</code></td>
+            <td>⑥ <a href="#review">the review's 4 fixes</a> — the seam keeps the rulebook it shipped, one
+              blob fetch, one pin helper, and clippy finally sees <code>xtask</code></td></tr>
+          <tr><td><em>the tip</em></td>
+            <td>this report + <code>workflow.html</code> v10. <strong>A commit cannot print its own
+              hash</strong> (W6 had a stale last row three rounds running), so this row names the range:
+              <code>git log --oneline origin/epic/design-flow..HEAD</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="owed">What this tip still owes</h3>
+      <p class="kd"><strong>A result report cannot state its own gate verdict.</strong> The
+        <code>cr/v3</code> note binds the diff sha of a diff that <em>contains this file</em>, so writing this
+        line moves the tip the note would bind — the same bootstrap the
+        <a href="#commits">commit table</a> hits. So this section names the command, never its output. Run
+        <code>cargo xtask verify-dod wu HEAD --target origin/epic/design-flow</code>. At the moment of
+        writing it reds twice: <code>1·notes</code> (no <code>cr/v3</code> yet — the attach below) and
+        <code>8·manual-review</code> (yours).</p>
+      <table data-c="tbl-owed">
+        <thead><tr><th>#</th><th>Owed</th><th>Who</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><s><strong>fast-forward local <code>epic/design-flow</code></strong></s>
+            <span class="badge auto">done</span> now at <code>2bceacd</code></td><td>—</td></tr>
+          <tr><td>2</td><td><s><code>workflow.html</code> <strong>v10</strong></s>
+            <span class="badge auto">committed</span> <code>84bbf68</code>, <code>Reviewed-By: key
+            vuluu</code>, SSH-signed</td><td>—</td></tr>
+          <tr><td>3</td><td><s><strong>DEC-24</strong> + index entry · DEC-15's tiers · DEC-16's
+            predicate</s> <span class="badge auto">landed</span></td><td>—</td></tr>
+          <tr><td>4</td><td><s>⑥ <strong>hand-over</strong>: the flow spec executable, every red naming its
+            fix</s> <span class="badge auto">landed</span> —
+            <a href="design-flow-base.html#commands">the command table</a> + the assertion</td><td>—</td></tr>
+          <tr><td>5</td><td><s><code>test/v2</code> + <code>doc/v1</code> on the tip</s>
+            <span class="badge auto">attached</span> unit 27 · integration 21 · e2e 2</td><td>—</td></tr>
+          <tr><td>6</td><td><strong>code-review skill</strong> over the WU diff —
+            <a href="#review">3 rounds run</a>: 5 fixed, 1 waived, 17 refuted. <strong>The
+            <code>cr/v3</code> note itself is still owed</strong>, and can only be attached <em>after</em>
+            this file stops changing</td><td>agent</td></tr>
+          <tr><td>7</td><td><code>mr confirm</code>. An agent must never self-authorise</td>
+            <td><span class="badge approval">user</span></td></tr>
+          <tr><td>8</td><td><code>--no-ff</code> merge into <code>epic/design-flow</code></td><td>agent</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation">
+      <thead><tr><th>Tier</th><th>State</th></tr></thead>
+      <tbody>
+        <tr><td><strong>T2 · decisions</strong></td>
+          <td><span class="badge auto">done</span> DEC-18…23 — 48 judged fork cards out of the 16 retired
+            design files, all in <code>decisions-index</code>.
+            <span class="badge approval">owed at ⑥</span> <strong>DEC-24</strong>, the design review as a
+            dimension of the code review.
+            <details class="why"><summary>what DEC-24 must record</summary><ul>
+              <li>why not a separate skill — independence, freshness and sha-binding already exist in
+                <code>cr</code></li>
+              <li>why the receipt is <code>cr/v3</code>, and what its design section must carry</li>
+              <li>why Tier-2's receipt stays inline while Tier-3's verdict does not — a self-claim dies with
+                its artifact, a judgment is about a commit</li>
+              <li><strong>why a design-bearing diff is never docs-only-exempt</strong> — the part easiest to
+                lose, because the exemption it overrides is older and reads as obviously right</li>
+              <li>the timing dependency W8 inherits</li></ul></details>
+            Plus DEC-15's tier table reading finished, and DEC-16's enforcement section naming
+            <code>6·retirement-order</code> instead of "W7 must"</td></tr>
+        <tr><td><strong>T1</strong></td>
+          <td><span class="badge auto">v9 landed</span> <code>cr/v3</code>, what makes a diff
+            design-bearing, gate check 9 — with its <code>Reviewed-By</code> trailer.
+            <span class="badge approval">v10 staged</span> the exemption's second exception, stated in
+            <code>gate-output</code> and cross-referenced from the branch-flow and hook rows.
+            The design-flow doc is <strong>still not promoted</strong> (D6) — W8 moves where the gate
+            sits</td></tr>
+        <tr><td><strong>T2 · design-rules</strong></td>
+          <td><span class="badge auto">none, as planned</span> no rule changed. Five retired files were
+            linked from the rulebook and are now plain <code>&lt;code&gt;</code> — the contract is the
+            TSDoc, so the name is the reference</td></tr>
+        <tr><td><strong>T4 · code</strong></td>
+          <td><span class="badge auto">done</span> <code>design-registry.mjs</code> = the component
+            vocabulary (as <code>design-vocabulary.mjs</code> = tokens; both emitted, neither stored) ·
+            <code>doc.rs</code> = what a design must satisfy · <code>gate.rs</code> = what a merge demands ·
+            <code>design-rubric.md</code> = what Tier-3 judges</td></tr>
+        <tr><td><strong>T3</strong></td>
+          <td><span class="badge auto">done</span> discussion · plan · 6 step records · this report. The
+            flow spec gained <a href="design-flow-base.html#close">step 7</a>,
+            <a href="design-flow-base.html#review-tier">step 8</a>, the <code>review</code> item and
+            <a href="design-flow-base.html#flow-e2e">§9</a> — in place, still T3.
+            <span class="badge approval">owed</span> the W2 registry seed still calls the generator "owed by
+            W7" and its table "hand-maintained" — true when written, now neither</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups">
+      <thead><tr><th>#</th><th>Item</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong><a href="#gap">Tier-3's finder has never judged a real artifact.</a></strong>
+          <span class="badge approval">ruled</span> deferred — W9's fresh-screen run is the tier's first
+          exercise <em>and</em> its acceptance test. Calibration over the archived runs stays waived</td>
+          <td>W9</td></tr>
+        <tr><td>2</td><td><strong>The walk-waiver bill is at 4 of 12.</strong> ③ +3 · ④ +0 · ⑤ +1 (the W2
+          seam, which cannot self-date — no <code>cr</code> note to carry a schema string). ③ filed the
+          threshold: a dozen means the walk's verdict is mostly waiver</td><td>epic merge</td></tr>
+        <tr><td>3</td><td><strong>Gate commands default to a ref nobody refreshes.</strong> A stale local
+          <code>epic/design-flow</code> silently measured the wrong base and put a false statement in a step
+          record that a whole acceptance rested on. Refuse to run when the target is behind its remote, or
+          print the two shas being compared</td><td>backlog · tooling</td></tr>
+        <tr><td>4</td><td><strong>A cited <code>@avoid</code>'s faithfulness is mechanically
+          undecidable</strong> — measured at ②. It is <em>the</em> defect run #3 shipped (finding 21), and
+          it is now Tier-3's alone. Which sharpens follow-up 1: the one defect class the plan aimed at is
+          the one nothing has been shown to catch</td><td>W9 · Tier-3</td></tr>
+        <tr><td>5</td><td>Two of ④'s notes still say DEC-18 for the design-review record. Immutable step
+          records, so the correction lives here</td>
+          <td><span class="badge auto">closed</span> in <a href="#deviations">deviations</a></td></tr>
+        <tr><td>6</td><td><code>StatusDot</code> and <code>Field</code> are cited by an <code>@avoid</code>
+          and have no component — named out of scope by this plan</td><td>deferred backlog</td></tr>
+        <tr><td>7</td><td>The 4 surviving design files have no code, so the file is still the contract.
+          <code>components·unretired</code> reds each the day its component is built</td>
+          <td><span class="badge auto">self-enforcing</span></td></tr>
+        <tr><td>8</td><td>5 reader functions still hand-scan fragments (<code>elements_of</code>,
+          <code>data_rows</code>, <code>gists</code>, <code>words</code>, <code>inner_text</code>). ⓪ left
+          them deliberately: none decides whether a declaration <em>exists</em>, the failure mode that
+          produced 6 review rounds</td><td>recorded</td></tr>
+        <tr><td>9</td><td><code>CLAUDE.md</code> (T0) still says "docs/infra-only diffs are exempt" flat —
+          one qualification short. T0 is edited only on request</td>
+          <td><span class="badge approval">user</span></td></tr>
+        <tr><td>10</td><td><strong>The tokeniser re-parses the whole document per call.</strong>
+          <span class="badge approval">waived</span> at ⑥ on <a href="#review">size, not unreachability</a> —
+          reached by 11 real docs on every write, worst real case ~90ms, superlinear only past hundreds of
+          items. Memoise the parse once per <code>verify_html_against</code> call</td>
+          <td>backlog · tooling</td></tr>
+        <tr><td>11</td><td><strong><code>catalog_rows</code> splits on a bare <code>"&lt;tr"</code> with no
+          boundary check.</strong> Refuted on reachability — no tag beginning <code>tr</code> exists anywhere
+          in the corpus, and <code>&lt;track&gt;</code> has no place in a proxy UI. But the mechanism a
+          verifier demonstrated is the <em>worst</em> class: a <code>tr</code>-prefixed tag mid-row truncated
+          the row, <code>check_state_declarations</code> read the wrong cell, and a real
+          <code>state-declarations·blank</code> failure <strong>vanished</strong>. A false green. One
+          delimiter check plus a named regression test closes it; the refutation rests on corpus contingency,
+          not on the code being sound</td><td>backlog · tooling</td></tr>
+        <tr><td>12</td><td><strong>The installed git hooks are stale — since 6 July.</strong> This checkout is
+          a worktree, so <code>.git</code> is a <em>file</em> and cargo-husky never finds the shared hooks
+          directory to reinstall. The installed <code>pre-commit</code> is missing its whole
+          <em>"main is merge-only"</em> refusal block. <code>pre-merge-commit</code> — the actual merge gate —
+          <em>is</em> in sync, so this WU's merge is properly gated. Resync:
+          <code>cp .cargo-husky/hooks/* "$(git rev-parse --git-path hooks)/"</code>, though that directory is
+          shared with the main <code>Trawler</code> checkout, so it is the user's call</td>
+          <td><span class="badge approval">user</span></td></tr>
+        <tr><td>13</td><td><strong><a href="#owed">A result report cannot state its own gate
+          verdict.</a></strong> Round 3 caught this report claiming a <code>cr/v3</code> note that did not
+          exist. The rule is <em>not</em> design-flow's: it follows from the workflow's gate binding a diff
+          that contains the report, and this file is a <code>wu-result</code> — so it belongs to
+          <strong><code>docs/work-planning.html</code></strong>'s result-report Evidence checklist, which
+          governs every epic's reports. <code>design-flow-base.html</code> would archive it or promote it into
+          a design-flow-only doc. T1, so it needs a human <code>Reviewed-By</code></td>
+          <td><span class="badge approval">user</span> · T1</td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

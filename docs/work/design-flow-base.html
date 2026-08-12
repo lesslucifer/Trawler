@@ -27,7 +27,54 @@
   </header>
   <main>
     <h2 id="status">What this is</h2>
-    <p>The <strong>written base flow</strong>: six stages, each with the concrete artifact <em>template</em> a real run converged on, plus the conventions that make an artifact reviewable. W1 produced the first cut from a bare hand-run; <strong>W4 wired it to the substrate</strong> — the design now <em>consumes</em> the <a href="2026-07-22-dflow-w2-registry-seed.html">component registry</a> (reuse-or-propose per element) and the <a href="../design-rules/design-rules-index.html">design rulebook</a> (rules cited per stage, all slugs receipted at the end) — and re-ran it on the flow detail panel (<a href="2026-07-25-dflow-w4-run-2.html">run #2</a>). It is distilled into the T1 process doc at epic distillation; until then it lives here in T3.</p>
+    <p>The <strong>written base flow</strong>: six stages, <a href="#close">a close</a> and
+      <a href="#review-tier">an independent review</a>, each with the concrete artifact <em>template</em> a real run converged on, plus the conventions that make an artifact reviewable. W1 produced the first cut from a bare hand-run; <strong>W4 wired it to the substrate</strong> — the design now <em>consumes</em> the <a href="2026-07-22-dflow-w2-registry-seed.html">component registry</a> (reuse-or-propose per element) and the <a href="../design-rules/design-rules-index.html">design rulebook</a> (rules cited per stage, all slugs receipted at the end) — and re-ran it on the flow detail panel (<a href="2026-07-25-dflow-w4-run-2.html">run #2</a>). It is distilled into the T1 process doc at epic distillation; until then it lives here in T3.</p>
+
+    <h2 id="commands">Run it — every command, in flow order <span class="badge id">the whole harness</span></h2>
+    <p>A flow only its author can drive is not a flow. Each command below is named again at the stage that
+      needs it; this table is the single place they are all together, so a run can be started from here
+      without reading the rest first.</p>
+    <table data-c="tbl-commands">
+      <thead><tr><th>When</th><th>Run</th><th>What it gives you</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Before stage 1</strong><br><span class="kd">load the substrate</span></td>
+          <td><code>node scripts/design-registry.mjs</code></td>
+          <td>the whole component vocabulary — tier, <code>@use</code>, <code>@avoid</code>,
+            <code>@states</code>, <code>@madeof</code> — read from the components' own TSDoc. Emitted, never
+            stored, so it cannot be stale. <strong>Read <code>@avoid</code> first</strong></td></tr>
+        <tr><td></td><td><code>git hash-object docs/design-rules/design-rules-index.html</code></td>
+          <td>the rulebook blob to pin in the receipt. Read the rulebook itself for the rules and their
+            <em>Binds at</em> column</td></tr>
+        <tr><td><strong>After every write</strong><br><span class="kd">Tier-1</span></td>
+          <td><code>cargo xtask verify-doc &lt;the run&gt;</code></td>
+          <td>what the run still owes. Fires automatically on PostToolUse and at turn end, so a red is fed
+            back before the next stage — <a href="#flow-e2e">the e2e asserts it names exactly the stages not
+            yet written</a></td></tr>
+        <tr><td><strong>At <a href="#close">the close</a></strong></td>
+          <td><code>cargo xtask verify-doc &lt;the run&gt;</code> → green, <em>then</em>
+            <code>data-status="archived"</code></td>
+          <td>step ③ before step ④: a red run is not closeable, and archiving first would hide the reds</td></tr>
+        <tr><td><strong>At the review</strong><br><span class="kd">Tier-3</span></td>
+          <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code></td>
+          <td>every artifact the design dimension must judge, and the rulebook pin its verdict is a claim
+            about. <strong>The same function the merge gate calls</strong> — the note is written from this
+            output and nothing else</td></tr>
+        <tr><td></td><td>the <strong>code-review skill</strong> on the tip</td>
+          <td>a <code>cr/v3</code> note whose <code>design:</code> section carries the verdict. The design
+            finder activates only when <code>design-scope</code> reports artifacts</td></tr>
+        <tr><td><strong>At the merge</strong></td>
+          <td><code>cargo xtask verify-dod wu &lt;tip&gt; --target &lt;epic&gt;</code></td>
+          <td>every red the merge will refuse, before attempting it. The
+            <code>pre-merge-commit</code> hook runs the same thing</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="stale-base">
+      <strong>Pass the base explicitly, and make sure it is current.</strong> <code>design-scope</code> and
+      <code>verify-dod</code> both measure from a branch ref. A local epic ref behind its remote silently
+      measures the wrong diff — it produced a false <em>"1 design artifact to judge"</em> in W7 ④, which a
+      whole acceptance argument then rested on. <code>git fetch</code> and pass
+      <code>origin/epic/&lt;slug&gt;</code> when in doubt.
+    </div>
 
     <h2 id="principles">Principles (apply to every stage)</h2>
     <ul data-c="principles">
@@ -38,7 +85,7 @@
       <li><strong>Reuse-or-propose, fit-first.</strong> Every element resolves to <em>reuse</em> (cite the component), <em>extend</em> (the component grows — never fork a copy), or <em>propose</em> (a new design file, tiered). Fit is judged against the entry's <code>@use</code>/<code>@avoid</code>: forcing a component past its <code>@avoid</code> line is a propose, not a reuse. <strong>Read <code>@avoid</code> first</strong> (added at run #3, which shipped a wrong reuse for a whole stage): the pass is a <em>rejection</em> test, not a matching test. A <code>@use</code> line describes the <em>action</em> and matches easily — run #3 cited CopyButton's "any one-click copy affordance" correctly while both CopyButton's and CopyText's <code>@avoid</code> lines partitioned the space against it. Where two components name each other in their <code>@avoid</code>s, that pair <em>is</em> the discriminator, and a fluent <code>@use</code> citation is not evidence of fit.</li>
       <li><strong>Never re-decide what a component owns.</strong> A component's states, tones, hover/focus, microcopy and internal layout are its design file's truth; the screen cites them and never restates them (restating is duplication down a tier — the doc-system rule). The screen decides only placement, composition, and the coordinated response across components.</li>
       <li><strong>Compose the artifacts, not just the components.</strong> A design file's specimen is written in the app's own Tailwind utilities, and a run doc loads the same theme (<code>doc-assets/components/tw-config.js</code>, importing the app config) and reuses those class strings instead of re-typing values; the doc behaviours a run needs — the keyed element map, the mockup's state switch — come from <code>doc-assets/components/specimen.js</code> instead of a fresh script per doc. Re-typing either is how a run silently forks the registry while claiming to reuse it, and it is invisible at review time because the copy looks deliberate.</li>
-      <li><strong>Every convention here is machine-checked — the checker is the truth, this page is the reading copy.</strong> A run doc declares <code>data-artifact="design-run"</code> and tags its ten items; <code>cargo xtask verify-doc</code> then reds it on every write (PostToolUse) and at every turn end (Stop). What it checks: the ten items non-empty · the receipt's soft-rule coverage against the <em>live</em> rulebook, verdict enum and citations · a keyed <code>data-map</code> at Elements · every reuse citing an <code>@avoid</code> · a gist + collapsed trace per catalog and use-case row · Tune drawn and slug-cited · every <code>Given</code> capability answered · a state toggle in the mockup · both shared specimens linked · zero colour literals in the doc's own CSS · <a href="#frame-density">the Frame's density</a>. A rule an agent must remember is a rule an agent forgets — the three defects this flow has actually shipped (a lost element map, a re-typed component sheet, a Frame of paragraphs) all happened <em>after</em> the wording existed. <strong>Every predicate reads the <em>live</em> rule set, so tightening a stage's form re-opens closed runs</strong> — run #3's checks red runs #1 and #2, which are records of what the flow was rather than work anyone will redo. A finished run therefore carries <code>data-status="archived"</code>, which exempts it for the opposite reason to <code>draft</code>: finished under an older contract, not unfinished. <strong>A run still open is never archived</strong> — that hides exactly the reds the flow exists to surface. <strong>A finished one is archived when it finishes</strong>, newest included: waiting for a later run to replace it as the reference is what left run #3 red in the tree for two Working Units, because closing a run was nobody's step. The pins that read a real artifact <strong>lift the flag themselves and assert the lift changed something</strong>, so an archived run cannot make them pass vacuously — the day one stops being archived, the pin fails instead of going quiet.</li>
+      <li><strong>Every convention here is machine-checked — the checker is the truth, this page is the reading copy.</strong> A run doc declares <code>data-artifact="design-run"</code> and tags its eleven items; <code>cargo xtask verify-doc</code> then reds it on every write (PostToolUse) and at every turn end (Stop). What it checks: the eleven items non-empty · the receipt's soft-rule coverage against the <em>live</em> rulebook, verdict enum and citations · <a href="#close">the rulebook pin against the rulebook on disk</a> · every reviewer instruction naming what it moved and the contract it hit · a keyed <code>data-map</code> at Elements · every reuse citing an <code>@avoid</code> · a gist + collapsed trace per catalog and use-case row · Tune drawn and slug-cited · every <code>Given</code> capability answered · a state toggle in the mockup · both shared specimens linked · zero colour literals in the doc's own CSS · <a href="#frame-density">the Frame's density</a>. A rule an agent must remember is a rule an agent forgets — the three defects this flow has actually shipped (a lost element map, a re-typed component sheet, a Frame of paragraphs) all happened <em>after</em> the wording existed. <strong>Every predicate reads the <em>live</em> rule set, so tightening a stage's form re-opens closed runs</strong> — run #3's checks red runs #1 and #2, which are records of what the flow was rather than work anyone will redo. A finished run therefore carries <code>data-status="archived"</code>, which exempts it for the opposite reason to <code>draft</code>: finished under an older contract, not unfinished. <strong>A run still open is never archived</strong> — that hides exactly the reds the flow exists to surface. <strong>A finished one is archived when it finishes</strong>, newest included: waiting for a later run to replace it as the reference is what left run #3 red in the tree for two Working Units, because closing a run was nobody's step. It is <a href="#close">step 7</a> now, and <code>6·run-closed</code> refuses the merge of a Working Unit that carried a run it never closed. The pins that read a real artifact <strong>lift the flag themselves and assert the lift changed something</strong>, so an archived run cannot make them pass vacuously — the day one stops being archived, the pin fails instead of going quiet.</li>
       <li><strong>Findings live in one table, tagged by stage — never as prose inside a stage.</strong> A stage carries its artifact and stops. Per-stage commentary duplicates the findings roll-up in the most verbose form available, and the reviewer reads the same thing twice.</li>
       <li><strong>Nothing rides on taste alone.</strong> Every structural call cites a Frame driver; every judgment call ("weight", "grouping", "hero") cites a soft-rule slug. A call that can cite neither is a finding — either the design is arbitrary or the rulebook has a hole.</li>
       <li><strong>One artifact per stage, cheapest commitment first.</strong> Each stage's artifact is the next stage's input. Stages loop back — Elements → Layout (a component contract breaks the zoning) and Tune → Layout (the assembled whole reads wrong); both loops are real, not decorative.</li>
@@ -51,26 +98,28 @@ flowchart LR
   S[["load substrate:
 registry index + rulebook
 (frozen for the run)"]] --> F[Frame]
-  F --> L[Layout] --> E[Elements] --> I[Interaction] --> D[Draft mockup] --> T[Tune] --> R[["receipt +
-proposals +
-blocked-on"]]
+  F --> L[Layout] --> E[Elements] --> I[Interaction] --> D[Draft mockup] --> T[Tune] --> R[["receipt + capabilities +
+proposals + blocked-on +
+review"]]
+  R --> C[["close:
+re-pin · green · archive"]]
   E -. contract breaks the zoning .-> L
   T -. reads wrong assembled .-> L
       </pre>
-      <div class="caption">Six stages between a substrate load and the closing receipt; two real loop-backs into Layout.</div>
+      <div class="caption">Six stages between a substrate load and the closing lists, then <a href="#close">the close</a> — the step whose absence left run #3 open for two Working Units. Two real loop-backs into Layout.</div>
     </div>
 
     <div class="diagram" data-c="verify-timeline">
       <pre class="mermaid">
 flowchart TB
   W["write / edit a run doc"]
-  V1["verify-doc · this doc&lt;br/&gt;9 items present and non-empty&lt;br/&gt;receipt (YAML): every soft slug · verdict in enum · why&lt;br/&gt;elements: data-map + data-key&lt;br/&gt;mockup: state toggle · zero colour literals&lt;br/&gt;assets: tw-config.js + specimen.js linked"]
+  V1["verify-doc · this doc&lt;br/&gt;11 items present and non-empty&lt;br/&gt;receipt (YAML): every soft slug · verdict in enum · why&lt;br/&gt;the rulebook pin vs the rulebook on disk&lt;br/&gt;elements: data-map + data-key&lt;br/&gt;review: what moved · the contract it hit&lt;br/&gt;mockup: state toggle · zero colour literals&lt;br/&gt;assets: tw-config.js + specimen.js linked"]
   E["end of turn"]
   V2["verify-doc · every governed doc under docs/&lt;br/&gt;same checks — backstop for shell and script edits"]
   C["commit"]
   V3["gate0: fmt · clippy -D warnings · all tests&lt;br/&gt;commit-msg: docs carry an mr trailer"]
   M["WU merge --no-ff"]
-  V4["verify-dod wu&lt;br/&gt;test/v2 · cr/v2 diff-bound PASS · doc/v1&lt;br/&gt;green writes dod/v1"]
+  V4["verify-dod wu&lt;br/&gt;test/v2 · cr/v2 diff-bound PASS · doc/v1&lt;br/&gt;6·run-closed: no run left open&lt;br/&gt;green writes dod/v1"]
   EP["epic merge"]
   V5["verify-dod epic&lt;br/&gt;re-walks every seam + e2e"]
   R["review only — no gate proves these&lt;br/&gt;is a verdict true · does the fit hold against @use / @avoid&lt;br/&gt;is a violation honest or quietly fixed&lt;br/&gt;is a driver case-specific or a restated rule"]
@@ -265,8 +314,8 @@ scroll / overflow: &lt;which zone is pinned · which region scrolls · every
       <p class="kd"><strong>Key distinctions:</strong> Tune is load-bearing — it has genuinely sent design back to Layout, so it earns a distinct stage. <strong>Every tune call cites a soft-rule slug</strong> ("hero", "weight", "proximity" are not reasons); a call with no slug to cite is a rulebook hole and goes to the findings, not into the design. Conversely a soft rule that never gets cited across a whole run is a kill candidate — the receipt makes that visible.</p>
     </div>
 
-    <h2 id="closing">Closing artifacts — receipt · capabilities · proposals · blocked-on</h2>
-    <p>A run ends with four lists, not with the mockup. They are what a reviewer and (from W7) the harness consume; the design itself is only the first half of the deliverable.</p>
+    <h2 id="closing">Closing artifacts — receipt · capabilities · proposals · blocked-on · review</h2>
+    <p>A run ends with five lists, not with the mockup. They are what a reviewer and (from W7) the harness consume; the design itself is only the first half of the deliverable.</p>
     <div class="tmpl" data-c="tmpl-closing">
       <table>
         <thead><tr><th>List</th><th>One row per…</th><th>Row shape</th></tr></thead>
@@ -277,12 +326,91 @@ soft:
           <tr><td><strong>Proposals</strong></td><td>every entry the design needed and the vocabulary lacked</td><td>kind (component · component extension · token · lexicon term · key binding) · what · why nothing existing fits · owner</td></tr>
           <tr><td><strong>Capabilities</strong> — <code>data-item="capabilities"</code></td><td>every capability the Frame listed under <em>Given</em></td><td>what it is · <code>used</code> · <code>deliberately unused</code> · <code>blocked</code> · where / why. Added at run #3, which listed <code>proxy unset</code> as given, designed its undo as commands only, and filed a blocked-on entry saying the app cannot reverse its own writes — the shipped code disproved it. <strong>The receipt forces coverage of rules; nothing forced coverage of capabilities.</strong> An unmentioned Given is the same defect class as an unreceipted rule and worse in one way: a dropped capability makes the design look correctly constrained rather than under-designed</td></tr>
           <tr><td><strong>Blocked-on</strong></td><td>every decision the design could not make because something upstream is missing</td><td>what is missing · which stage hit it · whose call it is (domain/UX · API · build WU) · what the run did meanwhile</td></tr>
+          <tr><td><strong>Review</strong> — <code>data-item="review"</code></td><td>every <strong>reviewer instruction</strong> the run acted on. Added at W7 from run #2's finding 29: two instructions moved the Layout sketch, two catalog rows, two use-cases, the mockup, four receipt rows and the cross-check, and the run read as if the stages had produced all of it. Tune is the run's <em>own</em> stepping-back and the cross-check compares runs; neither records that <strong>a human overrode the design, and what contract the override hit</strong> — the strongest signal a run carries, and the one the artifact dropped</td><td>what the reviewer said · what it moved (name the stages, or <code>nothing</code> when the design argued and held — an instruction heard and refused is a first-class row) · the contract it hit, cited: a rule slug, a component's <code>@use</code>/<code>@avoid</code>, a decision record, or <code>taste</code> where the design genuinely had latitude. <strong>Not</strong> the Tier-3 verdict — one is provenance, the other a judgment, and merging them loses the provenance. <b>Checked</b>: <code>review·recorded</code> reds an item with no instruction row, a row naming no stage it moved, and a row citing no contract</td></tr>
         </tbody>
       </table>
     </div>
     <p class="kd"><strong>Why forced coverage:</strong> a receipt that only lists the rules the design happened to think about proves nothing — the value is the row that reads <em>n/a</em> or <em>violated</em>, because that is where the rulebook is wrong or the design is. <em>inherited</em> is a first-class verdict, not a dodge: most component-level rules are satisfied by reusing the component, and the citation is the proof. Coverage is checked against the rulebook <em>on disk</em>, so adding or killing a rule re-opens every receipt; a receipt that cannot be checked (unreadable rulebook) is red, never silently green.</p>
     <p class="kd"><strong>Why the hard/soft split:</strong> the receipt exists for what a machine cannot judge. Run #2 wrote <em>satisfied</em> against <code>spacing-scale</code> while its mockup re-typed three components' padding on-scale — the claim was false, the citation was fluent, and only composing the real CSS caught it. Hard rules therefore leave the receipt and become predicates; each one still unimplemented is printed on every verify (<code>hard rules: n/m machine-checked</code>, counted off the rulebook) so the gap stays visible instead of becoming a forgotten follow-up.</p>
     <p class="kd"><strong>When a new predicate reds an artifact, the artifact is the suspect</strong> (added at run #3, which did the opposite). This run ended one capability <em>"dropped, then recovered"</em>, the three-state check went red, and a fourth state was added to the checker in the same commit that introduced the rule — so the code disagreed with this spec and the gate rubber-stamped the exact defect it existed to catch. Code review caught it, the author did not. <strong>A predicate's vocabulary is closed on purpose</strong>: an outcome that does not fit is the run reporting something under-designed, and widening the check deletes that signal while leaving the gate green. Loosening a predicate is a <em>rulebook</em> change — it needs its own reasoning, never a same-commit accommodation of the artifact that tripped it.</p>
+
+    <h2 id="close">7 · Close the run <span class="badge id">a step, not a side effect</span></h2>
+    <p>Run #3 sat open and red in the tree for two Working Units because archiving happened as a side effect of the <em>next</em> run being written — and run #3 had no next run. Closing is therefore its own step, with its own gate.</p>
+    <table data-c="tbl-close">
+      <thead><tr><th>#</th><th>Do</th><th>What refuses it</th></tr></thead>
+      <tbody>
+        <tr><td>①</td><td><strong>Re-pin the rulebook.</strong> <code>git hash-object docs/design-rules/design-rules-index.html</code>; if it no longer matches the receipt's <code>rulebook:</code>, the rulebook moved <em>under</em> the run — re-judge every soft row against the current one before re-pinning</td><td><code>receipt·rulebook-stale</code> names both versions. A pin that only had to be non-empty was a claim nothing checked for three Working Units</td></tr>
+        <tr><td>②</td><td><strong>Fill the <a href="#closing">review</a> item</strong> — one row per reviewer instruction, what it moved, the contract it hit</td><td><code>item·review</code> · <code>review·recorded</code></td></tr>
+        <tr><td>③</td><td><strong>Green the run</strong>: <code>cargo xtask verify-doc &lt;the run&gt;</code>. A red run is not closeable — closing a red run is what archiving would otherwise hide</td><td>every Tier-1 predicate</td></tr>
+        <tr><td>④</td><td><strong>Archive it</strong>: <code>data-status="archived"</code> beside its <code>data-artifact</code>, in the commit that finishes the run — newest included, never waiting for a successor</td><td><code>6·run-closed</code> refuses the <strong>merge</strong> of any tip whose diff carries a run still open. A run genuinely mid-design across a merge declares <code>data-status="draft"</code> instead, which says unfinished rather than closed</td></tr>
+      </tbody>
+    </table>
+    <p class="kd"><strong>Why the merge and not the working tree.</strong> A run mid-design is legitimately red for days, so a sweep asserting "every run is archived or green" would hold the suite hostage to work in progress. The merge is the first moment the tree is <em>answerable</em> for the run: the Working Unit that carried it is ending. <code>archived</code> then exempts the run from every later rule — finished under an older contract, not unfinished — which is why ③ has to happen before ④ and not after.</p>
+
+    <h2 id="review-tier">8 · The design review <span class="badge id">Tier-3 — the reviewer is not the author</span></h2>
+    <p>Everything up to ⑦ is the designing agent judging its own work: the stages are its design, the receipt is
+      its claim about that design, and the predicates check the claim's <em>shape</em>. The one thing missing is
+      the rule the dev workflow has always had — <strong>never judge your own diff</strong>. So the closed run
+      goes through the same door code goes through: the <strong>design dimension of the code review</strong>,
+      which fires on the merge that lands it.</p>
+    <table data-c="tbl-tier3">
+      <thead><tr><th></th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td><strong>What activates it</strong></td>
+          <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code> — a <em>closed</em> run
+            (<code>data-status="archived"</code>) or a component design file in the diff. A draft run is
+            unfinished and is judged by the merge that closes it, so ⑦ and ⑧ are one motion</td></tr>
+        <tr><td><strong>What it judges</strong></td>
+          <td>soft rules and the new-component warrant, on the artifact — <em>not</em> the built code, and
+            <em>not</em> the thirteen hard rules Tier-1 already owns. The rubric is
+            <code>.claude/skills/code-review/design-rubric.md</code></td></tr>
+        <tr><td><strong>What it catches that ⑦ cannot</strong></td>
+          <td>a receipt that is complete, fluent and <strong>false</strong> — a <code>satisfied</code> the
+            design does not earn — and a component invented while an existing one fit. Both are defects the
+            author wrote and then attested</td></tr>
+        <tr><td><strong>Where the verdict lives</strong></td>
+          <td>the tip's <code>cr/v3</code> note, in a <code>design:</code> section naming every artifact
+            judged and pinning the rulebook blob. Not in the run doc: the run is retired under
+            <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a> and the commit is not</td></tr>
+        <tr><td><strong>What refuses it</strong></td>
+          <td><code>9·design</code> at the merge — a design-bearing tip whose note has no design section, skips
+            an artifact, pins another rulebook, or carries a failing design verdict. <strong>A design-bearing
+            diff is never docs-only-exempt</strong>: a design is a docs-only <em>deliverable</em>, and the
+            exemption was handing this check exactly the diffs it exists to judge — W2 landed 14 component
+            design files with no code review at all (found by the <a href="#flow-e2e">flow e2e</a>)</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">Tier-2's receipt stays <em>inline</em> and Tier-3's verdict does not, and the asymmetry is the
+      point: a self-claim is part of the artifact and dies with it, while an independent judgment is about a
+      commit — and commits outlive the files they carry.</p>
+
+    <h2 id="flow-e2e">What proves the harness — the flow e2e <span class="badge id">xtask/tests/e2e_design_flow.rs</span></h2>
+    <p>Every stage above is a rule an agent must follow and a predicate that refuses it, and the whole
+      point is the <em>sequence</em>: no unit test can tell whether a run can be driven from a blank page
+      to a landed merge. A fake designing agent emits one artifact at a time and a fake human answers each
+      with a taste instruction; all three tiers then judge the result over a real git tree, real
+      <code>node</code> oracles and the real merge hook. Feature-gated
+      (<code>--features design-e2e</code>) out of the default suite — re-run it when the flow or the
+      harness changes.</p>
+    <table data-c="tbl-e2e">
+      <thead><tr><th>Asserts</th><th>The failure it refuses</th></tr></thead>
+      <tbody>
+        <tr><td>After every stage the run is red for <strong>exactly the stages not yet written</strong></td>
+          <td>the flow stalling, or prompting for work it has not reached. A half-written run that goes
+            quiet asks for nothing; one red for something else refused a stage that was not wrong. Both
+            were real: <code>mono-for-wire-data·undeclared</code> asked a Frame-stage run to mark the
+            payloads of a mockup five stages away</td></tr>
+        <tr><td>The rulebook moving under an open run re-opens <em>both</em> halves of
+          <a href="#close">the close's step ①</a> — the pin is stale and the new rule is unreceipted</td>
+          <td>a receipt that is complete against a rulebook nobody has read since</td></tr>
+        <tr><td>The <code>cr/v3</code> note is written from what <code>design-scope</code> printed, and
+          nothing else</td><td>the reviewer and the gate each deciding what counts as design-bearing</td></tr>
+        <tr><td>A rule-violating mockup reds <strong>at the stage that wrote it</strong>, and the chain
+          from there keeps it out of the tree: a run that cannot be greened cannot be closed
+          (<a href="#close">③</a>), and a run left open cannot merge (<code>6·run-closed</code>)</td>
+          <td>a breach surfacing only at the end, where it is expensive, or not at all</td></tr>
+      </tbody>
+    </table>
 
     <h2 id="provenance">Provenance &amp; what feeds the rest of the epic</h2>
     <table data-c="provenance">

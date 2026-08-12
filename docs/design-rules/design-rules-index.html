@@ -107,11 +107,11 @@ flowchart LR
     <table data-c="chromatic-meanings-table">
       <thead><tr><th>Token</th><th>Fixed meaning</th><th>Mapping owned by</th></tr></thead>
       <tbody>
-        <tr><td><code>ok</code></td><td>success outcome (2xx) · confirmation of a completed action · <strong>a request that only reads</strong> (GET)</td><td><a href="../work/components/status-pill.html">StatusPill</a> status→tone · <a href="../work/components/copy-text.html">CopyText</a>/<a href="../work/components/copy-button.html">CopyButton</a> confirm · <a href="../work/components/method-label.html">MethodLabel</a> verb→tone</td></tr>
-        <tr><td><code>warn</code></td><td>failure outcome (4xx/5xx) · error states · <strong>a request that destroys</strong> (DELETE)</td><td><a href="../work/components/status-pill.html">StatusPill</a> · <a href="../work/components/method-label.html">MethodLabel</a></td></tr>
-        <tr><td><code>create</code></td><td>a request that brings a resource into being (POST)</td><td><a href="../work/components/method-label.html">MethodLabel</a> verb→tone</td></tr>
-        <tr><td><code>replace</code></td><td>a request that overwrites a resource whole (PUT)</td><td><a href="../work/components/method-label.html">MethodLabel</a> verb→tone</td></tr>
-        <tr><td><code>amend</code></td><td>a request that alters part of a resource (PATCH)</td><td><a href="../work/components/method-label.html">MethodLabel</a> verb→tone</td></tr>
+        <tr><td><code>ok</code></td><td>success outcome (2xx) · confirmation of a completed action · <strong>a request that only reads</strong> (GET)</td><td><code>StatusPill</code> status→tone · <code>CopyText</code>/<code>CopyButton</code> confirm · <code>MethodLabel</code> verb→tone</td></tr>
+        <tr><td><code>warn</code></td><td>failure outcome (4xx/5xx) · error states · <strong>a request that destroys</strong> (DELETE)</td><td><code>StatusPill</code> · <code>MethodLabel</code></td></tr>
+        <tr><td><code>create</code></td><td>a request that brings a resource into being (POST)</td><td><code>MethodLabel</code> verb→tone</td></tr>
+        <tr><td><code>replace</code></td><td>a request that overwrites a resource whole (PUT)</td><td><code>MethodLabel</code> verb→tone</td></tr>
+        <tr><td><code>amend</code></td><td>a request that alters part of a resource (PATCH)</td><td><code>MethodLabel</code> verb→tone</td></tr>
         <tr><td><code>syn-key</code> · <code>syn-str</code> · <code>syn-num</code></td><td>the three body-pane syntax roles — a key, a string, a number inside a rendered payload. <strong>Three roles and no more:</strong> a full syntax theme is what the renderer family forbids, and punctuation stays <code>ink-mute</code> (DEC-11)</td><td><a href="../work/components/body-renderer.html">SourceSurface</a> — the pane JsonRenderer and XmlRenderer share</td></tr>
         <tr><td><em>unknown</em> — an outcome that is neither success nor failure</td><td><strong>no tint. The neutral ink channel is the answer</strong> — a probe that fails and a probe that shrugs are both <em>unknown</em>, and on some screens that is the permanent case rather than an edge one. <code>colour-plus-text</code> already guarantees the text channel carries the meaning, so a third status hue would add nothing a reader needs</td><td>— (ink, never a colour)</td></tr>
       </tbody>
@@ -137,12 +137,12 @@ flowchart LR
     <table data-c="keyboard-conventions-table">
       <thead><tr><th>Pattern</th><th>Keys</th><th>Sighting</th></tr></thead>
       <tbody>
-        <tr><td>activate the focused element</td><td>Enter / Space</td><td><a href="../work/components/copy-text.html">CopyText</a> trigger</td></tr>
-        <tr><td>partial take from a value</td><td>native selection + ⌘C — never intercepted</td><td><a href="../work/components/copy-text.html">CopyText</a> selection guard</td></tr>
-        <tr><td><strong>dismiss the surface</strong> — panel, dialog, popup; closes unchanged</td><td>Esc</td><td><a href="../work/components/select.html">Select</a> popup · ProxyCloseDialog · the flow detail panel</td></tr>
-        <tr><td><strong>move within a list</strong> without selecting</td><td>↑ / ↓ — no wrap</td><td><a href="../work/components/select.html">Select</a> options</td></tr>
-        <tr><td><strong>narrow a list</strong></td><td>type-to-filter — always on, searchable or not</td><td><a href="../work/components/select.html">Select</a> filtering</td></tr>
-        <tr><td><strong>take the moved-to item</strong></td><td>Enter</td><td><a href="../work/components/select.html">Select</a> — a no-op while loading, empty, or filtered to nothing</td></tr>
+        <tr><td>activate the focused element</td><td>Enter / Space</td><td><code>CopyText</code> trigger</td></tr>
+        <tr><td>partial take from a value</td><td>native selection + ⌘C — never intercepted</td><td><code>CopyText</code> selection guard</td></tr>
+        <tr><td><strong>dismiss the surface</strong> — panel, dialog, popup; closes unchanged</td><td>Esc</td><td><code>Select</code> popup · ProxyCloseDialog · the flow detail panel</td></tr>
+        <tr><td><strong>move within a list</strong> without selecting</td><td>↑ / ↓ — no wrap</td><td><code>Select</code> options</td></tr>
+        <tr><td><strong>narrow a list</strong></td><td>type-to-filter — always on, searchable or not</td><td><code>Select</code> filtering</td></tr>
+        <tr><td><strong>take the moved-to item</strong></td><td>Enter</td><td><code>Select</code> — a no-op while loading, empty, or filtered to nothing</td></tr>
       </tbody>
     </table>
     <p class="meta">The four list bindings are one idiom, not four decisions: they belong to the searchable-list contract and a screen composing such a list inherits them rather than re-proposing them.</p>
@@ -204,7 +204,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ hairline between request and response legs</span><br><span style="color:var(--warn)">✗ a divider inside one header set</span></td>
           <td>For each separator and cluster: does the visual boundary match a semantic one?</td>
           <td><code>screen</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/section.html">Section</a> — "the seam, not a card frame"</td>
+          <td><strong>extracted</strong> · <code>Section</code> — "the seam, not a card frame"</td>
         </tr>
         <tr>
           <td><code>ordering-by-priority</code></td>
@@ -228,7 +228,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ tinted text is the whole StatusPill</span><br><span style="color:var(--warn)">✗ a bordered badge around every status</span></td>
           <td>Strip each piece of chrome in imagination: is any information lost?</td>
           <td><code>both</code></td>
-          <td><em>import</em> · <a href="../work/components/status-pill.html">StatusPill</a> driver ④</td>
+          <td><em>import</em> · <code>StatusPill</code> driver ④</td>
         </tr>
         <tr>
           <td><code>generous-targets</code></td>
@@ -236,7 +236,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ the whole value copies on click</span><br><span style="color:var(--warn)">✗ a 12px icon as the only target</span></td>
           <td>For each interaction: could the target be bigger for free?</td>
           <td><code>component</code></td>
-          <td><em>import</em> · <a href="../work/components/copy-text.html">CopyText</a> whole-text target</td>
+          <td><em>import</em> · <code>CopyText</code> whole-text target</td>
         </tr>
         <tr>
           <td><code>motion-informs</code></td>
@@ -244,7 +244,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ confirm chip appears, expires</span><br><span style="color:var(--warn)">✗ hover glow, panels sliding for style</span></td>
           <td>For each animation: what does it tell the user? "Nothing" fails.</td>
           <td><code>component</code></td>
-          <td><em>import</em> · <a href="../work/components/copy-text.html">CopyText</a> confirm</td>
+          <td><em>import</em> · <code>CopyText</code> confirm</td>
         </tr>
         <tr>
           <td><code>empty-states-orient</code></td>
@@ -268,7 +268,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ the view is named — <em>pretty</em> / <em>raw</em>, <em>decoded</em> / <em>raw</em> — and one act switches it</span><br><span style="color:var(--warn)">✗ JSON pretty-printed with nothing saying so and no way back to the bytes</span></td>
           <td>For every displayed wire value: is it the bytes, or a view? If a view — is it named on screen, and is one act enough to get back?</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/copy-text.html">CopyText</a> driver ② · <a href="../work/components/body-viewer.html">BodyViewer</a> decode</td>
+          <td><strong>extracted</strong> · <code>CopyText</code> driver ② · <a href="../work/components/body-viewer.html">BodyViewer</a> decode</td>
         </tr>
         <tr>
           <td><code>labels-add-context</code></td>
@@ -284,7 +284,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ "copied" · "none"</span><br><span style="color:var(--warn)">✗ "Copied!" · "No headers found."</span></td>
           <td>Scan all microcopy for case, length, exclamation.</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/copy-text.html">CopyText</a> · <a href="../work/components/header-table.html">HeaderTable</a></td>
+          <td><strong>extracted</strong> · <code>CopyText</code> · <a href="../work/components/header-table.html">HeaderTable</a></td>
         </tr>
         <tr>
           <td><code>one-term-per-concept</code></td>
@@ -300,7 +300,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ inline "copied" chip at the value</span><br><span style="color:var(--warn)">✗ a corner toast</span></td>
           <td>Trace each use-case's feedback: where does the eye have to go?</td>
           <td><code>component</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/copy-text.html">CopyText</a> confirm chip</td>
+          <td><strong>extracted</strong> · <code>CopyText</code> confirm chip</td>
         </tr>
         <tr>
           <td><code>absence-names-itself</code></td>
@@ -316,7 +316,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ Esc closes the option list, focus is back on the trigger</span><br><span style="color:var(--warn)">✗ focus lost to <code>&lt;body&gt;</code> after a dialog closes</span></td>
           <td>For each dismissable surface: close it from the keyboard — where is focus now, and can the next Tab continue the task?</td>
           <td><code>component</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/select.html">Select</a> — <em>"closing always returns focus to the trigger"</em>, shipped</td>
+          <td><strong>extracted</strong> · <code>Select</code> — <em>"closing always returns focus to the trigger"</em>, shipped</td>
         </tr>
         <tr>
           <td><code>choose-before-act</code></td>

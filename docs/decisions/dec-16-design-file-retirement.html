@@ -66,10 +66,21 @@
       </tbody>
     </table>
 
-    <h2 id="enforcement">Enforcement is W7's, and it must be a predicate</h2>
-    <p>The same reasoning as DEC-15: a convention an agent must remember is a convention an agent forgets. The order is machine-checkable, so it is a check rather than a paragraph — <strong>W7's registry harness must refuse step ③ until step ① has landed</strong>. The existing <code>doc/v1</code> lineage rule is the half of it that already works; what is missing is the part that knows a design file's forks are not yet anywhere else.</p>
+    <h2 id="enforcement">Enforcement — two predicates, landed in E-DFLOW.W7</h2>
+    <p>The same reasoning as DEC-15: a convention an agent must remember is a convention an agent forgets. The order is machine-checkable, so it is a check rather than a paragraph. Both halves now exist:</p>
+    <table data-c="predicates">
+      <thead><tr><th>Check</th><th>Refuses</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><code>6·retirement-order</code></td>
+          <td>Step ③ before step ①: a <code>docs/work/components/</code> file absent at the tip whose <code>doc/v1</code> <code>distilled_to</code> does not name a <code>docs/decisions/</code> record that really exists there. The general lineage rule accepts a dead-end reason — the right latitude for a scratch plan, and the wrong one for a file whose fork cards are the whole reason a removal loses something.</td>
+          <td><code>xtask/src/gate.rs</code></td></tr>
+        <tr><td><code>components·unretired</code></td>
+          <td>Step ③ never happening: a design file whose component <em>has</em> a roster entry is red until it is retired. The registry and the design files are disjoint sets, and this is what keeps them so — two contracts for one component, with nothing comparing them, is the drift this record exists to prevent.</td>
+          <td><code>xtask/src/doc.rs</code></td></tr>
+      </tbody>
+    </table>
     <div class="callout" data-c="w5-position">
-      <p><strong>W5 removed nothing.</strong> It built the code and left every design file in place — Q1 confirms the direction, W7 owns the removal. This record exists so the WU that does the deleting inherits the order instead of re-deriving it, and so it is judged by a gate rather than by whoever is holding the delete key.</p>
+      <p><strong>W5 removed nothing</strong> — it built the code and left every design file in place. <strong>W7 removed sixteen</strong>, distilling their forks to <a href="dec-18-one-control-box.html">DEC-18</a> · <a href="dec-19-chromatic-accent-closed.html">DEC-19</a> · <a href="dec-20-logic-lives-with-its-inputs.html">DEC-20</a> · <a href="dec-21-props-need-a-truthful-source.html">DEC-21</a> · <a href="dec-22-time-is-absolute-and-local.html">DEC-22</a> · <a href="dec-23-collection-dependencies.html">DEC-23</a> first. Four files remain and are not violations: <code>BodyViewer</code>, <code>BodyRenderer</code>, <code>HeaderTable</code> and <code>CopyAllHeadersButton</code> have no roster entry, so their contract still lives in the file — the unbuilt case named below.</p>
     </div>
 
     <h2 id="options">Options rejected</h2>
@@ -85,7 +96,19 @@
 
     <h2 id="consequences">Consequences</h2>
     <ul>
-      <li><strong>W7</strong> owns both halves: the predicate that refuses an undistilled removal, and the removal itself. It may not delete a design file whose forks are not yet in <code>docs/decisions/</code>.</li>
+      <li><s><strong>W7</strong> owns both halves: the predicate that refuses an undistilled removal, and the removal itself.</s> <strong>Landed.</strong> The order is refused by <code>6·retirement-order</code> in <code>xtask/src/gate.rs</code>, and W7 removed sixteen files behind it.</li>
+      <li><strong>A dead end <em>named</em> retires the file; a dead end <em>assumed</em> does not.</strong> The predicate first demanded a <code>docs/decisions/</code> record for every removal — and then refused the case this record calls the majority. <strong>Measured over W7's own sixteen retirements: two produced no record, correctly.</strong> <code>CopyText</code>'s two forks are carried verbatim by its <code>@states</code>; <code>KeyValueRow</code>'s three are carried by <code>@madeof</code> and superseded by <code>wrap-not-truncate</code> and <code>data-ink-first</code>. So <code>distilled_to</code> may be a reason instead of a path, provided <strong>it says what carries the fork</strong>:
+        <table data-c="carriers">
+          <thead><tr><th><code>distilled_to</code></th><th>Retires the file?</th></tr></thead>
+          <tbody>
+            <tr><td>a <code>docs/decisions/</code> path that exists at the tip</td><td><span class="badge auto">yes</span> the original rule, unchanged</td></tr>
+            <tr><td>a reason citing a TSDoc tag — <code>@use</code> · <code>@avoid</code> · <code>@states</code> · <code>@madeof</code> · <code>@tier</code></td><td><span class="badge auto">yes</span> the contract carries it, at the point of use</td></tr>
+            <tr><td>a reason citing a slug <strong>the rulebook declares</strong></td><td><span class="badge auto">yes</span> a rule outranks it. Checked against <strong>the rulebook that seam shipped</strong>, never the working tree — read the tree and a later slug rename reddens an already-merged retirement, on a branch no one may amend</td></tr>
+            <tr><td><code>"none"</code> · <code>"nothing survives"</code> · <code>"local prop shape"</code></td><td><span class="badge approval">no</span> a dead end <em>assumed</em> — the loss this record exists to prevent</td></tr>
+          </tbody>
+        </table>
+        The check the amendment keeps is the one that matters: <strong>every reason must point somewhere a reader can go</strong>. What it gives up is the assumption that "somewhere" is always a decision record.</li>
+      <li><strong>Retirement is not a design review.</strong> A <em>removed</em> design file is deliberately not a Tier-3 artifact (<a href="dec-24-design-review-dimension.html">DEC-24</a>): this predicate owns the removal, and asking a reviewer to judge a contract the diff deletes is asking about the wrong thing. A design file <em>present</em> in a diff is design-bearing; the same file removed is this rule's business.</li>
       <li><strong>The decisions KB grows from component forks.</strong> Some fork cards become DEC records; most are local and die with the file. Judging which is which is distillation work, per file, and the judgment itself is recorded — a dead end named is not the same as a dead end assumed.</li>
       <li><strong>A design file with no code is not retired, it is unbuilt.</strong> This order applies only when the component exists in <code>ui/src/components/</code>. T3/T4 files (<code>ProtocolLine</code>, <code>HeaderTable</code>, <code>BodyViewer</code>) keep their files because the contract still lives there and nowhere else.</li>
       <li><strong>Code wins conflicts, but only after ① has run.</strong> Code-as-truth is a statement about the <em>contract</em>. The why was never in the code and code-as-truth never claimed it was, so "the code is the truth" is not a licence to delete the reasoning.</li>

@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v10 · 2026-07-15 · Trawler</div>
+      <div class="meta">v11 · 2026-08-12 · Trawler</div>
     </div>
   </header>
   <main>
@@ -78,6 +78,85 @@
           <td><a href="dec-17-closed-vocabulary.html"><code>dec-17-closed-vocabulary.html</code></a></td>
           <td><span class="badge id">DEC-17</span></td>
           <td>The design vocabulary is <strong>closed</strong> and legality is membership of a scale the config <em>declares</em> — not of anything Tailwind can emit, because an undeclared scale inherits its whole default ladder and nothing drawn from it can ever red. <code>ui/tailwind.config.js</code> is the single source of truth (every scale replaces Tailwind's, never extends it); the rulebook points at it and never lists a member. Two enforcement surfaces off one derived oracle — Tier-1 predicates for the design run, a local <code>design/vocabulary</code> ESLint rule for <code>ui/src/</code> — with exactly two escapes: the <code>design-allow</code> pragma (next line only, size values rejected, count printed) and raw CSS configuring a third-party styling API, whose colours are still checked</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-18-one-control-box.html"><code>dec-18-one-control-box.html</code></a></td>
+          <td><span class="badge id">DEC-18</span></td>
+          <td>The collection has <strong>one small-control box</strong> and a new control composes it —
+            <code>CopyButton</code> renders a <code>Button</code>, <code>Select</code>'s trigger is the
+            same box. Replaces W4's "clone CopyButton's box", which had already failed: three token
+            values drifted while both files claimed identity, because a rule that two files must match
+            is only as good as the next edit. Weight is expressed in tone and in which actions exist,
+            never in a second shape; no primary/filled variant anywhere. Open door: a real form may
+            reopen <code>Select</code>'s box</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-19-chromatic-accent-closed.html"><code>dec-19-chromatic-accent-closed.html</code></a></td>
+          <td><span class="badge id">DEC-19</span></td>
+          <td>Colour is a <strong>closed set widened by amendment, never by a prop</strong>: the refusal
+            is not "no colour" but "no component <em>deciding</em> a colour". Five method tokens granted
+            (capped at five — plumbing verbs add noise), <code>Notice</code>'s <code>ok</code> granted
+            for a <em>standing</em> outcome only; a slow-duration tint, an accent hover ring and
+            <code>ok</code> for 3xx refused. A fourth tone is deliberately left open above the
+            primitive, so the first tenant reopens DEC-11 instead of adding a prop</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-20-logic-lives-with-its-inputs.html"><code>dec-20-logic-lives-with-its-inputs.html</code></a></td>
+          <td><span class="badge id">DEC-20</span></td>
+          <td><strong>Business logic lives where its inputs live</strong> — <code>StatusPill</code>
+            absorbs status→display (a pure total function of one number) while <code>StatusLine</code>
+            refuses raw inputs (a function of app state the domain already resolves). The two read as a
+            contradiction and are one rule; <strong>this record refutes the "fix the asymmetry"
+            finding</strong>. One tier down: a T1 <em>states</em> what it cannot enforce
+            (<code>colour-plus-text</code>, the action slot, the free step, the required label) and its
+            tenants discharge it</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-21-props-need-a-truthful-source.html"><code>dec-21-props-need-a-truthful-source.html</code></a></td>
+          <td><span class="badge id">DEC-21</span></td>
+          <td>A prop whose value <strong>can only be a guess does not exist</strong> (nothing observes
+            per-step completion, so the flag would record "I read this"), a mode with no tenant is a
+            sibling component deferred, and two components differing by one colour with a moving
+            boundary are one component with a tone. Where a prop <em>is</em> warranted the default is
+            <strong>opt-out</strong>: a redundant search row costs one line, a missing one costs the
+            user the option</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-22-time-is-absolute-and-local.html"><code>dec-22-time-is-absolute-and-local.html</code></a></td>
+          <td><span class="badge id">DEC-22</span></td>
+          <td>Every time Trawler shows is <strong>absolute · local · 24 h · seconds, truncated never
+            rounded</strong> — one driver (the app is read side by side with server logs, a terminal
+            and a system clock) settling four forks. Relative and ms are opt-in via the format prop,
+            no UTC mode exists or is planned, and the 8-char width is a contract the list column is
+            sized to</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-23-collection-dependencies.html"><code>dec-23-collection-dependencies.html</code></a></td>
+          <td><span class="badge id">DEC-23</span></td>
+          <td>The collection's whole dependency surface — <code>statuses</code> (IANA reason phrases;
+            <code>http.STATUS_CODES</code> is Node-only, so the browser alternative is a copied table
+            that drifts) and <code>moment</code> (parsing + format tokens + relative in one).
+            <strong>Each carries its exit path</strong>: moment is maintenance-mode and
+            <code>dayjs</code> shares its token API, so anything leaking moment past
+            <code>TimestampText</code>'s boundary is a finding</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-24-design-review-dimension.html"><code>dec-24-design-review-dimension.html</code></a></td>
+          <td><span class="badge id">DEC-24</span></td>
+          <td>Tier-3 is a <strong>dimension of the code review</strong>, not a skill of its own —
+            independence, freshness, sha-binding and merge-time refusal already live there. Its verdict is
+            the tip's <code>cr/v3</code> <code>design:</code> section, refused by <code>9·design</code>;
+            the <strong>schema string is the grandfather rule</strong>, so the bump cost zero waivers. And
+            <strong>a design-bearing diff is never docs-only-exempt</strong>: a design is a docs-only
+            <em>deliverable</em>, and the exemption had already let W2 land 14 component design files with
+            no code review at all</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>
