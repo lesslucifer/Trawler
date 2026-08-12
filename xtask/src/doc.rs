@@ -122,6 +122,15 @@ pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
     crate::git::git(repo, &["rev-parse", &format!("{rev}:{RULEBOOK}")]).ok()
 }
 
+// Every slug the rulebook declares, hard and soft. The gate reads it to check a
+// citation is followable rather than merely well-shaped.
+pub fn rulebook_slugs(repo: &Path) -> Vec<String> {
+    std::fs::read_to_string(repo.join(RULEBOOK))
+        .ok()
+        .map(|html| rules_from_rulebook(&html).into_iter().map(|rule| rule.slug).collect())
+        .unwrap_or_default()
+}
+
 pub fn rulebook(repo: &Path) -> Option<Rulebook> {
     let rules = std::fs::read_to_string(repo.join(RULEBOOK))
         .ok()

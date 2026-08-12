@@ -350,6 +350,59 @@ fn a_design_file_retired_in_dec_16_order_passes() {
     assert!(report.green(), "{}", format_report(&report));
 }
 
+// DEC-16: "most fork cards are local and die with the file", and "a dead end named
+// is not the same as a dead end assumed". Demanding a decision record refused the
+// case DEC-16 calls the majority — measured over W7's own sixteen retirements, 2 of
+// which correctly produced no record. So a dead end retires the file when it says
+// WHAT CARRIES the fork; the reason that names nothing is still refused.
+#[test]
+fn a_dead_end_that_names_what_carries_the_fork_retires_the_file() {
+    for reason in ["\"D1/D2 carried verbatim by @states\"", "\"the value cell is a @madeof edge\""]
+    {
+        let repo = wu_retiring_a_design_file(reason, false);
+        let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+        assert!(report.green(), "{reason} names its carrier: {}", format_report(&report));
+    }
+
+    for reason in ["\"none\"", "\"nothing survives\"", "\"local prop shape\"", "\"  \""] {
+        let repo = wu_retiring_a_design_file(reason, false);
+        let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+        assert!(
+            checks_of(&report).contains(&"6·retirement-order"),
+            "{reason} names nothing - a dead end assumed: {}",
+            format_report(&report)
+        );
+    }
+}
+
+// A rulebook slug is the other carrier, and it counts only when the rulebook really
+// holds it: a citation nobody can follow is the same silence as no citation.
+#[test]
+fn a_rulebook_slug_carries_a_fork_only_while_the_rulebook_declares_it() {
+    let repo = wu_retiring_a_design_file("\"superseded by wrap-not-truncate\"", false);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"6·retirement-order"),
+        "the fixture rulebook declares no slugs, so the citation leads nowhere: {}",
+        format_report(&report)
+    );
+
+    repo.write(
+        RULEBOOK,
+        "<table data-c=\"hard-rules-table\"><tbody>\
+         <tr><td><code>wrap-not-truncate</code></td></tr></tbody></table>\n",
+    );
+    repo.commit("the rulebook declares the slug the reason cites");
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    let changes = format!(
+        "{WU_CHANGES}  - path: docs/work/components/button.html\n    tier: T3\n    action: archived\n    distilled_to: \"superseded by wrap-not-truncate\"\n  - path: {RULEBOOK}\n    tier: T2\n    action: updated\n    distills: \"the slug\"\n"
+    );
+    repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &changes, None));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "now the citation resolves: {}", format_report(&report));
+}
+
 // Closing a run was nobody's step, so run #3 rode two Working Units open and red.
 // The merge is where the tree becomes answerable for it: a run the diff carries is
 // this seam's, and a seam that ends with it still open never closed it.

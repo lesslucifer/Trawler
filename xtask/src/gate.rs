@@ -8,6 +8,22 @@ use crate::notes::{
     DocChange, DocNote, TestNote, CR_SCHEMAS,
 };
 
+// What a fork card may be carried by when no decision record carries it: the TSDoc
+// tags a contract compiles into, or a rulebook slug that outranks it. Both are
+// things a reader can go and read - the whole difference between a dead end named
+// and a dead end assumed (DEC-16).
+const CARRIERS: &[&str] = &["@use", "@avoid", "@states", "@madeof", "@tier"];
+
+// A slug counts only while the rulebook really holds it: a citation nobody can
+// follow is the same silence as no citation, and the rulebook is the one place that
+// can say whether `wrap-not-truncate` is a rule or a phrase.
+fn names_a_carrier(repo: &Path, reason: &str) -> bool {
+    if CARRIERS.iter().any(|tag| reason.contains(tag)) {
+        return true;
+    }
+    crate::doc::rulebook_slugs(repo).iter().any(|slug| reason.contains(slug.as_str()))
+}
+
 // A cr/v2 note carries no design section and cannot be made to carry one: the
 // review that wrote it ran before the dimension existed, and editing it after
 // the fact would claim a judgment nobody made. The epic walk therefore drops
@@ -286,11 +302,16 @@ impl Gate<'_> {
 
     // DEC-16's order, refused rather than remembered. Step ③ - removing a design
     // file - is the irreversible one, and step ① is the only one that can lose
-    // data, so the gate holds ③ until ① has landed. The existing lineage rule
-    // accepts any recorded distilled_to including a dead-end reason: the right
-    // latitude for a scratch plan, and the wrong one for a file whose fork cards
-    // are the whole reason a removal loses something. Here the lineage must name
-    // a decision record that really exists at the tip.
+    // data, so the gate holds ③ until ① has landed.
+    //
+    // Two lineages are accepted, and the second exists because the first was too
+    // narrow: W7 ⑥ measured it over the sixteen files W7 retired and 2 of them had
+    // NO surviving record, correctly - every fork was carried by the contract or
+    // superseded by a rule. DEC-16 says so itself ("most are local and die with the
+    // file"), so demanding a record refused the case that record calls the
+    // majority. What the check still refuses is the reason that names nothing:
+    // "none", "nothing survives", "local" - a dead end ASSUMED, which is the loss
+    // DEC-16 exists to prevent. A dead end NAMED cites what carries the fork.
     fn check_retirement_order(&self, report: &mut Report, path: &str, entry: &DocChange) {
         if !path.starts_with(crate::doc::COMPONENTS)
             || crate::git::show_bytes(self.repo, &report.tip, path).is_ok()
@@ -302,13 +323,14 @@ impl Gate<'_> {
                 to.starts_with("docs/decisions/")
                     && crate::git::show_bytes(self.repo, &report.tip, to).is_ok()
             }),
-            _ => false,
+            Some(DistilledTo::DeadEnd(reason)) => names_a_carrier(self.repo, reason),
+            None => false,
         };
         if !distilled {
             report.failures.push(Failure::new(
                 "6·retirement-order",
                 format!("{path} is removed with its forks distilled nowhere"),
-                "DEC-16: distil the fork cards to docs/decisions/ first, then record distilled_to: [that record] - a dead-end reason does not cover a design file".to_string(),
+                format!("DEC-16: distil the fork cards to docs/decisions/ and record distilled_to: [that record] - or, where every fork really is a dead end, say what carries it: a TSDoc tag ({}) or a rulebook slug. A reason that names nothing is a dead end assumed, not named", CARRIERS.join(" ")),
             ));
         }
     }
