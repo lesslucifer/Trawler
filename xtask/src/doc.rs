@@ -2350,7 +2350,7 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
         let html =
             std::fs::read_to_string(&resolved).map_err(|e| format!("cannot read {path}: {e}"))?;
         let component = component_designed(path);
-        let designs = declares_a_design(path, &html);
+        let designs = declares_a_design(component.is_some(), &html);
         if vocab.is_none() && designs {
             vocab = Some(vocabulary(repo));
         }
@@ -2380,8 +2380,8 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
 // that merely quotes the contract in prose, and each yes costs two node processes
 // nothing then reads. `design_run_status` is the same tokenised answer the gate's
 // run-finder already takes.
-fn declares_a_design(path: &str, html: &str) -> bool {
-    component_designed(path).is_some() || design_run_status(html).is_some()
+fn declares_a_design(is_component: bool, html: &str) -> bool {
+    is_component || design_run_status(html).is_some()
 }
 
 pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
@@ -2750,18 +2750,15 @@ chroma_floor: 40
             "<p>gate on <code>data-artifact=\"design-run\"</code> and never on the string</p>",
         );
         assert!(
-            !declares_a_design("docs/work/2026-08-12-notes.html", &quoted),
+            !declares_a_design(false, &quoted),
             "a quoted declaration is prose, not an artifact"
         );
         assert!(
-            declares_a_design(
-                "docs/work/2026-08-13-run.html",
-                &doc("design-run", "draft", "<p>x</p>")
-            ),
-            "the real declaration still asks for the oracles"
+            declares_a_design(false, &doc("design-run", "draft", "<p>x</p>")),
+            "the real declaration still asks for the oracles, draft or not"
         );
         assert!(
-            declares_a_design("docs/work/components/button.html", &quoted),
+            declares_a_design(true, &quoted),
             "a component design file is named by its path, whatever its body quotes"
         );
     }

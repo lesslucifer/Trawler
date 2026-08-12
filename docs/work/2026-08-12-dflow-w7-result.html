@@ -309,7 +309,9 @@ flowchart LR
           that merely <em>quotes</em> <code>data-artifact="design-run"</code> paid for both. ③'s own record
           says <em>"read the declaration, never the string"</em> — fixed at the run-finder, missed here</td>
           <td><span class="badge auto">fixed</span> <code>declares_a_design</code> tokenises;
-            <strong>0.19s → 0.026s</strong> on the 4 affected docs</td></tr>
+            <strong>0.19s → 0.026s</strong> on the <strong>5</strong> affected docs — 8 quote the string, 3
+            declare it. The 5th is <em>this report</em>, which became a false positive by quoting the
+            declaration to describe the fix</td></tr>
         <tr><td>this report claimed <code>cr/v3</code> was already attached, and counted
           <strong>one</strong> open item where <code>verify-dod</code> reds <strong>two</strong></td>
           <td><span class="badge auto">fixed</span> — the section now names the command, not its output</td></tr>
@@ -361,9 +363,11 @@ flowchart LR
               items and megabytes, which no doc approaches</td></tr>
         </tbody>
       </table>
-      So the waiver rests on <strong>size, not unreachability</strong> — the honest ground. The fix, memoising
-      the parse per <code>verify_html_against</code> call, is a refactor and not a hand-over change.
-      <strong>Carried as follow-up 10.</strong>
+      So the waiver rests on <strong>size, not unreachability</strong> — the honest ground, and it covers
+      <em>every</em> <code>attrs</code>/<code>element_content</code> call site, not only the two rows above.
+      Round 4 found a third (<code>declares_a_design</code> and <code>verify_html_against</code> asking
+      <code>data-artifact</code> twice per pass) and it folds in here: one extra parse over 8 docs, against a
+      fix that would re-signature 40+ call sites. <strong>Carried as follow-up 10.</strong>
     </div>
 
     <h2 id="gap">⚠ The gap — Tier-3 ships unexercised</h2>
@@ -653,12 +657,14 @@ no design artifact in 2bceacd71d..bfac33b2e1</pre>
           <code>cp .cargo-husky/hooks/* "$(git rev-parse --git-path hooks)/"</code>, though that directory is
           shared with the main <code>Trawler</code> checkout, so it is the user's call</td>
           <td><span class="badge approval">user</span></td></tr>
-        <tr><td>13</td><td><strong>A result report cannot state its own gate verdict</strong> — the
-          <code>cr/v3</code> note binds a diff sha of a diff containing the report, so any status it prints is
-          stale the moment it is written. Round 3 caught this report claiming a note that did not exist.
-          <code>#commits</code> already solved the same bootstrap for hashes by naming the command instead of
-          its output; the flow spec should say so once, for every future result report</td>
-          <td><a href="design-flow-base.html">flow spec</a></td></tr>
+        <tr><td>13</td><td><strong><a href="#owed">A result report cannot state its own gate
+          verdict.</a></strong> Round 3 caught this report claiming a <code>cr/v3</code> note that did not
+          exist. The rule is <em>not</em> design-flow's: it follows from the workflow's gate binding a diff
+          that contains the report, and this file is a <code>wu-result</code> — so it belongs to
+          <strong><code>docs/work-planning.html</code></strong>'s result-report Evidence checklist, which
+          governs every epic's reports. <code>design-flow-base.html</code> would archive it or promote it into
+          a design-flow-only doc. T1, so it needs a human <code>Reviewed-By</code></td>
+          <td><span class="badge approval">user</span> · T1</td></tr>
       </tbody>
     </table>
   </main>
