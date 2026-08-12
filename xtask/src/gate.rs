@@ -96,6 +96,9 @@ impl Gate<'_> {
         if level == Level::Epic {
             self.check_tracked_docs(&mut report);
         }
+        if level != Level::Commit {
+            self.check_runs_closed(&mut report, &names);
+        }
         self.check_manual_review(&mut report);
         report.exempt = report.exempt && report.failures.is_empty();
         if !code_changed {
@@ -286,6 +289,27 @@ impl Gate<'_> {
                 format!("{path} is removed with its forks distilled nowhere"),
                 "DEC-16: distil the fork cards to docs/decisions/ first, then record distilled_to: [that record] - a dead-end reason does not cover a design file".to_string(),
             ));
+        }
+    }
+
+    // Closing a design run was nobody's step: a run was archived as a side effect
+    // of the NEXT run being written, so run #3 - which had no next run - stayed
+    // open and red in the tree for two Working Units. The merge is where that
+    // stops being invisible, because a run the diff touched is a run this seam is
+    // answerable for. A commit mid-design is not: a run is legitimately open, and
+    // red, for as long as it is being designed.
+    fn check_runs_closed(&self, report: &mut Report, names: &[String]) {
+        for path in names.iter().filter(|p| is_doc(p)) {
+            let Ok(bytes) = crate::git::show_bytes(self.repo, &report.tip, path) else { continue };
+            let Ok(html) = String::from_utf8(bytes) else { continue };
+            let Some(status) = crate::doc::design_run_status(&html) else { continue };
+            if status.is_empty() {
+                report.failures.push(Failure::new(
+                    "6·run-closed",
+                    format!("{path} is a design run left open at the tip"),
+                    "close the run when it finishes: archive it (data-status=\"archived\" beside its data-artifact), which is what keeps a later rule from re-opening it - a run still mid-design across a merge declares data-status=\"draft\" instead".to_string(),
+                ));
+            }
         }
     }
 

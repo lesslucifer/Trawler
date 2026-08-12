@@ -347,6 +347,75 @@ fn a_design_file_retired_in_dec_16_order_passes() {
     assert!(report.green(), "{}", format_report(&report));
 }
 
+// Closing a run was nobody's step, so run #3 rode two Working Units open and red.
+// The merge is where the tree becomes answerable for it: a run the diff carries is
+// this seam's, and a seam that ends with it still open never closed it.
+const DESIGN_RUN: &str = "docs/work/2026-08-13-dflow-run-4.html";
+
+fn wu_carrying_a_design_run(status: &str) -> Repo {
+    let repo = wu_with_change();
+    let attr = if status.is_empty() { String::new() } else { format!(" data-status=\"{status}\"") };
+    repo.write(
+        DESIGN_RUN,
+        &format!("<html><body><main data-artifact=\"design-run\"{attr}><p>the run</p></main></body></html>\n"),
+    );
+    repo.commit("the fourth design run");
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    let changes = format!(
+        "{WU_CHANGES}  - path: {DESIGN_RUN}\n    tier: T3\n    action: added\n    distills: \"the fourth run\"\n"
+    );
+    repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &changes, None));
+    repo
+}
+
+#[test]
+fn a_design_run_left_open_at_the_tip_refuses_the_merge() {
+    let repo = wu_carrying_a_design_run("");
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(checks_of(&report).contains(&"6·run-closed"), "{}", format_report(&report));
+    assert!(format_report(&report).contains("archived"), "the fix names the close");
+
+    let ready = wu_carrying_a_design_run("ready");
+    let report = ready.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"6·run-closed"),
+        "ready declares the run open, not closed: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn a_closed_run_and_one_still_mid_design_both_pass() {
+    for status in ["archived", "draft"] {
+        let repo = wu_carrying_a_design_run(status);
+        let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+        assert!(report.green(), "{status}: {}", format_report(&report));
+    }
+}
+
+// The flow spec and two plans quote the declaration inside a <code> block. A
+// substring scan would hold every doc that explains the contract to it.
+#[test]
+fn a_doc_quoting_the_declaration_is_not_a_run() {
+    let repo = wu_with_change();
+    repo.write(
+        "docs/work/flow-spec.html",
+        "<html><body><main data-artifact=\"wu-plan\"><p>a run declares \
+         <code>data-artifact=\"design-run\"</code></p></main></body></html>\n",
+    );
+    repo.commit("the flow spec");
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    let changes = format!(
+        "{WU_CHANGES}  - path: docs/work/flow-spec.html\n    tier: T3\n    action: added\n    distills: \"the flow spec\"\n"
+    );
+    repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &changes, None));
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+}
+
 fn epic_with_merged_wu() -> (Repo, String) {
     let repo = wu_with_change();
     let wu_tip = repo.sha("wu/x/one");

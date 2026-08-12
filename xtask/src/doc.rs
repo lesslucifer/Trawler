@@ -35,6 +35,7 @@ const DESIGN_RUN: &[&str] = &[
     "capabilities",
     "proposals",
     "blocked-on",
+    "review",
 ];
 const VERDICTS: &[&str] = &[
     "satisfied",
@@ -84,6 +85,28 @@ fn checklist(artifact: &str) -> Option<&'static [&'static str]> {
 pub struct Rule {
     pub slug: String,
     pub hard: bool,
+}
+
+// The rulebook a run is judged against: its slugs, and the blob the receipt must
+// pin. Read together because a receipt pinning a version nobody hashed is the
+// same claim as a receipt pinning nothing - `rulebook: <anything>` passed for
+// three Working Units, which is what W3's promise ("the receipt pins the blob it
+// ran against") actually bought.
+pub struct Rulebook {
+    rules: Vec<Rule>,
+    blob: Option<String>,
+}
+
+// A pin shorter than this names no blob: git's own abbreviation floor, and the
+// length every receipt in the corpus already writes.
+const PIN_MIN: usize = 7;
+
+pub fn rulebook(repo: &Path) -> Option<Rulebook> {
+    let rules = std::fs::read_to_string(repo.join(RULEBOOK))
+        .ok()
+        .map(|html| rules_from_rulebook(&html))
+        .filter(|rules| !rules.is_empty())?;
+    Some(Rulebook { rules, blob: crate::git::git(repo, &["hash-object", RULEBOOK]).ok() })
 }
 
 #[derive(Deserialize)]
@@ -260,7 +283,7 @@ pub fn verify_html(html: &str) -> Verdict {
 
 pub fn verify_html_against(
     html: &str,
-    rules: Option<&[Rule]>,
+    rulebook: Option<&Rulebook>,
     vocabulary: Option<&Vocabulary>,
     roster: Option<&Roster>,
 ) -> Verdict {
@@ -350,7 +373,7 @@ pub fn verify_html_against(
     let mut summary = None;
     if artifacts.iter().any(|a| a == "design-run") {
         let receipt = top_items.iter().find(|(_, o)| o.value == "receipt").map(|(_, o)| o);
-        summary = check_receipt(&mut failures, receipt, html, rules);
+        summary = check_receipt(&mut failures, receipt, html, rulebook);
         check_composition(&mut failures, html, &top_items, roster);
         let allowed = read_pragmas(&mut failures, html);
         check_hard_rules(&mut failures, html, &top_items, vocabulary, &allowed, roster);
@@ -366,7 +389,7 @@ fn check_receipt(
     failures: &mut Vec<Failure>,
     receipt: Option<&Occurrence>,
     html: &str,
-    rules: Option<&[Rule]>,
+    rulebook: Option<&Rulebook>,
 ) -> Option<String> {
     let receipt = receipt?;
     let parsed: Receipt = match serde_yaml::from_str(&inner_text(html, receipt.span)) {
@@ -380,15 +403,7 @@ fn check_receipt(
             return None;
         }
     };
-    if parsed.rulebook.trim().is_empty() {
-        failures.push(Failure {
-            check: "receipt·rulebook".to_string(),
-            what: "the receipt names no rulebook version".to_string(),
-            fix: "pin it: rulebook: <blob sha of docs/design-rules/design-rules-index.html>"
-                .to_string(),
-        });
-    }
-    let Some(rules) = rules else {
+    let Some(rulebook) = rulebook else {
         failures.push(Failure {
             check: "receipt·rulebook-unreadable".to_string(),
             what: format!("cannot read {RULEBOOK} - receipt coverage is unverifiable"),
@@ -397,7 +412,9 @@ fn check_receipt(
         });
         return None;
     };
+    check_pin(failures, parsed.rulebook.trim(), rulebook);
 
+    let rules = &rulebook.rules;
     let soft: Vec<&str> = rules.iter().filter(|r| !r.hard).map(|r| r.slug.as_str()).collect();
     let hard: Vec<&str> = rules.iter().filter(|r| r.hard).map(|r| r.slug.as_str()).collect();
     let missing: Vec<&str> =
@@ -457,6 +474,48 @@ fn check_receipt(
     }
 
     Some(tally_line(&soft, &missing, &counts, &hard))
+}
+
+// The pin, compared against the rulebook it names rather than merely being
+// present. A stale pin is the one receipt claim that reads as evidence while
+// being unread: every verdict under it was written against rules that have since
+// moved. An archived run is exempt before this runs - a run that closed under an
+// older rulebook is a record, not a stale claim.
+fn check_pin(failures: &mut Vec<Failure>, pinned: &str, rulebook: &Rulebook) {
+    let mut fail = |check: &str, what: String, fix: String| {
+        failures.push(Failure { check: check.to_string(), what, fix });
+    };
+    if pinned.is_empty() {
+        fail(
+            "receipt·rulebook",
+            "the receipt names no rulebook version".to_string(),
+            format!("pin it: rulebook: $(git hash-object {RULEBOOK})"),
+        );
+        return;
+    }
+    let Some(blob) = &rulebook.blob else {
+        fail(
+            "receipt·rulebook-unverifiable",
+            format!("cannot hash {RULEBOOK} - the pin names a version nothing here can check"),
+            "run verify-doc from the repo root with git on PATH".to_string(),
+        );
+        return;
+    };
+    let pin = pinned.to_ascii_lowercase();
+    let short = blob.get(..PIN_MIN).unwrap_or(blob.as_str());
+    if pin.len() < PIN_MIN {
+        fail(
+            "receipt·rulebook",
+            format!("the pin \"{pinned}\" is too short to name a blob"),
+            format!("pin at least {PIN_MIN} characters: rulebook: {short}"),
+        );
+    } else if !blob.starts_with(&pin) {
+        fail(
+            "receipt·rulebook-stale",
+            format!("the receipt ran against rulebook {pinned}; {RULEBOOK} is now {short}"),
+            format!("re-read the rulebook, re-judge every soft row against it and re-pin: rulebook: {short} - or archive the run if it closed under the older one"),
+        );
+    }
 }
 
 fn tally_line(soft: &[&str], missing: &[&str], counts: &[usize], hard: &[&str]) -> String {
@@ -521,6 +580,9 @@ fn check_composition(
     }
     if let Some(capabilities) = item("capabilities") {
         check_capabilities(failures, capabilities);
+    }
+    if let Some(review) = item("review") {
+        check_review_record(failures, review);
     }
     if let Some(mockup) = item("mockup") {
         if !mockup.contains("data-state-toggle") {
@@ -1623,6 +1685,54 @@ fn check_capabilities(failures: &mut Vec<Failure>, capabilities: &str) {
     }
 }
 
+// W4 run #2, finding 29: two reviewer instructions moved the Layout sketch, two
+// catalog rows, two use-cases, the mockup, four receipt rows and the cross-check,
+// and the run read as if the stages had produced all of it. The strongest signal
+// a run carries - a human overrode the design, and here is the contract it hit -
+// was the one the artifact dropped. So the moved column is answered from the
+// run's own item names: "the reviewer changed things" is not an answer, and
+// `nothing` (the instruction was argued and the design held) is.
+fn check_review_record(failures: &mut Vec<Failure>, review: &str) {
+    let rows = data_rows(review);
+    let mut fail = |what: String, fix: &str| {
+        failures
+            .push(Failure { check: "review·recorded".to_string(), what, fix: fix.to_string() });
+    };
+    if rows.is_empty() {
+        fail(
+            "the review item records no instruction".to_string(),
+            "one row per reviewer instruction: what was said | what it moved (the stages, or `nothing`) | the contract it hit",
+        );
+        return;
+    }
+    let cell = |row: &str, at: usize| {
+        elements_of(row, "td").get(at).map_or_else(String::new, |c| c.to_lowercase())
+    };
+    let unmoved = rows
+        .iter()
+        .filter(|r| {
+            let moved = cell(r, 1);
+            !moved.contains("nothing") && !DESIGN_RUN.iter().any(|stage| moved.contains(stage))
+        })
+        .count();
+    if unmoved > 0 {
+        fail(
+            format!("{unmoved} of {} review rows name no stage they moved", rows.len()),
+            "name the stages the instruction moved, or `nothing` if the design held - a run that rewrites its own history silently is the defect this item exists to refuse",
+        );
+    }
+    let uncited = rows
+        .iter()
+        .filter(|r| elements_of(r, "td").get(2).is_none_or(|hit| !hit.contains("<code>")))
+        .count();
+    if uncited > 0 {
+        fail(
+            format!("{uncited} of {} review rows cite no contract", rows.len()),
+            "cite what the change hit: a rule slug, a component's @use/@avoid, or a decision record - <code>taste</code> when the design genuinely had latitude there",
+        );
+    }
+}
+
 fn is_example(cell: &str) -> bool {
     cell.contains('✓') || cell.contains('✗')
 }
@@ -1919,6 +2029,18 @@ fn check_unknown(
 // run #3's checks red runs #1 and #2, which are records of what the flow was, not
 // artifacts anyone will fix. A run still open is never archived: that would hide
 // exactly the reds the flow exists to surface.
+// What a doc declares itself to be, read the way the checks read it: a mention of
+// `data-artifact="design-run"` inside a <code> block - which the flow spec and two
+// plans carry - declares nothing. `Some("")` is a run still open.
+pub fn design_run_status(html: &str) -> Option<String> {
+    let artifact = attrs(html, "data-artifact").into_iter().next()?;
+    artifact
+        .value
+        .split_whitespace()
+        .any(|token| token == "design-run")
+        .then(|| exempt_declared(html, &artifact).unwrap_or_default())
+}
+
 fn exempt_declared(html: &str, artifact: &Attr) -> Option<String> {
     if !artifact.closed {
         return None;
@@ -2168,10 +2290,7 @@ fn edit_distance(a: &str, b: &str) -> usize {
 
 pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
     let single = paths.len() == 1;
-    let rules = std::fs::read_to_string(repo.join(RULEBOOK))
-        .ok()
-        .map(|html| rules_from_rulebook(&html))
-        .filter(|rules| !rules.is_empty());
+    let rules = rulebook(repo);
     // Read once for the whole invocation, and only when a doc in the batch has a
     // rule that reads them: each oracle costs a node process.
     let mut vocab: Option<Result<Vocabulary, String>> = None;
@@ -2195,7 +2314,7 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
         let roster_read = names.as_ref().and_then(|read| read.as_ref().ok());
         let verdict = match component {
             Some(name) => verify_component(&html, &name, roster_read, vocab_read),
-            None => verify_html_against(&html, rules.as_deref(), vocab_read, roster_read),
+            None => verify_html_against(&html, rules.as_ref(), vocab_read, roster_read),
         };
         if verdict.red() {
             any_red = true;
@@ -2289,8 +2408,19 @@ mod tests {
          <tr><td><code>calm-microcopy</code></td><td>calm</td></tr>\
          </tbody></table>";
 
-    fn rules() -> Vec<super::Rule> {
-        rules_from_rulebook(RULEBOOK)
+    // The pin is the fixture receipt's, so the unit tests judge coverage against a
+    // rulebook the receipt genuinely names; the pin's own checks move it.
+    const PIN: &str = "28f5437";
+
+    fn rules() -> super::Rulebook {
+        rulebook_of(RULEBOOK)
+    }
+
+    fn rulebook_of(html: &str) -> super::Rulebook {
+        super::Rulebook {
+            rules: rules_from_rulebook(html),
+            blob: Some(format!("{PIN}c0ffee1a2b3c4d5e6f708192a3b4c5d6e7f8")),
+        }
     }
 
     // A hand-written stand-in for what scripts/design-vocabulary.mjs emits, so
@@ -2359,7 +2489,9 @@ chroma_floor: 40
              {receipt_block}\
              <table data-item=\"capabilities\"><tr><td>CA install</td><td>used</td>\
              <td>B1's button</td></tr></table>\
-             <p data-item=\"proposals\">band</p><p data-item=\"blocked-on\">verb tokens</p></main>"
+             <p data-item=\"proposals\">band</p><p data-item=\"blocked-on\">verb tokens</p>\
+             <table data-item=\"review\"><tr><td>copy icon only</td><td>elements · mockup</td>\
+             <td><code>CopyButton</code> @avoid</td></tr></table></main>"
         );
         format!("<html><body>{body}</body></html>")
     }
@@ -2538,7 +2670,7 @@ chroma_floor: 40
     #[test]
     fn rulebook_slugs_are_read_from_the_rulebook_tables() {
         let extracted: Vec<(String, bool)> =
-            rules().into_iter().map(|r| (r.slug, r.hard)).collect();
+            rules().rules.into_iter().map(|r| (r.slug, r.hard)).collect();
         assert_eq!(
             extracted,
             vec![
@@ -2570,7 +2702,7 @@ chroma_floor: 40
             "<tr><td><code>not-a-predicate</code></td><td>x</td></tr>\
              <tr><td><code>spacing-scale</code></td>",
         );
-        let rules = rules_from_rulebook(&widened);
+        let rules = rulebook_of(&widened);
         let v = verify_html_against(&green_run(), Some(&rules), Some(&vocab()), Some(&roster()));
         let Verdict::Checked { summary: Some(summary), .. } = &v else { panic!("no tally") };
         assert!(
@@ -2637,6 +2769,43 @@ chroma_floor: 40
         let doc = green_run().replace("rulebook: 28f5437", "rulebook: \"\"");
         let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
         assert!(failures(&v).contains(&"receipt·rulebook".to_string()));
+    }
+
+    // W3 promised the receipt pins the rulebook blob it ran against; until now
+    // any string passed, so every verdict under a moved rulebook read as evidence
+    // while being unread.
+    #[test]
+    fn a_receipt_pinning_a_version_that_is_not_the_rulebook_on_disk_is_red() {
+        let doc = green_run().replace("rulebook: 28f5437", "rulebook: 9999999");
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
+        let hit = what(&v, "receipt·rulebook-stale");
+        assert!(hit.contains("9999999") && hit.contains(PIN), "names both versions: {hit}");
+        assert!(hit.contains("re-judge"), "the fix is a re-run, not a re-typed sha: {hit}");
+    }
+
+    #[test]
+    fn a_full_length_pin_of_the_same_blob_resolves() {
+        let full = rules().blob.expect("the fixture rulebook is hashed");
+        let doc = green_run().replace("rulebook: 28f5437", &format!("rulebook: {full}"));
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
+        assert!(!v.red(), "{:?}", failures(&v));
+    }
+
+    #[test]
+    fn a_pin_too_short_to_name_a_blob_is_red() {
+        let doc = green_run().replace("rulebook: 28f5437", "rulebook: 28f");
+        let v = verify_html_against(&doc, Some(&rules()), Some(&vocab()), Some(&roster()));
+        assert!(what(&v, "receipt·rulebook").contains("too short"));
+    }
+
+    // The rulebook read but not hashable is the same shape of hole as one that
+    // could not be read at all: a pin nothing can check is not a pin.
+    #[test]
+    fn a_pin_that_cannot_be_hashed_is_red_never_silently_green() {
+        let unhashable = super::Rulebook { rules: rules_from_rulebook(RULEBOOK), blob: None };
+        let v =
+            verify_html_against(&green_run(), Some(&unhashable), Some(&vocab()), Some(&roster()));
+        assert!(what(&v, "receipt·rulebook-unverifiable").contains("nothing here can check"));
     }
 
     #[test]
@@ -2776,6 +2945,46 @@ chroma_floor: 40
         assert!(failures(&doc_verdict(&doc)).contains(&"item·capabilities".to_string()));
     }
 
+    // W4 finding 29: the run doc read as if the stages had produced what two
+    // reviewer instructions moved. The item is required, so a run that had a
+    // reviewer and says nothing about them cannot be told from one that did not.
+    #[test]
+    fn a_run_that_records_no_review_is_red() {
+        let doc = green_run().replace(" data-item=\"review\"", "");
+        assert!(failures(&doc_verdict(&doc)).contains(&"item·review".to_string()));
+    }
+
+    #[test]
+    fn a_review_item_with_no_instruction_row_is_red() {
+        let doc = green_run().replace(
+            "<tr><td>copy icon only</td><td>elements · mockup</td>\
+             <td><code>CopyButton</code> @avoid</td></tr>",
+            "<tr><td>the reviewer had notes</td></tr>",
+        );
+        assert!(what(&doc_verdict(&doc), "review·recorded").contains("no instruction"));
+    }
+
+    #[test]
+    fn a_review_row_that_names_no_stage_it_moved_is_red() {
+        let doc = green_run().replace("<td>elements · mockup</td>", "<td>several things</td>");
+        assert!(what(&doc_verdict(&doc), "review·recorded").contains("no stage"));
+    }
+
+    // An instruction the design argued and held is a first-class outcome - the
+    // row exists to record that it was heard, not that it won.
+    #[test]
+    fn a_review_row_that_moved_nothing_says_so_and_passes() {
+        let doc = green_run().replace("<td>elements · mockup</td>", "<td>nothing</td>");
+        assert!(!doc_verdict(&doc).red(), "{:?}", failures(&doc_verdict(&doc)));
+    }
+
+    #[test]
+    fn a_review_row_citing_no_contract_is_red() {
+        let doc =
+            green_run().replace("<td><code>CopyButton</code> @avoid</td>", "<td>it fits</td>");
+        assert!(what(&doc_verdict(&doc), "review·recorded").contains("cite no contract"));
+    }
+
     // A cell holding a nested table ends at its OWN close tag: the naive scan
     // stopped at the inner one and measured every word count on a fragment.
     #[test]
@@ -2877,18 +3086,82 @@ chroma_floor: 40
         assert!(line.contains("archived") && !line.contains("until ready"), "{line}");
     }
 
+    // Every design run in the tree, found rather than listed: the hand-typed trio
+    // this replaces had to be extended by whoever added a run, which is the same
+    // "somebody remembers" that left run #3 open. What it asserts is that the
+    // archived flag is load-bearing on each file it finds - lifted, the run is
+    // governed again - so an archived run can never pass a check vacuously.
+    //
+    // It does NOT assert every run is archived: a run mid-design is open, and red,
+    // for as long as it is being designed. Closing is enforced where the tree is
+    // answerable for it, at the merge (6·run-closed).
     #[test]
-    fn the_closed_runs_are_archived_so_a_new_rule_does_not_reopen_them() {
-        for run in [
-            include_str!("../../docs/work/2026-07-16-dflow-run-1.html"),
-            include_str!("../../docs/work/2026-07-25-dflow-w4-run-2.html"),
-            include_str!("../../docs/work/2026-07-26-dflow-w4-run-3.html"),
-        ] {
+    fn every_archived_run_is_exempt_by_a_flag_that_is_doing_work() {
+        let runs: Vec<(String, String)> = design_runs_in_the_tree();
+        assert!(runs.len() >= 3, "the discovery found no runs: {}", runs.len());
+        for (path, html) in runs {
+            let Some(status) = super::design_run_status(&html) else {
+                panic!("{path} is not a run")
+            };
+            if status != "archived" {
+                continue;
+            }
             assert!(
-                matches!(verify_html(run), Verdict::Exempt(s) if s == "archived"),
-                "a closed run must be archived"
+                matches!(verify_html(&html), Verdict::Exempt(s) if s == "archived"),
+                "{path} declares archived but is not exempt"
+            );
+            let reopened = html.replace(" data-status=\"archived\"", "");
+            assert_ne!(reopened, html, "{path}: lifting the flag changed nothing");
+            assert!(
+                !matches!(verify_html(&reopened), Verdict::Exempt(_)),
+                "{path} is silent for some other reason - the archived flag proves nothing here"
             );
         }
+    }
+
+    fn design_runs_in_the_tree() -> Vec<(String, String)> {
+        let work = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/work");
+        let mut found: Vec<(String, String)> = std::fs::read_dir(work)
+            .expect("docs/work is where runs live")
+            .filter_map(|entry| {
+                let path = entry.ok()?.path();
+                let html = std::fs::read_to_string(&path).ok()?;
+                super::design_run_status(&html)?;
+                Some((path.file_name()?.to_string_lossy().to_string(), html))
+            })
+            .collect();
+        found.sort_by(|a, b| a.0.cmp(&b.0));
+        found
+    }
+
+    // The flow spec and two plans quote `data-artifact="design-run"` inside a
+    // <code> block; a scan for the string would call all three runs and gate them.
+    #[test]
+    fn a_quoted_artifact_declaration_is_not_a_run() {
+        assert_eq!(
+            super::design_run_status(
+                "<p>a run declares <code>data-artifact=\"design-run\"</code></p>"
+            ),
+            None
+        );
+        assert_eq!(super::design_run_status(&green_run()).as_deref(), Some(""));
+        assert_eq!(
+            super::design_run_status(&green_run().replace(
+                "data-artifact=\"design-run\"",
+                "data-artifact=\"design-run\" data-status=\"archived\"",
+            ))
+            .as_deref(),
+            Some("archived")
+        );
+        // `ready` is a declaration that the run is open and checked, not a close.
+        assert_eq!(
+            super::design_run_status(&green_run().replace(
+                "data-artifact=\"design-run\"",
+                "data-artifact=\"design-run\" data-status=\"ready\"",
+            ))
+            .as_deref(),
+            Some("")
+        );
     }
 
     #[test]

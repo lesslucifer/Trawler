@@ -172,8 +172,10 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
     )
     .unwrap();
 
-    let receipt =
-        |rows: &str| format!("<pre data-item=\"receipt\">rulebook: abc1234\nsoft:\n{rows}</pre>");
+    let pin = blob_of(&rulebook.join("design-rules-index.html"));
+    let receipt = |rows: &str| {
+        format!("<pre data-item=\"receipt\">rulebook: {}\nsoft:\n{rows}</pre>", &pin[..7])
+    };
     let run = |rows: &str| {
         format!(
             "<html><body><script src=\"https://cdn.tailwindcss.com\"></script>\
@@ -198,7 +200,9 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
                  {}<table data-item=\"capabilities\"><tr><td>CA install</td><td>used</td>\
                  <td>B1 button</td></tr></table>\
                  <p data-item=\"proposals\">band</p>\
-                 <p data-item=\"blocked-on\">tokens</p>",
+                 <p data-item=\"blocked-on\">tokens</p>\
+                 <table data-item=\"review\"><tr><td>copy icon only</td><td>elements</td>\
+                 <td><code>CopyButton</code> @avoid</td></tr></table>",
                 receipt(rows)
             ))
         )
@@ -229,6 +233,32 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
     assert!(text.contains("receipt·calm-microcopy"), "uncovered soft rule: {text}");
     assert!(text.contains("not one of the seven"), "bad verdict: {text}");
     assert!(text.contains("machine-checked, not receipted"), "hard rule row: {text}");
+
+    // The rulebook moves under a run that already receipted it - same slugs, so
+    // coverage still passes and only the pin can tell that every verdict above it
+    // was judged against a rulebook that no longer exists.
+    let rules_file = rulebook.join("design-rules-index.html");
+    let moved =
+        format!("<!-- W6 revised the wording -->{}", std::fs::read_to_string(&rules_file).unwrap());
+    std::fs::write(&rules_file, &moved).unwrap();
+    let out = run_verify(
+        &dir,
+        &[(
+            "stale.html",
+            &run("  data-ink-first: satisfied — no card frames\n  calm-microcopy: inherited — lowercase\n"),
+        )],
+    );
+    assert_eq!(out.status.code(), Some(1));
+    let text = stdout(&out);
+    assert!(text.contains("receipt·rulebook-stale"), "{text}");
+    assert!(text.contains(&pin[..7]) && text.contains(&blob_of(&rules_file)[..7]), "{text}");
+}
+
+// The pin the receipt must carry, computed the way the flow spec tells a run to
+// compute it: `git hash-object <the rulebook>`.
+fn blob_of(path: &std::path::Path) -> String {
+    let out = Command::new("git").arg("hash-object").arg(path).output().unwrap();
+    String::from_utf8_lossy(&out.stdout).trim().to_string()
 }
 
 // The five vocabulary rules read ui/tailwind.config.js through a node emitter.

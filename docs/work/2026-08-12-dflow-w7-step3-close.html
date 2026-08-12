@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7bdb199f34851f0dfab7c2">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W7 step 3 (a run closes)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W7 step ③ — a run closes, and the pin that passed for three Working Units</h1>
+      <p>Closing becomes a step the flow owns and the merge refuses to skip. Two claims that read as
+        evidence while being unread — the rulebook pin and the reviewer's overrides — get their
+        predicates. Three landed seams go red, which is the rule working.</p>
+      <div class="meta">Step record · 2026-08-12 · Trawler · T3 (docs/work/) ·
+        <code>wu/design-flow/harness</code> ·
+        plan: <a href="2026-08-11-dflow-w7-plan.html#step3">W7 ③</a> ·
+        closes: W6 follow-up 8 · sweep row 11 · W4 run #2 finding 29 ·
+        prior: <a href="2026-08-12-dflow-w7-step2-registry-gate.html">W7 ② the registry gate</a></div>
+    </div>
+  </header>
+
+  <main>
+    <h2 id="verdict">Verdict</h2>
+    <div class="cards" data-c="verdict-cards">
+      <div class="card"><h3>3 items, 3 homes</h3><p>the pin is a <code>verify-doc</code> predicate ·
+        the review record is an eleventh run item · closing is a <strong>merge</strong> rule, because
+        the working tree cannot tell mid-design from abandoned</p></div>
+      <div class="card"><h3>+2 reds per run</h3><p>replayed with the archive flag lifted: both
+        receipted runs pin <code>28f5437</code> against a rulebook that is now <code>796c547</code>,
+        and neither records the review rounds it had</p></div>
+      <div class="card"><h3>3 landed seams red</h3><p><code>6·run-closed</code> fires on the two W4
+        seams and one W1 seam — measured, not discovered later. They are true: those merges left a run
+        open</p></div>
+      <div class="card"><h3>The guard test stops listing</h3><p>three <code>include_str!</code> lines
+        become a directory read, and what it asserts changed: the archived flag is <em>load-bearing</em>
+        on every run it finds</p></div>
+      <div class="card"><h3>15 new tests</h3><p>10 unit · 5 integration, over the real binary and a
+        real git tree</p></div>
+    </div>
+
+    <h2 id="pin">① The pin — a claim nothing checked</h2>
+    <p>W3 promised <em>"the receipt pins the rulebook blob hash it ran against"</em>.
+      <code>receipt·rulebook</code> checked the field was non-empty, so <code>rulebook: x</code> passed.
+      It is the one receipt field that is <strong>evidence about the other fields</strong>: every soft
+      verdict above it is a claim against a specific rulebook, and a moved rulebook silently voids all
+      of them.</p>
+    <div class="diagram" data-c="dia-pin">
+      <pre class="mermaid">
+flowchart LR
+  FILE["docs/design-rules/design-rules-index.html"] --> HASH["git hash-object<br/>= 796c547…"]
+  FILE --> SLUGS["the slug set<br/>= coverage"]
+  HASH --> CMP{"prefix of<br/>the receipt's pin?"}
+  CMP -->|no| STALE["receipt·rulebook-stale<br/>names BOTH versions"]
+  CMP -->|yes| OK["the verdicts above it<br/>were judged against this"]
+  SLUGS --> OK
+  style STALE fill:#3a2b2b,stroke:#e5484d
+      </pre>
+      <div class="caption">Rules and pin are read together, in one <code>Rulebook</code>: a receipt
+        pinning a version nobody hashed is the same claim as a receipt pinning nothing.</div>
+    </div>
+    <table data-c="tbl-pin">
+      <thead><tr><th>Case</th><th>Verdict</th><th>Why it is not the same as the one above</th></tr></thead>
+      <tbody>
+        <tr><td>pin absent / <code>""</code></td><td><code>receipt·rulebook</code></td>
+          <td>the pre-existing check, kept</td></tr>
+        <tr><td>pin under 7 characters</td><td><code>receipt·rulebook</code> <em>too short</em></td>
+          <td>a 3-character prefix matches ~1 blob in 4 096. Git's own abbreviation floor is the
+            threshold, and every receipt in the corpus already writes 7</td></tr>
+        <tr><td>pin names another blob</td><td><code>receipt·rulebook-stale</code></td>
+          <td>the fix is <strong>re-judge, then re-pin</strong> — a message that said "re-pin" alone
+            would invite the one-character edit that makes the gate green and the receipt false</td></tr>
+        <tr><td>the rulebook cannot be hashed</td><td><code>receipt·rulebook-unverifiable</code></td>
+          <td>the same hole as an unreadable rulebook: a pin nothing can check is not a pin. Red, never
+            silently green</td></tr>
+        <tr><td>full 40-character pin</td><td>green</td>
+          <td>prefix comparison, so both the abbreviated and the full form resolve</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="review">② The review record — finding 29, the last open flow-spec finding</h2>
+    <p>Two reviewer instructions in run #2 moved the Layout sketch, two catalog rows, two use-cases, the
+      mockup, four receipt rows and the cross-check — and the run doc reads as if the stages had produced
+      all of it. Tune is the run's <em>own</em> stepping-back; the cross-check compares runs. Nothing
+      recorded that a human overrode the design and what the override cost.</p>
+    <table data-c="tbl-review">
+      <thead><tr><th>Column</th><th>Answered how</th><th>What the check refuses</th></tr></thead>
+      <tbody>
+        <tr><td>what the reviewer said</td><td>free prose</td><td>—</td></tr>
+        <tr><td><strong>what it moved</strong></td>
+          <td>the run's <em>own item names</em> — frame · layout · elements · interaction · mockup ·
+            tune · receipt · capabilities · proposals · blocked-on — or <code>nothing</code></td>
+          <td>"the reviewer changed things". The vocabulary is the artifact's own, so the column cannot
+            drift from what a run contains. <strong><code>nothing</code> is a real answer</strong>: an
+            instruction argued and refused is provenance too, and a schema that cannot express it
+            teaches runs to omit the row</td></tr>
+        <tr><td><strong>the contract it hit</strong></td>
+          <td>a cited <code>&lt;code&gt;</code>: a rule slug, a component's <code>@use</code>/<code>@avoid</code>,
+            a decision record — or <code>taste</code></td>
+          <td>an uncited cell. <code>taste</code> is deliberate and load-bearing: it distinguishes
+            <em>the reviewer overrode a contract</em> from <em>the design had latitude there</em>, and
+            the first is the signal worth keeping</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">Kept <strong>separate</strong> from the Tier-3 verdict, per the W7 discussion: one is
+      provenance, the other a judgment. Merging them loses the provenance half.</p>
+
+    <h2 id="close">③ Closing — where the enforcement had to sit</h2>
+    <p>Three homes were possible. The measurement that decided it: <strong>a run mid-design is
+      legitimately red for days</strong>, so any working-tree sweep holds the suite hostage to work in
+      progress.</p>
+    <table data-c="tbl-where">
+      <thead><tr><th>Home</th><th>Ruling</th></tr></thead>
+      <tbody>
+        <tr><td>a unit test — "every run is archived or green"</td>
+          <td><span class="badge approval">refused</span> already ruled out in W6: it reds the whole
+            suite for the duration of every live run</td></tr>
+        <tr><td>a <code>close</code> command that archives after verifying</td>
+          <td><span class="badge approval">not built</span> <strong>the user's call.</strong> It would
+            own the step but force nothing; the step's failure mode is <em>skipped</em>, and a command
+            nobody is required to run does not fix a skip</td></tr>
+        <tr><td><strong>the merge</strong> — <code>6·run-closed</code></td>
+          <td><span class="badge auto">built</span> the first moment the tree is <em>answerable</em> for
+            the run: the Working Unit that carried it is ending. A run still mid-design across a merge
+            declares <code>data-status="draft"</code> — unfinished, which is a different claim from
+            closed, and one the epic gate later refuses to leave in the tree at all</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="mention">
+      <strong>Read the declaration, never the string.</strong> The flow spec and two W4 plans quote
+      <code>data-artifact="design-run"</code> inside a <code>&lt;code&gt;</code> block. A substring scan
+      — the first thing tried while measuring — called all three of them runs and would have gated every
+      doc that <em>explains</em> the contract. The gate reads the same tokeniser the predicates read, and
+      a test pins it on both surfaces.
+    </div>
+
+    <h2 id="guard">The guard test stops enumerating</h2>
+    <table data-c="tbl-guard">
+      <thead><tr><th></th><th>Before</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td>Finds runs by</td><td>three <code>include_str!</code> paths, extended by whoever
+          remembers</td><td>reading <code>docs/work/</code> and asking each file what it declares</td></tr>
+        <tr><td>Asserts</td><td>these three are archived</td>
+          <td>every archived run it finds is exempt <strong>and the flag is doing the work</strong> —
+            lifted, the run must become governed again</td></tr>
+        <tr><td>Does not assert</td><td>—</td>
+          <td>that every run is archived. That is the merge's job, and a run being designed right now
+            must not red the suite</td></tr>
+      </tbody>
+    </table>
+    <p class="meta">The old test's weakness was structural: it was the same "somebody remembers" that
+      left run #3 open, one layer down. Its new form cannot go stale, and the vacuity guard is what keeps
+      it from degenerating into "archived docs are silent", which is true by construction.</p>
+
+    <h2 id="regression">Regression — old binary vs new, archive flag lifted</h2>
+    <table data-c="tbl-regression">
+      <thead><tr><th>Run</th><th>Reds</th><th>The difference, itemised</th></tr></thead>
+      <tbody>
+        <tr><td><a href="2026-07-16-dflow-run-1.html">#1</a></td><td>12 → <strong>13</strong></td>
+          <td><code>item·review</code>. No pin red: run #1 predates the receipt entirely</td></tr>
+        <tr><td><a href="2026-07-25-dflow-w4-run-2.html">#2</a></td><td>31 → <strong>33</strong></td>
+          <td><code>item·review</code> + <code>receipt·rulebook-stale</code></td></tr>
+        <tr><td><a href="2026-07-26-dflow-w4-run-3.html">#3</a></td><td>19 → <strong>21</strong></td>
+          <td><code>item·review</code> + <code>receipt·rulebook-stale</code></td></tr>
+      </tbody>
+    </table>
+    <p class="kd">Every new red is <strong>true</strong>. Both receipted runs pin <code>28f5437</code>
+      and W6 revised the rulebook to <code>796c547</code> — the pin has been wrong since W6 merged, in
+      exactly the way nothing could see. And both runs had review rounds: run #2's finding 29
+      <em>is</em> the observation that its own review record is missing. All three stay archived and
+      therefore exempt; the numbers come from lifting the flag deliberately, which is what the pins do.</p>
+
+    <h2 id="seams">What this reds in landed history</h2>
+    <div class="callout warn" data-c="seams">
+      <strong>Three seams on <code>epic/design-flow</code> go red under the new rule</strong>, measured
+      by running the gate over each: two carrying <code>run-3</code> unarchived, one carrying
+      <code>run-1</code> as <code>data-status="ready"</code>. They are <strong>true positives</strong> —
+      those merges are precisely the "closing is nobody's step" defect this rule exists to name. The epic
+      walk re-verifies every seam against the <em>live</em> rule set, so the E-DFLOW epic merge needs
+      three <code>walk_waivers</code> entries on its <code>cr</code> note, on the record and by sha.
+      Recorded here so the epic gate is not surprised by it; carried to the WU result's follow-ups.
+    </div>
+
+    <h2 id="tests">The tests</h2>
+    <table data-c="tbl-tests">
+      <thead><tr><th>Level</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">unit · 10</span></td>
+          <td>A pin naming another blob reds and names both versions · a full-length pin of the same blob
+            resolves · a pin too short to name a blob reds · an unhashable rulebook reds rather than
+            passing · a run with no review item reds · a review item with no instruction row reds · a row
+            naming no stage it moved reds · a row that moved <code>nothing</code> passes · a row citing no
+            contract reds · a quoted declaration is not a run, and <code>ready</code> is open while
+            <code>archived</code> is closed</td></tr>
+        <tr><td><span class="badge id">integration · 5</span></td>
+          <td><strong><code>verify-doc</code> over the real binary</strong>: a run green against a
+            rulebook whose blob it pins, then the <em>same</em> run after the rulebook moves on disk —
+            same slugs, so coverage still passes and only the pin can tell ·
+            <strong><code>verify-dod</code> over a real git tree</strong>: a WU tip carrying an open run
+            is refused, <code>ready</code> is refused too, <code>archived</code> and <code>draft</code>
+            both pass, and a doc that quotes the declaration is not a run</td></tr>
+        <tr><td><span class="badge id">regression</span></td>
+          <td>Old binary vs new over all three archived runs with the flag lifted — the table
+            <a href="#regression">above</a>, every delta itemised and accounted for</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="gate">Gate 0</h2>
+    <table data-c="tbl-gate">
+      <thead><tr><th>Check</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><code>cargo fmt --check</code> · <code>clippy -D warnings</code> (pedantic)</td>
+          <td>clean</td></tr>
+        <tr><td><code>cargo test --workspace --features hook-tests</code></td>
+          <td>green · xtask lib <strong>183</strong> (+10), dod_gate <strong>53</strong> (+3),
+            verify_doc <strong>9</strong> (+2 assertions in place)</td></tr>
+        <tr><td><code>verify-doc</code> over every tracked doc</td>
+          <td><strong>69 checked, none red</strong></td></tr>
+        <tr><td>front end</td><td>untouched by this step</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="next">Next</h2>
+    <p><a href="2026-08-11-dflow-w7-plan.html#step4">④ Tier-3 as the design dimension of the code
+      review</a> — the rubric, the conditional finder, <code>cr/v3</code>, and the calibration that
+      requires it to surface the defects the three archived runs are already known to carry.</p>
+    <p class="meta"><strong>Carried to the WU's distillation.</strong> The three walk waivers above ·
+      the flow spec now carries <a href="design-flow-base.html#close">step 7</a> and the eleventh run
+      item, still T3 (D6) · <code>workflow.html</code>'s note table row for <code>cr/v3</code> stays with
+      step ④, where the schema actually changes.</p>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
