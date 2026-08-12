@@ -2,6 +2,7 @@ schema: doc/v1
 epic: E-DFLOW
 wu: E-DFLOW.W7
 branch: wu/design-flow/harness
+changes:
   - path: docs/decisions/dec-15-design-run-enforcement.html
     tier: T2
     action: updated
