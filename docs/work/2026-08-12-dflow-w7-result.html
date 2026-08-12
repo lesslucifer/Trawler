@@ -40,7 +40,11 @@
       <div class="card"><h3>1 tier unexercised</h3><p>Tier-3's finder has never judged a real
         artifact</p></div>
       <div class="card"><h3>417 + 492</h3><p>Rust · vitest. Every gate clean</p></div>
-      <div class="card"><h3>3 items open</h3><p>the tip's notes · the review · your sign-off</p></div>
+      <div class="card"><h3>4 more holes</h3><p>found by the review, at ⑥ — 3 of them written that
+        same hour</p></div>
+      <div class="card"><h3>clippy saw 1 of 2 crates</h3><p>for the whole epic. <code>xtask</code> was
+        never linted</p></div>
+      <div class="card"><h3>1 item open</h3><p>your sign-off</p></div>
     </div>
 
     <h2 id="run">How to run any of it</h2>
@@ -247,6 +251,84 @@ flowchart LR
     <p class="meta">Delta = <strong>one seam reporting twice</strong> (no <code>cr</code> note; a
       <code>doc/v1</code> that never parsed). Every other line byte-identical.</p>
 
+    <h2 id="review">What the review found</h2>
+    <p class="meta">Two rounds. Round 1 on <code>f6ebf6a</code> found 4 real defects; the fixes became
+      <code>d68aa22</code>, and round 2 re-swept that tip and confirmed none of its own 13 candidates but one.</p>
+    <table data-c="tbl-review-r1">
+      <thead><tr><th>Round 1 · real</th><th>Class</th><th>What it would have cost</th></tr></thead>
+      <tbody>
+        <tr><td><code>6·retirement-order</code> followed a slug citation in the <strong>working
+          tree</strong></td><td>correctness</td>
+          <td>A later slug rename reddens an <em>already-merged</em> retirement. A gated branch may never be
+            amended, so a walk waiver is the only exit — the retroactive reddening
+            <code>check_design_pin</code>'s tip-read exists to prevent, in code written an hour after that
+            comment. <strong>Regression test first</strong>; it fails against the old read</td></tr>
+        <tr><td><code>verify()</code> fetched every doc blob <strong>2–3×</strong> per call</td>
+          <td>efficiency</td>
+          <td><code>walk()</code> multiplies it per seam. One fetch, threaded:
+            <strong>1.1s → 0.79s</strong> at WU scope, <strong>4.8s → 3.26s</strong> at epic scope</td></tr>
+        <tr><td>the pin floor re-derived at 3 sites</td><td>nit</td>
+          <td><code>doc::pin_of</code> owns it</td></tr>
+        <tr><td><code>cargo clippy</code> ran <strong>without <code>--workspace</code></strong> — in gate 0
+          <em>and</em> the pre-commit hook</td><td>correctness</td>
+          <td>The root is a package as well as a workspace, so only <code>trawler</code> was linted.
+            <strong>Every gate, hook and design check W1–W7 wrote has never been clippy-linted.</strong>
+            Adding the flag surfaced 4 pedantic reds immediately. A test at each call site now refuses its
+            removal</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="lint-hole">
+      <strong>The lint hole is the one that generalises.</strong> It was not found by a finder — it surfaced
+      while fixing a nit, because a workspace-wide clippy run was needed to check the fix. Three of the four
+      round-1 defects were written during ⑥ itself; this one had been open for the whole epic, in the crate
+      that enforces everything else, and no gate could see it.
+    </div>
+    <table data-c="tbl-review-r2">
+      <thead><tr><th>Round 2 · 13 candidates</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><code>nodes(html)</code> re-tokenises the whole document on <em>every</em>
+          <code>attrs</code>/<code>element_content</code> call, so the paths that call it per occurrence cost
+          O(occurrences × doc size) where ⓪'s predecessors did not</td>
+          <td><span class="badge approval">real · nit · waived</span></td></tr>
+        <tr><td>4 finders converged on <code>catalog_rows</code>/<code>row_key</code> hand-scanning markup</td>
+          <td><span class="badge auto">all refuted</span></td></tr>
+        <tr><td>a fourth un-collapsed blob fetch in <code>check_retirement_order</code></td>
+          <td><span class="badge auto">refuted</span> — reusing <code>docs</code> there is
+            <em>unsound</em></td></tr>
+        <tr><td><code>design_scope</code>'s String return · its base derivation · pin-check duplication ·
+          tokeniser module placement</td><td><span class="badge auto">refuted</span></td></tr>
+      </tbody>
+    </table>
+    <details class="why" data-c="why-refuted">
+      <summary>Why 4 finders agreeing on one function was worth <em>less</em>, not more</summary>
+      <p>Four of five finders independently flagged the same ~15 lines: <code>catalog_rows</code> and
+        <code>row_key</code> still scan HTML by substring search, while ⓪ of this very WU replaced four such
+        scanners with a tokeniser. The convergence looked like corroboration. It was correlation — every one
+        reasoned from <em>"hand-rolled scanning is fragile"</em> without testing whether the tokeniser
+        behaves differently.</p>
+      <p>Its verifier tested the counterfactual instead of asserting it, and ran the same input through both:
+        <code>nodes()</code>/<code>attrs()</code> produced the <strong>identical</strong> spurious row.
+        <code>&lt;pre&gt;</code>/<code>&lt;code&gt;</code> are ordinary parsed content in HTML5 —
+        <code>RAW_TEXT</code> covers only <code>&lt;script&gt;</code>/<code>&lt;style&gt;</code> — so any
+        conformant reader must treat an unescaped <code>&lt;</code> there as a tag open. The project already
+        names that case, via <code>check_escaped_markup</code>.</p>
+      <p>Two of the refutations are stronger still, because each found the <em>consequence</em> false rather
+        than the mechanism. The <code>&gt;</code>-in-attribute drop is real — a row does vanish — but
+        <code>markup·escaped</code> reds any raw <code>&gt;</code> inside a tag, runs first and
+        unconditionally, and the only fix it accepts (escaping) disarms the drop. And
+        <code>elements_of</code>, the helper two finders said to reuse, returns an element's
+        <em>body</em> — while <code>data-key</code> rides the opening tag it strips.</p>
+    </details>
+    <div class="callout" data-c="waiver">
+      <strong>The one waiver, stated plainly.</strong> The quadratic path is <em>currently unreachable</em>:
+      every design-run doc in <code>docs/</code> is <code>draft</code> or <code>archived</code>, both of which
+      short-circuit to <code>Exempt</code> before <code>check_hard_rules</code> runs, and
+      <code>component-design</code> docs never call <code>check_colour_plus_text</code>. Forced onto the
+      largest real doc it adds ~100ms over a ~200ms floor already dominated by unconditional subprocess
+      spawns. The fix — caching the parsed nodes per document — threads state through ~25 predicates, which
+      is not a change to make at hand-over. <strong>Carried as follow-up 10.</strong>
+    </div>
+
     <h2 id="gap">⚠ The gap — Tier-3 ships unexercised</h2>
     <table data-c="tbl-gap">
       <thead><tr><th></th><th></th></tr></thead>
@@ -387,6 +469,11 @@ no design artifact in 2bceacd71d..bfac33b2e1</pre>
             <td>④ Tier-3 · <code>workflow.html</code> v9 with its human <code>Reviewed-By</code></td></tr>
           <tr><td><code>bfac33b</code></td><td>⑤ the e2e, and the exemption that let 14 files land
             unreviewed</td></tr>
+          <tr><td><code>d913518</code> <code>f6ebf6a</code></td>
+            <td>⑥ DEC-24 · the hand-over predicate · a dead end <em>named</em> retires the file</td></tr>
+          <tr><td><code>d68aa22</code></td>
+            <td>⑥ <a href="#review">the review's 4 fixes</a> — the seam keeps the rulebook it shipped, one
+              blob fetch, one pin helper, and clippy finally sees <code>xtask</code></td></tr>
           <tr><td><em>the tip</em></td>
             <td>this report + <code>workflow.html</code> v10. <strong>A commit cannot print its own
               hash</strong> (W6 had a stale last row three rounds running), so this row names the range:
@@ -395,8 +482,8 @@ no design artifact in 2bceacd71d..bfac33b2e1</pre>
       </table>
 
       <h3 id="owed">What this tip still owes</h3>
-      <p class="meta">Read off <code>verify-dod wu HEAD --target origin/epic/design-flow</code> — four reds:
-        no <code>test/v2</code>, no <code>cr/v3</code>, no <code>doc/v1</code>, no <code>mr/v1</code>.</p>
+      <p class="meta">Read off <code>verify-dod wu HEAD --target origin/epic/design-flow</code> — down to
+        <strong>one red</strong>: <code>8·manual-review</code>, which is yours alone.</p>
       <table data-c="tbl-owed">
         <thead><tr><th>#</th><th>Owed</th><th>Who</th></tr></thead>
         <tbody>
@@ -410,10 +497,13 @@ no design artifact in 2bceacd71d..bfac33b2e1</pre>
           <tr><td>4</td><td><s>⑥ <strong>hand-over</strong>: the flow spec executable, every red naming its
             fix</s> <span class="badge auto">landed</span> —
             <a href="design-flow-base.html#commands">the command table</a> + the assertion</td><td>—</td></tr>
-          <tr><td>5</td><td><code>test/v2</code> + <code>doc/v1</code> on the tip</td><td>agent</td></tr>
-          <tr><td>6</td><td><strong>code-review skill</strong> over the WU diff → <code>cr/v3</code> PASS
-            bound to it. Its design section will be <a href="#gap">empty, correctly</a></td><td>agent</td></tr>
-          <tr><td>7</td><td><code>mr confirm</code></td><td><span class="badge approval">user</span></td></tr>
+          <tr><td>5</td><td><s><code>test/v2</code> + <code>doc/v1</code> on the tip</s>
+            <span class="badge auto">attached</span> unit 27 · integration 21 · e2e 2</td><td>—</td></tr>
+          <tr><td>6</td><td><s><strong>code-review skill</strong> over the WU diff → <code>cr/v3</code>
+            PASS</s> <span class="badge auto">2 rounds</span> — <a href="#review">4 fixed, 1 waived, 16
+            refuted</a>. No design section, <a href="#gap">correctly</a></td><td>—</td></tr>
+          <tr><td>7</td><td><code>mr confirm</code> — <strong>the only thing left.</strong> An agent must
+            never self-authorise</td><td><span class="badge approval">user</span></td></tr>
           <tr><td>8</td><td><code>--no-ff</code> merge into <code>epic/design-flow</code></td><td>agent</td></tr>
         </tbody>
       </table>
@@ -498,6 +588,27 @@ no design artifact in 2bceacd71d..bfac33b2e1</pre>
           produced 6 review rounds</td><td>recorded</td></tr>
         <tr><td>9</td><td><code>CLAUDE.md</code> (T0) still says "docs/infra-only diffs are exempt" flat —
           one qualification short. T0 is edited only on request</td>
+          <td><span class="badge approval">user</span></td></tr>
+        <tr><td>10</td><td><strong>The tokeniser re-parses the whole document per call.</strong>
+          <span class="badge approval">waived</span> at ⑥ — <a href="#review">unreachable today</a>, ~100ms
+          when forced. Cache the parsed nodes per document rather than per
+          <code>attrs</code>/<code>element_content</code> call; the change touches ~25 predicates, so it wants
+          its own commit and its own review</td><td>backlog · tooling</td></tr>
+        <tr><td>11</td><td><strong><code>catalog_rows</code> splits on a bare <code>"&lt;tr"</code> with no
+          boundary check.</strong> Refuted on reachability — no tag beginning <code>tr</code> exists anywhere
+          in the corpus, and <code>&lt;track&gt;</code> has no place in a proxy UI. But the mechanism a
+          verifier demonstrated is the <em>worst</em> class: a <code>tr</code>-prefixed tag mid-row truncated
+          the row, <code>check_state_declarations</code> read the wrong cell, and a real
+          <code>state-declarations·blank</code> failure <strong>vanished</strong>. A false green. One
+          delimiter check plus a named regression test closes it; the refutation rests on corpus contingency,
+          not on the code being sound</td><td>backlog · tooling</td></tr>
+        <tr><td>12</td><td><strong>The installed git hooks are stale — since 6 July.</strong> This checkout is
+          a worktree, so <code>.git</code> is a <em>file</em> and cargo-husky never finds the shared hooks
+          directory to reinstall. The installed <code>pre-commit</code> is missing its whole
+          <em>"main is merge-only"</em> refusal block. <code>pre-merge-commit</code> — the actual merge gate —
+          <em>is</em> in sync, so this WU's merge is properly gated. Resync:
+          <code>cp .cargo-husky/hooks/* "$(git rev-parse --git-path hooks)/"</code>, though that directory is
+          shared with the main <code>Trawler</code> checkout, so it is the user's call</td>
           <td><span class="badge approval">user</span></td></tr>
       </tbody>
     </table>
