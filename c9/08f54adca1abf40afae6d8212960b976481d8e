@@ -50,64 +50,64 @@ changes:
   - path: docs/work/components/button.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/copy-button.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/copy-text.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/duration-text.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/icon-button.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/key-value-row.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/method-label.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/notice.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/section.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/segmented-control.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/select.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/status-line.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/status-pill.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/step-list.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/timestamp-text.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
   - path: docs/work/components/toned-text.html
     tier: T3
     action: archived
-    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+    distilled_to: "none: local prop naming"
