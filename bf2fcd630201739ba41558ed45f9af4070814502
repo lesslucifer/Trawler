@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-DFLOW
 wu: E-DFLOW.W7
-branch: wu/design-flow/harness
 base: 2bceacd71d677c1f9557f7d603275acb98462df5
 tip: bf2fcd630201739ba41558ed45f9af4070814502
 diff_sha256: 00c502a943f3f9dbe37637abcd50a4f989857d4e2eebf0a4e1cc767faa254207
