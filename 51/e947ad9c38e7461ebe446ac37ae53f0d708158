@@ -1,0 +1,10 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W7
+branch: wu/design-flow/harness
+tests:
+  unit: { count: 27, covers: "the tokeniser's six review-round holes; the registry oracle's absent-vs-throws split; four registry predicates (mutation-verified); the rulebook pin at git's abbreviation floor; the review item; cr/v3's design section; a partial run is not asked to mark payloads; every red carries an actionable fix over 33 distinct checks; gate 0's clippy names every workspace member" }
+  integration: { count: 21, covers: "verify-doc against a real collection in a TempDir through the real node oracle; verify-dod over real git trees - design-scope's output, cr/v2 on a closed run refused, a skipped artifact named, a stale pin, a later rulebook leaving the reviewed tip green, the epic walk grandfathering v2 but not v3, docs-only + design not exempt while docs-only alone still is, DEC-16's retirement order, and a landed seam judged against the rulebook it shipped rather than the working tree; the versioned pre-commit hook lints every workspace member" }
+  e2e: { count: 2, covers: "xtask/tests/e2e_design_flow.rs - a fake human and a fake designing agent through all three tiers over the real binary, real node oracles, real git and the real pre-merge-commit hook; a compliant run green and merged, a rule-violating one red at the stage that wrote it and refused at the merge. Feature-gated design-e2e" }
+  regression: { count: 3, covers: "the parser swap - empty verify-doc output diff over 82 docs + 3 archived runs flag-lifted; the new predicates over the archived runs, red by red (12->13, 30->33, 19->21); the whole epic gate old binary vs new, one seam itemised" }
