@@ -1,0 +1,17 @@
+schema: cr/v3
+scope: "WU E-DFLOW.W7 the harness -> epic/design-flow"
+epic: E-DFLOW
+wu: E-DFLOW.W7
+branch: wu/design-flow/harness
+base: 2bceacd71d677c1f9557f7d603275acb98462df5
+head: bf2fcd630201739ba41558ed45f9af4070814502
+diff_sha256: 00c502a943f3f9dbe37637abcd50a4f989857d4e2eebf0a4e1cc767faa254207
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 37, verified: 12, waived: 1 }
+waivers:
+  - finding: "nodes(html) re-tokenises the whole document on every attrs/element_content call, so paths calling it per occurrence cost O(occurrences x doc size) where the pre-step-0 scanners did not"
+    reason: "Waived on SIZE, not unreachability - round 2 waived it as unreachable and round 3 measured that reason wrong. Truth: check_hard_rules is unreached (all 6 real design-run declarations are draft/archived, exempt before it), but verify_html_against's entry path is reached by 11 real docs on every write. Worst real doc measures ~40-90ms at 53 occurrences; superlinear only past hundreds of occurrences and megabytes, which no doc in the corpus approaches. Covers every call site, including the third instance round 4 found (declares_a_design and verify_html_against both asking data-artifact). The fix - memoising the parse per call - would re-signature 40+ call sites; DEC-11 puts verify-dod under 0.5% of gate-heavy epic time. Carried as follow-up 10 in the WU result report."
+  - finding: "This diff's final commit - the round-4 fixes - was not itself swept by a fresh finder round"
+    reason: "Declared, not hidden: the gate cannot detect it and a bare PASS would overclaim. Four rounds ran (37 candidates, 12 real, 26 refuted). Each round after the first found defects almost entirely IN THE ARTIFACTS THE PREVIOUS ROUND'S FIXES CREATED, so a fifth round would review text a fifth round wrote and its own fixes would move the tip again - the fixpoint is not reachable by iterating. Round 4's evidence for stopping: both code finders (correctness, reuse) returned EMPTY on substance after independently rebuilding both binaries and reproducing every measurement; 5 of 8 candidates were refuted; and the 3 that survived were a follow-up's owner, a redundant pure-function call, and a miscount of 4-vs-5 docs. The unswept delta is that signature change plus two prose corrections in a T3 record. Any code finding here would have been fixed and re-reviewed; none was. A human still gates this tip at 8-manual-review and may demand a further round."
+verdict: PASS
+date: 2026-08-12
