@@ -1,0 +1,8 @@
+schema: test/v2
+level: commit
+epic: E-DFLOW
+wu: E-DFLOW.W7
+branch: wu/design-flow/harness
+tests:
+  unit: { count: 10, covers: "citation resolution against the roster · a designed-but-unbuilt component resolves · a propose may name what does not exist · a states citation resolves against the registry not the verdict word · an unretired design file reds, an unbuilt one is green · a re-drawn vocabulary class reds, the doc's own chrome does not · component-file path recognition · an unreadable registry reds on both surfaces" }
+  integration: { count: 3, covers: "verify-doc resolves citations against a real collection written into a TempDir, running the real oracle over real TSDoc · verify-dod refuses a removed design file whose distilled_to is a dead-end reason and one naming an absent record, and greens on DEC-16's order" }
