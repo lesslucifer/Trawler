@@ -1,0 +1,113 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W7
+branch: wu/design-flow/harness
+changes:
+  - path: docs/decisions/dec-18-one-control-box.html
+    tier: T2
+    action: added
+    distills: "component fork cards retired under DEC-16"
+  - path: docs/decisions/dec-19-chromatic-accent-closed.html
+    tier: T2
+    action: added
+    distills: "component fork cards retired under DEC-16"
+  - path: docs/decisions/dec-20-logic-lives-with-its-inputs.html
+    tier: T2
+    action: added
+    distills: "component fork cards retired under DEC-16"
+  - path: docs/decisions/dec-21-props-need-a-truthful-source.html
+    tier: T2
+    action: added
+    distills: "component fork cards retired under DEC-16"
+  - path: docs/decisions/dec-22-time-is-absolute-and-local.html
+    tier: T2
+    action: added
+    distills: "component fork cards retired under DEC-16"
+  - path: docs/decisions/dec-23-collection-dependencies.html
+    tier: T2
+    action: added
+    distills: "component fork cards retired under DEC-16"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-18..DEC-23 registered"
+  - path: docs/decisions/dec-16-design-file-retirement.html
+    tier: T2
+    action: updated
+    distills: "enforcement names its two predicates; sixteen removed, four unbuilt files stay"
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: updated
+    distills: "five links to retired design files become the component name - the TSDoc is the contract"
+  - path: docs/work/2026-08-12-dflow-w7-step2-registry-gate.html
+    tier: T3
+    action: added
+    distills: "step 2 record"
+  - path: docs/work/component-design-base.html
+    tier: T3
+    action: updated
+    distills: "canonical exemplar moves from the retired CopyText to HeaderTable"
+  - path: docs/work/components/button.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/copy-button.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/copy-text.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/duration-text.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/icon-button.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/key-value-row.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/method-label.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/notice.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/section.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/segmented-control.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/select.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/status-line.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/status-pill.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/step-list.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/timestamp-text.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/toned-text.html
+    tier: T3
+    action: archived
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html, docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
