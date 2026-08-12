@@ -27,7 +27,8 @@
   </header>
   <main>
     <h2 id="status">What this is</h2>
-    <p>The <strong>written base flow</strong>: six stages and <a href="#close">a close</a>, each with the concrete artifact <em>template</em> a real run converged on, plus the conventions that make an artifact reviewable. W1 produced the first cut from a bare hand-run; <strong>W4 wired it to the substrate</strong> — the design now <em>consumes</em> the <a href="2026-07-22-dflow-w2-registry-seed.html">component registry</a> (reuse-or-propose per element) and the <a href="../design-rules/design-rules-index.html">design rulebook</a> (rules cited per stage, all slugs receipted at the end) — and re-ran it on the flow detail panel (<a href="2026-07-25-dflow-w4-run-2.html">run #2</a>). It is distilled into the T1 process doc at epic distillation; until then it lives here in T3.</p>
+    <p>The <strong>written base flow</strong>: six stages, <a href="#close">a close</a> and
+      <a href="#review-tier">an independent review</a>, each with the concrete artifact <em>template</em> a real run converged on, plus the conventions that make an artifact reviewable. W1 produced the first cut from a bare hand-run; <strong>W4 wired it to the substrate</strong> — the design now <em>consumes</em> the <a href="2026-07-22-dflow-w2-registry-seed.html">component registry</a> (reuse-or-propose per element) and the <a href="../design-rules/design-rules-index.html">design rulebook</a> (rules cited per stage, all slugs receipted at the end) — and re-ran it on the flow detail panel (<a href="2026-07-25-dflow-w4-run-2.html">run #2</a>). It is distilled into the T1 process doc at epic distillation; until then it lives here in T3.</p>
 
     <h2 id="principles">Principles (apply to every stage)</h2>
     <ul data-c="principles">
@@ -299,6 +300,40 @@ soft:
       </tbody>
     </table>
     <p class="kd"><strong>Why the merge and not the working tree.</strong> A run mid-design is legitimately red for days, so a sweep asserting "every run is archived or green" would hold the suite hostage to work in progress. The merge is the first moment the tree is <em>answerable</em> for the run: the Working Unit that carried it is ending. <code>archived</code> then exempts the run from every later rule — finished under an older contract, not unfinished — which is why ③ has to happen before ④ and not after.</p>
+
+    <h2 id="review-tier">8 · The design review <span class="badge id">Tier-3 — the reviewer is not the author</span></h2>
+    <p>Everything up to ⑦ is the designing agent judging its own work: the stages are its design, the receipt is
+      its claim about that design, and the predicates check the claim's <em>shape</em>. The one thing missing is
+      the rule the dev workflow has always had — <strong>never judge your own diff</strong>. So the closed run
+      goes through the same door code goes through: the <strong>design dimension of the code review</strong>,
+      which fires on the merge that lands it.</p>
+    <table data-c="tbl-tier3">
+      <thead><tr><th></th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td><strong>What activates it</strong></td>
+          <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code> — a <em>closed</em> run
+            (<code>data-status="archived"</code>) or a component design file in the diff. A draft run is
+            unfinished and is judged by the merge that closes it, so ⑦ and ⑧ are one motion</td></tr>
+        <tr><td><strong>What it judges</strong></td>
+          <td>soft rules and the new-component warrant, on the artifact — <em>not</em> the built code, and
+            <em>not</em> the thirteen hard rules Tier-1 already owns. The rubric is
+            <code>.claude/skills/code-review/design-rubric.md</code></td></tr>
+        <tr><td><strong>What it catches that ⑦ cannot</strong></td>
+          <td>a receipt that is complete, fluent and <strong>false</strong> — a <code>satisfied</code> the
+            design does not earn — and a component invented while an existing one fit. Both are defects the
+            author wrote and then attested</td></tr>
+        <tr><td><strong>Where the verdict lives</strong></td>
+          <td>the tip's <code>cr/v3</code> note, in a <code>design:</code> section naming every artifact
+            judged and pinning the rulebook blob. Not in the run doc: the run is retired under
+            <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a> and the commit is not</td></tr>
+        <tr><td><strong>What refuses it</strong></td>
+          <td><code>9·design</code> at the merge — a design-bearing tip whose note has no design section, skips
+            an artifact, pins another rulebook, or carries a failing design verdict</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">Tier-2's receipt stays <em>inline</em> and Tier-3's verdict does not, and the asymmetry is the
+      point: a self-claim is part of the artifact and dies with it, while an independent judgment is about a
+      commit — and commits outlive the files they carry.</p>
 
     <h2 id="provenance">Provenance &amp; what feeds the rest of the epic</h2>
     <table data-c="provenance">

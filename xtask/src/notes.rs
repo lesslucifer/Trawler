@@ -62,6 +62,11 @@ impl Layer {
     }
 }
 
+/// The review contracts the gate reads. `cr/v3` adds the design dimension's
+/// section; a `cr/v2` note is, by its own schema declaration, evidence written
+/// before that dimension existed.
+pub const CR_SCHEMAS: &[&str] = &["cr/v2", "cr/v3"];
+
 #[derive(Deserialize)]
 pub struct CrNote {
     pub schema: String,
@@ -74,6 +79,27 @@ pub struct CrNote {
     pub verdict: String,
     #[serde(default)]
     pub walk_waivers: Vec<WalkWaiver>,
+    #[serde(default)]
+    pub design: Option<Design>,
+}
+
+/// Tier-3's verdict: what the design dimension judged, the rulebook blob it
+/// judged against, and the outcome. Its absence on a design-bearing diff is the
+/// silence the schema bump exists to make loud — a PASS where nobody looked at
+/// the design must not read like one where somebody did.
+#[derive(Deserialize)]
+pub struct Design {
+    #[serde(default)]
+    pub artifacts: Vec<String>,
+    #[serde(default)]
+    pub rulebook: String,
+    pub verdict: String,
+}
+
+impl Design {
+    pub fn judged(&self, path: &str) -> bool {
+        self.artifacts.iter().any(|a| a == path)
+    }
 }
 
 #[derive(Deserialize)]
@@ -289,6 +315,35 @@ date: 2026-07-05
         assert_eq!(note.verdict, "PASS");
         assert_eq!(note.base, "aaaa");
         assert!(note.walk_waivers.is_empty(), "absent walk_waivers defaults empty");
+    }
+
+    // The bump is for enforcement: a v2 note has no design section and cannot be
+    // given one after the fact, so the schema string is itself the record of
+    // which contract the review ran under.
+    #[test]
+    fn cr_v3_carries_the_design_dimensions_verdict_and_v2_carries_none() {
+        let yaml = "\
+schema: cr/v3
+base: aaaa
+diff_sha256: cccc
+design:
+  artifacts: [docs/work/2026-08-13-dflow-run-4.html]
+  rulebook: 796c547
+  findings: { found: 3, verified: 1, waived: 0 }
+  verdict: PASS
+verdict: PASS
+";
+        let note: CrNote = serde_yaml::from_str(yaml).expect("parses");
+        let design = note.design.expect("the design section");
+        assert_eq!(design.verdict, "PASS");
+        assert_eq!(design.rulebook, "796c547");
+        assert!(design.judged("docs/work/2026-08-13-dflow-run-4.html"));
+        assert!(!design.judged("docs/work/components/button.html"), "unlisted is unjudged");
+
+        let v2: CrNote =
+            serde_yaml::from_str("schema: cr/v2\nbase: a\ndiff_sha256: c\nverdict: PASS\n")
+                .expect("parses");
+        assert!(v2.design.is_none());
     }
 
     #[test]

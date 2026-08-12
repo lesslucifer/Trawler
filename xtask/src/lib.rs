@@ -23,6 +23,7 @@ usage:
   cargo xtask verify-dod commit-msg <msg-file>                (commit-msg hook: docs need an mr trailer)
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
+  cargo xtask design-scope <base> <head>                     (what the review's design dimension must judge, and the rulebook pin it writes)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
@@ -43,6 +44,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
     match strs.as_slice() {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
+        ["design-scope", base, head] => design_scope(repo, base, head),
         ["gate0"] => gate0::gate0(repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
@@ -77,6 +79,38 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         ["range", old, new] => range(repo, old, new),
         _ => Err(USAGE.to_string()),
     }
+}
+
+// The review and the merge gate must not each decide for themselves what a
+// design artifact is - the same function answers both, and this is where a
+// reviewer reads it. Merge-base, matching the scope the review pins.
+fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), String> {
+    let tip = git(repo, &["rev-parse", head])?;
+    let merge_base = git(repo, &["merge-base", base, &tip])?;
+    let names = git::diff_names(repo, &merge_base, &tip)?;
+    let artifacts = Gate { repo }.design_artifacts(&tip, &names);
+    if artifacts.is_empty() {
+        return Ok((
+            0,
+            format!(
+                "no design artifact in {}..{} - the design dimension does not run, and the cr/v3 note carries no design section",
+                gate::short(&merge_base),
+                gate::short(&tip)
+            ),
+        ));
+    }
+    let pin = doc::rulebook_blob(repo, &tip).map_or_else(
+        || "<unreadable - the design pin cannot be written>".to_string(),
+        |blob| blob.get(..doc::PIN_MIN).unwrap_or(&blob).to_string(),
+    );
+    Ok((
+        0,
+        format!(
+            "{} design artifact(s) to judge, against rulebook {pin}:\n{}",
+            artifacts.len(),
+            artifacts.join("\n")
+        ),
+    ))
 }
 
 fn gate_run(repo: &Path, level: Level, tip: &str, target: &str) -> Result<(i32, String), String> {

@@ -7,6 +7,8 @@ use xtask::gate::{format_report, Gate, Level};
 use xtask::git::diff_sha256;
 use xtask::notes::DodReceipt;
 
+const RULEBOOK: &str = "docs/design-rules/design-rules-index.html";
+
 struct Repo {
     _dir: TempDir,
     path: PathBuf,
@@ -24,6 +26,7 @@ impl Repo {
         repo.write("src/lib.rs", "pub fn base() {}\n");
         repo.write("docs/use-cases/api.html", "<html>v1</html>\n");
         repo.write("docs/standard.html", "<html>t1 standard</html>\n");
+        repo.write(RULEBOOK, "<html>the soft rules a design verdict is a claim about</html>\n");
         repo.commit("init");
         repo
     }
@@ -385,13 +388,159 @@ fn a_design_run_left_open_at_the_tip_refuses_the_merge() {
     );
 }
 
+// A run still mid-design is closed by a later merge, and that merge is the one
+// its design review rides. Only the closed one is design-bearing, which is why
+// `draft` greens here on the same cr/v2 note the archived case is refused for.
 #[test]
-fn a_closed_run_and_one_still_mid_design_both_pass() {
-    for status in ["archived", "draft"] {
-        let repo = wu_carrying_a_design_run(status);
-        let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
-        assert!(report.green(), "{status}: {}", format_report(&report));
-    }
+fn a_run_still_mid_design_passes_and_a_closed_one_needs_the_design_dimension() {
+    let draft = wu_carrying_a_design_run("draft");
+    let report = draft.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "draft: {}", format_report(&report));
+
+    let closed = wu_carrying_a_design_run("archived");
+    let report = closed.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design-schema"], "{}", format_report(&report));
+    assert!(format_report(&report).contains("cr/v2"), "the red names the contract it found");
+    assert!(format_report(&report).contains("design finder"), "the fix names how to get one");
+}
+
+// The reviewer and the merge gate must never disagree about what is
+// design-bearing, so they call one function - this is the reviewer's door to it.
+#[test]
+fn design_scope_reports_what_the_review_must_judge_and_the_pin_it_writes() {
+    let repo = wu_carrying_a_design_run("archived");
+    let args: Vec<String> =
+        ["design-scope", "epic/x", "wu/x/one"].iter().map(|s| (*s).to_string()).collect();
+    let (code, out) = xtask::run(&args, &repo.path).unwrap();
+    assert_eq!(code, 0);
+    assert!(out.contains(DESIGN_RUN), "{out}");
+    assert!(out.contains(&pin_of(&repo, &repo.sha("wu/x/one"))), "the pin to write: {out}");
+
+    let plain = wu_with_change();
+    let (code, out) = xtask::run(&args, &plain.path).unwrap();
+    assert_eq!(code, 0);
+    assert!(out.contains("no design artifact"), "{out}");
+}
+
+fn pin_of(repo: &Repo, tip: &str) -> String {
+    let blob = repo.git(&["rev-parse", &format!("{tip}:{RULEBOOK}")]);
+    blob[..7].to_string()
+}
+
+fn design_section(artifacts: &[&str], pin: &str, verdict: &str) -> String {
+    format!(
+        "design:\n  artifacts: [{}]\n  rulebook: {pin}\n  findings: {{ found: 1, verified: 0, waived: 0 }}\n  verdict: {verdict}\n",
+        artifacts.join(", ")
+    )
+}
+
+/// The cr/v3 note the review writes for a design-bearing diff — the same
+/// identity and binding as `cr_note`, plus the design dimension's verdict.
+fn cr_note_v3(base: &str, sha: &str, design: &str) -> String {
+    format!(
+        "schema: cr/v3\n{}base: {base}\nhead: x\ndiff_sha256: {sha}\nverdict: PASS\n{design}date: 2026-08-12\n",
+        identity("E9", Some("E9.W1"))
+    )
+}
+
+fn design_bearing_wu(design: &dyn Fn(&Repo, &str) -> String) -> (Repo, String) {
+    let repo = wu_carrying_a_design_run("archived");
+    let tip = repo.sha("wu/x/one");
+    let base = repo.sha("epic/x");
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    repo.note("cr", &tip, &cr_note_v3(&base, &sha, &design(&repo, &tip)));
+    (repo, tip)
+}
+
+fn verify_design_bearing(design: &dyn Fn(&Repo, &str) -> String) -> (Repo, xtask::gate::Report) {
+    let (repo, _) = design_bearing_wu(design);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    (repo, report)
+}
+
+#[test]
+fn a_complete_cr_v3_greens_a_design_bearing_tip_and_the_receipt_lists_the_check() {
+    let (repo, report) = verify_design_bearing(&|repo, tip| {
+        design_section(&[DESIGN_RUN], &pin_of(repo, tip), "PASS")
+    });
+    assert!(report.green(), "{}", format_report(&report));
+    let receipt = repo.gate().write_receipt(&report).unwrap();
+    assert!(receipt.contains("design"), "the receipt names the check it passed: {receipt}");
+}
+
+#[test]
+fn a_cr_v3_note_with_no_design_section_is_refused() {
+    let (_repo, report) = verify_design_bearing(&|_, _| String::new());
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(format_report(&report).contains("cr/v3"));
+}
+
+// The silence the schema bump exists to break: one artifact judged, another in
+// the same diff never opened, and a PASS covering both.
+#[test]
+fn a_design_section_that_skips_an_artifact_in_the_diff_is_refused() {
+    let component = "docs/work/components/button.html";
+    let repo = wu_carrying_a_design_run("archived");
+    repo.write(component, "<html>the Button contract</html>\n");
+    repo.commit("a component design file too");
+    let tip = repo.sha("wu/x/one");
+    let base = repo.sha("epic/x");
+    bless_wu(&repo, &tip);
+    let changes = format!(
+        "{WU_CHANGES}  - path: {DESIGN_RUN}\n    tier: T3\n    action: added\n    distills: \"the fourth run\"\n  - path: {component}\n    tier: T3\n    action: added\n    distills: \"the Button contract\"\n"
+    );
+    repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &changes, None));
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    let design = design_section(&[DESIGN_RUN], &pin_of(&repo, &tip), "PASS");
+    repo.note("cr", &tip, &cr_note_v3(&base, &sha, &design));
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(format_report(&report).contains(component), "the red names the artifact nobody read");
+}
+
+#[test]
+fn a_failing_design_verdict_is_refused() {
+    let (_repo, report) = verify_design_bearing(&|repo, tip| {
+        design_section(&[DESIGN_RUN], &pin_of(repo, tip), "FAIL")
+    });
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+}
+
+// The same claim the run's own receipt makes, and the same way it went unchecked
+// for three Working Units: a design verdict is a judgment against one rulebook,
+// and the tip's rulebook is the only one that can be checked against.
+#[test]
+fn a_design_pin_that_names_no_blob_or_another_one_is_refused() {
+    let (_repo, report) =
+        verify_design_bearing(&|_, _| design_section(&[DESIGN_RUN], "796c5", "PASS"));
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(format_report(&report).contains("names no rulebook blob"));
+
+    let (repo, report) =
+        verify_design_bearing(&|_, _| design_section(&[DESIGN_RUN], "28f5437", "PASS"));
+    let text = format_report(&report);
+    assert_eq!(checks_of(&report), vec!["9·design"], "{text}");
+    let tip = repo.sha("wu/x/one");
+    assert!(
+        text.contains("28f5437") && text.contains(&pin_of(&repo, &tip)),
+        "both versions: {text}"
+    );
+}
+
+// A rulebook that moves in a LATER Working Unit must not redden this seam: the
+// pin is read at the tip, so a review stays true to the tree it judged.
+#[test]
+fn a_rulebook_that_moves_after_the_review_leaves_the_reviewed_tip_green() {
+    let (repo, report) = verify_design_bearing(&|repo, tip| {
+        design_section(&[DESIGN_RUN], &pin_of(repo, tip), "PASS")
+    });
+    assert!(report.green(), "{}", format_report(&report));
+    let tip = repo.sha("wu/x/one");
+    repo.write(RULEBOOK, "<html>the rulebook, revised by the next Working Unit</html>\n");
+    repo.commit("revise the rulebook");
+    let after = repo.gate().verify(Level::Wu, &tip, "epic/x").unwrap();
+    assert!(after.green(), "{}", format_report(&after));
 }
 
 // The flow spec and two plans quote the declaration inside a <code> block. A
@@ -461,6 +610,45 @@ fn green_epic_walk_verifies_the_merged_wu() {
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
     assert!(report.green(), "unexpected failures: {}", format_report(&report));
+}
+
+// The design lives on the seam, not on the epic tip: work docs are archived out
+// of git before the epic gate (DEC-3), so the run's add and delete net out of the
+// epic diff. The seam is the only place a landed design review can be judged,
+// which is exactly why the walk's treatment of it is the thing to pin.
+fn epic_over_a_design_bearing_wu(wu_cr: &dyn Fn(&str, &str) -> String) -> Repo {
+    let repo = wu_carrying_a_design_run("archived");
+    let wu_tip = repo.sha("wu/x/one");
+    let wu_base = repo.sha("epic/x");
+    let wu_sha = diff_sha256(&repo.path, &wu_base, &wu_tip).unwrap();
+    repo.note("cr", &wu_tip, &wu_cr(&wu_base, &wu_sha));
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "merge wu/x/one", "wu/x/one"]);
+    std::fs::remove_file(repo.path.join(WU_RESULT)).unwrap();
+    std::fs::remove_file(repo.path.join(DESIGN_RUN)).unwrap();
+    repo.commit("archive the wu result and the run out of git");
+    bless_epic(&repo, T2_ENTRY);
+    repo
+}
+
+// A seam's cr/v2 note is evidence from before the design dimension existed, and
+// no edit can make it say otherwise without claiming a judgment nobody made - so
+// the walk drops that one check on immutable history. What it does NOT drop is a
+// v3 note that omits its design section: that note's own schema says the
+// dimension was available, which is the difference a date-based cutoff could
+// never express.
+#[test]
+fn the_walk_grandfathers_a_cr_v2_seam_but_not_a_v3_one_missing_its_design_section() {
+    let grandfathered =
+        epic_over_a_design_bearing_wu(&|base, sha| cr_note("E9", Some("E9.W1"), base, sha, "PASS"));
+    let report = grandfathered.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "a v2 seam predates the dimension: {}", format_report(&report));
+
+    let claimed_v3 = epic_over_a_design_bearing_wu(&|base, sha| {
+        cr_note("E9", Some("E9.W1"), base, sha, "PASS").replace("cr/v2", "cr/v3")
+    });
+    let report = claimed_v3.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(checks_of(&report), vec!["7·walk·9·design"], "{}", format_report(&report));
 }
 
 // Blesses the epic tip against the *merge-base* with main, not main's tip -

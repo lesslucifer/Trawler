@@ -99,7 +99,28 @@ pub struct Rulebook {
 
 // A pin shorter than this names no blob: git's own abbreviation floor, and the
 // length every receipt in the corpus already writes.
-const PIN_MIN: usize = 7;
+pub const PIN_MIN: usize = 7;
+
+pub fn pin_matches(pinned: &str, blob: &str) -> bool {
+    let pin = pinned.to_ascii_lowercase();
+    pin.len() >= PIN_MIN && blob.starts_with(&pin)
+}
+
+// What pulls the design dimension into a code review. Tier-3 judges a FINISHED
+// design, so a run doc counts once it is closed at the tip - the merge that
+// closes it is the first one answerable for it, and a run still `draft` is
+// judged at the merge that finishes it, which touches the file again. A
+// component design file is a finished contract the moment it is in the tree.
+pub fn design_artifact(path: &str, html: &str) -> Option<&'static str> {
+    if component_designed(path).is_some() {
+        return Some("component-design");
+    }
+    (design_run_status(html)? == "archived").then_some("design-run")
+}
+
+pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
+    crate::git::git(repo, &["rev-parse", &format!("{rev}:{RULEBOOK}")]).ok()
+}
 
 pub fn rulebook(repo: &Path) -> Option<Rulebook> {
     let rules = std::fs::read_to_string(repo.join(RULEBOOK))
@@ -509,7 +530,7 @@ fn check_pin(failures: &mut Vec<Failure>, pinned: &str, rulebook: &Rulebook) {
             format!("the pin \"{pinned}\" is too short to name a blob"),
             format!("pin at least {PIN_MIN} characters: rulebook: {short}"),
         );
-    } else if !blob.starts_with(&pin) {
+    } else if !pin_matches(&pin, blob) {
         fail(
             "receipt·rulebook-stale",
             format!("the receipt ran against rulebook {pinned}; {RULEBOOK} is now {short}"),
@@ -3084,6 +3105,58 @@ chroma_floor: 40
         assert!(matches!(&v, Verdict::Exempt(s) if s == "archived"), "archived exempts");
         let line = format_verdict("run.html", &v);
         assert!(line.contains("archived") && !line.contains("until ready"), "{line}");
+    }
+
+    // What activates the review's design dimension. The asymmetry is the point:
+    // Tier-1 goes SILENT on an archived run (closed under an older contract) and
+    // Tier-3 wakes up on exactly that file, because a finished design is the only
+    // kind there is anything independent to say about.
+    #[test]
+    fn only_a_closed_run_or_a_component_file_is_a_design_artifact() {
+        let run = design_run(&receipt("  data-ink-first: satisfied — x\n"));
+        let archived = run.replace(
+            "data-artifact=\"design-run\"",
+            "data-artifact=\"design-run\" data-status=\"archived\"",
+        );
+        let draft = run.replace(
+            "data-artifact=\"design-run\"",
+            "data-artifact=\"design-run\" data-status=\"draft\"",
+        );
+        let path = "docs/work/2026-08-13-dflow-run-4.html";
+        assert_eq!(super::design_artifact(path, &archived), Some("design-run"));
+        assert_eq!(super::design_artifact(path, &draft), None, "a draft run is unfinished");
+        assert_eq!(super::design_artifact(path, &run), None, "an open run is unfinished");
+        assert_eq!(
+            super::design_artifact("docs/work/components/button.html", "<html></html>"),
+            Some("component-design"),
+            "a component design file is a finished contract whatever it contains"
+        );
+        assert_eq!(super::design_artifact("docs/work/components/specimen.js", ""), None);
+        assert_eq!(
+            super::design_artifact(
+                "docs/workflow.html",
+                &archived.replace("design-run", "wu-plan")
+            ),
+            None
+        );
+        assert_eq!(
+            super::design_artifact(
+                "docs/work/flow-spec.html",
+                "<html><body><main data-artifact=\"wu-plan\"><code>data-artifact=\"design-run\" data-status=\"archived\"</code></main></body></html>"
+            ),
+            None,
+            "a doc that quotes the declaration is not a run"
+        );
+    }
+
+    #[test]
+    fn a_pin_names_a_blob_only_at_git_s_own_abbreviation_floor() {
+        let blob = "796c547cb1de0f21e5a1b1a1c0ffee0123456789";
+        assert!(super::pin_matches("796c547", blob));
+        assert!(super::pin_matches("796C547", blob), "case is not the claim");
+        assert!(super::pin_matches(blob, blob));
+        assert!(!super::pin_matches("796c54", blob), "under the floor names ~1 blob in 16");
+        assert!(!super::pin_matches("28f5437", blob), "another blob is another judgment");
     }
 
     // Every design run in the tree, found rather than listed: the hand-typed trio
