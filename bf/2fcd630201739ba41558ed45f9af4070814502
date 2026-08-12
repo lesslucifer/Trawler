@@ -1,0 +1,181 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W7
+branch: wu/design-flow/harness
+changes:
+  - path: docs/decisions/dec-15-design-run-enforcement.html
+    tier: T2
+    action: updated
+    distills: "all three tiers read finished; the human lane is Tier-3 in cr/v3, not cr/v2"
+  - path: docs/decisions/dec-16-design-file-retirement.html
+    tier: T2
+    action: updated
+    distills: "the enforcement section names 6-retirement-order instead of saying W7 must; a removed file is not a Tier-3 artifact; a slug citation is followed in the rulebook that seam shipped, never the working tree"
+  - path: docs/decisions/dec-18-one-control-box.html
+    tier: T2
+    action: added
+    distills: "four components reached one control-box fork separately"
+  - path: docs/decisions/dec-19-chromatic-accent-closed.html
+    tier: T2
+    action: added
+    distills: "five refusals and two grants are one rule read together"
+  - path: docs/decisions/dec-20-logic-lives-with-its-inputs.html
+    tier: T2
+    action: added
+    distills: "why two sibling components take opposite API shapes"
+  - path: docs/decisions/dec-21-props-need-a-truthful-source.html
+    tier: T2
+    action: added
+    distills: "the reasoning for a prop that deliberately does not exist"
+  - path: docs/decisions/dec-22-time-is-absolute-and-local.html
+    tier: T2
+    action: added
+    distills: "one product claim binding every future surface showing a time"
+  - path: docs/decisions/dec-23-collection-dependencies.html
+    tier: T2
+    action: added
+    distills: "the collection dependency surface, each with its exit path"
+  - path: docs/decisions/dec-24-design-review-dimension.html
+    tier: T2
+    action: added
+    distills: "Tier-3 is a dimension of the code review; cr/v3; and a design-bearing diff is never docs-only-exempt"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-24 registered"
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: updated
+    distills: "five links to retired design files become plain code spans - the contract is the TSDoc"
+  - path: docs/work/2026-07-22-dflow-w2-registry-seed.html
+    tier: T3
+    action: updated
+    distills: "the generator landed, so the index is neither stored nor hand-maintained and the freshness gate dissolved"
+  - path: docs/work/2026-08-11-dflow-w7-discussion.html
+    tier: T3
+    action: added
+    distills: "the WU's discussion record"
+  - path: docs/work/2026-08-11-dflow-w7-plan.html
+    tier: T3
+    action: added
+    distills: "the WU's plan record"
+  - path: docs/work/2026-08-11-dflow-w7-step0-parser.html
+    tier: T3
+    action: added
+    distills: "the WU's step0 record"
+  - path: docs/work/2026-08-11-dflow-w7-step1-registry.html
+    tier: T3
+    action: added
+    distills: "the WU's step1 record"
+  - path: docs/work/2026-08-12-dflow-w7-result.html
+    tier: T3
+    action: added
+    distills: "the WU's result record"
+  - path: docs/work/2026-08-12-dflow-w7-step2-registry-gate.html
+    tier: T3
+    action: added
+    distills: "the WU's step2 record"
+  - path: docs/work/2026-08-12-dflow-w7-step3-close.html
+    tier: T3
+    action: added
+    distills: "the WU's step3 record"
+  - path: docs/work/2026-08-12-dflow-w7-step4-tier3.html
+    tier: T3
+    action: added
+    distills: "the WU's step4 record"
+  - path: docs/work/2026-08-12-dflow-w7-step5-e2e.html
+    tier: T3
+    action: added
+    distills: "the WU's step5 record"
+  - path: docs/work/component-design-base.html
+    tier: T3
+    action: updated
+    distills: "the canonical exemplar moves off a retired file to HeaderTable"
+  - path: docs/work/components/button.html
+    tier: T3
+    action: removed
+    distills: "the button design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-18-one-control-box.html]
+  - path: docs/work/components/copy-button.html
+    tier: T3
+    action: removed
+    distills: "the copy-button design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-18-one-control-box.html]
+  - path: docs/work/components/copy-text.html
+    tier: T3
+    action: removed
+    distills: "the copy-text design file retired in DEC-16 order, both forks judged"
+    distilled_to: "no record survives: D1 (click-to-copy trigger) and D2 (confirm chip) are both carried verbatim by CopyText's @states"
+  - path: docs/work/components/duration-text.html
+    tier: T3
+    action: removed
+    distills: "the duration-text design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-21-props-need-a-truthful-source.html]
+  - path: docs/work/components/icon-button.html
+    tier: T3
+    action: removed
+    distills: "the icon-button design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-19-chromatic-accent-closed.html]
+  - path: docs/work/components/key-value-row.html
+    tier: T3
+    action: removed
+    distills: "the key-value-row design file retired in DEC-16 order, all three forks judged"
+    distilled_to: "no record survives: D2 (the value cell is a CopyText) is carried by @madeof; D1 is superseded by wrap-not-truncate and D3 by data-ink-first"
+  - path: docs/work/components/method-label.html
+    tier: T3
+    action: removed
+    distills: "the method-label design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-19-chromatic-accent-closed.html]
+  - path: docs/work/components/notice.html
+    tier: T3
+    action: removed
+    distills: "the notice design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html]
+  - path: docs/work/components/section.html
+    tier: T3
+    action: removed
+    distills: "the section design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-20-logic-lives-with-its-inputs.html]
+  - path: docs/work/components/segmented-control.html
+    tier: T3
+    action: removed
+    distills: "the segmented-control design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-21-props-need-a-truthful-source.html]
+  - path: docs/work/components/select.html
+    tier: T3
+    action: removed
+    distills: "the select design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-18-one-control-box.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html]
+  - path: docs/work/components/status-line.html
+    tier: T3
+    action: removed
+    distills: "the status-line design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-20-logic-lives-with-its-inputs.html]
+  - path: docs/work/components/status-pill.html
+    tier: T3
+    action: removed
+    distills: "the status-pill design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/step-list.html
+    tier: T3
+    action: removed
+    distills: "the step-list design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-20-logic-lives-with-its-inputs.html, docs/decisions/dec-21-props-need-a-truthful-source.html]
+  - path: docs/work/components/timestamp-text.html
+    tier: T3
+    action: removed
+    distills: "the timestamp-text design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-22-time-is-absolute-and-local.html, docs/decisions/dec-23-collection-dependencies.html]
+  - path: docs/work/components/toned-text.html
+    tier: T3
+    action: removed
+    distills: "the toned-text design file retired in DEC-16 order, its 1-5 forks judged one at a time"
+    distilled_to: [docs/decisions/dec-19-chromatic-accent-closed.html, docs/decisions/dec-20-logic-lives-with-its-inputs.html]
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "the close, the design review, the review item, the e2e section and the command table"
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "v9 cr/v3 + what makes a diff design-bearing + gate check 9; v10 the design-artifact carve-out from the docs-only exemption"
