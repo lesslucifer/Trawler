@@ -759,7 +759,7 @@ fn check_hard_rules(
     check_vocabulary(failures, html, vocabulary, allowed);
     check_uppercase_mute_labels(failures, html, vocabulary);
     check_colour_plus_text(failures, html, vocabulary);
-    check_wire_data(failures, html);
+    check_wire_data(failures, html, item("mockup").is_some());
     if let Some(layout) = item("layout") {
         check_overflow_declared(failures, layout);
     }
@@ -984,18 +984,25 @@ fn check_colour_plus_text(failures: &mut Vec<Failure>, html: &str, vocabulary: &
 // correctly typed when nobody looked.
 const WIRE_HOSTILE: &[&str] = &["truncate", "text-ellipsis", "whitespace-nowrap"];
 
-fn check_wire_data(failures: &mut Vec<Failure>, html: &str) {
+// The marking rule reads the whole doc - a payload can be marked outside the
+// mockup, and the wrapping half scans every class - but the DEMAND for a marking
+// waits for the mockup, the way overflow waits for the layout and keyboard parity
+// for the interaction. A run five stages from its mockup being told the mockup
+// marks no payload is a prompt for work the flow has not reached (E-DFLOW.W7 ⑤).
+fn check_wire_data(failures: &mut Vec<Failure>, html: &str, mockup_written: bool) {
     let marked = attrs(html, "data-wire");
     let declared = attrs(html, "class");
     let bases = |declared: &Attr| -> Vec<String> {
         declared.value.split_whitespace().map(|c| base_class(c).to_string()).collect()
     };
     if marked.is_empty() {
-        failures.push(Failure {
-            check: "mono-for-wire-data·undeclared".to_string(),
-            what: "the mockup marks no payload element and does not say it has none".to_string(),
-            fix: "mark every verbatim payload data-wire=\"<what it is>\", or declare data-wire=\"none\" once - a payload is anything the user reads or copies exactly".to_string(),
-        });
+        if mockup_written {
+            failures.push(Failure {
+                check: "mono-for-wire-data·undeclared".to_string(),
+                what: "the mockup marks no payload element and does not say it has none".to_string(),
+                fix: "mark every verbatim payload data-wire=\"<what it is>\", or declare data-wire=\"none\" once - a payload is anything the user reads or copies exactly".to_string(),
+            });
+        }
         return;
     }
     for wire in &marked {
@@ -3551,6 +3558,21 @@ chroma_floor: 40
     fn a_mockup_that_declares_no_payload_at_all_is_red() {
         let silent = green_run().replace(" data-wire=\"none\"", "");
         assert!(what(&doc_verdict(&silent), "mono-for-wire-data·undeclared").contains("has none"));
+    }
+
+    // ...but a run that has not written its mockup yet is owed nothing about
+    // payloads: the demand waits for the stage that answers it, the way overflow
+    // waits for the layout. The mid-flow run is red for the mockup it still owes
+    // and for nothing beyond that.
+    #[test]
+    fn a_run_that_has_not_reached_its_mockup_is_not_asked_to_mark_payloads() {
+        let mid_flow = green_run().replace(
+            "<div data-item=\"mockup\" data-wire=\"none\"><button data-state-toggle=\"mock\">flip</button></div>",
+            "",
+        );
+        let checks = reds(&mid_flow);
+        assert!(checks.contains(&"item·mockup".to_string()), "{checks:?}");
+        assert!(!checks.contains(&"mono-for-wire-data·undeclared".to_string()), "{checks:?}");
     }
 
     #[test]

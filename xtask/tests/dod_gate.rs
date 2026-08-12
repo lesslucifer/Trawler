@@ -1115,6 +1115,50 @@ fn docs_only_wu_gate_requires_mr_then_is_exempt_without_a_receipt() {
     );
 }
 
+// A design is a docs-only deliverable, so the exemption that lets incidental
+// doc changes through would hand the design dimension exactly the diffs it
+// exists to judge: E-DFLOW.W2 landed 14 component design files with no code
+// review at all, on this rule (E-DFLOW.W7 ⑤).
+#[test]
+fn a_docs_only_wu_carrying_a_design_artifact_is_not_exempt() {
+    let repo = Repo::new();
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/design", "epic/x"]);
+    repo.write(
+        DESIGN_RUN,
+        "<html><body><main data-artifact=\"design-run\" data-status=\"archived\">\
+         <p>the run</p></main></body></html>\n",
+    );
+    repo.write(WU_RESULT, "<html>the design WU result</html>\n");
+    let tip = repo.commit("a design run and nothing else");
+    allow_file(&repo);
+    repo.note("mr", &tip, &wu_mr_note(&repo, &tip));
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/design", "epic/x").unwrap();
+    assert!(!report.exempt, "a design-bearing diff is the gate's subject, not its exception");
+    assert!(
+        checks_of(&report).contains(&"1·notes"),
+        "the design deliverable needs the same evidence any other does: {}",
+        format_report(&report)
+    );
+}
+
+// ...and the exemption itself is untouched: a docs change that designs nothing
+// still passes ungated, which is the whole point of having one.
+#[test]
+fn a_docs_only_wu_that_designs_nothing_stays_exempt() {
+    let repo = Repo::new();
+    repo.git(&["branch", "epic/x"]);
+    docs_only_wu(&repo);
+    repo.write(WU_RESULT, "<html>docs-only wu result</html>\n");
+    let tip = repo.commit("wu result report");
+    allow_file(&repo);
+    repo.note("mr", &tip, &wu_mr_note(&repo, &tip));
+
+    let report = repo.gate().verify(Level::Wu, "wu/x/docs", "epic/x").unwrap();
+    assert!(report.exempt, "unexpected failures: {}", format_report(&report));
+}
+
 #[test]
 fn docs_only_standalone_commit_is_exempt() {
     let (repo, _) = epic_with_merged_wu();

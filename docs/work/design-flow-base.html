@@ -328,12 +328,43 @@ soft:
             <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a> and the commit is not</td></tr>
         <tr><td><strong>What refuses it</strong></td>
           <td><code>9·design</code> at the merge — a design-bearing tip whose note has no design section, skips
-            an artifact, pins another rulebook, or carries a failing design verdict</td></tr>
+            an artifact, pins another rulebook, or carries a failing design verdict. <strong>A design-bearing
+            diff is never docs-only-exempt</strong>: a design is a docs-only <em>deliverable</em>, and the
+            exemption was handing this check exactly the diffs it exists to judge — W2 landed 14 component
+            design files with no code review at all (found by the <a href="#flow-e2e">flow e2e</a>)</td></tr>
       </tbody>
     </table>
     <p class="kd">Tier-2's receipt stays <em>inline</em> and Tier-3's verdict does not, and the asymmetry is the
       point: a self-claim is part of the artifact and dies with it, while an independent judgment is about a
       commit — and commits outlive the files they carry.</p>
+
+    <h2 id="flow-e2e">What proves the harness — the flow e2e <span class="badge id">xtask/tests/e2e_design_flow.rs</span></h2>
+    <p>Every stage above is a rule an agent must follow and a predicate that refuses it, and the whole
+      point is the <em>sequence</em>: no unit test can tell whether a run can be driven from a blank page
+      to a landed merge. A fake designing agent emits one artifact at a time and a fake human answers each
+      with a taste instruction; all three tiers then judge the result over a real git tree, real
+      <code>node</code> oracles and the real merge hook. Feature-gated
+      (<code>--features design-e2e</code>) out of the default suite — re-run it when the flow or the
+      harness changes.</p>
+    <table data-c="tbl-e2e">
+      <thead><tr><th>Asserts</th><th>The failure it refuses</th></tr></thead>
+      <tbody>
+        <tr><td>After every stage the run is red for <strong>exactly the stages not yet written</strong></td>
+          <td>the flow stalling, or prompting for work it has not reached. A half-written run that goes
+            quiet asks for nothing; one red for something else refused a stage that was not wrong. Both
+            were real: <code>mono-for-wire-data·undeclared</code> asked a Frame-stage run to mark the
+            payloads of a mockup five stages away</td></tr>
+        <tr><td>The rulebook moving under an open run re-opens <em>both</em> halves of
+          <a href="#close">the close's step ①</a> — the pin is stale and the new rule is unreceipted</td>
+          <td>a receipt that is complete against a rulebook nobody has read since</td></tr>
+        <tr><td>The <code>cr/v3</code> note is written from what <code>design-scope</code> printed, and
+          nothing else</td><td>the reviewer and the gate each deciding what counts as design-bearing</td></tr>
+        <tr><td>A rule-violating mockup reds <strong>at the stage that wrote it</strong>, and the chain
+          from there keeps it out of the tree: a run that cannot be greened cannot be closed
+          (<a href="#close">③</a>), and a run left open cannot merge (<code>6·run-closed</code>)</td>
+          <td>a breach surfacing only at the end, where it is expensive, or not at all</td></tr>
+      </tbody>
+    </table>
 
     <h2 id="provenance">Provenance &amp; what feeds the rest of the epic</h2>
     <table data-c="provenance">

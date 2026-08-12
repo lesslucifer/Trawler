@@ -89,6 +89,13 @@ impl Gate<'_> {
         let names = diff_names(self.repo, &base, &tip)?;
         let sha = diff_sha256(self.repo, &base, &tip)?;
         let code_changed = names.iter().any(|p| is_code(p));
+        // A design is a docs-only deliverable, so the docs/infra exemption would
+        // hand the design dimension exactly the diffs it exists to judge - the
+        // most common design Working Unit writes a run and no code at all. The
+        // merge that closes a design is answerable for it whether or not any
+        // code moved, for the same reason `6·run-closed` already is.
+        let designs = level != Level::Commit && !self.design_artifacts(&tip, &names).is_empty();
+        let gated = code_changed || designs;
         let mut report = Report {
             level,
             tip_ref: tip_ref.to_string(),
@@ -97,7 +104,7 @@ impl Gate<'_> {
             diff_sha256: sha,
             epic: None,
             wu: None,
-            exempt: !code_changed,
+            exempt: !gated,
             failures: Vec::new(),
             waived: Vec::new(),
         };
@@ -109,7 +116,7 @@ impl Gate<'_> {
         }
         self.check_manual_review(&mut report);
         report.exempt = report.exempt && report.failures.is_empty();
-        if !code_changed {
+        if !gated {
             return Ok(report);
         }
         let parsed = self.load_notes(&mut report, &names);
