@@ -171,14 +171,43 @@ flowchart LR
       therefore exempt; the numbers come from lifting the flag deliberately, which is what the pins do.</p>
 
     <h2 id="seams">What this reds in landed history</h2>
-    <div class="callout warn" data-c="seams">
-      <strong>Three seams on <code>epic/design-flow</code> go red under the new rule</strong>, measured
-      by running the gate over each: two carrying <code>run-3</code> unarchived, one carrying
-      <code>run-1</code> as <code>data-status="ready"</code>. They are <strong>true positives</strong> —
-      those merges are precisely the "closing is nobody's step" defect this rule exists to name. The epic
-      walk re-verifies every seam against the <em>live</em> rule set, so the E-DFLOW epic merge needs
-      three <code>walk_waivers</code> entries on its <code>cr</code> note, on the record and by sha.
-      Recorded here so the epic gate is not surprised by it; carried to the WU result's follow-ups.
+    <p>Three seams on <code>epic/design-flow</code> go red under the new rule — measured by running the
+      gate over each, not inferred. They are <strong>true positives</strong>: those merges are precisely
+      the "closing is nobody's step" defect this rule exists to name. Each has since been remedied in the
+      tree, and the seam commits are immutable (never amend a gated branch — it orphans the notes), so
+      the instrument is the waiver the walk already carries.</p>
+    <table data-c="tbl-seams">
+      <thead><tr><th>Seam</th><th>Merged</th><th>The run it left open</th><th>Closed since, at</th></tr></thead>
+      <tbody>
+        <tr><td><code>d4454f5</code></td><td>E-DFLOW.W1</td>
+          <td><code>2026-07-16-dflow-run-1.html</code> — <code>data-status="ready"</code>, which says
+            open out loud</td><td><code>f2bebc1</code> (W4)</td></tr>
+        <tr><td><code>989f4bf</code></td><td>E-DFLOW.W4</td>
+          <td><code>2026-07-26-dflow-w4-run-3.html</code> — no status at all</td>
+          <td rowspan="2"><code>40ff32c</code> (W6 ⑤ — <em>"the one red doc nobody archived"</em>)</td></tr>
+        <tr><td><code>f2a2b7c</code></td><td>E-DFLOW.W5</td>
+          <td>the same run #3, still open — and this WU <strong>edited it</strong>, 25 lines, without
+            closing it. That is the two-Working-Unit window W6 filed as follow-up 8</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="seams-waiver">
+      <strong>Apply at the epic merge, not before.</strong> <code>walk()</code> runs only at
+      <code>Level::Epic</code> — merging into <code>main</code> — and reads <code>walk_waivers</code>
+      from the <code>cr</code> note <em>on the epic tip being verified</em>. That tip does not exist yet
+      (W7–W9 still to land), so the entries below go into the epic's own <code>cr</code> note when the
+      code review writes it, bound to that diff. Merging a WU into the epic runs the <em>WU</em> gate,
+      which does not walk: nothing is blocked in the meantime.
+      <pre>walk_waivers:
+  - seam: d4454f596bd70e2ce7099d67826203f8ae9ae2c4
+    why: "6·run-closed post-dates this seam (E-DFLOW.W7 ③). run-1 was left data-status=\"ready\"; closed at f2bebc1 and archived in the tree since"
+  - seam: 989f4bfacdee1d433b5b385d5227fd5e36a3281d
+    why: "6·run-closed post-dates this seam (E-DFLOW.W7 ③). run-3 left open; closed at 40ff32c — the defect W6 follow-up 8 filed and this rule now refuses"
+  - seam: f2a2b7ce75b2572390668c9de0c3a937b502aa18
+    why: "6·run-closed post-dates this seam (E-DFLOW.W7 ③). run-3 still open one WU later, edited but not closed; closed at 40ff32c"</pre>
+      Each <code>why</code> is a real reason, which the waiver requires — a blank one does not suppress.
+      What it says is <strong>not</strong> "this was fine": it is that the rule is newer than the seam,
+      the seam is immutable, and the tree it produced is closed today. Never <code>--no-verify</code>,
+      which skips every gate rather than these three seams.
     </div>
 
     <h2 id="tests">The tests</h2>
