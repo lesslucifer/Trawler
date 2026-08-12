@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Workflow Standard</h1>
       <p>How work is planned, gated and merged: epic → working unit → commit, one hook-enforced DoD gate per level, completeness proven from git notes — never from an agent's word.</p>
-      <div class="meta">v9 · 2026-08-12 · Trawler · T1 process doc</div>
+      <div class="meta">v10 · 2026-08-12 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -39,7 +39,8 @@
     <strong>Main is merge-only</strong> (<a href="decisions/workflow-gates.html#dec-6">DEC-6</a>): the
     pre-commit hook refuses every non-merge commit on <code>main</code> — all work, docs included,
     starts on an <code>epic/*</code> or <code>wu/*</code> branch and lands through the merge gate
-    (docs/infra-only merges pass it ungated). Standalone commits exist only on <code>epic/*</code>
+    (docs/infra-only merges pass it ungated, <a href="#gate-output">unless they carry a design
+    artifact</a>). Standalone commits exist only on <code>epic/*</code>
     branches: a <em>code</em> commit there (outside any WU) carries a <code>test/v2</code> note,
     <code>level: commit</code>, unit ≥ 1 or waived; the epic walk and the pre-push range check verify
     them. Code paths are <code>src/</code>, <code>xtask/</code>, <code>tests/</code>,
@@ -120,7 +121,8 @@ flowchart TD
     The gate accepts a waiver mechanically (present, non-empty reason); whether it is <em>justified</em>
     is a review question — an unjustified waiver is a review finding. Vocabulary:
     <strong>waived</strong> = judged unnecessary, reason recorded, reviewable ·
-    <strong>exempt</strong> = a rule says no evidence is needed (docs/infra-only diffs).</p>
+    <strong>exempt</strong> = a rule says no evidence is needed (docs/infra-only diffs — unless the
+    diff carries a design artifact, which is a docs-only <em>deliverable</em>).</p>
 
     <h2 id="manual-review">Manual review — a human sign-off, path-derived</h2>
 
@@ -244,8 +246,11 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
     failure — check id, expected vs found, and a concrete <code>fix →</code> action — written for the
     fixing agent to consume. Red gates write nothing. Docs/infra-only diffs are <em>exempt</em> at every
     level: green, no notes demanded, no receipt written — one shared rule behind the hook's ungated doc
-    merges and the walk's exempt seams. One exception: an epic tip runs the tracked-doc layout check
-    even when its diff is docs-only — a stray tracked doc turns the merge red, exempt or not.</p>
+    merges and the walk's exempt seams. Two exceptions: an epic tip runs the tracked-doc layout check
+    even when its diff is docs-only — a stray tracked doc turns the merge red, exempt or not — and
+    <strong>a diff carrying a design artifact is never exempt</strong>: a design is a docs-only
+    <em>deliverable</em>, so the exemption would hand check 9 exactly the diffs it exists to judge
+    (E-DFLOW.W2 landed 14 component design files with no code review at all, on the old rule).</p>
 
     <h2 id="hooks">Hooks</h2>
 
@@ -255,7 +260,7 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
         <tr><td><code>pre-commit</code></td><td>refuses non-merge commits on <code>main</code> with branch guidance (DEC-6) · <code>fmt</code> + <code>clippy -D warnings</code> · when completing a <em>conflicted</em> merge (MERGE_HEAD on disk — those never reach pre-merge-commit), runs the same merge gate</td></tr>
         <tr><td><code>commit-msg</code></td><td>if the staged diff touches rule-bearing docs (T0 <code>CLAUDE.md</code> / T1 flat <code>docs/</code>), refuses the commit unless the message carries a <code>Reviewed-By</code> trailer naming a listed authoriser (manual review at commit level — a presence check only: the hook runs before git signs, so a <code>key</code>-backed signature is verified later, at pre-push); T2/T3 doc commits pass untrailered (DEC-10); merge commits are skipped — their merged doc commits carried their own authorisation when they were created and pushed</td></tr>
         <tr><td><code>pre-push</code></td><td>full suite · auto-pushes <code>refs/notes/*</code> · range-checks standalone commits on <code>main</code>/<code>epic/*</code> pushes, incl. each rule-bearing (T0/T1) doc commit's authorisation (trailer listed; <code>gpgsig</code> verifies for a <code>key</code>-backed identity)</td></tr>
-        <tr><td><code>pre-merge-commit</code></td><td>runs the gate on <code>MERGE_HEAD</code>: into <code>epic/*</code> ⇒ wu gate, into <code>main</code> ⇒ epic gate; docs/infra-only merges pass ungated; red refuses the merge</td></tr>
+        <tr><td><code>pre-merge-commit</code></td><td>runs the gate on <code>MERGE_HEAD</code>: into <code>epic/*</code> ⇒ wu gate, into <code>main</code> ⇒ epic gate; docs/infra-only merges pass ungated unless they carry a design artifact; red refuses the merge</td></tr>
         <tr><td><code>post-checkout</code></td><td>heals <code>merge.ff = false</code> · worktree setup</td></tr>
       </tbody>
     </table>
