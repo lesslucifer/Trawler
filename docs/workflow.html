@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Workflow Standard</h1>
       <p>How work is planned, gated and merged: epic → working unit → commit, one hook-enforced DoD gate per level, completeness proven from git notes — never from an agent's word.</p>
-      <div class="meta">v8 · 2026-07-11 · Trawler · T1 process doc</div>
+      <div class="meta">v9 · 2026-08-12 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -28,8 +28,8 @@
     <table data-c="levels-table">
       <thead><tr><th>Level</th><th>Branch</th><th>Plan artifact</th><th>Gate</th><th>Evidence on the gated tip</th></tr></thead>
       <tbody>
-        <tr><td>Epic</td><td><code>epic/&lt;slug&gt;</code> off <code>main</code></td><td>epic plan per <a href="work-planning.html">the work-planning standard</a>, WU summaries included</td><td>DoD-E at the merge into <code>main</code></td><td><code>test/v2</code> (epic) · <code>cr/v2</code> PASS · <code>doc/v1</code> · <code>mr/v1</code> (always) · <code>dod/v1</code></td></tr>
-        <tr><td>Working Unit</td><td><code>wu/&lt;epic-slug&gt;/&lt;slug&gt;</code> off its epic</td><td>its own WU plan doc per <a href="work-planning.html">the standard</a> + a summary block in the epic plan, written before code</td><td>DoD-W at the merge into the epic</td><td><code>test/v2</code> (working-unit) · <code>cr/v2</code> PASS · <code>doc/v1</code> · <code>mr/v1</code> (always) · <code>dod/v1</code></td></tr>
+        <tr><td>Epic</td><td><code>epic/&lt;slug&gt;</code> off <code>main</code></td><td>epic plan per <a href="work-planning.html">the work-planning standard</a>, WU summaries included</td><td>DoD-E at the merge into <code>main</code></td><td><code>test/v2</code> (epic) · <code>cr/v3</code> PASS · <code>doc/v1</code> · <code>mr/v1</code> (always) · <code>dod/v1</code></td></tr>
+        <tr><td>Working Unit</td><td><code>wu/&lt;epic-slug&gt;/&lt;slug&gt;</code> off its epic</td><td>its own WU plan doc per <a href="work-planning.html">the standard</a> + a summary block in the epic plan, written before code</td><td>DoD-W at the merge into the epic</td><td><code>test/v2</code> (working-unit) · <code>cr/v3</code> PASS · <code>doc/v1</code> · <code>mr/v1</code> (always) · <code>dod/v1</code></td></tr>
         <tr><td>Commit</td><td>on its WU branch</td><td>—</td><td>DoD-C, hooks at commit/push</td><td>none — hooks refuse red commits; rule-bearing docs (T0/T1) need a <code>Reviewed-By</code> trailer</td></tr>
       </tbody>
     </table>
@@ -53,7 +53,7 @@ flowchart TD
   P["T3 epic plan: WUs, requirements, test plans"] --> B["branch epic/&lt;slug&gt;"]
   B --> W["branch wu/&lt;epic&gt;/&lt;slug&gt;"]
   W --> C["commits — hooks enforce DoD-C"]
-  C --> R["write test/v2 + doc/v1 notes,<br/>code review → cr/v2 PASS on tip"]
+  C --> R["write test/v2 + doc/v1 notes,<br/>code review → cr/v3 PASS on tip"]
   R --> MR["human signs off → mr/v1 note attesting<br/>the WU result report (sign-what-you-read)"]
   MR --> G1{"merge --no-ff into the epic<br/>hook: verify-dod wu"}
   G1 -- red: merge refused --> C
@@ -185,7 +185,7 @@ flowchart TD
       <thead><tr><th>Note</th><th>Ref</th><th>Proves</th><th>Schema owner</th></tr></thead>
       <tbody>
         <tr><td><code>test/v2</code></td><td><code>refs/notes/test</code></td><td>what tests back this work (per-layer counts/waivers)</td><td><a href="testing-strategy.html">testing standard</a></td></tr>
-        <tr><td><code>cr/v2</code></td><td><code>refs/notes/cr</code></td><td>an independent review judged exactly this diff: PASS/FAIL + <code>diff_sha256</code></td><td><code>.claude/skills/code-review/</code></td></tr>
+        <tr><td><code>cr/v3</code></td><td><code>refs/notes/cr</code></td><td>an independent review judged exactly this diff: PASS/FAIL + <code>diff_sha256</code>. A <strong>design-bearing</strong> diff also carries a <code>design:</code> section — the review's design dimension, its <code>artifacts</code> (every one the diff carries), the <code>rulebook</code> blob it judged against, and its own verdict. Design-bearing = the diff touches a <strong>closed</strong> design run (<code>data-status="archived"</code>) or a component design file; <code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code> answers it, and the gate calls the same function. <code>cr/v2</code> notes stay valid on tips already merged — a note written before the dimension existed cannot be given one after the fact</td><td><code>.claude/skills/code-review/</code></td></tr>
         <tr><td><code>doc/v1</code></td><td><code>refs/notes/doc</code></td><td>every changed doc file accounted for; distillation lineage</td><td><a href="documentation-system.html">documentation system</a></td></tr>
         <tr><td><code>mr/v1</code></td><td><code>refs/notes/mr</code></td><td>a listed human read the result report and authorised this WU/epic tip: <code>tier</code> + <code>signer</code> + <code>report</code> + <code>report_sha256</code>, plus <code>base</code> + <code>sig</code> (a signature over the change-hash + report-hash payload) when the signer is <code>key</code>-backed</td><td>this doc · <a href="decisions/workflow-gates.html">DEC-7</a>/<a href="decisions/workflow-gates.html#dec-9">DEC-9</a>/<a href="decisions/workflow-gates.html#dec-10">DEC-10</a></td></tr>
         <tr><td><code>dod/v1</code></td><td><code>refs/notes/dod</code></td><td>the gate ran green here (receipt below)</td><td>this doc</td></tr>
@@ -230,12 +230,13 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
       <tbody>
         <tr><td>1</td><td>Required notes present on the tip, schemas parse, identity consistent across them</td></tr>
         <tr><td>2</td><td>Manifest <code>level</code> matches the gate; required layer (commit ⇒ unit, WU ⇒ integration, epic ⇒ e2e) shows count ≥ 1 or a waiver</td></tr>
-        <tr><td>3</td><td><code>cr/v2</code> verdict is PASS</td></tr>
+        <tr><td>3</td><td><code>cr/v3</code> verdict is PASS</td></tr>
         <tr><td>4</td><td>Review <code>base</code> equals the current merge-base — stale reviews rejected</td></tr>
         <tr><td>5</td><td><code>diff_sha256</code> equals the gated diff recomputed now, byte-identical</td></tr>
         <tr><td>6</td><td><code>doc/v1</code> matches <code>git diff --name-only</code> exactly (no missing/phantom entries, tiers correct); code change ⇒ T2 entry or <code>t2_waived</code>; epic ⇒ only expected doc locations tracked at the tip (flat <code>docs/*</code>, <code>use-cases/</code>, <code>decisions/</code>, <code>backlog/</code>, <code>design-rules/</code> — nothing under <code>docs/work/</code>; archived docs live untracked in <code>docs/.archive/</code>); <code>archived</code> entries carry <code>distilled_to</code></td></tr>
         <tr><td>7</td><td><em>Epic:</em> first-parent walk — each merge's <code>^2</code> re-verified as a WU, each non-merge commit checked as standalone (docs-only exempt from test/cr/doc; <strong>manual review is boundary-only at every seam</strong> — doc-commit trailers are checked at commit-msg and pre-push when the commit is new, and a WU tip's <code>mr/v1</code> is checked by the merge hook when the seam is made; the walk re-judges neither: history is immutable while the local <code>.mr-allowed</code> is mutable, so retroactive re-verification would redden authorised history after key rotation, tier removal or on a fresh clone (<a href="decisions/workflow-gates.html#dec-9">DEC-9</a>/<a href="decisions/workflow-gates.html#dec-10">DEC-10</a>); the tip itself is covered by the epic gate). A seam whose merged-in parent is already reachable from the epic mainline <em>or</em> from the gate target is skipped — a back-merge of landed history (<code>main</code> or a sibling already on <code>main</code>) is not a net-new seam (<a href="decisions/workflow-gates.html#dec-8">DEC-8</a>); a genuine forward seam always carries work absent from the target, so the skip can't swallow it. Octopus merges are refused, by the walk and by the hook: one WU per merge. A misfire is overridable per-seam via the walk-error waiver below — never by <code>--no-verify</code></td></tr>
         <tr><td>8</td><td><em>Manual review</em> (not waivable): every WU and epic tip needs a valid <code>mr/v1</code> note whose <code>signer</code> is listed in <code>.mr-allowed</code>, whose <code>report</code>/<code>report_sha256</code> name the level's result report (a WU report is re-hashed against the tracked file at the tip; an epic report is archived, its hash attested by the signature), and whose <code>sig</code> verifies over the change-hash + report-hash payload when the note carries one (a <code>key</code>-backed signer). Runs before the exemption, like the epic tracked-doc check. Absent/unlisted/failed-verify/missing-report ⇒ red, with an instruction to get human confirmation — the agent must not self-authorise</td></tr>
+        <tr><td>9</td><td><em>Design</em> — a design-bearing tip (see <code>cr/v3</code> above) needs a <code>cr/v3</code> note whose <code>design:</code> section names every design artifact in the diff, pins the rulebook blob <em>the tip ships</em>, and reads <code>PASS</code>. A <code>cr/v2</code> note on such a tip is refused; at a walk seam that one refusal is dropped — the note is immutable evidence from before the dimension existed — while a <code>cr/v3</code> note missing or short-changing its design section stays red everywhere</td></tr>
       </tbody>
     </table>
 
@@ -270,14 +271,14 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
       a seam it can't classify — a live cross-epic integration, or any future topology the discriminator
       doesn't yet recognise — do <strong>not</strong> reach for <code>--no-verify</code>, which skips
       <em>every</em> gate. Waive that <em>one</em> seam, on the record, by adding an entry to the epic
-      tip's <code>cr/v2</code> review note:</p>
+      tip's <code>cr/v3</code> review note:</p>
       <pre>walk_waivers:
   - seam: &lt;seam-sha, exactly as the walk printed it&gt;
     why: "&lt;why skipping this seam's re-check is safe&gt;"</pre>
       <p>A non-empty <code>why</code> turns that seam's failure into a visible <code>waived</code> line; every
       other seam and every non-walk check still runs, and the still-red seam's <code>fix</code> line names
-      this exact edit. It rides <code>cr/v2</code> because a walk waiver is a review judgment, and because
-      <code>cr/v2</code> is diff-bound — a moved <code>main</code> re-validates the review and the waiver with
+      this exact edit. It rides <code>cr/v3</code> because a walk waiver is a review judgment, and because
+      <code>cr/v3</code> is diff-bound — a moved <code>main</code> re-validates the review and the waiver with
       it, so it can't silently outlive its diff. Manual review (check 8) is never waivable this way.
       An unjustified waiver is a review finding, like any other <code>waived</code>.</p>
     </div>
@@ -286,8 +287,9 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
 
     <p>Every <em>judgment</em> above is a run of the <strong>code-review skill</strong>
     (<code>.claude/skills/code-review/</code>): Gate 0 mechanical preflight, five fresh-context finders
-    (one rubric dimension each), one adversarial verifier per finding that tries to refute it, verdict,
-    and the <code>cr/v2</code> note. The triggering session orchestrates but never judges its own diff;
+    (one rubric dimension each) plus a sixth — the design finder — whenever the diff carries a design
+    artifact, one adversarial verifier per finding that tries to refute it, verdict,
+    and the <code>cr/v3</code> note. The triggering session orchestrates but never judges its own diff;
     finders read the tip's <code>test/v2</code> and <code>doc/v1</code> notes so waivers and distillation
     claims get judged — and the work's plan and result docs
     (<a href="work-planning.html">work-planning standard</a>) as inputs, so delivered-vs-planned and
