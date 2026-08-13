@@ -1130,50 +1130,29 @@ mod tests {
         let silent = checked(&note("cr/v3", ""));
         assert_eq!(silent.len(), 1);
         assert_eq!(silent[0].check, super::DESIGN, "a v3 note has no excuse");
-        assert!(silent[0].what.contains("StatusPill.tsx"), "{}", silent[0].what);
-
         assert_eq!(
             checked(&note("cr/v2", ""))[0].check,
             super::DESIGN_SCHEMA,
             "a v2 note predates the field, so the walk can drop it at a seam"
         );
 
-        let stated_nothing =
-            checked(&note("cr/v3", "design:\n  verdict: PASS\n  implements: []\n"));
-        assert!(
-            stated_nothing[0].what.contains("empty"),
-            "an empty list is a stated nothing, not the same silence: {}",
-            stated_nothing[0].what
-        );
-
-        assert!(
-            checked(&note("cr/v3", &implements("docs/work/gone.html", &blob)))[0]
-                .what
-                .contains("does not resolve"),
-            "a path nobody can follow"
-        );
-        assert!(
-            checked(&note("cr/v3", &implements(design, "0000000")))[0]
-                .what
-                .contains("this tip ships"),
-            "a blob that is not the tip's bytes"
-        );
-        assert!(
-            checked(&note("cr/v3", &implements(design, "abc")))[0].what.contains("names no blob"),
-            "a pin too short to be a blob"
-        );
-        assert!(
-            checked(&note("cr/v3", &implements("docs/work/plan.html", &blob)))
-                .iter()
-                .any(|f| f.what.contains("not a design artifact")),
-            "a doc Tier-3 never judged"
-        );
-        assert!(
-            checked(&note("cr/v3", &implements("docs/work/run-5.html", &blob)))
-                .iter()
-                .any(|f| f.what.contains("not archived")),
-            "an open run cannot be handed to a build"
-        );
+        // The silence names the surface; a stated nothing is not that silence;
+        // then a path nobody can follow, bytes the tip does not ship, a pin too
+        // short to be a blob, a doc Tier-3 never judged, and an open run.
+        let empty = "design:\n  verdict: PASS\n  implements: []\n".to_string();
+        for (section, red) in [
+            (String::new(), "StatusPill.tsx"),
+            (empty, "empty"),
+            (implements("docs/work/gone.html", &blob), "does not resolve"),
+            (implements(design, "0000000"), "this tip ships"),
+            (implements(design, "abc"), "names no blob"),
+            (implements("docs/work/plan.html", &blob), "not a design artifact"),
+            (implements("docs/work/run-5.html", &blob), "not archived"),
+        ] {
+            let reds = checked(&note("cr/v3", &section));
+            let what: Vec<&str> = reds.iter().map(|f| f.what.as_str()).collect();
+            assert!(what.iter().any(|w| w.contains(red)), "expected {red}, got {what:?}");
+        }
 
         assert!(
             checked(&note("cr/v3", &implements(design, &blob[..7]))).is_empty(),
