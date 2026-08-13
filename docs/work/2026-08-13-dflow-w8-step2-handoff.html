@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7dac609f34851f0dfab8b4">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W8 step 2 (the handoff, written)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W8 step ② — the rule in prose, before it is a predicate</h1>
+      <p>W7's registry gate went three Working Units with the predicate <em>as</em> the spec, and nobody
+        could tell a missing rule from an unwritten one. So the hand-over is written first: one step on the
+        flow spec, one section and two checklist rows in <code>workflow.html</code>.</p>
+      <div class="meta">Step record · 2026-08-13 · Trawler · T3 (docs/work/) ·
+        <code>wu/design-flow/dev-integration</code> ·
+        plan: <a href="2026-08-13-dflow-w8-plan.html#step2">W8 ②</a> ·
+        prior: <a href="2026-08-13-dflow-w8-step1-unbuilt.html">W8 ① the epic predicate</a></div>
+    </div>
+  </header>
+
+  <main>
+    <h2 id="verdict">Verdict</h2>
+    <div class="cards" data-c="verdict-cards">
+      <div class="card"><h3>2 docs</h3><p>the flow spec gains step <strong>9 · Hand over to the build</strong>;
+        <code>workflow.html</code> gains a <strong>Design → build</strong> section, a DoD-W row, a DoD-E row,
+        a gate-check row and one lifecycle node</p></div>
+      <div class="card"><h3>0 lines</h3><p>in <code>documentation-system.html</code> — see below, this is a
+        finding, not an omission</p></div>
+      <div class="card"><h3>3 cases</h3><p>D1a stated as rules rather than as discussion: an unforeseen
+        change owes nothing, an amendment re-judges itself, a late-discovered surface carries its own
+        design</p></div>
+      <div class="card"><h3>1 non-rule</h3><p>written down as loudly as the rules: <strong>nothing judges
+        the build against its design</strong>, and the doc says so where a reader would otherwise assume
+        it</p></div>
+    </div>
+
+    <h2 id="what">What each doc gained</h2>
+    <table data-c="tbl-what">
+      <thead><tr><th>Doc</th><th>Added</th><th>Why there</th></tr></thead>
+      <tbody>
+        <tr><td><a href="design-flow-base.html#handover">the flow spec</a>
+          <span class="badge id">T3, edited in place</span></td>
+          <td><strong>9 · Hand over to the build</strong> after the Tier-3 review: the two halves of the
+            rule with what refuses each, why the pointer is a blob and not a path, D1a's three drift cases,
+            and the deliberate absence of a conformance judgment. One row added to the commands table — the
+            <code>git rev-parse &lt;tip&gt;:&lt;design&gt;</code> a build agent runs to get the blob it
+            cites</td>
+          <td>the spec already ends at "the design is judged"; a judged design that nothing consumes is where
+            the flow stopped. Still T3 — promotion is epic distillation's, per W7·D6</td></tr>
+        <tr><td><code>docs/workflow.html</code>
+          <span class="badge approval">T1 · rule-bearing · Reviewed-By</span></td>
+          <td><strong>Design → build</strong> (the two halves, the three drift cases, the non-rule) ·
+            <strong>DoD-W row</strong>: a UI WU that adds a surface cites its design ·
+            <strong>DoD-E row</strong>: every component design built or dropped on the record ·
+            <strong>gate checks</strong>: check 9 gains the build side, and <code>components·unbuilt</code>
+            gets its own row · <strong>lifecycle</strong>: design WU before build WU, same epic</td>
+          <td>this is where a WU author reads what is owed. A rule discoverable only by tripping a predicate
+            is the failure W7 named</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="docsystem">The doc the plan expected to touch, and did not</h2>
+    <div class="callout" data-c="docsystem-finding">
+      <p>The plan allowed <code>documentation-system.html</code> <em>one line, and only if D3·E contradicts
+        what it already says about where a design artifact lives</em>. Read end to end: it says
+        <strong>nothing</strong> about component designs having a home. Designs are T3 under
+        <code>docs/work/</code> like every other in-flight artifact, its distillation rule already sends
+        UI-touching work to <code>design-rules/</code>, and its tracked-location rule already forbids
+        anything under <code>docs/work/</code> at an epic tip.</p>
+      <p><strong>That is D3·E's whole point restated:</strong> the address problem was never a missing
+        location, it was DEC-16 granting an unbuilt design the right to survive its epic. Remove the right
+        and the documentation system needs no new row — which is the evidence that the ruling was right, so
+        it is recorded here rather than silently skipped.</p>
+    </div>
+
+    <h2 id="forward">What this step hands the next one</h2>
+    <table data-c="tbl-forward">
+      <thead><tr><th>Written here</th><th>Mechanised in</th></tr></thead>
+      <tbody>
+        <tr><td>the trigger: an <em>added</em> <code>@tier</code> file under <code>ui/src/components/</code>,
+          or an added non-test <code>.tsx</code> directly under <code>ui/src/</code></td>
+          <td><a href="2026-08-13-dflow-w8-plan.html#step3">step ③</a></td></tr>
+        <tr><td>the pointer: <code>design.implements: [{path, blob}]</code>, checked for resolution, bytes,
+          artifact-hood and (for a run) archival</td>
+          <td><a href="2026-08-13-dflow-w8-plan.html#step3">step ③</a></td></tr>
+        <tr><td>D1a case 2 — an amendment re-judges itself through the existing design check</td>
+          <td><a href="2026-08-13-dflow-w8-plan.html#step4">step ④</a>, the e2e leg</td></tr>
+        <tr><td>DEC-25, which both docs already cite by name</td>
+          <td><a href="2026-08-13-dflow-w8-plan.html#step5">step ⑤</a></td></tr>
+      </tbody>
+    </table>
+    <p class="kd">The <code>workflow.html</code> change is rule-bearing, so it lands as its own commit with a
+      listed <code>Reviewed-By</code> trailer (DEC-7/9/10) — the flow spec and this record ride an ordinary
+      T3 commit.</p>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
