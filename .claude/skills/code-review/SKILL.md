@@ -54,17 +54,23 @@ dimension in `rubric.md`. Each finder prompt contains exactly:
 
 ## 3b · The design dimension — a sixth finder, when the diff earns it
 
-Run `cargo xtask design-scope <BASE> <HEAD_R>`. It prints the design artifacts
-in scope and the rulebook blob to pin — the same function the merge gate uses,
-so the two can never disagree about what is design-bearing.
+Run `cargo xtask design-scope <BASE> <HEAD_R>`. It prints two things — the
+design **artifacts** in scope with the rulebook blob to pin, and the **new
+surfaces** the diff adds (a `@tier` component, a screen) — the same function the
+merge gate uses, so the two can never disagree about either.
 
-- **No artifact** ⇒ no design finder, and the note carries no `design:` section.
-- **One or more** ⇒ spawn the design finder alongside the other five, in the
-  same message. Its prompt: the instruction to read
+- **No artifact** ⇒ no design finder, and the note carries no `design:` section
+  unless a new surface is listed.
+- **One or more artifacts** ⇒ spawn the design finder alongside the other five,
+  in the same message. Its prompt: the instruction to read
   `.claude/skills/code-review/design-rubric.md` first, the artifact paths the
   command printed, the scope, and the same return format as §3. It is Tier-3 of
   the design flow — soft rules and the new-component warrant, never the hard
   rules Tier-1 already owns.
+- **One or more new surfaces** ⇒ no finder runs, but the note owes
+  `design.implements`: one `{path, blob}` per design the build was built from,
+  the blob being `git rev-parse <HEAD_R>:<the design>`. This is a citation, not
+  a judgment — nothing here judges the code against the design.
 
 Its candidates go through §4 verification like any other. The design verdict is
 `PASS` when no design finding survives verification unwaived, and it is recorded
@@ -123,19 +129,24 @@ findings: { found: <n>, verified: <n>, waived: <n> }
 waivers:
   - finding: "<summary>"
     reason: "<reason>"
-design:                         # §3b — present iff design-scope listed artifacts
-  artifacts: [docs/work/<the run>.html]   # every path it listed, none omitted
+design:                         # §3b — present iff design-scope listed anything
+  artifacts: [docs/work/<the run>.html]   # every artifact it listed, none omitted
   rulebook: <blob it printed>   # what the design dimension judged against
   findings: { found: <n>, verified: <n>, waived: <n> }
-  verdict: PASS                 # PASS | FAIL
+  verdict: PASS                 # PASS | FAIL — artifacts only; omit when nothing was judged
+  implements:                   # one per new surface's design; omit when none was listed
+    - path: docs/work/components/<the design>.html
+      blob: <git rev-parse HEAD_R:<that path>>
 verdict: PASS   # PASS | FAIL
 date: <YYYY-MM-DD>
 ```
 
 The `design:` block is what `verify-dod`'s `9·design` check reads: a
 design-bearing tip whose note omits it, judges fewer artifacts than the diff
-carries, or pins a rulebook the tip does not ship, is refused at the merge. On a
-diff with no design artifact the block is absent, and no check asks for it.
+carries, or pins a rulebook the tip does not ship, is refused at the merge — as
+is a tip that adds a new surface and cites no design, or cites one whose path or
+blob the tip does not ship. On a diff with neither an artifact nor a new surface
+the block is absent, and no check asks for it.
 
 - Attach it: `git notes --ref=cr add -f -m "<yaml>" HEAD_R`.
 - The pre-push hook syncs `refs/notes/*` to origin automatically. Audit any

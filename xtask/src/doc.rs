@@ -71,6 +71,7 @@ const VOCABULARY: &str = "scripts/design-vocabulary.mjs";
 const REGISTRY: &str = "scripts/design-registry.mjs";
 pub const COMPONENTS: &str = "docs/work/components/";
 pub const COLLECTION: &str = "ui/src/components/";
+pub const SCREENS: &str = "ui/src/";
 
 fn checklist(artifact: &str) -> Option<&'static [&'static str]> {
     match artifact {
@@ -140,6 +141,23 @@ pub fn registry_entry(path: &str, source: &str) -> bool {
             && !file.contains(".test.")
             && matches!(file.rsplit_once('.'), Some((_, "ts" | "tsx")))
     }) && source.contains("@tier")
+}
+
+// What a build adds that owes a design: a new registry entry, or a new screen -
+// a non-test `.tsx` directly under ui/src/. Both are surfaces a user meets that
+// nothing designed before this diff. An edit to either is not a new surface, and
+// neither is a test beside one.
+pub fn new_surface(path: &str, source: &str) -> Option<&'static str> {
+    if registry_entry(path, source) {
+        return Some("registry component");
+    }
+    path.strip_prefix(SCREENS)
+        .is_some_and(|file| {
+            !file.contains('/')
+                && !file.contains(".test.")
+                && matches!(file.rsplit_once('.'), Some((_, "tsx")))
+        })
+        .then_some("screen")
 }
 
 pub fn registry_name(path: &str) -> Option<String> {
@@ -2455,10 +2473,10 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 mod tests {
     use super::{
         attrs, check_frame_density, component_designed, declares_a_design, edit_distance,
-        elements_of, format_verdict, registry_entry, registry_name, rules_from_rulebook,
-        verify_component, verify_html, verify_html_against, Component, Roster, Verdict, Vocabulary,
-        CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS,
-        GIST_MAX_WORDS,
+        elements_of, format_verdict, new_surface, registry_entry, registry_name,
+        rules_from_rulebook, verify_component, verify_html, verify_html_against, Component, Roster,
+        Verdict, Vocabulary, CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX,
+        FRAME_PROSE_WORDS, GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -4134,6 +4152,23 @@ chroma_floor: 40
             registry_name("ui/src/components/CopyButton.tsx").as_deref(),
             Some("CopyButton")
         );
+    }
+
+    // What a build owes a design for: a component the roster will carry, or a
+    // screen. A module, a test and an untiered helper are neither.
+    #[test]
+    fn a_new_surface_is_a_tiered_component_or_a_screen_and_nothing_else() {
+        let tiered = "/**\n * StatusPill.\n * @tier T1 — primitive\n */\n";
+        let plain = "export const helper = () => null;\n";
+        assert_eq!(
+            new_surface("ui/src/components/StatusPill.tsx", tiered),
+            Some("registry component")
+        );
+        assert_eq!(new_surface("ui/src/components/helper.tsx", plain), None, "untiered is not one");
+        assert_eq!(new_surface("ui/src/Onboarding.tsx", plain), Some("screen"));
+        assert_eq!(new_surface("ui/src/Onboarding.test.tsx", plain), None);
+        assert_eq!(new_surface("ui/src/api.ts", plain), None, "a module is not a screen");
+        assert_eq!(new_surface("src/lib.rs", plain), None);
     }
 
     #[test]

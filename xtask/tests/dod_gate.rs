@@ -769,8 +769,10 @@ fn epic_cr_with_drop(repo: &Repo, why: &str) {
     let tip = repo.sha("epic/x");
     let base = repo.sha("main");
     let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
-    let dropped = format!("  dropped:\n    - path: {COMPONENT_DESIGN}\n      why: \"{why}\"\n");
-    let design = format!("{}{dropped}", design_section(&[], &pin_of(repo, &tip), "PASS"));
+    // No rulebook pin and no design verdict: the epic's diff carries no design
+    // artifact, so this section exists for the drop record and nothing else.
+    let design =
+        format!("design:\n  dropped:\n    - path: {COMPONENT_DESIGN}\n      why: \"{why}\"\n");
     repo.note(
         "cr",
         &tip,
@@ -822,6 +824,86 @@ fn a_component_design_whose_component_landed_needs_no_drop_record() {
 
     let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
     assert!(report.green(), "{}", format_report(&report));
+}
+
+// The build side of the hand-over: the design landed in an earlier Working Unit,
+// this one adds the component. The citation must resolve against the TIP, which
+// is the only place the design still exists by then.
+fn wu_building_a_component() -> Repo {
+    let repo = Repo::new();
+    repo.write(COMPONENT_DESIGN, "<html><body>the StatusPill contract</body></html>\n");
+    repo.commit("an earlier WU landed the contract");
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\n");
+    repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
+    repo.write(
+        "ui/src/components/StatusPill.tsx",
+        "/**\n * StatusPill states one verdict.\n * @tier T1 — primitive\n */\nexport const StatusPill = () => null;\n",
+    );
+    repo.commit("build the pill");
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    repo
+}
+
+#[test]
+fn a_build_that_adds_a_component_must_cite_the_design_the_tip_ships() {
+    let repo = wu_building_a_component();
+    let tip = repo.sha("wu/x/one");
+    let base = repo.sha("epic/x");
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    let v3 = |design: &str| {
+        format!(
+            "{}{design}",
+            cr_note("E9", Some("E9.W1"), &base, &sha, "PASS").replace("cr/v2", "cr/v3")
+        )
+    };
+
+    repo.note("cr", &tip, &v3(""));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(
+        format_report(&report).contains("StatusPill.tsx"),
+        "the red names the surface that owes a design"
+    );
+
+    let blob = repo.git(&["rev-parse", &format!("{tip}:{COMPONENT_DESIGN}")]);
+    let cites = |pin: &str| {
+        format!("design:\n  implements:\n    - path: {COMPONENT_DESIGN}\n      blob: {pin}\n")
+    };
+    repo.note("cr", &tip, &v3(&cites(&blob[..7])));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "a resolvable citation lands it: {}", format_report(&report));
+
+    // The comparison is against the tip's bytes, not the working tree's: editing
+    // the design after the note was written must not silently stay green.
+    repo.write(
+        COMPONENT_DESIGN,
+        "<html><body>the contract, revised after the note</body></html>\n",
+    );
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "an unstaged edit does not move the tip");
+    repo.commit("revise the contract after the build cited it");
+    let moved = repo.sha("wu/x/one");
+    bless_wu(&repo, &moved);
+    let moved_sha = diff_sha256(&repo.path, &base, &moved).unwrap();
+    repo.note(
+        "cr",
+        &moved,
+        &format!(
+            "{}{}",
+            cr_note("E9", Some("E9.W1"), &base, &moved_sha, "PASS").replace("cr/v2", "cr/v3"),
+            cites(&blob[..7])
+        ),
+    );
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"9·design"),
+        "a stale blob is a citation of bytes the tip no longer ships: {}",
+        format_report(&report)
+    );
 }
 
 // Blesses the epic tip against the *merge-base* with main, not main's tip -

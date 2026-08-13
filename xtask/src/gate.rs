@@ -148,6 +148,13 @@ impl Gate<'_> {
             check_review(&mut report, parsed.cr.as_ref());
             self.check_design(&mut report, parsed.cr.as_ref(), &docs);
         }
+        // The citation names a T3 design, which check 6 forces out of the tree by
+        // the epic tip - so only the Working Unit that built the surface can
+        // resolve it. The epic re-asks the question where it is answerable: at
+        // every seam its walk re-verifies.
+        if level == Level::Wu {
+            self.check_handoff(&mut report, parsed.cr.as_ref());
+        }
         self.check_docs(&mut report, parsed.doc.as_ref(), &names);
         if level == Level::Epic {
             self.walk(&mut report, target_ref)?;
@@ -366,10 +373,13 @@ impl Gate<'_> {
     fn check_design(&self, report: &mut Report, cr: Option<&CrNote>, docs: &[(String, String)]) {
         let Some(cr) = cr else { return };
         let artifacts = design_artifacts_of(docs);
+        // Nothing judged, nothing claimed: a build's note carries a design
+        // section for its citation and its drops alone, and a verdict or a
+        // rulebook pin over an empty judgment would be a claim about no design.
+        if artifacts.is_empty() {
+            return;
+        }
         let Some(design) = &cr.design else {
-            if artifacts.is_empty() {
-                return;
-            }
             let check = if cr.schema == "cr/v3" { DESIGN } else { DESIGN_SCHEMA };
             report.failures.push(Failure::new(
                 check,
@@ -393,9 +403,11 @@ impl Gate<'_> {
             ));
         }
         if design.verdict != "PASS" {
+            let stated =
+                if design.verdict.trim().is_empty() { "absent" } else { design.verdict.as_str() };
             report.failures.push(Failure::new(
                 DESIGN,
-                format!("design verdict is {}", design.verdict),
+                format!("design verdict is {stated}"),
                 "fix the verified design findings and re-run the review until its design dimension passes".to_string(),
             ));
         }
@@ -436,6 +448,119 @@ impl Gate<'_> {
                 format!("the rulebook moved under the review - re-run it against this tip's rulebook and re-pin: design.rulebook: {short_blob}"),
             ));
         }
+    }
+
+    // The surfaces a diff adds that owe a design - the same function
+    // `design-scope` prints for the reviewer, so the note and the gate cannot
+    // disagree about what a build must cite.
+    pub fn new_surfaces(&self, tip: &str, base: &str) -> Vec<String> {
+        crate::git::added_names(self.repo, base, tip)
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|path| {
+                crate::git::show_bytes(self.repo, tip, path)
+                    .ok()
+                    .and_then(|bytes| String::from_utf8(bytes).ok())
+                    .is_some_and(|source| crate::doc::new_surface(path, &source).is_some())
+            })
+            .collect()
+    }
+
+    // The other direction of the hand-over: a build that adds a surface names
+    // the design it built from. A `cr/v2` note carries no citation and cannot be
+    // given one after the fact, so - exactly as for the design section - its
+    // silence is reported under the schema check the walk drops at seams. This
+    // epic's own W5 seams added twenty components under that schema.
+    fn check_handoff(&self, report: &mut Report, cr: Option<&CrNote>) {
+        let Some(cr) = cr else { return };
+        let surfaces = self.new_surfaces(&report.tip, &report.base);
+        if surfaces.is_empty() {
+            return;
+        }
+        let check = if cr.schema == "cr/v3" { DESIGN } else { DESIGN_SCHEMA };
+        let fix = format!(
+            "cite what each was built from in the {} note: design.implements: [{{ path: <the design>, blob: <git rev-parse {}:<the design>> }}] - `cargo xtask design-scope` lists the surfaces the gate is asking about",
+            cr.schema,
+            short(&report.tip)
+        );
+        match cr.design.as_ref().and_then(|d| d.implements.as_ref()) {
+            None => report.failures.push(Failure::new(
+                check,
+                format!(
+                    "{} new surface(s) in the diff and the {} note cites no design: {}",
+                    surfaces.len(),
+                    cr.schema,
+                    surfaces.join(", ")
+                ),
+                fix,
+            )),
+            Some(cited) if cited.is_empty() => report.failures.push(Failure::new(
+                check,
+                format!(
+                    "{} new surface(s) in the diff and design.implements is empty: {}",
+                    surfaces.len(),
+                    surfaces.join(", ")
+                ),
+                fix,
+            )),
+            Some(cited) => {
+                for citation in cited {
+                    self.check_citation(report, citation);
+                }
+            }
+        }
+    }
+
+    // A citation is checked, never trusted: the path resolves at the tip, the
+    // blob is the bytes the tip ships, and what it names is a finished design.
+    fn check_citation(&self, report: &mut Report, cited: &crate::notes::Cited) {
+        let (Ok(bytes), Some(blob)) = (
+            crate::git::show_bytes(self.repo, &report.tip, &cited.path),
+            crate::git::blob_of(self.repo, &report.tip, &cited.path),
+        ) else {
+            report.failures.push(Failure::new(
+                DESIGN,
+                format!("design.implements names {}, which does not resolve at the tip", cited.path),
+                "cite a design the tip actually ships - a path that resolves nowhere is a citation nobody can follow".to_string(),
+            ));
+            return;
+        };
+        let short_blob = crate::doc::pin_of(&blob);
+        if cited.blob.len() < crate::doc::PIN_MIN {
+            report.failures.push(Failure::new(
+                DESIGN,
+                format!(
+                    "the citation of {} pins \"{}\", which names no blob",
+                    cited.path, cited.blob
+                ),
+                format!("pin the bytes the build read: blob: {short_blob}"),
+            ));
+        } else if !crate::doc::pin_matches(&cited.blob, &blob) {
+            report.failures.push(Failure::new(
+                DESIGN,
+                format!(
+                    "the build cites {} at blob {}; this tip ships {short_blob}",
+                    cited.path, cited.blob
+                ),
+                format!("the design moved after the note was written - re-read it and re-pin: blob: {short_blob}"),
+            ));
+        }
+        let Ok(html) = String::from_utf8(bytes) else { return };
+        if crate::doc::design_artifact(&cited.path, &html).is_some() {
+            return;
+        }
+        let (what, fix) = if crate::doc::design_run_status(&html).is_some() {
+            (
+                format!("{} is a design run that is not archived", cited.path),
+                "an open run cannot be handed to a build - close it (data-status=\"archived\") in the merge that finishes it, then cite it",
+            )
+        } else {
+            (
+                format!("{} is not a design artifact", cited.path),
+                "cite a closed design run or a component design file - a doc that is neither was never judged by Tier-3",
+            )
+        };
+        report.failures.push(Failure::new(DESIGN, what, fix.to_string()));
     }
 
     fn check_manual_review(&self, report: &mut Report) {
@@ -882,7 +1007,7 @@ pub fn format_report(report: &Report) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{format_report, short, Failure, Gate, Level, Report};
+    use super::{format_report, short, CrNote, Failure, Gate, Level, Report};
 
     fn report(failures: Vec<Failure>) -> Report {
         Report {
@@ -931,6 +1056,140 @@ mod tests {
     fn short_handles_small_ids() {
         assert_eq!(short("abc"), "abc");
         assert_eq!(short("0123456789abcdef"), "0123456789");
+    }
+
+    // Every way a build can fail to name what it built from, and the one way it
+    // succeeds. The surface is a real added file at a real tip, so the trigger
+    // (added, not edited) and the citation checks are driven together.
+    #[test]
+    fn a_build_that_adds_a_surface_cites_a_design_the_tip_ships_or_reds() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let repo = dir.path();
+        let g = |args: &[&str]| super::git(repo, args).unwrap();
+        let write = |rel: &str, body: &str| {
+            let full = repo.join(rel);
+            std::fs::create_dir_all(full.parent().unwrap()).unwrap();
+            std::fs::write(full, body).unwrap();
+        };
+        let commit = |msg: &str| {
+            g(&["add", "-A"]);
+            g(&["commit", "-q", "-m", msg]);
+            g(&["rev-parse", "HEAD"])
+        };
+
+        g(&["init", "-q", "-b", "main"]);
+        g(&["config", "user.email", "t@t"]);
+        g(&["config", "user.name", "t"]);
+        g(&["config", "commit.gpgsign", "false"]);
+        write("src/lib.rs", "pub fn base() {}\n");
+        write("ui/src/components/Section.tsx", "/**\n * Section.\n * @tier T2\n */\n");
+        let base = commit("base");
+
+        let design = "docs/work/components/status-pill.html";
+        write(design, "<html>the StatusPill contract</html>\n");
+        write("docs/work/plan.html", "<html>a plan, not a design</html>\n");
+        write(
+            "docs/work/run-5.html",
+            "<html><body><main data-artifact=\"design-run\">open</main></body></html>\n",
+        );
+        write(
+            "ui/src/components/StatusPill.tsx",
+            "/**\n * StatusPill.\n * @tier T1\n */\nexport const StatusPill = () => null;\n",
+        );
+        write("ui/src/components/StatusPill.test.tsx", "test('x', () => {});\n");
+        write("ui/src/Section.notes.ts", "export const notes = 1;\n");
+        let tip = commit("build the pill");
+
+        let gate = Gate { repo };
+        assert_eq!(
+            gate.new_surfaces(&tip, &base),
+            vec!["ui/src/components/StatusPill.tsx".to_string()],
+            "a @tier component added; its test, a .ts sibling and the untouched Section are not surfaces"
+        );
+
+        let blob = g(&["rev-parse", &format!("{tip}:{design}")]);
+        let checked = |note: &str| {
+            let cr: CrNote = serde_yaml::from_str(note).expect("the note parses");
+            let mut r = report(vec![]);
+            r.base.clone_from(&base);
+            r.tip.clone_from(&tip);
+            gate.check_handoff(&mut r, Some(&cr));
+            r.failures
+        };
+        let note = |schema: &str, design_section: &str| {
+            format!(
+                "schema: {schema}\nbase: {base}\ndiff_sha256: x\nverdict: PASS\n{design_section}"
+            )
+        };
+        let implements = |path: &str, blob: &str| {
+            format!(
+                "design:\n  verdict: PASS\n  implements:\n    - path: {path}\n      blob: {blob}\n"
+            )
+        };
+
+        let silent = checked(&note("cr/v3", ""));
+        assert_eq!(silent.len(), 1);
+        assert_eq!(silent[0].check, super::DESIGN, "a v3 note has no excuse");
+        assert!(silent[0].what.contains("StatusPill.tsx"), "{}", silent[0].what);
+
+        assert_eq!(
+            checked(&note("cr/v2", ""))[0].check,
+            super::DESIGN_SCHEMA,
+            "a v2 note predates the field, so the walk can drop it at a seam"
+        );
+
+        let stated_nothing =
+            checked(&note("cr/v3", "design:\n  verdict: PASS\n  implements: []\n"));
+        assert!(
+            stated_nothing[0].what.contains("empty"),
+            "an empty list is a stated nothing, not the same silence: {}",
+            stated_nothing[0].what
+        );
+
+        assert!(
+            checked(&note("cr/v3", &implements("docs/work/gone.html", &blob)))[0]
+                .what
+                .contains("does not resolve"),
+            "a path nobody can follow"
+        );
+        assert!(
+            checked(&note("cr/v3", &implements(design, "0000000")))[0]
+                .what
+                .contains("this tip ships"),
+            "a blob that is not the tip's bytes"
+        );
+        assert!(
+            checked(&note("cr/v3", &implements(design, "abc")))[0].what.contains("names no blob"),
+            "a pin too short to be a blob"
+        );
+        assert!(
+            checked(&note("cr/v3", &implements("docs/work/plan.html", &blob)))
+                .iter()
+                .any(|f| f.what.contains("not a design artifact")),
+            "a doc Tier-3 never judged"
+        );
+        assert!(
+            checked(&note("cr/v3", &implements("docs/work/run-5.html", &blob)))
+                .iter()
+                .any(|f| f.what.contains("not archived")),
+            "an open run cannot be handed to a build"
+        );
+
+        assert!(
+            checked(&note("cr/v3", &implements(design, &blob[..7]))).is_empty(),
+            "path resolves, blob matches, and it is a design"
+        );
+
+        write(
+            "ui/src/components/StatusPill.tsx",
+            "/**\n * StatusPill, revised.\n * @tier T1\n */\n",
+        );
+        std::fs::remove_file(repo.join("ui/src/components/Section.tsx")).unwrap();
+        let later = commit("revise the pill, retire Section");
+        assert!(
+            gate.new_surfaces(&later, &tip).is_empty(),
+            "the trigger is about adding a surface - an edit to one and a deletion are not"
+        );
     }
 
     // The four ways an epic can answer for a component design it wrote: built,

@@ -93,12 +93,28 @@ pub struct Design {
     pub artifacts: Vec<String>,
     #[serde(default)]
     pub rulebook: String,
+    /// Absent when the section carries no judgment — a build's citation or an
+    /// epic's drop record. A design-bearing diff is refused without it.
+    #[serde(default)]
     pub verdict: String,
+    /// The designs this diff's new surfaces were built from, pinned by blob. An
+    /// absent field is a silence and an empty list is a stated nothing; both
+    /// refuse a build that added a surface, and the two stay distinguishable so
+    /// the red can say which one happened.
+    #[serde(default)]
+    pub implements: Option<Vec<Cited>>,
     /// The designs this epic gave up on, each with the reason it went — the
     /// `walk_waivers` shape, so a drop lands in the waiver bill the epic already
     /// reports rather than beside it.
     #[serde(default)]
     pub dropped: Vec<Dropped>,
+}
+
+#[derive(Deserialize)]
+pub struct Cited {
+    pub path: String,
+    #[serde(default)]
+    pub blob: String,
 }
 
 #[derive(Deserialize)]
@@ -365,6 +381,38 @@ verdict: PASS
             serde_yaml::from_str("schema: cr/v2\nbase: a\ndiff_sha256: c\nverdict: PASS\n")
                 .expect("parses");
         assert!(v2.design.is_none());
+    }
+
+    // Absent and empty are different silences, and the note must keep them apart:
+    // one says nobody wrote a citation, the other says somebody wrote that there
+    // is none. Defaulting the field to an empty list would erase the difference.
+    #[test]
+    fn an_absent_implements_stays_distinct_from_an_empty_one() {
+        let note = |design: &str| -> CrNote {
+            serde_yaml::from_str(&format!(
+                "schema: cr/v3\nbase: a\ndiff_sha256: c\nverdict: PASS\n{design}"
+            ))
+            .expect("parses")
+        };
+
+        let cited = note(
+            "design:\n  verdict: PASS\n  implements:\n    - path: docs/work/components/status-pill.html\n      blob: 796c547\n",
+        );
+        let listed = cited.design.expect("design").implements.expect("implements");
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].path, "docs/work/components/status-pill.html");
+        assert_eq!(listed[0].blob, "796c547");
+
+        let stated_none = note("design:\n  verdict: PASS\n  implements: []\n");
+        assert_eq!(
+            stated_none.design.expect("design").implements.map(|c| c.len()),
+            Some(0),
+            "an empty list is present and empty"
+        );
+        assert!(
+            note("design:\n  verdict: PASS\n").design.expect("design").implements.is_none(),
+            "an absent field is absent, never an empty list"
+        );
     }
 
     // A drop is the epic's answer to "this design was never built" - so it says
