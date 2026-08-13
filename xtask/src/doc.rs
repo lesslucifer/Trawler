@@ -131,10 +131,6 @@ pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
     crate::git::blob_of(repo, rev, RULEBOOK)
 }
 
-// Membership is `@tier`, the same tag scripts/design-registry.mjs reads - so a
-// gate and the oracle cannot disagree about who is in the roster. Read from git
-// rather than through the oracle because a gate judges the roster its own tip
-// ships, and because an epic tip is often not the checkout.
 fn shaped_file(file: &str, exts: &[&str]) -> bool {
     !file.contains('/')
         && !file.contains(".test.")
@@ -157,6 +153,10 @@ pub fn may_be_surface(path: &str) -> bool {
     collection_file(path) || screen_file(path)
 }
 
+// Membership is `@tier`, the same tag scripts/design-registry.mjs reads - so a
+// gate and the oracle cannot disagree about who is in the roster. Read from git
+// rather than through the oracle because a gate judges the roster its own tip
+// ships, and because an epic tip is often not the checkout.
 pub fn registry_entry(path: &str, source: &str) -> bool {
     collection_file(path) && source.contains("@tier")
 }
