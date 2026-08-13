@@ -47,20 +47,20 @@ pub fn write_note(repo: &Path, note_ref: &str, tip: &str, body: &str) -> Result<
     git(repo, &["notes", &ref_arg, "add", "-f", "-m", body, tip]).map(|_| ())
 }
 
-pub fn diff_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
+fn names_in(repo: &Path, base: &str, tip: &str, filter: &[&str]) -> Result<Vec<String>, String> {
     let range = format!("{base}..{tip}");
-    Ok(git(repo, &["diff", "--name-only", "--no-renames", &range])?
-        .lines()
-        .map(str::to_string)
-        .collect())
+    let mut args = vec!["diff", "--name-only", "--no-renames"];
+    args.extend_from_slice(filter);
+    args.push(&range);
+    Ok(git(repo, &args)?.lines().map(str::to_string).collect())
+}
+
+pub fn diff_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
+    names_in(repo, base, tip, &[])
 }
 
 pub fn added_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
-    let range = format!("{base}..{tip}");
-    Ok(git(repo, &["diff", "--name-only", "--no-renames", "--diff-filter=A", &range])?
-        .lines()
-        .map(str::to_string)
-        .collect())
+    names_in(repo, base, tip, &["--diff-filter=A"])
 }
 
 // Every path the range ever added under `prefix` - the commits, not the two
@@ -225,6 +225,13 @@ pub fn show_bytes(repo: &Path, rev: &str, path: &str) -> Result<Vec<u8>, String>
     } else {
         Err(format!("git show {spec}: {}", String::from_utf8_lossy(&out.stderr).trim_end()))
     }
+}
+
+/// The same blob as text, for the readers that judge source rather than hash it.
+/// Absent, unreadable and not-UTF-8 all collapse to `None` — every caller treats
+/// a path it cannot read as a path that declares nothing.
+pub fn read_utf8_at(repo: &Path, rev: &str, path: &str) -> Option<String> {
+    String::from_utf8(show_bytes(repo, rev, path).ok()?).ok()
 }
 
 pub fn sha256_hex(bytes: &[u8]) -> Result<String, String> {

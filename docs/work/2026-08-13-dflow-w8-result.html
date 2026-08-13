@@ -180,11 +180,13 @@
         <thead><tr><th>Level</th><th>Measured</th></tr></thead>
         <tbody>
           <tr><td><span class="badge id">unit</span> commit</td>
-            <td><strong>196</strong> <code>xtask</code> lib tests. The trigger (a <code>@tier</code> component
+            <td><strong>197</strong> <code>xtask</code> lib tests. The trigger (a <code>@tier</code> component
               fires; an untiered file, a test, a <code>.ts</code> module, an edit and a deletion do not) · the
               pointer (absent and empty <code>implements</code> parse differently and stay that way) · one red
               per way a citation breaks and one green when it holds ·
-              <code>components·unbuilt</code>'s four answers over a real temp repo</td></tr>
+              <code>components·unbuilt</code>'s four answers over a real temp repo · and the
+              <a href="#review">review round</a>'s <code>may_be_surface</code>, which must admit every
+              candidate the content test could still accept and refuse everything a path alone settles</td></tr>
           <tr><td><span class="badge id">integration</span> WU</td>
             <td><strong>69</strong> <code>dod_gate</code> tests through the real binary against temp trees:
               the WU gate reds a build that cites nothing and names the surface, greens on a resolvable
@@ -199,7 +201,8 @@
               is bound to its own message, not to a check name — <code>9·design</code> is a prefix of
               <code>9·design-schema</code>. <strong>Not waived at any level</strong>, as the plan required</td></tr>
           <tr><td><span class="badge id">regression</span></td>
-            <td><code>verify-doc</code> over <strong>82 tracked docs, none red</strong>, with
+            <td><code>verify-doc</code> over <strong>84 tracked docs, none red</strong> — re-run at this
+              tip, not carried forward from ④'s 82, which predates the two docs ⑤ adds. With
               <code>docs/work/components/</code> absent rather than empty — the <code>roster()</code> change
               is exercised by the real corpus. The trigger over the epic's own seams: <strong>1 fires, 0
               fail</strong></td></tr>
@@ -224,6 +227,63 @@
         rediscovered.
       </div>
     </div>
+
+    <h2 id="review">What the review found</h2>
+    <p class="meta">Five finders over <code>dcd0b7e..4109404</code> — no design finder, because
+      <code>design-scope</code> reports no design artifact and no new surface in the diff: a <em>removed</em>
+      design file is deliberately not a Tier-3 artifact (DEC-16/DEC-24). 11 candidates, one verifier each,
+      <strong>6 refuted</strong>.</p>
+    <table data-c="tbl-review">
+      <thead><tr><th>Candidate</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The gate fetches a blob for every added path</strong> before any path test, and only
+          <code>@tier</code> needs the bytes — so a merge pays a <code>git show</code> per added file that
+          could never be a surface, once per WU seam the epic walk re-verifies</td>
+          <td><span class="badge auto">real · important · fixed</span> measured by the verifier at
+            <strong>~12–14% of a real epic walk's wall time</strong> (466 git spawns, 362 of them
+            <code>git show</code>) and ~30% of a single WU gate. <code>may_be_surface</code> now decides from
+            the path and the fetch is short-circuited: <strong>8 added paths → 0 fetches</strong> on this WU's
+            own seam. The same guard went into <code>roster_at</code>, where it drops
+            <strong>52 → 26</strong>, because it is the identical defect one caller over</td></tr>
+        <tr><td><strong>The report claims <code>verify-doc</code> over 82 tracked docs</strong>, but the tip it
+          certifies ships 84 — the count predates ⑤'s own two docs</td>
+          <td><span class="badge auto">real · important · fixed</span> re-run at the tip: 84, none red. A
+            report's evidence line must measure the tip it is bound to, which is the same lesson as
+            W7 follow-up 13 one field over</td></tr>
+        <tr><td><strong>Three duplications inside this WU's own new code</strong>:
+          <code>added_names</code> was <code>diff_names</code> plus one flag, two path-shape filters repeated
+          one three-condition chain, and <code>show_bytes(..).and_then(from_utf8)</code> was inlined three
+          times</td>
+          <td><span class="badge auto">real · nit · fixed</span> <code>names_in</code> ·
+            <code>shaped_file</code> · <code>git::read_utf8_at</code>. Net <strong>−33/+35</strong> lines
+            before the surface fix, and the third helper covered a pre-existing third site
+            (<code>rulebook_slugs</code>) the finder pointed at</td></tr>
+        <tr><td>A WU citing one design while adding N surfaces is never asked to cover the rest</td>
+          <td><span class="badge auto">refuted</span> that is DEC-25's shape, and the record's own worked
+            example is one family contract spanning seven built components. Requiring one citation per
+            surface would refuse the precedent the record documents</td></tr>
+        <tr><td><code>registry_entry</code>'s <code>@tier</code> test is greener than
+          <code>design-registry.mjs</code>, which also demands <code>@use</code>/<code>@avoid</code>/
+          <code>@states</code>/<code>@madeof</code></td>
+          <td><span class="badge auto">refuted</span> the parity claim is scoped to <em>membership</em>, which
+            is the oracle's own first-pass filter. The full-contract check exists and is stricter — the
+            <code>verify-doc</code> hook shells out to the real script, and
+            <code>collection.test.tsx</code> fails outright on an incomplete block. Replicating it in Rust
+            would fork business logic across two languages</td></tr>
+        <tr><td>Three more shape-duplication and double-work claims (the blob-pin block, a second
+          <code>design_run_status</code> parse, two git spawns per citation, a non-empty helper,
+          <code>roster_at</code>'s spawns as a standalone nit)</td>
+          <td><span class="badge auto">refuted</span> the pin sites already share
+            <code>PIN_MIN</code>/<code>pin_matches</code> and differ in blob source, cardinality and check-id
+            scheme; the second parse fires only on an already-failing citation (tens of microseconds); the
+            two spawns cost ~7ms against a 4.8s walk at 0–1 citations per WU. The
+            <code>roster_at</code> spawns were refuted as out-of-dimension and then fixed anyway, as part of
+            the surface fix above</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">Every fix is behaviour-preserving except the one that is not: <code>may_be_surface</code>
+      changes <em>when</em> bytes are read, never <em>what</em> answer comes back — so its test is written
+      against the risk that matters, a candidate wrongly skipped, in both directions.</p>
 
     <h2 id="risk">⚠ The handoff has never been driven by a real build</h2>
     <div class="callout warn" data-c="risk">

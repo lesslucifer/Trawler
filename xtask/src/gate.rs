@@ -458,10 +458,9 @@ impl Gate<'_> {
             .unwrap_or_default()
             .into_iter()
             .filter(|path| {
-                crate::git::show_bytes(self.repo, tip, path)
-                    .ok()
-                    .and_then(|bytes| String::from_utf8(bytes).ok())
-                    .is_some_and(|source| crate::doc::new_surface(path, &source).is_some())
+                crate::doc::may_be_surface(path)
+                    && crate::git::read_utf8_at(self.repo, tip, path)
+                        .is_some_and(|source| crate::doc::new_surface(path, &source).is_some())
             })
             .collect()
     }

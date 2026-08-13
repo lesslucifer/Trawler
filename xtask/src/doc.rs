@@ -135,12 +135,30 @@ pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
 // gate and the oracle cannot disagree about who is in the roster. Read from git
 // rather than through the oracle because a gate judges the roster its own tip
 // ships, and because an epic tip is often not the checkout.
+fn shaped_file(file: &str, exts: &[&str]) -> bool {
+    !file.contains('/')
+        && !file.contains(".test.")
+        && file.rsplit_once('.').is_some_and(|(_, ext)| exts.contains(&ext))
+}
+
+fn collection_file(path: &str) -> bool {
+    path.strip_prefix(COLLECTION).is_some_and(|file| shaped_file(file, &["ts", "tsx"]))
+}
+
+fn screen_file(path: &str) -> bool {
+    path.strip_prefix(SCREENS).is_some_and(|file| shaped_file(file, &["tsx"]))
+}
+
+// Whether a path could be a surface at all, decided from the path alone. `@tier`
+// is the only thing the full test needs the bytes for, so this is what says
+// whether a blob is worth a subprocess: fetching first cost ~12% of an epic
+// gate's wall time on paths that could never qualify.
+pub fn may_be_surface(path: &str) -> bool {
+    collection_file(path) || screen_file(path)
+}
+
 pub fn registry_entry(path: &str, source: &str) -> bool {
-    path.strip_prefix(COLLECTION).is_some_and(|file| {
-        !file.contains('/')
-            && !file.contains(".test.")
-            && matches!(file.rsplit_once('.'), Some((_, "ts" | "tsx")))
-    }) && source.contains("@tier")
+    collection_file(path) && source.contains("@tier")
 }
 
 // What a build adds that owes a design: a new registry entry, or a new screen -
@@ -151,13 +169,7 @@ pub fn new_surface(path: &str, source: &str) -> Option<&'static str> {
     if registry_entry(path, source) {
         return Some("registry component");
     }
-    path.strip_prefix(SCREENS)
-        .is_some_and(|file| {
-            !file.contains('/')
-                && !file.contains(".test.")
-                && matches!(file.rsplit_once('.'), Some((_, "tsx")))
-        })
-        .then_some("screen")
+    screen_file(path).then_some("screen")
 }
 
 pub fn registry_name(path: &str) -> Option<String> {
@@ -170,10 +182,9 @@ pub fn roster_at(repo: &Path, rev: &str) -> BTreeSet<String> {
         .unwrap_or_default()
         .lines()
         .filter(|path| {
-            crate::git::show_bytes(repo, rev, path)
-                .ok()
-                .and_then(|bytes| String::from_utf8(bytes).ok())
-                .is_some_and(|source| registry_entry(path, &source))
+            may_be_surface(path)
+                && crate::git::read_utf8_at(repo, rev, path)
+                    .is_some_and(|source| registry_entry(path, &source))
         })
         .filter_map(registry_name)
         .collect()
@@ -184,9 +195,7 @@ pub fn roster_at(repo: &Path, rev: &str) -> BTreeSet<String> {
 // judging, never the working tree, so a later rename cannot unfollow a citation
 // that resolved when its seam was reviewed.
 pub fn rulebook_slugs(repo: &Path, rev: &str) -> Vec<String> {
-    crate::git::show_bytes(repo, rev, RULEBOOK)
-        .ok()
-        .and_then(|bytes| String::from_utf8(bytes).ok())
+    crate::git::read_utf8_at(repo, rev, RULEBOOK)
         .map(|html| rules_from_rulebook(&html).into_iter().map(|rule| rule.slug).collect())
         .unwrap_or_default()
 }
@@ -2473,7 +2482,7 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 mod tests {
     use super::{
         attrs, check_frame_density, component_designed, declares_a_design, edit_distance,
-        elements_of, format_verdict, new_surface, registry_entry, registry_name,
+        elements_of, format_verdict, may_be_surface, new_surface, registry_entry, registry_name,
         rules_from_rulebook, verify_component, verify_html, verify_html_against, Component, Roster,
         Verdict, Vocabulary, CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX,
         FRAME_PROSE_WORDS, GIST_MAX_WORDS,
@@ -4169,6 +4178,34 @@ chroma_floor: 40
         assert_eq!(new_surface("ui/src/Onboarding.test.tsx", plain), None);
         assert_eq!(new_surface("ui/src/api.ts", plain), None, "a module is not a screen");
         assert_eq!(new_surface("src/lib.rs", plain), None);
+    }
+
+    // The path-only half, which is what spares a blob fetch per added path. It
+    // must admit everything new_surface could accept on its content and refuse
+    // everything decidable without it - a gap either way is a wrong answer, not
+    // a slow one.
+    #[test]
+    fn may_be_surface_admits_every_candidate_and_refuses_what_a_path_alone_settles() {
+        let tiered = "/**\n * StatusPill.\n * @tier T1 — primitive\n */\n";
+        for candidate in ["ui/src/components/StatusPill.tsx", "ui/src/components/dot.ts"] {
+            assert!(may_be_surface(candidate), "{candidate} is fetch-worthy");
+        }
+        assert!(may_be_surface("ui/src/Onboarding.tsx"));
+        assert!(
+            may_be_surface("ui/src/components/helper.tsx"),
+            "untiered still needs its bytes read"
+        );
+        for settled in [
+            "ui/src/api.ts",
+            "ui/src/Onboarding.test.tsx",
+            "ui/src/components/StatusPill.test.tsx",
+            "ui/src/components/nested/Deep.tsx",
+            "src/lib.rs",
+            "docs/workflow.html",
+        ] {
+            assert!(!may_be_surface(settled), "{settled} needs no blob");
+            assert_eq!(new_surface(settled, tiered), None, "{settled} is not a surface either");
+        }
     }
 
     #[test]
