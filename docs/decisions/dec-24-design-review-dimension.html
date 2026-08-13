@@ -177,7 +177,18 @@
       <li><strong>W8 inherits a timing dependency.</strong> Tier-3 fires on the merge that lands a closed
         design, which is <em>before</em> the design reaches development. Where the design gate sits relative
         to a UI-touching Working Unit, and what evidence it hands the build, is W8's question — and its
-        answer cannot move the verdict earlier than the close.</li>
+        answer cannot move the verdict earlier than the close.
+        <strong>Answered by <a href="dec-25-design-build-handoff.html">DEC-25</a>:</strong> the verdict stays
+        at the close, and what the build inherits is a <em>pointer to the exact bytes it covered</em> —
+        <code>design.implements: [{path, blob}]</code> in the same <code>design:</code> section, required of
+        a Working Unit that adds a new surface. An <strong>amendment inside a build Working Unit needs no new
+        rule</strong>: the amended design is a design artifact in that diff, so this record's own trigger
+        already demands a verdict on it, and the blob pin is what makes the amendment countable rather than
+        invisible. One consequence lands here: a note may now carry a <code>design:</code> section for its
+        citation alone, so <code>check_design</code> returns early on a diff with no design artifact and
+        <code>verdict</code> is optional — demanding a <code>PASS</code> over an empty artifact list is the
+        silence this record's <a href="#section">section table</a> exists to refuse, pointed the wrong
+        way.</li>
       <li><strong>A rule that cannot be judged as written is a finding, never a same-run loosening.</strong>
         The rubric forbids rulebook edits, which is DEC-15's own failure mode applied one tier up: a gate
         that bends converts an open defect into a green receipt.</li>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7dca9a9f34851f0dfab8c9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-25: the design → build handoff</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-25 — the design → build handoff is one rule with two halves, and the epic is what binds them</h1>
+      <p>A build that adds a surface names the design it read; a design nobody built does not leave its
+        epic. Two predicates, one field, and no judgment of conformance.</p>
+      <div class="meta">DEC-25 · 2026-08-13 · Trawler · E-DFLOW.W8 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p><a href="dec-24-design-review-dimension.html">DEC-24</a> put Tier-3 on the merge that <em>lands</em> a
+      closed design — which is before the design reaches development, and it said nothing about what happens
+      after. Two failures live in that gap, and both had already happened:</p>
+    <table data-c="gap">
+      <thead><tr><th>The gap</th><th>What it produced</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Nothing connects a build to the design it was handed.</strong> A UI Working Unit
+          could add a screen with no design at all, or with a design nobody opened, and every gate stayed
+          green</td>
+          <td>the failure mode M1 named: <strong>three design runs, zero lines of product code</strong>, and
+            no check anywhere that noticed</td></tr>
+        <tr><td><strong>Nothing makes an unbuilt design account for itself.</strong>
+          <a href="dec-16-design-file-retirement.html">DEC-16</a> granted the unbuilt case a permanent home —
+          <em>"the contract still lives there and nowhere else"</em></td>
+          <td>the <strong>address problem</strong>: that grant makes a design file a second, permanent home
+            for a contract, with nothing comparing it to code and nothing ever forcing the question of
+            whether the component arrived. Four such files sat in the tree for three Working Units</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="choice">Choice</h2>
+    <p><strong>One rule, two halves, and the unit it binds is the epic.</strong></p>
+    <div class="diagram" data-c="seam">
+      <pre class="mermaid">flowchart TB
+  subgraph EPIC["one epic — the unit the rule binds"]
+    DW["design WU
+    the diff carries a design artifact"] -->|"cr/v3 design.verdict PASS
+    (DEC-24)"| M1{{"WU merge"}}
+    M1 --> BW["build WU
+    the diff ADDS a @tier component or a screen"]
+    BW -->|"cr/v3 design.implements: path + blob
+    (DEC-25, upstream half)"| M2{{"WU merge"}}
+    M2 --> EM{{"epic merge"}}
+  end
+  EM -->|"every component design the range added
+  resolves to a roster entry at the tip"| MAIN["main"]
+  EM -.->|"or design.dropped names it, with a why"| MAIN</pre>
+      <div class="caption">Upstream: a build names what it built from. Downstream: no design leaves the epic
+        unaccounted for. Everything before the first merge already existed.</div>
+    </div>
+    <table data-c="halves">
+      <thead><tr><th>Half</th><th>Fires when</th><th>Refuses</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><strong>upstream</strong> — the citation<br><span class="badge id">WU</span></td>
+          <td>the diff <em>adds</em> a <code>@tier</code> file under <code>ui/src/components/</code>, or a
+            non-test <code>.tsx</code> directly under <code>ui/src/</code></td>
+          <td>a citation that is missing · empty · unresolvable at the tip · pinned to a blob the tip does
+            not ship · not a design artifact · an unarchived run</td>
+          <td><code>check_handoff</code> · <code>check_citation</code>, <code>xtask/src/gate.rs</code></td></tr>
+        <tr><td><strong>downstream</strong> — <code>components·unbuilt</code><br><span class="badge id">epic</span></td>
+          <td>the epic <em>range</em> added a file under <code>docs/work/components/</code></td>
+          <td>a component design whose name no roster entry carries at the epic tip, unless
+            <code>design.dropped</code> names it with a non-empty <code>why</code></td>
+          <td><code>check_unbuilt_designs</code>, <code>xtask/src/gate.rs</code></td></tr>
+      </tbody>
+    </table>
+    <p class="kd"><strong>One function, three callers.</strong> <code>new_surface</code> is the trigger for
+      the gate, the epic walk, and <code>cargo xtask design-scope</code> — the same refusal DEC-24 made for
+      <code>design-scope</code> itself. It is built on <code>registry_entry</code>, so "in the roster" and
+      "owes a design" are literally the same <code>@tier</code> test.</p>
+
+    <h2 id="epic-unit">Why the coupling unit is the epic</h2>
+    <table data-c="unit">
+      <thead><tr><th>Candidate unit</th><th>Why not / why</th></tr></thead>
+      <tbody>
+        <tr><td>the commit</td><td>a design and its build are never the same diff — the design is docs-only
+          and the build is code</td></tr>
+        <tr><td>the Working Unit</td><td>the ruled shape is <strong>design WU, then build WU</strong>. A unit
+          that cannot contain both halves cannot be asked whether they met</td></tr>
+        <tr><td><strong>the epic</strong></td><td><span class="badge auto">chosen</span> the smallest unit
+          that contains both, and the last seam where a design that never became code is still in the tree
+          to be seen. It is also where the design files <em>leave</em> the tree (check 6), so the question
+          has to be answered there or not at all</td></tr>
+        <tr><td><code>main</code>, or a periodic sweep</td><td>an unbuilt design would already be merged and
+          the epic dissolved; there is no one left to ask</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="range">
+      <strong>The epic half reads the range, not the endpoints.</strong> Check 6 forces every
+      <code>docs/work/</code> file out of the tree by the epic tip, so a design added and then silently
+      <code>git rm</code>'d nets out of an endpoint diff entirely. <code>added_under</code> walks the
+      range's <em>commits</em> — the check cannot be defeated by the deletion the epic already owes.
+    </div>
+
+    <h2 id="blob">Why the pointer carries a blob</h2>
+    <table data-c="blob">
+      <thead><tr><th>Pointer shape</th><th>What it cannot say</th></tr></thead>
+      <tbody>
+        <tr><td>a path</td><td>which <em>bytes</em>. A design edited after the citation was written still
+          resolves, so the note attests a reading of a file that no longer exists in that form</td></tr>
+        <tr><td><strong>path + blob</strong></td><td><span class="badge auto">chosen</span> nothing — and it
+          is what makes an <strong>amendment countable</strong>: an amended design is different bytes, so
+          the stale citation reds and the amendment has to re-enter Tier-3 on the merge that lands it</td></tr>
+      </tbody>
+    </table>
+    <p>The comparison is made against the <strong>tip</strong>, never the working tree — the same rule
+      DEC-24 applies to its rulebook pin, and for the same reason: a later Working Unit editing the design
+      must not retroactively falsify a citation that was true when it was written, on a branch nobody may
+      amend.</p>
+    <p class="kd"><code>design.implements</code> is <code>Option&lt;Vec&lt;Cited&gt;&gt;</code>: <strong>absent
+      is a silence, <code>[]</code> is a stated nothing</strong>, and the two reds say which happened. That is
+      DEC-15's rule — a silence must never read as a pass — applied to the field rather than to the run.</p>
+
+    <h2 id="no-conformance">Nothing judges the build against the design</h2>
+    <div class="callout warn" data-c="d4c">
+      <p><strong>The pointer is a mechanical check, not a judgment.</strong> No sixth finder asks whether the
+        code matches the design it cites; UI merges stay at five finders plus the design dimension DEC-24
+        already defined. What the rule guarantees is that the design was <em>named and readable</em>, not
+        that it was <em>followed</em>.</p>
+      <p><strong>What would have to change to revisit it.</strong> Every check in this epic was born from a
+        defect a run actually shipped (DEC-15). Conformance has no such measurement yet — no real build has
+        ever consumed a handed-over design, so a conformance finder would be a judgment with no observed
+        defect class to catch, which is precisely the shape DEC-24 rejected for the hard rules. The revisit
+        condition is evidence: <strong>a real build that drifts from the design it cited, in a way the
+        pointer did not catch</strong>. W9 is the first run that can produce one.</p>
+    </div>
+
+    <h2 id="cases">The three ways a build and its design come apart</h2>
+    <table data-c="cases">
+      <thead><tr><th>Case</th><th>Ruled</th><th>What watches it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>an unforeseen small change</strong> during the build</td>
+          <td>not a second shape, and it does not fire the trigger</td>
+          <td>nothing new. No surface is added, so nothing is owed — the alternative is a gate that reds on
+            every ordinary edit</td></tr>
+        <tr><td><strong>an amendment</strong> to the design the build was handed</td>
+          <td>it <em>re-enters Tier-3</em> on the merge that lands it</td>
+          <td>the blob pin makes it countable, and DEC-24's existing trigger (a design artifact in the diff)
+            already demands the verdict. An amendment inside a build Working Unit needs no new rule</td></tr>
+        <tr><td><strong>a late-discovered surface</strong> nobody designed</td>
+          <td>the build Working Unit carries its own design, gated identically</td>
+          <td>both halves at once — the design artifact fires DEC-24, the added surface fires the
+            citation</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="measured">Measured, not asserted</h2>
+    <table data-c="measured">
+      <thead><tr><th>Claim</th><th>Measurement</th></tr></thead>
+      <tbody>
+        <tr><td>the trigger does not punish landed history</td>
+          <td>it <strong>fires on 1 seam</strong> inside <code>main..epic/design-flow</code> — W5's, with
+            <strong>25 surfaces</strong> — and produced <strong>0</strong> walk failures. Every seam in the
+            epic carries a <code>cr/v2</code> note, and a v2 note says in its own bytes that the field did
+            not exist: <code>9·design-schema</code> on v2, <code>9·design</code> on v3, and the walk drops
+            the former exactly as DEC-24 already had it. <strong>No new discriminator, no cutoff, no
+            waiver</strong></td></tr>
+        <tr><td>the epic half is a real question</td>
+          <td><strong>4 of the 20</strong> component designs E-DFLOW wrote have no roster entry —
+            <code>BodyRenderer</code> · <code>BodyViewer</code> · <code>CopyAllHeadersButton</code> ·
+            <code>HeaderTable</code>. E-DFLOW is <strong>the first epic its own rule refuses</strong></td></tr>
+        <tr><td>the drop record is not a formality</td>
+          <td>writing four reasons found that only <strong>one</strong> was never built. The other three were
+            built as a seven-member family, as a screen outside the collection, and as a local function
+            never extracted — three facts that existed nowhere until the rule demanded them</td></tr>
+        <tr><td>the rule works over real git</td>
+          <td><code>xtask/tests/e2e_design_flow.rs</code>: <strong>8 merges, 5 refused, 3 landed</strong>,
+            through the real merge hook, with <strong>0 rule defects</strong> found</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="drops">The four drops this record retires</h2>
+    <p>The rule's first refusal was its own epic, and the four design files it forced out are removed under
+      <a href="dec-16-design-file-retirement.html">DEC-16</a>'s order with this record as their
+      <code>distilled_to</code>. What each one held, and what holds it now:</p>
+    <table data-c="drops">
+      <thead><tr><th>Design</th><th>What actually happened</th><th>What carries the contract now</th></tr></thead>
+      <tbody>
+        <tr><td><code>body-renderer.html</code><br><span class="badge id">BodyRenderer</span></td>
+          <td>a <em>family</em> contract, not a component. Everything it specified was built — and no
+            component bears the family's name</td>
+          <td>the seven members' own TSDoc: <code>SourceSurface</code> · <code>JsonRenderer</code> ·
+            <code>XmlRenderer</code> · <code>TextRenderer</code> · <code>HexRenderer</code> ·
+            <code>ImageRenderer</code> · <code>FormRenderer</code></td></tr>
+        <tr><td><code>body-viewer.html</code><br><span class="badge id">BodyViewer</span></td>
+          <td>built as <code>ui/src/BodyViewer.tsx</code> — a <em>screen</em>, outside
+            <code>ui/src/components/</code> and so outside the registry its contract assumed</td>
+          <td>the screen itself. A screen's contract is not the collection's, which is why the roster never
+            carried it</td></tr>
+        <tr><td><code>copy-all-headers-button.html</code><br><span class="badge id">CopyAllHeadersButton</span></td>
+          <td>the only true never-built: the design review <strong>dissolved</strong> it into
+            <code>CopyText</code> before any code existed, and the file's own title said so</td>
+          <td><code>CopyText</code>. Nothing is owed — a dissolved proposal is a design decision, not a
+            debt</td></tr>
+        <tr><td><code>header-table.html</code><br><span class="badge id">HeaderTable</span></td>
+          <td>built as a local function inside <code>ui/src/FlowDetail.tsx</code>, used by both header
+            sections, never extracted into the collection</td>
+          <td>the function and its two call sites. <strong>The extraction is the open one</strong> — the day it
+            becomes a registry component it needs a design, and the trigger above will ask for one</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">Three of the four were <em>built</em>. That fact existed nowhere before the rule demanded a
+      reason for each — the plan going in said three were never built, and reading the tree said one.</p>
+
+    <h2 id="options">Options rejected</h2>
+    <table data-c="options">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>A new tracked home for unbuilt contracts (a T2 folder, a tier row, an <code>xtask</code>
+          location)</td>
+          <td>it answers the address problem by <em>formalising</em> the second address. The epic predicate
+            answers it by refusing the situation: a contract with no code is a question, not a location</td></tr>
+        <tr><td>A design-side declaration or marking for the build to find</td>
+          <td>a design-bearing diff already <strong>is</strong> the marking — <code>design_artifacts_of</code>
+            detects it and DEC-24's check already demands the receipt. Building a second signal is building a
+            second answer to a question that already has one</td></tr>
+        <tr><td>A conformance dimension on the code review</td>
+          <td><a href="#no-conformance">above</a> — no measured defect class, and the same argument DEC-24
+            makes for keeping hard rules out of the receipt</td></tr>
+        <tr><td>A date cutoff or a walk waiver to grandfather the trigger</td>
+          <td>the <code>cr/v2</code> schema string already discriminates, and it cost zero waivers. A date
+            cannot tell a note written before the field from one written badly after it</td></tr>
+        <tr><td>Gate the citation at the epic level too</td>
+          <td>the citation names a <code>docs/work/</code> design, and check 6 forces those out of the tree
+            by the epic tip — the WU seam is the only place the path can resolve. The epic re-asks at every
+            seam its walk re-verifies, which is the same question in the only place it is answerable</td></tr>
+        <tr><td>Annotate DEC-16's survival clause instead of superseding it</td>
+          <td>the clause is not imprecise, it is <em>wrong</em> in its grant: "lives there and nowhere else"
+            is what created the address problem. An annotation would leave the grant standing next to the
+            rule that revokes it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li><strong><a href="dec-16-design-file-retirement.html">DEC-16</a>'s survival clause is superseded, its
+        retirement <em>order</em> untouched.</strong> An unbuilt design file no longer holds a contract by
+        right; it holds a question its epic must answer. The three-step order — distil, verify, remove — and
+        both its predicates stand exactly as written.</li>
+      <li><strong><a href="dec-24-design-review-dimension.html">DEC-24</a>'s timing dependency is answered on
+        the build side.</strong> The Tier-3 verdict still fires at the close and is not moved earlier; what
+        the build inherits is a pointer to the exact bytes that verdict covered.</li>
+      <li><strong>A note may carry a <code>design:</code> section without claiming a review.</strong> A build's
+        note carries it for the citation and an epic's for the drop record, so <code>check_design</code>
+        returns as soon as the diff carries no design artifact and <code>verdict</code> became optional.
+        Demanding a <code>PASS</code> over an empty artifact list would have made both notes attest a
+        judgment nobody made — DEC-15's own failure mode, one field down.</li>
+      <li><strong>The truth is the code.</strong> <code>xtask/src/gate.rs</code> owns when a design is required
+        and what a citation must satisfy; <code>xtask/src/doc.rs</code> owns what a design must contain and
+        what counts as a surface. Where a doc and the code disagree, the code wins.</li>
+      <li><strong>The handoff has never been driven by anything real.</strong> It is enforced by two predicates
+        and exercised by a fake build: a stub component, a one-line screen, and no agent that read the
+        contract it cited. A handoff nobody real has driven reads exactly like one that works — which is the
+        failure this record's own context describes. <strong>W9 pays it</strong>, by making the first real
+        Tier-3 judgment and the first real build the same run.</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: false, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+    for (const [i, pre] of [...document.querySelectorAll('pre.mermaid')].entries()) {
+      const { svg } = await mermaid.render(`mmd-${i}`, pre.textContent);
+      pre.outerHTML = svg;
+    }
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
