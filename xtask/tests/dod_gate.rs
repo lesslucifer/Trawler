@@ -741,6 +741,89 @@ fn the_walk_grandfathers_a_cr_v2_seam_but_not_a_v3_one_missing_its_design_sectio
     assert_eq!(checks_of(&report), vec!["7·walk·9·design"], "{}", format_report(&report));
 }
 
+const COMPONENT_DESIGN: &str = "docs/work/components/status-pill.html";
+
+// The epic that wrote a component contract and never built it. The contract is
+// archived out of the tree before the epic gate, as check 6 demands - so the
+// epic's endpoint diff carries no trace of it, and only the range does.
+fn epic_over_an_unbuilt_component_design() -> Repo {
+    let repo = wu_with_change();
+    repo.write(COMPONENT_DESIGN, "<html><body>the StatusPill contract</body></html>\n");
+    repo.commit("design the pill");
+    let wu_tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &wu_tip);
+    let changes = format!(
+        "{WU_CHANGES}  - path: {COMPONENT_DESIGN}\n    tier: T3\n    action: added\n    distills: \"the pill contract\"\n"
+    );
+    repo.note("doc", &wu_tip, &doc_note("E9", Some("E9.W1"), &changes, None));
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "merge wu/x/one", "wu/x/one"]);
+    std::fs::remove_file(repo.path.join(WU_RESULT)).unwrap();
+    std::fs::remove_file(repo.path.join(COMPONENT_DESIGN)).unwrap();
+    repo.commit("archive the wu result and the contract out of git");
+    bless_epic(&repo, T2_ENTRY);
+    repo
+}
+
+fn epic_cr_with_drop(repo: &Repo, why: &str) {
+    let tip = repo.sha("epic/x");
+    let base = repo.sha("main");
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    let dropped = format!("  dropped:\n    - path: {COMPONENT_DESIGN}\n      why: \"{why}\"\n");
+    let design = format!("{}{dropped}", design_section(&[], &pin_of(repo, &tip), "PASS"));
+    repo.note(
+        "cr",
+        &tip,
+        &format!("{}{design}", cr_note("E9", None, &base, &sha, "PASS").replace("cr/v2", "cr/v3")),
+    );
+}
+
+// D3·E: the epic is the unit a design is coupled to, so an epic that carries a
+// component design nobody built either builds it or says why it went. Check 6
+// only forces the FILE out of the tree; a `git rm` with no record is the hole
+// this closes.
+#[test]
+fn an_unbuilt_component_design_refuses_the_epic_until_the_drop_is_recorded() {
+    let repo = epic_over_an_unbuilt_component_design();
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(checks_of(&report), vec!["components·unbuilt"], "{}", format_report(&report));
+    assert!(report.failures[0].what.contains("StatusPill"), "the red names the component");
+
+    epic_cr_with_drop(&repo, "  ");
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(
+        checks_of(&report),
+        vec!["components·unbuilt"],
+        "a drop with no reason records nothing: {}",
+        format_report(&report)
+    );
+
+    epic_cr_with_drop(&repo, "never built; the flow row renders its own status");
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+    assert!(
+        report.waived.iter().any(|w| w.contains("never built")),
+        "the drop is billed as a waiver, not hidden beside one: {:?}",
+        report.waived
+    );
+}
+
+// The built case needs no record at all: the roster at the epic tip is the whole
+// answer, and it is read from git rather than from the checkout.
+#[test]
+fn a_component_design_whose_component_landed_needs_no_drop_record() {
+    let repo = epic_over_an_unbuilt_component_design();
+    repo.write(
+        "ui/src/components/StatusPill.tsx",
+        "/**\n * StatusPill states one verdict.\n * @tier T1 — primitive\n */\nexport const StatusPill = () => null;\n",
+    );
+    repo.commit("build the pill");
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+}
+
 // Blesses the epic tip against the *merge-base* with main, not main's tip -
 // once main and the epic diverge, base = merge-base(main, epic) != sha("main").
 fn bless_epic_diverged(repo: &Repo, changes: &str) {

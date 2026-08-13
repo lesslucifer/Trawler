@@ -31,6 +31,7 @@ fn names_a_carrier(repo: &Path, rev: &str, reason: &str) -> bool {
 // only a cr/v3 note can fail keeps applying there.
 const DESIGN_SCHEMA: &str = "9·design-schema";
 const DESIGN: &str = "9·design";
+const UNBUILT: &str = "components·unbuilt";
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Level {
@@ -131,6 +132,7 @@ impl Gate<'_> {
         };
         if level == Level::Epic {
             self.check_tracked_docs(&mut report);
+            self.check_unbuilt_designs(&mut report);
         }
         if level != Level::Commit {
             check_runs_closed(&mut report, &docs);
@@ -492,6 +494,44 @@ impl Gate<'_> {
         }
     }
 
+    // No unbuilt design survives its epic (DEC-16's survival clause superseded).
+    // `check_retirement` refuses a design file whose component EXISTS; this
+    // refuses one whose component never arrived, and between them a component
+    // design is never both written and unaccounted for.
+    //
+    // Read over the range's commits rather than its endpoints: check 6 forces
+    // every docs/work/ file out of the tree by the epic tip, so an add and a
+    // silent `git rm` net out of an endpoint diff - which is the hole. The
+    // roster is read at the tip, because "was it built" is a question about the
+    // epic's result, not about any one seam.
+    fn check_unbuilt_designs(&self, report: &mut Report) {
+        let designed =
+            crate::git::added_under(self.repo, &report.base, &report.tip, crate::doc::COMPONENTS);
+        if designed.is_empty() {
+            return;
+        }
+        let roster = crate::doc::roster_at(self.repo, &report.tip);
+        let cr = self.tip_cr_note(&report.tip);
+        let drop_record = |path: &str| {
+            cr.as_ref().and_then(|c| c.design.as_ref()).and_then(|d| d.dropped_why(path))
+        };
+        for path in designed {
+            let Some(name) = crate::doc::component_designed(&path) else { continue };
+            if roster.contains(&name) {
+                continue;
+            }
+            if let Some(why) = drop_record(&path) {
+                report.waived.push(format!("{UNBUILT} {path} dropped: {why}"));
+                continue;
+            }
+            report.failures.push(Failure::new(
+                UNBUILT,
+                format!("{path} designs {name}, which no component in the roster carries at the epic tip"),
+                format!("a design outlives its epic nowhere: build {name} in this epic, or record the drop on the epic's cr note - design.dropped: [{{ path: {path}, why: \"<why it went>\" }}]"),
+            ));
+        }
+    }
+
     fn check_tracked_docs(&self, report: &mut Report) {
         let tracked = git(self.repo, &["ls-tree", "-r", "--name-only", &report.tip, "--", "docs"])
             .unwrap_or_default();
@@ -550,7 +590,7 @@ impl Gate<'_> {
         git(self.repo, &["merge-base", "--is-ancestor", commit, of]).is_ok()
     }
 
-    fn tip_walk_waivers(&self, tip: &str) -> Option<CrNote> {
+    fn tip_cr_note(&self, tip: &str) -> Option<CrNote> {
         note(self.repo, "cr", tip).and_then(|raw| serde_yaml::from_str::<CrNote>(&raw).ok())
     }
 
@@ -590,7 +630,7 @@ impl Gate<'_> {
     }
 
     fn walk(&self, report: &mut Report, target: &str) -> Result<(), String> {
-        let waivers = self.tip_walk_waivers(&report.tip);
+        let waivers = self.tip_cr_note(&report.tip);
         let range = format!("{}..{}", report.base, report.tip);
         let lines = git(self.repo, &["rev-list", "--first-parent", "--parents", &range])?;
         for line in lines.lines() {
@@ -688,7 +728,7 @@ impl Gate<'_> {
         line(format!("tip: {}", report.tip));
         line(format!("diff_sha256: {}", report.diff_sha256));
         let checks = match report.level {
-            Level::Epic => "[notes, manifest, review, review-base, diff-binding, doc-note, design, manual-review, walk]",
+            Level::Epic => "[notes, manifest, review, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]",
             _ => "[notes, manifest, review, review-base, diff-binding, doc-note, design, manual-review]",
         };
         line(format!("checks: {checks}"));
@@ -891,6 +931,82 @@ mod tests {
     fn short_handles_small_ids() {
         assert_eq!(short("abc"), "abc");
         assert_eq!(short("0123456789abcdef"), "0123456789");
+    }
+
+    // The four ways an epic can answer for a component design it wrote: built,
+    // unbuilt, dropped with a reason, dropped with none. The design file is
+    // archived out of the tree first, as check 6 demands - so a check reading
+    // the endpoints instead of the range would see nothing at all here.
+    #[test]
+    fn an_unbuilt_component_design_reds_the_epic_unless_a_reason_is_recorded() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let repo = dir.path();
+        let g = |args: &[&str]| super::git(repo, args).unwrap();
+        let write = |rel: &str, body: &str| {
+            let full = repo.join(rel);
+            std::fs::create_dir_all(full.parent().unwrap()).unwrap();
+            std::fs::write(full, body).unwrap();
+        };
+        let commit = |msg: &str| {
+            g(&["add", "-A"]);
+            g(&["commit", "-q", "-m", msg]);
+            g(&["rev-parse", "HEAD"])
+        };
+
+        g(&["init", "-q", "-b", "main"]);
+        g(&["config", "user.email", "t@t"]);
+        g(&["config", "user.name", "t"]);
+        g(&["config", "commit.gpgsign", "false"]);
+        write("src/lib.rs", "pub fn base() {}\n");
+        let base = commit("base");
+
+        let design = "docs/work/components/status-pill.html";
+        write(design, "<html>the StatusPill contract</html>\n");
+        commit("design the pill");
+        std::fs::remove_file(repo.join(design)).unwrap();
+        let unbuilt = commit("archive the design out of git");
+
+        let gate = Gate { repo };
+        let checked = |tip: &str| {
+            let mut r = report(vec![]);
+            r.base.clone_from(&base);
+            r.tip = tip.to_string();
+            gate.check_unbuilt_designs(&mut r);
+            r
+        };
+
+        let red = checked(&unbuilt);
+        assert_eq!(
+            red.failures.iter().map(|f| f.check.as_str()).collect::<Vec<_>>(),
+            vec![super::UNBUILT],
+            "a design whose component never arrived refuses the epic"
+        );
+        assert!(red.failures[0].what.contains("StatusPill"), "{}", red.failures[0].what);
+
+        let note = |body: &str| {
+            g(&["notes", "--ref=cr", "add", "-f", "-m", body, &unbuilt]);
+        };
+        let cr = |why: &str| {
+            format!(
+                "schema: cr/v3\nbase: {base}\ndiff_sha256: x\nverdict: PASS\ndesign:\n  \
+                 rulebook: 796c547\n  verdict: PASS\n  dropped:\n    - path: {design}\n      why: \"{why}\"\n"
+            )
+        };
+
+        note(&cr("  "));
+        assert_eq!(checked(&unbuilt).failures.len(), 1, "a drop with no reason is not a drop");
+
+        note(&cr("never built; the row renders its own status"));
+        let dropped = checked(&unbuilt);
+        assert!(dropped.failures.is_empty(), "a recorded drop greens it");
+        assert!(dropped.waived[0].contains("never built"), "and lands in the waiver bill");
+
+        write(
+            "ui/src/components/StatusPill.tsx",
+            "/**\n * StatusPill.\n * @tier T1 — primitive\n */\nexport const StatusPill = () => null;\n",
+        );
+        let built = commit("build the pill");
+        assert!(checked(&built).failures.is_empty(), "a built component needs no drop record");
     }
 
     // The discriminator's whole point is the divergent case: main and the epic

@@ -55,6 +55,47 @@ pub fn diff_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, Str
         .collect())
 }
 
+pub fn added_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
+    let range = format!("{base}..{tip}");
+    Ok(git(repo, &["diff", "--name-only", "--no-renames", "--diff-filter=A", &range])?
+        .lines()
+        .map(str::to_string)
+        .collect())
+}
+
+// Every path the range ever added under `prefix` - the commits, not the two
+// endpoints. A file added by one commit and removed by another nets out of an
+// endpoint diff, which is exactly how a design nobody built leaves no trace at
+// an epic tip.
+pub fn added_under(repo: &Path, base: &str, tip: &str, prefix: &str) -> Vec<String> {
+    let range = format!("{base}..{tip}");
+    let mut paths: Vec<String> = git(
+        repo,
+        &[
+            "log",
+            "--diff-filter=A",
+            "--name-only",
+            "--pretty=format:",
+            "--no-renames",
+            &range,
+            "--",
+            prefix,
+        ],
+    )
+    .unwrap_or_default()
+    .lines()
+    .filter(|line| !line.trim().is_empty())
+    .map(str::to_string)
+    .collect();
+    paths.sort();
+    paths.dedup();
+    paths
+}
+
+pub fn blob_of(repo: &Path, rev: &str, path: &str) -> Option<String> {
+    git(repo, &["rev-parse", &format!("{rev}:{path}")]).ok()
+}
+
 pub fn diff_sha256(repo: &Path, base: &str, tip: &str) -> Result<String, String> {
     let range = format!("{base}..{tip}");
     let diff = cmd(repo)

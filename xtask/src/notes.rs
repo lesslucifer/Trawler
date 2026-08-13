@@ -94,11 +94,32 @@ pub struct Design {
     #[serde(default)]
     pub rulebook: String,
     pub verdict: String,
+    /// The designs this epic gave up on, each with the reason it went — the
+    /// `walk_waivers` shape, so a drop lands in the waiver bill the epic already
+    /// reports rather than beside it.
+    #[serde(default)]
+    pub dropped: Vec<Dropped>,
+}
+
+#[derive(Deserialize)]
+pub struct Dropped {
+    pub path: String,
+    #[serde(default)]
+    pub why: String,
 }
 
 impl Design {
     pub fn judged(&self, path: &str) -> bool {
         self.artifacts.iter().any(|a| a == path)
+    }
+
+    // An empty reason is not a drop, for the same reason an empty waiver is not
+    // a waiver: it records that something went, not why.
+    pub fn dropped_why(&self, path: &str) -> Option<&str> {
+        self.dropped.iter().find_map(|d| {
+            let why = d.why.trim();
+            (d.path == path && !why.is_empty()).then_some(why)
+        })
     }
 }
 
@@ -344,6 +365,41 @@ verdict: PASS
             serde_yaml::from_str("schema: cr/v2\nbase: a\ndiff_sha256: c\nverdict: PASS\n")
                 .expect("parses");
         assert!(v2.design.is_none());
+    }
+
+    // A drop is the epic's answer to "this design was never built" - so it says
+    // which one and why. The reasonless entry is the silence the record exists
+    // to refuse, exactly as a blank walk waiver is.
+    #[test]
+    fn a_drop_records_a_path_and_a_reason_or_it_is_no_drop() {
+        let yaml = "\
+schema: cr/v3
+base: aaaa
+diff_sha256: cccc
+verdict: PASS
+design:
+  artifacts: []
+  rulebook: 796c547
+  verdict: PASS
+  dropped:
+    - path: docs/work/components/body-renderer.html
+      why: \"never built; the panel renders bodies inline\"
+    - path: docs/work/components/header-table.html
+      why: \"   \"
+";
+        let note: CrNote = serde_yaml::from_str(yaml).expect("parses");
+        let design = note.design.expect("the design section");
+        assert_eq!(
+            design.dropped_why("docs/work/components/body-renderer.html"),
+            Some("never built; the panel renders bodies inline")
+        );
+        assert_eq!(design.dropped_why("docs/work/components/header-table.html"), None);
+        assert_eq!(design.dropped_why("docs/work/components/unlisted.html"), None);
+
+        let v2: CrNote =
+            serde_yaml::from_str("schema: cr/v2\nbase: a\ndiff_sha256: c\nverdict: PASS\n")
+                .expect("parses");
+        assert!(v2.design.is_none(), "a v2 note can drop nothing");
     }
 
     #[test]

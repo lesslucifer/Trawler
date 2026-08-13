@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7dab4d9f34851f0dfab8a9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W8 step 1 (no unbuilt design survives its epic)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W8 step ① — the epic answers for every design it wrote, and this epic owes four answers</h1>
+      <p>The predicate landed first, then the delete key. It fires on E-DFLOW immediately, exactly as
+        planned — and the four reasons turned out to be four different reasons, none of which is the
+        one the plan wrote down.</p>
+      <div class="meta">Step record · 2026-08-13 · Trawler · T3 (docs/work/) ·
+        <code>wu/design-flow/dev-integration</code> ·
+        plan: <a href="2026-08-13-dflow-w8-plan.html#step1">W8 ①</a> ·
+        supersedes: <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>'s survival
+        clause · prior: <a href="2026-08-12-dflow-w7-step2-registry-gate.html">W7 ② the registry gate</a></div>
+    </div>
+  </header>
+
+  <main>
+    <h2 id="verdict">Verdict</h2>
+    <div class="cards" data-c="verdict-cards">
+      <div class="card"><h3>1 predicate</h3><p><code>components·unbuilt</code>, epic level: every
+        component design the range added resolves to a roster entry at the tip, or the note records the
+        drop and why</p></div>
+      <div class="card"><h3>4 of 20</h3><p>component designs E-DFLOW wrote whose name no roster entry
+        carries. 16 were built under their own name — the check is measured, not asserted</p></div>
+      <div class="card"><h3>4 drops, 4 reasons</h3><p>and only <strong>one</strong> of them is "never
+        built". The other three were built — under another name, in another folder, or as a local
+        function</p></div>
+      <div class="card"><h3>1 hole closed</h3><p>the check reads the <em>range</em>, not the two
+        endpoints: check 6 forces every <code>docs/work/</code> file out of the tree by the epic tip,
+        so a silent <code>git rm</code> leaves an endpoint diff blank</p></div>
+    </div>
+
+    <h2 id="predicate">What the predicate is</h2>
+    <div class="diagram" data-c="dia-predicate">
+      <pre class="mermaid">
+flowchart TB
+  R["git log --diff-filter=A<br/>base..tip -- docs/work/components/"] --> N["component_designed(path)<br/>copy-text.html → CopyText"]
+  N --> Q{"in the roster<br/>at the epic tip?"}
+  Q -->|yes| OK["green — nothing owed"]
+  Q -->|no| D{"design.dropped names it<br/>with a non-empty why?"}
+  D -->|yes| W["WAIVE — billed with the walk waivers"]
+  D -->|no| F["FAIL components·unbuilt"]
+      </pre>
+      <div class="caption">The roster is read from git at the tip, never through the working tree:
+        membership is <code>@tier</code>, the same tag <code>scripts/design-registry.mjs</code> reads,
+        so the gate and the oracle cannot answer differently.</div>
+    </div>
+    <table data-c="tbl-pieces">
+      <thead><tr><th>Piece</th><th>Where</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><code>added_under</code></td><td><code>xtask/src/git.rs</code></td>
+          <td>every path the range's <em>commits</em> ever added under a prefix. The endpoint diff was
+            the wrong instrument: an add and a later <code>git rm</code> net out of it</td></tr>
+        <tr><td><code>registry_entry</code> · <code>roster_at</code></td><td><code>xtask/src/doc.rs</code></td>
+          <td>the roster as a revision ships it — a collection file, not a test, carrying
+            <code>@tier</code>. No <code>node</code> in the epic gate, and no dependence on what happens
+            to be checked out</td></tr>
+        <tr><td><code>design.dropped: [{path, why}]</code></td><td><code>xtask/src/notes.rs</code></td>
+          <td>the <code>walk_waivers</code> shape, so a drop lands in the waiver bill the epic already
+            reports. An empty <code>why</code> is not a drop</td></tr>
+        <tr><td><code>check_unbuilt_designs</code></td><td><code>xtask/src/gate.rs</code></td>
+          <td>epic level only, and it runs before the docs-only exemption — an epic that wrote a design
+            and built nothing is precisely the case</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="pair">
+      <strong>The pair, not the predicate, is the rule.</strong>
+      <code>check_retirement</code> (Tier-1) refuses a design file whose component <em>exists</em>;
+      <code>components·unbuilt</code> refuses one whose component never arrived. Together they say: no
+      component design is ever both written and unaccounted for. Neither half is the rule alone.
+    </div>
+
+    <h2 id="measurement">The measurement</h2>
+    <p class="meta">Over <code>main..epic/design-flow</code>, every <code>.html</code> the range added
+      under <code>docs/work/components/</code>, mapped through <code>component_designed</code> to a
+      roster lookup at the epic tip.</p>
+    <table data-c="tbl-measure">
+      <thead><tr><th></th><th>Count</th><th>Which</th></tr></thead>
+      <tbody>
+        <tr><td><strong>designs the epic wrote</strong></td><td>20</td>
+          <td>every component contract of runs #1–#3</td></tr>
+        <tr><td><strong>resolved in the roster</strong></td><td>16</td>
+          <td>Button · CopyButton · CopyText · DurationText · IconButton · KeyValueRow · MethodLabel ·
+            Notice · Section · SegmentedControl · Select · StatusLine · StatusPill · StepList ·
+            TimestampText · TonedText</td></tr>
+        <tr><td><strong>unresolved</strong></td><td>4</td>
+          <td>BodyRenderer · BodyViewer · CopyAllHeadersButton · HeaderTable</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="drops">The four drops, and their real reasons</h2>
+    <div class="callout warn" data-c="deviation">
+      <strong>Deviation from the plan.</strong> The plan (and Q1 before it) recorded "three were never
+      built; <code>BodyViewer</code>'s code exists outside the registry". Reading the tree instead of
+      the plan: <strong>one</strong> was never built, and the other three were all built — under a
+      different name, in a different folder, or without ever being extracted. The drop record is the
+      one place these facts are written down, so they are written down as they are.
+    </div>
+    <table data-c="tbl-drops">
+      <thead><tr><th>Contract</th><th>What actually happened</th><th>The reason recorded</th></tr></thead>
+      <tbody>
+        <tr><td><code>body-renderer.html</code><br><span class="badge id">BodyRenderer</span></td>
+          <td>a <em>family</em> contract, not a component. Everything it specified was built and is in
+            the roster — JsonRenderer · XmlRenderer · TextRenderer · HexRenderer · ImageRenderer ·
+            FormRenderer · SourceSurface — none of them under the family's own name</td>
+          <td>built as the seven-renderer family (SourceSurface, JsonRenderer, XmlRenderer,
+            TextRenderer, HexRenderer, ImageRenderer, FormRenderer); no component is named
+            BodyRenderer, and each member's contract is now its own TSDoc</td></tr>
+        <tr><td><code>body-viewer.html</code><br><span class="badge id">BodyViewer</span></td>
+          <td>built as <code>ui/src/BodyViewer.tsx</code> — a screen, outside
+            <code>ui/src/components/</code>, so outside the registry its contract assumed</td>
+          <td>built as the screen ui/src/BodyViewer.tsx, never a registry component; its contract
+            belongs to the screen, not to the collection</td></tr>
+        <tr><td><code>copy-all-headers-button.html</code><br><span class="badge id">CopyAllHeadersButton</span></td>
+          <td>the only true never-built. The file's own title says <em>(dissolved)</em> — the design
+            review dissolved it into <code>CopyText</code> before any code existed</td>
+          <td>dissolved by design review into CopyText; no component was ever built and none is
+            owed</td></tr>
+        <tr><td><code>header-table.html</code><br><span class="badge id">HeaderTable</span></td>
+          <td>built as a local function inside <code>ui/src/FlowDetail.tsx</code> (line 16), used by
+            both header sections, never extracted into the collection</td>
+          <td>built as a local function in ui/src/FlowDetail.tsx; never extracted, so the registry
+            carries no entry to hold its contract</td></tr>
+      </tbody>
+    </table>
+    <p class="kd"><strong>Where the reasons land:</strong> in the epic's <code>cr</code> note as
+      <code>design.dropped</code>, at the epic merge — this WU deletes the files and states the reasons;
+      the epic merge is where the gate reads them back. E-DFLOW is the first epic its own rule refuses,
+      which was the point.</p>
+
+    <h2 id="fallout">Three things the deletion moved</h2>
+    <table data-c="tbl-fallout">
+      <thead><tr><th>What</th><th>Why it moved</th></tr></thead>
+      <tbody>
+        <tr><td><code>docs/design-rules/design-rules-index.html</code> — 10 links</td>
+          <td>the rulebook cited three of the four contracts as the <em>provenance</em> of a rule
+            (<code>syn-*</code> roles, <code>empty-states-instruct</code>,
+            <code>labels-add-context</code>, <code>calm-microcopy</code>,
+            <code>one-term-per-concept</code>, <code>view-not-truth</code>). The name still names where
+            the rule came from; the link no longer resolves, so each became
+            <code>&lt;code&gt;Name&lt;/code&gt;</code>, matching how every built component already
+            appears there. <strong>T2, no rule text changed.</strong></td></tr>
+        <tr><td><code>roster()</code> — an absent folder is no longer an error</td>
+          <td><code>docs/work/components/</code> is now <em>gone</em>, not empty, and
+            <code>read_dir</code> said "cannot read the roster". That answer was correct when a design
+            in flight was the norm; under D3·E the empty folder <em>is</em> the resting state. A
+            missing folder now reads as "no design in flight" — the registry half, the half that must
+            be answerable, still is</td></tr>
+        <tr><td>this WU's <code>doc/v1</code> note owes four <code>distilled_to</code> entries</td>
+          <td><code>6·retirement-order</code> fires on every removed <code>docs/work/components/</code>
+            file and demands the forks be distilled somewhere that resolves at the tip. The four point
+            at <strong>DEC-25</strong>, written in step ⑤ — the order is: predicate, deletion, decision
+            record, merge</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="tests">Tests</h2>
+    <table data-c="tbl-tests">
+      <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">unit</span></td>
+          <td><code>gate.rs</code> — the four answers over a real temp repo: unbuilt reds · a drop with
+            a blank reason still reds · a drop with a reason greens and is billed as a waiver · a built
+            component needs no record. The design file is archived out of the tree first, so a check
+            reading the endpoints would see nothing at all.<br>
+            <code>doc.rs</code> — <code>@tier</code> is the whole of roster membership: a collection
+            file without one is out, a test file is out, a nested file is out, a screen is out.<br>
+            <code>notes.rs</code> — a drop parses as path + reason, and a blank reason is no drop.</td></tr>
+        <tr><td><span class="badge id">integration</span></td>
+          <td><code>dod_gate.rs</code> — the whole epic gate over an epic that merged a component
+            design, archived it as check 6 demands, and never built it: red on
+            <code>components·unbuilt</code>, still red with a reasonless drop, green and billed with the
+            reason, and green with no record at all once the component lands.</td></tr>
+        <tr><td><span class="badge id">verify-doc</span></td>
+          <td>72 tracked docs, none red, with the components folder absent — the roster change is
+            exercised by the real corpus rather than asserted.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="closing">
+      The predicate refuses its own author's epic on the first run, and the four reasons it forced out
+      are four different facts — a family built under other names, a screen, a dissolved proposal, and
+      an un-extracted local function. A silent <code>git rm</code> would have recorded none of them.
+    </div>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

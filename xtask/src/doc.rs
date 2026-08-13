@@ -70,6 +70,7 @@ const RULEBOOK: &str = "docs/design-rules/design-rules-index.html";
 const VOCABULARY: &str = "scripts/design-vocabulary.mjs";
 const REGISTRY: &str = "scripts/design-registry.mjs";
 pub const COMPONENTS: &str = "docs/work/components/";
+pub const COLLECTION: &str = "ui/src/components/";
 
 fn checklist(artifact: &str) -> Option<&'static [&'static str]> {
     match artifact {
@@ -126,7 +127,38 @@ pub fn design_artifact(path: &str, html: &str) -> Option<&'static str> {
 }
 
 pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
-    crate::git::git(repo, &["rev-parse", &format!("{rev}:{RULEBOOK}")]).ok()
+    crate::git::blob_of(repo, rev, RULEBOOK)
+}
+
+// Membership is `@tier`, the same tag scripts/design-registry.mjs reads - so a
+// gate and the oracle cannot disagree about who is in the roster. Read from git
+// rather than through the oracle because a gate judges the roster its own tip
+// ships, and because an epic tip is often not the checkout.
+pub fn registry_entry(path: &str, source: &str) -> bool {
+    path.strip_prefix(COLLECTION).is_some_and(|file| {
+        !file.contains('/')
+            && !file.contains(".test.")
+            && matches!(file.rsplit_once('.'), Some((_, "ts" | "tsx")))
+    }) && source.contains("@tier")
+}
+
+pub fn registry_name(path: &str) -> Option<String> {
+    let file = path.strip_prefix(COLLECTION)?;
+    Some(file.rsplit_once('.')?.0.to_string())
+}
+
+pub fn roster_at(repo: &Path, rev: &str) -> BTreeSet<String> {
+    crate::git::git(repo, &["ls-tree", "-r", "--name-only", rev, "--", COLLECTION])
+        .unwrap_or_default()
+        .lines()
+        .filter(|path| {
+            crate::git::show_bytes(repo, rev, path)
+                .ok()
+                .and_then(|bytes| String::from_utf8(bytes).ok())
+                .is_some_and(|source| registry_entry(path, &source))
+        })
+        .filter_map(registry_name)
+        .collect()
 }
 
 // Every slug the rulebook declares, hard and soft. The gate reads it to check a
@@ -274,14 +306,20 @@ impl Roster {
     }
 }
 
+// No folder means no design is in flight, which is the resting state now that
+// no unbuilt design survives its epic - not an unreadable roster. The registry
+// half is the one that must be answerable, and it still is.
 pub fn roster(repo: &Path) -> Result<Roster, String> {
     let designed = std::fs::read_dir(repo.join(COMPONENTS))
-        .map_err(|e| format!("cannot read {COMPONENTS}: {e}"))?
-        .filter_map(|entry| {
-            let name = entry.ok()?.file_name().into_string().ok()?;
-            Some(component_name(name.strip_suffix(".html")?))
+        .map(|entries| {
+            entries
+                .filter_map(|entry| {
+                    let name = entry.ok()?.file_name().into_string().ok()?;
+                    Some(component_name(name.strip_suffix(".html")?))
+                })
+                .collect()
         })
-        .collect();
+        .unwrap_or_default();
     Ok(Roster { registry: oracle(repo, REGISTRY)?, designed })
 }
 
@@ -687,7 +725,7 @@ pub fn verify_component(
     Verdict::Checked { artifacts: vec!["component-design".to_string()], failures, summary: None }
 }
 
-fn component_designed(path: &str) -> Option<String> {
+pub fn component_designed(path: &str) -> Option<String> {
     let file = path.split(COMPONENTS).nth(1)?.strip_suffix(".html")?;
     (!file.contains('/')).then(|| component_name(file))
 }
@@ -2417,9 +2455,10 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 mod tests {
     use super::{
         attrs, check_frame_density, component_designed, declares_a_design, edit_distance,
-        elements_of, format_verdict, rules_from_rulebook, verify_component, verify_html,
-        verify_html_against, Component, Roster, Verdict, Vocabulary, CAPABILITY_STATES,
-        FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
+        elements_of, format_verdict, registry_entry, registry_name, rules_from_rulebook,
+        verify_component, verify_html, verify_html_against, Component, Roster, Verdict, Vocabulary,
+        CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS,
+        GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -4068,6 +4107,33 @@ chroma_floor: 40
         assert_eq!(component_designed("docs/work/components/nested/x.html"), None);
         assert_eq!(component_designed("docs/work/2026-07-16-dflow-run-1.html"), None);
         assert_eq!(component_designed("docs/work/components/README.md"), None);
+    }
+
+    // The other half of the same question: who is in the roster. @tier is the
+    // membership tag, so a collection file without one is out - which is what
+    // keeps the gate's answer identical to the oracle's.
+    #[test]
+    fn a_collection_file_joins_the_roster_only_when_it_declares_a_tier() {
+        let tiered =
+            "/**\n * Button.\n * @tier T1 — primitive\n */\nexport const Button = () => null;\n";
+        assert!(registry_entry("ui/src/components/Button.tsx", tiered));
+        assert!(!registry_entry(
+            "ui/src/components/Button.tsx",
+            "export const Button = () => null;\n"
+        ));
+        assert!(
+            !registry_entry("ui/src/components/Button.test.tsx", tiered),
+            "a test is not an entry"
+        );
+        assert!(!registry_entry("ui/src/components/nested/Button.tsx", tiered));
+        assert!(
+            !registry_entry("ui/src/BodyViewer.tsx", tiered),
+            "a screen is not in the collection"
+        );
+        assert_eq!(
+            registry_name("ui/src/components/CopyButton.tsx").as_deref(),
+            Some("CopyButton")
+        );
     }
 
     #[test]
