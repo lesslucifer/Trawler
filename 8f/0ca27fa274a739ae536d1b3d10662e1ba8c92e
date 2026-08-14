@@ -2,8 +2,3 @@ schema: cr/v3
 base: 620c7c4a8ebf2b524f0ad1856e9f8131a7a4acdf
 diff_sha256: 72339dd556448c8f3757b8b7a5a62202876aea3ab36cb5375bc186d3b307b6b9
 verdict: PASS
-design:
-  implements:
-    - path: docs/work/2026-08-14-dflow-w9-run-4.html
-      blob: 5b17cdfdd33f55182487ceb53b5e354c04c8e05b
-      built: [ui/src/Onboarding.tsx, ui/src/components/Notice.tsx]
