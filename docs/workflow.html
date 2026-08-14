@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Workflow Standard</h1>
       <p>How work is planned, gated and merged: epic → working unit → commit, one hook-enforced DoD gate per level, completeness proven from git notes — never from an agent's word.</p>
-      <div class="meta">v10 · 2026-08-12 · Trawler · T1 process doc</div>
+      <div class="meta">v12 · 2026-08-13 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -96,7 +96,7 @@ flowchart TD
         <tr><td>Integration test(s) assert the WU contract; wire contracts snapshot-locked</td><td><span class="badge auto">gate check 2</span> (integration ≥ 1 or waived) · adequacy = review</td></tr>
         <tr><td><code>test/v2</code> + <code>doc/v1</code> notes on the tip; review PASS bound to this exact diff</td><td><span class="badge auto">gate checks 1–6</span></td></tr>
         <tr><td>T2 synthesis: use-case/decision updated, or <code>t2_waived</code> with reason</td><td><span class="badge auto">gate check 6</span> · adequacy = epic review</td></tr>
-        <tr><td><em>UI only:</em> a WU that <strong>adds</strong> a registry component or a new screen cites the closed design it implements — path + blob (<a href="#design-handoff">design → build</a>)</td><td><span class="badge auto">gate check 9</span></td></tr>
+        <tr><td><em>UI only:</em> every UI-rendering file the diff touches is <strong>accounted for</strong> — cited to the closed design it was built from (path + blob), or declared <code>undesigned</code> with a reason. An <em>added</em> surface may only be cited (<a href="#design-handoff">design → build</a>)</td><td><span class="badge auto">gate check 9</span></td></tr>
         <tr><td>A listed <code>mr/v1</code> note attesting the WU result report — a human read the result and authorised the tip (always, not waivable)</td><td><span class="badge auto">gate check 8</span></td></tr>
         <tr><td>Merge <code>--no-ff</code> into the epic; notes on origin</td><td><span class="badge auto">pre-merge-commit hook</span> · <span class="badge auto">pre-push notes sync</span></td></tr>
       </tbody>
@@ -121,35 +121,62 @@ flowchart TD
 
     <p data-c="handoff-intro">UI work carries a design, and <strong>the design and the build share one
     epic</strong>: a Working Unit lands the closed design (Tier-3 judges it at that merge, check 9), a later
-    Working Unit builds it and cites what it built from. The epic is the coupling unit, so the rule has two
-    halves and both are mechanical.</p>
+    Working Unit builds it and cites what it built from. Nothing rendered changes without an answer on the
+    record — <em>which design, or why none</em> — so the rule has three halves and all three are mechanical.</p>
+
+    <table data-c="handoff-scope">
+      <thead><tr><th>A UI-rendering file</th><th>Not one</th></tr></thead>
+      <tbody>
+        <tr><td>any non-test <code>.tsx</code> under <code>ui/src/</code>, at any depth — screens,
+          registry components, anything composed of them</td>
+          <td><code>.ts</code> logic and data modules · <code>.test.tsx</code> siblings ·
+            <code>index.css</code> (the tokens live in <code>ui/tailwind.config.js</code>) ·
+            everything outside <code>ui/src/</code></td></tr>
+      </tbody>
+    </table>
 
     <table data-c="handoff-table">
       <thead><tr><th>Half</th><th>Rule</th><th>Refused at</th></tr></thead>
       <tbody>
-        <tr><td><strong>Upstream</strong><br>the build names its design</td>
+        <tr><td><strong>Upstream · added</strong><br>a new surface names its design</td>
           <td>a WU whose diff <em>adds</em> a registry component (a file under
-            <code>ui/src/components/</code> carrying <code>@tier</code>) or a new screen (a non-test
-            <code>.tsx</code> directly under <code>ui/src/</code>) writes
-            <code>design.implements: [{path, blob}]</code> in its <code>cr/v3</code> note. The blob pins the
-            bytes read, not the filename; the path must resolve at the tip, name a design artifact, and — if
-            it is a design run — be archived</td>
+            <code>ui/src/components/</code> carrying <code>@tier</code>) or a screen (a non-test
+            <code>.tsx</code> under <code>ui/src/</code> outside the collection) writes
+            <code>design.implements: [{path, blob, built: [&lt;the files&gt;]}]</code> in its
+            <code>cr/v3</code> note. The blob pins the bytes read, not the filename; the path must resolve at
+            the tip, name a design artifact, and — if it is a design run — be archived. An added surface may
+            <strong>only</strong> be cited: there is no reason that excuses one</td>
+          <td>gate check 9, at the WU merge</td></tr>
+        <tr><td><strong>Upstream · touched</strong><br>an edit answers for itself</td>
+          <td>every other UI-rendering file in the diff is cited the same way, or named by
+            <code>design.undesigned: [{path, why}]</code> — an empty reason is not a reason. The declaration
+            is the reviewer's statement of fact, bound to <code>diff_sha256</code>, not a waiver the builder
+            grants itself; a silence is refused because a silence has always read as a pass
+            (<a href="decisions/dec-15-design-run-enforcement.html">DEC-15</a>). Every declaration is billed
+            at the epic gate, so an epic that designed nothing says so in its own receipt</td>
           <td>gate check 9, at the WU merge</td></tr>
         <tr><td><strong>Downstream</strong><br>no unbuilt design survives its epic</td>
           <td>every component design the epic added resolves to a roster entry at the epic tip, or the
             epic's <code>cr</code> note records <code>design.dropped: [{path, why}]</code> — an empty reason
-            is not a drop. A design file is retired into the code's TSDoc when built
+            is not a drop. The roster counts screens as well as <code>@tier</code> components, so a screen
+            design resolves where it was built. A design file is retired into the code's TSDoc when built
             (<a href="decisions/dec-16-design-file-retirement.html">DEC-16</a>), dropped on the record when
             not, and never left standing</td>
           <td><code>components·unbuilt</code>, at the epic merge</td></tr>
       </tbody>
     </table>
 
+    <p class="kd" data-c="handoff-wu-only"><strong>UI work happens inside a Working Unit.</strong> The
+    accounting lives on the <code>cr/v3</code> note, and a standalone commit has none — so a commit that
+    touches a UI-rendering file outside a WU is refused at commit level, whatever else it carries.</p>
+
     <table data-c="handoff-drift">
       <thead><tr><th>When the build and its design come apart</th><th>What is owed</th></tr></thead>
       <tbody>
         <tr><td>an unforeseen small change while building</td>
-          <td><strong>nothing</strong> — the trigger fires on a new surface, never on an edit to an existing one</td></tr>
+          <td><strong>one sentence</strong> — no design run, no new artifact: the file is named under
+            <code>design.undesigned</code> with why it needed none. The gate never demands a design for an
+            edit; it demands an answer</td></tr>
         <tr><td>the build <strong>amends</strong> the design it was handed</td>
           <td><strong>nothing to remember</strong> — the amended file is a design artifact in that WU's diff,
             so check 9 re-judges it on the merge that lands it and the cited blob is the amended one</td></tr>
@@ -236,7 +263,7 @@ flowchart TD
       <thead><tr><th>Note</th><th>Ref</th><th>Proves</th><th>Schema owner</th></tr></thead>
       <tbody>
         <tr><td><code>test/v2</code></td><td><code>refs/notes/test</code></td><td>what tests back this work (per-layer counts/waivers)</td><td><a href="testing-strategy.html">testing standard</a></td></tr>
-        <tr><td><code>cr/v3</code></td><td><code>refs/notes/cr</code></td><td>an independent review judged exactly this diff: PASS/FAIL + <code>diff_sha256</code>. A <strong>design-bearing</strong> diff also carries a <code>design:</code> section — the review's design dimension, its <code>artifacts</code> (every one the diff carries), the <code>rulebook</code> blob it judged against, and its own verdict. Design-bearing = the diff touches a <strong>closed</strong> design run (<code>data-status="archived"</code>) or a component design file; <code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code> answers it, and the gate calls the same function. <code>cr/v2</code> notes stay valid on tips already merged — a note written before the dimension existed cannot be given one after the fact</td><td><code>.claude/skills/code-review/</code></td></tr>
+        <tr><td><code>cr/v3</code></td><td><code>refs/notes/cr</code></td><td>an independent review judged exactly this diff: PASS/FAIL + <code>diff_sha256</code>. A <strong>design-bearing</strong> diff also carries a <code>design:</code> section — the review's design dimension, its <code>artifacts</code> (every one the diff carries), the <code>rulebook</code> blob it judged against, and its own verdict. Design-bearing = the diff touches a <strong>closed</strong> design run (<code>data-status="archived"</code>) or a component design file; <code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code> answers it, and the gate calls the same function. <code>cr/v2</code> notes stay valid on tips already merged — a note written before the dimension existed cannot be given one after the fact. A diff that touches <strong>UI-rendering files</strong> additionally accounts for each of them in the same section — <code>implements[].built</code> or <code>undesigned</code> — and <code>design-scope</code> prints that set too</td><td><code>.claude/skills/code-review/</code></td></tr>
         <tr><td><code>doc/v1</code></td><td><code>refs/notes/doc</code></td><td>every changed doc file accounted for; distillation lineage</td><td><a href="documentation-system.html">documentation system</a></td></tr>
         <tr><td><code>mr/v1</code></td><td><code>refs/notes/mr</code></td><td>a listed human read the result report and authorised this WU/epic tip: <code>tier</code> + <code>signer</code> + <code>report</code> + <code>report_sha256</code>, plus <code>base</code> + <code>sig</code> (a signature over the change-hash + report-hash payload) when the signer is <code>key</code>-backed</td><td>this doc · <a href="decisions/workflow-gates.html">DEC-7</a>/<a href="decisions/workflow-gates.html#dec-9">DEC-9</a>/<a href="decisions/workflow-gates.html#dec-10">DEC-10</a></td></tr>
         <tr><td><code>dod/v1</code></td><td><code>refs/notes/dod</code></td><td>the gate ran green here (receipt below)</td><td>this doc</td></tr>
@@ -287,8 +314,8 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
         <tr><td>6</td><td><code>doc/v1</code> matches <code>git diff --name-only</code> exactly (no missing/phantom entries, tiers correct); code change ⇒ T2 entry or <code>t2_waived</code>; epic ⇒ only expected doc locations tracked at the tip (flat <code>docs/*</code>, <code>use-cases/</code>, <code>decisions/</code>, <code>backlog/</code>, <code>design-rules/</code> — nothing under <code>docs/work/</code>; archived docs live untracked in <code>docs/.archive/</code>); <code>archived</code> entries carry <code>distilled_to</code></td></tr>
         <tr><td>7</td><td><em>Epic:</em> first-parent walk — each merge's <code>^2</code> re-verified as a WU, each non-merge commit checked as standalone (docs-only exempt from test/cr/doc; <strong>manual review is boundary-only at every seam</strong> — doc-commit trailers are checked at commit-msg and pre-push when the commit is new, and a WU tip's <code>mr/v1</code> is checked by the merge hook when the seam is made; the walk re-judges neither: history is immutable while the local <code>.mr-allowed</code> is mutable, so retroactive re-verification would redden authorised history after key rotation, tier removal or on a fresh clone (<a href="decisions/workflow-gates.html#dec-9">DEC-9</a>/<a href="decisions/workflow-gates.html#dec-10">DEC-10</a>); the tip itself is covered by the epic gate). A seam whose merged-in parent is already reachable from the epic mainline <em>or</em> from the gate target is skipped — a back-merge of landed history (<code>main</code> or a sibling already on <code>main</code>) is not a net-new seam (<a href="decisions/workflow-gates.html#dec-8">DEC-8</a>); a genuine forward seam always carries work absent from the target, so the skip can't swallow it. Octopus merges are refused, by the walk and by the hook: one WU per merge. A misfire is overridable per-seam via the walk-error waiver below — never by <code>--no-verify</code></td></tr>
         <tr><td>8</td><td><em>Manual review</em> (not waivable): every WU and epic tip needs a valid <code>mr/v1</code> note whose <code>signer</code> is listed in <code>.mr-allowed</code>, whose <code>report</code>/<code>report_sha256</code> name the level's result report (a WU report is re-hashed against the tracked file at the tip; an epic report is archived, its hash attested by the signature), and whose <code>sig</code> verifies over the change-hash + report-hash payload when the note carries one (a <code>key</code>-backed signer). Runs before the exemption, like the epic tracked-doc check. Absent/unlisted/failed-verify/missing-report ⇒ red, with an instruction to get human confirmation — the agent must not self-authorise</td></tr>
-        <tr><td>9</td><td><em>Design</em> — a design-bearing tip (see <code>cr/v3</code> above) needs a <code>cr/v3</code> note whose <code>design:</code> section names every design artifact in the diff, pins the rulebook blob <em>the tip ships</em>, and reads <code>PASS</code>. A <code>cr/v2</code> note on such a tip is refused; at a walk seam that one refusal is dropped — the note is immutable evidence from before the dimension existed — while a <code>cr/v3</code> note missing or short-changing its design section stays red everywhere. <em>WU level also:</em> a diff that <strong>adds</strong> a registry component or a new screen needs <code>design.implements: [{path, blob}]</code> resolving at the tip (<a href="#design-handoff">design → build</a>)</td></tr>
-        <tr><td>—</td><td><em>Epic:</em> <code>components·unbuilt</code> — every component design the epic's <em>range</em> added (the commits, not the endpoints: check 6 forces the file out of the tree by the tip) has a roster entry at the tip, or a <code>design.dropped</code> record naming it with a reason. Recorded drops are billed with the walk waivers</td></tr>
+        <tr><td>9</td><td><em>Design</em> — a design-bearing tip (see <code>cr/v3</code> above) needs a <code>cr/v3</code> note whose <code>design:</code> section names every design artifact in the diff, pins the rulebook blob <em>the tip ships</em>, and reads <code>PASS</code>. A <code>cr/v2</code> note on such a tip is refused; at a walk seam that one refusal is dropped — the note is immutable evidence from before the dimension existed — while a <code>cr/v3</code> note missing or short-changing its design section stays red everywhere. <em>WU level also:</em> every UI-rendering file the diff touches (any non-test <code>.tsx</code> under <code>ui/src/</code>) is accounted for — an <em>added</em> surface by <code>design.implements: [{path, blob, built}]</code> resolving at the tip, any other by that or by <code>design.undesigned: [{path, why}]</code>. A path claimed by both, or claimed but untouched, is refused as readily as one left out (<a href="#design-handoff">design → build</a>). <em>Commit level:</em> a UI-rendering file in a standalone commit is refused — the accounting has no note to live on</td></tr>
+        <tr><td>—</td><td><em>Epic:</em> <code>components·unbuilt</code> — every component design the epic's <em>range</em> added (the commits, not the endpoints: check 6 forces the file out of the tree by the tip) has a roster entry at the tip — screens count, not only <code>@tier</code> components — or a <code>design.dropped</code> record naming it with a reason. Recorded drops are billed with the walk waivers, and so is every <code>undesigned</code> declaration the range's seams made: the epic's receipt shows what it shipped without a design</td></tr>
       </tbody>
     </table>
 
