@@ -22,7 +22,7 @@
     .a-mock{display:block}
     .a-zone{display:block}
     .a-row{display:flex;align-items:center;justify-content:space-between}
-    .a-seam{border-bottom-style:solid}
+    .a-headline{display:block}
     .a-proven-only{display:none}
     .proven .a-proven-only{display:block}
     .proven .a-idle-only{display:none}
@@ -188,17 +188,18 @@ carries no outcome, so it is neither Notice's job nor anyone else's.
         <tbody>
           <tr data-key="notice">
             <td>Notice</td>
-            <td>T1 <span class="ok">reuse</span><br>A — one zone</td>
-            <td><div class="gist">reuse — zone A is a sentence about capture, not a verdict line</div>
+            <td>T1 <span class="no">extend</span><br>A — one zone</td>
+            <td><div class="gist">extend — the fit is exact, the message size is not</div>
               <details class="why"><summary>▸ why</summary>
                 <span class="no">@avoid</span> read first — <em>"a status verdict with a glyph+name+message shape (that is StatusLine)"</em>. Zone A clears it because it carries no precondition name and no per-item glyph pair: it is one sentence about the screen as a whole, and the two named verdicts live in B on StatusLine. It also clears <em>"wrapping a notice in a card or panel of its own"</em> (A is a bare zone) and <em>"a dismissible message"</em> (nothing dismisses it).
+                <strong>Why extend and not reuse.</strong> <code>Notice.tsx</code> hardcodes its message to <code>font-ui text-body leading-normal</code> and exposes no size axis, so the component as built cannot carry the weight the top goal ranks first — the mockup composing it at <code>text-body</code> would leave zone A the same size as the precondition it outranks. The delta is <strong>one headline size on the message paragraph</strong>, and nothing else: same anatomy, same glyph slot, same tones, same detail and action slots. Growing the component is the flow's answer here rather than forking a copy into the screen.
                 <span class="ok">@use</span> lands exactly — <em>"any zone whose whole content is a STANDING positive outcome (tone=&quot;ok&quot; — &quot;trawler is capturing&quot;) … the setup screen's capture-is-working zone"</em>, and for the not-yet case <em>"any zone that has nothing to show and must say which nothing it is"</em>.
               </details></td>
             <td><pre class="tb">✓ trawler is capturing
 ◐ waiting for your first
   request — nothing has
   reached trawler yet</pre>
-              per Notice's own TSDoc — mute bare, mute + detail, warn + ⚠, ok + ✓, any tone + action slot</td>
+              per Notice's own TSDoc — mute bare, mute + detail, warn + ⚠, ok + ✓, any tone + action slot. <strong>The extension adds no state</strong>: the message renders at the headline size in every tone Notice already has, and nothing about the delta is stateful</td>
           </tr>
           <tr data-key="status-line">
             <td>StatusLine</td>
@@ -326,9 +327,10 @@ carries no outcome, so it is neither Notice's job nor anyone else's.
         Button (T1) · <em>guide</em> (T4). <em>guide</em> → disclosure (T0) · Select (T1) ·
         StepList (T1) · CopyText (T1). Neither composition is a registry entry; both are built local
         and every part above them is.</p>
-      <p class="kd"><strong>Proposals: none.</strong> Ten rows, eight placements, zero components the
-        vocabulary lacked. That is a finding about registry coverage rather than a quiet success, and it
-        is written up as one at <a href="#proposals">proposals</a>.</p>
+      <p class="kd"><strong>Proposals: one extension.</strong> Ten rows, eight placements, and exactly one
+        place where the contract fits and the built component cannot render it — <code>Notice</code>'s
+        fixed message size. Written up at <a href="#proposals">proposals</a>, together with what it says
+        about a reuse pass that reads TSDoc and never the code behind it.</p>
     </div>
 
     <h2 id="interaction">4 · Interaction</h2>
@@ -464,78 +466,102 @@ D → present, because ever-proven latched
         state's copy is visible. Stubbed: Select's popup, CopyText's clipboard write and confirm timer,
         StatusLine's spinner.</p>
       <div class="app">
-        <div class="a-mock mx-auto max-w-dialog-max bg-canvas p-6 font-ui text-body text-ink-body" id="mock4">
+        <div class="a-mock mx-auto max-w-dialog-max bg-canvas py-6 font-ui text-body text-ink-body" id="mock4">
 
-          <div class="a-zone">
-            <p class="text-label uppercase tracking-label text-ink-mute">setup</p>
-            <p class="a-idle-only mt-2 text-title text-ink">waiting for your first request — nothing has reached trawler yet</p>
-            <p class="a-proven-only mt-2 text-title text-ok">✓ trawler is capturing</p>
-          </div>
-
-          <div class="a-zone mt-6">
-            <p class="text-label uppercase tracking-label text-ink-mute">what has to be true</p>
-
-            <div class="a-seam border-b border-hairline pb-3 pt-3">
-              <div class="a-row">
-                <span class="text-ink">trust the certificate</span>
-                <span class="a-idle-only text-chrome text-ink-mute">◐ can't check here yet</span>
-                <span class="a-proven-only text-chrome text-ok">✓ trusted — confirmed by traffic</span>
-              </div>
-              <button type="button" class="mt-2 rounded-button border border-hairline px-2 py-chrome-y text-ink">install certificate</button>
-              <details class="mt-2">
-                <summary class="cursor-pointer text-chrome text-ink-mute">set it up by hand</summary>
-                <div class="mt-chrome-y">
-                  <span class="rounded-button border border-hairline px-chrome-x py-chrome-tight text-control text-ink">macOS ▾</span>
-                  <ol class="mt-chrome-y list-decimal pl-6 text-chrome">
-                    <li>save trawler's certificate as trawler-ca.pem</li>
-                    <li><span data-wire="shell command" class="font-mono text-value text-ink whitespace-pre-wrap">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem</span></li>
-                    <li>or double-click it and set the trawler CA to always trust</li>
-                  </ol>
-                </div>
-              </details>
+          <!-- A · Notice, EXTENDED: its own anatomy, message at the title size (the declared delta) -->
+          <div class="a-zone px-4">
+            <div data-tone="mute" class="a-idle-only flex items-start gap-chrome-gap py-chrome-y">
+              <span aria-hidden="true" class="shrink-0 font-ui text-body text-ink-mute">○</span>
+              <div class="min-w-0"><p class="a-headline font-ui text-title leading-normal text-ink-mute">waiting for your first request — nothing has reached trawler yet</p></div>
             </div>
-
-            <div class="a-seam border-b border-hairline pb-3 pt-3">
-              <div class="a-row">
-                <span class="text-ink">route traffic through trawler</span>
-                <span class="a-idle-only text-chrome text-ink-mute">○ no traffic reaching trawler yet</span>
-                <span class="a-proven-only text-chrome text-ok">✓ receiving traffic</span>
-              </div>
-              <button type="button" class="mt-2 rounded-button border border-hairline px-2 py-chrome-y text-ink">set system proxy</button>
-              <details class="mt-2">
-                <summary class="cursor-pointer text-chrome text-ink-mute">set it up by hand</summary>
-                <div class="mt-chrome-y">
-                  <span class="rounded-button border border-hairline px-chrome-x py-chrome-tight text-control text-ink">macOS ▾</span>
-                  <ol class="mt-chrome-y list-decimal pl-6 text-chrome">
-                    <li>run — this sets the wi-fi service, change the name for ethernet</li>
-                    <li><span data-wire="shell command" class="font-mono text-value text-ink whitespace-pre-wrap">networksetup -setwebproxy Wi-Fi 127.0.0.1 7420 &amp;&amp; networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420</span></li>
-                  </ol>
-                </div>
-              </details>
+            <div data-tone="ok" class="a-proven-only flex items-start gap-chrome-gap py-chrome-y">
+              <span aria-hidden="true" class="shrink-0 font-ui text-body text-ok">✓</span>
+              <div class="min-w-0"><p class="a-headline font-ui text-title leading-normal text-ok">trawler is capturing</p></div>
             </div>
           </div>
 
-          <div class="a-zone mt-6">
-            <p class="text-label uppercase tracking-label text-ink-mute">the first flow</p>
-            <p class="mt-2 text-chrome text-ink-mute">run this, or just open any site</p>
-            <p data-wire="shell command" class="mt-2 font-mono text-value text-ink whitespace-pre-wrap">curl -x http://127.0.0.1:7420 https://example.com</p>
+          <!-- B · Section variant=band over two default Sections -->
+          <section data-variant="band" class="a-zone">
+            <h2 class="mb-2 px-4 pt-3 text-chrome uppercase tracking-label text-ink-strong">what has to be true</h2>
+
+            <section class="border-b border-hairline px-4 py-3">
+              <h3 class="mb-2 text-chrome uppercase tracking-label text-ink-mute">trust the certificate</h3>
+              <div class="a-idle-only flex min-h-line items-baseline gap-chrome-gap text-body leading-normal">
+                <span aria-hidden="true"><span class="font-mono tabular-nums text-ink-mute text-body leading-none">◐</span></span>
+                <span class="min-w-0 font-ui text-ink-mute">can't check here yet</span>
+              </div>
+              <div class="a-proven-only flex min-h-line items-baseline gap-chrome-gap text-body leading-normal">
+                <span aria-hidden="true"><span class="font-mono tabular-nums text-ok text-body leading-none">✓</span></span>
+                <span class="min-w-0 font-ui text-ink-mute">trusted — confirmed by captured traffic</span>
+              </div>
+              <button type="button" class="mt-2 inline-flex items-center justify-center gap-control-gap rounded-button border border-hairline bg-transparent px-control-x py-control-y font-ui text-control text-ink-body min-h-control">install certificate</button>
+              <details class="mt-2">
+                <summary class="cursor-pointer font-ui text-chrome text-ink-mute">set it up by hand</summary>
+                <div class="mt-chrome-y">
+                  <button type="button" class="inline-flex min-h-control min-w-control-min items-center justify-between gap-2 rounded-button border border-hairline bg-transparent px-control-x py-control-y font-ui text-control text-ink-body"><span>macOS</span><span aria-hidden="true" class="shrink-0 text-glyph leading-none text-ink-mute">▾</span></button>
+                  <ol class="m-0 mt-2 flex list-none flex-col gap-step-gap p-0">
+                    <!-- design-allow: grid-cols-[theme(spacing.step-marker)_1fr] — StepList's own marker-plus-content template; the marker width is the step-marker token -->
+                    <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">1.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body">save trawler's certificate as trawler-ca.pem</div></li>
+                    <!-- design-allow: grid-cols-[theme(spacing.step-marker)_1fr] — StepList's own marker-plus-content template; the marker width is the step-marker token -->
+                    <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">2.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body"><span data-wire="shell command" class="cursor-text break-all font-mono text-body underline decoration-dotted underline-offset-link text-ink-body">sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem</span></div></li>
+                    <!-- design-allow: grid-cols-[theme(spacing.step-marker)_1fr] — StepList's own marker-plus-content template; the marker width is the step-marker token -->
+                    <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">3.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body">or double-click it and set the trawler CA to always trust</div></li>
+                  </ol>
+                  <p class="mt-2 font-ui text-chrome text-ink-mute">to remove it later, run: <span data-wire="shell command" class="cursor-text break-all font-mono text-body underline decoration-dotted underline-offset-link text-ink-body">sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain</span></p>
+                </div>
+              </details>
+            </section>
+
+            <section class="border-b border-hairline px-4 py-3">
+              <h3 class="mb-2 text-chrome uppercase tracking-label text-ink-mute">route traffic through trawler</h3>
+              <div class="a-idle-only flex min-h-line items-baseline gap-chrome-gap text-body leading-normal">
+                <span aria-hidden="true"><span class="font-mono tabular-nums text-ink-mute text-body leading-none">○</span></span>
+                <span class="min-w-0 font-ui text-ink-mute">no traffic reaching trawler yet</span>
+              </div>
+              <div class="a-proven-only flex min-h-line items-baseline gap-chrome-gap text-body leading-normal">
+                <span aria-hidden="true"><span class="font-mono tabular-nums text-ok text-body leading-none">✓</span></span>
+                <span class="min-w-0 font-ui text-ink-mute">receiving traffic</span>
+              </div>
+              <button type="button" class="mt-2 inline-flex items-center justify-center gap-control-gap rounded-button border border-hairline bg-transparent px-control-x py-control-y font-ui text-control text-ink-body min-h-control">set system proxy</button>
+              <details class="mt-2">
+                <summary class="cursor-pointer font-ui text-chrome text-ink-mute">set it up by hand</summary>
+                <div class="mt-chrome-y">
+                  <button type="button" class="inline-flex min-h-control min-w-control-min items-center justify-between gap-2 rounded-button border border-hairline bg-transparent px-control-x py-control-y font-ui text-control text-ink-body"><span>macOS</span><span aria-hidden="true" class="shrink-0 text-glyph leading-none text-ink-mute">▾</span></button>
+                  <ol class="m-0 mt-2 flex list-none flex-col gap-step-gap p-0">
+                    <!-- design-allow: grid-cols-[theme(spacing.step-marker)_1fr] — StepList's own marker-plus-content template; the marker width is the step-marker token -->
+                    <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">1.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body">run — this sets the wi-fi service, change the name for ethernet</div></li>
+                    <!-- design-allow: grid-cols-[theme(spacing.step-marker)_1fr] — StepList's own marker-plus-content template; the marker width is the step-marker token -->
+                    <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">2.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body"><span data-wire="shell command" class="cursor-text break-all font-mono text-body underline decoration-dotted underline-offset-link text-ink-body">networksetup -setwebproxy Wi-Fi 127.0.0.1 7420 &amp;&amp; networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420</span></div></li>
+                  </ol>
+                </div>
+              </details>
+            </section>
+          </section>
+
+          <!-- C · a screen-owned caption plus one CopyText -->
+          <div class="a-zone px-4 pt-3">
+            <p class="font-ui text-chrome text-ink-mute">run this, or just open any site</p>
+            <p class="mt-2"><span data-wire="shell command" class="cursor-text break-all font-mono text-body underline decoration-dotted underline-offset-link text-ink-body">curl -x http://127.0.0.1:7420 https://example.com</span></p>
           </div>
 
-          <div class="a-proven-only a-zone mt-6 border-t border-hairline pt-3">
-            <button type="button" class="rounded-button px-2 py-chrome-y text-note text-ink-mute">‹ back to flows</button>
+          <!-- D · Button frame=bare tone=mute -->
+          <div class="a-proven-only a-zone px-4 pt-3">
+            <button type="button" class="inline-flex items-center justify-center gap-control-gap rounded-button border-none bg-transparent px-control-x py-control-y font-ui text-control text-ink-mute min-h-control">‹ back to flows</button>
           </div>
 
         </div>
       </div>
       <button class="statebtn" data-state-toggle="mock4" data-state-class="proven"
               data-label-off="▶ show proven" data-label-on="◀ show not yet">▶ show proven</button>
-      <p class="kd"><strong>What the build forced that the earlier stages had not.</strong> Three things.
-        The verdict cannot sit under the precondition's name without the row reading as two unrelated
-        lines, so the name and the verdict share one row and the action drops below — which is what makes
-        fork D4's "in the same zone" true rather than asserted. The seam has to be a bottom hairline on
-        each precondition rather than a divider between them, or the last precondition loses its floor
-        and the zone below it reads as part of it. And the guide's picker had to move above the steps: a
-        selector <em>after</em> what it selects reads as a filter on a result.</p>
+      <p class="kd"><strong>What the build forced that the earlier stages had not.</strong> Three things,
+        and the first two were only found once the mockup was composed from the components' own source
+        rather than from their TSDoc. <strong>Section owns the precondition's whole frame</strong> — its
+        heading, its padding and its bottom hairline — so the name cannot share a row with the verdict
+        and the screen draws no seam of its own; the earlier draft invented both. <strong>StepList's
+        numerals are a marker column, not a browser counter</strong>: a real ordered list keeps every
+        step body on one left edge, which a <code>list-decimal</code> stand-in does not. And the guide's
+        picker had to move above the steps — a selector <em>after</em> what it selects reads as a filter
+        on a result.</p>
     </div>
 
     <h2 id="tune">6 · Tune</h2>
@@ -603,11 +629,11 @@ proxy  ○ no traffic</pre></td>
     <pre data-item="receipt">
 rulebook: b769f7e4ccbb2e4d02604f47e0fd1aa07e493cf9
 soft:
-  visual-weight-follows-goals: satisfied — zone A renders at the title size, the largest type the mockup draws, and nothing below it exceeds the note size
-  grouping-by-relatedness: satisfied — one hairline per precondition floor, none inside a precondition's own stack
+  visual-weight-follows-goals: satisfied-via-proposal — the top goal owns the headline size, which only the proposed Notice extension can render; the built component pins its message to body size and would leave zone A no heavier than the precondition it outranks
+  grouping-by-relatedness: inherited — the boundary between preconditions is Section's own bottom hairline, drawn once per Section and never inside one
   ordering-by-priority: satisfied — outcome, then what must be true, then what proves it, then the way out
-  progressive-disclosure: satisfied — two verdicts and one command at rest, the guides one act away, nothing two
-  data-ink-first: satisfied — the screen draws no card, panel or badge of its own and one seam per precondition; the control borders and the step numerals it composes are Button's and StepList's, not the screen's to strip
+  progressive-disclosure: satisfied — a headline, two verdicts and one command at rest, each guide one act away, and the removal steps folded into that same act rather than a second one
+  data-ink-first: satisfied — the screen draws no card, panel, badge or seam of its own at all; every border, hairline and numeral in the mockup is composed from Section, Button, Select or StepList and is theirs to justify
   generous-targets: inherited — CopyText's whole-value target and Button's hit floor, both cited not restated
   motion-informs: inherited — CopyText's ~2 s confirm and StatusLine's spinner; the screen animates nothing of its own
   empty-states-orient: satisfied — every absence is named where it is observed, zone A for capture and zone B per precondition, and where the user can act zone C is the act
@@ -643,14 +669,23 @@ soft:
       </tbody>
     </table>
 
-    <h2 id="proposals">Proposals — <span class="badge id">none, and that is the finding</span></h2>
+    <h2 id="proposals">Proposals — <span class="badge id">one extension, and where it came from</span></h2>
     <table data-item="proposals" data-c="proposals-table">
       <thead><tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr></thead>
       <tbody>
-        <tr><td colspan="4"><strong>No component, extension, token, lexicon term or key binding was proposed.</strong>
+        <tr><td>component extension</td>
+          <td><code>Notice</code> — a headline size for the message paragraph</td>
+          <td>Notice's <code>@use</code> names this exact zone (<em>"the setup screen's capture-is-working zone"</em>) and every <code>@avoid</code> clears, so nothing else in the collection is a candidate. What does not fit is the built component: <code>Notice.tsx</code> pins its message to <code>text-body</code> with no size axis, and the screen's top-ranked goal owns the most visual weight. Forking a copy into the screen is what the registry exists to stop, so the component grows by one axis</td>
+          <td>build WU · <code>ui/src/components/Notice.tsx</code> + its collection specimen</td></tr>
+        <tr><td colspan="4"><strong>No component, token, lexicon term or key binding was proposed — one extension, and it was found by Tier-3, not by the run.</strong>
           A full redesign of the app's largest screen resolved to eight placements over seven existing
-          components plus one native element, and needed nothing the vocabulary lacked. No component was
-          invented to trip a predicate (W9 plan, Q1 ruled <em>No</em>).</td></tr>
+          components plus one native element. The run's own reuse pass judged all eight against the
+          registry's TSDoc and concluded zero proposals; the independent review composed the mockup
+          against the components' <em>source</em> and found one place where the contract fits and the
+          <strong>built component cannot render what the contract permits</strong>. That gap — TSDoc-fits,
+          code-does-not — is invisible to a reuse pass that reads only the registry, which is the
+          registry oracle's blind spot stated as a finding. No component was invented to trip a
+          predicate (W9 plan, Q1 ruled <em>No</em>).</td></tr>
         <tr><td>observation, not a proposal</td>
           <td>a disclosure primitive</td>
           <td>Native <code>&lt;details&gt;</code> covers it whole, so nothing is missing <em>here</em>. Worth recording anyway: <code>progressive-disclosure</code> binds every screen, <code>Section</code>'s <code>@avoid</code> already assumes a local disclosure exists, and this screen hand-rolls two. A second screen hand-rolling it is the evidence that would make it an entry — one is not</td>
@@ -720,6 +755,9 @@ soft:
         <tr><td>Tier-3, submission 5 — a second spliced quotation (Select's cardinality <code>@avoid</code>), fork D4 owed for <em>stop routing</em> against a <code>Running</code> union that has no unsetting member, and <em>"zone A names each absence"</em> when zone B names three of the four</td>
           <td>elements · blocked-on · receipt — the quote restored verbatim, a third blocked-on row opened against <code>setup.ts</code>, and the absence clause moved to where each absence is actually observed. Two splices in two rounds is a pattern, not two slips, so all <strong>44</strong> registry quotations in Elements were then swept mechanically against the oracle's output and eight restored; a marked <code>…</code> elision counts, a silent truncation does not</td>
           <td><code>Select</code>'s <code>@avoid</code> · <code>Button</code>'s <code>@avoid</code> fork D4 · <code>empty-states-orient</code></td></tr>
+        <tr><td>Tier-3, submission 6 — three findings, all one discovery: <em>"the mockup composes markup the real components cannot render"</em>. Notice pins its message to <code>text-body</code> · StepList's numerals are a marker column, not <code>list-decimal</code> · Section always emits its title in its own heading, so a name cannot share a row with a verdict</td>
+          <td>mockup · elements · proposals · receipt · findings — the mockup was rebuilt from the components' <strong>source</strong>, Notice's verdict flipped from reuse to <strong>extend</strong>, the run's proposal count went 0 → 1, and <code>grouping-by-relatedness</code> became <code>inherited</code> because the seam turned out to be Section's</td>
+          <td>Notice's <code>@use</code> · <code>StepList</code> anatomy · <code>Section</code> anatomy · <code>data-ink-first</code></td></tr>
         <tr><td>R3 — the shipped suite retires with the design it guarded</td>
           <td>nothing in the design; it binds the build at W9 ⑤, and this run's capabilities table is what the coverage map is written against</td>
           <td><code>R3</code> · the W9 discussion's clash ruling</td></tr>
@@ -732,10 +770,11 @@ soft:
       <tbody>
         <tr><td>1</td><td>Elements</td><td><strong>The shipped screen sits on the wrong side of a discriminating <code>@avoid</code> pair.</strong> It renders each command as a <code>&lt;pre&gt;</code> with a labelled Copy button beside it. <code>CopyButton</code>'s <code>@avoid</code> refuses <em>"showing a value the user grabs verbatim"</em> and <code>CopyText</code>'s refuses <em>"explicit copy actions with their own label"</em> — so the shipped shape is rejected by both, and <code>StepList</code> names the same verdict from a third side. This is the defect class run #3's reuse pass shipped; here the registry caught it before code.</td></tr>
         <tr><td>2</td><td>Frame · Elements</td><td><strong>A component contract made the shipped design unbuildable, not merely unfashionable.</strong> <code>StepList</code>'s <code>@avoid</code> forbids per-step completion and a current-step highlight because the app cannot observe them. The shipped screen draws exactly that (<code>data-status</code> done/active/pending on each step). The redesign's shape is therefore forced by the registry, which is the strongest evidence in this run that the substrate does real work.</td></tr>
-        <tr><td>3</td><td>Elements</td><td><strong>Zero proposals, on the app's largest screen.</strong> 24 entries covered eight placements with nothing left over. Read together with run #3's reported 3 reuses / 4 proposals on this same screen, the registry has stopped being the constraint — which is a claim about coverage that only a second screen can confirm.</td></tr>
+        <tr><td>3</td><td>Elements</td><td><strong>Seven reuses, one extension, on the app's largest screen.</strong> 24 entries covered eight placements with one growth. Read together with run #3's reported 3 reuses / 4 proposals on this same screen, the registry has stopped being the constraint — but the one gap that remained was invisible to the reuse pass, because the pass reads the registry oracle and the oracle emits TSDoc, never the component's rendered output.</td></tr>
         <tr><td>4</td><td>Elements</td><td><strong>The <code>[UI_DEFER]</code> marker came due exactly where it said it would.</strong> Filed at W5 as "it lands with the screen that consumes StatusLine" — this is that screen, and the reuse cannot be built until <code>setup.ts</code> returns a short form. A deferral that predicts its own trigger is worth more than the fix it deferred.</td></tr>
         <tr><td>5</td><td>Receipt</td><td><strong>The lexicon caught a shipped term.</strong> <em>Verify</em> is the shipped screen's third step title and the lexicon lists it under <em>never</em> for the first-flow milestone. Nothing mechanical could have found it: <code>one-term-per-concept</code> is soft, and no run had ever receipted this screen.</td></tr>
         <tr><td>6</td><td>Mockup</td><td><strong><code>wire-order-preserved</code> gets no population for the third time.</strong> This screen renders no captured collection, so the rule closes on its n/a path again — the predicate has still never judged anything, on any artifact. Recorded so a green is not miscounted as evidence (see <a href="2026-08-14-dflow-w9-step0-numbers.html#vacuous">step ⓪</a>).</td></tr>
+        <tr><td>8</td><td>Mockup · Elements</td><td><strong>The registry oracle emits TSDoc, and a mockup can pass the whole reuse pass while composing something no component renders.</strong> Three reuses in this run were written from their <code>@use</code>/<code>@avoid</code> — correctly — and drawn as markup the built component cannot produce: Notice at a size it pins, StepList's numerals as a browser counter, Section's title inline with a verdict. Tier-1 cannot see it (every class is a legal token), Tier-2 cannot (the author wrote both halves), and Tier-3 only saw it by opening <code>ui/src/components/*.tsx</code> — which its rubric does not name as a source. <strong>The cheapest fix is a rubric line, not a predicate</strong>: a reuse row is judged against the component's rendered output, not only its contract.</td></tr>
         <tr><td>7</td><td>Layout</td><td><strong>The overflow line's only real answer is a component's.</strong> Three of four zones cannot grow; the fourth grows only because a StepList inside it does, and StepList owns its own no-truncate rule. The zone-level cap the rule asks for turns out to be a citation, which is what <code>overflow-declared</code>'s "declared by reference" clause exists for — and this is the first run to need it.</td></tr>
       </tbody>
     </table>
