@@ -1,0 +1,25 @@
+schema: cr/v3
+scope: "WU E-DFLOW.W8 -> epic/design-flow. Five finders ran over dcd0b7e35b..915b59b4a7; the one finding they left unwaived was a wrong number in a doc, and c513030 corrects it - so this note binds the tip that carries the correction, not the tip the finders read. The delta between them is two prose lines in docs/work/2026-08-13-dflow-w8-result.html and no code"
+epic: E-DFLOW
+wu: E-DFLOW.W8
+branch: wu/design-flow/dev-integration
+base: dcd0b7e35b8df6e1c35d29cee4950f51a9a8e9b9
+head: c513030dad96744267128d94a8aa8cf159b7601d
+diff_sha256: fc11e2396df038be3dc609d0585cf1ffe86815292785a32fac5ba88cfc2053d1
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 12, verified: 7, waived: 6 }
+waivers:
+  - finding: "check_handoff and check_design each write the cr/v3-or-else discriminator inline rather than sharing a helper"
+    reason: "raised by two finders and real as duplication - but it is the grandfathering rule, and both sites are pinned by a test asserting a cr/v2 note routes to 9-design-schema (gate.rs:1277, gate.rs:1517). A divergence reds a test rather than silently ungrandfathering a seam, which is the risk that would have made three lines worth spending"
+  - finding: "check_citation repeats check_design_pin's pin-too-short then pin-mismatch structure instead of sharing it"
+    reason: "the common part is two conditions; the check name, the blob source and all four messages differ, and the messages are the value - 'the design moved after the note was written' and 'the rulebook moved under the review' are different facts about different objects. A helper taking four message closures is longer than the duplication"
+  - finding: "two dod_gate tests each define the same local v3 closure while a cr_note_v3 helper exists"
+    reason: "the helper is not a drop-in - it hard-codes head and builds its own identity, where both tests need the real base and diff sha the gate binds on. Real duplication, five lines, in two adjacent tests"
+  - finding: "check_handoff calls surfaces(), spawning two more git diff --name-only over a range verify() already diffed"
+    reason: "real and measured small: two name-only spawns behind the Some(cr) guard, about 2% of a 4.8s epic walk against the 466 spawns it already makes - the expensive ones are git show, already short-circuited by the path test. Deriving all three lists from one --name-status diff means reshaping a helper design-scope also calls; recorded as cost, not paid here"
+  - finding: "check_citation evaluates show_bytes and blob_of as one tuple, so both spawn even when the first fails"
+    reason: "one extra spawn on a path that is already a refusal - the gate fails that seam either way"
+  - finding: "design_scope runs three git diffs for one invocation"
+    reason: "a command a reviewer runs once per Working Unit, not the gate walk"
+verdict: PASS
+date: 2026-08-14
