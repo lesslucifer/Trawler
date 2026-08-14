@@ -209,6 +209,7 @@ setup screen
               </details></td>
             <td><pre class="tb">✓ trust  trusted here
 ◐ trust  can't check yet
+○ proxy  another proxy is set
 ⚠ proxy  couldn't set it
 ⟳ trust  installing…</pre>
               per StatusLine's own TSDoc — ok · warn · can't-determine · not-yet · in-flight, which outranks every other verdict</td>
@@ -393,6 +394,18 @@ A → follows the observation, not the action</pre></details></td>
             <td>Enter / Space on the focused Button</td>
           </tr>
           <tr>
+            <td>another proxy is already set on this machine</td>
+            <td>tell the truth about where setup stands</td>
+            <td>nothing — the probe returns <em>foreign</em> on arrival</td>
+            <td><div class="gist">the proxy verdict names the conflict instead of reporting no traffic</div>
+              <details class="why"><summary>▸ why</summary><pre class="tb">B → proxy ○ another proxy is set on this machine —
+      point it at trawler here, or capture from a
+      device configured to use trawler
+B → the Button stays, and setting it overwrites
+A → UNCHANGED   ← nothing about capture has changed</pre>The fourth distinct absence on this screen, and the one that would otherwise share <em>no traffic reaching trawler yet</em>'s sentence while meaning something the user can act on.</details></td>
+            <td>Enter / Space on the focused Button</td>
+          </tr>
+          <tr>
             <td>take the proxy command by hand</td>
             <td>the manual path is the main path</td>
             <td>clicks the command text in the open guide</td>
@@ -453,8 +466,8 @@ D → present, because ever-proven latched
 
           <div class="a-zone">
             <p class="text-label uppercase tracking-label text-ink-mute">setup</p>
-            <p class="a-idle-only mt-2 text-note text-ink-mute">waiting for your first request — nothing has reached trawler yet</p>
-            <p class="a-proven-only mt-2 text-note text-ok">✓ trawler is capturing</p>
+            <p class="a-idle-only mt-2 text-title text-ink">waiting for your first request — nothing has reached trawler yet</p>
+            <p class="a-proven-only mt-2 text-title text-ok">✓ trawler is capturing</p>
           </div>
 
           <div class="a-zone mt-6">
@@ -588,7 +601,7 @@ proxy  ○ no traffic</pre></td>
     <pre data-item="receipt">
 rulebook: b769f7e4ccbb2e4d02604f47e0fd1aa07e493cf9
 soft:
-  visual-weight-follows-goals: satisfied — zone A carries goal 1's verdict above everything, and it is the only line in serif
+  visual-weight-follows-goals: satisfied — zone A opens the screen at the title size in full ink while every precondition under it is chrome-sized
   grouping-by-relatedness: satisfied — one hairline per precondition floor, none inside a precondition's own stack
   ordering-by-priority: satisfied — outcome, then what must be true, then what proves it, then the way out
   progressive-disclosure: satisfied — two verdicts and one command at rest, the guides one act away, nothing two
@@ -683,6 +696,12 @@ soft:
         <tr><td>Q1 — if the design honestly proposes nothing new, write it down as a named gap; invent nothing to trip a predicate</td>
           <td>proposals — the empty result is stated as a finding about registry coverage, with two observations that deliberately stop short of being entries</td>
           <td><code>DEC-25</code> · the W9 plan's step ④ table</td></tr>
+        <tr><td>Tier-3, submission 1 — <em>"the receipt claims zone A is the only line in serif; no element in the mockup carries a serif family, and the precondition names below it sit in brighter ink"</em></td>
+          <td>mockup · receipt — zone A now opens at the title size in full ink, and the receipt row says what the design does instead of what it wished it did</td>
+          <td><code>visual-weight-follows-goals</code></td></tr>
+        <tr><td>Tier-3, submission 1 — <em>"absence-names-itself counts four absences; the fourth, another proxy is set, is receipted and never rendered anywhere"</em></td>
+          <td>elements · interaction — the sentence is now a StatusLine state in the catalog and a use-case row of its own, because a fourth absence nobody designed is three absences and a claim</td>
+          <td><code>absence-names-itself</code></td></tr>
         <tr><td>R3 — the shipped suite retires with the design it guarded</td>
           <td>nothing in the design; it binds the build at W9 ⑤, and this run's capabilities table is what the coverage map is written against</td>
           <td><code>R3</code> · the W9 discussion's clash ruling</td></tr>
