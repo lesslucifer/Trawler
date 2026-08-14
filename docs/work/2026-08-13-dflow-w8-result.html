@@ -256,7 +256,7 @@
         <thead><tr><th>Level</th><th>Measured</th></tr></thead>
         <tbody>
           <tr><td><span class="badge id">unit</span> commit</td>
-            <td><strong>200</strong> <code>xtask</code> lib tests. The added trigger (a <code>@tier</code>
+            <td><strong>202</strong> <code>xtask</code> lib tests. The added trigger (a <code>@tier</code>
               component fires; an untiered file, a test, a <code>.ts</code> module and a deletion do not) ·
               the pointer (absent and empty <code>implements</code> parse differently and stay that way) · one
               red per way a citation breaks and one green when it holds ·
@@ -313,7 +313,10 @@
     <h2 id="review">What the review found</h2>
     <p class="meta">Two rounds. Round 1: five finders over <code>dcd0b7e..4109404</code>, 11 candidates,
       <strong>6 refuted</strong>. Round 3, over <code>dcd0b7e..c628df5</code> once step ⑥ landed:
-      <strong>19 candidates, 11 refuted, 2 blockers</strong>. Neither round ran a design finder —
+      <strong>24 candidates from five finders — 12 refuted, 2 duplicates, 10 real</strong> (2 blockers,
+      3 important, 5 nits; 9 fixed, 1 waived). Round 4 re-reviewed the fix commit — and found that one of
+      the fixes had opened a hole of its own, plus three numbers in these very docs that were wrong,
+      including this one. Neither round ran a design finder —
       <code>design-scope</code> reports no design artifact and no new surface in either diff: a
       <em>removed</em> design file is deliberately not a Tier-3 artifact (DEC-16/DEC-24), and this WU renders
       nothing.</p>
@@ -321,6 +324,29 @@
       blockers were in the mechanism, not the prose, and both were reproduced in a scratch repo before a line
       was changed — then written as tests that fail without the fix and pass with it, which is the only way a
       regression test is worth its lines.</p>
+    <table data-c="tbl-review4">
+      <thead><tr><th>Round 4 · what the fixes themselves cost</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The rename fix let a brand-new screen in.</strong> Round 3's answer turned on rename
+          detection in the added set — but git pairs on content similarity and has never heard of a surface,
+          so a new <code>.tsx</code> scaffolded from any deleted file it resembles is reported as a rename and
+          answered with a sentence</td>
+          <td><span class="badge auto">real · blocker · fixed</span> reproduced: an unrelated 60-line filler
+            recycled as padding pairs at <code>R095</code>, and the new screen left the added set entirely.
+            The pairing is now <em>evidence, not a verdict</em> — a destination is exempt only when the path
+            it renames was <strong>itself a surface at the base</strong>. Both directions are tested, and the
+            fix that caused this is the reason a round-4 exists at all</td></tr>
+        <tr><td><strong>Two branches shipped with no test</strong> — the non-UTF-8 citation refusal and the
+          check-name threading for a <code>cr/v2</code> note that carries a citation</td>
+          <td><span class="badge auto">real · important · fixed</span> the logic was right and the coverage
+            was absent, which the project's testing rule does not distinguish from being wrong. One test now
+            drives both, and asserts the grandfathered note's refusal is the one the walk can drop</td></tr>
+        <tr><td><strong>Three numbers in these docs were wrong</strong>: the unit-test count, the round-3
+          candidate tally, and DEC-25's decomposition of the epic's failures, which summed to 65 of 68</td>
+          <td><span class="badge auto">real · fixed</span> all three re-measured rather than re-stated. The
+            missing 3 are the notes the epic tip does not carry yet</td></tr>
+      </tbody>
+    </table>
     <table data-c="tbl-review3">
       <thead><tr><th>Round 3 · candidate</th><th>Verdict</th></tr></thead>
       <tbody>

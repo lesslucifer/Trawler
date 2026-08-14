@@ -110,12 +110,17 @@
       <code>verify-doc</code>'s retirement check — still reads the collection alone, so it will not ask a
       screen design to retire into its screen's TSDoc. Nothing leaks (check 6 forces the file out of the tree
       at the epic tip regardless), and the asymmetry is stated rather than built around.</p>
-    <p class="kd"><strong>A rename is not a new surface.</strong> The added set is the one place rename
-      detection is on. A renamed component is already built, so DEC-16 has already retired the design a
-      citation would have to name: treating the destination as added would demand an artifact the rules
-      guarantee is gone, and the Working Unit could not merge at all. Detected, it falls to the touched half,
-      where a reason is the honest answer. A rename that also rewrites the file drops below git's similarity
-      threshold and is an add again — correctly, because that is a new surface wearing an old name.</p>
+    <p class="kd"><strong>A rename of a surface is not a new surface — a rename of anything else is.</strong>
+      The added set is the one place rename detection runs, because a renamed component is already built and
+      DEC-16 has already retired the design a citation would name: treating the destination as added would
+      demand an artifact the rules guarantee is gone, and the Working Unit could not merge at all. But git
+      pairs on <em>content similarity</em> and knows nothing about surfaces, so the pairing is evidence, not a
+      verdict — the gate exempts a destination only when the path it renames <strong>was itself a surface at
+      the base</strong>. Read any other way, a new screen scaffolded from a deleted file it happens to
+      resemble would be classed a rename and answered with a sentence, which is the review's own
+      counter-example: an unrelated 60-line filler recycled as padding pairs at <code>R095</code>. A rename
+      that also rewrites the file drops below the similarity threshold and is an add again — correctly,
+      because that is a new surface wearing an old name.</p>
     <p class="kd"><strong>UI work happens inside a Working Unit.</strong> The accounting lives on a
       <code>cr/v3</code> note and a standalone commit has none, so a commit that renders something outside a
       Working Unit is refused at commit level. It is the third door, and it is closed for the same reason
@@ -240,8 +245,9 @@
             <strong>3</strong> <code>components·unbuilt</code> where the same range produced 4, and the one
             that dropped out is <code>BodyViewer</code>: the roster now sees
             <code>ui/src/BodyViewer.tsx</code>, so the design that <em>was</em> built stops being refused.
-            The epic's other 68 failures are the ones it already owed (51 tracked work docs, 8 pre-W8 seams
-            missing notes, 3 open runs, 2 retirement-order, 1 manual review) — untouched by this rule</td></tr>
+            The epic's other 68 failures are the ones it already owed — 51 tracked work docs, 8 pre-W8 seams
+            missing notes, 3 open runs, 3 notes the epic tip does not carry yet, 2 retirement-order, 1 manual
+            review — untouched by this rule</td></tr>
         <tr><td>the rule works over real git</td>
           <td><code>xtask/tests/e2e_design_flow.rs</code>, hand-over legs: <strong>12 merges, 7 refused,
             5 landed</strong> through the real merge hook (the file as a whole: 18, 11, 7), with

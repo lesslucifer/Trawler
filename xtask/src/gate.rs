@@ -458,11 +458,25 @@ impl Gate<'_> {
     // `design-scope` prints for the reviewer, so the note and the gate cannot
     // disagree about what a build must cite.
     pub fn new_surfaces(&self, tip: &str, base: &str) -> Vec<String> {
-        crate::git::added_names(self.repo, base, tip)
-            .unwrap_or_default()
+        let (added, renamed) =
+            crate::git::added_and_renamed(self.repo, base, tip).unwrap_or_default();
+        // A rename brings its design with it only when what it renamed was itself
+        // a surface. Git pairs on similarity and knows nothing of surfaces, so a
+        // pairing whose source was never one is a new surface wearing a recycled
+        // file - and it owes a design like any other.
+        let mut surfaces: Vec<String> = added
             .into_iter()
+            .chain(
+                renamed
+                    .into_iter()
+                    .filter(|(from, _)| !crate::doc::surface_at(self.repo, base, from))
+                    .map(|(_, to)| to),
+            )
             .filter(|path| crate::doc::surface_at(self.repo, tip, path))
-            .collect()
+            .collect();
+        surfaces.sort();
+        surfaces.dedup();
+        surfaces
     }
 
     // The accounting lives on a `cr` note, and a standalone commit has none - so
@@ -1467,6 +1481,59 @@ mod tests {
         );
     }
 
+    // The refusal only the citation path can produce, and the schema tagging that
+    // decides whether the walk may drop it. A design whose bytes do not decode was
+    // being accepted in silence - the one citation nobody can read, passing as
+    // though Tier-3 had judged it.
+    #[test]
+    fn a_citation_nobody_can_read_is_refused_under_its_own_note_schema() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let repo = dir.path();
+        let g = |args: &[&str]| super::git(repo, args).unwrap();
+        g(&["init", "-q", "-b", "main"]);
+        g(&["config", "user.email", "t@t"]);
+        g(&["config", "user.name", "t"]);
+        g(&["config", "commit.gpgsign", "false"]);
+        std::fs::create_dir_all(repo.join("docs/work/components")).unwrap();
+        std::fs::create_dir_all(repo.join("ui/src/components")).unwrap();
+        std::fs::write(repo.join("base.txt"), "base\n").unwrap();
+        g(&["add", "-A"]);
+        g(&["commit", "-q", "-m", "base"]);
+        let base = g(&["rev-parse", "HEAD"]);
+
+        std::fs::write(repo.join(PILL_DESIGN), b"<html>the contract \xff</html>\n").unwrap();
+        std::fs::write(repo.join(PILL), "/**\n * StatusPill.\n * @tier T1\n */\n").unwrap();
+        g(&["add", "-A"]);
+        g(&["commit", "-q", "-m", "build it against an undecodable contract"]);
+        let tip = g(&["rev-parse", "HEAD"]);
+        let blob = g(&["rev-parse", &format!("{tip}:{PILL_DESIGN}")]);
+
+        let judged = |schema: &str| {
+            let cr: CrNote = serde_yaml::from_str(&note_yaml(
+                schema,
+                &base,
+                &implements(PILL_DESIGN, &blob, PILL),
+            ))
+            .unwrap();
+            let mut r = report(vec![]);
+            r.base.clone_from(&base);
+            r.tip.clone_from(&tip);
+            Gate { repo }.check_handoff(&mut r, Some(&cr));
+            r.failures
+        };
+
+        let reds = judged("cr/v3");
+        assert_eq!(reds.len(), 1, "{reds:?}");
+        assert!(reds[0].what.contains("does not decode"), "{}", reds[0].what);
+        assert_eq!(reds[0].check, super::DESIGN);
+        assert_eq!(
+            judged("cr/v2")[0].check,
+            super::DESIGN_SCHEMA,
+            "a note that predates the field is grandfathered through every refusal it can raise, \
+             not through all but this one"
+        );
+    }
+
     // A rename is not a new surface. The component it renames is already built,
     // so DEC-16 has retired the design a citation would have to name - treating
     // the destination as added would demand an artifact the rules guarantee is
@@ -1495,6 +1562,29 @@ mod tests {
         g(&["mv", PILL, renamed]);
         g(&["commit", "-q", "-m", "rename it"]);
         let tip = g(&["rev-parse", "HEAD"]);
+
+        // The other half of the same question. Git pairs on similarity alone, so
+        // a new screen scaffolded from a deleted file it happens to resemble is
+        // reported as a rename too - and that one owes a design like any other.
+        let padding = "one line of boilerplate padding\n".repeat(60);
+        std::fs::write(repo.join("filler.txt"), &padding).unwrap();
+        g(&["add", "-A"]);
+        g(&["commit", "-q", "-m", "an unrelated file"]);
+        let before_scaffold = g(&["rev-parse", "HEAD"]);
+        g(&["rm", "-q", "filler.txt"]);
+        std::fs::write(
+            repo.join("ui/src/NewScreen.tsx"),
+            format!("export const NewScreen = () => null;\n/*\n{padding}*/\n"),
+        )
+        .unwrap();
+        g(&["add", "-A"]);
+        g(&["commit", "-q", "-m", "scaffold a screen out of it"]);
+        let scaffolded = g(&["rev-parse", "HEAD"]);
+        assert_eq!(
+            Gate { repo }.new_surfaces(&scaffolded, &before_scaffold),
+            vec!["ui/src/NewScreen.tsx".to_string()],
+            "git calls it a rename; it renames nothing that was ever a surface, so it is added"
+        );
 
         let gate = Gate { repo };
         assert!(
