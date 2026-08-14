@@ -6,4 +6,7 @@ design:
   implements:
     - path: docs/work/2026-08-14-dflow-w9-run-4.html
       blob: 5b17cdfdd33f55182487ceb53b5e354c04c8e05b
-      built: [ui/src/Onboarding.tsx, ui/src/components/Notice.tsx, ui/src/setup.ts]
+      built: [ui/src/Onboarding.tsx, ui/src/components/Notice.tsx]
+  undesigned:
+    - path: ui/src/setup.ts
+      why: probe
