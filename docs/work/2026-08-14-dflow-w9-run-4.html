@@ -176,17 +176,19 @@ setup screen
 ├─ B preconditions ── <span data-key="section">Section</span> ◆ (band) ▣
 │     ▣ precondition = <span data-key="section">Section</span> ◆ · <span data-key="status-line">StatusLine</span> ◆ · <span data-key="button">Button</span> ◆ · guide ▣
 │         ▣ guide    = <span data-key="disclosure">disclosure</span> · <span data-key="select">Select</span> ◆ · <span data-key="step-list">StepList</span> ◆ · <span data-key="copy-text">CopyText</span> ◆
-├─ C first flow ───── <span data-key="copy-text">CopyText</span> ◆ · <span data-key="notice">Notice</span> ◆
+├─ C first flow ───── <span data-key="copy-text">CopyText</span> ◆
 └─ D way out ─────── <span data-key="button">Button</span> ◆
 
 ◆ recurring    ▣ composition (T4, broken down below)
+C's caption is screen prose, not a component — it names no absence and
+carries no outcome, so it is neither Notice's job nor anyone else's.
 </pre>
       <table data-c="catalog">
         <thead><tr><th>Component</th><th>Placement · verdict</th><th>Fit</th><th>Shape · States</th></tr></thead>
         <tbody>
           <tr data-key="notice">
             <td>Notice</td>
-            <td>T1 <span class="ok">reuse</span><br>A · C — two zones, shared</td>
+            <td>T1 <span class="ok">reuse</span><br>A — one zone</td>
             <td><div class="gist">reuse — zone A is a sentence about capture, not a verdict line</div>
               <details class="why"><summary>▸ why</summary>
                 <span class="no">@avoid</span> read first — <em>"a status verdict with a glyph+name+message shape (that is StatusLine)"</em>. Zone A clears it because it carries no precondition name and no per-item glyph pair: it is one sentence about the screen as a whole, and the two named verdicts live in B on StatusLine. It also clears <em>"wrapping a notice in a card or panel of its own"</em> (A is a bare zone) and <em>"a dismissible message"</em> (nothing dismisses it).
@@ -601,7 +603,7 @@ proxy  ○ no traffic</pre></td>
     <pre data-item="receipt">
 rulebook: b769f7e4ccbb2e4d02604f47e0fd1aa07e493cf9
 soft:
-  visual-weight-follows-goals: satisfied — zone A opens the screen at the title size in full ink and nothing under it rises above body size
+  visual-weight-follows-goals: satisfied — zone A renders at the title size, the largest type the mockup draws, and nothing below it exceeds the note size
   grouping-by-relatedness: satisfied — one hairline per precondition floor, none inside a precondition's own stack
   ordering-by-priority: satisfied — outcome, then what must be true, then what proves it, then the way out
   progressive-disclosure: satisfied — two verdicts and one command at rest, the guides one act away, nothing two
@@ -705,6 +707,9 @@ soft:
         <tr><td>Tier-3, submission 2 — three findings, all the same shape: <em>"the receipt's supporting clause describes a mockup that is not this one"</em> (chrome-sized preconditions that are body-sized, no step numerals beside two <code>list-decimal</code> lists, every action elevated when D's is instant)</td>
           <td>receipt · elements — three clauses rewritten to what the mockup composes, and the fork-D4 justification scoped to the three actions that actually wait</td>
           <td><code>visual-weight-follows-goals</code> · <code>data-ink-first</code> · <code>familiar-idioms</code> · Button's <code>@avoid</code> fork D4</td></tr>
+        <tr><td>Tier-3, submission 3 — <em>"nothing under zone A rises above body size is false — the commands are 12.5px and the way out is 14px"</em>, and <em>"Notice is placed in A and C but only A's fit is argued"</em></td>
+          <td>receipt · elements — the weight row now claims what is measurable (title size is the largest the mockup draws, nothing below exceeds note size), and Notice's placement drops to zone A because zone C's caption is screen prose that was never a Notice</td>
+          <td><code>visual-weight-follows-goals</code> · Notice's <code>@use</code></td></tr>
         <tr><td>R3 — the shipped suite retires with the design it guarded</td>
           <td>nothing in the design; it binds the build at W9 ⑤, and this run's capabilities table is what the coverage map is written against</td>
           <td><code>R3</code> · the W9 discussion's clash ruling</td></tr>
