@@ -59,41 +59,17 @@ pub fn diff_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, Str
     names_in(repo, base, tip, &[])
 }
 
-// What the range added, and the renames git was able to pair - kept apart, never
-// merged into one "added" answer.
-//
-// Rename detection is on here and nowhere else, because a renamed component is
-// already built and DEC-16 has already retired the design a citation would have
-// to name: treating the destination as added would demand an artifact the rules
-// guarantee is gone, and the Working Unit could not merge at all. But the caller,
-// not this function, decides what a pairing means - git pairs on content
-// similarity and has no idea what a surface is, so it will happily pair a
-// brand-new screen with any deleted file it resembles. A scaffold copied from an
-// old file is exactly that shape, and reading `R` as "not new" would hand every
-// new screen a way out of citing a design.
-//
-// `added_under` keeps `--no-renames` for the mirror-image reason: there,
-// detection would let an unbuilt design dodge its epic by renaming its own file.
-/// Paths the range added, paired with the renames it detected (from, to).
-pub type AddedAndRenamed = (Vec<String>, Vec<(String, String)>);
-
-pub fn added_and_renamed(repo: &Path, base: &str, tip: &str) -> Result<AddedAndRenamed, String> {
-    let range = format!("{base}..{tip}");
-    let out = git(repo, &["diff", "--name-status", "--find-renames", &range])?;
-    let (mut added, mut renamed) = (Vec::new(), Vec::new());
-    for line in out.lines() {
-        let mut parts = line.split('\t');
-        match (parts.next(), parts.next(), parts.next()) {
-            (Some(status), Some(path), _) if status.starts_with('A') => {
-                added.push(path.to_string());
-            }
-            (Some(status), Some(from), Some(to)) if status.starts_with('R') => {
-                renamed.push((from.to_string(), to.to_string()));
-            }
-            _ => {}
-        }
-    }
-    Ok((added, renamed))
+// Renames are NOT detected here, and that is a deliberate refusal rather than an
+// oversight. A rename's destination looks exactly like a new surface, and git can
+// only pair it with a source by content similarity - which knows nothing about
+// surfaces. Two review rounds found that heuristic letting genuinely new screens
+// through: one scaffolded out of a deleted filler file, one copied from a live
+// component while an unrelated surface happened to retire in the same diff. The
+// gate therefore fails CLOSED: a rename of a built component is refused, because
+// its design was already retired and there is nothing left to cite. That is a
+// documented limitation with a reproduction, owned by W9 - not a hole.
+pub fn added_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
+    names_in(repo, base, tip, &["--diff-filter=A"])
 }
 
 // What the range leaves standing - added and modified, never deleted. Lower-case

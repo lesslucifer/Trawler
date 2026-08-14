@@ -311,19 +311,37 @@
     </div>
 
     <h2 id="review">What the review found</h2>
-    <p class="meta">Two rounds. Round 1: five finders over <code>dcd0b7e..4109404</code>, 11 candidates,
+    <p class="meta">Round 1: five finders over <code>dcd0b7e..4109404</code>, 11 candidates,
       <strong>6 refuted</strong>. Round 3, over <code>dcd0b7e..c628df5</code> once step ⑥ landed:
       <strong>24 candidates from five finders — 12 refuted, 2 duplicates, 10 real</strong> (2 blockers,
       3 important, 5 nits; 9 fixed, 1 waived). Round 4 re-reviewed the fix commit — and found that one of
       the fixes had opened a hole of its own, plus three numbers in these very docs that were wrong,
-      including this one. Neither round ran a design finder —
-      <code>design-scope</code> reports no design artifact and no new surface in either diff: a
-      <em>removed</em> design file is deliberately not a Tier-3 artifact (DEC-16/DEC-24), and this WU renders
+      including this one. Round 5 found the <em>same</em> fix, patched, still leaking. No round ran a design
+      finder — <code>design-scope</code> reports no design artifact and no new surface in any of these diffs:
+      a <em>removed</em> design file is deliberately not a Tier-3 artifact (DEC-16/DEC-24), and this WU renders
       nothing.</p>
     <p class="kd"><strong>The step that widened the rule is the step the review nearly broke.</strong> Both
-      blockers were in the mechanism, not the prose, and both were reproduced in a scratch repo before a line
-      was changed — then written as tests that fail without the fix and pass with it, which is the only way a
-      regression test is worth its lines.</p>
+      round-3 blockers were in the mechanism, not the prose, and both were reproduced in a scratch repo before
+      a line was changed — then written as tests that fail without the fix and pass with it, which is the only
+      way a regression test is worth its lines. One of those fixes then cost two further rounds and was
+      reverted: the lesson is not that the review was too strict but that <em>a heuristic patched twice is
+      answering a question it cannot answer</em>, and the third round should have been the revert rather than
+      the third patch.</p>
+    <table data-c="tbl-review5">
+      <thead><tr><th>Round 5 · the same fix, still leaking</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Rename detection let a surface through a second way.</strong> Round 4 narrowed the
+          exemption to pairings whose source was itself a surface — but git picks the pairing, so a
+          <em>copy</em> of a live component paired against an unrelated surface retiring in the same diff, and
+          the copy escaped citation. A quoted non-ASCII <code>from</code> path broke the lookup besides</td>
+          <td><span class="badge auto">real · blocker · reverted</span> the answer is not a third patch.
+            <code>--find-renames</code> is gone and every helper is back on <code>--no-renames</code>: a rename
+            of a built component is <strong>refused</strong>, because DEC-16 retired the design there is
+            nothing left to cite. The gate fails closed — a blocked rename costs a rename, a leaked surface
+            costs the guarantee. The test now pins the refusal, and
+            <a href="#follow-ups">a follow-up</a> carries the reproduction</td></tr>
+      </tbody>
+    </table>
     <table data-c="tbl-review4">
       <thead><tr><th>Round 4 · what the fixes themselves cost</th><th>Verdict</th></tr></thead>
       <tbody>
@@ -331,11 +349,10 @@
           detection in the added set — but git pairs on content similarity and has never heard of a surface,
           so a new <code>.tsx</code> scaffolded from any deleted file it resembles is reported as a rename and
           answered with a sentence</td>
-          <td><span class="badge auto">real · blocker · fixed</span> reproduced: an unrelated 60-line filler
-            recycled as padding pairs at <code>R095</code>, and the new screen left the added set entirely.
-            The pairing is now <em>evidence, not a verdict</em> — a destination is exempt only when the path
-            it renames was <strong>itself a surface at the base</strong>. Both directions are tested, and the
-            fix that caused this is the reason a round-4 exists at all</td></tr>
+          <td><span class="badge auto">real · blocker · superseded</span> reproduced: an unrelated 60-line
+            filler recycled as padding pairs at <code>R095</code>, and the new screen left the added set
+            entirely. The fix — exempt a destination only when the path it renames was itself a surface at the
+            base — leaked again in round 5, and detection was reverted rather than patched a third time</td></tr>
         <tr><td><strong>Two branches shipped with no test</strong> — the non-UTF-8 citation refusal and the
           check-name threading for a <code>cr/v2</code> note that carries a citation</td>
           <td><span class="badge auto">real · important · fixed</span> the logic was right and the coverage
@@ -362,12 +379,12 @@
         <tr><td><strong>A rename of a built component is unmergeable</strong>, not merely refused. Every diff
           helper passed <code>--no-renames</code>, so <code>git mv StatusPill.tsx StatusBadge.tsx</code> reads
           as an added surface — and the added half accepts only a citation</td>
-          <td><span class="badge auto">real · blocker · fixed</span> the verifier escalated it from
-            <em>important</em>: DEC-16 has already retired the design of a built component, so there is
-            <strong>nothing left to cite</strong> and no honest note can be written. Rename detection is now
-            on in the added set alone — the destination falls to the touched half, where a reason is the right
-            answer. <code>added_under</code> keeps <code>--no-renames</code> for the mirror-image reason: there
-            detection would let an unbuilt design dodge its epic by renaming its own file</td></tr>
+          <td><span class="badge warn">real · blocker · ruled a limitation</span> the verifier escalated it
+            from <em>important</em>: DEC-16 has already retired the design of a built component, so there is
+            <strong>nothing left to cite</strong>. Rename detection was the fix, and rounds 4 and 5 each caught
+            it letting a genuinely new surface through — so it was reverted and the refusal stands as ruled
+            behaviour. Unmergeable-until-split is the honest cost of failing closed; the accepted risk is that
+            a rename is more work, not that a surface slips</td></tr>
         <tr><td><strong>A screen whose bytes are not UTF-8 escapes the added half.</strong>
           <code>new_surfaces</code> read a blob for every candidate including screens, whose answer never
           needs one, and treated an undecodable read as "not a surface"</td>
@@ -587,6 +604,16 @@
           file out of the tree at the epic tip either way, so nothing leaks — but the asymmetry is real and
           the first screen design is what will exercise it</td>
           <td>W9 <span class="badge approval">recorded, not built around</span></td></tr>
+        <tr><td>10</td><td><strong>A rename of a built component cannot merge.</strong> Ruled behaviour, not a
+          bug: DEC-16 retired the design, nothing is left to cite, and the two attempts to exempt renames both
+          leaked a real surface (rounds 4 and 5 — reproductions live in
+          <code>renaming_a_built_component_is_refused_rather_than_read_as_unchanged</code> and the round
+          tables above). The way out is a signal git does not have: a rename <em>declared</em> in the
+          <code>cr/v3</code> note — <code>design.renamed: [{from, to}]</code> — accepted only when
+          <code>from</code> was a surface at the base and <code>to</code> is one at the tip. That is an
+          assertion the reviewer makes and the gate checks, not a similarity guess. Build it when a rename is
+          actually blocked; until then the refusal costs nobody anything</td>
+          <td>W9+ <span class="badge approval">limitation, with its exit</span></td></tr>
       </tbody>
     </table>
   </main>

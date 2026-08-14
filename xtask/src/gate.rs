@@ -458,25 +458,11 @@ impl Gate<'_> {
     // `design-scope` prints for the reviewer, so the note and the gate cannot
     // disagree about what a build must cite.
     pub fn new_surfaces(&self, tip: &str, base: &str) -> Vec<String> {
-        let (added, renamed) =
-            crate::git::added_and_renamed(self.repo, base, tip).unwrap_or_default();
-        // A rename brings its design with it only when what it renamed was itself
-        // a surface. Git pairs on similarity and knows nothing of surfaces, so a
-        // pairing whose source was never one is a new surface wearing a recycled
-        // file - and it owes a design like any other.
-        let mut surfaces: Vec<String> = added
+        crate::git::added_names(self.repo, base, tip)
+            .unwrap_or_default()
             .into_iter()
-            .chain(
-                renamed
-                    .into_iter()
-                    .filter(|(from, _)| !crate::doc::surface_at(self.repo, base, from))
-                    .map(|(_, to)| to),
-            )
             .filter(|path| crate::doc::surface_at(self.repo, tip, path))
-            .collect();
-        surfaces.sort();
-        surfaces.dedup();
-        surfaces
+            .collect()
     }
 
     // The accounting lives on a `cr` note, and a standalone commit has none - so
@@ -1534,13 +1520,15 @@ mod tests {
         );
     }
 
-    // A rename is not a new surface. The component it renames is already built,
-    // so DEC-16 has retired the design a citation would have to name - treating
-    // the destination as added would demand an artifact the rules guarantee is
-    // gone, and no honest note could be written. It belongs in the touched tier,
-    // where a reason is the answer.
+    // Renames are not detected, so a rename reads as a delete plus an add and the
+    // destination owes a citation DEC-16 has already retired - the Working Unit is
+    // refused. That refusal is the intended answer, not a gap: git pairs on content
+    // similarity and cannot tell a renamed surface from a new screen scaffolded out
+    // of a file it resembles, and every reading of `R` as "not new" handed a real
+    // new surface a way out. Refusing a rename costs a rename; excusing one costs
+    // the guarantee. Lifting it needs a signal git does not have.
     #[test]
-    fn renaming_a_built_component_is_answerable_rather_than_unmergeable() {
+    fn renaming_a_built_component_is_refused_rather_than_read_as_unchanged() {
         let dir = tempfile::TempDir::new().unwrap();
         let repo = dir.path();
         let g = |args: &[&str]| super::git(repo, args).unwrap();
@@ -1563,38 +1551,10 @@ mod tests {
         g(&["commit", "-q", "-m", "rename it"]);
         let tip = g(&["rev-parse", "HEAD"]);
 
-        // The other half of the same question. Git pairs on similarity alone, so
-        // a new screen scaffolded from a deleted file it happens to resemble is
-        // reported as a rename too - and that one owes a design like any other.
-        let padding = "one line of boilerplate padding\n".repeat(60);
-        std::fs::write(repo.join("filler.txt"), &padding).unwrap();
-        g(&["add", "-A"]);
-        g(&["commit", "-q", "-m", "an unrelated file"]);
-        let before_scaffold = g(&["rev-parse", "HEAD"]);
-        g(&["rm", "-q", "filler.txt"]);
-        std::fs::write(
-            repo.join("ui/src/NewScreen.tsx"),
-            format!("export const NewScreen = () => null;\n/*\n{padding}*/\n"),
-        )
-        .unwrap();
-        g(&["add", "-A"]);
-        g(&["commit", "-q", "-m", "scaffold a screen out of it"]);
-        let scaffolded = g(&["rev-parse", "HEAD"]);
-        assert_eq!(
-            Gate { repo }.new_surfaces(&scaffolded, &before_scaffold),
-            vec!["ui/src/NewScreen.tsx".to_string()],
-            "git calls it a rename; it renames nothing that was ever a surface, so it is added"
-        );
-
         let gate = Gate { repo };
-        assert!(
-            gate.new_surfaces(&tip, &base).is_empty(),
-            "a rename adds nothing: {:?}",
-            gate.new_surfaces(&tip, &base)
-        );
         let (added, owed) = gate.surfaces(&tip, &base);
-        assert!(added.is_empty());
-        assert_eq!(owed, vec![renamed.to_string()], "and the new name is still owed an answer");
+        assert_eq!(added, vec![renamed.to_string()], "the destination reads as added");
+        assert_eq!(owed, vec![renamed.to_string()]);
 
         let note: CrNote = serde_yaml::from_str(&note_yaml(
             "cr/v3",
@@ -1606,7 +1566,13 @@ mod tests {
         r.base.clone_from(&base);
         r.tip.clone_from(&tip);
         gate.check_handoff(&mut r, Some(&note));
-        assert!(r.failures.is_empty(), "a stated reason lands the rename: {:?}", r.failures);
+        assert_eq!(r.failures.len(), 1, "{:?}", r.failures);
+        assert!(r.failures[0].what.contains("new surface"), "{}", r.failures[0].what);
+        assert!(
+            r.waived.is_empty(),
+            "a reason must not land a rename - the refusal is the point: {:?}",
+            r.waived
+        );
     }
 
     // The four ways an epic can answer for a component design it wrote: built,
