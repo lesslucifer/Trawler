@@ -62,6 +62,11 @@
         <tr><td></td><td>the <strong>code-review skill</strong> on the tip</td>
           <td>a <code>cr/v3</code> note whose <code>design:</code> section carries the verdict. The design
             finder activates only when <code>design-scope</code> reports artifacts</td></tr>
+        <tr><td><strong>At <a href="#handover">the hand-over</a></strong><br><span class="kd">the build WU</span></td>
+          <td><code>git rev-parse &lt;tip&gt;:&lt;the design&gt;</code></td>
+          <td>the blob to cite. A Working Unit that adds a registry component or a new screen writes
+            <code>design.implements: [{path, blob}]</code> into its <code>cr/v3</code> note; without it
+            <code>9·design</code> refuses the merge</td></tr>
         <tr><td><strong>At the merge</strong></td>
           <td><code>cargo xtask verify-dod wu &lt;tip&gt; --target &lt;epic&gt;</code></td>
           <td>every red the merge will refuse, before attempting it. The
@@ -383,6 +388,74 @@ soft:
     <p class="kd">Tier-2's receipt stays <em>inline</em> and Tier-3's verdict does not, and the asymmetry is the
       point: a self-claim is part of the artifact and dies with it, while an independent judgment is about a
       commit — and commits outlive the files they carry.</p>
+
+    <h2 id="handover">9 · Hand over to the build <span class="badge id">Tier-3 passed — now something gets built</span></h2>
+    <p>A judged design is still nothing but a file. The hand-over is the step that makes it consumable, and
+      it is short because everything it needs already exists: the closed run (or component design) is the
+      artifact, its <strong>path and blob</strong> are the address, and the Working Unit that builds from it
+      writes both into its own review note. One rule, three halves, and a life that ends at the epic.</p>
+    <table data-c="tbl-handover">
+      <thead><tr><th>Half</th><th>What it says</th><th>What refuses it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The build names its design</strong></td>
+          <td>a Working Unit whose diff <em>adds</em> a registry component (a file under
+            <code>ui/src/components/</code> carrying <code>@tier</code>) or a screen (a non-test
+            <code>.tsx</code> under <code>ui/src/</code> outside the collection, at any depth) cites what it
+            built from: <code>design.implements: [{path, blob, built}]</code> in its <code>cr/v3</code> note.
+            The path resolves at the tip, the blob is the bytes the tip ships, the doc is a design artifact,
+            a run it names is archived — an open run cannot be handed to anyone — and <code>built</code> names
+            the files it produced, so a citation covers what it claims and no more</td>
+          <td><code>9·design</code> at the WU merge</td></tr>
+        <tr><td><strong>An edit answers for itself</strong></td>
+          <td>every <em>other</em> UI-rendering file the diff touches — any non-test <code>.tsx</code> under
+            <code>ui/src/</code> — is cited the same way or declared: <code>design.undesigned: [{path,
+            why}]</code>, an empty reason being no reason. This half demands a <em>sentence</em>, never a run:
+            most UI work re-shapes what exists, and a gate that answered that with "go design it" would be
+            routed around by lunchtime. What it refuses is the silence, which is the defect this flow keeps
+            finding</td>
+          <td><code>9·design</code> at the WU merge</td></tr>
+        <tr><td><strong>No unbuilt design survives its epic</strong></td>
+          <td>every component design the epic added resolves to a roster entry at the epic tip — screens
+            count, not only <code>@tier</code> components, so a screen design resolves where it was built — or
+            the epic's note records <code>design.dropped: [{path, why}]</code>. This is
+            <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>'s retirement rule with its
+            survival clause removed: a design file is retired into the code's TSDoc when built, dropped on
+            the record when not, and never simply left standing</td>
+          <td><code>components·unbuilt</code> at the epic merge</td></tr>
+      </tbody>
+    </table>
+    <p class="kd"><strong>The design is not the only thing that has to reach the build.</strong> A design run
+      designs a screen, and a screen is where the flow's own <code>screen</code>-bound rules live — layout,
+      grouping, ordering, disclosure. The hand-over therefore reaches every rendered file, not only the ones
+      the collection knows about, and it reaches them whether they are new or being re-shaped.</p>
+    <p class="kd"><strong>Why the blob and not just the path.</strong> A path proves a file was named; a blob
+      proves <em>which bytes</em> were read. It costs one field and buys the drift count for free — a build
+      whose cited blob differs from the one its design Working Unit closed is a build that amended its
+      design, countable over notes already written. The field is the monitor; no monitoring machinery
+      exists.</p>
+    <table data-c="tbl-drift">
+      <thead><tr><th>When the build and its design come apart</th><th>What is owed</th></tr></thead>
+      <tbody>
+        <tr><td>an unforeseen small change while building</td>
+          <td><strong>one sentence.</strong> No run, no artifact, no stage: the file is named under
+            <code>design.undesigned</code> with why it needed no design. The reviewer writes it, bound to the
+            diff — it is a statement of fact, not a permission the build grants itself</td></tr>
+        <tr><td>the build <strong>amends</strong> the design it was handed</td>
+          <td><strong>nothing to remember.</strong> The amended file is a design artifact in that Working
+            Unit's diff, so <a href="#review-tier">Tier-3</a> re-fires on the merge that lands it and the
+            cited blob is the amended one. The re-judgment is automatic, not a rule anyone has to
+            recall</td></tr>
+        <tr><td>a surface nobody designed, discovered mid-build</td>
+          <td>the build Working Unit <strong>carries its own design</strong>, gated identically — it is a
+            design WU and a build WU at once</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="no-conformance">
+      <strong>Nothing judges the build against its design.</strong> The gate answers <em>is there a design,
+      and is it this one</em> — never whether the code honoured it. The pointer is a mechanical check, not a
+      judgment, and <em>why</em> — plus the one piece of evidence that would reopen it — is
+      <a href="../decisions/dec-25-design-build-handoff.html#no-conformance">DEC-25</a>'s, not this spec's.
+    </div>
 
     <h2 id="flow-e2e">What proves the harness — the flow e2e <span class="badge id">xtask/tests/e2e_design_flow.rs</span></h2>
     <p>Every stage above is a rule an agent must follow and a predicate that refuses it, and the whole

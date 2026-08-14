@@ -741,6 +741,224 @@ fn the_walk_grandfathers_a_cr_v2_seam_but_not_a_v3_one_missing_its_design_sectio
     assert_eq!(checks_of(&report), vec!["7·walk·9·design"], "{}", format_report(&report));
 }
 
+const COMPONENT_DESIGN: &str = "docs/work/components/status-pill.html";
+
+// The epic that wrote a component contract and never built it. The contract is
+// archived out of the tree before the epic gate, as check 6 demands - so the
+// epic's endpoint diff carries no trace of it, and only the range does.
+fn epic_over_an_unbuilt_component_design() -> Repo {
+    let repo = wu_with_change();
+    repo.write(COMPONENT_DESIGN, "<html><body>the StatusPill contract</body></html>\n");
+    repo.commit("design the pill");
+    let wu_tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &wu_tip);
+    let changes = format!(
+        "{WU_CHANGES}  - path: {COMPONENT_DESIGN}\n    tier: T3\n    action: added\n    distills: \"the pill contract\"\n"
+    );
+    repo.note("doc", &wu_tip, &doc_note("E9", Some("E9.W1"), &changes, None));
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "merge wu/x/one", "wu/x/one"]);
+    std::fs::remove_file(repo.path.join(WU_RESULT)).unwrap();
+    std::fs::remove_file(repo.path.join(COMPONENT_DESIGN)).unwrap();
+    repo.commit("archive the wu result and the contract out of git");
+    bless_epic(&repo, T2_ENTRY);
+    repo
+}
+
+fn epic_cr_with_drop(repo: &Repo, why: &str) {
+    let tip = repo.sha("epic/x");
+    let base = repo.sha("main");
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    // No rulebook pin and no design verdict: the epic's diff carries no design
+    // artifact, so this section exists for the drop record and nothing else.
+    let design =
+        format!("design:\n  dropped:\n    - path: {COMPONENT_DESIGN}\n      why: \"{why}\"\n");
+    repo.note(
+        "cr",
+        &tip,
+        &format!("{}{design}", cr_note("E9", None, &base, &sha, "PASS").replace("cr/v2", "cr/v3")),
+    );
+}
+
+// D3·E: the epic is the unit a design is coupled to, so an epic that carries a
+// component design nobody built either builds it or says why it went. Check 6
+// only forces the FILE out of the tree; a `git rm` with no record is the hole
+// this closes.
+#[test]
+fn an_unbuilt_component_design_refuses_the_epic_until_the_drop_is_recorded() {
+    let repo = epic_over_an_unbuilt_component_design();
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(checks_of(&report), vec!["components·unbuilt"], "{}", format_report(&report));
+    assert!(report.failures[0].what.contains("StatusPill"), "the red names the component");
+
+    epic_cr_with_drop(&repo, "  ");
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert_eq!(
+        checks_of(&report),
+        vec!["components·unbuilt"],
+        "a drop with no reason records nothing: {}",
+        format_report(&report)
+    );
+
+    epic_cr_with_drop(&repo, "never built; the flow row renders its own status");
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+    assert!(
+        report.waived.iter().any(|w| w.contains("never built")),
+        "the drop is billed as a waiver, not hidden beside one: {:?}",
+        report.waived
+    );
+}
+
+// The built case needs no record at all: the roster at the epic tip is the whole
+// answer, and it is read from git rather than from the checkout.
+#[test]
+fn a_component_design_whose_component_landed_needs_no_drop_record() {
+    let repo = epic_over_an_unbuilt_component_design();
+    repo.write(
+        "ui/src/components/StatusPill.tsx",
+        "/**\n * StatusPill states one verdict.\n * @tier T1 — primitive\n */\nexport const StatusPill = () => null;\n",
+    );
+    repo.commit("build the pill");
+    bless_epic(&repo, T2_ENTRY);
+
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+}
+
+// The build side of the hand-over: the design landed in an earlier Working Unit,
+// this one adds the component. The citation must resolve against the TIP, which
+// is the only place the design still exists by then.
+fn wu_building_a_component() -> Repo {
+    let repo = Repo::new();
+    repo.write(COMPONENT_DESIGN, "<html><body>the StatusPill contract</body></html>\n");
+    repo.commit("an earlier WU landed the contract");
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\n");
+    repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
+    repo.write(
+        "ui/src/components/StatusPill.tsx",
+        "/**\n * StatusPill states one verdict.\n * @tier T1 — primitive\n */\nexport const StatusPill = () => null;\n",
+    );
+    repo.commit("build the pill");
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    repo
+}
+
+#[test]
+fn a_build_that_adds_a_component_must_cite_the_design_the_tip_ships() {
+    let repo = wu_building_a_component();
+    let tip = repo.sha("wu/x/one");
+    let base = repo.sha("epic/x");
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    let v3 = |design: &str| {
+        format!(
+            "{}{design}",
+            cr_note("E9", Some("E9.W1"), &base, &sha, "PASS").replace("cr/v2", "cr/v3")
+        )
+    };
+
+    repo.note("cr", &tip, &v3(""));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(
+        format_report(&report).contains("StatusPill.tsx"),
+        "the red names the surface that owes a design"
+    );
+
+    let blob = repo.git(&["rev-parse", &format!("{tip}:{COMPONENT_DESIGN}")]);
+    let cites = |pin: &str| {
+        format!(
+            "design:\n  implements:\n    - path: {COMPONENT_DESIGN}\n      blob: {pin}\n      built: [ui/src/components/StatusPill.tsx]\n"
+        )
+    };
+    repo.note("cr", &tip, &v3(&cites(&blob[..7])));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "a resolvable citation lands it: {}", format_report(&report));
+
+    // The comparison is against the tip's bytes, not the working tree's: editing
+    // the design after the note was written must not silently stay green.
+    repo.write(
+        COMPONENT_DESIGN,
+        "<html><body>the contract, revised after the note</body></html>\n",
+    );
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "an unstaged edit does not move the tip");
+    repo.commit("revise the contract after the build cited it");
+    let moved = repo.sha("wu/x/one");
+    bless_wu(&repo, &moved);
+    let moved_sha = diff_sha256(&repo.path, &base, &moved).unwrap();
+    repo.note(
+        "cr",
+        &moved,
+        &format!(
+            "{}{}",
+            cr_note("E9", Some("E9.W1"), &base, &moved_sha, "PASS").replace("cr/v2", "cr/v3"),
+            cites(&blob[..7])
+        ),
+    );
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"9·design"),
+        "a stale blob is a citation of bytes the tip no longer ships: {}",
+        format_report(&report)
+    );
+}
+
+// The case an added-only trigger can never see: a Working Unit that re-shapes a
+// surface that already exists, which is where most UI work lives once the screens
+// are built. No design is demanded of it - a gate that answered every edit with
+// "go design it" would be routed around - but an answer is, and the answer is
+// billed, so an epic can count what it shipped undesigned.
+#[test]
+fn a_build_that_only_edits_a_surface_owes_a_reason_and_the_reason_is_billed() {
+    const SCREEN: &str = "ui/src/FlowDetail.tsx";
+    let repo = Repo::new();
+    repo.write(SCREEN, "export const FlowDetail = () => null;\n");
+    repo.commit("a screen that landed before the design flow existed");
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    repo.write(SCREEN, "export const FlowDetail = () => <section>rows</section>;\n");
+    repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
+    repo.commit("re-shape the panel");
+
+    let tip = repo.sha("wu/x/one");
+    let base = repo.sha("epic/x");
+    bless_wu(&repo, &tip);
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    let v3 = |design: &str| {
+        format!(
+            "{}{design}",
+            cr_note("E9", Some("E9.W1"), &base, &sha, "PASS").replace("cr/v2", "cr/v3")
+        )
+    };
+
+    repo.note("cr", &tip, &v3(""));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(
+        format_report(&report).contains(SCREEN),
+        "the red names the file nothing accounts for: {}",
+        format_report(&report)
+    );
+
+    repo.note(
+        "cr",
+        &tip,
+        &v3(&format!(
+            "design:\n  undesigned:\n    - path: {SCREEN}\n      why: \"a copy fix; the layout is untouched\"\n"
+        )),
+    );
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    let text = format_report(&report);
+    assert!(report.green(), "a stated reason answers for an edit: {text}");
+    assert!(text.contains("WAIVE") && text.contains("a copy fix"), "and it is billed: {text}");
+}
+
 // Blesses the epic tip against the *merge-base* with main, not main's tip -
 // once main and the epic diverge, base = merge-base(main, epic) != sha("main").
 fn bless_epic_diverged(repo: &Repo, changes: &str) {

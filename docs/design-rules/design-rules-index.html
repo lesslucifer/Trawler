@@ -112,7 +112,7 @@ flowchart LR
         <tr><td><code>create</code></td><td>a request that brings a resource into being (POST)</td><td><code>MethodLabel</code> verb→tone</td></tr>
         <tr><td><code>replace</code></td><td>a request that overwrites a resource whole (PUT)</td><td><code>MethodLabel</code> verb→tone</td></tr>
         <tr><td><code>amend</code></td><td>a request that alters part of a resource (PATCH)</td><td><code>MethodLabel</code> verb→tone</td></tr>
-        <tr><td><code>syn-key</code> · <code>syn-str</code> · <code>syn-num</code></td><td>the three body-pane syntax roles — a key, a string, a number inside a rendered payload. <strong>Three roles and no more:</strong> a full syntax theme is what the renderer family forbids, and punctuation stays <code>ink-mute</code> (DEC-11)</td><td><a href="../work/components/body-renderer.html">SourceSurface</a> — the pane JsonRenderer and XmlRenderer share</td></tr>
+        <tr><td><code>syn-key</code> · <code>syn-str</code> · <code>syn-num</code></td><td>the three body-pane syntax roles — a key, a string, a number inside a rendered payload. <strong>Three roles and no more:</strong> a full syntax theme is what the renderer family forbids, and punctuation stays <code>ink-mute</code> (DEC-11)</td><td><code>SourceSurface</code> — the pane JsonRenderer and XmlRenderer share</td></tr>
         <tr><td><em>unknown</em> — an outcome that is neither success nor failure</td><td><strong>no tint. The neutral ink channel is the answer</strong> — a probe that fails and a probe that shrugs are both <em>unknown</em>, and on some screens that is the permanent case rather than an edge one. <code>colour-plus-text</code> already guarantees the text channel carries the meaning, so a third status hue would add nothing a reader needs</td><td>— (ink, never a colour)</td></tr>
       </tbody>
     </table>
@@ -252,7 +252,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ "waiting for traffic — point a client at :7420" · ✓ "not captured — too large (12.0 MiB)", which instructs nothing because nothing would help</span><br><span style="color:var(--warn)">✗ a blank panel · ✗ a retry button on a flow the ring has dropped — an action that can only fail again is a lie about what the user can do</span></td>
           <td>Land on each empty state cold: do you know what happened, and — if you can act — what to do next?</td>
           <td><code>both</code></td>
-          <td><em>import</em> · the onboarding screen · <a href="../work/components/header-table.html">HeaderTable</a> "none"</td>
+          <td><em>import</em> · the onboarding screen · <code>HeaderTable</code> "none"</td>
         </tr>
         <tr>
           <td><code>familiar-idioms</code></td>
@@ -268,7 +268,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ the view is named — <em>pretty</em> / <em>raw</em>, <em>decoded</em> / <em>raw</em> — and one act switches it</span><br><span style="color:var(--warn)">✗ JSON pretty-printed with nothing saying so and no way back to the bytes</span></td>
           <td>For every displayed wire value: is it the bytes, or a view? If a view — is it named on screen, and is one act enough to get back?</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <code>CopyText</code> driver ② · <a href="../work/components/body-viewer.html">BodyViewer</a> decode</td>
+          <td><strong>extracted</strong> · <code>CopyText</code> driver ② · <code>BodyViewer</code> decode</td>
         </tr>
         <tr>
           <td><code>labels-add-context</code></td>
@@ -276,7 +276,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ "copy all"</span><br><span style="color:var(--warn)">✗ "copy request headers" (under that heading)</span></td>
           <td>Read each label in situ: does any word repeat its surroundings?</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/header-table.html">HeaderTable</a> sub-bar verdict</td>
+          <td><strong>extracted</strong> · <code>HeaderTable</code> sub-bar verdict</td>
         </tr>
         <tr>
           <td><code>calm-microcopy</code></td>
@@ -284,7 +284,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ "copied" · "none"</span><br><span style="color:var(--warn)">✗ "Copied!" · "No headers found."</span></td>
           <td>Scan all microcopy for case, length, exclamation.</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <code>CopyText</code> · <a href="../work/components/header-table.html">HeaderTable</a></td>
+          <td><strong>extracted</strong> · <code>CopyText</code> · <code>HeaderTable</code></td>
         </tr>
         <tr>
           <td><code>one-term-per-concept</code></td>
@@ -292,7 +292,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ "decode" everywhere</span><br><span style="color:var(--warn)">✗ "decode" here, "prettify" there</span></td>
           <td>Check each label/microcopy term against the lexicon; unknown terms need a proposal entry. <em>Then check it against the component's own design file</em> — a built component whose labels disagree with its confirmed contract breaks this rule even when every word is in the lexicon.</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/header-table.html">HeaderTable</a> "copy all" · <a href="../work/components/body-viewer.html">BodyViewer</a> decode</td>
+          <td><strong>extracted</strong> · <code>HeaderTable</code> "copy all" · <code>BodyViewer</code> decode</td>
         </tr>
         <tr>
           <td><code>confirm-at-point</code></td>
@@ -308,7 +308,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ five body absences, five sentences — empty · not captured (too large) · streaming · no response yet · no longer captured</span><br><span style="color:var(--warn)">✗ "none" for a response that has not arrived — which states that the response had no headers</span></td>
           <td>List every way this surface can have nothing to show. Does each one have its own words, and does any of them blame the user for normal operation?</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/body-viewer.html">BodyViewer</a> driver ④ — five absences, five notices · <a href="../work/components/header-table.html">HeaderTable</a>'s pending state</td>
+          <td><strong>extracted</strong> · <code>BodyViewer</code> driver ④ — five absences, five notices · <code>HeaderTable</code>'s pending state</td>
         </tr>
         <tr>
           <td><code>focus-returns-to-origin</code></td>
@@ -324,7 +324,7 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ leg and view switches at the row's start, copy and save pushed to its end</span><br><span style="color:var(--warn)">✗ an action button ahead of the selector that decides what it acts on</span></td>
           <td>Read each control row left to right: does it say what you are looking at before it offers to do something to it?</td>
           <td><code>screen</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/body-viewer.html">BodyViewer</a> chrome bar — view switches at the start, copy and save at the end</td>
+          <td><strong>extracted</strong> · <code>BodyViewer</code> chrome bar — view switches at the start, copy and save at the end</td>
         </tr>
       </tbody>
     </table>

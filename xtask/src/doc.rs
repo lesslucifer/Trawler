@@ -70,6 +70,8 @@ const RULEBOOK: &str = "docs/design-rules/design-rules-index.html";
 const VOCABULARY: &str = "scripts/design-vocabulary.mjs";
 const REGISTRY: &str = "scripts/design-registry.mjs";
 pub const COMPONENTS: &str = "docs/work/components/";
+pub const COLLECTION: &str = "ui/src/components/";
+pub const SCREENS: &str = "ui/src/";
 
 fn checklist(artifact: &str) -> Option<&'static [&'static str]> {
     match artifact {
@@ -126,7 +128,79 @@ pub fn design_artifact(path: &str, html: &str) -> Option<&'static str> {
 }
 
 pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
-    crate::git::git(repo, &["rev-parse", &format!("{rev}:{RULEBOOK}")]).ok()
+    crate::git::blob_of(repo, rev, RULEBOOK)
+}
+
+fn shaped_file(file: &str, exts: &[&str]) -> bool {
+    !file.contains('/')
+        && !file.contains(".test.")
+        && file.rsplit_once('.').is_some_and(|(_, ext)| exts.contains(&ext))
+}
+
+fn collection_file(path: &str) -> bool {
+    path.strip_prefix(COLLECTION).is_some_and(|file| shaped_file(file, &["ts", "tsx"]))
+}
+
+// Everything a user meets that a design could have shaped: a non-test `.tsx`
+// anywhere under ui/src/. Depth is not membership - a surface moved into a
+// subfolder is still rendered - so this reads the basename, unlike the
+// collection's own deliberately flat test.
+pub fn ui_surface(path: &str) -> bool {
+    path.strip_prefix(SCREENS)
+        .and_then(|rest| rest.rsplit('/').next())
+        .is_some_and(|file| shaped_file(file, &["tsx"]))
+}
+
+// Anything rendered that the collection does not govern. The collection's own
+// test is deliberately flat because its oracle reads one directory, so a `.tsx`
+// nested below `ui/src/components/` is in nobody's registry - which makes it a
+// screen, not an exemption. Judging it by prefix instead would leave one folder
+// as the way to add a surface no design is owed for.
+fn screen_file(path: &str) -> bool {
+    ui_surface(path) && !collection_file(path)
+}
+
+// Membership is `@tier`, the same tag scripts/design-registry.mjs reads - so a
+// gate and the oracle cannot disagree about who is in the roster. Read from git
+// rather than through the oracle because a gate judges the roster its own tip
+// ships, and because an epic tip is often not the checkout.
+pub fn registry_entry(path: &str, source: &str) -> bool {
+    collection_file(path) && source.contains("@tier")
+}
+
+// Whether a path is a surface at one revision - the one answer both the roster
+// and the added-surface trigger want, so the two can never drift.
+//
+// The path test comes first and settles every screen, which is load-bearing
+// twice. It is what keeps a blob from being fetched for a path that could never
+// need one (fetching first cost ~12% of an epic gate's wall time). And it is what
+// stops a screen's membership from depending on a successful UTF-8 decode: bytes
+// that fail to decode read as "not a surface", so one stray byte in a new screen
+// would drop it out of the added set and let a stated reason stand in for the
+// design it owes.
+pub fn surface_at(repo: &Path, rev: &str, path: &str) -> bool {
+    screen_file(path)
+        || (collection_file(path)
+            && crate::git::read_utf8_at(repo, rev, path)
+                .is_some_and(|source| registry_entry(path, &source)))
+}
+
+pub fn surface_name(path: &str) -> Option<String> {
+    let file = path.rsplit('/').next()?;
+    Some(file.rsplit_once('.')?.0.to_string())
+}
+
+// Who counts as built, at one revision. Screens are in it as well as `@tier`
+// components: a screen design resolves where its screen was built, or designing
+// one would cost a drop record while designing nothing cost nothing - the
+// incentive inverted.
+pub fn roster_at(repo: &Path, rev: &str) -> BTreeSet<String> {
+    crate::git::git(repo, &["ls-tree", "-r", "--name-only", rev, "--", SCREENS])
+        .unwrap_or_default()
+        .lines()
+        .filter(|path| surface_at(repo, rev, path))
+        .filter_map(surface_name)
+        .collect()
 }
 
 // Every slug the rulebook declares, hard and soft. The gate reads it to check a
@@ -134,9 +208,7 @@ pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
 // judging, never the working tree, so a later rename cannot unfollow a citation
 // that resolved when its seam was reviewed.
 pub fn rulebook_slugs(repo: &Path, rev: &str) -> Vec<String> {
-    crate::git::show_bytes(repo, rev, RULEBOOK)
-        .ok()
-        .and_then(|bytes| String::from_utf8(bytes).ok())
+    crate::git::read_utf8_at(repo, rev, RULEBOOK)
         .map(|html| rules_from_rulebook(&html).into_iter().map(|rule| rule.slug).collect())
         .unwrap_or_default()
 }
@@ -274,14 +346,20 @@ impl Roster {
     }
 }
 
+// No folder means no design is in flight, which is the resting state now that
+// no unbuilt design survives its epic - not an unreadable roster. The registry
+// half is the one that must be answerable, and it still is.
 pub fn roster(repo: &Path) -> Result<Roster, String> {
     let designed = std::fs::read_dir(repo.join(COMPONENTS))
-        .map_err(|e| format!("cannot read {COMPONENTS}: {e}"))?
-        .filter_map(|entry| {
-            let name = entry.ok()?.file_name().into_string().ok()?;
-            Some(component_name(name.strip_suffix(".html")?))
+        .map(|entries| {
+            entries
+                .filter_map(|entry| {
+                    let name = entry.ok()?.file_name().into_string().ok()?;
+                    Some(component_name(name.strip_suffix(".html")?))
+                })
+                .collect()
         })
-        .collect();
+        .unwrap_or_default();
     Ok(Roster { registry: oracle(repo, REGISTRY)?, designed })
 }
 
@@ -687,7 +765,7 @@ pub fn verify_component(
     Verdict::Checked { artifacts: vec!["component-design".to_string()], failures, summary: None }
 }
 
-fn component_designed(path: &str) -> Option<String> {
+pub fn component_designed(path: &str) -> Option<String> {
     let file = path.split(COMPONENTS).nth(1)?.strip_suffix(".html")?;
     (!file.contains('/')).then(|| component_name(file))
 }
@@ -2417,9 +2495,10 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 mod tests {
     use super::{
         attrs, check_frame_density, component_designed, declares_a_design, edit_distance,
-        elements_of, format_verdict, rules_from_rulebook, verify_component, verify_html,
-        verify_html_against, Component, Roster, Verdict, Vocabulary, CAPABILITY_STATES,
-        FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
+        elements_of, format_verdict, registry_entry, rules_from_rulebook, screen_file,
+        surface_name, ui_surface, verify_component, verify_html, verify_html_against, Component,
+        Roster, Verdict, Vocabulary, CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN,
+        FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -4068,6 +4147,67 @@ chroma_floor: 40
         assert_eq!(component_designed("docs/work/components/nested/x.html"), None);
         assert_eq!(component_designed("docs/work/2026-07-16-dflow-run-1.html"), None);
         assert_eq!(component_designed("docs/work/components/README.md"), None);
+    }
+
+    // The other half of the same question: who is in the roster. @tier is the
+    // membership tag, so a collection file without one is out - which is what
+    // keeps the gate's answer identical to the oracle's.
+    #[test]
+    fn a_collection_file_joins_the_roster_only_when_it_declares_a_tier() {
+        let tiered =
+            "/**\n * Button.\n * @tier T1 — primitive\n */\nexport const Button = () => null;\n";
+        assert!(registry_entry("ui/src/components/Button.tsx", tiered));
+        assert!(!registry_entry(
+            "ui/src/components/Button.tsx",
+            "export const Button = () => null;\n"
+        ));
+        assert!(
+            !registry_entry("ui/src/components/Button.test.tsx", tiered),
+            "a test is not an entry"
+        );
+        assert!(!registry_entry("ui/src/components/nested/Button.tsx", tiered));
+        assert!(
+            !registry_entry("ui/src/BodyViewer.tsx", tiered),
+            "a screen is not in the collection"
+        );
+        assert_eq!(surface_name("ui/src/components/CopyButton.tsx").as_deref(), Some("CopyButton"));
+        assert_eq!(
+            surface_name("ui/src/BodyViewer.tsx").as_deref(),
+            Some("BodyViewer"),
+            "a screen answers to its own name too - the roster carries both"
+        );
+    }
+
+    // The widened trigger, in one place: depth is not membership, an extension
+    // is, and the collection/screen split decides which half of the rule applies.
+    #[test]
+    fn every_rendered_file_is_a_surface_and_only_those_outside_the_collection_are_screens() {
+        for path in [
+            "ui/src/App.tsx",
+            "ui/src/components/Button.tsx",
+            "ui/src/panels/Inspector.tsx",
+            "ui/src/features/flows/Detail.tsx",
+        ] {
+            assert!(ui_surface(path), "{path} renders");
+        }
+        for path in [
+            "ui/src/App.test.tsx",
+            "ui/src/api.ts",
+            "ui/src/components/index.ts",
+            "ui/src/index.css",
+            "ui/tailwind.config.js",
+            "src/lib.rs",
+        ] {
+            assert!(!ui_surface(path), "{path} renders nothing");
+        }
+        assert!(screen_file("ui/src/panels/Inspector.tsx"), "a nested surface is still a screen");
+        assert!(!screen_file("ui/src/components/Button.tsx"), "the collection is not screens");
+        assert!(
+            screen_file("ui/src/components/status/StatusPill.tsx"),
+            "the collection's oracle reads one flat directory, so a file below it is in no registry - \
+             judging it by prefix would make one folder the way to add a surface owing no design"
+        );
+        assert!(!screen_file("ui/src/components/index.ts"), "a barrel renders nothing");
     }
 
     #[test]

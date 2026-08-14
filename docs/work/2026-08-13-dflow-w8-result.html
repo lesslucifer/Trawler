@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7dca9a9f34851f0dfab8cb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W8 result (design → build)</title>
+  <style>
+    table{font-size:13px;}
+    td code{white-space:nowrap;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W8 result — design → build</h1>
+      <p>The seam is built: three predicates, two fields, and the epic as the unit that binds them. Four
+        deviations, one of them a plan row that was measured false — plus
+        <a href="#step6">a rule that guarded only the work nobody was doing</a>, found by reviewing the
+        first five steps — and <a href="#risk">a handoff no real build has ever driven</a>.</p>
+      <div class="meta">Result report · 2026-08-13 · Trawler · T3 ·
+        <code>wu/design-flow/dev-integration</code> → <code>epic/design-flow</code> ·
+        <a href="2026-08-13-dflow-w8-plan.html">plan</a> ·
+        <a href="2026-08-12-dflow-w8-discussion.html">discussion</a> ·
+        <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a> ·
+        <a href="2026-08-12-dflow-w7-result.html">W7 result</a></div>
+    </div>
+  </header>
+
+  <main data-artifact="wu-result">
+
+    <h2 id="outcome">Outcome</h2>
+    <div class="cards" data-item="outcome">
+      <div class="card"><h3>3 predicates</h3><p><code>9·design</code> gains the build side at the WU seam and
+        a refusal at commit level; <code>components·unbuilt</code> is new at the epic seam. Two fields —
+        <code>implements[].built</code> and <code>undesigned</code> — and no new note, no new schema
+        version</p></div>
+      <div class="card"><h3>12 merges, 7 refused</h3><p>over real git through the real merge hook, in the flow
+        e2e's new build leg. <strong>0 rule defects</strong> — unlike W7's e2e, which found two</p></div>
+      <div class="card"><h3>8 screens, 0 designs</h3><p>the measurement that forced step ⑥: the added-only
+        trigger's whole population was already built, so every UI change it could ever see was one nobody
+        was going to make</p></div>
+      <div class="card"><h3>4 of 20</h3><p>component designs this epic wrote that no roster entry carries.
+        E-DFLOW is <strong>the first epic its own rule refuses</strong>, and the four reasons it forced out
+        are four different facts</p></div>
+      <div class="card"><h3>0 product code</h3><p>the epic's non-goal held. Everything here is the seam
+        itself — <code>xtask</code>, the e2e, and the rule written before it was mechanised</p></div>
+    </div>
+
+    <h2 id="requirement">The requirement, leg by leg</h2>
+    <table data-c="tbl-req">
+      <thead><tr><th></th><th>Leg</th><th>Where it landed</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge auto">met</span></td>
+          <td><strong>Added.</strong> A UI Working Unit that adds a new registry component or a new screen
+            cites the closed design it implements, path plus blob plus the files it produced; the merge is
+            refused when the citation is missing, unresolvable, names something that is not a closed design,
+            or covers a file the diff does not render. No reason excuses a new surface</td>
+          <td><a href="2026-08-13-dflow-w8-step3-pointer.html">③</a> — <code>new_surface</code> ·
+            <code>check_handoff</code> · <code>check_citation</code>, five refusals; ⑥ added the coverage
+            match and the subdirectory case</td></tr>
+        <tr><td><span class="badge auto">met</span></td>
+          <td><strong>Touched.</strong> Every other rendered file the diff leaves standing is cited the same
+            way or declared <code>undesigned</code> with a non-empty reason, and UI work outside a Working
+            Unit is refused outright</td>
+          <td>⑥ — <code>ui_surface</code> · <code>Gate::surfaces</code> ·
+            <code>check_ui_outside_a_wu</code>, and each accepted declaration billed at its seam and again at
+            the epic</td></tr>
+        <tr><td><span class="badge auto">met</span></td>
+          <td><strong>Downstream.</strong> A component design added during an epic whose component is absent
+            from the roster at the epic tip refuses the <em>epic</em> merge, unless the note records the drop
+            and says why</td>
+          <td><a href="2026-08-13-dflow-w8-step1-unbuilt.html">①</a> —
+            <code>components·unbuilt</code>, reading the <em>range</em> rather than the endpoints; ⑥ made the
+            roster count screens, so a screen design resolves instead of costing a drop record</td></tr>
+        <tr><td><span class="badge auto">met</span></td>
+          <td><strong>All three driven by a build leg on the flow e2e</strong>, including the case where the
+            build amends the design it was handed and the case where it only re-shapes what exists</td>
+          <td><a href="2026-08-13-dflow-w8-step4-build-leg.html">④</a> + ⑥ — 2 tests, 9 cases,
+            12 merges</td></tr>
+        <tr><td><span class="badge auto">met</span></td>
+          <td><strong>The rule is written before it is mechanised</strong> — the flow spec gains the hand-over
+            step, <code>workflow.html</code> gains the design row</td>
+          <td><a href="2026-08-13-dflow-w8-step2-handoff.html">②</a> — flow spec ⑨ ·
+            <code>workflow.html</code> v12, <code>Reviewed-By</code> as DEC-7/9/10 require. ⑥ kept the order:
+            the touched half was written into both docs before a line of it was mechanised</td></tr>
+        <tr><td><span class="badge auto">met</span></td>
+          <td><strong>DEC-16's "lives there and nowhere else" is superseded, not annotated</strong></td>
+          <td>⑤ — <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a>, and DEC-16's clause
+            struck with its retirement order left intact</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="ledger">What each step cost</h2>
+    <table data-c="tbl-ledger">
+      <thead><tr><th>Step</th><th>Landed</th><th>What it found</th></tr></thead>
+      <tbody>
+        <tr><td><a href="2026-08-13-dflow-w8-step1-unbuilt.html"><strong>① unbuilt</strong></a>
+          <code>5e3933d</code></td>
+          <td><code>components·unbuilt</code> · <code>added_under</code> · <code>roster_at</code> ·
+            <code>design.dropped</code>. The four surviving design files deleted, 2 032 lines out</td>
+          <td>the plan's account of the four contracts was wrong in three of four rows — and the endpoint
+            diff was the wrong instrument, because check 6 forces the same files out of the tree</td></tr>
+        <tr><td><a href="2026-08-13-dflow-w8-step2-handoff.html"><strong>② the rule, written</strong></a>
+          <code>57f2fb5</code> · <code>592ff2b</code></td>
+          <td>flow spec step 9, and <code>workflow.html</code> v11: the two halves, the DoD-W and DoD-E rows,
+            the gate-check rows, the lifecycle node, and the non-rule stated as loudly as the rules</td>
+          <td><code>documentation-system.html</code> needed <strong>zero lines</strong> — which is D3·E's
+            own argument restated, so it is recorded as evidence rather than skipped</td></tr>
+        <tr><td><a href="2026-08-13-dflow-w8-step3-pointer.html"><strong>③ the pointer</strong></a>
+          <code>8dc1aa4</code></td>
+          <td><code>new_surface</code> (one function, three callers) · <code>design.implements</code> ·
+            <code>check_handoff</code> · <code>check_citation</code> · <code>design-scope</code>'s second
+            block · the code-review skill's §3b and note template</td>
+          <td><strong>D6·A's premise was false</strong> — the trigger does fire on landed history — and
+            <code>check_design</code> was demanding a verdict over an empty artifact list</td></tr>
+        <tr><td><a href="2026-08-13-dflow-w8-step4-build-leg.html"><strong>④ the build leg</strong></a>
+          <code>264c1e5</code></td>
+          <td>2 e2e tests: a build that cites or is refused, and a design nobody built. Six cases, five
+            refusals and three landings, every one through the real hook</td>
+          <td><strong>gate 0 was red before the step began</strong> — <code>clippy --all-targets</code> on
+            step ③'s 117-line test. Fixed by shrinking to 91, not by the repo's first
+            <code>#[allow]</code></td></tr>
+        <tr><td><strong>⑤ distillation</strong> <code>4109404</code></td>
+          <td>DEC-25 · DEC-16 superseded · DEC-24 answered · DEC-15's build-side table ·
+            <code>decisions-index</code> · this report</td>
+          <td>DEC-15 has no "enforcement table" for the build-side rows to join — see
+            <a href="#deviations">deviations</a></td></tr>
+        <tr><td><strong>⑥ the edit case</strong> <em>this commit</em></td>
+          <td><code>ui_surface</code> · <code>changed_names</code> · <code>Gate::surfaces</code> ·
+            <code>design.undesigned</code> · <code>implements[].built</code> ·
+            <code>check_ui_outside_a_wu</code> · screens in <code>roster_at</code> · the walk carrying each
+            seam's waivers up · <code>workflow.html</code> v12 · the skill's two new fields</td>
+          <td>the rule shipped in ①–⑤ could only fire on surfaces that <strong>do not exist yet</strong>, and
+            the screens all exist. Three holes travelled with it: a subdirectory <code>.tsx</code> was no
+            surface, a screen design could never resolve, and a standalone commit could render anything.
+            Also: <code>workflow.html</code> still said <strong>v10</strong> — ②'s commit message called it
+            v11 and never edited the line</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="step6">Step ⑥ — the review that found the rule guarded nothing</h2>
+    <p>Steps ①–⑤ were complete and green when the question was asked: <em>how does an epic guarantee a design
+      for all its UI work?</em> The measurement that answered it is the whole of step ⑥.</p>
+    <table data-c="tbl-step6">
+      <thead><tr><th>What was measured</th><th>What it said</th></tr></thead>
+      <tbody>
+        <tr><td>the added-only trigger's remaining population</td>
+          <td><strong>8 product screens exist, 0 were ever designed</strong> — and the predicate's population is wider still: <strong>10</strong> non-test <code>.tsx</code> render outside the collection, the other two being <code>main.tsx</code> (the bootstrap) and <code>components.tsx</code> (a pre-registry primitives kit), both of which now owe an answer when touched. <code>new_surface</code> reads
+            <code>--diff-filter=A</code>, and <code>doc.rs</code> said so in its own comment: <em>"an edit to
+            either is not a new surface"</em>. Every future screen change is an edit</td></tr>
+        <tr><td>what landed history actually did</td>
+          <td><strong>14 seams</strong> on <code>main</code> touch a non-test <code>.tsx</code>;
+            <strong>4 of them modified only</strong> (E-UISETUP.W2/W3/W4/W6). Typical burden of the new
+            accounting: <strong>1–3 paths per seam</strong> — this is not the "reds almost everything" gate
+            D2·A was rejected as</td></tr>
+        <tr><td>whether widening re-opens grandfathering (D6·A's caveat)</td>
+          <td>no. <strong>1 <code>cr/v3</code> note exists in the repo</strong>, against 108 v2/v1, and it
+            renders nothing; <strong>0</strong> non-merge commits on either branch render anything. The
+            widened trigger fires on 0 landed seams and 0 landed commits</td></tr>
+        <tr><td>whether the incentive pointed the right way</td>
+          <td>it pointed backwards. The roster was <code>@tier</code>-under-<code>components/</code> only, so
+            a <em>screen</em> design could never resolve at the epic tip: designing a screen cost a drop
+            record, designing nothing cost nothing. <code>body-viewer.html</code> is the proof — DEC-25 filed
+            a design that <strong>was built</strong> as a drop</td></tr>
+        <tr><td>what the widened gate does to this repository's own history</td>
+          <td>run for real, not reasoned about: the new binary walking the old epic
+            (<code>verify-dod epic epic/design-flow --target main</code>) yields <strong>0</strong>
+            <code>9·design</code> failures across 9 seams, and turns W8's <strong>4</strong>
+            <code>components·unbuilt</code> into <strong>3</strong> — <code>BodyViewer</code> resolves now
+            that the roster can see a screen. Every other failure in that run is one the epic already owed
+            before this step existed</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">What the touched half demands is a <strong>sentence, not a run</strong>: the reviewer names
+      the file and says what made a design unnecessary, on a note bound to <code>diff_sha256</code>. That is
+      the distinction D2·A missed — it read the path trigger as "demand a design of every edit", which would
+      indeed have been waived away by lunchtime. What is refused here is only the silence.</p>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <thead><tr><th>Planned</th><th>What actually happened</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Five steps</strong>, ending at ⑤ with DEC-25, the review and the merge</td>
+          <td><strong>A sixth, and it changed the rule.</strong> ①–⑤ were green and distilled when reading
+            them back asked what an epic actually guarantees for its UI work. The answer was measurable and
+            bad: the trigger fires only on surfaces that do not exist yet, and all 8 product screens exist. Step ⑥
+            widened the rule to every rendered file a diff touches, closed three holes beside it, and amended
+            DEC-25 in place rather than adding DEC-26 — the record had not left this branch, so the rule keeps
+            one record instead of gaining a correction to an unmerged one. See <a href="#step6">step ⑥</a></td></tr>
+        <tr><td><strong>D6·A</strong>: "the trigger cannot fire on landed history", measured at
+          <strong>0 of 11</strong> landed UI seams</td>
+          <td><strong>False premise, surviving conclusion.</strong> The trigger fires on <strong>W5's
+            seam</strong> — 25 surfaces — and the epic walk re-verifies it. The plan's 11 were the
+            epic→main merges on <code>main</code>, which this epic's walk never re-verifies: it measured the
+            wrong seams. What grandfathers the real one is the discriminator DEC-24 already built: every seam
+            in this epic carries a <code>cr/v2</code> note, so the silence reports as
+            <code>9·design-schema</code> and the walk drops it. <strong>0 walk failures, no new
+            discriminator, no cutoff, no waiver</strong></td></tr>
+        <tr><td><strong>Q1</strong>: "three were never built; <code>BodyViewer</code>'s code exists outside
+          the registry"</td>
+          <td>Reading the tree instead of the plan: <strong>one</strong> was never built
+            (<code>CopyAllHeadersButton</code>, dissolved into <code>CopyText</code> by design review). The
+            other three were all built — <code>BodyRenderer</code> as a seven-member renderer family,
+            <code>BodyViewer</code> as a screen outside the collection, <code>HeaderTable</code> as a local
+            function in <code>FlowDetail.tsx</code> that was never extracted. Three facts that existed
+            nowhere until the drop record demanded them</td></tr>
+        <tr><td>The pointer is <strong>the only</strong> new field, and nothing else in the gate moves</td>
+          <td><code>check_design</code> had to be loosened, and the reason is the plan's own shape: a build's
+            note carries the <code>design:</code> section for its <em>citation</em> and an epic's for its
+            <em>drop record</em>, so demanding a <code>PASS</code> and a rulebook pin over an empty artifact
+            list would have made both notes attest a review nobody ran. It now returns early when the diff
+            carries no design artifact, and <code>verdict</code> is optional. The design-bearing path is
+            untouched and still asserted</td></tr>
+        <tr><td><strong>DEC-15</strong>'s "enforcement table gains the build-side trigger"</td>
+          <td>DEC-15 has no enforcement table. Its two tables are the three-part model and
+            <code>tiers-done</code>, and a fourth row in <code>tiers-done</code> would claim a
+            <strong>fourth tier</strong>, which is exactly what W8 did not build. The build-side rows landed
+            as a consequence bullet carrying their own table, so DEC-15 states where its model stops rather
+            than pretending to extend</td></tr>
+        <tr><td>Gate 0 green step to step</td>
+          <td>It was <strong>red when ④ began</strong>, from ③: <code>clippy --workspace --all-targets</code>
+            — the exact command <code>gate0.rs</code> runs — refused a 117-line lib <em>test</em> function,
+            which is why ③'s own <code>cargo test</code> never saw it. Same class as the miss W7 ⑥ closed for
+            the <code>xtask</code> crate. Fixed by shrinking the seven citation refusals into one table</td></tr>
+        <tr><td>—</td>
+          <td><strong>Two corrections to immutable step records.</strong> ④ reported "40 <code>dod_gate</code>"
+            — the real count at that same commit is <strong>69</strong>; 40 is <code>tests/mr.rs</code>. And
+            ③'s measurement ran over the <em>local</em> <code>epic/design-flow</code>, which is 21 commits
+            behind its remote, so W7's seams were outside the range it measured. The conclusion survives —
+            W7's range adds one <code>ui/src</code> path, <code>components/registry.test.ts</code>, which is a
+            test and by rule adds no surface — but it is <a href="#follow-ups">W7 follow-up 3</a> happening a
+            second time, in the same epic that filed it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="tbl-commits">
+        <thead><tr><th>Commit</th><th>Step</th></tr></thead>
+        <tbody>
+          <tr><td><code>dffc9a9</code></td><td>direction + plan</td></tr>
+          <tr><td><code>5e3933d</code></td><td>① no unbuilt design survives the epic</td></tr>
+          <tr><td><code>57f2fb5</code></td><td>② the flow spec's hand-over step (T3 half)</td></tr>
+          <tr><td><code>592ff2b</code></td><td>② <code>workflow.html</code> v11 — T1, rule-bearing,
+            <code>Reviewed-By</code></td></tr>
+          <tr><td><code>8dc1aa4</code></td><td>③ the trigger and the pointer</td></tr>
+          <tr><td><code>264c1e5</code></td><td>④ the e2e build leg</td></tr>
+          <tr><td><code>4109404</code> · <code>3bc2335</code> · <code>efd5d40</code></td>
+            <td>⑤ DEC-25, the three amended records, this report, and two review rounds</td></tr>
+          <tr><td><em>this commit</em> + its T1 doc commit</td>
+            <td>⑥ the edit case — <code>workflow.html</code> v12 (rule-bearing,
+              <code>Reviewed-By</code>), the flow spec, then the predicates and their tests</td></tr>
+        </tbody>
+      </table>
+      <table data-c="tbl-tests">
+        <thead><tr><th>Level</th><th>Measured</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge id">unit</span> commit</td>
+            <td><strong>202</strong> <code>xtask</code> lib tests. The added trigger (a <code>@tier</code>
+              component fires; an untiered file, a test, a <code>.ts</code> module and a deletion do not) ·
+              the pointer (absent and empty <code>implements</code> parse differently and stay that way) · one
+              red per way a citation breaks and one green when it holds ·
+              <code>components·unbuilt</code>'s four answers over a real temp repo, plus a fifth: a screen
+              design resolves once its screen exists · the touched half over the same repo's second range —
+              an unaccounted edit reds, a reason greens <em>and is billed</em>, an empty reason reds, a
+              declaration of an untouched file reds, and the file the commit deleted is owed nothing · the
+              standalone-commit refusal · <code>ui_surface</code> over four paths that render and six that do
+              not</td></tr>
+          <tr><td><span class="badge id">integration</span> WU</td>
+            <td><strong>70</strong> <code>dod_gate</code> tests through the real binary against temp trees:
+              the WU gate reds a build that cites nothing and names the surface, greens on a resolvable
+              citation, and <strong>reds a stale one</strong> — the blob is compared against the tip, not the
+              working tree. A WU that <em>only edits</em> a screen reds, then greens with its reason printed
+              as a <code>WAIVE</code> line. The epic gate reds an unbuilt design, still reds a reasonless
+              drop, greens and bills the reason as a waiver</td></tr>
+          <tr><td><span class="badge id">e2e</span> epic</td>
+            <td><strong>4</strong> in <code>xtask/tests/e2e_design_flow.rs</code>
+              (<code>--features design-e2e</code>), two of them this WU's:
+              <code>a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it</code> and
+              <code>a_design_nobody_built_refuses_the_epic_merge_until_the_drop_is_recorded</code>. Between
+              them <strong>12 merges, 7 refused</strong>, including ⑥'s two new legs: a new surface that
+              tries to declare itself undesigned, and a Working Unit that only re-shapes an existing screen.
+              Each red is bound to its own message, not to a check name — <code>9·design</code> is a prefix of
+              <code>9·design-schema</code>. <strong>Not waived at any level</strong>, as the plan required</td></tr>
+          <tr><td><span class="badge id">regression</span></td>
+            <td><code>verify-doc</code> over <strong>84 tracked docs, none red</strong> — re-run at this tip
+              (<code>git ls-tree -r --name-only HEAD -- docs | wc -l</code>, not carried forward: an earlier
+              revision of this row said 78, W6's count, which is the third time this WU has restated a
+              measurement instead of re-taking it).
+              With <code>docs/work/components/</code> absent rather than empty — the <code>roster()</code>
+              change is exercised by the real corpus. The widened trigger over landed history:
+              <strong>0 seams</strong> can red (1 <code>cr/v3</code> note in the repo, rendering nothing) and
+              <strong>0 non-merge commits</strong> render anything on either branch</td></tr>
+          <tr><td><span class="badge id">gate 0</span></td>
+            <td><code>cargo fmt --all --check</code> · <code>clippy --workspace --all-targets --all-features
+              -D warnings</code> · <code>cargo test --workspace</code> — <strong>green</strong>. Core suites
+              untouched: 65 lib · 11 api · 3 ca · 6 capture · 4 h2. Gated <code>xtask</code> suites green:
+              70 <code>dod_gate</code> · 4 design e2e · 1 <code>debug_serve</code></td></tr>
+          <tr><td><span class="badge id">front end</span></td>
+            <td>No <code>ui/src/</code> change was planned and none was made, and the checks were run rather
+              than assumed unchanged: <code>npx tsc -b</code> · <code>npm run lint</code> ·
+              <code>npx vitest run</code> <strong>492 tests, 40 files</strong> ·
+              <code>cargo xtask ui specimens --check</code> — all green</td></tr>
+        </tbody>
+      </table>
+      <div class="callout" data-c="gate-state">
+        <strong>Gate state at the time of writing.</strong> Gate 0 is green and every test level above is
+        green. What this report <em>cannot</em> state is its own merge verdict: the <code>test/v2</code>,
+        <code>doc/v1</code>, <code>cr/v3</code> and <code>mr/v1</code> notes bind to the tip that
+        <em>contains this file</em>, so they are written after it — and the merge either accepts them or does
+        not. <a href="2026-08-12-dflow-w7-result.html#follow-ups">W7 follow-up 13</a>, obeyed rather than
+        rediscovered.
+      </div>
+    </div>
+
+    <h2 id="review">What the review found</h2>
+    <p class="meta">Round 1: five finders over <code>dcd0b7e..4109404</code>, 11 candidates,
+      <strong>6 refuted</strong>. Round 3, over <code>dcd0b7e..c628df5</code> once step ⑥ landed:
+      <strong>24 candidates from five finders — 12 refuted, 2 duplicates, 10 real</strong> (2 blockers,
+      3 important, 5 nits; 9 fixed, 1 waived). Round 4 re-reviewed the fix commit — and found that one of
+      the fixes had opened a hole of its own, plus three numbers in these very docs that were wrong,
+      including this one. Round 5 found the <em>same</em> fix, patched, still leaking. No round ran a design
+      finder — <code>design-scope</code> reports no design artifact and no new surface in any of these diffs:
+      a <em>removed</em> design file is deliberately not a Tier-3 artifact (DEC-16/DEC-24), and this WU renders
+      nothing.</p>
+    <p class="kd"><strong>The step that widened the rule is the step the review nearly broke.</strong> Both
+      round-3 blockers were in the mechanism, not the prose, and both were reproduced in a scratch repo before
+      a line was changed — then written as tests that fail without the fix and pass with it, which is the only
+      way a regression test is worth its lines. One of those fixes then cost two further rounds and was
+      reverted: the lesson is not that the review was too strict but that <em>a heuristic patched twice is
+      answering a question it cannot answer</em>, and the third round should have been the revert rather than
+      the third patch.</p>
+    <table data-c="tbl-review5">
+      <thead><tr><th>Round 5 · the same fix, still leaking</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Rename detection let a surface through a second way.</strong> Round 4 narrowed the
+          exemption to pairings whose source was itself a surface — but git picks the pairing, so a
+          <em>copy</em> of a live component paired against an unrelated surface retiring in the same diff, and
+          the copy escaped citation. A quoted non-ASCII <code>from</code> path broke the lookup besides</td>
+          <td><span class="badge auto">real · blocker · reverted</span> the answer is not a third patch.
+            <code>--find-renames</code> is gone and every helper is back on <code>--no-renames</code>: a rename
+            of a built component is <strong>refused</strong>, because DEC-16 retired the design there is
+            nothing left to cite. The gate fails closed — a blocked rename costs a rename, a leaked surface
+            costs the guarantee. The test now pins the refusal, and
+            <a href="#follow-ups">a follow-up</a> carries the reproduction</td></tr>
+      </tbody>
+    </table>
+    <table data-c="tbl-review4">
+      <thead><tr><th>Round 4 · what the fixes themselves cost</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The rename fix let a brand-new screen in.</strong> Round 3's answer turned on rename
+          detection in the added set — but git pairs on content similarity and has never heard of a surface,
+          so a new <code>.tsx</code> scaffolded from any deleted file it resembles is reported as a rename and
+          answered with a sentence</td>
+          <td><span class="badge auto">real · blocker · superseded</span> reproduced: an unrelated 60-line
+            filler recycled as padding pairs at <code>R095</code>, and the new screen left the added set
+            entirely. The fix — exempt a destination only when the path it renames was itself a surface at the
+            base — leaked again in round 5, and detection was reverted rather than patched a third time</td></tr>
+        <tr><td><strong>Two branches shipped with no test</strong> — the non-UTF-8 citation refusal and the
+          check-name threading for a <code>cr/v2</code> note that carries a citation</td>
+          <td><span class="badge auto">real · important · fixed</span> the logic was right and the coverage
+            was absent, which the project's testing rule does not distinguish from being wrong. One test now
+            drives both, and asserts the grandfathered note's refusal is the one the walk can drop</td></tr>
+        <tr><td><strong>Three numbers in these docs were wrong</strong>: the unit-test count, the round-3
+          candidate tally, and DEC-25's decomposition of the epic's failures, which summed to 65 of 68</td>
+          <td><span class="badge auto">real · fixed</span> all three re-measured rather than re-stated. The
+            missing 3 are the notes the epic tip does not carry yet</td></tr>
+      </tbody>
+    </table>
+    <table data-c="tbl-review3">
+      <thead><tr><th>Round 3 · candidate</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A design added <em>and</em> removed inside one Working Unit branch never reaches
+          <code>components·unbuilt</code></strong>. <code>added_under</code> walks the range's commits, but
+          without <code>--full-history</code> git's pathspec simplification follows the TREESAME first parent
+          straight past that merge</td>
+          <td><span class="badge auto">real · blocker · fixed</span> reproduced in a scratch repo: the add is
+            invisible to the exact command the check ran, and visible with the flag. This is the case the
+            function was written for — an endpoint diff was rejected <em>because</em> an add and a
+            <code>git rm</code> net out, and the range walk had the same hole one level down. The epic would
+            have greened on a design nobody built</td></tr>
+        <tr><td><strong>A rename of a built component is unmergeable</strong>, not merely refused. Every diff
+          helper passed <code>--no-renames</code>, so <code>git mv StatusPill.tsx StatusBadge.tsx</code> reads
+          as an added surface — and the added half accepts only a citation</td>
+          <td><span class="badge warn">real · blocker · ruled a limitation</span> the verifier escalated it
+            from <em>important</em>: DEC-16 has already retired the design of a built component, so there is
+            <strong>nothing left to cite</strong>. Rename detection was the fix, and rounds 4 and 5 each caught
+            it letting a genuinely new surface through — so it was reverted and the refusal stands as ruled
+            behaviour. Unmergeable-until-split is the honest cost of failing closed; the accepted risk is that
+            a rename is more work, not that a surface slips</td></tr>
+        <tr><td><strong>A screen whose bytes are not UTF-8 escapes the added half.</strong>
+          <code>new_surfaces</code> read a blob for every candidate including screens, whose answer never
+          needs one, and treated an undecodable read as "not a surface"</td>
+          <td><span class="badge auto">real · important · fixed</span> one stray byte would have moved a new
+            screen from "must cite a design" to "a stated reason will do". <code>roster_at</code> had the
+            short-circuit and <code>new_surfaces</code> did not, so the fix is the one both wanted:
+            <code>doc::surface_at</code>, a single function answering "is this a surface at this revision" for
+            the roster and the trigger alike. <code>new_surface</code> and <code>may_be_surface</code> are
+            deleted — the divergence is gone rather than patched</td></tr>
+        <tr><td><strong>A <code>.tsx</code> one folder below <code>ui/src/components/</code> was no surface at
+          all</strong> — neither a collection file (the test is deliberately flat) nor a screen (the test
+          excluded anything under that prefix)</td>
+          <td><span class="badge auto">real · important · fixed</span> it rendered, so it was owed an answer,
+            but it was not <em>added</em>, so a reason satisfied it: one folder was the way to add a surface
+            no design was owed for. <code>screen_file</code> now excludes only <em>flat</em> collection files,
+            which is what the collection's own oracle can actually see</td></tr>
+        <tr><td><strong>The docs say 8 screens; the predicate's population is 10</strong> non-test
+          <code>.tsx</code> outside the collection — <code>main.tsx</code> and <code>components.tsx</code>
+          are in the set the rule fires on</td>
+          <td><span class="badge auto">real · important · fixed in the docs</span> the measurement was right
+            about screens and wrong about what the rule reaches. Both numbers are now stated, in DEC-25 and
+            here. The bootstrap and the pre-registry kit really do owe an answer when touched — 4 and 3
+            commits respectively in the repo's life, so the cost is a sentence a decade</td></tr>
+        <tr><td><strong>A citation whose bytes do not decode was silently accepted</strong> — the
+          <code>from_utf8</code> arm returned without pushing a failure</td>
+          <td><span class="badge auto">real · nit · fixed</span> the one citation nobody can read was passing
+            as though Tier-3 had judged it</td></tr>
+        <tr><td><strong><code>check_citation</code> hard-coded <code>9·design</code></strong> where every
+          other refusal in the same function's caller switches to <code>9·design-schema</code> for a
+          <code>cr/v2</code> note</td>
+          <td><span class="badge auto">real · nit · fixed</span> the check name is now the caller's, so a
+            grandfathered note's refusals are the ones the walk drops — uniformly, rather than
+            almost-uniformly</td></tr>
+        <tr><td><strong><code>may_be_surface</code> re-tested <code>screen_file</code></strong> inside
+          <code>roster_at</code>, where the <code>||</code> had already settled it false</td>
+          <td><span class="badge auto">real · nit · fixed</span> dissolved by the <code>surface_at</code>
+            unification rather than patched</td></tr>
+        <tr><td><strong>The tip's <code>cr</code> note is fetched three times per epic gate</strong></td>
+          <td><span class="badge auto">real · nit · not fixed</span> the verifier measured ~16ms, once per
+            epic run and never per seam, and showed the fix means threading a note through
+            <code>verify</code>'s pre-exemption ordering — which exists deliberately. Recorded as a waiver,
+            not silently dropped</td></tr>
+        <tr><td><strong>Eleven more</strong> — the blob-pin block as duplication (again), the seam-tag format,
+          the test-fixture bootstrap, one shared YAML builder across three crates,
+          <code>show_bytes</code> vs <code>read_utf8_at</code>, the gate-check table restating the handoff
+          section, three <code>git diff</code> spawns per verify, the doc-blob cache, <code>roster_at</code>
+          batching, DEC-25 amended in place, and the two-roster fact belonging in T2</td>
+          <td><span class="badge auto">refuted</span> each by its own verifier, with numbers where numbers
+            settle it: the triple <code>git diff</code> is ~150ms of a 4.8s walk (3%); the doc-blob cache
+            <em>cannot</em> serve a citation, because a design and its build are never the same diff;
+            <code>roster_at</code>'s spawn count did not move (26 before, 26 after); the append-only rule
+            names <em>reversals</em>, and this WU's own precedent amends DEC-15 and DEC-24 in place while
+            superseding DEC-16 with strikethrough — extension versus reversal, applied consistently. The
+            two-roster point survived as one sentence, now in DEC-25</td></tr>
+      </tbody>
+    </table>
+    <table data-c="tbl-review">
+      <thead><tr><th>Round 1 · candidate</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The gate fetches a blob for every added path</strong> before any path test, and only
+          <code>@tier</code> needs the bytes — so a merge pays a <code>git show</code> per added file that
+          could never be a surface, once per WU seam the epic walk re-verifies</td>
+          <td><span class="badge auto">real · important · fixed</span> measured by the verifier at
+            <strong>~12–14% of a real epic walk's wall time</strong> (466 git spawns, 362 of them
+            <code>git show</code>) and ~30% of a single WU gate. <code>may_be_surface</code> now decides from
+            the path and the fetch is short-circuited: <strong>8 added paths → 0 fetches</strong> on this WU's
+            own seam. The same guard went into <code>roster_at</code>, where it drops
+            <strong>52 → 26</strong>, because it is the identical defect one caller over</td></tr>
+        <tr><td><strong>The report claims <code>verify-doc</code> over 82 tracked docs</strong>, but the tip it
+          certifies ships 84 — the count predates ⑤'s own two docs</td>
+          <td><span class="badge auto">real · important · fixed</span> re-run at the tip: 84, none red. A
+            report's evidence line must measure the tip it is bound to, which is the same lesson as
+            W7 follow-up 13 one field over</td></tr>
+        <tr><td><strong>Three duplications inside this WU's own new code</strong>:
+          <code>added_names</code> was <code>diff_names</code> plus one flag, two path-shape filters repeated
+          one three-condition chain, and <code>show_bytes(..).and_then(from_utf8)</code> was inlined three
+          times</td>
+          <td><span class="badge auto">real · nit · fixed</span> <code>names_in</code> ·
+            <code>shaped_file</code> · <code>git::read_utf8_at</code>. Net <strong>−33/+35</strong> lines
+            before the surface fix, and the third helper covered a pre-existing third site
+            (<code>rulebook_slugs</code>) the finder pointed at</td></tr>
+        <tr><td>A WU citing one design while adding N surfaces is never asked to cover the rest</td>
+          <td><span class="badge auto">refuted</span> that is DEC-25's shape, and the record's own worked
+            example is one family contract spanning seven built components. Requiring one citation per
+            surface would refuse the precedent the record documents</td></tr>
+        <tr><td><code>registry_entry</code>'s <code>@tier</code> test is greener than
+          <code>design-registry.mjs</code>, which also demands <code>@use</code>/<code>@avoid</code>/
+          <code>@states</code>/<code>@madeof</code></td>
+          <td><span class="badge auto">refuted</span> the parity claim is scoped to <em>membership</em>, which
+            is the oracle's own first-pass filter. The full-contract check exists and is stricter — the
+            <code>verify-doc</code> hook shells out to the real script, and
+            <code>collection.test.tsx</code> fails outright on an incomplete block. Replicating it in Rust
+            would fork business logic across two languages</td></tr>
+        <tr><td>Three more shape-duplication and double-work claims (the blob-pin block, a second
+          <code>design_run_status</code> parse, two git spawns per citation, a non-empty helper,
+          <code>roster_at</code>'s spawns as a standalone nit)</td>
+          <td><span class="badge auto">refuted</span> the pin sites already share
+            <code>PIN_MIN</code>/<code>pin_matches</code> and differ in blob source, cardinality and check-id
+            scheme; the second parse fires only on an already-failing citation (tens of microseconds); the
+            two spawns cost ~7ms against a 4.8s walk at 0–1 citations per WU. The
+            <code>roster_at</code> spawns were refuted as out-of-dimension and then fixed anyway, as part of
+            the surface fix above</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">Every fix is behaviour-preserving except the one that is not: <code>may_be_surface</code>
+      changes <em>when</em> bytes are read, never <em>what</em> answer comes back — so its test is written
+      against the risk that matters, a candidate wrongly skipped, in both directions.</p>
+
+    <h2 id="risk">⚠ The handoff has never been driven by a real build</h2>
+    <div class="callout warn" data-c="risk">
+      <p>This was <a href="2026-08-13-dflow-w8-plan.html#step5">named at planning as Q2</a> and it is
+        unchanged: the rule is enforced by predicates and exercised by a <strong>fake</strong> build — a
+        stub component, a one-line screen, and no agent that read the contract it cited. <strong>A handoff
+        nobody real has driven reads exactly like one that works.</strong> Step ⑥ is what that reads like
+        when someone finally looks: five green steps enforcing a rule whose trigger had nothing left to fire
+        on.</p>
+      <p>That is the failure mode M1 already caught this epic committing once: three design runs, zero lines
+        of product code, every gate green. The WU accepts the risk knowingly; <strong>W9 pays it</strong>, by
+        making the first real Tier-3 judgment and the first real build the same run.</p>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation">
+      <thead><tr><th>Tier</th><th>Landed</th></tr></thead>
+      <tbody>
+        <tr><td><strong>T2 · decisions</strong></td>
+          <td><span class="badge auto">done</span>
+            <a href="../decisions/dec-25-design-build-handoff.html"><strong>DEC-25</strong></a> — the epic as
+            the coupling unit, the blob-pinned pointer, the deliberate absence of a conformance judgment with
+            its revisit condition stated, and D1a's three drift cases. Registered in
+            <code>decisions-index</code>.<br>
+            <strong>DEC-16</strong> superseded on its survival clause, retirement order untouched, and its
+            "four files remain" note corrected to what W8 did with them.<br>
+            <strong>DEC-24</strong>'s timing dependency answered on the build side, including why an amendment
+            inside a build WU needs no new rule and why <code>verdict</code> became optional.<br>
+            <strong>DEC-15</strong> gains the build-side pair as a consequence — <a href="#deviations">not as
+            a table row</a></td></tr>
+        <tr><td><strong>T1</strong></td>
+          <td><span class="badge auto">v12, ② then ⑥</span> <code>workflow.html</code> only: the design row
+            in DoD-W, a DoD-E row, the gate-check rows, the design/build ordering and D1a's three cases at ②;
+            at ⑥ the touched half, the scope table, the commit-level rule, and the version line itself —
+            which still read <strong>v10</strong>, because ②'s commit message announced v11 without editing
+            the file. Rule-bearing, so both commits carry a listed <code>Reviewed-By</code> trailer.
+            <strong><code>documentation-system.html</code>: zero lines</strong>, no new tier row and no new
+            tracked location — the condition the plan attached was measured false</td></tr>
+        <tr><td><strong>T2 · design-rules</strong></td>
+          <td><span class="badge auto">none, as planned</span> no rule changed, and the rulebook blob the e2e
+            pins is the one W6 left. Ten dead links in <code>design-rules-index</code> became plain
+            <code>&lt;code&gt;</code> names at ① — the provenance still names where each rule came from</td></tr>
+        <tr><td><strong>T4 · code</strong></td>
+          <td><code>xtask/src/gate.rs</code> is the truth for when a design is required and what a citation
+            must satisfy; <code>xtask/src/doc.rs</code> for what a design must contain and what counts as a
+            surface. Where a doc and the code disagree, the code wins</td></tr>
+        <tr><td><strong>T3</strong></td>
+          <td>discussion · plan (amended at ⑥ with the step, its expected rows, its order row and the widened
+            regression bar) · four step records · this report. <code>docs/work/components/</code> ends the
+            WU <strong>gone</strong>, not empty — which is now the resting state</td></tr>
+        <tr><td><strong>infrastructure</strong></td>
+          <td><code>.claude/skills/code-review/SKILL.md</code> — §3b now reads three blocks from
+            <code>design-scope</code> and the <code>cr/v3</code> template carries
+            <code>implements[].built</code> and <code>undesigned</code>. Without it the reviewer writes notes
+            the gate refuses, which is the one way a rule and its author can silently disagree</td></tr>
+        <tr><td><strong>flagged for epic distillation</strong></td>
+          <td><span class="badge approval">owed at the epic merge</span>
+            <code>component-design-base.html</code> is the <em>authoring format</em>, not a design — the
+            <code>components·unbuilt</code> check never sees it, but gate check 6 still deletes it at the epic
+            merge. It must be <strong>promoted alongside the flow spec</strong>, not archived (W7·D6)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups">
+      <thead><tr><th>#</th><th>Item</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong><a href="#risk">The handoff is enforced but never really driven.</a></strong>
+          A fake build cannot show that a real agent reads what it cites. Same run as W7 follow-up 1 —
+          Tier-3's finder has also never judged a real artifact, and both are settled by one fresh-screen
+          run</td><td>W9</td></tr>
+        <tr><td>2</td><td><strong>Conformance is unjudged, on purpose.</strong> DEC-25 states the revisit
+          condition rather than filing a task: a real build that drifts from the design it cited, in a way
+          the pointer did not catch. Until one exists, a conformance finder is a judgment with no measured
+          defect class</td><td><span class="badge approval">condition, not a task</span> W9+</td></tr>
+        <tr><td>3</td><td><strong>The epic's drop record is owed at the epic merge.</strong> The four reasons
+          are written at ①, but they live in the <em>epic's</em> <code>cr</code> note as
+          <code>design.dropped</code> — which is where the gate reads them back. Until that note exists,
+          <code>components·unbuilt</code> is the epic's only new red, by design</td><td>epic merge</td></tr>
+        <tr><td>4</td><td><strong>The walk-waiver bill grows by four.</strong> A drop lands in the same bill
+          as a walk waiver, so W7 follow-up 2's count moves — and its threshold ("a dozen means the walk's
+          verdict is mostly waiver") is the thing to check against, not the drops themselves</td>
+          <td>epic merge</td></tr>
+        <tr><td>5</td><td><strong>W7 follow-up 7 is closed.</strong> The four design files whose components
+          were never built are gone, each with a reason. <code>components·unretired</code> keeps the other
+          half — a design file whose component <em>does</em> exist</td>
+          <td><span class="badge auto">closed</span></td></tr>
+        <tr><td>6</td><td><strong>W7 follow-up 3 recurred inside W7's own epic.</strong> ③'s measurement ran
+          against a local <code>epic/design-flow</code> 21 commits behind its remote. It changed no
+          conclusion this time (<a href="#deviations">deviations</a>), which is exactly why the follow-up
+          asked for the tool to refuse a stale target or print the two shas — a rule that only holds when
+          someone remembers it is the failure this epic keeps re-deriving</td>
+          <td>backlog · tooling <span class="badge approval">re-filed, now with two occurrences</span></td></tr>
+        <tr><td>7</td><td><code>ProtocolLine</code> keeps its design file: it has no roster entry, so
+          <code>components·unretired</code> stays silent, and it was <em>not</em> added by this epic's range,
+          so <code>components·unbuilt</code> never sees it. Neither half is wrong — the pair only binds
+          designs an epic <em>wrote</em>, and this one predates the rule</td>
+          <td><span class="badge approval">recorded</span></td></tr>
+        <tr><td>8</td><td><strong>The 8 landed screens are undesigned and stay that way.</strong> No gate
+          reaches history, and the ruling is to <em>waive</em> them rather than retro-design or file them: the
+          first Working Unit to touch one writes the reason into its own note, so the fact surfaces per seam
+          instead of ageing in a tracker. What to watch is the shape of those reasons — a run of
+          "predates the design flow" across many seams is the signal that a screen needs a real run, and it
+          is visible in the epic's waiver bill by construction</td>
+          <td><span class="badge approval">ruled · watched at the epic gate</span></td></tr>
+        <tr><td>9</td><td><strong>The two roster oracles still disagree about screens.</strong>
+          <code>roster_at</code> (git, epic gate) now counts them; <code>Roster</code> (the node oracle +
+          working tree, <code>verify-doc</code>) does not, so <code>components·unretired</code> will not
+          demand that a <em>screen</em> design retire into its screen's TSDoc once built. Check 6 forces the
+          file out of the tree at the epic tip either way, so nothing leaks — but the asymmetry is real and
+          the first screen design is what will exercise it</td>
+          <td>W9 <span class="badge approval">recorded, not built around</span></td></tr>
+        <tr><td>10</td><td><strong>A rename of a built component cannot merge.</strong> Ruled behaviour, not a
+          bug: DEC-16 retired the design, nothing is left to cite, and the two attempts to exempt renames both
+          leaked a real surface (rounds 4 and 5 — reproductions live in
+          <code>renaming_a_built_component_is_refused_rather_than_read_as_unchanged</code> and the round
+          tables above). The way out is a signal git does not have: a rename <em>declared</em> in the
+          <code>cr/v3</code> note — <code>design.renamed: [{from, to}]</code> — accepted only when
+          <code>from</code> was a surface at the base and <code>to</code> is one at the tip. That is an
+          assertion the reviewer makes and the gate checks, not a similarity guess. Build it when a rename is
+          actually blocked; until then the refusal costs nobody anything</td>
+          <td>W9+ <span class="badge approval">limitation, with its exit</span></td></tr>
+      </tbody>
+    </table>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
