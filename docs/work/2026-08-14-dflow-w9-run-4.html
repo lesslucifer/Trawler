@@ -222,7 +222,7 @@ carries no outcome, so it is neither Notice's job nor anyone else's.
             <td><div class="gist">reuse — a worded action, and fork D4 gets both halves</div>
               <details class="why"><summary>▸ why</summary>
                 <span class="no">@avoid</span> first — <em>"copy actions (use CopyButton)"</em> (none of these copy), <em>"actions whose glyph is unambiguous alone"</em> (install, set, stop and back all need words), <em>"emphasis by styling: pick which actions to offer instead, a Button never carries a primary/filled variant"</em> (the design asks for none; it picks <em>which</em> actions to offer instead), <em>"warn-toning it inside a warn Notice"</em> (no action sits inside A).
-                <strong>Fork D4 is the binding half</strong> — <em>"leaving it enabled while its action is in flight, or disabling it without a progress line beside it — both halves or neither"</em>. The <strong>three actions in B</strong> are elevated and slow, so each owes both halves: the Button disabled for the whole in-flight window, and StatusLine's <code>in-flight</code> state as the progress line in the same zone. That pairing is why the verdict line sits beside the action rather than above the zone. <strong>D's way out is neither</strong> — it resolves in the same frame, so it has no in-flight window and owes neither half; the fork binds an action that waits, not every Button on the screen.
+                <strong>Fork D4 is the binding half</strong> — <em>"leaving it enabled while its action is in flight, or disabling it without a progress line beside it — both halves or neither"</em>. The <strong>three actions in B</strong> are elevated and slow, so each owes both halves: the Button disabled for the whole in-flight window, and StatusLine's <code>in-flight</code> state as the progress line in the same zone. Two of the three are buildable today; <strong>stop routing is not</strong> — <code>setup.ts</code>'s <code>Running</code> union has no unsetting member and <code>proxyStatus</code> no branch for one, which is a <a href="#blocked-on">blocked-on</a> row against the build, not a licence to ship the disabled half alone. That pairing is why the verdict line sits beside the action rather than above the zone. <strong>D's way out is neither</strong> — it resolves in the same frame, so it has no in-flight window and owes neither half; the fork binds an action that waits, not every Button on the screen.
               </details></td>
             <td><pre class="tb">[ install certificate ]
 [ set system proxy    ]
@@ -235,7 +235,7 @@ carries no outcome, so it is neither Notice's job nor anyone else's.
             <td>T1 <span class="ok">reuse</span><br>B — one per precondition guide</td>
             <td><div class="gist">reuse — six and seven options clear the cardinality @avoid</div>
               <details class="why"><summary>▸ why</summary>
-                <span class="no">@avoid</span> first — <em>"two to four options (use SegmentedControl) — this is a miss by cardinality, not kind"</em>: trust has 6 targets and proxy has 7, so both land on this side of the line. Also clears <em>"multi-select or a clear affordance"</em> (one target, always one), <em>"free-text entry"</em>, <em>"option groups or disabled entries"</em>, <em>"an option element that needs two lines"</em> (each is one label), and <em>"fetching, sorting or defaulting options inside the component"</em> — the default comes from the host OS, outside.
+                <span class="no">@avoid</span> first — <em>"two to four options (use SegmentedControl — all choices visible reads as a switch; this is a miss by cardinality, not kind)"</em>: trust has 6 targets and proxy has 7, so both land on this side of the line. Also clears <em>"multi-select or a clear affordance"</em> (one target, always one), <em>"free-text entry"</em>, <em>"option groups or disabled entries"</em>, <em>"an option element that needs two lines"</em> (each is one label), and <em>"fetching, sorting or defaulting options inside the component"</em> — the default comes from the host OS, outside.
                 <span class="ok">@use</span> — <em>"any single choice from five or more options … a target picker"</em>, which is the literal job.
               </details></td>
             <td><pre class="tb">[ macOS          ▾ ]
@@ -610,7 +610,7 @@ soft:
   data-ink-first: satisfied — the screen draws no card, panel or badge of its own and one seam per precondition; the control borders and the step numerals it composes are Button's and StepList's, not the screen's to strip
   generous-targets: inherited — CopyText's whole-value target and Button's hit floor, both cited not restated
   motion-informs: inherited — CopyText's ~2 s confirm and StatusLine's spinner; the screen animates nothing of its own
-  empty-states-orient: satisfied — zone A names each absence and, where the user can act, zone C is the act
+  empty-states-orient: satisfied — every absence is named where it is observed, zone A for capture and zone B per precondition, and where the user can act zone C is the act
   familiar-idioms: satisfied — a checklist of preconditions rather than a wizard, with no Back/Next and no number on a precondition
   display-equals-payload: satisfied — both commands are the exact strings the domain returns for the configured address, unmodified and unnamed as views because neither is one
   labels-add-context: satisfied — under the trust precondition the action reads install certificate, never install the trawler CA certificate
@@ -670,6 +670,10 @@ soft:
           <td>Elements — the StatusLine row</td>
           <td>build WU · <code>ui/src/setup.ts</code> (the <code>[UI_DEFER]</code> marker, filed at E-DFLOW.W5 r3·22, comes due with this screen)</td>
           <td>designed against the short form and wrote the short strings the mockup shows, so the build has the wording it must add rather than inventing it</td></tr>
+        <tr><td>an <em>unsetting</em> member on <code>setup.ts</code>'s <code>Running</code> union, and the matching branch in <code>proxyStatus</code> — the union is <code>installing</code> · <code>setting</code> · <code>null</code>, so the stop-routing action has no in-flight verdict to render</td>
+          <td>Elements — the Button row, resolving fork D4 for the third action in B</td>
+          <td>build WU · <code>ui/src/setup.ts</code></td>
+          <td>designed all three actions to the same rule rather than exempting the one the substrate cannot yet express — Button's <code>@avoid</code> is <em>both halves or neither</em>, and a design that quietly dropped the progress half for one action would be shipping the defect the fork exists to name</td></tr>
         <tr><td>a trust probe that works off macOS and Windows — Linux, the NSS store and every device stay <em>unknown</em> forever</td>
           <td>Frame — the <em>unknown must not look like no</em> quality</td>
           <td>domain · API (a probe, not a UI change)</td>
@@ -713,6 +717,9 @@ soft:
         <tr><td>Tier-3, submission 4 — <em>"the StepList row says three targets return one instruction; five target/function pairs do"</em>, and <em>"the Button row's @avoid quote splices two non-adjacent fragments into one continuous citation"</em></td>
           <td>elements — the count was re-taken by calling the four instruction functions over all thirteen targets, and the spliced quote restored to the registry's own words</td>
           <td><code>StepList</code>'s <code>@avoid</code> · <code>Button</code>'s <code>@avoid</code></td></tr>
+        <tr><td>Tier-3, submission 5 — a second spliced quotation (Select's cardinality <code>@avoid</code>), fork D4 owed for <em>stop routing</em> against a <code>Running</code> union that has no unsetting member, and <em>"zone A names each absence"</em> when zone B names three of the four</td>
+          <td>elements · blocked-on · receipt — the quote restored verbatim, a third blocked-on row opened against <code>setup.ts</code>, and the absence clause moved to where each absence is actually observed</td>
+          <td><code>Select</code>'s <code>@avoid</code> · <code>Button</code>'s <code>@avoid</code> fork D4 · <code>empty-states-orient</code></td></tr>
         <tr><td>R3 — the shipped suite retires with the design it guarded</td>
           <td>nothing in the design; it binds the build at W9 ⑤, and this run's capabilities table is what the coverage map is written against</td>
           <td><code>R3</code> · the W9 discussion's clash ruling</td></tr>
