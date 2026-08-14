@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7ea72b9f34851f0dfab9f9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W9 plan (the fresh screen, really built)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W9 — the fresh screen, really built</h1>
+      <p><strong>Seven steps, and the epic's last unpaid debt is every one of them.</strong>
+        The design flow runs greenfield on the setup screen, Tier-3 is made to go red before it is
+        allowed to go green, and a real build adopts the closed design — the first time in this
+        epic's nine Working Units that a design reaches product code.</p>
+      <div class="meta">WU plan · 2026-08-14 · Trawler · T3 (docs/work/) ·
+        <code>wu/design-flow/fresh-screen</code> off <code>epic/design-flow</code> @ <code>620c7c4</code> ·
+        <a href="2026-08-14-dflow-w9-discussion.html">discussion</a> (3 rounds, all forks ruled) ·
+        <a href="2026-07-16-design-flow-plan.html">epic plan</a> ·
+        <a href="2026-08-13-dflow-w8-result.html">W8 result</a></div>
+    </div>
+  </header>
+  <main data-artifact="wu-plan">
+
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement">
+      The finished design flow is <strong>run on a screen it has never designed under the current
+      substrate, and its output is really built</strong>. Run #4 designs onboarding greenfield —
+      six stages, against the current registry and rulebook, <em>without runs #1–#3 as input</em> —
+      and closes green. <strong>Tier-3 goes red before it may go green</strong>: a deliberately
+      doctored copy of the closed design, carrying one dishonestly paraphrased <code>@avoid</code>,
+      is submitted first and must return <strong>FAIL</strong>; only then is the real design
+      submitted, and it must return <strong>PASS</strong>. A real build then adopts the closed
+      design through the <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a>
+      handoff, citing path plus blob plus the files it produced, and firing <strong>both</strong>
+      the <code>new_surface</code> and the edit legs — or, where the design honestly proposed no new
+      surface, reporting that as a named gap rather than manufacturing one.
+      <span class="badge id">UC-ONBOARD</span> and
+      <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a> are amended where the
+      design demands it, the screen's shipped test suite is <strong>retired with the design it
+      guarded</strong> and replaced by the tests the new design needs, and a
+      <strong>coverage map</strong> records what each retired test asserted and where that
+      assertion went.
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <div data-item="maps-to">
+      <p>Epic plan <strong>W9 · whole-epic acceptance</strong>. <strong>Depends on: W8</strong> (the
+        handoff it drives), <strong>W7</strong> (Tier-3, the registry oracle, the flow e2e),
+        <strong>W6</strong> (the rulebook and its 13 predicates), <strong>W5</strong> (the registry).
+        It is the terminal Working Unit: nothing in the epic is deferred past it except the epic's
+        own distillation and merge.</p>
+
+      <table data-c="tbl-mapping">
+        <thead><tr><th>Deferred here by</th><th>What W9 owes it</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../decisions/dec-24-design-review-dimension.html">DEC-24</a> · W7 follow-up 1</td>
+            <td>Tier-3's finder has never judged a real artifact. W9 is its <strong>acceptance
+              test</strong>, not merely its first use — which is why a PASS alone will not close it
+              (<a href="#step3">step ③</a>)</td></tr>
+          <tr><td>W7 follow-up 4</td>
+            <td>The one defect class Tier-3 solely owns — a cited <code>@avoid</code> that is not
+              faithfully paraphrased — measured mechanically undecidable at W7 ②, and the defect run
+              #3 actually shipped. Nothing has ever been shown to catch it</td></tr>
+          <tr><td><a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a></td>
+            <td>Hard-rule predicates that have never gone red on a real artifact. A live screen is
+              where over-fit shows. The count is <strong>re-taken at <a href="#step0">step ⓪</a></strong>,
+              never restated</td></tr>
+          <tr><td><a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a> · W8 follow-up 1</td>
+            <td>The handoff has only ever been driven by a fake build — a stub component, a one-line
+              screen, no agent that read what it cited</td></tr>
+          <tr><td>W8 follow-up 9</td>
+            <td>The screen-design retirement asymmetry: <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>
+              does not demand a <em>screen</em> design retire into its screen's TSDoc. The first
+              screen design is what exercises it</td></tr>
+          <tr><td>this WU's <a href="2026-08-14-dflow-w9-discussion.html">discussion</a>, rounds 1–3</td>
+            <td>D1 greenfield · D2 the contract is changeable · D3 both legs, and Q1's <em>no</em> ·
+              D4 the non-goals struck in writing · D5 red-then-green · D6 → R3 the suite retires</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>Amends, in writing, on DEC-25's authority.</strong> The epic plan's non-goals say
+        <em>"No Trawler UI re-design"</em> and <em>"No building of real feature components"</em>.
+        W9 is both. <a href="#step6">Step ⑥</a> strikes them in the epic plan and records
+        <em>why</em>: the redesign exists to verify the flow and its handoff, <strong>not</strong>
+        because onboarding was judged to need redesigning. Without that sentence a later reader cites
+        W9 as licence to redesign UI inside a process epic.</p>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <p>What a reader who was not here can observe when W9 has landed.</p>
+    <table data-item="expected" data-c="tbl-expected">
+      <thead><tr><th>#</th><th>Observable</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>A <strong>closed design run #4</strong> on the setup screen, green through
+          <code>verify-doc</code>, produced against the current registry and rulebook, with the
+          rulebook blob pinned in its receipt</td></tr>
+        <tr><td>2</td><td>A record that Tier-3 <strong>returned FAIL on the doctored design and PASS
+          on the real one</strong>, in that order, from the same finder against the same rulebook
+          pin</td></tr>
+        <tr><td>3</td><td>A <code>cr/v3</code> note whose <code>design.implements</code> cites run
+          #4 by path and blob, with <code>built</code> naming the files the build produced — and a
+          merge that the gate accepted only because of it</td></tr>
+        <tr><td>4</td><td><strong>Onboarding rebuilt from that design</strong> and running in the
+          real app: a screen that reaches the component collection instead of hand-rolling
+          <code>&lt;button&gt;</code>, <code>&lt;ol&gt;</code> and <code>&lt;select&gt;</code></td></tr>
+        <tr><td>5</td><td>The retired suite gone, a new suite green, and a <strong>coverage
+          map</strong> naming every retired assertion and where it went — or why it was deliberately
+          dropped, with the matching contract amendment</td></tr>
+        <tr><td>6</td><td><span class="badge id">UC-ONBOARD</span> and
+          <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a> reflecting what
+          actually ships</td></tr>
+        <tr><td>7</td><td>Two <strong>numbers</strong>, taken not asserted: how many of the 13 hard
+          predicates went red at least once on a real artifact after run #4 (was N before), and
+          whether <code>new_surface</code> fired</td></tr>
+        <tr><td>8</td><td>A <strong>repeatability read</strong>: run #4 set beside run #3, the same
+          screen designed twice by the same flow, and what differed</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="worklist">The worklist</h2>
+
+    <h3 id="step0">⓪ Re-take every number this plan will rest on</h3>
+    <p>This epic has corrected a restated-rather-than-re-taken figure in four consecutive review
+      rounds. So before any step consumes one:</p>
+    <ul>
+      <li>Which of the 13 hard predicates have <strong>never</strong> gone red on a real artifact —
+        recomputed over the three archived runs, not read out of DEC-17.</li>
+      <li>The registry as the flow will actually load it (<code>node scripts/design-registry.mjs</code>)
+        and the rulebook blob (<code>git hash-object docs/design-rules/design-rules-index.html</code>).</li>
+      <li>The exact inventory of what run #4's build will retire: every test file, every assertion,
+        every <code>data-testid</code> the current screen exposes. This is the coverage map's
+        left-hand column, and it must be taken <em>before</em> anything is deleted.</li>
+    </ul>
+    <div class="callout warn">
+      <strong>Pass the base explicitly and make sure it is current.</strong>
+      <code>design-scope</code> and <code>verify-dod</code> both measure from a branch ref; a local
+      epic ref behind its remote silently measures the wrong diff. That produced a false
+      "1 design artifact to judge" in W7 ④ that a whole acceptance argument then rested on.
+    </div>
+
+    <h3 id="step1">① Run #4 — the design, greenfield</h3>
+    <p>The six stages (Frame → Layout → Elements → Interaction → Draft mockup → Tune) on the setup
+      screen, per the flow spec, with <code>verify-doc</code> after every write and green at the
+      close before <code>data-status="archived"</code>.</p>
+    <table data-c="tbl-step1">
+      <thead><tr><th>Constraint</th><th>Why it is a constraint and not advice</th></tr></thead>
+      <tbody>
+        <tr><td>Runs #1–#3 are <strong>not read</strong> during the run</td>
+          <td>D1. An independent run is what makes the later #4-vs-#3 comparison a measurement rather
+            than a tautology</td></tr>
+        <tr><td>The <em>shipped screen</em> is read for capabilities, not for layout</td>
+          <td>The design must know what onboarding has to accomplish (install a CA, set a proxy,
+            prove capture) without inheriting how the current screen does it — that inheritance is
+            exactly what a greenfield run is testing for</td></tr>
+        <tr><td>Reuse-or-propose is exercised honestly</td>
+          <td>The collection ships 24 components whose TSDoc names this screen's jobs —
+            <code>StepList</code> ("a certificate install, a device setting, a remedy"),
+            <code>Notice</code> ("the setup screen's capture-is-working zone"), <code>Select</code>
+            ("a target picker"). If they fit, they are used; if they do not, the proposal says why</td></tr>
+        <tr><td>The contract may move</td>
+          <td>D2. If the design concludes a different onboarding, that lands — and
+            <a href="#step6">step ⑥</a> amends UC-ONBOARD and DEC-13 to match</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="step2">② The overlap DEC-17 deferred to here, revisited only if it costs a reader</h3>
+    <p>DEC-17 left <code>colour-tokens-only</code> and <code>type-tokens-only</code> able to claim the
+      same declaration, silently exempting whichever loses, and deferred the question to W9
+      <em>"if it costs a reader something"</em>. Run #4 is the first live artifact that can answer
+      it. If no red in the run is ambiguous between the two, this step closes with that measurement
+      and no change. It is not licence to reopen the rulebook.</p>
+
+    <h3 id="step3">③ Tier-3 goes red before it may go green</h3>
+    <div class="diagram" data-c="step3-diagram">
+      <pre class="mermaid">
+flowchart TD
+    A["run #4, closed and archived"] --> B["make a doctored copy:<br/>one cited @avoid paraphrased<br/>as something the TSDoc does not say"]
+    B --> C{"Tier-3 · submission 1"}
+    C -->|"FAIL — required"| D["the finder can catch the class it solely owns"]
+    C -->|"PASS — stop"| X["the tier is broken.<br/>W9 halts: nothing downstream is worth running"]
+    D --> E{"Tier-3 · submission 2 — the real design"}
+    E -->|"PASS — required"| F["the verdict now means something"]
+    E -->|"FAIL"| G["fix the design, re-close, re-submit"]
+      </pre>
+      <div class="caption">Red first, green second. The FAIL is a precondition, not a parallel check
+        — the same shape as a failing test written before the code that satisfies it.</div>
+    </div>
+    <p>Both submissions use the <strong>same finder against the same rulebook pin</strong>, taken from
+      <code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code>. The doctored copy is scratch:
+      it never lands in the tree, never enters <code>design-scope</code>'s output, and never appears
+      in a note. What is recorded is the pair of verdicts and the exact paraphrase that was
+      falsified.</p>
+
+    <h3 id="step4">④ The handoff, driven by something real</h3>
+    <p>The build Working Unit cites what it built from:
+      <code>git rev-parse &lt;tip&gt;:&lt;the design&gt;</code> → <code>design.implements:
+      [{path, blob, built}]</code> in the <code>cr/v3</code> note. This is W8's machinery used in
+      anger for the first time — no stub component, no one-line screen, and an agent that has
+      actually read the contract it cites.</p>
+    <table data-c="tbl-step4">
+      <thead><tr><th>Leg</th><th>Expectation</th></tr></thead>
+      <tbody>
+        <tr><td>edit leg</td><td><strong>Fires, guaranteed</strong> — the rebuild changes rendered
+          files that already exist. This is the leg W8 ⑥ measured as having an empty trigger
+          population; W9 is its first real firing</td></tr>
+        <tr><td><code>new_surface</code></td><td>Fires <strong>if</strong> the design proposed a new
+          component or screen. <strong>Q1 is ruled No:</strong> if it honestly proposed nothing new,
+          that is written down as a named gap — <em>"a full redesign of the app's largest screen
+          needed zero new components"</em> is a real finding about registry coverage — and no
+          component is invented to trip the predicate</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="step5">⑤ The build, and the suite that retires with the design it guarded</h3>
+    <p>Onboarding is rebuilt from the closed design. Per <a href="2026-08-14-dflow-w9-discussion.html#clash">R3</a>,
+      the shipped suite goes with the design it was written against — it asserts
+      <code>onb-next</code>, <code>trust-target</code>, <code>data-status="active"</code> and this
+      screen's exact microcopy, all of which are design decisions the redesign is entitled to
+      change.</p>
+    <div class="callout warn">
+      <strong>The cost R3 accepts, carried here so the result report does not rediscover it.</strong>
+      W9 keeps <em>no independent regression evidence</em>. The run that changes the UI also writes
+      the tests that judge it, so a green suite proves the new build matches the new <em>design</em>
+      and nothing more. The <strong>coverage map</strong> is the whole mitigation: every retired
+      assertion, and either where it landed in the new suite or why it was deliberately dropped with
+      the matching <span class="badge id">UC-ONBOARD</span> / DEC-13 amendment. Its left column is
+      taken at <a href="#step0">step ⓪</a>, before anything is deleted — afterwards it cannot be
+      reconstructed.
+    </div>
+
+    <h3 id="step6">⑥ The contract, and the non-goals struck in writing</h3>
+    <ul>
+      <li><span class="badge id">UC-ONBOARD</span> in <code>docs/use-cases/web-ui.html</code> and
+        <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a> amended to what
+        actually ships — or an explicit statement that neither moved.</li>
+      <li>The epic plan's two non-goals struck, citing DEC-25, <strong>with the reason</strong>:
+        accepted as the verification vehicle, not as a product mandate.</li>
+      <li>W8 follow-up 9 answered by observation: does the first <em>screen</em> design retire the
+        way DEC-16 retires a component design, and if not, what actually happened at the tip.</li>
+    </ul>
+
+    <h3 id="step7">⑦ Distillation, review, merge</h3>
+    <p>The distillation checklist runs in the same session as the change. The
+      <strong>code-review skill</strong> on the tip, <code>cr/v3</code> PASS bound to that exact
+      diff, then the merge. <strong>Not here:</strong> promoting the flow spec to T1, the epic's drop
+      record for the 4 of 20 unbuilt component designs, and archiving the T3 run docs — all owed at
+      the <em>epic</em> distillation and merge, not this WU's.</p>
+
+    <h2 id="test-plan">Test plan <span class="badge id">no waiver at any level</span></h2>
+    <table data-item="test-plan" data-c="tbl-tests">
+      <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">unit</span> commit</td>
+          <td>Every component and screen the build adds or changes carries unit tests for what it
+            renders and what it does — the replacement suite, written against the new design rather
+            than inherited from the old one. Any new registry component additionally carries its
+            collection specimen, as every entry does.</td></tr>
+        <tr><td><span class="badge id">integration</span> WU</td>
+          <td>The bounded contract: <strong>onboarding wired into the app</strong>. A fresh launch
+            with no decrypted flow shows onboarding and not the list; a decrypted flow reveals the
+            list; each step's status reflects the real probe rather than a local marker; a failed
+            CA install surfaces its error and does <strong>not</strong> claim trusted. These are
+            capabilities, not layout — they must hold whatever the redesign concluded, and every one
+            of them appears in the coverage map's left column.</td></tr>
+        <tr><td><span class="badge id">e2e</span> epic</td>
+          <td><strong>Not waived.</strong> <code>ui/e2e/specs/onboarding.spec.ts</code> is rewritten
+            for the new design and drives the real Tauri window against a real ephemeral core: launch
+            → onboarding → a real proxied HTTPS request through the harness → the capture-driven
+            reveal. The retired spec's journey spine survives; its selectors do not.</td></tr>
+        <tr><td><span class="badge id">design</span> the run itself</td>
+          <td><code>verify-doc</code> green on run #4 at the close, before archiving · the receipt
+            pins the rulebook blob the run actually read · <code>design-scope</code> reports run #4
+            as an artifact the review must judge · Tier-3 <strong>FAIL then PASS</strong>
+            (<a href="#step3">step ③</a>) · <code>verify-dod wu</code> green at the merge, and red
+            with the citation removed — proving the handoff is what let it through.</td></tr>
+        <tr><td><span class="badge id">measurement</span></td>
+          <td>Reported as numbers, taken not asserted: <strong>how many of the 13 hard predicates
+            have now gone red at least once on a real artifact</strong> (against ⓪'s baseline) ·
+            whether <code>new_surface</code> fired, and if not, the named gap · how many of the 24
+            registry components the redesign actually reused · <strong>run #4 against run
+            #3</strong>, the same screen designed twice by the same flow, and what differed.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="order">Order of work</h2>
+    <div class="diagram" data-c="order-diagram">
+      <pre class="mermaid">
+flowchart LR
+    S0["⓪ re-take the numbers<br/>+ the coverage map's left column"] --> S1["① run #4<br/>greenfield design"]
+    S1 --> S2["② the DEC-17 overlap<br/>measured, changed only if it cost"]
+    S2 --> S3["③ Tier-3<br/>FAIL then PASS"]
+    S3 --> S4["④ the handoff<br/>cite path + blob + built"]
+    S4 --> S5["⑤ the build<br/>+ the new suite + coverage map"]
+    S5 --> S6["⑥ UC-ONBOARD · DEC-13<br/>· the non-goals struck"]
+    S6 --> S7["⑦ distil · review · merge"]
+      </pre>
+      <div class="caption">⓪ is not optional bookkeeping: its left column cannot be reconstructed once
+        ⑤ deletes the suite, and every number ③–⑦ report is measured against its baseline.</div>
+    </div>
+
+    <h2 id="risks">What could go wrong, and what happens then</h2>
+    <table data-c="tbl-risks">
+      <thead><tr><th>Risk</th><th>Ruled response</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Tier-3 passes the doctored design.</strong> The tier cannot catch the one
+          class it solely owns</td>
+          <td>W9 <strong>halts at ③</strong>. That is a finding about the harness, not a reason to
+            proceed — everything downstream would be evidence about a finder already known to be
+            blind. It becomes the epic's largest result, reported as such</td></tr>
+        <tr><td><strong>The redesign proposes nothing new</strong>, so <code>new_surface</code>
+          never fires</td>
+          <td>Ruled at Q1: <strong>report the gap</strong>. No component is manufactured to trip a
+            predicate</td></tr>
+        <tr><td><strong>All 13 predicates stay green on run #4</strong>, so the never-red set does not
+          shrink</td>
+          <td>Reported as the measurement it is. A live screen that violates nothing is weak evidence
+            for the predicates and <em>strong</em> evidence for the flow — both get said, and neither
+            is dressed as the other</td></tr>
+        <tr><td><strong>The rebuild is larger than one Working Unit can carry</strong></td>
+          <td>The standing default is one WU, because splitting re-opens the exact gap DEC-25 exists
+            to close. If it must split, the design and the build stay in the <em>same</em> WU and
+            something else moves — never the handoff</td></tr>
+        <tr><td><strong>A capability quietly disappears</strong> in the suite swap</td>
+          <td>The coverage map is the only thing that catches it, which is why its left column is
+            taken at ⓪ rather than reconstructed at ⑤</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
