@@ -220,7 +220,7 @@ setup screen
             <td><div class="gist">reuse — a worded action, and fork D4 gets both halves</div>
               <details class="why"><summary>▸ why</summary>
                 <span class="no">@avoid</span> first — <em>"copy actions (use CopyButton)"</em> (none of these copy), <em>"actions whose glyph is unambiguous alone"</em> (install, set, stop and back all need words), <em>"emphasis by styling — a Button never carries a primary/filled variant"</em> (the design asks for none; it picks <em>which</em> actions to offer instead), <em>"warn-toning it inside a warn Notice"</em> (no action sits inside A).
-                <strong>Fork D4 is the binding half</strong> — <em>"leaving it enabled while its action is in flight, or disabling it without a progress line beside it — both halves or neither"</em>. Every action here is elevated and slow, so the design owes both: the Button disabled for the whole in-flight window, and StatusLine's <code>in-flight</code> state as the progress line in the same zone. That pairing is why the verdict line sits beside the action rather than above the zone.
+                <strong>Fork D4 is the binding half</strong> — <em>"leaving it enabled while its action is in flight, or disabling it without a progress line beside it — both halves or neither"</em>. The <strong>three actions in B</strong> are elevated and slow, so each owes both halves: the Button disabled for the whole in-flight window, and StatusLine's <code>in-flight</code> state as the progress line in the same zone. That pairing is why the verdict line sits beside the action rather than above the zone. <strong>D's way out is neither</strong> — it resolves in the same frame, so it has no in-flight window and owes neither half; the fork binds an action that waits, not every Button on the screen.
               </details></td>
             <td><pre class="tb">[ install certificate ]
 [ set system proxy    ]
@@ -601,15 +601,15 @@ proxy  ○ no traffic</pre></td>
     <pre data-item="receipt">
 rulebook: b769f7e4ccbb2e4d02604f47e0fd1aa07e493cf9
 soft:
-  visual-weight-follows-goals: satisfied — zone A opens the screen at the title size in full ink while every precondition under it is chrome-sized
+  visual-weight-follows-goals: satisfied — zone A opens the screen at the title size in full ink and nothing under it rises above body size
   grouping-by-relatedness: satisfied — one hairline per precondition floor, none inside a precondition's own stack
   ordering-by-priority: satisfied — outcome, then what must be true, then what proves it, then the way out
   progressive-disclosure: satisfied — two verdicts and one command at rest, the guides one act away, nothing two
-  data-ink-first: satisfied — no cards, no badges, no step numerals; the only chrome is the seam that marks a boundary
+  data-ink-first: satisfied — the screen draws no card, panel or badge of its own and one seam per precondition; the control borders and the step numerals it composes are Button's and StepList's, not the screen's to strip
   generous-targets: inherited — CopyText's whole-value target and Button's hit floor, both cited not restated
   motion-informs: inherited — CopyText's ~2 s confirm and StatusLine's spinner; the screen animates nothing of its own
   empty-states-orient: satisfied — zone A names each absence and, where the user can act, zone C is the act
-  familiar-idioms: satisfied — a checklist of preconditions rather than a wizard, no Back/Next and no step numbers
+  familiar-idioms: satisfied — a checklist of preconditions rather than a wizard, with no Back/Next and no number on a precondition
   display-equals-payload: satisfied — both commands are the exact strings the domain returns for the configured address, unmodified and unnamed as views because neither is one
   labels-add-context: satisfied — under the trust precondition the action reads install certificate, never install the trawler CA certificate
   calm-microcopy: satisfied — every string rewritten lowercase and terse; the shipped screen's Title Case and its ellipses go with it
@@ -702,6 +702,9 @@ soft:
         <tr><td>Tier-3, submission 1 — <em>"absence-names-itself counts four absences; the fourth, another proxy is set, is receipted and never rendered anywhere"</em></td>
           <td>elements · interaction — the sentence is now a StatusLine state in the catalog and a use-case row of its own, because a fourth absence nobody designed is three absences and a claim</td>
           <td><code>absence-names-itself</code></td></tr>
+        <tr><td>Tier-3, submission 2 — three findings, all the same shape: <em>"the receipt's supporting clause describes a mockup that is not this one"</em> (chrome-sized preconditions that are body-sized, no step numerals beside two <code>list-decimal</code> lists, every action elevated when D's is instant)</td>
+          <td>receipt · elements — three clauses rewritten to what the mockup composes, and the fork-D4 justification scoped to the three actions that actually wait</td>
+          <td><code>visual-weight-follows-goals</code> · <code>data-ink-first</code> · <code>familiar-idioms</code> · Button's <code>@avoid</code> fork D4</td></tr>
         <tr><td>R3 — the shipped suite retires with the design it guarded</td>
           <td>nothing in the design; it binds the build at W9 ⑤, and this run's capabilities table is what the coverage map is written against</td>
           <td><code>R3</code> · the W9 discussion's clash ruling</td></tr>
