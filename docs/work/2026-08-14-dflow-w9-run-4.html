@@ -192,13 +192,14 @@ carries no outcome, so it is neither Notice's job nor anyone else's.
             <td><div class="gist">extend — the fit is exact, the message size is not</div>
               <details class="why"><summary>▸ why</summary>
                 <span class="no">@avoid</span> read first — <em>"a status verdict with a glyph+name+message shape (that is StatusLine)"</em>. Zone A clears it because it carries no precondition name and no per-item glyph pair: it is one sentence about the screen as a whole, and the two named verdicts live in B on StatusLine. It also clears <em>"wrapping a notice in a card or panel of its own"</em> (A is a bare zone) and <em>"a dismissible message"</em> (nothing dismisses it).
-                <strong>Why extend and not reuse.</strong> <code>Notice.tsx</code> hardcodes its message to <code>font-ui text-body leading-normal</code> and exposes no size axis, so the component as built cannot carry the weight the top goal ranks first — the mockup composing it at <code>text-body</code> would leave zone A the same size as the precondition it outranks. The delta is <strong>one headline size on the message paragraph</strong>, and nothing else: same anatomy, same glyph slot, same tones, same detail and action slots. Growing the component is the flow's answer here rather than forking a copy into the screen.
+                <strong>Why extend and not reuse.</strong> <code>Notice.tsx</code> hardcodes its message to <code>font-ui text-body leading-normal</code> and exposes no size axis, so the component as built cannot carry the weight the top goal ranks first — the mockup composing it at <code>text-body</code> would leave zone A the same size as the precondition it outranks. The delta is <strong>one headline size on the message paragraph</strong>, and nothing else: same anatomy, same tone map, same detail and action slots — and the same <strong>empty</strong> glyph slot at <code>mute</code>, where <code>Notice.tsx</code> sets <code>glyph: null</code> and the zone renders bare. The headline outcome carries its meaning in words and, at <code>ok</code>, in the component's own ✓; it never invents a mute glyph, which would be a second delta this extension does not ask for. Growing the component is the flow's answer here rather than forking a copy into the screen.
                 <span class="ok">@use</span> lands exactly — <em>"any zone whose whole content is a STANDING positive outcome (tone=&quot;ok&quot; — &quot;trawler is capturing&quot;) … the setup screen's capture-is-working zone"</em>, and for the not-yet case <em>"any zone that has nothing to show and must say which nothing it is"</em>.
               </details></td>
             <td><pre class="tb">✓ trawler is capturing
-◐ waiting for your first
-  request — nothing has
-  reached trawler yet</pre>
+
+waiting for your first
+request — nothing has
+reached trawler yet</pre>
               per Notice's own TSDoc — mute bare, mute + detail, warn + ⚠, ok + ✓, any tone + action slot. <strong>The extension adds no state</strong>: the message renders at the headline size in every tone Notice already has, and nothing about the delta is stateful</td>
           </tr>
           <tr data-key="status-line">
@@ -471,7 +472,6 @@ D → present, because ever-proven latched
           <!-- A · Notice, EXTENDED: its own anatomy, message at the title size (the declared delta) -->
           <div class="a-zone px-4">
             <div data-tone="mute" class="a-idle-only flex items-start gap-chrome-gap py-chrome-y">
-              <span aria-hidden="true" class="shrink-0 font-ui text-body text-ink-mute">○</span>
               <div class="min-w-0"><p class="a-headline font-ui text-title leading-normal text-ink-mute">waiting for your first request — nothing has reached trawler yet</p></div>
             </div>
             <div data-tone="ok" class="a-proven-only flex items-start gap-chrome-gap py-chrome-y">
@@ -777,6 +777,9 @@ soft:
         <tr><td>Tier-3, submission 7 — <em>"the proxy guide renders no turn-off instructions at all"</em>, and <em>"the trust guide's flattened removal sentence keeps one of removalSteps(macos)'s two instructions, which the run's own single-instruction rule does not permit"</em></td>
           <td>mockup · tune — both guides now carry their reversal as a second labelled StepList in the same disclosure, and Tune's after-drawing was corrected: the call removed a second <em>disclosure</em>, never the instructions behind it</td>
           <td><code>StepList</code>'s <code>@avoid</code> · <code>progressive-disclosure</code></td></tr>
+        <tr><td>Tier-3, submission 8 — <em>"the mockup composes a ○ glyph under data-tone=mute, and Notice.tsx sets glyph: null there, so the run's one extension quietly carried a second delta"</em></td>
+          <td>mockup · elements — the mute headline renders bare, as Notice does, and the extend row now names the empty glyph slot instead of claiming the slot is unchanged</td>
+          <td>Notice's <code>@states</code> · <code>colour-plus-text</code></td></tr>
         <tr><td>R3 — the shipped suite retires with the design it guarded</td>
           <td>nothing in the design; it binds the build at W9 ⑤, and this run's capabilities table is what the coverage map is written against</td>
           <td><code>R3</code> · the W9 discussion's clash ruling</td></tr>
