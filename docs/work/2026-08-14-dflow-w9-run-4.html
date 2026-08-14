@@ -221,7 +221,7 @@ carries no outcome, so it is neither Notice's job nor anyone else's.
             <td>T1 <span class="ok">reuse</span><br>B · D — two zones, shared</td>
             <td><div class="gist">reuse — a worded action, and fork D4 gets both halves</div>
               <details class="why"><summary>▸ why</summary>
-                <span class="no">@avoid</span> first — <em>"copy actions (use CopyButton)"</em> (none of these copy), <em>"actions whose glyph is unambiguous alone"</em> (install, set, stop and back all need words), <em>"emphasis by styling — a Button never carries a primary/filled variant"</em> (the design asks for none; it picks <em>which</em> actions to offer instead), <em>"warn-toning it inside a warn Notice"</em> (no action sits inside A).
+                <span class="no">@avoid</span> first — <em>"copy actions (use CopyButton)"</em> (none of these copy), <em>"actions whose glyph is unambiguous alone"</em> (install, set, stop and back all need words), <em>"emphasis by styling: pick which actions to offer instead, a Button never carries a primary/filled variant"</em> (the design asks for none; it picks <em>which</em> actions to offer instead), <em>"warn-toning it inside a warn Notice"</em> (no action sits inside A).
                 <strong>Fork D4 is the binding half</strong> — <em>"leaving it enabled while its action is in flight, or disabling it without a progress line beside it — both halves or neither"</em>. The <strong>three actions in B</strong> are elevated and slow, so each owes both halves: the Button disabled for the whole in-flight window, and StatusLine's <code>in-flight</code> state as the progress line in the same zone. That pairing is why the verdict line sits beside the action rather than above the zone. <strong>D's way out is neither</strong> — it resolves in the same frame, so it has no in-flight window and owes neither half; the fork binds an action that waits, not every Button on the screen.
               </details></td>
             <td><pre class="tb">[ install certificate ]
@@ -251,7 +251,7 @@ carries no outcome, so it is neither Notice's job nor anyone else's.
             <td><div class="gist">reuse — ordered hand-performed instructions, with no progress drawn</div>
               <details class="why"><summary>▸ why</summary>
                 <span class="no">@avoid</span> first — <em>"rendering per-step completion or a current-step highlight — the app cannot observe it; the probed verdict belongs to StatusLine above"</em>: cleared, and it is the contract that shaped the whole layout. <em>"nesting a StepList inside a step, or sub-steps of any kind"</em> — cleared by flattening removal and turn-off into the same guide rather than a second list inside a step. <em>"adding a copy affordance — a command step is a CopyText"</em> — cleared, the command steps are CopyText in the slot.
-                <strong>One @avoid bites for a subset</strong> — <em>"a single unordered statement (that is prose, or Notice if it is about a zone's state)"</em>. Three targets return exactly one instruction (<code>proxyOffSteps</code> for Firefox and Android, <code>removalSteps</code> for Windows). The screen renders those as the sentence they are; a numbered list of one is the shape this line refuses.
+                <strong>One @avoid bites for a subset</strong> — <em>"a single unordered statement (that is prose, or Notice if it is about a zone's state)"</em>. Five target/function pairs return exactly one instruction — <code>removalSteps</code> for Windows and Android, <code>proxyOffSteps</code> for Firefox, the iOS Simulator and Android — counted by calling them, not by reading the source. The screen renders those as the sentence they are; a numbered list of one is the shape this line refuses.
                 <span class="ok">@use</span> — <em>"any ordered sequence the user performs by hand — a certificate install, a device setting, a remedy"</em>.
               </details></td>
             <td><pre class="tb">1. save trawler-ca.pem
@@ -657,7 +657,7 @@ soft:
           <td>registry, on the second sighting</td></tr>
         <tr><td>observation, not a proposal</td>
           <td>a one-instruction list</td>
-          <td>Three targets return exactly one instruction, and <code>StepList</code>'s <code>@avoid</code> refuses <em>"a single unordered statement"</em>. The screen renders those as prose, which is what the @avoid points at. No new entry is needed — but the collection has no shape for <em>"an ordered list that may collapse to one"</em>, and every caller must know to branch</td>
+          <td>Five target/function pairs return exactly one instruction, and <code>StepList</code>'s <code>@avoid</code> refuses <em>"a single unordered statement"</em>. The screen renders those as prose, which is what the @avoid points at. No new entry is needed — but the collection has no shape for <em>"an ordered list that may collapse to one"</em>, and every caller must know to branch</td>
           <td>registry, if a second caller hits it</td></tr>
       </tbody>
     </table>
@@ -710,6 +710,9 @@ soft:
         <tr><td>Tier-3, submission 3 — <em>"nothing under zone A rises above body size is false — the commands are 12.5px and the way out is 14px"</em>, and <em>"Notice is placed in A and C but only A's fit is argued"</em></td>
           <td>receipt · elements — the weight row now claims what is measurable (title size is the largest the mockup draws, nothing below exceeds note size), and Notice's placement drops to zone A because zone C's caption is screen prose that was never a Notice</td>
           <td><code>visual-weight-follows-goals</code> · Notice's <code>@use</code></td></tr>
+        <tr><td>Tier-3, submission 4 — <em>"the StepList row says three targets return one instruction; five target/function pairs do"</em>, and <em>"the Button row's @avoid quote splices two non-adjacent fragments into one continuous citation"</em></td>
+          <td>elements — the count was re-taken by calling the four instruction functions over all thirteen targets, and the spliced quote restored to the registry's own words</td>
+          <td><code>StepList</code>'s <code>@avoid</code> · <code>Button</code>'s <code>@avoid</code></td></tr>
         <tr><td>R3 — the shipped suite retires with the design it guarded</td>
           <td>nothing in the design; it binds the build at W9 ⑤, and this run's capabilities table is what the coverage map is written against</td>
           <td><code>R3</code> · the W9 discussion's clash ruling</td></tr>
