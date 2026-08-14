@@ -31,7 +31,7 @@
             no check anywhere that noticed</td></tr>
         <tr><td><strong>Nothing asks a build that changes what already exists.</strong> A trigger keyed on
           <em>added</em> files reaches only surfaces that do not exist yet — and the screens all exist</td>
-          <td>the whole screen tier landed undesigned and stayed reachable: <strong>8 screens, 0 designs</strong>,
+          <td>the whole screen tier landed undesigned and stayed reachable: <strong>8 product screens, 0 designs</strong> (10 non-test <code>.tsx</code> render outside the collection; the other two are the bootstrap and a pre-registry primitives kit),
             and every future change to one an edit the gate is blind to. The rule would have guarded only the
             work nobody was doing</td></tr>
         <tr><td><strong>Nothing makes an unbuilt design account for itself.</strong>
@@ -93,14 +93,29 @@
     </table>
     <p class="kd"><strong>One function, three callers.</strong> <code>Gate::surfaces</code> is the trigger for
       the gate, the epic walk, and <code>cargo xtask design-scope</code> — the same refusal DEC-24 made for
-      <code>design-scope</code> itself. Its added half is built on <code>registry_entry</code>, so "in the
-      roster" and "owes a design" are literally the same <code>@tier</code> test; its touched half is
-      <code>ui_surface</code>, which asks only whether a file renders.</p>
+      <code>design-scope</code> itself. Its added half and the roster are the <em>same</em> function,
+      <code>doc::surface_at</code>: "is this path a surface at this revision", asked once and answered
+      identically for both, so the two can never drift. Its touched half is <code>ui_surface</code>, which
+      asks only whether a file renders.</p>
+    <p class="kd"><strong>The path test comes first, and that is load-bearing twice.</strong> It keeps a blob
+      from being fetched for a path that could never need one — the ~12% of an epic gate's wall time an
+      earlier round measured — and it stops a screen's membership from depending on a successful UTF-8
+      decode. Membership that read the bytes first would let one stray byte in a new screen drop it out of
+      the added set, where a stated reason stands in for the design it owes.</p>
     <p class="kd"><strong>And the roster counts screens.</strong> <code>roster_at</code> reads
       <code>@tier</code> components <em>and</em> non-test <code>.tsx</code> outside the collection, so a
       screen design resolves where its screen was built. Before that, the downstream half could only ever
       refuse a screen design — designing a screen cost a drop record while designing nothing cost nothing,
-      and the gate paid you to skip the design.</p>
+      and the gate paid you to skip the design. The <em>other</em> roster — the node oracle behind
+      <code>verify-doc</code>'s retirement check — still reads the collection alone, so it will not ask a
+      screen design to retire into its screen's TSDoc. Nothing leaks (check 6 forces the file out of the tree
+      at the epic tip regardless), and the asymmetry is stated rather than built around.</p>
+    <p class="kd"><strong>A rename is not a new surface.</strong> The added set is the one place rename
+      detection is on. A renamed component is already built, so DEC-16 has already retired the design a
+      citation would have to name: treating the destination as added would demand an artifact the rules
+      guarantee is gone, and the Working Unit could not merge at all. Detected, it falls to the touched half,
+      where a reason is the honest answer. A rename that also rewrites the file drops below git's similarity
+      threshold and is an add again — correctly, because that is a new surface wearing an old name.</p>
     <p class="kd"><strong>UI work happens inside a Working Unit.</strong> The accounting lives on a
       <code>cr/v3</code> note and a standalone commit has none, so a commit that renders something outside a
       Working Unit is refused at commit level. It is the third door, and it is closed for the same reason
@@ -123,10 +138,17 @@
       </tbody>
     </table>
     <div class="callout" data-c="range">
-      <strong>The epic half reads the range, not the endpoints.</strong> Check 6 forces every
-      <code>docs/work/</code> file out of the tree by the epic tip, so a design added and then silently
+      <strong>The epic half reads the range, not the endpoints — and reads all of it.</strong> Check 6 forces
+      every <code>docs/work/</code> file out of the tree by the epic tip, so a design added and then silently
       <code>git rm</code>'d nets out of an endpoint diff entirely. <code>added_under</code> walks the
       range's <em>commits</em> — the check cannot be defeated by the deletion the epic already owes.
+      <br><br>
+      Walking the commits is not sufficient on its own, which the review found the hard way. Given a
+      pathspec, git's default history simplification follows only the first parent past a merge whose tree is
+      TREESAME for that path — and a design added <em>and</em> removed inside one Working Unit branch makes
+      its merge exactly that. Without <code>--full-history</code> the add commit is never visited and the
+      epic greens on a design nobody built: the one case this half exists to catch, defeated by the very
+      deletion it was written to see through.
     </div>
 
     <h2 id="blob">Why the pointer carries a blob</h2>
@@ -187,7 +209,7 @@
       <thead><tr><th>Claim</th><th>Measurement</th></tr></thead>
       <tbody>
         <tr><td>the added trigger had nothing left to fire on</td>
-          <td>all <strong>8 screens</strong> already exist — <code>App</code> · <code>Layout</code> ·
+          <td>all <strong>8 product screens</strong> already exist — <code>App</code> · <code>Layout</code> ·
             <code>FlowList</code> · <code>FlowDetail</code> · <code>BodyViewer</code> ·
             <code>Onboarding</code> · <code>ProxyCloseDialog</code> · <code>Gallery</code>, landed by
             E-UIFOUND, E-UIINSPECT and E-UISETUP — and <strong>none of them ever had a design</strong>. Every
@@ -195,7 +217,7 @@
             non-test <code>.tsx</code> and <strong>4 of those modified only</strong> (E-UISETUP.W2/W3/W4/W6):
             the seams the added-only trigger is blind to <em>by construction</em></td></tr>
         <tr><td>widening it still does not punish landed history</td>
-          <td><strong>1 <code>cr/v3</code> note exists in the whole repo</strong> against 109 <code>cr/v2</code>
+          <td><strong>1 <code>cr/v3</code> note exists in the whole repo</strong> against 108 <code>cr/v2</code>
             and <code>cr/v1</code>, and that one tip touches <strong>0</strong> files under
             <code>ui/src</code>. A v2 note says in its own bytes that the field did not exist:
             <code>9·design-schema</code> on v2, <code>9·design</code> on v3, and the walk drops the former
@@ -211,6 +233,15 @@
           <td>writing four reasons found that only <strong>one</strong> was never built. The other three were
             built as a seven-member family, as a screen outside the collection, and as a local function
             never extracted — three facts that existed nowhere until the rule demanded them</td></tr>
+        <tr><td>the widened rule was run over this repository, not only over fixtures</td>
+          <td>the new gate binary walking the <em>old</em> epic history —
+            <code>verify-dod epic epic/design-flow --target main</code>, 9 seams — produces
+            <strong>0</strong> <code>9·design</code> failures of any kind. It also produces
+            <strong>3</strong> <code>components·unbuilt</code> where the same range produced 4, and the one
+            that dropped out is <code>BodyViewer</code>: the roster now sees
+            <code>ui/src/BodyViewer.tsx</code>, so the design that <em>was</em> built stops being refused.
+            The epic's other 68 failures are the ones it already owed (51 tracked work docs, 8 pre-W8 seams
+            missing notes, 3 open runs, 2 retirement-order, 1 manual review) — untouched by this rule</td></tr>
         <tr><td>the rule works over real git</td>
           <td><code>xtask/tests/e2e_design_flow.rs</code>, hand-over legs: <strong>12 merges, 7 refused,
             5 landed</strong> through the real merge hook (the file as a whole: 18, 11, 7), with

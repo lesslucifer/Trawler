@@ -59,8 +59,18 @@ pub fn diff_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, Str
     names_in(repo, base, tip, &[])
 }
 
+// Renames are detected here and nowhere else. A rename's destination is not a
+// new surface: the component it renames is already built, so DEC-16 has already
+// retired the design a citation would have to name - the added tier would demand
+// an artifact the rules guarantee no longer exists, and the Working Unit could
+// not merge at all. Detected, the destination lands in the touched tier instead,
+// where a stated reason is the honest answer. A rename that also rewrites the
+// file falls below git's similarity threshold and is an add again, which is
+// correct: that is a new surface wearing an old name. `added_under` keeps
+// `--no-renames` for the mirror-image reason - there, detection would let an
+// unbuilt design dodge its epic by renaming its own file.
 pub fn added_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
-    names_in(repo, base, tip, &["--diff-filter=A"])
+    names_in(repo, base, tip, &["--find-renames", "--diff-filter=A"])
 }
 
 // What the range leaves standing - added and modified, never deleted. Lower-case
@@ -74,12 +84,20 @@ pub fn changed_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, 
 // endpoints. A file added by one commit and removed by another nets out of an
 // endpoint diff, which is exactly how a design nobody built leaves no trace at
 // an epic tip.
+//
+// `--full-history` is the load-bearing flag, not boilerplate. With a pathspec,
+// git's default history simplification walks only the first parent past a merge
+// whose tree is TREESAME for that path - and a design added and `git rm`'d inside
+// one Working Unit branch makes its merge exactly that. Without the flag the add
+// commit is never visited and the epic greens on a design nobody built, which is
+// the one case this function exists to catch.
 pub fn added_under(repo: &Path, base: &str, tip: &str, prefix: &str) -> Vec<String> {
     let range = format!("{base}..{tip}");
     let mut paths: Vec<String> = git(
         repo,
         &[
             "log",
+            "--full-history",
             "--diff-filter=A",
             "--name-only",
             "--pretty=format:",

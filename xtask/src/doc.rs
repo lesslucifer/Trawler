@@ -151,16 +151,13 @@ pub fn ui_surface(path: &str) -> bool {
         .is_some_and(|file| shaped_file(file, &["tsx"]))
 }
 
+// Anything rendered that the collection does not govern. The collection's own
+// test is deliberately flat because its oracle reads one directory, so a `.tsx`
+// nested below `ui/src/components/` is in nobody's registry - which makes it a
+// screen, not an exemption. Judging it by prefix instead would leave one folder
+// as the way to add a surface no design is owed for.
 fn screen_file(path: &str) -> bool {
-    ui_surface(path) && !path.starts_with(COLLECTION)
-}
-
-// Whether a path could be a surface at all, decided from the path alone. `@tier`
-// is the only thing the full test needs the bytes for, so this is what says
-// whether a blob is worth a subprocess: fetching first cost ~12% of an epic
-// gate's wall time on paths that could never qualify.
-pub fn may_be_surface(path: &str) -> bool {
-    collection_file(path) || screen_file(path)
+    ui_surface(path) && !collection_file(path)
 }
 
 // Membership is `@tier`, the same tag scripts/design-registry.mjs reads - so a
@@ -171,15 +168,21 @@ pub fn registry_entry(path: &str, source: &str) -> bool {
     collection_file(path) && source.contains("@tier")
 }
 
-// What a build adds that owes a design: a new registry entry, or a new screen -
-// a non-test `.tsx` directly under ui/src/. Both are surfaces a user meets that
-// nothing designed before this diff. An edit to either is not a new surface, and
-// neither is a test beside one.
-pub fn new_surface(path: &str, source: &str) -> Option<&'static str> {
-    if registry_entry(path, source) {
-        return Some("registry component");
-    }
-    screen_file(path).then_some("screen")
+// Whether a path is a surface at one revision - the one answer both the roster
+// and the added-surface trigger want, so the two can never drift.
+//
+// The path test comes first and settles every screen, which is load-bearing
+// twice. It is what keeps a blob from being fetched for a path that could never
+// need one (fetching first cost ~12% of an epic gate's wall time). And it is what
+// stops a screen's membership from depending on a successful UTF-8 decode: bytes
+// that fail to decode read as "not a surface", so one stray byte in a new screen
+// would drop it out of the added set and let a stated reason stand in for the
+// design it owes.
+pub fn surface_at(repo: &Path, rev: &str, path: &str) -> bool {
+    screen_file(path)
+        || (collection_file(path)
+            && crate::git::read_utf8_at(repo, rev, path)
+                .is_some_and(|source| registry_entry(path, &source)))
 }
 
 pub fn surface_name(path: &str) -> Option<String> {
@@ -190,18 +193,12 @@ pub fn surface_name(path: &str) -> Option<String> {
 // Who counts as built, at one revision. Screens are in it as well as `@tier`
 // components: a screen design resolves where its screen was built, or designing
 // one would cost a drop record while designing nothing cost nothing - the
-// incentive inverted. Only a component's membership needs its bytes read, so a
-// screen never pays for a blob.
+// incentive inverted.
 pub fn roster_at(repo: &Path, rev: &str) -> BTreeSet<String> {
     crate::git::git(repo, &["ls-tree", "-r", "--name-only", rev, "--", SCREENS])
         .unwrap_or_default()
         .lines()
-        .filter(|path| {
-            screen_file(path)
-                || (may_be_surface(path)
-                    && crate::git::read_utf8_at(repo, rev, path)
-                        .is_some_and(|source| registry_entry(path, &source)))
-        })
+        .filter(|path| surface_at(repo, rev, path))
         .filter_map(surface_name)
         .collect()
 }
@@ -2498,10 +2495,10 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 mod tests {
     use super::{
         attrs, check_frame_density, component_designed, declares_a_design, edit_distance,
-        elements_of, format_verdict, may_be_surface, new_surface, registry_entry,
-        rules_from_rulebook, screen_file, surface_name, ui_surface, verify_component, verify_html,
-        verify_html_against, Component, Roster, Verdict, Vocabulary, CAPABILITY_STATES,
-        FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
+        elements_of, format_verdict, registry_entry, rules_from_rulebook, screen_file,
+        surface_name, ui_surface, verify_component, verify_html, verify_html_against, Component,
+        Roster, Verdict, Vocabulary, CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN,
+        FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -4205,51 +4202,12 @@ chroma_floor: 40
         }
         assert!(screen_file("ui/src/panels/Inspector.tsx"), "a nested surface is still a screen");
         assert!(!screen_file("ui/src/components/Button.tsx"), "the collection is not screens");
-    }
-
-    // What a build owes a design for: a component the roster will carry, or a
-    // screen. A module, a test and an untiered helper are neither.
-    #[test]
-    fn a_new_surface_is_a_tiered_component_or_a_screen_and_nothing_else() {
-        let tiered = "/**\n * StatusPill.\n * @tier T1 — primitive\n */\n";
-        let plain = "export const helper = () => null;\n";
-        assert_eq!(
-            new_surface("ui/src/components/StatusPill.tsx", tiered),
-            Some("registry component")
-        );
-        assert_eq!(new_surface("ui/src/components/helper.tsx", plain), None, "untiered is not one");
-        assert_eq!(new_surface("ui/src/Onboarding.tsx", plain), Some("screen"));
-        assert_eq!(new_surface("ui/src/Onboarding.test.tsx", plain), None);
-        assert_eq!(new_surface("ui/src/api.ts", plain), None, "a module is not a screen");
-        assert_eq!(new_surface("src/lib.rs", plain), None);
-    }
-
-    // The path-only half, which is what spares a blob fetch per added path. It
-    // must admit everything new_surface could accept on its content and refuse
-    // everything decidable without it - a gap either way is a wrong answer, not
-    // a slow one.
-    #[test]
-    fn may_be_surface_admits_every_candidate_and_refuses_what_a_path_alone_settles() {
-        let tiered = "/**\n * StatusPill.\n * @tier T1 — primitive\n */\n";
-        for candidate in ["ui/src/components/StatusPill.tsx", "ui/src/components/dot.ts"] {
-            assert!(may_be_surface(candidate), "{candidate} is fetch-worthy");
-        }
-        assert!(may_be_surface("ui/src/Onboarding.tsx"));
         assert!(
-            may_be_surface("ui/src/components/helper.tsx"),
-            "untiered still needs its bytes read"
+            screen_file("ui/src/components/status/StatusPill.tsx"),
+            "the collection's oracle reads one flat directory, so a file below it is in no registry - \
+             judging it by prefix would make one folder the way to add a surface owing no design"
         );
-        for settled in [
-            "ui/src/api.ts",
-            "ui/src/Onboarding.test.tsx",
-            "ui/src/components/StatusPill.test.tsx",
-            "ui/src/components/nested/Deep.tsx",
-            "src/lib.rs",
-            "docs/workflow.html",
-        ] {
-            assert!(!may_be_surface(settled), "{settled} needs no blob");
-            assert_eq!(new_surface(settled, tiered), None, "{settled} is not a surface either");
-        }
+        assert!(!screen_file("ui/src/components/index.ts"), "a barrel renders nothing");
     }
 
     #[test]

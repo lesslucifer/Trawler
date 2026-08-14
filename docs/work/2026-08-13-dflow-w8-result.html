@@ -145,7 +145,7 @@
       <thead><tr><th>What was measured</th><th>What it said</th></tr></thead>
       <tbody>
         <tr><td>the added-only trigger's remaining population</td>
-          <td><strong>8 screens exist, 0 were ever designed.</strong> <code>new_surface</code> reads
+          <td><strong>8 product screens exist, 0 were ever designed</strong> — and the predicate's population is wider still: <strong>10</strong> non-test <code>.tsx</code> render outside the collection, the other two being <code>main.tsx</code> (the bootstrap) and <code>components.tsx</code> (a pre-registry primitives kit), both of which now owe an answer when touched. <code>new_surface</code> reads
             <code>--diff-filter=A</code>, and <code>doc.rs</code> said so in its own comment: <em>"an edit to
             either is not a new surface"</em>. Every future screen change is an edit</td></tr>
         <tr><td>what landed history actually did</td>
@@ -154,7 +154,7 @@
             accounting: <strong>1–3 paths per seam</strong> — this is not the "reds almost everything" gate
             D2·A was rejected as</td></tr>
         <tr><td>whether widening re-opens grandfathering (D6·A's caveat)</td>
-          <td>no. <strong>1 <code>cr/v3</code> note exists in the repo</strong>, against 109 v2/v1, and it
+          <td>no. <strong>1 <code>cr/v3</code> note exists in the repo</strong>, against 108 v2/v1, and it
             renders nothing; <strong>0</strong> non-merge commits on either branch render anything. The
             widened trigger fires on 0 landed seams and 0 landed commits</td></tr>
         <tr><td>whether the incentive pointed the right way</td>
@@ -162,6 +162,13 @@
             a <em>screen</em> design could never resolve at the epic tip: designing a screen cost a drop
             record, designing nothing cost nothing. <code>body-viewer.html</code> is the proof — DEC-25 filed
             a design that <strong>was built</strong> as a drop</td></tr>
+        <tr><td>what the widened gate does to this repository's own history</td>
+          <td>run for real, not reasoned about: the new binary walking the old epic
+            (<code>verify-dod epic epic/design-flow --target main</code>) yields <strong>0</strong>
+            <code>9·design</code> failures across 9 seams, and turns W8's <strong>4</strong>
+            <code>components·unbuilt</code> into <strong>3</strong> — <code>BodyViewer</code> resolves now
+            that the roster can see a screen. Every other failure in that run is one the epic already owed
+            before this step existed</td></tr>
       </tbody>
     </table>
     <p class="kd">What the touched half demands is a <strong>sentence, not a run</strong>: the reviewer names
@@ -176,7 +183,7 @@
         <tr><td><strong>Five steps</strong>, ending at ⑤ with DEC-25, the review and the merge</td>
           <td><strong>A sixth, and it changed the rule.</strong> ①–⑤ were green and distilled when reading
             them back asked what an epic actually guarantees for its UI work. The answer was measurable and
-            bad: the trigger fires only on surfaces that do not exist yet, and all 8 screens exist. Step ⑥
+            bad: the trigger fires only on surfaces that do not exist yet, and all 8 product screens exist. Step ⑥
             widened the rule to every rendered file a diff touches, closed three holes beside it, and amended
             DEC-25 in place rather than adding DEC-26 — the record had not left this branch, so the rule keeps
             one record instead of gaining a correction to an unmerged one. See <a href="#step6">step ⑥</a></td></tr>
@@ -249,7 +256,7 @@
         <thead><tr><th>Level</th><th>Measured</th></tr></thead>
         <tbody>
           <tr><td><span class="badge id">unit</span> commit</td>
-            <td><strong>199</strong> <code>xtask</code> lib tests. The added trigger (a <code>@tier</code>
+            <td><strong>200</strong> <code>xtask</code> lib tests. The added trigger (a <code>@tier</code>
               component fires; an untiered file, a test, a <code>.ts</code> module and a deletion do not) ·
               the pointer (absent and empty <code>implements</code> parse differently and stay that way) · one
               red per way a citation breaks and one green when it holds ·
@@ -304,12 +311,95 @@
     </div>
 
     <h2 id="review">What the review found</h2>
-    <p class="meta">Five finders over <code>dcd0b7e..4109404</code> — no design finder, because
-      <code>design-scope</code> reports no design artifact and no new surface in the diff: a <em>removed</em>
-      design file is deliberately not a Tier-3 artifact (DEC-16/DEC-24). 11 candidates, one verifier each,
-      <strong>6 refuted</strong>.</p>
+    <p class="meta">Two rounds. Round 1: five finders over <code>dcd0b7e..4109404</code>, 11 candidates,
+      <strong>6 refuted</strong>. Round 3, over <code>dcd0b7e..c628df5</code> once step ⑥ landed:
+      <strong>19 candidates, 11 refuted, 2 blockers</strong>. Neither round ran a design finder —
+      <code>design-scope</code> reports no design artifact and no new surface in either diff: a
+      <em>removed</em> design file is deliberately not a Tier-3 artifact (DEC-16/DEC-24), and this WU renders
+      nothing.</p>
+    <p class="kd"><strong>The step that widened the rule is the step the review nearly broke.</strong> Both
+      blockers were in the mechanism, not the prose, and both were reproduced in a scratch repo before a line
+      was changed — then written as tests that fail without the fix and pass with it, which is the only way a
+      regression test is worth its lines.</p>
+    <table data-c="tbl-review3">
+      <thead><tr><th>Round 3 · candidate</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A design added <em>and</em> removed inside one Working Unit branch never reaches
+          <code>components·unbuilt</code></strong>. <code>added_under</code> walks the range's commits, but
+          without <code>--full-history</code> git's pathspec simplification follows the TREESAME first parent
+          straight past that merge</td>
+          <td><span class="badge auto">real · blocker · fixed</span> reproduced in a scratch repo: the add is
+            invisible to the exact command the check ran, and visible with the flag. This is the case the
+            function was written for — an endpoint diff was rejected <em>because</em> an add and a
+            <code>git rm</code> net out, and the range walk had the same hole one level down. The epic would
+            have greened on a design nobody built</td></tr>
+        <tr><td><strong>A rename of a built component is unmergeable</strong>, not merely refused. Every diff
+          helper passed <code>--no-renames</code>, so <code>git mv StatusPill.tsx StatusBadge.tsx</code> reads
+          as an added surface — and the added half accepts only a citation</td>
+          <td><span class="badge auto">real · blocker · fixed</span> the verifier escalated it from
+            <em>important</em>: DEC-16 has already retired the design of a built component, so there is
+            <strong>nothing left to cite</strong> and no honest note can be written. Rename detection is now
+            on in the added set alone — the destination falls to the touched half, where a reason is the right
+            answer. <code>added_under</code> keeps <code>--no-renames</code> for the mirror-image reason: there
+            detection would let an unbuilt design dodge its epic by renaming its own file</td></tr>
+        <tr><td><strong>A screen whose bytes are not UTF-8 escapes the added half.</strong>
+          <code>new_surfaces</code> read a blob for every candidate including screens, whose answer never
+          needs one, and treated an undecodable read as "not a surface"</td>
+          <td><span class="badge auto">real · important · fixed</span> one stray byte would have moved a new
+            screen from "must cite a design" to "a stated reason will do". <code>roster_at</code> had the
+            short-circuit and <code>new_surfaces</code> did not, so the fix is the one both wanted:
+            <code>doc::surface_at</code>, a single function answering "is this a surface at this revision" for
+            the roster and the trigger alike. <code>new_surface</code> and <code>may_be_surface</code> are
+            deleted — the divergence is gone rather than patched</td></tr>
+        <tr><td><strong>A <code>.tsx</code> one folder below <code>ui/src/components/</code> was no surface at
+          all</strong> — neither a collection file (the test is deliberately flat) nor a screen (the test
+          excluded anything under that prefix)</td>
+          <td><span class="badge auto">real · important · fixed</span> it rendered, so it was owed an answer,
+            but it was not <em>added</em>, so a reason satisfied it: one folder was the way to add a surface
+            no design was owed for. <code>screen_file</code> now excludes only <em>flat</em> collection files,
+            which is what the collection's own oracle can actually see</td></tr>
+        <tr><td><strong>The docs say 8 screens; the predicate's population is 10</strong> non-test
+          <code>.tsx</code> outside the collection — <code>main.tsx</code> and <code>components.tsx</code>
+          are in the set the rule fires on</td>
+          <td><span class="badge auto">real · important · fixed in the docs</span> the measurement was right
+            about screens and wrong about what the rule reaches. Both numbers are now stated, in DEC-25 and
+            here. The bootstrap and the pre-registry kit really do owe an answer when touched — 4 and 3
+            commits respectively in the repo's life, so the cost is a sentence a decade</td></tr>
+        <tr><td><strong>A citation whose bytes do not decode was silently accepted</strong> — the
+          <code>from_utf8</code> arm returned without pushing a failure</td>
+          <td><span class="badge auto">real · nit · fixed</span> the one citation nobody can read was passing
+            as though Tier-3 had judged it</td></tr>
+        <tr><td><strong><code>check_citation</code> hard-coded <code>9·design</code></strong> where every
+          other refusal in the same function's caller switches to <code>9·design-schema</code> for a
+          <code>cr/v2</code> note</td>
+          <td><span class="badge auto">real · nit · fixed</span> the check name is now the caller's, so a
+            grandfathered note's refusals are the ones the walk drops — uniformly, rather than
+            almost-uniformly</td></tr>
+        <tr><td><strong><code>may_be_surface</code> re-tested <code>screen_file</code></strong> inside
+          <code>roster_at</code>, where the <code>||</code> had already settled it false</td>
+          <td><span class="badge auto">real · nit · fixed</span> dissolved by the <code>surface_at</code>
+            unification rather than patched</td></tr>
+        <tr><td><strong>The tip's <code>cr</code> note is fetched three times per epic gate</strong></td>
+          <td><span class="badge auto">real · nit · not fixed</span> the verifier measured ~16ms, once per
+            epic run and never per seam, and showed the fix means threading a note through
+            <code>verify</code>'s pre-exemption ordering — which exists deliberately. Recorded as a waiver,
+            not silently dropped</td></tr>
+        <tr><td><strong>Eleven more</strong> — the blob-pin block as duplication (again), the seam-tag format,
+          the test-fixture bootstrap, one shared YAML builder across three crates,
+          <code>show_bytes</code> vs <code>read_utf8_at</code>, the gate-check table restating the handoff
+          section, three <code>git diff</code> spawns per verify, the doc-blob cache, <code>roster_at</code>
+          batching, DEC-25 amended in place, and the two-roster fact belonging in T2</td>
+          <td><span class="badge auto">refuted</span> each by its own verifier, with numbers where numbers
+            settle it: the triple <code>git diff</code> is ~150ms of a 4.8s walk (3%); the doc-blob cache
+            <em>cannot</em> serve a citation, because a design and its build are never the same diff;
+            <code>roster_at</code>'s spawn count did not move (26 before, 26 after); the append-only rule
+            names <em>reversals</em>, and this WU's own precedent amends DEC-15 and DEC-24 in place while
+            superseding DEC-16 with strikethrough — extension versus reversal, applied consistently. The
+            two-roster point survived as one sentence, now in DEC-25</td></tr>
+      </tbody>
+    </table>
     <table data-c="tbl-review">
-      <thead><tr><th>Candidate</th><th>Verdict</th></tr></thead>
+      <thead><tr><th>Round 1 · candidate</th><th>Verdict</th></tr></thead>
       <tbody>
         <tr><td><strong>The gate fetches a blob for every added path</strong> before any path test, and only
           <code>@tier</code> needs the bytes — so a merge pays a <code>git show</code> per added file that
