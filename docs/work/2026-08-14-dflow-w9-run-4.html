@@ -507,7 +507,13 @@ D → present, because ever-proven latched
                     <!-- design-allow: grid-cols-[theme(spacing.step-marker)_1fr] — StepList's own marker-plus-content template; the marker width is the step-marker token -->
                     <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">3.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body">or double-click it and set the trawler CA to always trust</div></li>
                   </ol>
-                  <p class="mt-2 font-ui text-chrome text-ink-mute">to remove it later, run: <span data-wire="shell command" class="cursor-text break-all font-mono text-body underline decoration-dotted underline-offset-link text-ink-body">sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain</span></p>
+                  <p class="mt-3 font-ui text-chrome text-ink-mute">to remove it later</p>
+                  <ol class="m-0 mt-chrome-y flex list-none flex-col gap-step-gap p-0">
+                    <!-- design-allow: grid-cols-[theme(spacing.step-marker)_1fr] — StepList's own marker-plus-content template; the marker width is the step-marker token -->
+                    <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">1.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body">run: <span data-wire="shell command" class="cursor-text break-all font-mono text-body underline decoration-dotted underline-offset-link text-ink-body">sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain</span></div></li>
+                    <!-- design-allow: grid-cols-[theme(spacing.step-marker)_1fr] — StepList's own marker-plus-content template; the marker width is the step-marker token -->
+                    <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">2.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body">or delete the trawler proxy CA entry in keychain access → system</div></li>
+                  </ol>
                 </div>
               </details>
             </section>
@@ -532,6 +538,13 @@ D → present, because ever-proven latched
                     <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">1.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body">run — this sets the wi-fi service, change the name for ethernet</div></li>
                     <!-- design-allow: grid-cols-[theme(spacing.step-marker)_1fr] — StepList's own marker-plus-content template; the marker width is the step-marker token -->
                     <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">2.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body"><span data-wire="shell command" class="cursor-text break-all font-mono text-body underline decoration-dotted underline-offset-link text-ink-body">networksetup -setwebproxy Wi-Fi 127.0.0.1 7420 &amp;&amp; networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420</span></div></li>
+                  </ol>
+                  <p class="mt-3 font-ui text-chrome text-ink-mute">to turn it off later</p>
+                  <ol class="m-0 mt-chrome-y flex list-none flex-col gap-step-gap p-0">
+                    <!-- design-allow: grid-cols-[theme(spacing.step-marker)_1fr] — StepList's own marker-plus-content template; the marker width is the step-marker token -->
+                    <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">1.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body">turn it off per enabled service, keeping the saved address</div></li>
+                    <!-- design-allow: grid-cols-[theme(spacing.step-marker)_1fr] — StepList's own marker-plus-content template; the marker width is the step-marker token -->
+                    <li class="grid grid-cols-[theme(spacing.step-marker)_1fr] items-baseline gap-2"><span class="text-right font-ui text-chrome tabular-nums text-ink-mute">2.</span><div class="flex min-w-0 flex-col gap-chrome-gap font-ui text-body leading-loose text-ink-body"><span data-wire="shell command" class="cursor-text break-all font-mono text-body underline decoration-dotted underline-offset-link text-ink-body">networksetup -setwebproxystate Wi-Fi off &amp;&amp; networksetup -setsecurewebproxystate Wi-Fi off</span></div></li>
                   </ol>
                 </div>
               </details>
@@ -593,9 +606,10 @@ proxy  ○ no traffic</pre></td>
           <td><pre class="tb">▸ set it up by hand
   1. save the pem
   2. run: sudo …
-  to remove it later,
-  run: sudo security
-  delete-certificate…</pre></td>
+  to remove it later
+  1. run: sudo security
+     delete-certificate…
+  2. or use keychain</pre></td>
           <td><code>progressive-disclosure</code></td>
         </tr>
         <tr>
@@ -617,8 +631,10 @@ proxy  ○ no traffic</pre></td>
           reaching the first flow, so its verdict owns the top. <em>Loops back to Layout: yes</em> — this
           is what fixed A above B rather than beside it.</li>
         <li><strong>one act to the guide, never two</strong> — removal and turn-off started as their own
-          disclosures inside the manual one, which made them two acts deep. Flattened into the same
-          guide as a trailing sentence. <em>Loops back to Layout: no.</em></li>
+          disclosures inside the manual one, which made them two acts deep. They are now a second
+          labelled StepList in the <em>same</em> guide: what the call removes is the second
+          disclosure, not the instructions, and a two-step reversal stays two steps.
+          <em>Loops back to Layout: no.</em></li>
         <li><strong>the picker precedes what it picks</strong> — caught only in the built mockup, where a
           selector sitting under a numbered list reads as a filter on a result rather than the choice
           that produced it. <em>Loops back to Layout: no.</em></li>
@@ -758,6 +774,9 @@ soft:
         <tr><td>Tier-3, submission 6 — three findings, all one discovery: <em>"the mockup composes markup the real components cannot render"</em>. Notice pins its message to <code>text-body</code> · StepList's numerals are a marker column, not <code>list-decimal</code> · Section always emits its title in its own heading, so a name cannot share a row with a verdict</td>
           <td>mockup · elements · proposals · receipt · findings — the mockup was rebuilt from the components' <strong>source</strong>, Notice's verdict flipped from reuse to <strong>extend</strong>, the run's proposal count went 0 → 1, and <code>grouping-by-relatedness</code> became <code>inherited</code> because the seam turned out to be Section's</td>
           <td>Notice's <code>@use</code> · <code>StepList</code> anatomy · <code>Section</code> anatomy · <code>data-ink-first</code></td></tr>
+        <tr><td>Tier-3, submission 7 — <em>"the proxy guide renders no turn-off instructions at all"</em>, and <em>"the trust guide's flattened removal sentence keeps one of removalSteps(macos)'s two instructions, which the run's own single-instruction rule does not permit"</em></td>
+          <td>mockup · tune — both guides now carry their reversal as a second labelled StepList in the same disclosure, and Tune's after-drawing was corrected: the call removed a second <em>disclosure</em>, never the instructions behind it</td>
+          <td><code>StepList</code>'s <code>@avoid</code> · <code>progressive-disclosure</code></td></tr>
         <tr><td>R3 — the shipped suite retires with the design it guarded</td>
           <td>nothing in the design; it binds the build at W9 ⑤, and this run's capabilities table is what the coverage map is written against</td>
           <td><code>R3</code> · the W9 discussion's clash ruling</td></tr>
