@@ -442,6 +442,7 @@ fn merge_into(flow: &Flow, target: &str, branch: &str) -> (bool, String) {
 struct Scope {
     artifacts: Vec<String>,
     surfaces: Vec<String>,
+    touched: Vec<String>,
     pin: String,
 }
 
@@ -453,18 +454,27 @@ fn design_scope(flow: &Flow, branch: &str) -> Scope {
     let out = flow.xtask(&["design-scope", "epic/x", branch]);
     assert!(out.status.success(), "design-scope: {}", stdout(&out));
     let text = stdout(&out);
-    let mut scope = Scope { artifacts: Vec::new(), surfaces: Vec::new(), pin: String::new() };
-    let mut judged = true;
+    let mut scope = Scope {
+        artifacts: Vec::new(),
+        surfaces: Vec::new(),
+        touched: Vec::new(),
+        pin: String::new(),
+    };
+    let mut block = 0;
     for line in text.lines() {
         if line.contains("design artifact(s) to judge") {
-            judged = true;
+            block = 0;
             scope.pin = line.trim_end_matches(':').split_whitespace().last().unwrap().to_string();
         } else if line.contains("new surface(s)") {
-            judged = false;
-        } else if judged {
-            scope.artifacts.push(line.to_string());
+            block = 1;
+        } else if line.contains("rendered file(s) touched") {
+            block = 2;
         } else {
-            scope.surfaces.push(line.to_string());
+            match block {
+                0 => scope.artifacts.push(line.to_string()),
+                1 => scope.surfaces.push(line.to_string()),
+                _ => scope.touched.push(line.to_string()),
+            }
         }
     }
     scope
@@ -481,10 +491,20 @@ fn design_section(scope: &Scope, verdict: &str) -> String {
 /// The citation block, appended under the same `design:` key — on its own for a
 /// build that judged nothing, after [`design_section`] for one that amended the
 /// design it was handed.
-fn cites(pairs: &[(&str, &str)]) -> String {
+fn cites(pairs: &[(&str, &str, &str)]) -> String {
     let mut out = String::from("  implements:\n");
-    for (path, blob) in pairs {
-        let _ = write!(out, "    - path: {path}\n      blob: {blob}\n");
+    for (path, blob, built) in pairs {
+        let _ = write!(out, "    - path: {path}\n      blob: {blob}\n      built: [{built}]\n");
+    }
+    out
+}
+
+/// The other answer a build can give: this file needed no design, and here is
+/// why. Same key, same section — an edit is accounted for, never judged.
+fn declares(records: &[(&str, &str)]) -> String {
+    let mut out = String::from("  undesigned:\n");
+    for (path, why) in records {
+        let _ = write!(out, "    - path: {path}\n      why: \"{why}\"\n");
     }
     out
 }
@@ -719,11 +739,18 @@ fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it(
     bless(&flow, &tip, &cr_note(&flow, &tip, "cr/v3", ""), &changes);
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/two");
     assert!(!merged, "a new surface with no citation must not merge: {said}");
-    assert!(said.contains("cites no design"), "{said}");
+    assert!(said.contains("accounts for none of them"), "{said}");
     assert!(said.contains("StatusPill.tsx"), "the red names the surface that owes one: {said}");
 
+    // ②b A reason is not an answer for something nobody has ever designed.
+    let excused = format!("design:\n{}", declares(&[(PILL, "small, and the tier is obvious")]));
+    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &excused));
+    let (merged, said) = merge_into(&flow, "epic/x", "wu/x/two");
+    assert!(!merged, "a new surface may not be declared undesigned: {said}");
+    assert!(said.contains("new surface this diff adds"), "{said}");
+
     // ③ Path and blob: the design, and which of its bytes the build read.
-    let cited = format!("design:\n{}", cites(&[(PILL_DESIGN, &handed[..7])]));
+    let cited = format!("design:\n{}", cites(&[(PILL_DESIGN, &handed[..7], PILL)]));
     flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &cited));
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/two");
     assert!(merged, "a resolvable citation lands the build: {said}");
@@ -749,8 +776,11 @@ fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it(
 
     // The stale citation - the blob this build was handed is not the blob its own
     // amendment left behind. A path-only pointer passes this; a blob does not.
-    let stale =
-        format!("{}{}", design_section(&scope, "PASS"), cites(&[(PILL_DESIGN, &handed[..7])]));
+    let stale = format!(
+        "{}{}",
+        design_section(&scope, "PASS"),
+        cites(&[(PILL_DESIGN, &handed[..7], SCREEN)])
+    );
     bless(&flow, &tip, &cr_note(&flow, &tip, "cr/v3", &stale), &changes);
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/three");
     assert!(!merged, "a citation of bytes the tip no longer ships must not merge: {said}");
@@ -761,7 +791,7 @@ fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it(
 
     // Re-pinned, and the amendment itself unjudged: the design section is the
     // same one Tier-3 writes, so the re-judgment is demanded automatically.
-    let unjudged = format!("design:\n{}", cites(&[(PILL_DESIGN, &amended[..7])]));
+    let unjudged = format!("design:\n{}", cites(&[(PILL_DESIGN, &amended[..7], SCREEN)]));
     flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &unjudged));
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/three");
     assert!(!merged, "an amended design nobody re-judged must not merge: {said}");
@@ -773,11 +803,42 @@ fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it(
     );
 
     // Re-judged and re-pinned.
-    let complete =
-        format!("{}{}", design_section(&scope, "PASS"), cites(&[(PILL_DESIGN, &amended[..7])]));
+    let complete = format!(
+        "{}{}",
+        design_section(&scope, "PASS"),
+        cites(&[(PILL_DESIGN, &amended[..7], SCREEN)])
+    );
     flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &complete));
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/three");
     assert!(merged, "a re-judged amendment citing the bytes it left lands: {said}");
+
+    // ⑤ The edit leg: no surface added, an existing one re-shaped. Nothing here
+    // owes a design - and everything here owes an answer.
+    flow.git(&["checkout", "-q", "-b", "wu/x/four", "epic/x"]);
+    flow.write(SCREEN, "export const FlowDetail = () => <section>rows</section>;\n");
+    flow.write(WU_RESULT, "<html><body>the re-shape WU result</body></html>\n");
+    let tip = flow.commit("re-shape the panel nobody designed");
+    let changes = doc_changes(&[(WU_RESULT, "updated")]);
+
+    let scope = design_scope(&flow, "wu/x/four");
+    assert!(scope.surfaces.is_empty(), "an edit adds nothing: {:?}", scope.surfaces);
+    assert_eq!(
+        scope.touched,
+        vec![SCREEN.to_string()],
+        "and the reviewer is told what it did touch"
+    );
+
+    bless(&flow, &tip, &cr_note(&flow, &tip, "cr/v3", ""), &changes);
+    let (merged, said) = merge_into(&flow, "epic/x", "wu/x/four");
+    assert!(!merged, "an unaccounted edit must not merge: {said}");
+    assert!(said.contains(SCREEN), "the red names the file it re-shaped: {said}");
+
+    let reason = "a copy fix inside the existing layout";
+    let excused = format!("design:\n{}", declares(&[(SCREEN, reason)]));
+    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &excused));
+    let (merged, said) = merge_into(&flow, "epic/x", "wu/x/four");
+    assert!(merged, "a stated reason lands the edit: {said}");
+    assert!(said.contains(reason), "and the reason is billed where the epic reads it: {said}");
 }
 
 fn bless_epic(flow: &Flow, tip: &str, design: &str) {

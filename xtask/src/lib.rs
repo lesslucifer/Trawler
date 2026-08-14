@@ -91,8 +91,8 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
     let names = git::diff_names(repo, &merge_base, &tip)?;
     let gate = Gate { repo };
     let artifacts = gate.design_artifacts(&tip, &names);
-    let surfaces = gate.new_surfaces(&tip, &merge_base);
-    if artifacts.is_empty() && surfaces.is_empty() {
+    let (added, owed) = gate.surfaces(&tip, &merge_base);
+    if artifacts.is_empty() && owed.is_empty() {
         return Ok((
             0,
             format!(
@@ -115,15 +115,25 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
             artifacts.join("\n")
         );
     }
-    // Printed as its own block so the artifact list a reviewer reads stays the
-    // artifact list: these are not judged, they are surfaces whose note owes a
-    // design.implements citation.
-    if !surfaces.is_empty() {
+    // Printed as their own blocks so the artifact list a reviewer reads stays the
+    // artifact list: these are not judged, they are files whose note owes an
+    // answer. The two are separated because the answers differ - a new surface
+    // takes a citation and nothing else.
+    if !added.is_empty() {
         let _ = writeln!(
             out,
-            "{} new surface(s) - the cr/v3 note must cite the design each was built from (design.implements: [{{path, blob}}]):\n{}",
-            surfaces.len(),
-            surfaces.join("\n")
+            "{} new surface(s) - the cr/v3 note must cite the design each was built from (design.implements: [{{path, blob, built}}]):\n{}",
+            added.len(),
+            added.join("\n")
+        );
+    }
+    let touched: Vec<&String> = owed.iter().filter(|path| !added.contains(path)).collect();
+    if !touched.is_empty() {
+        let _ = writeln!(
+            out,
+            "{} rendered file(s) touched - each is cited the same way or declared (design.undesigned: [{{path, why}}]):\n{}",
+            touched.len(),
+            touched.iter().map(|p| p.as_str()).collect::<Vec<_>>().join("\n")
         );
     }
     Ok((0, out.trim_end().to_string()))

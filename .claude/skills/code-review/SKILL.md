@@ -54,13 +54,14 @@ dimension in `rubric.md`. Each finder prompt contains exactly:
 
 ## 3b · The design dimension — a sixth finder, when the diff earns it
 
-Run `cargo xtask design-scope <BASE> <HEAD_R>`. It prints two things — the
-design **artifacts** in scope with the rulebook blob to pin, and the **new
-surfaces** the diff adds (a `@tier` component, a screen) — the same function the
-merge gate uses, so the two can never disagree about either.
+Run `cargo xtask design-scope <BASE> <HEAD_R>`. It prints three things — the
+design **artifacts** in scope with the rulebook blob to pin, the **new surfaces**
+the diff adds (a `@tier` component, a screen), and every other **rendered file**
+it touches (any non-test `.tsx` under `ui/src/`) — the same function the merge
+gate uses, so the two can never disagree about any of them.
 
 - **No artifact** ⇒ no design finder, and the note carries no `design:` section
-  unless a new surface is listed.
+  unless a surface or a rendered file is listed.
 - **One or more artifacts** ⇒ spawn the design finder alongside the other five,
   in the same message. Its prompt: the instruction to read
   `.claude/skills/code-review/design-rubric.md` first, the artifact paths the
@@ -68,9 +69,19 @@ merge gate uses, so the two can never disagree about either.
   the design flow — soft rules and the new-component warrant, never the hard
   rules Tier-1 already owns.
 - **One or more new surfaces** ⇒ no finder runs, but the note owes
-  `design.implements`: one `{path, blob}` per design the build was built from,
-  the blob being `git rev-parse <HEAD_R>:<the design>`. This is a citation, not
-  a judgment — nothing here judges the code against the design.
+  `design.implements`: one `{path, blob, built}` per design the build was built
+  from, the blob being `git rev-parse <HEAD_R>:<the design>` and `built` naming
+  the files that design produced. This is a citation, not a judgment — nothing
+  here judges the code against the design. A new surface takes **only** a
+  citation; no reason excuses one.
+- **One or more rendered files touched** ⇒ each is covered by a citation's
+  `built` list, or named in `design.undesigned: [{path, why}]`. Write the `why`
+  yourself, as a statement of fact about this diff — *what did the edit do, and
+  what made a design unnecessary*. "No design" is not a reason; "a copy fix
+  inside the existing layout" is. You are the independent party here, so this is
+  the one place the record can be trusted: a builder excusing its own work is
+  what the field exists to prevent. If the edit did re-shape a surface and no
+  design covers it, say so and **FAIL** — the gate cannot see that, only you can.
 
 Its candidates go through §4 verification like any other. The design verdict is
 `PASS` when no design finding survives verification unwaived, and it is recorded
@@ -134,9 +145,13 @@ design:                         # §3b — present iff design-scope listed anyth
   rulebook: <blob it printed>   # what the design dimension judged against
   findings: { found: <n>, verified: <n>, waived: <n> }
   verdict: PASS                 # PASS | FAIL — artifacts only; omit when nothing was judged
-  implements:                   # one per new surface's design; omit when none was listed
+  implements:                   # one per design the build read; omit when none was listed
     - path: docs/work/components/<the design>.html
       blob: <git rev-parse HEAD_R:<that path>>
+      built: [ui/src/components/<what it produced>.tsx]   # the rendered files it covers
+  undesigned:                   # every other rendered file the diff touched
+    - path: ui/src/<the file>.tsx
+      why: "<what the edit did, and what made a design unnecessary>"
 verdict: PASS   # PASS | FAIL
 date: <YYYY-MM-DD>
 ```
@@ -145,8 +160,12 @@ The `design:` block is what `verify-dod`'s `9·design` check reads: a
 design-bearing tip whose note omits it, judges fewer artifacts than the diff
 carries, or pins a rulebook the tip does not ship, is refused at the merge — as
 is a tip that adds a new surface and cites no design, or cites one whose path or
-blob the tip does not ship. On a diff with neither an artifact nor a new surface
-the block is absent, and no check asks for it.
+blob the tip does not ship, or leaves a rendered file neither cited nor
+declared. The accounting is checked both ways: a `built` or `undesigned` entry
+naming a file the diff does not render is refused as readily as one left out,
+and a file given both answers is refused for contradicting itself. On a diff
+that renders nothing and carries no artifact the block is absent, and no check
+asks for it.
 
 - Attach it: `git notes --ref=cr add -f -m "<yaml>" HEAD_R`.
 - The pre-push hook syncs `refs/notes/*` to origin automatically. Audit any

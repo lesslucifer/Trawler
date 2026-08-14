@@ -871,7 +871,9 @@ fn a_build_that_adds_a_component_must_cite_the_design_the_tip_ships() {
 
     let blob = repo.git(&["rev-parse", &format!("{tip}:{COMPONENT_DESIGN}")]);
     let cites = |pin: &str| {
-        format!("design:\n  implements:\n    - path: {COMPONENT_DESIGN}\n      blob: {pin}\n")
+        format!(
+            "design:\n  implements:\n    - path: {COMPONENT_DESIGN}\n      blob: {pin}\n      built: [ui/src/components/StatusPill.tsx]\n"
+        )
     };
     repo.note("cr", &tip, &v3(&cites(&blob[..7])));
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
@@ -904,6 +906,57 @@ fn a_build_that_adds_a_component_must_cite_the_design_the_tip_ships() {
         "a stale blob is a citation of bytes the tip no longer ships: {}",
         format_report(&report)
     );
+}
+
+// The case an added-only trigger can never see: a Working Unit that re-shapes a
+// surface that already exists, which is where most UI work lives once the screens
+// are built. No design is demanded of it - a gate that answered every edit with
+// "go design it" would be routed around - but an answer is, and the answer is
+// billed, so an epic can count what it shipped undesigned.
+#[test]
+fn a_build_that_only_edits_a_surface_owes_a_reason_and_the_reason_is_billed() {
+    const SCREEN: &str = "ui/src/FlowDetail.tsx";
+    let repo = Repo::new();
+    repo.write(SCREEN, "export const FlowDetail = () => null;\n");
+    repo.commit("a screen that landed before the design flow existed");
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    repo.write(SCREEN, "export const FlowDetail = () => <section>rows</section>;\n");
+    repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
+    repo.commit("re-shape the panel");
+
+    let tip = repo.sha("wu/x/one");
+    let base = repo.sha("epic/x");
+    bless_wu(&repo, &tip);
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    let v3 = |design: &str| {
+        format!(
+            "{}{design}",
+            cr_note("E9", Some("E9.W1"), &base, &sha, "PASS").replace("cr/v2", "cr/v3")
+        )
+    };
+
+    repo.note("cr", &tip, &v3(""));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    assert!(
+        format_report(&report).contains(SCREEN),
+        "the red names the file nothing accounts for: {}",
+        format_report(&report)
+    );
+
+    repo.note(
+        "cr",
+        &tip,
+        &v3(&format!(
+            "design:\n  undesigned:\n    - path: {SCREEN}\n      why: \"a copy fix; the layout is untouched\"\n"
+        )),
+    );
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    let text = format_report(&report);
+    assert!(report.green(), "a stated reason answers for an edit: {text}");
+    assert!(text.contains("WAIVE") && text.contains("a copy fix"), "and it is billed: {text}");
 }
 
 // Blesses the epic tip against the *merge-base* with main, not main's tip -

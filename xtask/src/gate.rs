@@ -58,6 +58,7 @@ impl Level {
     }
 }
 
+#[derive(Debug)]
 pub struct Failure {
     pub check: String,
     pub what: String,
@@ -154,6 +155,9 @@ impl Gate<'_> {
         // every seam its walk re-verifies.
         if level == Level::Wu {
             self.check_handoff(&mut report, parsed.cr.as_ref());
+        }
+        if level == Level::Commit {
+            Self::check_ui_outside_a_wu(&mut report, &names);
         }
         self.check_docs(&mut report, parsed.doc.as_ref(), &names);
         if level == Level::Epic {
@@ -465,48 +469,139 @@ impl Gate<'_> {
             .collect()
     }
 
-    // The other direction of the hand-over: a build that adds a surface names
-    // the design it built from. A `cr/v2` note carries no citation and cannot be
-    // given one after the fact, so - exactly as for the design section - its
-    // silence is reported under the schema check the walk drops at seams. This
-    // epic's own W5 seams added twenty components under that schema.
+    // The accounting lives on a `cr` note, and a standalone commit has none - so
+    // a commit that renders something outside a Working Unit cannot be asked the
+    // question at all. Refusing it keeps the WU seam the only door UI work comes
+    // through. Deletions count here though they are owed nothing at the WU seam:
+    // there the question is which design a file came from, unanswerable for a file
+    // that is gone; here it is whether anyone reviewed the change, and removing a
+    // screen is as unreviewed as adding one.
+    fn check_ui_outside_a_wu(report: &mut Report, names: &[String]) {
+        let rendered: Vec<&str> =
+            names.iter().filter(|p| crate::doc::ui_surface(p)).map(String::as_str).collect();
+        if rendered.is_empty() {
+            return;
+        }
+        report.failures.push(Failure::new(
+            DESIGN,
+            format!(
+                "{} rendered file(s) in a standalone commit: {}",
+                rendered.len(),
+                rendered.join(", ")
+            ),
+            "UI work happens inside a Working Unit - the design accounting lives on its cr/v3 note, and a standalone commit has none".to_string(),
+        ));
+    }
+
+    // What a diff owes the design flow: the surfaces it ADDS, which only a
+    // citation answers for, and every rendered file it leaves standing, which a
+    // citation or a stated reason answers for. The added set is not a subset of
+    // the second - an `@tier` `.ts` is a registry entry that renders nothing - so
+    // the two are unioned rather than nested.
+    pub fn surfaces(&self, tip: &str, base: &str) -> (Vec<String>, Vec<String>) {
+        let added = self.new_surfaces(tip, base);
+        let mut owed: Vec<String> = crate::git::changed_names(self.repo, base, tip)
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|path| crate::doc::ui_surface(path))
+            .chain(added.iter().cloned())
+            .collect();
+        owed.sort();
+        owed.dedup();
+        (added, owed)
+    }
+
+    // The other direction of the hand-over: a build answers for everything it
+    // renders. An added surface names the design it was built from; anything else
+    // names that design or the reason it needed none. A `cr/v2` note carries
+    // neither field and cannot be given one after the fact, so - exactly as for
+    // the design section - its silence is reported under the schema check the walk
+    // drops at seams. This epic's own W5 seams added twenty components under that
+    // schema.
     fn check_handoff(&self, report: &mut Report, cr: Option<&CrNote>) {
         let Some(cr) = cr else { return };
-        let surfaces = self.new_surfaces(&report.tip, &report.base);
-        if surfaces.is_empty() {
+        let (added, owed) = self.surfaces(&report.tip, &report.base);
+        if owed.is_empty() {
             return;
         }
         let check = if cr.schema == "cr/v3" { DESIGN } else { DESIGN_SCHEMA };
         let fix = format!(
-            "cite what each was built from in the {} note: design.implements: [{{ path: <the design>, blob: <git rev-parse {}:<the design>> }}] - `cargo xtask design-scope` lists the surfaces the gate is asking about",
+            "account for each on the {} note: design.implements: [{{ path: <the design>, blob: <git rev-parse {}:<the design>>, built: [<the files it produced>] }}], or design.undesigned: [{{ path, why }}] for a file that needed no design - an added surface takes only the citation. `cargo xtask design-scope` lists what the gate is asking about",
             cr.schema,
             short(&report.tip)
         );
-        match cr.design.as_ref().and_then(|d| d.implements.as_ref()) {
-            None => report.failures.push(Failure::new(
+        let design = cr.design.as_ref();
+        let cited_any = design.and_then(|d| d.implements.as_ref()).is_some_and(|c| !c.is_empty());
+        if !cited_any && design.is_none_or(|d| d.undesigned.is_empty()) {
+            // DEC-25's distinction, widened: an absent field is a silence and an
+            // empty list is a stated nothing, and the red says which happened.
+            let stated_nothing = design.is_some_and(|d| d.implements.is_some());
+            let (what, hint) = if stated_nothing {
+                ("design.implements is empty", "an empty list is a stated nothing")
+            } else {
+                ("the note accounts for none of them", "a silence is not an answer")
+            };
+            report.failures.push(Failure::new(
                 check,
                 format!(
-                    "{} new surface(s) in the diff and the {} note cites no design: {}",
-                    surfaces.len(),
-                    cr.schema,
-                    surfaces.join(", ")
+                    "{} rendered file(s) in the diff and {what}: {}",
+                    owed.len(),
+                    owed.join(", ")
                 ),
-                fix,
-            )),
-            Some(cited) if cited.is_empty() => report.failures.push(Failure::new(
-                check,
-                format!(
-                    "{} new surface(s) in the diff and design.implements is empty: {}",
-                    surfaces.len(),
-                    surfaces.join(", ")
-                ),
-                fix,
-            )),
-            Some(cited) => {
-                for citation in cited {
-                    self.check_citation(report, citation);
+                format!("{hint} - {fix}"),
+            ));
+            return;
+        }
+        for path in &owed {
+            let cited = design.is_some_and(|d| d.built().any(|built| built == path));
+            let claimed = design.is_some_and(|d| d.claims(path));
+            if cited && claimed {
+                report.failures.push(Failure::new(
+                    check,
+                    format!("{path} is cited to a design and declared undesigned"),
+                    "one file, one answer - drop whichever of the two is not true".to_string(),
+                ));
+            } else if added.contains(path) && !cited {
+                report.failures.push(Failure::new(
+                    check,
+                    format!("{path} is a new surface this diff adds, and no citation names it"),
+                    format!("only a design answers for a new surface - a reason does not. {fix}"),
+                ));
+            } else if !cited {
+                match design.and_then(|d| d.undesigned_why(path)) {
+                    Some(why) => report.waived.push(format!("{check} {path} undesigned: {why}")),
+                    None if claimed => report.failures.push(Failure::new(
+                        check,
+                        format!("{path} is declared undesigned with no reason"),
+                        "an empty reason records that a file went undesigned, not why - say what made a design unnecessary".to_string(),
+                    )),
+                    None => report.failures.push(Failure::new(
+                        check,
+                        format!("{path} is rendered by this diff and nothing accounts for it"),
+                        fix.clone(),
+                    )),
                 }
             }
+        }
+        let untouched = |path: &String| !owed.iter().any(|owed| owed == path);
+        for citation in design.and_then(|d| d.implements.as_ref()).into_iter().flatten() {
+            self.check_citation(report, citation);
+            for built in citation.built.iter().filter(|b| untouched(b)) {
+                report.failures.push(Failure::new(
+                    check,
+                    format!("{} is cited as built from {}, and this diff does not render it", built, citation.path),
+                    "a citation names what this diff produced - `cargo xtask design-scope` lists it".to_string(),
+                ));
+            }
+        }
+        for record in design.iter().flat_map(|d| d.undesigned.iter()).filter(|r| untouched(&r.path))
+        {
+            report.failures.push(Failure::new(
+                check,
+                format!("{} is declared undesigned, and this diff does not render it", record.path),
+                "declare the files the diff actually touches - `cargo xtask design-scope` lists them"
+                    .to_string(),
+            ));
         }
     }
 
@@ -771,6 +866,13 @@ impl Gate<'_> {
                     }
                     let inner = self.verify(Level::Wu, wu_tip, mainline)?;
                     let level = inner.level.as_note_level();
+                    // A seam's own waivers are the epic's ledger: every file a
+                    // Working Unit declared undesigned surfaces here, so an epic
+                    // that shipped UI without designing any of it says so in its
+                    // own receipt rather than in nine notes nobody re-reads.
+                    report
+                        .waived
+                        .extend(inner.waived.iter().map(|w| format!("[{level} {}] {w}", short(merge))));
                     // Manual review is boundary-only at seams too (DEC-9/DEC-10):
                     // mr/v1 verifies against the mutable, local .mr-allowed, so
                     // re-judging immutable WU tips would redden authorised history
@@ -1057,14 +1159,25 @@ mod tests {
         assert_eq!(short("0123456789abcdef"), "0123456789");
     }
 
-    // Every way a build can fail to name what it built from, and the one way it
-    // succeeds. The surface is a real added file at a real tip, so the trigger
-    // (added, not edited) and the citation checks are driven together.
-    #[test]
-    fn a_build_that_adds_a_surface_cites_a_design_the_tip_ships_or_reds() {
+    const PILL: &str = "ui/src/components/StatusPill.tsx";
+    const PILL_DESIGN: &str = "docs/work/components/status-pill.html";
+
+    struct Built {
+        _dir: tempfile::TempDir,
+        repo: std::path::PathBuf,
+        base: String,
+        tip: String,
+        later: String,
+        blob: String,
+    }
+
+    // One repo, two ranges, because the rule has two halves. `base..tip` ADDS the
+    // pill, with a test sibling, a `.ts` sibling and an untouched component beside
+    // it; `tip..later` only re-shapes it, and deletes another surface outright.
+    fn a_repo_that_builds_then_re_shapes_a_pill() -> Built {
         let dir = tempfile::TempDir::new().unwrap();
-        let repo = dir.path();
-        let g = |args: &[&str]| super::git(repo, args).unwrap();
+        let repo = dir.path().to_path_buf();
+        let g = |args: &[&str]| super::git(&repo, args).unwrap();
         let write = |rel: &str, body: &str| {
             let full = repo.join(rel);
             std::fs::create_dir_all(full.parent().unwrap()).unwrap();
@@ -1084,90 +1197,161 @@ mod tests {
         write("ui/src/components/Section.tsx", "/**\n * Section.\n * @tier T2\n */\n");
         let base = commit("base");
 
-        let design = "docs/work/components/status-pill.html";
-        write(design, "<html>the StatusPill contract</html>\n");
+        write(PILL_DESIGN, "<html>the StatusPill contract</html>\n");
         write("docs/work/plan.html", "<html>a plan, not a design</html>\n");
         write(
             "docs/work/run-5.html",
             "<html><body><main data-artifact=\"design-run\">open</main></body></html>\n",
         );
         write(
-            "ui/src/components/StatusPill.tsx",
+            PILL,
             "/**\n * StatusPill.\n * @tier T1\n */\nexport const StatusPill = () => null;\n",
         );
         write("ui/src/components/StatusPill.test.tsx", "test('x', () => {});\n");
         write("ui/src/Section.notes.ts", "export const notes = 1;\n");
         let tip = commit("build the pill");
+        let blob = g(&["rev-parse", &format!("{tip}:{PILL_DESIGN}")]);
 
-        let gate = Gate { repo };
+        write(PILL, "/**\n * StatusPill, revised.\n * @tier T1\n */\n");
+        std::fs::remove_file(repo.join("ui/src/components/Section.tsx")).unwrap();
+        let later = commit("revise the pill, retire Section");
+
+        Built { _dir: dir, repo, base, tip, later, blob }
+    }
+
+    fn note_yaml(schema: &str, base: &str, design: &str) -> String {
+        format!("schema: {schema}\nbase: {base}\ndiff_sha256: x\nverdict: PASS\n{design}")
+    }
+
+    fn implements(path: &str, blob: &str, built: &str) -> String {
+        format!(
+            "design:\n  verdict: PASS\n  implements:\n    - path: {path}\n      blob: {blob}\n      built: [{built}]\n"
+        )
+    }
+
+    fn undesigned(path: &str, why: &str) -> String {
+        format!(
+            "design:\n  verdict: PASS\n  undesigned:\n    - path: {path}\n      why: \"{why}\"\n"
+        )
+    }
+
+    fn handoff(built: &Built, from: &str, to: &str, note: &str) -> (Vec<Failure>, Vec<String>) {
+        let cr: CrNote = serde_yaml::from_str(note).expect("the note parses");
+        let mut r = report(vec![]);
+        r.base = from.to_string();
+        r.tip = to.to_string();
+        Gate { repo: &built.repo }.check_handoff(&mut r, Some(&cr));
+        (r.failures, r.waived)
+    }
+
+    // Every way a build can fail to name what it built from, and the one way it
+    // succeeds. The surface is a real added file at a real tip, so the trigger and
+    // the citation checks are driven together.
+    #[test]
+    fn a_build_that_adds_a_surface_cites_a_design_the_tip_ships_or_reds() {
+        let built = a_repo_that_builds_then_re_shapes_a_pill();
+        let (base, tip, blob) = (&built.base, &built.tip, &built.blob);
+        let gate = Gate { repo: &built.repo };
         assert_eq!(
-            gate.new_surfaces(&tip, &base),
-            vec!["ui/src/components/StatusPill.tsx".to_string()],
+            gate.new_surfaces(tip, base),
+            vec![PILL.to_string()],
             "a @tier component added; its test, a .ts sibling and the untouched Section are not surfaces"
         );
+        let checked = |section: &str| handoff(&built, base, tip, section).0;
+        let v3 = |section: &str| note_yaml("cr/v3", base, section);
 
-        let blob = g(&["rev-parse", &format!("{tip}:{design}")]);
-        let checked = |note: &str| {
-            let cr: CrNote = serde_yaml::from_str(note).expect("the note parses");
-            let mut r = report(vec![]);
-            r.base.clone_from(&base);
-            r.tip.clone_from(&tip);
-            gate.check_handoff(&mut r, Some(&cr));
-            r.failures
-        };
-        let note = |schema: &str, design_section: &str| {
-            format!(
-                "schema: {schema}\nbase: {base}\ndiff_sha256: x\nverdict: PASS\n{design_section}"
-            )
-        };
-        let implements = |path: &str, blob: &str| {
-            format!(
-                "design:\n  verdict: PASS\n  implements:\n    - path: {path}\n      blob: {blob}\n"
-            )
-        };
-
-        let silent = checked(&note("cr/v3", ""));
+        let silent = checked(&v3(""));
         assert_eq!(silent.len(), 1);
         assert_eq!(silent[0].check, super::DESIGN, "a v3 note has no excuse");
         assert_eq!(
-            checked(&note("cr/v2", ""))[0].check,
+            checked(&note_yaml("cr/v2", base, ""))[0].check,
             super::DESIGN_SCHEMA,
             "a v2 note predates the field, so the walk can drop it at a seam"
         );
 
         // The silence names the surface; a stated nothing is not that silence;
         // then a path nobody can follow, bytes the tip does not ship, a pin too
-        // short to be a blob, a doc Tier-3 never judged, and an open run.
-        let empty = "design:\n  verdict: PASS\n  implements: []\n".to_string();
+        // short to be a blob, a doc Tier-3 never judged, and an open run. Then the
+        // three ways an accounting contradicts itself.
+        let cite = |path: &str, pin: &str| implements(path, pin, PILL);
         for (section, red) in [
             (String::new(), "StatusPill.tsx"),
-            (empty, "empty"),
-            (implements("docs/work/gone.html", &blob), "does not resolve"),
-            (implements(design, "0000000"), "this tip ships"),
-            (implements(design, "abc"), "names no blob"),
-            (implements("docs/work/plan.html", &blob), "not a design artifact"),
-            (implements("docs/work/run-5.html", &blob), "not archived"),
+            ("design:\n  verdict: PASS\n  implements: []\n".to_string(), "empty"),
+            (cite("docs/work/gone.html", blob), "does not resolve"),
+            (cite(PILL_DESIGN, "0000000"), "this tip ships"),
+            (cite(PILL_DESIGN, "abc"), "names no blob"),
+            (cite("docs/work/plan.html", blob), "not a design artifact"),
+            (cite("docs/work/run-5.html", blob), "not archived"),
+            (undesigned(PILL, "not this time"), "new surface this diff adds"),
+            (implements(PILL_DESIGN, blob, "ui/src/components/Ghost.tsx"), "does not render it"),
+            (
+                format!(
+                    "{}  undesigned:\n    - path: {PILL}\n      why: also\n",
+                    cite(PILL_DESIGN, blob)
+                ),
+                "cited to a design and declared undesigned",
+            ),
         ] {
-            let reds = checked(&note("cr/v3", &section));
-            let what: Vec<&str> = reds.iter().map(|f| f.what.as_str()).collect();
+            let what: Vec<String> = checked(&v3(&section)).iter().map(|f| f.what.clone()).collect();
             assert!(what.iter().any(|w| w.contains(red)), "expected {red}, got {what:?}");
         }
 
         assert!(
-            checked(&note("cr/v3", &implements(design, &blob[..7]))).is_empty(),
-            "path resolves, blob matches, and it is a design"
+            checked(&v3(&cite(PILL_DESIGN, &blob[..7]))).is_empty(),
+            "path resolves, blob matches, it is a design, and the citation names what it built"
         );
+    }
 
-        write(
-            "ui/src/components/StatusPill.tsx",
-            "/**\n * StatusPill, revised.\n * @tier T1\n */\n",
-        );
-        std::fs::remove_file(repo.join("ui/src/components/Section.tsx")).unwrap();
-        let later = commit("revise the pill, retire Section");
+    // The half an added-only trigger could never see: the same file, modified
+    // rather than added. A design is never demanded of it, an answer always is,
+    // and the file this commit deleted is owed neither.
+    #[test]
+    fn a_build_that_only_re_shapes_a_surface_states_why_it_needed_no_design() {
+        let built = a_repo_that_builds_then_re_shapes_a_pill();
+        let (tip, later) = (&built.tip, &built.later);
         assert!(
-            gate.new_surfaces(&later, &tip).is_empty(),
-            "the trigger is about adding a surface - an edit to one and a deletion are not"
+            Gate { repo: &built.repo }.new_surfaces(later, tip).is_empty(),
+            "the old trigger is about adding a surface - an edit to one and a deletion are not"
         );
+        let edited = |section: &str| handoff(&built, tip, later, &note_yaml("cr/v3", tip, section));
+
+        let (reds, _) = edited("");
+        assert_eq!(reds.len(), 1, "one rendered file left standing, one red: {reds:?}");
+        assert!(reds[0].what.contains(PILL) && !reds[0].what.contains("Section.tsx"));
+
+        let (reds, waived) = edited(&undesigned(PILL, "a doc-comment fix, nothing rendered moved"));
+        assert!(reds.is_empty(), "a stated reason answers for an edit: {reds:?}");
+        assert_eq!(waived.len(), 1, "and it is billed, so the epic sees what shipped undesigned");
+        assert!(waived[0].contains("undesigned: a doc-comment fix"), "{waived:?}");
+
+        let (reds, _) = edited(&undesigned(PILL, ""));
+        assert!(reds[0].what.contains("no reason"), "an empty why is not a reason: {reds:?}");
+
+        let what: Vec<String> = edited(&undesigned("ui/src/components/Ghost.tsx", "never touched"))
+            .0
+            .iter()
+            .map(|f| f.what.clone())
+            .collect();
+        assert!(what.iter().any(|w| w.contains("does not render it")), "{what:?}");
+        assert!(what.iter().any(|w| w.contains(PILL)), "and the real file is still owed: {what:?}");
+    }
+
+    // The other door UI work could come through, and the one the accounting
+    // cannot reach: a commit with no Working Unit, and so no cr note to answer on.
+    #[test]
+    fn a_standalone_commit_may_not_render_anything() {
+        let mut r = report(vec![]);
+        Gate::check_ui_outside_a_wu(
+            &mut r,
+            &["src/lib.rs".to_string(), "ui/src/api.ts".to_string()],
+        );
+        assert!(r.failures.is_empty(), "logic and Rust are not rendered files");
+
+        let mut r = report(vec![]);
+        Gate::check_ui_outside_a_wu(&mut r, &["ui/src/FlowDetail.tsx".to_string()]);
+        assert_eq!(r.failures.len(), 1);
+        assert_eq!(r.failures[0].check, super::DESIGN);
+        assert!(r.failures[0].fix.contains("inside a Working Unit"));
     }
 
     // The four ways an epic can answer for a component design it wrote: built,
@@ -1244,6 +1428,26 @@ mod tests {
         );
         let built = commit("build the pill");
         assert!(checked(&built).failures.is_empty(), "a built component needs no drop record");
+
+        // A screen design resolves where a screen was built. Before the roster
+        // counted screens, designing one cost a drop record while designing
+        // nothing cost nothing - the epic gate paid you to skip the design.
+        let screen_design = "docs/work/components/body-viewer.html";
+        write(screen_design, "<html>the BodyViewer contract</html>\n");
+        commit("design the viewer");
+        std::fs::remove_file(repo.join(screen_design)).unwrap();
+        let designed = commit("archive the viewer design");
+        assert!(
+            checked(&designed).failures[0].what.contains("BodyViewer"),
+            "a screen design with no screen is as unbuilt as any other"
+        );
+
+        write("ui/src/BodyViewer.tsx", "export const BodyViewer = () => null;\n");
+        let screen = commit("build the viewer as a screen, outside the collection");
+        assert!(
+            checked(&screen).failures.is_empty(),
+            "the screen carries the contract; no @tier tag, and none is owed"
+        );
     }
 
     // The discriminator's whole point is the divergent case: main and the epic

@@ -141,8 +141,18 @@ fn collection_file(path: &str) -> bool {
     path.strip_prefix(COLLECTION).is_some_and(|file| shaped_file(file, &["ts", "tsx"]))
 }
 
+// Everything a user meets that a design could have shaped: a non-test `.tsx`
+// anywhere under ui/src/. Depth is not membership - a surface moved into a
+// subfolder is still rendered - so this reads the basename, unlike the
+// collection's own deliberately flat test.
+pub fn ui_surface(path: &str) -> bool {
+    path.strip_prefix(SCREENS)
+        .and_then(|rest| rest.rsplit('/').next())
+        .is_some_and(|file| shaped_file(file, &["tsx"]))
+}
+
 fn screen_file(path: &str) -> bool {
-    path.strip_prefix(SCREENS).is_some_and(|file| shaped_file(file, &["tsx"]))
+    ui_surface(path) && !path.starts_with(COLLECTION)
 }
 
 // Whether a path could be a surface at all, decided from the path alone. `@tier`
@@ -172,21 +182,27 @@ pub fn new_surface(path: &str, source: &str) -> Option<&'static str> {
     screen_file(path).then_some("screen")
 }
 
-pub fn registry_name(path: &str) -> Option<String> {
-    let file = path.strip_prefix(COLLECTION)?;
+pub fn surface_name(path: &str) -> Option<String> {
+    let file = path.rsplit('/').next()?;
     Some(file.rsplit_once('.')?.0.to_string())
 }
 
+// Who counts as built, at one revision. Screens are in it as well as `@tier`
+// components: a screen design resolves where its screen was built, or designing
+// one would cost a drop record while designing nothing cost nothing - the
+// incentive inverted. Only a component's membership needs its bytes read, so a
+// screen never pays for a blob.
 pub fn roster_at(repo: &Path, rev: &str) -> BTreeSet<String> {
-    crate::git::git(repo, &["ls-tree", "-r", "--name-only", rev, "--", COLLECTION])
+    crate::git::git(repo, &["ls-tree", "-r", "--name-only", rev, "--", SCREENS])
         .unwrap_or_default()
         .lines()
         .filter(|path| {
-            may_be_surface(path)
-                && crate::git::read_utf8_at(repo, rev, path)
-                    .is_some_and(|source| registry_entry(path, &source))
+            screen_file(path)
+                || (may_be_surface(path)
+                    && crate::git::read_utf8_at(repo, rev, path)
+                        .is_some_and(|source| registry_entry(path, &source)))
         })
-        .filter_map(registry_name)
+        .filter_map(surface_name)
         .collect()
 }
 
@@ -2482,10 +2498,10 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 mod tests {
     use super::{
         attrs, check_frame_density, component_designed, declares_a_design, edit_distance,
-        elements_of, format_verdict, may_be_surface, new_surface, registry_entry, registry_name,
-        rules_from_rulebook, verify_component, verify_html, verify_html_against, Component, Roster,
-        Verdict, Vocabulary, CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX,
-        FRAME_PROSE_WORDS, GIST_MAX_WORDS,
+        elements_of, format_verdict, may_be_surface, new_surface, registry_entry,
+        rules_from_rulebook, screen_file, surface_name, ui_surface, verify_component, verify_html,
+        verify_html_against, Component, Roster, Verdict, Vocabulary, CAPABILITY_STATES,
+        FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -4157,10 +4173,38 @@ chroma_floor: 40
             !registry_entry("ui/src/BodyViewer.tsx", tiered),
             "a screen is not in the collection"
         );
+        assert_eq!(surface_name("ui/src/components/CopyButton.tsx").as_deref(), Some("CopyButton"));
         assert_eq!(
-            registry_name("ui/src/components/CopyButton.tsx").as_deref(),
-            Some("CopyButton")
+            surface_name("ui/src/BodyViewer.tsx").as_deref(),
+            Some("BodyViewer"),
+            "a screen answers to its own name too - the roster carries both"
         );
+    }
+
+    // The widened trigger, in one place: depth is not membership, an extension
+    // is, and the collection/screen split decides which half of the rule applies.
+    #[test]
+    fn every_rendered_file_is_a_surface_and_only_those_outside_the_collection_are_screens() {
+        for path in [
+            "ui/src/App.tsx",
+            "ui/src/components/Button.tsx",
+            "ui/src/panels/Inspector.tsx",
+            "ui/src/features/flows/Detail.tsx",
+        ] {
+            assert!(ui_surface(path), "{path} renders");
+        }
+        for path in [
+            "ui/src/App.test.tsx",
+            "ui/src/api.ts",
+            "ui/src/components/index.ts",
+            "ui/src/index.css",
+            "ui/tailwind.config.js",
+            "src/lib.rs",
+        ] {
+            assert!(!ui_surface(path), "{path} renders nothing");
+        }
+        assert!(screen_file("ui/src/panels/Inspector.tsx"), "a nested surface is still a screen");
+        assert!(!screen_file("ui/src/components/Button.tsx"), "the collection is not screens");
     }
 
     // What a build owes a design for: a component the roster will carry, or a

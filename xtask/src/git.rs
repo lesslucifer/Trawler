@@ -63,6 +63,13 @@ pub fn added_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, St
     names_in(repo, base, tip, &["--diff-filter=A"])
 }
 
+// What the range leaves standing - added and modified, never deleted. Lower-case
+// `d` excludes deletions inside the diff itself, so nothing downstream has to ask
+// git whether each path still resolves at the tip: one process, not one per path.
+pub fn changed_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
+    names_in(repo, base, tip, &["--diff-filter=d"])
+}
+
 // Every path the range ever added under `prefix` - the commits, not the two
 // endpoints. A file added by one commit and removed by another nets out of an
 // endpoint diff, which is exactly how a design nobody built leaves no trace at

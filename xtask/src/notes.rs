@@ -107,7 +107,14 @@ pub struct Design {
     /// `walk_waivers` shape, so a drop lands in the waiver bill the epic already
     /// reports rather than beside it.
     #[serde(default)]
-    pub dropped: Vec<Dropped>,
+    pub dropped: Vec<Excused>,
+    /// The rendered files this diff touched that no design covers, each with why
+    /// it needed none. The edit case: a build re-shapes far more often than it
+    /// adds, and a gate that answered every edit with "go design it" would be
+    /// routed around — so the rule asks for the sentence, and refuses only the
+    /// silence.
+    #[serde(default)]
+    pub undesigned: Vec<Excused>,
 }
 
 #[derive(Deserialize)]
@@ -115,13 +122,29 @@ pub struct Cited {
     pub path: String,
     #[serde(default)]
     pub blob: String,
+    /// The rendered files this design produced. A citation with no `built` list
+    /// covers nothing: one design naming one path used to satisfy a diff that
+    /// added five surfaces.
+    #[serde(default)]
+    pub built: Vec<String>,
 }
 
+/// A path, and why it is not where the rule would otherwise put it: a design the
+/// epic gave up on, or a rendered file no design covers. One shape because it is
+/// one rule — an empty reason records that something happened, not why, so it
+/// records nothing.
 #[derive(Deserialize)]
-pub struct Dropped {
+pub struct Excused {
     pub path: String,
     #[serde(default)]
     pub why: String,
+}
+
+fn why_for<'a>(records: &'a [Excused], path: &str) -> Option<&'a str> {
+    records.iter().find_map(|r| {
+        let why = r.why.trim();
+        (r.path == path && !why.is_empty()).then_some(why)
+    })
 }
 
 impl Design {
@@ -132,10 +155,19 @@ impl Design {
     // An empty reason is not a drop, for the same reason an empty waiver is not
     // a waiver: it records that something went, not why.
     pub fn dropped_why(&self, path: &str) -> Option<&str> {
-        self.dropped.iter().find_map(|d| {
-            let why = d.why.trim();
-            (d.path == path && !why.is_empty()).then_some(why)
-        })
+        why_for(&self.dropped, path)
+    }
+
+    pub fn undesigned_why(&self, path: &str) -> Option<&str> {
+        why_for(&self.undesigned, path)
+    }
+
+    pub fn claims(&self, path: &str) -> bool {
+        self.undesigned.iter().any(|r| r.path == path)
+    }
+
+    pub fn built(&self) -> impl Iterator<Item = &str> {
+        self.implements.iter().flatten().flat_map(|c| c.built.iter()).map(String::as_str)
     }
 }
 
