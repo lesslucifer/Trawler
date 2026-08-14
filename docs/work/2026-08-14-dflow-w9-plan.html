@@ -292,12 +292,16 @@ flowchart TD
     <div class="callout warn">
       <strong>The consequence that gets measured, never assumed.</strong> <code>check_vocabulary</code>
       scans <em>authored</em> classes, so every class a mounted component draws leaves Tier-1's
-      sight. Taken over run #4's current mockup: <strong>75 distinct class tokens — 55 are also drawn
-      by a collection component and would leave the scan, 20 are the screen's own and stay.</strong>
+      sight. <strong>Re-taken at execution, over the mockup item exactly:
+      74 distinct class tokens before, 21 after — 53 left the scan, and 50 of those are drawn by a
+      collection component where <code>design/vocabulary</code> reds them at source.</strong> The 75/55
+      written here when the step was planned was cut over a wider span and is not what the predicate
+      sees; the executed figures and the four predicate populations are in
+      <a href="../decisions/dec-26-the-mockup-mounts.html">DEC-26</a>.
       ④.5 reports which of the 13 hard predicates keep a trigger population on the migrated run and
-      which lose one, <strong>and whether the departing classes are gated anywhere else</strong>. If
-      they are not, the migration trades one blindness for another, and that answer goes in the
-      record rather than being argued away.
+      which lose one, <strong>and whether the departing classes are gated anywhere else</strong>.
+      <strong>Answered</strong>: three tokens and four of five payload markings are gated by nothing,
+      and the scanner widening that would recover them is a named follow-up, not an argument.
     </div>
     <p><strong>Red before green, the same shape as ③.</strong> The new predicate must
       <strong>refuse run #4's current hand-drawn mockup</strong> before it is allowed to pass the
