@@ -34,7 +34,10 @@
       design through the <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a>
       handoff, citing path plus blob plus the files it produced, and firing <strong>both</strong>
       the <code>new_surface</code> and the edit legs — or, where the design honestly proposed no new
-      surface, reporting that as a named gap rather than manufacturing one.
+      surface, reporting that as a named gap rather than manufacturing one. The mockup
+      <strong>mounts the components it claims to reuse</strong> instead of hand-drawing pictures of
+      them, and the rule that says so is <strong>enforced rather than skipped</strong>
+      (<a href="#step45">step ④.5</a>).
       <span class="badge id">UC-ONBOARD</span> and
       <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a> are amended where the
       design demands it, the screen's shipped test suite is <strong>retired with the design it
@@ -69,6 +72,12 @@
           <tr><td><a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a> · W8 follow-up 1</td>
             <td>The handoff has only ever been driven by a fake build — a stub component, a one-line
               screen, no agent that read what it cited</td></tr>
+          <tr><td>W5 — <em>the specimens become the components</em></td>
+            <td>The migration reached <strong>5 of 20</strong> component design files and never
+              reached a design run — <strong>0 of 4</strong> load the bundle. Its render gate cannot
+              refuse a doc that hand-draws, is wired into no gate, and its live population is now
+              <strong>1</strong>. W9 is the first run to build the mockup and therefore the first to
+              hit it (<a href="#step45">step ④.5</a>)</td></tr>
           <tr><td>W8 follow-up 9</td>
             <td>The screen-design retirement asymmetry: <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>
               does not demand a <em>screen</em> design retire into its screen's TSDoc. The first
@@ -212,6 +221,97 @@ flowchart TD
       </tbody>
     </table>
 
+    <h3 id="step45">④.5 The mockup composes the components, not pictures of them</h3>
+    <p>W5 made a design file's specimen <em>the component itself</em> —
+      <code>scripts/build-specimens.mjs</code> compiles <code>ui/src/components/</code> plus React
+      into <code>doc-assets/components/specimens.bundle.js</code>, which a doc loads over
+      <code>file://</code> as a classic script and reads as <code>window.Trawler</code>. The design
+      <strong>run</strong>'s mockup stage never migrated, and nothing noticed, because the only check
+      that could have noticed <strong>skips exactly the files it should refuse</strong>.</p>
+    <table data-c="tbl-step45-found">
+      <thead><tr><th>Fact</th><th>How it was taken</th></tr></thead>
+      <tbody>
+        <tr><td>The capability is live and complete for this run</td>
+          <td>rebuilt (<code>node scripts/build-specimens.mjs</code>, 55&nbsp;ms) and loaded:
+            <strong>28 exports</strong>, and all <strong>7</strong> components run #4 places are
+            among them</td></tr>
+        <tr><td>It reached component design files and stopped</td>
+          <td><strong>5 of 20</strong> files under <code>docs/work/components/</code> loaded the
+            bundle at the W5 merge and still did at W7 — every one has since been retired.
+            <strong>0 of 4</strong> design runs have ever loaded it</td></tr>
+        <tr><td>The check cannot fail on a doc that hand-draws</td>
+          <td><code>scripts/check-render.mjs</code> line 96:
+            <code>if (!source.includes('specimens.bundle.js')) return { skipped: 'not migrated' }</code>,
+            and the loop <code>continue</code>s past a skip without printing it.
+            <code>node scripts/check-render.mjs &lt;run #4&gt;</code> → <em>"all migrated design files
+            render"</em>, <strong>exit 0</strong>, on a mockup that hand-draws all seven</td></tr>
+        <tr><td>It is in no gate, over almost nothing</td>
+          <td>reachable only from <code>cargo xtask ui specimens --check</code>; the installed hooks
+            call <code>verify-dod</code> and <code>verify-dod</code> never invokes it. Its live
+            population is <strong>1 doc</strong> — the W5 record that announced the migration</td></tr>
+        <tr><td>Tier-1 points the other way</td>
+          <td><code>assets·specimen</code> (<code>xtask/src/doc.rs</code>) <strong>requires</strong>
+            the pre-bundle trio — CDN + <code>tw-config.js</code> + <code>specimen.js</code>. The
+            predicate encodes the unmigrated shape as the mandatory one</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <strong>The rule, one sentence.</strong> A design run's mockup <strong>mounts</strong> every
+      component it declared <em>reuse</em> or <em>extend</em>; only a <em>propose</em> row, a
+      <em>build local</em> element, and an <em>extend</em>'s declared delta may be hand-drawn — each
+      declared, one comment each. Imitating a built component is refused, not reviewed.
+    </div>
+    <table data-c="tbl-step45-changes">
+      <thead><tr><th>What moves</th><th>To what</th></tr></thead>
+      <tbody>
+        <tr><td><code>docs/work/design-flow-base.html</code>, stage 5</td>
+          <td>the <em>composed</em> layer changes from <em>"the component's Tailwind utilities, by
+            class name"</em> to <strong>mount the component</strong>; the asset block gains the
+            bundle. The layer table keeps its other two rows unchanged</td></tr>
+        <tr><td><code>xtask/src/doc.rs</code></td>
+          <td><code>assets·specimen</code> accepts the bundle, and a new predicate refuses a
+            hand-drawn reuse. <strong>Seen through the marking the elements stage already
+            demands</strong>: every mount host in the mockup carries
+            <code>data-key="&lt;component-file-slug&gt;"</code>, so the predicate is <em>every
+            catalog row verdicted reuse or extend has a keyed mount inside
+            <code>data-item="mockup"</code></em>. No new vocabulary, and the keyed map lights the
+            mount along with the tree and the catalog row</td></tr>
+        <tr><td><code>scripts/check-render.mjs</code></td>
+          <td>the silent skip becomes a <strong>reported refusal</strong> when the file is a design
+            artifact. A doc that opts out of rendering must say so where a reader sees it —
+            <em>"not migrated"</em> printed nowhere is DEC-15's silence-reads-as-pass, in a
+            script</td></tr>
+        <tr><td>run #4's mockup</td>
+          <td>re-composed by mounting; re-closed through <code>verify-doc</code> green, then
+            re-archived</td></tr>
+        <tr><td>a decision record</td>
+          <td>why <em>the specimen is the component</em> reaches the run, and why the render gate was
+            never able to say so</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn">
+      <strong>The consequence that gets measured, never assumed.</strong> <code>check_vocabulary</code>
+      scans <em>authored</em> classes, so every class a mounted component draws leaves Tier-1's
+      sight. Taken over run #4's current mockup: <strong>75 distinct class tokens — 55 are also drawn
+      by a collection component and would leave the scan, 20 are the screen's own and stay.</strong>
+      ④.5 reports which of the 13 hard predicates keep a trigger population on the migrated run and
+      which lose one, <strong>and whether the departing classes are gated anywhere else</strong>. If
+      they are not, the migration trades one blindness for another, and that answer goes in the
+      record rather than being argued away.
+    </div>
+    <p><strong>Red before green, the same shape as ③.</strong> The new predicate must
+      <strong>refuse run #4's current hand-drawn mockup</strong> before it is allowed to pass the
+      migrated one. Both verdicts are recorded; a predicate that only ever went green proves
+      nothing.</p>
+    <p><strong>The cost, stated rather than discovered.</strong> Run #4's bytes change, so the
+      <a href="#step4">④</a> citation re-pins and, under
+      <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a>, the amendment re-enters
+      Tier-3 on the merge that lands it. That is the blob pin working, not a cost to avoid.</p>
+    <p><strong>Not here:</strong> wiring <code>check-render.mjs</code> into <code>verify-dod</code>.
+      It drives a real Chrome and the DoD gate is hermetic — headless <code>cargo build</code> and
+      <code>cargo test</code> stay GUI-free. ④.5 fixes the skip that made it silent and leaves a
+      browser-in-the-gate to a record that can weigh it.</p>
+
     <h3 id="step5">⑤ The build, and the suite that retires with the design it guarded</h3>
     <p>Onboarding is rebuilt from the closed design. Per <a href="2026-08-14-dflow-w9-discussion.html#clash">R3</a>,
       the shipped suite goes with the design it was written against — it asserts
@@ -279,7 +379,11 @@ flowchart TD
             have now gone red at least once on a real artifact</strong> (against ⓪'s baseline) ·
             whether <code>new_surface</code> fired, and if not, the named gap · how many of the 24
             registry components the redesign actually reused · <strong>run #4 against run
-            #3</strong>, the same screen designed twice by the same flow, and what differed.</td></tr>
+            #3</strong>, the same screen designed twice by the same flow, and what differed ·
+            <strong>after <a href="#step45">④.5</a></strong>: how many of the mockup's class tokens
+            left Tier-1's scan when the components were mounted (against the 55-of-75 baseline taken
+            before), which hard predicates lost a trigger population, and whether anything else gates
+            what departed.</td></tr>
       </tbody>
     </table>
 
@@ -291,7 +395,8 @@ flowchart LR
     S1 --> S2["② the DEC-17 overlap<br/>measured, changed only if it cost"]
     S2 --> S3["③ Tier-3<br/>FAIL then PASS"]
     S3 --> S4["④ the handoff<br/>cite path + blob + built"]
-    S4 --> S5["⑤ the build<br/>+ the new suite + coverage map"]
+    S4 --> S45["④.5 the mockup mounts<br/>the real components"]
+    S45 --> S5["⑤ the build<br/>+ the new suite + coverage map"]
     S5 --> S6["⑥ UC-ONBOARD · DEC-13<br/>· the non-goals struck"]
     S6 --> S7["⑦ distil · review · merge"]
       </pre>
@@ -324,6 +429,18 @@ flowchart LR
         <tr><td><strong>A capability quietly disappears</strong> in the suite swap</td>
           <td>The coverage map is the only thing that catches it, which is why its left column is
             taken at ⓪ rather than reconstructed at ⑤</td></tr>
+        <tr><td><strong>Mounting hollows out Tier-1.</strong> 55 of the mockup's 75 class tokens
+          leave <code>check_vocabulary</code>'s scan, and nothing else gates them</td>
+          <td>Then <a href="#step45">④.5</a> has traded a blindness for a blindness, and
+            <strong>says so</strong> rather than shipping the trade quietly. The migration still
+            stands — a mockup that imitates a component is wrong about what it draws, which is worse
+            than a scan with less to read — but the uncovered set is named, counted, and left as the
+            next question. It is not answered by widening a predicate in this WU</td></tr>
+        <tr><td><strong>The bundle folds in <code>specimen.js</code> and the theme</strong>, which
+          <code>assets·specimen</code> separately requires — so a migrated run loads both</td>
+          <td>Measured before the predicate is written, not assumed: whether the doubled load
+            double-binds anything. Whichever way it lands, the predicate is changed to match the
+            shape that actually works, and the alternative it rejected is recorded</td></tr>
       </tbody>
     </table>
 
