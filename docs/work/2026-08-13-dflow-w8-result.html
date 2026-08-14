@@ -13,9 +13,10 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-DFLOW.W8 result — design → build</h1>
-      <p>The seam is built: two predicates, one field, and the epic as the unit that binds them. Four
-        deviations, one of them a plan row that was measured false — and
-        <a href="#risk">a handoff no real build has ever driven</a>.</p>
+      <p>The seam is built: three predicates, two fields, and the epic as the unit that binds them. Four
+        deviations, one of them a plan row that was measured false — plus
+        <a href="#step6">a rule that guarded only the work nobody was doing</a>, found by reviewing the
+        first five steps — and <a href="#risk">a handoff no real build has ever driven</a>.</p>
       <div class="meta">Result report · 2026-08-13 · Trawler · T3 ·
         <code>wu/design-flow/dev-integration</code> → <code>epic/design-flow</code> ·
         <a href="2026-08-13-dflow-w8-plan.html">plan</a> ·
@@ -29,11 +30,15 @@
 
     <h2 id="outcome">Outcome</h2>
     <div class="cards" data-item="outcome">
-      <div class="card"><h3>2 predicates</h3><p><code>9·design</code> gains the build side at the WU seam;
-        <code>components·unbuilt</code> is new at the epic seam. One field —
-        <code>design.implements: [{path, blob}]</code> — and no new note, no new schema version</p></div>
-      <div class="card"><h3>8 merges, 5 refused</h3><p>over real git through the real merge hook, in the flow
+      <div class="card"><h3>3 predicates</h3><p><code>9·design</code> gains the build side at the WU seam and
+        a refusal at commit level; <code>components·unbuilt</code> is new at the epic seam. Two fields —
+        <code>implements[].built</code> and <code>undesigned</code> — and no new note, no new schema
+        version</p></div>
+      <div class="card"><h3>12 merges, 7 refused</h3><p>over real git through the real merge hook, in the flow
         e2e's new build leg. <strong>0 rule defects</strong> — unlike W7's e2e, which found two</p></div>
+      <div class="card"><h3>8 screens, 0 designs</h3><p>the measurement that forced step ⑥: the added-only
+        trigger's whole population was already built, so every UI change it could ever see was one nobody
+        was going to make</p></div>
       <div class="card"><h3>4 of 20</h3><p>component designs this epic wrote that no roster entry carries.
         E-DFLOW is <strong>the first epic its own rule refuses</strong>, and the four reasons it forced out
         are four different facts</p></div>
@@ -46,26 +51,38 @@
       <thead><tr><th></th><th>Leg</th><th>Where it landed</th></tr></thead>
       <tbody>
         <tr><td><span class="badge auto">met</span></td>
-          <td><strong>Upstream.</strong> A UI Working Unit that adds a new registry component or a new screen
-            cites the closed design it implements, path plus blob; the merge is refused when the citation is
-            missing, unresolvable, or names something that is not a closed design</td>
+          <td><strong>Added.</strong> A UI Working Unit that adds a new registry component or a new screen
+            cites the closed design it implements, path plus blob plus the files it produced; the merge is
+            refused when the citation is missing, unresolvable, names something that is not a closed design,
+            or covers a file the diff does not render. No reason excuses a new surface</td>
           <td><a href="2026-08-13-dflow-w8-step3-pointer.html">③</a> — <code>new_surface</code> ·
-            <code>check_handoff</code> · <code>check_citation</code>, five refusals</td></tr>
+            <code>check_handoff</code> · <code>check_citation</code>, five refusals; ⑥ added the coverage
+            match and the subdirectory case</td></tr>
+        <tr><td><span class="badge auto">met</span></td>
+          <td><strong>Touched.</strong> Every other rendered file the diff leaves standing is cited the same
+            way or declared <code>undesigned</code> with a non-empty reason, and UI work outside a Working
+            Unit is refused outright</td>
+          <td>⑥ — <code>ui_surface</code> · <code>Gate::surfaces</code> ·
+            <code>check_ui_outside_a_wu</code>, and each accepted declaration billed at its seam and again at
+            the epic</td></tr>
         <tr><td><span class="badge auto">met</span></td>
           <td><strong>Downstream.</strong> A component design added during an epic whose component is absent
             from the roster at the epic tip refuses the <em>epic</em> merge, unless the note records the drop
             and says why</td>
           <td><a href="2026-08-13-dflow-w8-step1-unbuilt.html">①</a> —
-            <code>components·unbuilt</code>, reading the <em>range</em> rather than the endpoints</td></tr>
+            <code>components·unbuilt</code>, reading the <em>range</em> rather than the endpoints; ⑥ made the
+            roster count screens, so a screen design resolves instead of costing a drop record</td></tr>
         <tr><td><span class="badge auto">met</span></td>
-          <td><strong>Both driven by a build leg on the flow e2e</strong>, including the case where the build
-            amends the design it was handed</td>
-          <td><a href="2026-08-13-dflow-w8-step4-build-leg.html">④</a> — 2 tests, 6 cases, 8 merges</td></tr>
+          <td><strong>All three driven by a build leg on the flow e2e</strong>, including the case where the
+            build amends the design it was handed and the case where it only re-shapes what exists</td>
+          <td><a href="2026-08-13-dflow-w8-step4-build-leg.html">④</a> + ⑥ — 2 tests, 9 cases,
+            12 merges</td></tr>
         <tr><td><span class="badge auto">met</span></td>
           <td><strong>The rule is written before it is mechanised</strong> — the flow spec gains the hand-over
             step, <code>workflow.html</code> gains the design row</td>
           <td><a href="2026-08-13-dflow-w8-step2-handoff.html">②</a> — flow spec ⑨ ·
-            <code>workflow.html</code> v11, <code>Reviewed-By</code> as DEC-7/9/10 require</td></tr>
+            <code>workflow.html</code> v12, <code>Reviewed-By</code> as DEC-7/9/10 require. ⑥ kept the order:
+            the touched half was written into both docs before a line of it was mechanised</td></tr>
         <tr><td><span class="badge auto">met</span></td>
           <td><strong>DEC-16's "lives there and nowhere else" is superseded, not annotated</strong></td>
           <td>⑤ — <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a>, and DEC-16's clause
@@ -103,18 +120,66 @@
           <td><strong>gate 0 was red before the step began</strong> — <code>clippy --all-targets</code> on
             step ③'s 117-line test. Fixed by shrinking to 91, not by the repo's first
             <code>#[allow]</code></td></tr>
-        <tr><td><strong>⑤ distillation</strong> <em>this commit</em></td>
+        <tr><td><strong>⑤ distillation</strong> <code>4109404</code></td>
           <td>DEC-25 · DEC-16 superseded · DEC-24 answered · DEC-15's build-side table ·
             <code>decisions-index</code> · this report</td>
           <td>DEC-15 has no "enforcement table" for the build-side rows to join — see
             <a href="#deviations">deviations</a></td></tr>
+        <tr><td><strong>⑥ the edit case</strong> <em>this commit</em></td>
+          <td><code>ui_surface</code> · <code>changed_names</code> · <code>Gate::surfaces</code> ·
+            <code>design.undesigned</code> · <code>implements[].built</code> ·
+            <code>check_ui_outside_a_wu</code> · screens in <code>roster_at</code> · the walk carrying each
+            seam's waivers up · <code>workflow.html</code> v12 · the skill's two new fields</td>
+          <td>the rule shipped in ①–⑤ could only fire on surfaces that <strong>do not exist yet</strong>, and
+            the screens all exist. Three holes travelled with it: a subdirectory <code>.tsx</code> was no
+            surface, a screen design could never resolve, and a standalone commit could render anything.
+            Also: <code>workflow.html</code> still said <strong>v10</strong> — ②'s commit message called it
+            v11 and never edited the line</td></tr>
       </tbody>
     </table>
+
+    <h2 id="step6">Step ⑥ — the review that found the rule guarded nothing</h2>
+    <p>Steps ①–⑤ were complete and green when the question was asked: <em>how does an epic guarantee a design
+      for all its UI work?</em> The measurement that answered it is the whole of step ⑥.</p>
+    <table data-c="tbl-step6">
+      <thead><tr><th>What was measured</th><th>What it said</th></tr></thead>
+      <tbody>
+        <tr><td>the added-only trigger's remaining population</td>
+          <td><strong>8 screens exist, 0 were ever designed.</strong> <code>new_surface</code> reads
+            <code>--diff-filter=A</code>, and <code>doc.rs</code> said so in its own comment: <em>"an edit to
+            either is not a new surface"</em>. Every future screen change is an edit</td></tr>
+        <tr><td>what landed history actually did</td>
+          <td><strong>14 seams</strong> on <code>main</code> touch a non-test <code>.tsx</code>;
+            <strong>4 of them modified only</strong> (E-UISETUP.W2/W3/W4/W6). Typical burden of the new
+            accounting: <strong>1–3 paths per seam</strong> — this is not the "reds almost everything" gate
+            D2·A was rejected as</td></tr>
+        <tr><td>whether widening re-opens grandfathering (D6·A's caveat)</td>
+          <td>no. <strong>1 <code>cr/v3</code> note exists in the repo</strong>, against 109 v2/v1, and it
+            renders nothing; <strong>0</strong> non-merge commits on either branch render anything. The
+            widened trigger fires on 0 landed seams and 0 landed commits</td></tr>
+        <tr><td>whether the incentive pointed the right way</td>
+          <td>it pointed backwards. The roster was <code>@tier</code>-under-<code>components/</code> only, so
+            a <em>screen</em> design could never resolve at the epic tip: designing a screen cost a drop
+            record, designing nothing cost nothing. <code>body-viewer.html</code> is the proof — DEC-25 filed
+            a design that <strong>was built</strong> as a drop</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">What the touched half demands is a <strong>sentence, not a run</strong>: the reviewer names
+      the file and says what made a design unnecessary, on a note bound to <code>diff_sha256</code>. That is
+      the distinction D2·A missed — it read the path trigger as "demand a design of every edit", which would
+      indeed have been waived away by lunchtime. What is refused here is only the silence.</p>
 
     <h2 id="deviations">Deviations</h2>
     <table data-item="deviations">
       <thead><tr><th>Planned</th><th>What actually happened</th></tr></thead>
       <tbody>
+        <tr><td><strong>Five steps</strong>, ending at ⑤ with DEC-25, the review and the merge</td>
+          <td><strong>A sixth, and it changed the rule.</strong> ①–⑤ were green and distilled when reading
+            them back asked what an epic actually guarantees for its UI work. The answer was measurable and
+            bad: the trigger fires only on surfaces that do not exist yet, and all 8 screens exist. Step ⑥
+            widened the rule to every rendered file a diff touches, closed three holes beside it, and amended
+            DEC-25 in place rather than adding DEC-26 — the record had not left this branch, so the rule keeps
+            one record instead of gaining a correction to an unmerged one. See <a href="#step6">step ⑥</a></td></tr>
         <tr><td><strong>D6·A</strong>: "the trigger cannot fire on landed history", measured at
           <strong>0 of 11</strong> landed UI seams</td>
           <td><strong>False premise, surviving conclusion.</strong> The trigger fires on <strong>W5's
@@ -173,44 +238,54 @@
             <code>Reviewed-By</code></td></tr>
           <tr><td><code>8dc1aa4</code></td><td>③ the trigger and the pointer</td></tr>
           <tr><td><code>264c1e5</code></td><td>④ the e2e build leg</td></tr>
-          <tr><td><em>this commit</em></td><td>⑤ DEC-25, the three amended records, this report</td></tr>
+          <tr><td><code>4109404</code> · <code>3bc2335</code> · <code>efd5d40</code></td>
+            <td>⑤ DEC-25, the three amended records, this report, and two review rounds</td></tr>
+          <tr><td><em>this commit</em> + its T1 doc commit</td>
+            <td>⑥ the edit case — <code>workflow.html</code> v12 (rule-bearing,
+              <code>Reviewed-By</code>), the flow spec, then the predicates and their tests</td></tr>
         </tbody>
       </table>
       <table data-c="tbl-tests">
         <thead><tr><th>Level</th><th>Measured</th></tr></thead>
         <tbody>
           <tr><td><span class="badge id">unit</span> commit</td>
-            <td><strong>197</strong> <code>xtask</code> lib tests. The trigger (a <code>@tier</code> component
-              fires; an untiered file, a test, a <code>.ts</code> module, an edit and a deletion do not) · the
-              pointer (absent and empty <code>implements</code> parse differently and stay that way) · one red
-              per way a citation breaks and one green when it holds ·
-              <code>components·unbuilt</code>'s four answers over a real temp repo · and the
-              <a href="#review">review round</a>'s <code>may_be_surface</code>, which must admit every
-              candidate the content test could still accept and refuse everything a path alone settles</td></tr>
+            <td><strong>199</strong> <code>xtask</code> lib tests. The added trigger (a <code>@tier</code>
+              component fires; an untiered file, a test, a <code>.ts</code> module and a deletion do not) ·
+              the pointer (absent and empty <code>implements</code> parse differently and stay that way) · one
+              red per way a citation breaks and one green when it holds ·
+              <code>components·unbuilt</code>'s four answers over a real temp repo, plus a fifth: a screen
+              design resolves once its screen exists · the touched half over the same repo's second range —
+              an unaccounted edit reds, a reason greens <em>and is billed</em>, an empty reason reds, a
+              declaration of an untouched file reds, and the file the commit deleted is owed nothing · the
+              standalone-commit refusal · <code>ui_surface</code> over four paths that render and six that do
+              not</td></tr>
           <tr><td><span class="badge id">integration</span> WU</td>
-            <td><strong>69</strong> <code>dod_gate</code> tests through the real binary against temp trees:
+            <td><strong>70</strong> <code>dod_gate</code> tests through the real binary against temp trees:
               the WU gate reds a build that cites nothing and names the surface, greens on a resolvable
               citation, and <strong>reds a stale one</strong> — the blob is compared against the tip, not the
-              working tree. The epic gate reds an unbuilt design, still reds a reasonless drop, greens and
-              bills the reason as a waiver</td></tr>
+              working tree. A WU that <em>only edits</em> a screen reds, then greens with its reason printed
+              as a <code>WAIVE</code> line. The epic gate reds an unbuilt design, still reds a reasonless
+              drop, greens and bills the reason as a waiver</td></tr>
           <tr><td><span class="badge id">e2e</span> epic</td>
             <td><strong>4</strong> in <code>xtask/tests/e2e_design_flow.rs</code>
               (<code>--features design-e2e</code>), two of them this WU's:
               <code>a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it</code> and
-              <code>a_design_nobody_built_refuses_the_epic_merge_until_the_drop_is_recorded</code>. Each red
-              is bound to its own message, not to a check name — <code>9·design</code> is a prefix of
+              <code>a_design_nobody_built_refuses_the_epic_merge_until_the_drop_is_recorded</code>. Between
+              them <strong>12 merges, 7 refused</strong>, including ⑥'s two new legs: a new surface that
+              tries to declare itself undesigned, and a Working Unit that only re-shapes an existing screen.
+              Each red is bound to its own message, not to a check name — <code>9·design</code> is a prefix of
               <code>9·design-schema</code>. <strong>Not waived at any level</strong>, as the plan required</td></tr>
           <tr><td><span class="badge id">regression</span></td>
-            <td><code>verify-doc</code> over <strong>84 tracked docs, none red</strong> — re-run at this
-              tip, not carried forward from ④'s 82, which predates the two docs ⑤ adds. With
-              <code>docs/work/components/</code> absent rather than empty — the <code>roster()</code> change
-              is exercised by the real corpus. The trigger over the epic's own seams: <strong>1 fires, 0
-              fail</strong></td></tr>
+            <td><code>verify-doc</code> over <strong>78 tracked docs, none red</strong> — re-run at this tip.
+              With <code>docs/work/components/</code> absent rather than empty — the <code>roster()</code>
+              change is exercised by the real corpus. The widened trigger over landed history:
+              <strong>0 seams</strong> can red (1 <code>cr/v3</code> note in the repo, rendering nothing) and
+              <strong>0 non-merge commits</strong> render anything on either branch</td></tr>
           <tr><td><span class="badge id">gate 0</span></td>
             <td><code>cargo fmt --all --check</code> · <code>clippy --workspace --all-targets --all-features
               -D warnings</code> · <code>cargo test --workspace</code> — <strong>green</strong>. Core suites
               untouched: 65 lib · 11 api · 3 ca · 6 capture · 4 h2. Gated <code>xtask</code> suites green:
-              69 <code>dod_gate</code> · 4 design e2e · 1 <code>debug_serve</code></td></tr>
+              70 <code>dod_gate</code> · 4 design e2e · 1 <code>debug_serve</code></td></tr>
           <tr><td><span class="badge id">front end</span></td>
             <td>No <code>ui/src/</code> change was planned and none was made, and the checks were run rather
               than assumed unchanged: <code>npx tsc -b</code> · <code>npm run lint</code> ·
@@ -288,9 +363,11 @@
     <h2 id="risk">⚠ The handoff has never been driven by a real build</h2>
     <div class="callout warn" data-c="risk">
       <p>This was <a href="2026-08-13-dflow-w8-plan.html#step5">named at planning as Q2</a> and it is
-        unchanged: the rule is enforced by two predicates and exercised by a <strong>fake</strong> build — a
+        unchanged: the rule is enforced by predicates and exercised by a <strong>fake</strong> build — a
         stub component, a one-line screen, and no agent that read the contract it cited. <strong>A handoff
-        nobody real has driven reads exactly like one that works.</strong></p>
+        nobody real has driven reads exactly like one that works.</strong> Step ⑥ is what that reads like
+        when someone finally looks: five green steps enforcing a rule whose trigger had nothing left to fire
+        on.</p>
       <p>That is the failure mode M1 already caught this epic committing once: three design runs, zero lines
         of product code, every gate green. The WU accepts the risk knowingly; <strong>W9 pays it</strong>, by
         making the first real Tier-3 judgment and the first real build the same run.</p>
@@ -313,9 +390,11 @@
             <strong>DEC-15</strong> gains the build-side pair as a consequence — <a href="#deviations">not as
             a table row</a></td></tr>
         <tr><td><strong>T1</strong></td>
-          <td><span class="badge auto">v11 landed at ②</span> <code>workflow.html</code> only: the design row
-            in DoD-W, a DoD-E row, the gate-check rows, the design/build ordering and D1a's three cases.
-            Rule-bearing, so <code>592ff2b</code> carries a listed <code>Reviewed-By</code> trailer.
+          <td><span class="badge auto">v12, ② then ⑥</span> <code>workflow.html</code> only: the design row
+            in DoD-W, a DoD-E row, the gate-check rows, the design/build ordering and D1a's three cases at ②;
+            at ⑥ the touched half, the scope table, the commit-level rule, and the version line itself —
+            which still read <strong>v10</strong>, because ②'s commit message announced v11 without editing
+            the file. Rule-bearing, so both commits carry a listed <code>Reviewed-By</code> trailer.
             <strong><code>documentation-system.html</code>: zero lines</strong>, no new tier row and no new
             tracked location — the condition the plan attached was measured false</td></tr>
         <tr><td><strong>T2 · design-rules</strong></td>
@@ -327,8 +406,14 @@
             must satisfy; <code>xtask/src/doc.rs</code> for what a design must contain and what counts as a
             surface. Where a doc and the code disagree, the code wins</td></tr>
         <tr><td><strong>T3</strong></td>
-          <td>discussion · plan · four step records · this report. <code>docs/work/components/</code> ends the
+          <td>discussion · plan (amended at ⑥ with the step, its expected rows, its order row and the widened
+            regression bar) · four step records · this report. <code>docs/work/components/</code> ends the
             WU <strong>gone</strong>, not empty — which is now the resting state</td></tr>
+        <tr><td><strong>infrastructure</strong></td>
+          <td><code>.claude/skills/code-review/SKILL.md</code> — §3b now reads three blocks from
+            <code>design-scope</code> and the <code>cr/v3</code> template carries
+            <code>implements[].built</code> and <code>undesigned</code>. Without it the reviewer writes notes
+            the gate refuses, which is the one way a rule and its author can silently disagree</td></tr>
         <tr><td><strong>flagged for epic distillation</strong></td>
           <td><span class="badge approval">owed at the epic merge</span>
             <code>component-design-base.html</code> is the <em>authoring format</em>, not a design — the
@@ -372,6 +457,20 @@
           so <code>components·unbuilt</code> never sees it. Neither half is wrong — the pair only binds
           designs an epic <em>wrote</em>, and this one predates the rule</td>
           <td><span class="badge approval">recorded</span></td></tr>
+        <tr><td>8</td><td><strong>The 8 landed screens are undesigned and stay that way.</strong> No gate
+          reaches history, and the ruling is to <em>waive</em> them rather than retro-design or file them: the
+          first Working Unit to touch one writes the reason into its own note, so the fact surfaces per seam
+          instead of ageing in a tracker. What to watch is the shape of those reasons — a run of
+          "predates the design flow" across many seams is the signal that a screen needs a real run, and it
+          is visible in the epic's waiver bill by construction</td>
+          <td><span class="badge approval">ruled · watched at the epic gate</span></td></tr>
+        <tr><td>9</td><td><strong>The two roster oracles still disagree about screens.</strong>
+          <code>roster_at</code> (git, epic gate) now counts them; <code>Roster</code> (the node oracle +
+          working tree, <code>verify-doc</code>) does not, so <code>components·unretired</code> will not
+          demand that a <em>screen</em> design retire into its screen's TSDoc once built. Check 6 forces the
+          file out of the tree at the epic tip either way, so nothing leaks — but the asymmetry is real and
+          the first screen design is what will exercise it</td>
+          <td>W9 <span class="badge approval">recorded, not built around</span></td></tr>
       </tbody>
     </table>
   </main>

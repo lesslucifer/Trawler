@@ -8,9 +8,10 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>DEC-25 — the design → build handoff is one rule with two halves, and the epic is what binds them</h1>
-      <p>A build that adds a surface names the design it read; a design nobody built does not leave its
-        epic. Two predicates, one field, and no judgment of conformance.</p>
+      <h1>DEC-25 — the design → build handoff is one rule with three halves, and the epic is what binds them</h1>
+      <p>A build that adds a surface names the design it read; every other rendered file it touches says why
+        it needed none; a design nobody built does not leave its epic. Three predicates, two fields, and no
+        judgment of conformance.</p>
       <div class="meta">DEC-25 · 2026-08-13 · Trawler · E-DFLOW.W8 · status: active</div>
     </div>
   </header>
@@ -19,7 +20,7 @@
     <h2 id="context">Context</h2>
     <p><a href="dec-24-design-review-dimension.html">DEC-24</a> put Tier-3 on the merge that <em>lands</em> a
       closed design — which is before the design reaches development, and it said nothing about what happens
-      after. Two failures live in that gap, and both had already happened:</p>
+      after. Three failures live in that gap, and all three had already happened:</p>
     <table data-c="gap">
       <thead><tr><th>The gap</th><th>What it produced</th></tr></thead>
       <tbody>
@@ -28,6 +29,11 @@
           green</td>
           <td>the failure mode M1 named: <strong>three design runs, zero lines of product code</strong>, and
             no check anywhere that noticed</td></tr>
+        <tr><td><strong>Nothing asks a build that changes what already exists.</strong> A trigger keyed on
+          <em>added</em> files reaches only surfaces that do not exist yet — and the screens all exist</td>
+          <td>the whole screen tier landed undesigned and stayed reachable: <strong>8 screens, 0 designs</strong>,
+            and every future change to one an edit the gate is blind to. The rule would have guarded only the
+            work nobody was doing</td></tr>
         <tr><td><strong>Nothing makes an unbuilt design account for itself.</strong>
           <a href="dec-16-design-file-retirement.html">DEC-16</a> granted the unbuilt case a permanent home —
           <em>"the contract still lives there and nowhere else"</em></td>
@@ -38,7 +44,8 @@
     </table>
 
     <h2 id="choice">Choice</h2>
-    <p><strong>One rule, two halves, and the unit it binds is the epic.</strong></p>
+    <p><strong>One rule, three halves, and the unit it binds is the epic.</strong> Nothing rendered
+      changes without an answer on the record: <em>which design, or why none</em>.</p>
     <div class="diagram" data-c="seam">
       <pre class="mermaid">flowchart TB
   subgraph EPIC["one epic — the unit the rule binds"]
@@ -47,25 +54,36 @@
     (DEC-24)"| M1{{"WU merge"}}
     M1 --> BW["build WU
     the diff ADDS a @tier component or a screen"]
-    BW -->|"cr/v3 design.implements: path + blob
-    (DEC-25, upstream half)"| M2{{"WU merge"}}
+    BW -->|"cr/v3 design.implements: path + blob + built
+    (DEC-25, added half)"| M2{{"WU merge"}}
+    M1 --> EW["any WU that re-shapes
+    a rendered file it did not add"]
+    EW -->|"that citation, or design.undesigned: path + why
+    (DEC-25, touched half)"| M2
     M2 --> EM{{"epic merge"}}
   end
   EM -->|"every component design the range added
   resolves to a roster entry at the tip"| MAIN["main"]
   EM -.->|"or design.dropped names it, with a why"| MAIN</pre>
-      <div class="caption">Upstream: a build names what it built from. Downstream: no design leaves the epic
-        unaccounted for. Everything before the first merge already existed.</div>
+      <div class="caption">Added: a build names what it built from. Touched: an edit answers for itself.
+        Downstream: no design leaves the epic unaccounted for.</div>
     </div>
     <table data-c="halves">
       <thead><tr><th>Half</th><th>Fires when</th><th>Refuses</th><th>Where</th></tr></thead>
       <tbody>
-        <tr><td><strong>upstream</strong> — the citation<br><span class="badge id">WU</span></td>
+        <tr><td><strong>added</strong> — the citation<br><span class="badge id">WU</span></td>
           <td>the diff <em>adds</em> a <code>@tier</code> file under <code>ui/src/components/</code>, or a
-            non-test <code>.tsx</code> directly under <code>ui/src/</code></td>
+            non-test <code>.tsx</code> under <code>ui/src/</code> outside the collection, at any depth</td>
           <td>a citation that is missing · empty · unresolvable at the tip · pinned to a blob the tip does
-            not ship · not a design artifact · an unarchived run</td>
+            not ship · not a design artifact · an unarchived run · naming no <code>built</code> file, or one
+            the diff does not render. A reason is never accepted here</td>
           <td><code>check_handoff</code> · <code>check_citation</code>, <code>xtask/src/gate.rs</code></td></tr>
+        <tr><td><strong>touched</strong> — the declaration<br><span class="badge id">WU</span></td>
+          <td>the diff leaves standing any other non-test <code>.tsx</code> under <code>ui/src/</code></td>
+          <td>a file that is neither cited nor named by <code>design.undesigned</code> with a non-empty
+            <code>why</code> · one given both answers · a declaration of a file the diff does not render.
+            Accepted declarations are billed as waivers, at the seam and again at the epic</td>
+          <td><code>check_handoff</code>, <code>xtask/src/gate.rs</code></td></tr>
         <tr><td><strong>downstream</strong> — <code>components·unbuilt</code><br><span class="badge id">epic</span></td>
           <td>the epic <em>range</em> added a file under <code>docs/work/components/</code></td>
           <td>a component design whose name no roster entry carries at the epic tip, unless
@@ -73,10 +91,20 @@
           <td><code>check_unbuilt_designs</code>, <code>xtask/src/gate.rs</code></td></tr>
       </tbody>
     </table>
-    <p class="kd"><strong>One function, three callers.</strong> <code>new_surface</code> is the trigger for
+    <p class="kd"><strong>One function, three callers.</strong> <code>Gate::surfaces</code> is the trigger for
       the gate, the epic walk, and <code>cargo xtask design-scope</code> — the same refusal DEC-24 made for
-      <code>design-scope</code> itself. It is built on <code>registry_entry</code>, so "in the roster" and
-      "owes a design" are literally the same <code>@tier</code> test.</p>
+      <code>design-scope</code> itself. Its added half is built on <code>registry_entry</code>, so "in the
+      roster" and "owes a design" are literally the same <code>@tier</code> test; its touched half is
+      <code>ui_surface</code>, which asks only whether a file renders.</p>
+    <p class="kd"><strong>And the roster counts screens.</strong> <code>roster_at</code> reads
+      <code>@tier</code> components <em>and</em> non-test <code>.tsx</code> outside the collection, so a
+      screen design resolves where its screen was built. Before that, the downstream half could only ever
+      refuse a screen design — designing a screen cost a drop record while designing nothing cost nothing,
+      and the gate paid you to skip the design.</p>
+    <p class="kd"><strong>UI work happens inside a Working Unit.</strong> The accounting lives on a
+      <code>cr/v3</code> note and a standalone commit has none, so a commit that renders something outside a
+      Working Unit is refused at commit level. It is the third door, and it is closed for the same reason
+      the other two are.</p>
 
     <h2 id="epic-unit">Why the coupling unit is the epic</h2>
     <table data-c="unit">
@@ -139,9 +167,10 @@
       <thead><tr><th>Case</th><th>Ruled</th><th>What watches it</th></tr></thead>
       <tbody>
         <tr><td><strong>an unforeseen small change</strong> during the build</td>
-          <td>not a second shape, and it does not fire the trigger</td>
-          <td>nothing new. No surface is added, so nothing is owed — the alternative is a gate that reds on
-            every ordinary edit</td></tr>
+          <td>not a second shape, and never a second design — but it is answered for</td>
+          <td>the touched half. What it costs is a sentence in <code>design.undesigned</code>, written by the
+            reviewer and bound to the diff; what it does not cost is a design run, which is the gate that
+            would red on every ordinary edit and get routed around by lunchtime</td></tr>
         <tr><td><strong>an amendment</strong> to the design the build was handed</td>
           <td>it <em>re-enters Tier-3</em> on the merge that lands it</td>
           <td>the blob pin makes it countable, and DEC-24's existing trigger (a design artifact in the diff)
@@ -157,13 +186,23 @@
     <table data-c="measured">
       <thead><tr><th>Claim</th><th>Measurement</th></tr></thead>
       <tbody>
-        <tr><td>the trigger does not punish landed history</td>
-          <td>it <strong>fires on 1 seam</strong> inside <code>main..epic/design-flow</code> — W5's, with
-            <strong>25 surfaces</strong> — and produced <strong>0</strong> walk failures. Every seam in the
-            epic carries a <code>cr/v2</code> note, and a v2 note says in its own bytes that the field did
-            not exist: <code>9·design-schema</code> on v2, <code>9·design</code> on v3, and the walk drops
-            the former exactly as DEC-24 already had it. <strong>No new discriminator, no cutoff, no
-            waiver</strong></td></tr>
+        <tr><td>the added trigger had nothing left to fire on</td>
+          <td>all <strong>8 screens</strong> already exist — <code>App</code> · <code>Layout</code> ·
+            <code>FlowList</code> · <code>FlowDetail</code> · <code>BodyViewer</code> ·
+            <code>Onboarding</code> · <code>ProxyCloseDialog</code> · <code>Gallery</code>, landed by
+            E-UIFOUND, E-UIINSPECT and E-UISETUP — and <strong>none of them ever had a design</strong>. Every
+            future change to one is an edit. Over <code>main</code>, <strong>14 landed seams</strong> touch a
+            non-test <code>.tsx</code> and <strong>4 of those modified only</strong> (E-UISETUP.W2/W3/W4/W6):
+            the seams the added-only trigger is blind to <em>by construction</em></td></tr>
+        <tr><td>widening it still does not punish landed history</td>
+          <td><strong>1 <code>cr/v3</code> note exists in the whole repo</strong> against 109 <code>cr/v2</code>
+            and <code>cr/v1</code>, and that one tip touches <strong>0</strong> files under
+            <code>ui/src</code>. A v2 note says in its own bytes that the field did not exist:
+            <code>9·design-schema</code> on v2, <code>9·design</code> on v3, and the walk drops the former
+            exactly as DEC-24 already had it. <strong>0</strong> non-merge commits on <code>main</code> or
+            <code>epic/design-flow</code> render anything, so the commit-level refusal is free too. D6·A's
+            caveat — <em>"widening it later re-opens this question"</em> — re-opened, re-measured, and still
+            <strong>no new discriminator, no cutoff, no waiver</strong></td></tr>
         <tr><td>the epic half is a real question</td>
           <td><strong>4 of the 20</strong> component designs E-DFLOW wrote have no roster entry —
             <code>BodyRenderer</code> · <code>BodyViewer</code> · <code>CopyAllHeadersButton</code> ·
@@ -173,8 +212,9 @@
             built as a seven-member family, as a screen outside the collection, and as a local function
             never extracted — three facts that existed nowhere until the rule demanded them</td></tr>
         <tr><td>the rule works over real git</td>
-          <td><code>xtask/tests/e2e_design_flow.rs</code>: <strong>8 merges, 5 refused, 3 landed</strong>,
-            through the real merge hook, with <strong>0 rule defects</strong> found</td></tr>
+          <td><code>xtask/tests/e2e_design_flow.rs</code>, hand-over legs: <strong>12 merges, 7 refused,
+            5 landed</strong> through the real merge hook (the file as a whole: 18, 11, 7), with
+            <strong>0 rule defects</strong> found</td></tr>
       </tbody>
     </table>
 
@@ -193,9 +233,11 @@
             <code>ImageRenderer</code> · <code>FormRenderer</code></td></tr>
         <tr><td><code>body-viewer.html</code><br><span class="badge id">BodyViewer</span></td>
           <td>built as <code>ui/src/BodyViewer.tsx</code> — a <em>screen</em>, outside
-            <code>ui/src/components/</code> and so outside the registry its contract assumed</td>
-          <td>the screen itself. A screen's contract is not the collection's, which is why the roster never
-            carried it</td></tr>
+            <code>ui/src/components/</code> and so outside the registry its contract assumed. It was the one
+            drop that was not a drop, and writing that sentence is what exposed the inverted incentive: a
+            <strong>built</strong> design filed as unbuilt because the roster could not see screens</td>
+          <td>the screen itself, and now the roster too — <code>roster_at</code> counts screens, so this
+            design would resolve today and need no record at all</td></tr>
         <tr><td><code>copy-all-headers-button.html</code><br><span class="badge id">CopyAllHeadersButton</span></td>
           <td>the only true never-built: the design review <strong>dissolved</strong> it into
             <code>CopyText</code> before any code existed, and the file's own title said so</td>
@@ -229,6 +271,19 @@
         <tr><td>A date cutoff or a walk waiver to grandfather the trigger</td>
           <td>the <code>cr/v2</code> schema string already discriminates, and it cost zero waivers. A date
             cannot tell a note written before the field from one written badly after it</td></tr>
+        <tr><td>Demand a design run of every UI edit — the path trigger as W8's discussion measured it
+          (fires on 10 of 11 landed UI Working Units)</td>
+          <td>a gate that reds almost everything gets waived almost every time. The touched half fires on the
+            same population and demands something else entirely: <strong>a sentence, not a run</strong>,
+            written by the reviewer rather than granted by the builder. What is refused is the silence</td></tr>
+        <tr><td>Let the builder declare a file undesigned in its own plan or commit</td>
+          <td>the declaration would then be a permission the work grants itself, which is the shape DEC-15
+            already rejected for design runs. It lives on the <code>cr/v3</code> note because that note is
+            written by an independent review and bound to <code>diff_sha256</code></td></tr>
+        <tr><td>A second epic-level check counting undesigned files</td>
+          <td>the seams already know; they were only being thrown away. The walk now carries each seam's
+            waivers up, so the epic's own receipt lists what it shipped undesigned — one line of plumbing
+            instead of a predicate</td></tr>
         <tr><td>Gate the citation at the epic level too</td>
           <td>the citation names a <code>docs/work/</code> design, and check 6 forces those out of the tree
             by the epic tip — the WU seam is the only place the path can resolve. The epic re-asks at every
@@ -254,6 +309,15 @@
         returns as soon as the diff carries no design artifact and <code>verdict</code> became optional.
         Demanding a <code>PASS</code> over an empty artifact list would have made both notes attest a
         judgment nobody made — DEC-15's own failure mode, one field down.</li>
+      <li><strong>An epic can still ship UI it never designed — it just cannot do it quietly.</strong> The
+        touched half refuses silence, not choice: every declared file surfaces as a <code>WAIVE</code> line at
+        its seam and again in the epic's receipt. Whether the reasons are good is a judgment, and judgment
+        stays with the review; <em>"did this epic design enough"</em> is not a predicate and this record does
+        not pretend it is.</li>
+      <li><strong>Deletion is asymmetric, deliberately.</strong> At a WU seam a deleted file owes nothing —
+        no design can be cited for bytes that are gone. In a standalone commit it is refused like any other
+        rendered change, because there the question is not <em>which design</em> but <em>who reviewed
+        this</em>, and removing a screen is as unreviewed as adding one.</li>
       <li><strong>The truth is the code.</strong> <code>xtask/src/gate.rs</code> owns when a design is required
         and what a citation must satisfy; <code>xtask/src/doc.rs</code> owns what a design must contain and
         what counts as a surface. Where a doc and the code disagree, the code wins.</li>

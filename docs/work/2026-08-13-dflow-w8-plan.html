@@ -23,16 +23,21 @@
 
     <h2 id="requirement">Requirement</h2>
     <div class="callout" data-item="requirement">
-      The design flow hands its output to development under <strong>one rule with two halves</strong>.
-      Upstream: a UI Working Unit that <strong>adds a new registry component or a new screen</strong> must
-      cite the closed design it implements — path plus blob — and the gate refuses the merge when the
-      citation is missing, unresolvable, or names a design that is not closed. Downstream: <strong>no
-      unbuilt design survives its epic</strong> — a component design added during an epic whose component
-      is absent from the roster at the epic tip refuses the <em>epic</em> merge, unless the note records it
-      as dropped and says why. Both halves are driven by a <strong>build leg on the flow e2e</strong>: a
-      fake build Working Unit consuming a handed-over design, gated, including the case where the build
-      amends the design it was handed. The rule is written before it is mechanised — the flow spec gains
-      the hand-over step and <code>workflow.html</code> gains the design row — and
+      The design flow hands its output to development under <strong>one rule with three halves</strong>.
+      Added: a UI Working Unit that <strong>adds a new registry component or a new screen</strong> must
+      cite the closed design it implements — path plus blob, and the files that design produced — and the
+      gate refuses the merge when the citation is missing, unresolvable, or names a design that is not
+      closed. Touched: <strong>every other rendered file the diff leaves standing</strong> — any non-test
+      <code>.tsx</code> under <code>ui/src/</code> — is cited the same way or declared
+      <code>undesigned</code> with a non-empty reason, and UI work outside a Working Unit is refused
+      outright. Downstream: <strong>no unbuilt design survives its epic</strong> — a component design added
+      during an epic whose component is absent from the roster at the epic tip refuses the <em>epic</em>
+      merge, unless the note records it as dropped and says why; the roster counts screens, so a screen
+      design resolves where it was built. All three are driven by a <strong>build leg on the flow
+      e2e</strong>: a fake build Working Unit consuming a handed-over design, gated, including the case
+      where the build amends the design it was handed and the case where it only re-shapes what exists. The
+      rule is written before it is mechanised — the flow spec gains the hand-over step and
+      <code>workflow.html</code> gains the design row — and
       <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>'s "lives there and nowhere
       else" is superseded rather than annotated.
     </div>
@@ -161,6 +166,17 @@ flowchart TB
         <tr><td><strong>DEC-16 no longer claims an unbuilt design has a home.</strong> Superseded on that
           clause, with the reason: the survival right was the whole address problem, and removing it
           dissolves it</td><td><code>docs/decisions/dec-16-design-file-retirement.html</code> · DEC-25</td></tr>
+        <tr><td><strong>An edit answers for itself.</strong> <span class="badge id">⑥</span> Every rendered
+          file the diff leaves standing is cited or declared <code>undesigned</code> with a reason, so a
+          re-shape of a screen nobody designed cannot land in silence. A new surface still takes only a
+          citation, and every accepted declaration is billed at its seam and again at the epic</td>
+          <td><code>xtask/src/gate.rs</code> · <code>xtask/src/notes.rs</code> ·
+            <code>.claude/skills/code-review/SKILL.md</code></td></tr>
+        <tr><td><strong>The three holes beside it are closed.</strong> <span class="badge id">⑥</span> A
+          <code>.tsx</code> in a subdirectory is a surface; the roster counts screens, so a screen design
+          resolves instead of costing a drop record; and a standalone commit may not render anything —
+          the accounting lives on a note it does not have</td>
+          <td><code>xtask/src/doc.rs</code> · <code>xtask/src/gate.rs</code></td></tr>
       </tbody>
     </table>
     <p class="meta"><strong>Out of scope:</strong> any conformance judgment of code against design (D4·C) ·
@@ -312,12 +328,43 @@ flowchart TB
         the exact diff, then <code>mr/v1</code>, then <code>--no-ff</code>.</li>
     </ul>
     <div class="callout warn" data-c="risk">
-      <strong>The standing risk, named at planning (Q2).</strong> W8's handoff is enforced by two
-      predicates and driven by a fake build. A handoff nobody real has driven reads exactly like one that
+      <strong>The standing risk, named at planning (Q2).</strong> W8's handoff is enforced by predicates and
+      driven by a fake build. A handoff nobody real has driven reads exactly like one that
       works — the failure mode M1 caught this epic committing once already, when three design runs produced
       zero lines of product code. This WU accepts that risk knowingly; W9 is where it is paid, by making
       the first real Tier-3 judgment and the first real build the same run.
     </div>
+
+    <h3 id="step6">⑥ The edit case — a review found the rule guarded only work nobody was doing</h3>
+    <p>Steps ①–⑤ shipped a trigger keyed on <em>added</em> files. Reviewing them found its population was
+      already empty: all 8 screens exist, none was ever designed, and every future change to one is an edit
+      the trigger cannot see. Three smaller holes travelled with it. Prose first, as step ② had it.</p>
+    <table data-c="tbl-step6">
+      <thead><tr><th>Piece</th><th>Shape</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The touched half</strong></td>
+          <td>every non-test <code>.tsx</code> under <code>ui/src/</code> the diff leaves standing is cited
+            (<code>implements[].built</code>) or declared (<code>undesigned: [{path, why}]</code>). An
+            <em>added</em> surface may only be cited. Accounted both ways: an entry naming a file the diff
+            does not render is refused, and so is a file given both answers</td></tr>
+        <tr><td><strong>Three holes beside it</strong></td>
+          <td>a <code>.tsx</code> in a subdirectory was no surface at all (<code>screen_file</code> forbade
+            a <code>/</code>) · the roster counted only <code>@tier</code> components, so a screen design
+            could never resolve and designing a screen cost a drop record · a standalone commit could render
+            anything, having no note to account on</td></tr>
+        <tr><td><strong>Visible at the epic</strong></td>
+          <td>the walk threw away each seam's waivers; it now carries them up, so the epic's own receipt
+            lists every file the range shipped undesigned. No second epic-level predicate</td></tr>
+        <tr><td><strong>Grandfathering, re-measured</strong></td>
+          <td>D6·A said widening the trigger later re-opens the question. It fires on <strong>0</strong>
+            landed seams and <strong>0</strong> landed commits: 1 <code>cr/v3</code> note exists in the repo
+            and it renders nothing, and no non-merge commit on either branch renders anything</td></tr>
+        <tr><td><strong>The note's author</strong></td>
+          <td><code>.claude/skills/code-review/SKILL.md</code> emits the two new fields, and
+            <code>design-scope</code> prints the set the gate will check — one function, three callers, as
+            DEC-25 already required</td></tr>
+      </tbody>
+    </table>
 
     <h2 id="test-plan">Test plan <span class="badge id">no waiver at any level</span></h2>
     <table data-item="test-plan" data-c="tbl-tests">
@@ -348,8 +395,10 @@ flowchart TB
         <tr><td><span class="badge id">regression</span></td>
           <td>The trigger re-run over the <strong>11 landed UI seams</strong> must fire
             <strong>0 times</strong> — D6·A's grandfathering is measured, not asserted, and a different
-            number means the trigger widened beyond what was ruled. Every existing predicate stays green
-            over every tracked doc.</td></tr>
+            number means the trigger widened beyond what was ruled. After step ⑥ the same must hold for the
+            <em>widened</em> trigger: <strong>0</strong> landed seams and <strong>0</strong> landed commits
+            can red, which the <code>cr/v2</code> schema discriminator and the empty non-merge-commit
+            population must show. Every existing predicate stays green over every tracked doc.</td></tr>
         <tr><td><span class="badge id">lint</span></td>
           <td>No <code>ui/src/</code> change is planned; <code>npm run lint</code>, <code>npx tsc -b</code>
             and <code>npx vitest run</code> stay green unchanged.</td></tr>
@@ -415,6 +464,11 @@ flowchart TB
         <tr><td>⑤</td><td><a href="#step5">DEC-25 · result report · code review · merge</a></td>
           <td><code>cr/v3</code> PASS bound to the committed tip, <code>mr/v1</code>, then
             <code>--no-ff</code> into <code>epic/design-flow</code></td></tr>
+        <tr><td>⑥</td><td><a href="#step6">The edit case</a> — the touched half, the three holes beside it,
+            and DEC-25 amended</td>
+          <td>an unaccounted edit reds and a stated reason greens and is billed; an added surface still takes
+            only a citation; a screen design resolves; a standalone commit that renders anything reds; the
+            widened trigger fires 0 times on landed history</td></tr>
       </tbody>
     </table>
 
