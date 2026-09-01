@@ -119,6 +119,22 @@
         <p data-item="wu-deps">W8</p>
       </div>
 
+      <div data-wu="E-DFLOW.W10">
+        <h3>W10 · Optimise the flow cost</h3>
+        <p data-item="wu-summary">Make a real design run read each reusable artifact once, in the smallest slice that answers the question: compact <code>design-flow-base.html</code> and distil <code>design-rules-index.html</code> to real-run value, direct the agent to <code>verify-doc</code>'s failure output and the rulebook rows instead of the checker source (<code>xtask/src/doc.rs</code>), and batch the edit→verify fix loop.</p>
+        <p data-item="wu-maps-to">Post-W9 optimisation of the design flow's token cost (audited over run #6).</p>
+        <p data-item="wu-expected">~65–70% fewer prompt tokens for a run-6-class task; the compacted docs verified green; the rulebook structurally byte-faithful (same slugs, same blob).</p>
+        <p data-item="wu-deps">W9</p>
+      </div>
+
+      <div data-wu="E-DFLOW.W11">
+        <h3>W11 · The fullscreen redesign, re-run</h3>
+        <p data-item="wu-summary">Re-work the setup-screen (fullscreen) redesign from scratch on the optimised flow, completing W9's deferred steps: DEC-25 build handoff, UC-ONBOARD / DEC-13 amendment, screen retirement, coverage map.</p>
+        <p data-item="wu-maps-to">The W9 requirement's fullscreen redesign, re-run; acceptance of the optimised flow.</p>
+        <p data-item="wu-expected">A closed green redesign run on the optimised flow, built and retired per DEC-25, with token cost measured against run #6's baseline.</p>
+        <p data-item="wu-deps">W10</p>
+      </div>
+
     </div>
 
     <h2 id="e2e-plan">E2E test plan</h2>
