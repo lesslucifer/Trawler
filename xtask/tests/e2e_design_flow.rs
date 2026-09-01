@@ -224,10 +224,13 @@ fn review_artifact() -> String {
 
 // ─── the fake designing agent ───────────────────────────────────────────────
 
-const MOCKUP_COMPLIANT: &str = "<div class=\"text-ink\">flow detail</div>";
+const MOCKUP_COMPLIANT: &str = "<div id=\"m-zone\"></div>\
+     <script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>";
 // The silent fork: a colour the closed vocabulary does not emit, written into
 // the mockup as if it were a token. Run #2 shipped this shape once.
-const MOCKUP_VIOLATING: &str = "<div class=\"text-crimson\">flow detail</div>";
+const MOCKUP_VIOLATING: &str = "<div id=\"m-zone\"></div>\
+     <script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>\
+     <div class=\"text-crimson\">oops</div>";
 
 /// The eleven artifacts, in the order the flow emits them. `mockup` is the
 /// stage the violating run breaks, so its body is the only variable.
@@ -339,8 +342,8 @@ fn run_doc(status: &str, body: &str) -> String {
         "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">\
          <title>Trawler — design run #4</title>\
          <script src=\"https://cdn.tailwindcss.com\"></script>\
-         <script type=\"module\" src=\"../../doc-assets/components/tw-config.js\"></script>\
-         <script src=\"../../doc-assets/components/specimen.js\" defer></script>\
+         <script src=\"../../doc-assets/components/specimens.bundle.js\"></script>\
+         <script src=\"https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js\"></script>\
          <style>.tb{{color:var(--ink);}}</style></head>\
          <body><main data-artifact=\"design-run\"{attr}>{body}</main></body></html>\n"
     )
