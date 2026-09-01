@@ -6,9 +6,8 @@ branch: wu/design-flow/fresh-screen
 tests:
   unit:
     count: 5
-    covers: "5 new test functions in xtask/src/doc.rs (#[cfg(test)]): a_run_that_mounts_nothing_may_still_load_the_trio (the trio is still accepted when the mockup mounts nothing); loading_the_bundle_beside_what_it_folds_in_is_red (specimens.bundle.js cannot load beside the trio it folds in); a_mockup_that_draws_a_reuse_instead_of_mounting_it_is_red (the new predicate refuses a hand-drawn reuse); the_mount_is_read_as_a_component_element_not_as_a_marking (a mount host inside data-item=mockup is a component element, not a data-wire marking); only_reuse_and_extend_owe_a_mount (a propose row owes no mount). Plus xtask/tests/verify_doc.rs: the receipt fixture updated to load the bundle and mount via a script."
+    covers: "5 new test functions in xtask/src/doc.rs (#[cfg(test)]): a_run_that_mounts_nothing_may_still_load_the_trio; loading_the_bundle_beside_what_it_folds_in_is_red; a_mockup_that_draws_a_reuse_instead_of_mounting_it_is_red; the_mount_is_read_as_a_component_element_not_as_a_marking; only_reuse_and_extend_owe_a_mount. Plus xtask/tests/verify_doc.rs: the receipt fixture updated to the bundle + mount."
   integration:
-    count: 0
     waived: "the WU touches no product code or screens; the diff is docs + xtask checker code (design-run predicates and check-render.mjs) — no integration test level exists for these paths"
   e2e:
     covered: false
