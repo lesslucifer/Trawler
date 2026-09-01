@@ -1,0 +1,49 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W9
+branch: wu/design-flow/fresh-screen
+changes:
+  - path: docs/decisions/dec-26-the-mockup-mounts.html
+    tier: T2
+    action: added
+    distills: "the mockup mounts the components it claims to reuse - the rule, the reason (the specimen is the component), the predicate (every catalog row verdicted reuse or extend has a keyed mount inside data-item=mockup), the measured consequence (74 distinct class tokens before, 21 after, 50 drawn by a collection component), the three ungated tokens as a named follow-up, and why the render gate could never say so before (the silent skip)."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "the DEC-26 row, so the record is reachable index-first"
+  - path: docs/work/2026-08-14-dflow-w9-discussion.html
+    tier: T3
+    action: added
+    distills: "three discussion rounds ruling the forks: the shipped suite retires with the design it guarded (R3), and the scope of the build adoption"
+  - path: docs/work/2026-08-14-dflow-w9-plan.html
+    tier: T3
+    action: added
+    distills: "the seven-step WU plan - run #4 greenfield, overlap revisited only if it costs a reader, Tier-3 red before green, the handoff driven by something real, the build and the suite that retires with it, the contract amendments, distillation and merge"
+  - path: docs/work/2026-08-14-dflow-w9-run-4.html
+    tier: T3
+    action: added
+    distills: "the design of the setup screen - six stages, closed green with zero proposals, 17/17 soft receipts satisfied, archived; revised across Tier-3 submissions"
+  - path: docs/work/2026-08-14-dflow-w9-step0-numbers.html
+    tier: T3
+    action: added
+    distills: "the re-taken numbers - which hard predicates never went red, the registry as loaded, the rulebook blob"
+  - path: docs/work/2026-08-14-dflow-w9-step23-overlap-and-tier3.html
+    tier: T3
+    action: added
+    distills: "the overlap measured (costs a reader two lines), Tier-3 FAIL then PASS, and the revisions each submission forced on run #4"
+  - path: docs/work/2026-08-14-dflow-w9-step4-handoff.html
+    tier: T3
+    action: added
+    distills: "the DEC-25 handoff driven by something real - the citation taken, both legs fired, setup.ts a file the record has no room for"
+  - path: docs/work/2026-08-14-dflow-w9-step45-mounting.html
+    tier: T3
+    action: added
+    distills: "the mockup mounts the components - the new predicate, the check-render refusal, the 74-to-21 token measurement"
+  - path: docs/work/2026-08-31-dflow-w9-result.html
+    tier: T3
+    action: added
+    distills: "the WU result report - outcome, deviations (steps 5-6 deferred to W11, run #6 dropped), evidence, distillation, follow-ups (W10 optimization, W11 redesign re-run)"
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "stage 5 composed layer: mount the component instead of hand-drawing by class name; the asset block gains specimens.bundle.js"
