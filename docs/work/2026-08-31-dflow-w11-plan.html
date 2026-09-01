@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a96663f9f34851f0dfabd3c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W11 plan (the fullscreen redesign, re-run)</title>
+  <style>
+    table{font-size:13px;width:100%;}
+    td code{white-space:nowrap;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W11 — the fullscreen redesign, re-run</h1>
+      <p>W9's fullscreen redesign re-worked from scratch on the optimised flow, completing W9's deferred
+        build and retirement steps. The acceptance run of the optimised flow, with token cost compared
+        against run #6's baseline.</p>
+      <div class="meta">WU plan · 2026-08-31 · Trawler · T3 (docs/work/) ·
+        <code>wu/design-flow/fullscreen-redesign</code> off <code>epic/design-flow</code> @ <code>d09b66b</code> ·
+        <a href="2026-07-16-design-flow-plan.html">epic plan</a> ·
+        <a href="2026-08-31-dflow-w10-plan.html">W10 plan</a> ·
+        <a href="2026-08-14-dflow-w9-plan.html">W9 plan</a></div>
+    </div>
+  </header>
+  <main data-artifact="wu-plan">
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement">
+      <strong>The setup-screen (fullscreen) redesign is run on the optimised flow, and the output is
+      really built.</strong> Run #7 designs the fullscreen setup screen greenfield across six stages,
+      closes green, and a real build adopts the closed design through DEC-25 handoff. The redesigned
+      screen's shipped test suite is retired with the design it guarded, replaced by the new design's
+      tests, and a coverage map records what each retired test asserted and where that assertion went.
+      <strong>This is the acceptance run of the optimised flow delivered by W10.</strong>
+      <ul>
+        <li><strong>W10's compacted flow spec is the reference</strong> — the agent never reads the
+          checker source, reads each artifact once, and batches the fix loop.</li>
+        <li><strong>Token cost is measured</strong> — input tokens, output tokens, cache reads, and
+          billed-equivalent versus run #6's turn-3 baseline (11.4M prompt tokens, 2.87M input).</li>
+        <li><strong>W9's deferred steps ⑤⑥ land here:</strong> DEC-25 build handoff (cite the closed
+          design), UC-ONBOARD / DEC-13 amendment, screen retirement, coverage map.</li>
+      </ul>
+      <span class="badge id">UC-ONBOARD</span> and
+      <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a> are amended where the
+      design demands it.
+    </div>
+    <h2 id="maps-to">Mapping</h2>
+    <div data-item="maps-to">
+      <p>Epic plan <strong>W11 · the fullscreen redesign, re-run</strong> (new block added to the epic
+        plan at W10 planning). <strong>Depends on: W10</strong> (the optimised flow — compacted flow
+        spec, rulebook, batched fix loop, checker oracle), <strong>W9</strong> (the original fresh-screen
+        run, whose deferred steps ⑤⑥ this WU completes).</p>
+    </div>
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>A closed green redesign of the fullscreen setup screen, running on the optimised flow, with
+        token cost measured against run #6's baseline. The design is built through DEC-25 handoff, the
+        shipped test suite is retired with a coverage map, and UC-ONBOARD / DEC-13 are amended. The
+        mockup mounts the components it claims to reuse (DEC-26).</p>
+      <p><strong>Token cost target:</strong> ~3.4M prompt tokens for a full 6-stage design run (vs run
+        #6's 11.4M). Measured and reported at the WU result.</p>
+    </div>
+    <h2 id="test-plan">Test plan <span class="badge id">no waiver at any level</span></h2>
+    <table data-item="test-plan" data-c="tbl-tests">
+      <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">unit</span> commit</td>
+          <td>Every component and screen the build adds or changes carries unit tests; any new registry
+            component carries its collection specimen.</td></tr>
+        <tr><td><span class="badge id">integration</span> WU</td>
+          <td>Onboarding wired into the app: a fresh launch with no decrypted flow shows onboarding and
+            not the list; a decrypted flow reveals the list; each step's status reflects the real probe
+            rather than a local marker; a failed CA install surfaces its error. These are capabilities,
+            not layout — they must hold whatever the redesign concluded, and every one appears in the
+            coverage map's left column.</td></tr>
+        <tr><td><span class="badge id">e2e</span> epic</td>
+          <td><code>ui/e2e/specs/onboarding.spec.ts</code> is rewritten for the new design and drives
+            the real Tauri window against a real ephemeral core: launch → onboarding → a real proxied
+            HTTPS request → the capture-driven reveal. The retired spec's journey spine survives; its
+            selectors do not.</td></tr>
+        <tr><td><span class="badge id">design</span> the run itself</td>
+          <td><code>verify-doc</code> green on the run at close, before archiving · the receipt pins the
+            rulebook blob the run actually read · <code>design-scope</code> reports the run as an
+            artifact the review must judge · Tier-3 FAIL then PASS · render gate green (mounts, buttons,
+            forced rules) · token cost logged against baseline.</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
