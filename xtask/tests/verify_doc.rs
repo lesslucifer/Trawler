@@ -179,8 +179,7 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
     let run = |rows: &str| {
         format!(
             "<html><body><script src=\"https://cdn.tailwindcss.com\"></script>\
-             <script src=\"../../doc-assets/components/tw-config.js\"></script>\
-             <script src=\"../../doc-assets/components/specimen.js\" defer></script>\
+             <script src=\"../../doc-assets/components/specimens.bundle.js\"></script>\
              <style>.m{{color:var(--ink);}}</style>\
              {}</body></html>",
             doc_main(&format!(
@@ -194,7 +193,9 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
                  <table data-item=\"interaction\"><tr><td>land cold</td><td>orient</td>\
                  <td><div class=\"gist\">B renders the real verdicts</div>\
                  <details class=\"why\"><div>B -&gt; status</div></details></td></tr></table>\
-                 <div data-item=\"mockup\" data-wire=\"none\"><button data-state-toggle=\"m\">flip</button></div>\
+                 <div data-item=\"mockup\" data-wire=\"none\"><div id=\"m-zone\"></div>\
+                 <script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>\
+                 <button data-state-toggle=\"m\">flip</button></div>\
                  <table data-item=\"tune\"><tr><td>weight</td><td><pre class=\"tb\">before</pre></td>\
                  <td><pre class=\"tb\">after</pre></td><td><code>data-ink-first</code></td></tr></table>\
                  {}<table data-item=\"capabilities\"><tr><td>CA install</td><td>used</td>\

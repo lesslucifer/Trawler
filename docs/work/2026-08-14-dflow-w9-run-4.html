@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7eaef09f34851f0dfaba0c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — design run #4 (the setup screen, greenfield)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- The theme, the shared specimen behaviours and the real collection, in one
+       classic script — loadable over file://, where a module never runs. It
+       replaces tw-config.js + specimen.js: the bundle folds both in, and a
+       second copy of specimen.js would bind every state toggle twice.
+       Generated and git-ignored: `cargo xtask ui specimens`. -->
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style type="text/tailwindcss">
+    /* Notice's declared delta, and the whole of it: the message paragraph at the
+       title size. Notice.tsx exposes no size axis, which is why zone A's verdict
+       is extend and not reuse — the base is mounted, this one rule is the fork. */
+    .a-headline p{@apply text-title;}
+  </style>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .gist{font-weight:600}
+    details.why{margin-top:4px}
+    details.why summary{cursor:pointer;color:var(--muted);font-size:12px}
+    pre.tb{font-family:var(--mono,monospace);font-size:11px;line-height:1.45;margin:0;white-space:pre}
+    .statebtn{margin-top:10px;border:1px solid var(--line);border-radius:4px;padding:4px 10px;
+      background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
+    .ok{color:var(--ok)} .no{color:var(--warn)}
+    /* mockup assembly only — zoning, seams, state visibility. every magnitude
+       the design owns is written as a token utility on the element itself. */
+    .a-mock{display:block}
+    .a-zone{display:block}
+    .a-row{display:flex;align-items:center;justify-content:space-between}
+    .a-headline{display:block}
+    .a-proven-only{display:none}
+    .proven .a-proven-only{display:block}
+    .proven .a-idle-only{display:none}
+    .proven .a-warn-only{display:none}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run #4 — the setup screen, greenfield</h1>
+      <p>The fourth run of the design flow, on the screen the app actually ships, designed
+        <strong>without reading runs #1–#3</strong> and against the current registry (24 entries) and
+        rulebook (<code>b769f7e</code>). Its output is built in the same Working Unit.</p>
+      <div class="meta">Design run · 2026-08-14 · Trawler · T3 (docs/work/) · E-DFLOW.W9 ① ·
+        <a href="design-flow-base.html">the flow it follows</a> ·
+        <a href="2026-08-14-dflow-w9-step0-numbers.html">the numbers it was given</a> ·
+        <a href="2026-08-14-dflow-w9-plan.html">W9 plan</a></div>
+    </div>
+  </header>
+
+  <main data-artifact="design-run" data-status="archived">
+
+    <h2 id="substrate">Substrate, frozen at the start</h2>
+    <table data-c="substrate">
+      <thead><tr><th>Input</th><th>Version</th><th>Read for</th></tr></thead>
+      <tbody>
+        <tr><td>component registry</td><td>24 entries, emitted from TSDoc</td><td>reuse-or-propose at Elements — <strong><code>@avoid</code> first</strong></td></tr>
+        <tr><td>design rulebook</td><td><code>b769f7e</code> · 13 hard · 17 soft</td><td>rules per stage; the receipt covers all 17 soft</td></tr>
+        <tr><td>the shipped screen</td><td><code>ui/src/Onboarding.tsx</code> · <code>setup.ts</code> · <code>onboardingMachine.ts</code></td><td><strong>capabilities only</strong> — what onboarding must be able to do, never how the current screen does it</td></tr>
+        <tr><td>runs #1–#3</td><td class="no">not read</td><td>D1 — an independent run is what makes the #4-vs-#3 comparison a measurement rather than a tautology</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="frame">1 · Frame</h2>
+    <div data-item="frame">
+      <p><strong>Purpose:</strong> a first-run operator, on the machine Trawler runs on or pointing a
+        second device at it, gets from a fresh install to one decrypted request.</p>
+      <p><strong>Given</strong> (received, not designed): trust probe · proxy probe · observed traffic ·
+        observed decrypt · one-click install, set and unset on macOS/Windows · per-target instructions ·
+        copyable commands · the configured address · host OS · the proven latch</p>
+      <p><strong>Not given</strong> (may not be assumed): a remote trust probe · per-device attribution ·
+        a reason for a failed handshake · firing the request itself · progress inside an elevated
+        action · any confirmation that a manual install worked</p>
+      <table data-c="frame-drivers">
+        <thead><tr><th>Driver</th><th>why</th><th>…therefore</th><th>on this screen</th></tr></thead>
+        <tbody>
+          <tr><td colspan="4"><strong>Goals</strong> — the ranking is the hierarchy</td></tr>
+          <tr>
+            <td>reach the first decrypted flow</td>
+            <td>nothing else here matters until one arrives</td>
+            <td>the capture verdict opens the screen, instructions sit under it</td>
+            <td><span class="ok">✓ zone A is one sentence about capture, above everything</span><br><span class="no">✗ a numbered wizard whose last step is titled Verify</span></td>
+          </tr>
+          <tr>
+            <td>tell the truth about where setup stands</td>
+            <td>two probes and one observation, disagreeing often</td>
+            <td>each precondition renders its own resolved verdict, never a cursor</td>
+            <td><span class="ok">✓ trust reads can't-check while proxy reads receiving traffic</span><br><span class="no">✗ step 2 marked done because step 3 is active</span></td>
+          </tr>
+          <tr>
+            <td>the manual path is the main path</td>
+            <td>only two hosts have one click, every device is manual</td>
+            <td>instructions are one act away, never a fallback under failure</td>
+            <td><span class="ok">✓ a target picker on every precondition, host or not</span><br><span class="no">✗ steps that appear only after the automatic action fails</span></td>
+          </tr>
+          <tr>
+            <td>leave and come back</td>
+            <td>setup is re-entered from the status dot after it worked</td>
+            <td>the screen reads as a dashboard, not a one-way flow</td>
+            <td><span class="ok">✓ every verdict legible at rest, nothing expanded</span><br><span class="no">✗ a wizard restarting at step one on re-entry</span></td>
+          </tr>
+          <tr><td colspan="4"><strong>Constraints</strong> — hard boundaries</td></tr>
+          <tr>
+            <td>an elevated action reports only that it ran</td>
+            <td>the prompt succeeds, trust and routing are proven elsewhere</td>
+            <td>an action never sets a verdict, it starts one and waits</td>
+            <td><span class="ok">✓ install returns and the line still reads can't-check</span><br><span class="no">✗ a tick the moment the command exits zero</span></td>
+          </tr>
+          <tr>
+            <td>StepList draws no progress</td>
+            <td>its <code>@avoid</code> forbids per-step completion, unobservable</td>
+            <td>the three-step stepper is unbuildable from the collection</td>
+            <td><span class="ok">✓ instructions inside a precondition, verdict above them</span><br><span class="no">✗ a list whose items carry a done status each</span></td>
+          </tr>
+          <tr>
+            <td>no remote attribution</td>
+            <td>traffic proves a device exists, never which one</td>
+            <td>every sentence about another device is advice, not a claim</td>
+            <td><span class="ok">✓ install it on the device you are capturing from</span><br><span class="no">✗ your phone does not trust the certificate</span></td>
+          </tr>
+          <tr>
+            <td>the address is configured, never assumed</td>
+            <td>the port is a config value the core reports</td>
+            <td>every command is rendered from the live address</td>
+            <td><span class="ok">✓ the copyable curl carries the configured host and port</span><br><span class="no">✗ a snippet with 7420 typed into it</span></td>
+          </tr>
+          <tr><td colspan="4"><strong>Qualities</strong> — Tune's yardstick</td></tr>
+          <tr>
+            <td>unknown must not look like no</td>
+            <td>can't-check is permanent on Linux and on every device</td>
+            <td>the un-probeable case gets its own words and its own glyph</td>
+            <td><span class="ok">✓ we'll confirm when traffic arrives, at a muted glyph</span><br><span class="no">✗ not trusted, on a host nothing probed</span></td>
+          </tr>
+          <tr>
+            <td>one surface, two reading modes</td>
+            <td>first run reads a guide, later runs read a dashboard</td>
+            <td>verdicts are the resting state, the guide is the expansion</td>
+            <td><span class="ok">✓ two verdict lines and one command at rest</span><br><span class="no">✗ every instruction list open on arrival</span></td>
+          </tr>
+          <tr><td colspan="4"><strong>Non-goals</strong>: firing the request for the user · attributing traffic to a device · explaining a failed handshake</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="layout">2 · Layout</h2>
+    <div data-item="layout">
+      <pre>
+┌──────────────────────────────────────────────┐
+│ A  outcome                                   │  ← the whole screen's answer, one sentence
+├──────────────────────────────────────────────┤
+│ B  preconditions                             │  ← two, each verdict + action + its guide
+│                                              │
+│                                              │
+├──────────────────────────────────────────────┤
+│ C  first flow                                │  ← the command that causes one, copyable
+├──────────────────────────────────────────────┤
+│ D  way out                                   │  ← present only once ever proven
+└──────────────────────────────────────────────┘
+
+overflow: A is one sentence and C is one command, so neither can grow; a long
+          command wraps rather than clips, which is wrap-not-truncate and not a
+          cap. D is one control. B is the only unbounded zone — an instruction
+          list grows with the target — and it is not capped internally: each
+          StepList's own no-truncate-and-no-scroll rule is StepList's, cited not
+          re-annotated. The whole column is capped at the dialog-max token and
+          centred; the page behind it scrolls.
+</pre>
+      <p class="kd"><strong>Why four zones and not three steps.</strong> A stepper needs a cursor, and a
+        cursor is a claim about progress the app cannot observe — <code>StepList</code>'s
+        <code>@avoid</code> refuses to draw one and <code>StatusLine</code> owns the verdict instead. So
+        the screen zones by <em>what is true</em> (A), <em>what must become true</em> (B) and <em>what
+        proves it</em> (C), and the boundary between B and C is the seam between things the user does
+        and the thing that judges them.</p>
+    </div>
+
+    <h2 id="elements">3 · Elements</h2>
+    <div data-item="elements" data-map="components">
+      <pre>
+setup screen
+├─ A outcome ──────── <span data-key="notice">Notice</span> ◆
+├─ B preconditions ── <span data-key="section">Section</span> ◆ (band) ▣
+│     ▣ precondition = <span data-key="section">Section</span> ◆ · <span data-key="status-line">StatusLine</span> ◆ · <span data-key="button">Button</span> ◆ · guide ▣
+│         ▣ guide    = <span data-key="disclosure">disclosure</span> · <span data-key="select">Select</span> ◆ · <span data-key="step-list">StepList</span> ◆ · <span data-key="copy-text">CopyText</span> ◆
+├─ C first flow ───── <span data-key="copy-text">CopyText</span> ◆
+└─ D way out ─────── <span data-key="button">Button</span> ◆
+
+◆ recurring    ▣ composition (T4, broken down below)
+C's caption is screen prose, not a component — it names no absence and
+carries no outcome, so it is neither Notice's job nor anyone else's.
+</pre>
+      <table data-c="catalog">
+        <thead><tr><th>Component</th><th>Placement · verdict</th><th>Fit</th><th>Shape · States</th></tr></thead>
+        <tbody>
+          <tr data-key="notice">
+            <td>Notice</td>
+            <td>T1 <span class="no">extend</span><br>A — one zone</td>
+            <td><div class="gist">extend — the fit is exact, the message size is not</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> read first — <em>"a status verdict with a glyph+name+message shape (that is StatusLine)"</em>. Zone A clears it because it carries no precondition name and no per-item glyph pair: it is one sentence about the screen as a whole, and the two named verdicts live in B on StatusLine. It also clears <em>"wrapping a notice in a card or panel of its own"</em> (A is a bare zone) and <em>"a dismissible message"</em> (nothing dismisses it).
+                <strong>Why extend and not reuse.</strong> <code>Notice.tsx</code> hardcodes its message to <code>font-ui text-body leading-normal</code> and exposes no size axis, so the component as built cannot carry the weight the top goal ranks first — the mockup composing it at <code>text-body</code> would leave zone A the same size as the precondition it outranks. The delta is <strong>one headline size on the message paragraph</strong>, and nothing else: same anatomy, same tone map, same detail and action slots — and the same <strong>empty</strong> glyph slot at <code>mute</code>, where <code>Notice.tsx</code> sets <code>glyph: null</code> and the zone renders bare. The headline outcome carries its meaning in words and, at <code>ok</code>, in the component's own ✓; it never invents a mute glyph, which would be a second delta this extension does not ask for. Growing the component is the flow's answer here rather than forking a copy into the screen.
+                <span class="ok">@use</span> lands exactly — <em>"any zone whose whole content is a STANDING positive outcome (tone=&quot;ok&quot; — &quot;trawler is capturing&quot;) … the setup screen's capture-is-working zone"</em>, and for the not-yet case <em>"any zone that has nothing to show and must say which nothing it is"</em>.
+              </details></td>
+            <td><pre class="tb">✓ trawler is capturing
+
+waiting for your first
+request — nothing has
+reached trawler yet</pre>
+              per Notice's own TSDoc — mute bare, mute + detail, warn + ⚠, ok + ✓, any tone + action slot. <strong>The extension adds no state</strong>: the message renders at the headline size in every tone Notice already has, and nothing about the delta is stateful</td>
+          </tr>
+          <tr data-key="status-line">
+            <td>StatusLine</td>
+            <td>T2 <span class="ok">reuse</span><br>B — once per precondition</td>
+            <td><div class="gist">reuse — a setup precondition is its @use, verbatim</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> first — <em>"an HTTP status"</em> (no), <em>"a zone-level absence or one-sentence outcome with an action"</em> (that is A, and A is Notice), <em>"re-resolving or re-ranking the verdict at the call site"</em> (the screen passes <code>StepStatusView</code> through untouched), <em>"rendering it as a checkbox or toggle"</em> (nothing here is a tick).
+                <strong>One @avoid is hit and it is the useful one</strong> — <em>"shortening a domain message at the call site: the short form is the domain's to return (see the [UI_DEFER] marker in setup.ts)"</em>. <code>setup.ts</code> returns full sentences today, so this reuse cannot be built until <code>StepStatusView</code> gains its <code>short</code> field. That is a <a href="#blocked-on">blocked-on</a> row against the build, not a reason to fork the component.
+                <span class="ok">@use</span> — <em>"any item that reports a resolved state with a reason — a setup precondition"</em>.
+              </details></td>
+            <td><pre class="tb">✓ trust  trusted here
+◐ trust  can't check yet
+○ proxy  another proxy is set
+⚠ proxy  couldn't set it
+⟳ trust  installing…</pre>
+              per StatusLine's own TSDoc — ok · warn · can't-determine · not-yet · in-flight, which outranks every other verdict</td>
+          </tr>
+          <tr data-key="button">
+            <td>Button</td>
+            <td>T1 <span class="ok">reuse</span><br>B · D — two zones, shared</td>
+            <td><div class="gist">reuse — a worded action, and fork D4 gets both halves</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> first — <em>"copy actions (use CopyButton — it owns the clipboard write and its confirm)"</em> (none of these copy), <em>"actions whose glyph is unambiguous alone"</em> (install, set, stop and back all need words), <em>"emphasis by styling: pick which actions to offer instead, a Button never carries a primary/filled variant"</em> (the design asks for none; it picks <em>which</em> actions to offer instead), <em>"warn-toning it inside a warn Notice"</em> (no action sits inside A).
+                <strong>Fork D4 is the binding half</strong> — <em>"leaving it enabled while its action is in flight, or disabling it without a progress line beside it (fork D4 — both halves or neither)"</em>. The <strong>three actions in B</strong> are elevated and slow, so each owes both halves: the Button disabled for the whole in-flight window, and StatusLine's <code>in-flight</code> state as the progress line in the same zone. Two of the three are buildable today; <strong>stop routing is not</strong> — <code>setup.ts</code>'s <code>Running</code> union has no unsetting member and <code>proxyStatus</code> no branch for one, which is a <a href="#blocked-on">blocked-on</a> row against the build, not a licence to ship the disabled half alone. That pairing is why the verdict line sits beside the action rather than above the zone. <strong>D's way out is neither</strong> — it resolves in the same frame, so it has no in-flight window and owes neither half; the fork binds an action that waits, not every Button on the screen.
+              </details></td>
+            <td><pre class="tb">[ install certificate ]
+[ set system proxy    ]
+[ stop routing        ]
+[ ‹ back to flows     ]</pre>
+              per Button's own TSDoc — rest · hover · focus · active · disabled; no loading state of its own, by contract</td>
+          </tr>
+          <tr data-key="select">
+            <td>Select</td>
+            <td>T1 <span class="ok">reuse</span><br>B — one per precondition guide</td>
+            <td><div class="gist">reuse — six and seven options clear the cardinality @avoid</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> first — <em>"two to four options (use SegmentedControl — all choices visible reads as a switch; this is a miss by cardinality, not kind)"</em>: trust has 6 targets and proxy has 7, so both land on this side of the line. Also clears <em>"multi-select or a clear affordance"</em> (one target, always one), <em>"free-text entry"</em>, <em>"option groups or disabled entries"</em>, <em>"an option element that needs two lines"</em> (each is one label), and <em>"fetching, sorting or defaulting options inside the component"</em> — the default comes from the host OS, outside.
+                <span class="ok">@use</span> — <em>"any single choice from five or more options … a target picker"</em>, which is the literal job.
+              </details></td>
+            <td><pre class="tb">[ macOS          ▾ ]
+   macOS
+   Windows
+   Linux
+   Firefox …</pre>
+              per Select's own TSDoc — rest · hover · focus · open · filtering · no-match · loading · empty · nothing-selected · disabled</td>
+          </tr>
+          <tr data-key="step-list">
+            <td>StepList</td>
+            <td>T1 <span class="ok">reuse</span><br>B — inside each guide</td>
+            <td><div class="gist">reuse — ordered hand-performed instructions, with no progress drawn</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> first — <em>"rendering per-step completion or a current-step highlight — the app cannot observe it; the probed verdict belongs to StatusLine above"</em>: cleared, and it is the contract that shaped the whole layout. <em>"nesting a StepList inside a step, or sub-steps of any kind"</em> — cleared by flattening removal and turn-off into the same guide rather than a second list inside a step. <em>"adding a copy affordance: a command step is a CopyText, which already owns click-to-copy and its confirm"</em> — cleared, the command steps are CopyText in the slot.
+                <strong>One @avoid bites for a subset</strong> — <em>"a single unordered statement (that is prose, or Notice if it is about a zone's state)"</em>. Five target/function pairs return exactly one instruction — <code>removalSteps</code> for Windows and Android, <code>proxyOffSteps</code> for Firefox, the iOS Simulator and Android — counted by calling them, not by reading the source. The screen renders those as the sentence they are; a numbered list of one is the shape this line refuses.
+                <span class="ok">@use</span> — <em>"any ordered sequence the user performs by hand — a certificate install, a device setting, a remedy"</em>.
+              </details></td>
+            <td><pre class="tb">1. save trawler-ca.pem
+2. run: sudo security
+   add-trusted-cert …
+3. or add it in Keychain</pre>
+              per StepList's own TSDoc — rendered, the only state; no empty state, no per-step done, no progress count</td>
+          </tr>
+          <tr data-key="copy-text">
+            <td>CopyText</td>
+            <td>T1 <span class="ok">reuse</span><br>B · C — two zones, shared</td>
+            <td><div class="gist">reuse — the command is displayed and grabbed whole</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> first, and this is the pair that discriminates. CopyText refuses <em>"prose"</em> and <em>"explicit copy actions with their own label (that is CopyButton)"</em>; CopyButton refuses <em>"showing a value the user grabs verbatim (that is CopyText)"</em>. On this screen the command <strong>is shown</strong> — the user reads it before running it — so CopyButton's @avoid rules it out and CopyText's @use takes it. <code>StepList</code> agrees from the third side: <em>"a command step is a CopyText, which already owns click-to-copy and its confirm"</em>.
+                <span class="ok">@use</span> — <em>"full-value fields grabbed whole"</em>. Both payloads qualify: the proxy snippet and the prove-it curl, each rendered from the configured address.
+              </details></td>
+            <td><pre class="tb">curl -x http://127.0.0.1:7420
+     https://example.com
+                    copied</pre>
+              per CopyText's own TSDoc — rest · hover · focus · confirming (~2 s) · drag-select passes through</td>
+          </tr>
+          <tr data-key="section">
+            <td>Section</td>
+            <td>T1 <span class="ok">reuse</span><br>B — one band, two sections</td>
+            <td><div class="gist">reuse — one band over two labelled preconditions, the two-level cap</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> first — <em>"a Section inside another Section's CONTENT slot, and any band nested in a band (two levels is the cap — use variant=&quot;band&quot; for the second, never nesting)"</em>: B is exactly two levels, the band labelling the pair and one Section per precondition, so it sits on the cap and not past it. <em>"a Section that needs to collapse (put the disclosure inside the slot instead)"</em>: cleared, and it is why the guide's disclosure lives inside the Section rather than around it. <em>"a screen drawing its own group label above a Section stack"</em>: cleared — that label <em>is</em> the band.
+                <span class="ok">@use</span> — <em>"every labelled zone of a detail or settings screen"</em>.
+              </details></td>
+            <td><pre class="tb">what has to be true
+─────────────────────
+ trust  ✓ trusted here
+─────────────────────
+ proxy  ◐ can't check</pre>
+              per Section's own TSDoc — none of its own; every interactive state belongs to its slot children</td>
+          </tr>
+          <tr data-key="disclosure">
+            <td>disclosure</td>
+            <td>T0 <span>build local</span><br>B — one per precondition</td>
+            <td><div class="gist">build local — T0 details, nothing higher fits</div>
+              <details class="why"><summary>▸ why</summary>
+                The collection has no disclosure primitive, and the tier model's T0 rule is <em>"use only when nothing higher fits"</em>. Native <code>&lt;details&gt;</code>/<code>&lt;summary&gt;</code> fits whole: it owns the open state, the keyboard activation the conventions already name (Enter / Space on the focused summary), and the accessible name. Nothing about it is screen-specific, which is why it is <strong>not</strong> proposed as an entry either — see <a href="#proposals">proposals</a>, where its recurrence across screens is recorded as an observation rather than manufactured into a component.
+                <code>Section</code>'s own <code>@avoid</code> presumes it exists as a local thing — <em>"a Section that needs to collapse (put the disclosure inside the slot instead)"</em>.
+              </details></td>
+            <td><pre class="tb">▸ set it up by hand
+▾ set it up by hand
+  [ macOS ▾ ]
+  1. save trawler-ca.pem</pre>
+              — the element owns open/closed; the screen adds no state of its own</td>
+          </tr>
+          <tr data-key="copy-button">
+            <td>CopyButton</td>
+            <td>T1 <span>n/a</span><br>considered for C, rejected</td>
+            <td><div class="gist">n/a — its @avoid rejects a displayed value, CopyText owns this</div>
+              <details class="why"><summary>▸ why</summary>
+                Its <span class="ok">@use</span> reads fluently for this job — <em>"any one-click copy affordance where the payload is derived/invisible"</em> — and a matching test would have taken it. The <span class="no">@avoid</span> is what decides: <em>"showing a value the user grabs verbatim (that is CopyText)"</em> and <em>"icon-only form UNLESS the payload is rendered directly adjacent"</em>. The payload here is not derived and not invisible; it is the whole point of the zone. Recorded because the shipped screen took the other side — a <code>&lt;pre&gt;</code> plus a labelled Copy button — which both components' @avoid lines reject at once.
+              </details></td>
+            <td>— CopyButton's own file; nothing is drawn from it here</td>
+          </tr>
+          <tr data-key="segmented-control">
+            <td>SegmentedControl</td>
+            <td>T1 <span>n/a</span><br>considered for B, rejected</td>
+            <td><div class="gist">n/a — a miss by cardinality, not by kind</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="ok">@use</span> — <em>"any always-visible mutually exclusive view/mode switch"</em> — describes a target picker correctly, and always-visible options would suit a guide the user is reading. The <span class="no">@avoid</span> settles it numerically: <em>"&gt;4 options"</em>, against 6 trust targets and 7 proxy targets. <code>Select</code>'s own @avoid names the same boundary from the other side, so the pair is the discriminator and neither citation is a judgement call.
+              </details></td>
+            <td>— SegmentedControl's own file; nothing is drawn from it here</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="kd"><strong>T4 break-down.</strong> <em>precondition</em> → Section (T1) · StatusLine (T2) ·
+        Button (T1) · <em>guide</em> (T4). <em>guide</em> → disclosure (T0) · Select (T1) ·
+        StepList (T1) · CopyText (T1). Neither composition is a registry entry; both are built local
+        and every part above them is.</p>
+      <p class="kd"><strong>Proposals: one extension.</strong> Ten rows, eight placements, and exactly one
+        place where the contract fits and the built component cannot render it — <code>Notice</code>'s
+        fixed message size. Written up at <a href="#proposals">proposals</a>, together with what it says
+        about a reuse pass that reads TSDoc and never the code behind it.</p>
+    </div>
+
+    <h2 id="interaction">4 · Interaction</h2>
+    <div data-item="interaction">
+      <table data-c="use-cases">
+        <thead><tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th><th>Keyboard path</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>arrive, first run, nothing set up</td>
+            <td>reach the first decrypted flow</td>
+            <td>opens the app; the launch self-test finds nothing</td>
+            <td><div class="gist">A names the absence, B holds two verdicts and no cursor</div>
+              <details class="why"><summary>▸ why</summary><pre class="tb">A → "waiting for your first request"
+B → two StatusLines at their resolved verdicts
+     (◐ can't check, or ○ not trusted yet)
+B → both guides CLOSED     ← quality: two reading modes
+C → the curl, rendered from the live address
+D → UNCHANGED (absent — never proven)</pre></details></td>
+            <td>Tab reaches each action and each summary in reading order; passive otherwise</td>
+          </tr>
+          <tr>
+            <td>install the certificate, one click</td>
+            <td>the manual path is the main path</td>
+            <td>clicks <em>install certificate</em> on macOS or Windows</td>
+            <td><div class="gist">the button disables and the same line goes in-flight</div>
+              <details class="why"><summary>▸ why</summary><pre class="tb">B → Button DISABLED for the whole window
+B → StatusLine → ⟳ installing…         ← fork D4's other half
+A → UNCHANGED   ← an action never sets the capture verdict
+C → UNCHANGED</pre>Both halves are one decision, not two: Button's <code>@avoid</code> forbids either alone.</details></td>
+            <td>Enter / Space on the focused Button</td>
+          </tr>
+          <tr>
+            <td>the install fails</td>
+            <td>tell the truth about where setup stands</td>
+            <td>declines the system prompt, or the fetch fails</td>
+            <td><div class="gist">the error replaces the in-flight line, the guide opens itself</div>
+              <details class="why"><summary>▸ why</summary><pre class="tb">B → StatusLine → ⚠ install failed — &lt;reason&gt;
+B → the guide OPENS       ← the sentence points at it
+B → Button re-enabled
+A → UNCHANGED   ← still no claim about capture</pre>The verdict never reads done; the resolver's precedence owns that, not this screen.</details></td>
+            <td>focus stays on the Button; Tab reaches the now-open guide</td>
+          </tr>
+          <tr>
+            <td>pick a target that is not this host</td>
+            <td>the manual path is the main path</td>
+            <td>opens the guide, picks <em>Android</em> in the Select</td>
+            <td><div class="gist">the one-click action withdraws, the steps follow the picker</div>
+              <details class="why"><summary>▸ why</summary><pre class="tb">B → Button REMOVED   ← it acts on this machine only
+B → StepList → the Android instructions
+B → StatusLine UNCHANGED  ← the probe is about this
+                             machine whatever is picked
+A → UNCHANGED</pre></details></td>
+            <td>↑ ↓ move without selecting, Enter takes, Esc closes unchanged, type-to-filter — all Select's, inherited from the searchable-list contract</td>
+          </tr>
+          <tr>
+            <td>set the proxy, then stop routing</td>
+            <td>leave and come back</td>
+            <td>clicks <em>set system proxy</em>, later <em>stop routing</em></td>
+            <td><div class="gist">stop routing appears only after a set succeeded</div>
+              <details class="why"><summary>▸ why</summary><pre class="tb">B → StatusLine → ⟳ setting the proxy…
+B → then ✓ system proxy is set to trawler
+B → a second Button appears — stop routing
+B → after stop → ○ no traffic reaching trawler yet
+A → follows the observation, not the action</pre></details></td>
+            <td>Enter / Space on the focused Button</td>
+          </tr>
+          <tr>
+            <td>another proxy is already set on this machine</td>
+            <td>tell the truth about where setup stands</td>
+            <td>nothing — the probe returns <em>foreign</em> on arrival</td>
+            <td><div class="gist">the proxy verdict names the conflict instead of reporting no traffic</div>
+              <details class="why"><summary>▸ why</summary><pre class="tb">B → proxy ○ another proxy is set on this machine —
+      point it at trawler here, or capture from a
+      device configured to use trawler
+B → the Button stays, and setting it overwrites
+A → UNCHANGED   ← nothing about capture has changed</pre>The fourth distinct absence on this screen, and the one that would otherwise share <em>no traffic reaching trawler yet</em>'s sentence while meaning something the user can act on.</details></td>
+            <td>Enter / Space on the focused Button</td>
+          </tr>
+          <tr>
+            <td>take the proxy command by hand</td>
+            <td>the manual path is the main path</td>
+            <td>clicks the command text in the open guide</td>
+            <td><div class="gist">one click on the command copies it, the confirm lands there</div>
+              <details class="why"><summary>▸ why</summary><pre class="tb">B → CopyText → confirming (~2 s), at the value
+B → everything else UNCHANGED
+A → UNCHANGED</pre>No toast and no second affordance — CopyText owns the target, the confirm and its timer.</details></td>
+            <td>Enter / Space activates the focused value; a partial take is native selection plus ⌘C, never intercepted</td>
+          </tr>
+          <tr>
+            <td>run the first request, it decrypts</td>
+            <td>reach the first decrypted flow</td>
+            <td>runs the copied curl, or just browses</td>
+            <td><div class="gist">A flips to capturing and D appears, nothing else moves</div>
+              <details class="why"><summary>▸ why</summary><pre class="tb">A → "✓ trawler is capturing"
+B → trust ✓ trusted — confirmed by captured traffic
+B → proxy ✓ receiving traffic
+C → UNCHANGED   ← the command stays, for the next device
+D → appears — back to flows</pre>C not changing is the decision: proving once does not retire the way to prove again.</details></td>
+            <td>passive — the app observes the stream, the user does nothing here</td>
+          </tr>
+          <tr>
+            <td>traffic arrives but does not decrypt</td>
+            <td>tell the truth about where setup stands</td>
+            <td>points a second device at the proxy without trusting the CA</td>
+            <td><div class="gist">trust warns, proxy goes ok — the two probes disagree</div>
+              <details class="why"><summary>▸ why</summary><pre class="tb">B → proxy ✓ receiving traffic
+B → trust ⚠ arriving but not decrypting — install it
+      on the device you're capturing from
+A → still the not-yet sentence, its own wording
+C → UNCHANGED</pre>The advice names no device because none can be named — the Frame's <em>not given</em>.</details></td>
+            <td>passive</td>
+          </tr>
+          <tr>
+            <td>come back later, then leave</td>
+            <td>leave and come back</td>
+            <td>taps the status dot, reads, clicks <em>back to flows</em></td>
+            <td><div class="gist">every verdict is legible at rest, with nothing expanded</div>
+              <details class="why"><summary>▸ why</summary><pre class="tb">A → the current capture sentence
+B → both verdicts, both guides CLOSED
+D → present, because ever-proven latched
+     → click returns to the list, setup untouched</pre>No step is re-entered and nothing restarts — there is no cursor to restart.</details></td>
+            <td>Enter / Space on the focused Button; Esc is not bound here — nothing on this screen is a dismissable surface</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="mockup">5 · Draft mockup</h2>
+    <div data-item="mockup">
+      <p class="kd">Every composed element is <strong>mounted from the collection</strong> —
+        <code>window.Trawler</code>, the real <code>ui/src/components/</code> compiled by
+        <code>scripts/build-specimens.mjs</code> — so what renders below is the shipped component,
+        not a drawing of one. Hand-drawn, each declared inline: the <code>&lt;details&gt;</code>
+        disclosure (<em>build local</em>), the screen's zoning, and Notice's one declared delta.
+        Stubbed: nothing — Select really opens, CopyText really copies and confirms.</p>
+      <div class="app">
+        <div class="a-mock mx-auto max-w-dialog-max bg-canvas py-6 font-ui text-body text-ink-body" id="mock4">
+
+          <!-- A · Notice, EXTENDED: mounted, with .a-headline carrying the declared delta -->
+          <div class="a-zone px-4">
+            <div class="a-headline a-idle-only" id="m-notice-idle"></div>
+            <div class="a-headline a-proven-only" id="m-notice-proven"></div>
+          </div>
+
+          <!-- B · Section variant=band over two default Sections -->
+          <div class="a-zone" id="m-preconditions"></div>
+
+          <!-- C · a screen-owned caption plus one CopyText -->
+          <div class="a-zone px-4 pt-3">
+            <p class="font-ui text-chrome text-ink-mute">run this, or just open any site</p>
+            <p class="mt-2 font-mono" data-wire="shell command" id="m-try"></p>
+          </div>
+
+          <!-- D · Button frame=bare tone=mute -->
+          <div class="a-proven-only a-zone px-4 pt-3" id="m-back"></div>
+
+        </div>
+      </div>
+      <script type="text/babel">
+        const { React, createRoot, Notice, Section, StatusLine, Button, Select, StepList, CopyText } = window.Trawler;
+
+        const mount = (id, node) => {
+          const host = document.getElementById(id);
+          if (host) createRoot(host).render(node);
+        };
+        const noop = () => {};
+
+        const command = (value, label) => (
+          <span data-wire="shell command" className="font-mono">
+            <CopyText value={value} label={label} />
+          </span>
+        );
+
+        const TRUST_TARGETS = [
+          { id: "macos", label: "macOS" },
+          { id: "windows", label: "Windows" },
+          { id: "linux", label: "Linux" },
+          { id: "firefox", label: "Firefox" },
+          { id: "ios-sim", label: "iOS Simulator" },
+          { id: "android", label: "Android" },
+        ];
+        const PROXY_TARGETS = [
+          ...TRUST_TARGETS.slice(0, 3),
+          { id: "firefox", label: "Firefox" },
+          { id: "terminal", label: "Terminal / CLI" },
+          { id: "ios-sim", label: "iOS Simulator" },
+          { id: "android", label: "Android" },
+        ];
+
+        /* build local — the collection has no disclosure primitive and native
+           <details> fits whole. The picker sits ABOVE the steps: a selector after
+           what it selects reads as a filter on a result. */
+        const Guide = ({ targets, steps, undoTitle, undo }) => (
+          <details className="mt-2">
+            <summary className="cursor-pointer font-ui text-chrome text-ink-mute">set it up by hand</summary>
+            <div className="mt-chrome-y">
+              <Select options={targets} value="macos" onChange={noop} searchable={false} label="platform" />
+              <div className="mt-2"><StepList steps={steps} /></div>
+              <p className="mt-3 font-ui text-chrome text-ink-mute">{undoTitle}</p>
+              <div className="mt-chrome-y"><StepList steps={undo} /></div>
+            </div>
+          </details>
+        );
+
+        /* screen-owned assembly: which verdict is visible in which state, and the
+           order name → verdict → act → guide. Every part of it is a component. */
+        const Precondition = ({ title, idle, proven, act, guide }) => (
+          <Section title={title}>
+            <div className="a-idle-only"><StatusLine status={idle} /></div>
+            <div className="a-proven-only"><StatusLine status={proven} /></div>
+            <div className="mt-2"><Button onClick={noop}>{act}</Button></div>
+            {guide}
+          </Section>
+        );
+
+        mount("m-notice-idle",
+          <Notice tone="mute">waiting for your first request — nothing has reached trawler yet</Notice>);
+        mount("m-notice-proven",
+          <Notice tone="ok">trawler is capturing</Notice>);
+
+        mount("m-preconditions",
+          <Section variant="band" title="what has to be true">
+            <Precondition
+              title="trust the certificate"
+              idle={{ glyph: "◐", tone: "muted", message: "can't check here yet" }}
+              proven={{ glyph: "✓", tone: "ok", message: "trusted — confirmed by captured traffic" }}
+              act="install certificate"
+              guide={
+                <Guide
+                  targets={TRUST_TARGETS}
+                  steps={[
+                    "save trawler's certificate as trawler-ca.pem",
+                    command("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem", "the trust command"),
+                    "or double-click it and set the trawler CA to always trust",
+                  ]}
+                  undoTitle="to remove it later"
+                  undo={[
+                    <>run: {command('sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain', "the removal command")}</>,
+                    "or delete the trawler proxy CA entry in keychain access → system",
+                  ]}
+                />
+              }
+            />
+            <Precondition
+              title="route traffic through trawler"
+              idle={{ glyph: "○", tone: "muted", message: "no traffic reaching trawler yet" }}
+              proven={{ glyph: "✓", tone: "ok", message: "receiving traffic" }}
+              act="set system proxy"
+              guide={
+                <Guide
+                  targets={PROXY_TARGETS}
+                  steps={[
+                    "run — this sets the wi-fi service, change the name for ethernet",
+                    command("networksetup -setwebproxy Wi-Fi 127.0.0.1 7420 && networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420", "the proxy command"),
+                  ]}
+                  undoTitle="to turn it off later"
+                  undo={[
+                    "turn it off per enabled service, keeping the saved address",
+                    command("networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off", "the proxy-off command"),
+                  ]}
+                />
+              }
+            />
+          </Section>);
+
+        mount("m-try",
+          <CopyText value="curl -x http://127.0.0.1:7420 https://example.com" label="the try-it command" />);
+        mount("m-back",
+          <Button frame="bare" tone="mute" onClick={noop}>‹ back to flows</Button>);
+      </script>
+      <button class="statebtn" data-state-toggle="mock4" data-state-class="proven"
+              data-label-off="▶ show proven" data-label-on="◀ show not yet">▶ show proven</button>
+      <p class="kd"><strong>What the build forced that the earlier stages had not.</strong> Three things,
+        and the first two were only found once the mockup was composed from the components' own source
+        rather than from their TSDoc. <strong>Section owns the precondition's whole frame</strong> — its
+        heading, its padding and its bottom hairline — so the name cannot share a row with the verdict
+        and the screen draws no seam of its own; the earlier draft invented both. <strong>StepList's
+        numerals are a marker column, not a browser counter</strong>: a real ordered list keeps every
+        step body on one left edge, which a <code>list-decimal</code> stand-in does not. And the guide's
+        picker had to move above the steps — a selector <em>after</em> what it selects reads as a filter
+        on a result.</p>
+    </div>
+
+    <h2 id="tune">6 · Tune</h2>
+    <table data-item="tune" data-c="tune-calls">
+      <thead><tr><th>Call</th><th>Before</th><th>After</th><th>Slug</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>the capture verdict outranks the preconditions</td>
+          <td><pre class="tb">trust  ◐ can't check
+proxy  ○ no traffic
+─────────────────────
+waiting for your first
+request</pre></td>
+          <td><pre class="tb">waiting for your first
+request
+─────────────────────
+trust  ◐ can't check
+proxy  ○ no traffic</pre></td>
+          <td><code>visual-weight-follows-goals</code></td>
+        </tr>
+        <tr>
+          <td>one act to the guide, never two</td>
+          <td><pre class="tb">▸ set it up by hand
+  1. save the pem
+  2. run: sudo …
+  ▸ remove it later
+     1. sudo security
+        delete-cert…</pre></td>
+          <td><pre class="tb">▸ set it up by hand
+  1. save the pem
+  2. run: sudo …
+  to remove it later
+  1. run: sudo security
+     delete-certificate…
+  2. or use keychain</pre></td>
+          <td><code>progressive-disclosure</code></td>
+        </tr>
+        <tr>
+          <td>the picker precedes what it picks</td>
+          <td><pre class="tb">1. save the pem
+2. run: sudo …
+[ macOS ▾ ]</pre></td>
+          <td><pre class="tb">[ macOS ▾ ]
+1. save the pem
+2. run: sudo …</pre></td>
+          <td><code>choose-before-act</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <details class="why"><summary>▸ why, per call</summary>
+      <ul>
+        <li><strong>the capture verdict outranks the preconditions</strong> — the first draft ordered the
+          zones by the order the user acts in, which is build order wearing a user's clothes. Goal 1 is
+          reaching the first flow, so its verdict owns the top. <em>Loops back to Layout: yes</em> — this
+          is what fixed A above B rather than beside it.</li>
+        <li><strong>one act to the guide, never two</strong> — removal and turn-off started as their own
+          disclosures inside the manual one, which made them two acts deep. They are now a second
+          labelled StepList in the <em>same</em> guide: what the call removes is the second
+          disclosure, not the instructions, and a two-step reversal stays two steps.
+          <em>Loops back to Layout: no.</em></li>
+        <li><strong>the picker precedes what it picks</strong> — caught only in the built mockup, where a
+          selector sitting under a numbered list reads as a filter on a result rather than the choice
+          that produced it. <em>Loops back to Layout: no.</em></li>
+      </ul>
+    </details>
+
+    <h2 id="receipt">Receipt <span class="badge id">machine-read</span></h2>
+    <pre data-item="receipt">
+rulebook: b769f7e4ccbb2e4d02604f47e0fd1aa07e493cf9
+soft:
+  visual-weight-follows-goals: satisfied-via-proposal — the top goal owns the headline size, which only the proposed Notice extension can render; the built component pins its message to body size and would leave zone A no heavier than the precondition it outranks
+  grouping-by-relatedness: inherited — the boundary between preconditions is Section's own bottom hairline, drawn once per Section and never inside one
+  ordering-by-priority: satisfied — outcome, then what must be true, then what proves it, then the way out
+  progressive-disclosure: satisfied — a headline, two verdicts and one command at rest, each guide one act away, and the removal steps folded into that same act rather than a second one
+  data-ink-first: satisfied — the screen draws no card, panel, badge or seam of its own at all; every border, hairline and numeral in the mockup is composed from Section, Button, Select or StepList and is theirs to justify
+  generous-targets: inherited — CopyText's whole-value target and Button's hit floor, both cited not restated
+  motion-informs: inherited — CopyText's ~2 s confirm and StatusLine's spinner; the screen animates nothing of its own
+  empty-states-orient: satisfied — every absence is named where it is observed, zone A for capture and zone B per precondition, and where the user can act zone C is the act
+  familiar-idioms: satisfied — a checklist of preconditions rather than a wizard, with no Back/Next and no number on a precondition
+  display-equals-payload: satisfied — both commands are the exact strings the domain returns for the configured address, unmodified and unnamed as views because neither is one
+  labels-add-context: satisfied — under the trust precondition the action reads install certificate, never install the trawler CA certificate
+  calm-microcopy: satisfied — every string rewritten lowercase and terse; the shipped screen's Title Case and its ellipses go with it
+  one-term-per-concept: satisfied — first flow replaces Verify, which the lexicon names as a term never to use for this milestone
+  confirm-at-point: inherited — CopyText confirms at the value, and each elevated action confirms on the StatusLine in its own row
+  absence-names-itself: satisfied — four absences, four sentences; nothing yet, can't check, arriving but not decrypting, another proxy is set
+  focus-returns-to-origin: inherited — Select returns focus to its trigger, and the native disclosure keeps focus on its summary
+  choose-before-act: satisfied — in each guide the target picker precedes the copyable command it produces
+</pre>
+
+    <h2 id="capabilities">Capabilities — every <em>Given</em>, answered</h2>
+    <table data-item="capabilities" data-c="capabilities-table">
+      <thead><tr><th>Capability</th><th>State</th><th>Where / why</th></tr></thead>
+      <tbody>
+        <tr><td>trust probe (trusted · untrusted · unknown)</td><td>used</td><td>B — the trust StatusLine's verdict, passed through unranked</td></tr>
+        <tr><td>proxy probe (ours · foreign · none · unknown)</td><td>used</td><td>B — the proxy StatusLine, including the <em>another proxy is set</em> sentence</td></tr>
+        <tr><td>observed traffic (any connection)</td><td>used</td><td>B — turns the proxy verdict ok independently of decryption</td></tr>
+        <tr><td>observed decrypt (a real https flow)</td><td>used</td><td>A — the capture sentence; and B, where it proves trust when no probe can</td></tr>
+        <tr><td>one-click CA install</td><td>used</td><td>B — the trust Button, offered only on the detected host</td></tr>
+        <tr><td>one-click proxy set</td><td>used</td><td>B — the proxy Button, same gate</td></tr>
+        <tr><td>proxy unset</td><td>used</td><td>B — the second Button, shown once a set has succeeded</td></tr>
+        <tr><td>per-target instructions (6 trust · 7 proxy · removal · turn-off)</td><td>used</td><td>B — StepList inside each guide, following the Select</td></tr>
+        <tr><td>copyable proxy command</td><td>used</td><td>B — a CopyText step inside the proxy guide</td></tr>
+        <tr><td>copyable prove-it command</td><td>used</td><td>C — the whole zone</td></tr>
+        <tr><td>the configured proxy address</td><td>used</td><td>B and C — every rendered command is built from it</td></tr>
+        <tr><td>host OS from the webview UA</td><td>used</td><td>B — gates both Buttons and defaults both Selects</td></tr>
+        <tr><td>the ever-proven latch</td><td>used</td><td>D — the way out exists only once it has latched</td></tr>
+        <tr><td>step navigation (next · back · goto)</td><td>deliberately unused</td><td>the design has no cursor to move. A stepper needs per-step progress, which <code>StepList</code>'s <code>@avoid</code> refuses to draw and no probe can supply — so <code>STEPS</code>, <code>stepStatus</code> and the three navigation events are design, and this design drops them. Recorded here because dropping a capability quietly is what makes a screen look correctly constrained rather than under-designed</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="proposals">Proposals — <span class="badge id">one extension, and where it came from</span></h2>
+    <table data-item="proposals" data-c="proposals-table">
+      <thead><tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>component extension</td>
+          <td><code>Notice</code> — a headline size for the message paragraph</td>
+          <td>Notice's <code>@use</code> names this exact zone (<em>"the setup screen's capture-is-working zone"</em>) and every <code>@avoid</code> clears, so nothing else in the collection is a candidate. What does not fit is the built component: <code>Notice.tsx</code> pins its message to <code>text-body</code> with no size axis, and the screen's top-ranked goal owns the most visual weight. Forking a copy into the screen is what the registry exists to stop, so the component grows by one axis</td>
+          <td>build WU · <code>ui/src/components/Notice.tsx</code> + its collection specimen</td></tr>
+        <tr><td colspan="4"><strong>No component, token, lexicon term or key binding was proposed — one extension, and it was found by Tier-3, not by the run.</strong>
+          A full redesign of the app's largest screen resolved to eight placements over seven existing
+          components plus one native element. The run's own reuse pass judged all eight against the
+          registry's TSDoc and concluded zero proposals; the independent review composed the mockup
+          against the components' <em>source</em> and found one place where the contract fits and the
+          <strong>built component cannot render what the contract permits</strong>. That gap — TSDoc-fits,
+          code-does-not — is invisible to a reuse pass that reads only the registry, which is the
+          registry oracle's blind spot stated as a finding. No component was invented to trip a
+          predicate (W9 plan, Q1 ruled <em>No</em>).</td></tr>
+        <tr><td>observation, not a proposal</td>
+          <td>a disclosure primitive</td>
+          <td>Native <code>&lt;details&gt;</code> covers it whole, so nothing is missing <em>here</em>. Worth recording anyway: <code>progressive-disclosure</code> binds every screen, <code>Section</code>'s <code>@avoid</code> already assumes a local disclosure exists, and this screen hand-rolls two. A second screen hand-rolling it is the evidence that would make it an entry — one is not</td>
+          <td>registry, on the second sighting</td></tr>
+        <tr><td>observation, not a proposal</td>
+          <td>a one-instruction list</td>
+          <td>Five target/function pairs return exactly one instruction, and <code>StepList</code>'s <code>@avoid</code> refuses <em>"a single unordered statement"</em>. The screen renders those as prose, which is what the @avoid points at. No new entry is needed — but the collection has no shape for <em>"an ordered list that may collapse to one"</em>, and every caller must know to branch</td>
+          <td>registry, if a second caller hits it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="blocked-on">Blocked-on</h2>
+    <table data-item="blocked-on" data-c="blocked-table">
+      <thead><tr><th>What is missing</th><th>Stage that hit it</th><th>Whose call</th><th>What the run did meanwhile</th></tr></thead>
+      <tbody>
+        <tr><td><code>StepStatusView.short</code> — the resolvers return full sentences, and <code>StatusLine</code>'s <code>@avoid</code> forbids the screen shortening a domain message</td>
+          <td>Elements — the StatusLine row</td>
+          <td>build WU · <code>ui/src/setup.ts</code> (the <code>[UI_DEFER]</code> marker, filed at E-DFLOW.W5 r3·22, comes due with this screen)</td>
+          <td>designed against the short form and wrote the short strings the mockup shows, so the build has the wording it must add rather than inventing it</td></tr>
+        <tr><td>an <em>unsetting</em> member on <code>setup.ts</code>'s <code>Running</code> union, and the matching branch in <code>proxyStatus</code> — the union is <code>installing</code> · <code>setting</code> · <code>null</code>, so the stop-routing action has no in-flight verdict to render</td>
+          <td>Elements — the Button row, resolving fork D4 for the third action in B</td>
+          <td>build WU · <code>ui/src/setup.ts</code></td>
+          <td>designed all three actions to the same rule rather than exempting the one the substrate cannot yet express — Button's <code>@avoid</code> is <em>both halves or neither</em>, and a design that quietly dropped the progress half for one action would be shipping the defect the fork exists to name</td></tr>
+        <tr><td>a trust probe that works off macOS and Windows — Linux, the NSS store and every device stay <em>unknown</em> forever</td>
+          <td>Frame — the <em>unknown must not look like no</em> quality</td>
+          <td>domain · API (a probe, not a UI change)</td>
+          <td>gave the un-probeable case its own glyph and its own sentence, so a permanent can't-check never renders as a negative; zone A carries the whole burden of the verdict until traffic arrives</td></tr>
+        <tr><td>any attribution of observed traffic to a device</td>
+          <td>Interaction — the arriving-but-not-decrypting case</td>
+          <td>domain · API</td>
+          <td>wrote the advice as advice — <em>install it on the device you're capturing from</em> — and refused to name a device the app cannot know</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="review">Review — the instructions this run was driven under</h2>
+    <p class="kd">No reviewer round has yet happened on this artifact; Tier-3 judges it next
+      (<a href="2026-08-14-dflow-w9-plan.html#step3">W9 ③</a>). What follows are the standing human
+      rulings from the W9 discussion and plan that this run acted on, recorded in the same shape: what
+      was said, what it moved, and the contract it hit.</p>
+    <table data-item="review" data-c="review-table">
+      <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
+      <tbody>
+        <tr><td>D1 — design it greenfield; runs #1–#3 are not read during the run</td>
+          <td>nothing in the artifact — it constrained how the run was driven, not what it concluded</td>
+          <td><code>D1</code> · the W9 plan's step ① constraint table</td></tr>
+        <tr><td>D2 — "we will redesign the full flow, UI / UX here", and UC-ONBOARD may be amended to match</td>
+          <td>frame · layout · elements — the run concluded two preconditions and a proof instead of the shipped three-step stepper, and dropped step navigation as a capability</td>
+          <td><code>UC-ONBOARD</code> · <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a></td></tr>
+        <tr><td>Q1 — if the design honestly proposes nothing new, write it down as a named gap; invent nothing to trip a predicate</td>
+          <td>proposals — the empty result is stated as a finding about registry coverage, with two observations that deliberately stop short of being entries</td>
+          <td><code>DEC-25</code> · the W9 plan's step ④ table</td></tr>
+        <tr><td>Tier-3, submission 1 — <em>"the receipt claims zone A is the only line in serif; no element in the mockup carries a serif family, and the precondition names below it sit in brighter ink"</em></td>
+          <td>mockup · receipt — zone A now opens at the title size in full ink, and the receipt row says what the design does instead of what it wished it did</td>
+          <td><code>visual-weight-follows-goals</code></td></tr>
+        <tr><td>Tier-3, submission 1 — <em>"absence-names-itself counts four absences; the fourth, another proxy is set, is receipted and never rendered anywhere"</em></td>
+          <td>elements · interaction — the sentence is now a StatusLine state in the catalog and a use-case row of its own, because a fourth absence nobody designed is three absences and a claim</td>
+          <td><code>absence-names-itself</code></td></tr>
+        <tr><td>Tier-3, submission 2 — three findings, all the same shape: <em>"the receipt's supporting clause describes a mockup that is not this one"</em> (chrome-sized preconditions that are body-sized, no step numerals beside two <code>list-decimal</code> lists, every action elevated when D's is instant)</td>
+          <td>receipt · elements — three clauses rewritten to what the mockup composes, and the fork-D4 justification scoped to the three actions that actually wait</td>
+          <td><code>visual-weight-follows-goals</code> · <code>data-ink-first</code> · <code>familiar-idioms</code> · Button's <code>@avoid</code> fork D4</td></tr>
+        <tr><td>Tier-3, submission 3 — <em>"nothing under zone A rises above body size is false — the commands are 12.5px and the way out is 14px"</em>, and <em>"Notice is placed in A and C but only A's fit is argued"</em></td>
+          <td>receipt · elements — the weight row now claims what is measurable (title size is the largest the mockup draws, nothing below exceeds note size), and Notice's placement drops to zone A because zone C's caption is screen prose that was never a Notice</td>
+          <td><code>visual-weight-follows-goals</code> · Notice's <code>@use</code></td></tr>
+        <tr><td>Tier-3, submission 4 — <em>"the StepList row says three targets return one instruction; five target/function pairs do"</em>, and <em>"the Button row's @avoid quote splices two non-adjacent fragments into one continuous citation"</em></td>
+          <td>elements — the count was re-taken by calling the four instruction functions over all thirteen targets, and the spliced quote restored to the registry's own words</td>
+          <td><code>StepList</code>'s <code>@avoid</code> · <code>Button</code>'s <code>@avoid</code></td></tr>
+        <tr><td>Tier-3, submission 5 — a second spliced quotation (Select's cardinality <code>@avoid</code>), fork D4 owed for <em>stop routing</em> against a <code>Running</code> union that has no unsetting member, and <em>"zone A names each absence"</em> when zone B names three of the four</td>
+          <td>elements · blocked-on · receipt — the quote restored verbatim, a third blocked-on row opened against <code>setup.ts</code>, and the absence clause moved to where each absence is actually observed. Two splices in two rounds is a pattern, not two slips, so all <strong>44</strong> registry quotations in Elements were then swept mechanically against the oracle's output and eight restored; a marked <code>…</code> elision counts, a silent truncation does not</td>
+          <td><code>Select</code>'s <code>@avoid</code> · <code>Button</code>'s <code>@avoid</code> fork D4 · <code>empty-states-orient</code></td></tr>
+        <tr><td>Tier-3, submission 6 — three findings, all one discovery: <em>"the mockup composes markup the real components cannot render"</em>. Notice pins its message to <code>text-body</code> · StepList's numerals are a marker column, not <code>list-decimal</code> · Section always emits its title in its own heading, so a name cannot share a row with a verdict</td>
+          <td>mockup · elements · proposals · receipt · findings — the mockup was rebuilt from the components' <strong>source</strong>, Notice's verdict flipped from reuse to <strong>extend</strong>, the run's proposal count went 0 → 1, and <code>grouping-by-relatedness</code> became <code>inherited</code> because the seam turned out to be Section's</td>
+          <td>Notice's <code>@use</code> · <code>StepList</code> anatomy · <code>Section</code> anatomy · <code>data-ink-first</code></td></tr>
+        <tr><td>Tier-3, submission 7 — <em>"the proxy guide renders no turn-off instructions at all"</em>, and <em>"the trust guide's flattened removal sentence keeps one of removalSteps(macos)'s two instructions, which the run's own single-instruction rule does not permit"</em></td>
+          <td>mockup · tune — both guides now carry their reversal as a second labelled StepList in the same disclosure, and Tune's after-drawing was corrected: the call removed a second <em>disclosure</em>, never the instructions behind it</td>
+          <td><code>StepList</code>'s <code>@avoid</code> · <code>progressive-disclosure</code></td></tr>
+        <tr><td>Tier-3, submission 8 — <em>"the mockup composes a ○ glyph under data-tone=mute, and Notice.tsx sets glyph: null there, so the run's one extension quietly carried a second delta"</em></td>
+          <td>mockup · elements — the mute headline renders bare, as Notice does, and the extend row now names the empty glyph slot instead of claiming the slot is unchanged</td>
+          <td>Notice's <code>@states</code> · <code>colour-plus-text</code></td></tr>
+        <tr><td>R3 — the shipped suite retires with the design it guarded</td>
+          <td>nothing in the design; it binds the build at W9 ⑤, and this run's capabilities table is what the coverage map is written against</td>
+          <td><code>R3</code> · the W9 discussion's clash ruling</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="findings">Findings</h2>
+    <table data-c="findings-table">
+      <thead><tr><th>#</th><th>Stage</th><th>Finding</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Elements</td><td><strong>The shipped screen sits on the wrong side of a discriminating <code>@avoid</code> pair.</strong> It renders each command as a <code>&lt;pre&gt;</code> with a labelled Copy button beside it. <code>CopyButton</code>'s <code>@avoid</code> refuses <em>"showing a value the user grabs verbatim"</em> and <code>CopyText</code>'s refuses <em>"explicit copy actions with their own label"</em> — so the shipped shape is rejected by both, and <code>StepList</code> names the same verdict from a third side. This is the defect class run #3's reuse pass shipped; here the registry caught it before code.</td></tr>
+        <tr><td>2</td><td>Frame · Elements</td><td><strong>A component contract made the shipped design unbuildable, not merely unfashionable.</strong> <code>StepList</code>'s <code>@avoid</code> forbids per-step completion and a current-step highlight because the app cannot observe them. The shipped screen draws exactly that (<code>data-status</code> done/active/pending on each step). The redesign's shape is therefore forced by the registry, which is the strongest evidence in this run that the substrate does real work.</td></tr>
+        <tr><td>3</td><td>Elements</td><td><strong>Six reuses, one extension, one native element, on the app's largest screen.</strong> Counted off the catalog's own verdict words, not asserted: 6 <em>reuse</em> · 1 <em>extend</em> · 1 <em>build local</em> · 2 <em>n/a</em> rejections, so 7 of the 24 registry entries carry eight placements. Read together with run #3's reported 3 reuses / 4 proposals on this same screen, the registry has stopped being the constraint — but the one gap that remained was invisible to the reuse pass, because the pass reads the registry oracle and the oracle emits TSDoc, never the component's rendered output.</td></tr>
+        <tr><td>4</td><td>Elements</td><td><strong>The <code>[UI_DEFER]</code> marker came due exactly where it said it would.</strong> Filed at W5 as "it lands with the screen that consumes StatusLine" — this is that screen, and the reuse cannot be built until <code>setup.ts</code> returns a short form. A deferral that predicts its own trigger is worth more than the fix it deferred.</td></tr>
+        <tr><td>5</td><td>Receipt</td><td><strong>The lexicon caught a shipped term.</strong> <em>Verify</em> is the shipped screen's third step title and the lexicon lists it under <em>never</em> for the first-flow milestone. Nothing mechanical could have found it: <code>one-term-per-concept</code> is soft, and no run had ever receipted this screen.</td></tr>
+        <tr><td>6</td><td>Mockup</td><td><strong><code>wire-order-preserved</code> gets no population for the third time.</strong> This screen renders no captured collection, so the rule closes on its n/a path again — the predicate has still never judged anything, on any artifact. Recorded so a green is not miscounted as evidence (see <a href="2026-08-14-dflow-w9-step0-numbers.html#vacuous">step ⓪</a>).</td></tr>
+        <tr><td>8</td><td>Mockup · Elements</td><td><strong>The registry oracle emits TSDoc, and a mockup can pass the whole reuse pass while composing something no component renders.</strong> Three reuses in this run were written from their <code>@use</code>/<code>@avoid</code> — correctly — and drawn as markup the built component cannot produce: Notice at a size it pins, StepList's numerals as a browser counter, Section's title inline with a verdict. Tier-1 cannot see it (every class is a legal token), Tier-2 cannot (the author wrote both halves), and Tier-3 only saw it by opening <code>ui/src/components/*.tsx</code> — which its rubric does not name as a source. <strong>The cheapest fix is a rubric line, not a predicate</strong>: a reuse row is judged against the component's rendered output, not only its contract.</td></tr>
+        <tr><td>7</td><td>Layout</td><td><strong>The overflow line's only real answer is a component's.</strong> Three of four zones cannot grow; the fourth grows only because a StepList inside it does, and StepList owns its own no-truncate rule. The zone-level cap the rule asks for turns out to be a citation, which is what <code>overflow-declared</code>'s "declared by reference" clause exists for — and this is the first run to need it.</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

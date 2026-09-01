@@ -702,6 +702,7 @@ fn check_composition(
     if let Some(review) = item("review") {
         check_review_record(failures, review);
     }
+    let owed = item("elements").map(mounts_owed).unwrap_or_default();
     if let Some(mockup) = item("mockup") {
         if !mockup.contains("data-state-toggle") {
             failures.push(Failure {
@@ -710,22 +711,9 @@ fn check_composition(
                 fix: "add data-state-toggle for the states the Interaction table named".to_string(),
             });
         }
+        check_mockup_mounts(failures, &owed, mockup);
     }
-    // the attribute, not the path: a prose mention of an asset composes nothing
-    for (attr, asset) in [
-        ("src", "https://cdn.tailwindcss.com"),
-        ("src", "../../doc-assets/components/tw-config.js"),
-        ("src", "../../doc-assets/components/specimen.js"),
-    ] {
-        if !html.contains(&format!("{attr}=\"{asset}\"")) {
-            failures.push(Failure {
-                check: "assets·specimen".to_string(),
-                what: format!("the run does not load {asset}"),
-                fix: "compose the component design files' own rendering instead of re-typing it"
-                    .to_string(),
-            });
-        }
-    }
+    check_assets(failures, html, !owed.is_empty());
     if let Some(literal) = colour_literal(html) {
         failures.push(Failure {
             check: "mockup·colour-literals".to_string(),
@@ -736,6 +724,101 @@ fn check_composition(
     }
     if let Some(frame) = item("frame") {
         check_frame_density(failures, frame);
+    }
+}
+
+// W5 made a specimen the component itself - build-specimens.mjs compiles
+// ui/src/components/ plus React into one classic script a file:// page can load
+// as window.Trawler - and the design RUN never migrated, so run #4 hand-drew
+// seven components the registry already ships. A drawn reuse is the silent fork
+// the mockup rules exist to stop, from the one direction no class check reaches:
+// every utility is correct and the rendering is still the doc's own invention.
+// `propose` has nothing to mount, `build local` and `n/a` are not composed, and
+// an `extend` mounts its base - the delta is the only part it draws.
+const MOUNTED: &[&str] = &["reuse", "extend"];
+const CDN: &str = "https://cdn.tailwindcss.com";
+const THEME: &str = "../../doc-assets/components/tw-config.js";
+const SPECIMEN: &str = "../../doc-assets/components/specimen.js";
+const BUNDLE: &str = "../../doc-assets/components/specimens.bundle.js";
+
+fn mounts_owed(elements: &str) -> Vec<String> {
+    let mut owed: Vec<String> = catalog_rows(elements)
+        .into_iter()
+        .filter(|(_, row)| MOUNTED.iter().any(|v| row.contains(&format!(">{v}<"))))
+        .map(|(name, _)| name)
+        .collect();
+    owed.sort_unstable();
+    owed.dedup();
+    owed
+}
+
+// The mount is read as a JSX tag rather than as a marking, because a marking is
+// exactly what a hand-drawn imitation can also carry. `<Notice` cannot be
+// written by drawing: the element name IS the component. Read off the raw
+// mockup slice on purpose - the tokeniser treats a <script> body as data (HTML's
+// raw-text rule), and the mount script is where the composition lives.
+fn check_mockup_mounts(failures: &mut Vec<Failure>, owed: &[String], mockup: &str) {
+    let drawn: Vec<&str> =
+        owed.iter().filter(|name| !mounted(mockup, name)).map(String::as_str).collect();
+    if drawn.is_empty() {
+        return;
+    }
+    failures.push(Failure {
+        check: "mockup·hand-drawn".to_string(),
+        what: format!("the mockup draws what the collection already ships: {}", drawn.join(" ")),
+        fix: format!("mount it - `const {{ {} }} = window.Trawler` and render the component inside data-item=\"mockup\"; only a propose row, a build local element and an extend's declared delta are drawn", drawn.join(", ")),
+    });
+}
+
+fn mounted(mockup: &str, name: &str) -> bool {
+    let tag = format!("<{name}");
+    mockup
+        .match_indices(&tag)
+        .any(|(at, _)| mockup[at + tag.len()..].starts_with([' ', '\n', '\t', '>', '/']))
+}
+
+// One tag, three things, in the order they must arrive: the app theme, the
+// shared specimen behaviours, then the collection. The trio the bundle replaces
+// stays legal for a run that mounts nothing - a theme and a state switch are all
+// such a run needs - but loading both double-binds every state toggle, because
+// the bundle imports specimen.js for its side effects.
+fn check_assets(failures: &mut Vec<Failure>, html: &str, mounting: bool) {
+    let loads = |asset: &str| html.contains(&format!("src=\"{asset}\""));
+    let mut fail = |what: String, fix: &str| {
+        failures
+            .push(Failure { check: "assets·specimen".to_string(), what, fix: fix.to_string() });
+    };
+    if !loads(CDN) {
+        fail(
+            format!("the run does not load {CDN}"),
+            "compose the app's own utilities instead of re-typing them",
+        );
+    }
+    if loads(BUNDLE) {
+        for asset in [THEME, SPECIMEN] {
+            if loads(asset) {
+                fail(
+                    format!("{asset} is loaded beside the bundle, which already folds it in"),
+                    "load the bundle alone - a second copy of specimen.js binds every state toggle twice, and two toggles per click is no toggle",
+                );
+            }
+        }
+        return;
+    }
+    if mounting {
+        fail(
+            format!("the mockup composes components but the run does not load {BUNDLE}"),
+            "a mounted component comes from window.Trawler - build it with `cargo xtask ui specimens` and load the bundle instead of re-typing the rendering",
+        );
+        return;
+    }
+    for asset in [THEME, SPECIMEN] {
+        if !loads(asset) {
+            fail(
+                format!("the run does not load {asset}"),
+                "compose the component design files' own rendering instead of re-typing it",
+            );
+        }
     }
 }
 
@@ -2600,11 +2683,17 @@ chroma_floor: 40
         format!("<pre data-item=\"receipt\">rulebook: 28f5437\nsoft:\n{rows}</pre>")
     }
 
+    // The mockup the fixture ships, and the mount inside it: five tests swap one
+    // or the other, and a literal repeated five times drifts on the first edit.
+    const RUN_MOUNT: &str = "<script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>";
+    const RUN_MOCKUP: &str = "<div data-item=\"mockup\" data-wire=\"none\"><div id=\"m-zone\"></div>\
+             <script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>\
+             <button data-state-toggle=\"mock\">flip</button></div>";
+
     fn design_run(receipt_block: &str) -> String {
         let body = format!(
             "<script src=\"https://cdn.tailwindcss.com\"></script>\
-             <script src=\"../../doc-assets/components/tw-config.js\"></script>\
-             <script src=\"../../doc-assets/components/specimen.js\" defer></script>\
+             <script src=\"../../doc-assets/components/specimens.bundle.js\"></script>\
              <style>.mock{{color:var(--a-ink);}}</style>\
              <main data-artifact=\"design-run\">\
              <p data-item=\"frame\">drivers</p><p data-item=\"layout\">zones</p>\
@@ -2617,7 +2706,7 @@ chroma_floor: 40
              <table data-item=\"interaction\"><tr><td>land cold</td><td>orient</td>\
              <td><div class=\"gist\">B renders the real verdicts</div>\
              <details class=\"why\"><div>B → status</div></details></td></tr></table>\
-             <div data-item=\"mockup\" data-wire=\"none\"><button data-state-toggle=\"mock\">flip</button></div>\
+             {RUN_MOCKUP}\
              <table data-item=\"tune\"><tr><td>weight</td><td><pre class=\"tb\">before</pre></td>\
              <td><pre class=\"tb\">after</pre></td><td><code>data-ink-first</code></td></tr></table>\
              {receipt_block}\
@@ -3177,14 +3266,110 @@ chroma_floor: 40
     #[test]
     fn a_run_that_does_not_link_the_shared_specimens_is_red() {
         let doc = green_run()
-            .replace("src=\"../../doc-assets/components/tw-config.js\"", "src=\"own-theme.js\"");
+            .replace("src=\"../../doc-assets/components/specimens.bundle.js\"", "src=\"mine.js\"");
         assert!(what(&doc_verdict(&doc), "assets·specimen").contains("re-typing"));
 
-        let mentioned =
-            doc.replace("<style>", "<a href=\"x\">doc-assets/components/tw-config.js</a><style>");
+        let mentioned = doc.replace(
+            "<style>",
+            "<a href=\"x\">doc-assets/components/specimens.bundle.js</a><style>",
+        );
         assert!(
             doc_verdict(&mentioned).red(),
-            "naming the theme in prose composes nothing - the attribute is the proof"
+            "naming the bundle in prose composes nothing - the attribute is the proof"
+        );
+    }
+
+    // The trio the bundle replaces stays legal for a run that composes nothing:
+    // a theme and a state switch are all such a run needs, and W9 ④.5 migrates
+    // the flow without invalidating a run that never mounted.
+    #[test]
+    fn a_run_that_mounts_nothing_may_still_load_the_trio() {
+        let doc = green_run()
+            .replace(
+                "src=\"../../doc-assets/components/specimens.bundle.js\"></script>",
+                "src=\"../../doc-assets/components/tw-config.js\"></script>\
+                 <script src=\"../../doc-assets/components/specimen.js\" defer></script>",
+            )
+            .replace("<td>reuse</td>", "<td>propose</td>");
+        assert!(!doc_verdict(&doc).red(), "{:?}", failures(&doc_verdict(&doc)));
+    }
+
+    // Both at once is the migration's own trap: the bundle imports specimen.js
+    // for its side effects, so a second copy binds every toggle twice and the
+    // state switch stops switching while every predicate stays green.
+    #[test]
+    fn loading_the_bundle_beside_what_it_folds_in_is_red() {
+        let doc = green_run().replace(
+            "src=\"../../doc-assets/components/specimens.bundle.js\"></script>",
+            "src=\"../../doc-assets/components/specimens.bundle.js\"></script>\
+             <script src=\"../../doc-assets/components/specimen.js\" defer></script>",
+        );
+        assert!(what(&doc_verdict(&doc), "assets·specimen").contains("twice"));
+    }
+
+    // What run #4 shipped: seven components the registry already builds, drawn
+    // by hand in correct utilities, past a green gate. The verdict word in the
+    // catalog is what owes the mount.
+    #[test]
+    fn a_mockup_that_draws_a_reuse_instead_of_mounting_it_is_red() {
+        let drawn = green_run().replace(
+            RUN_MOUNT,
+            "<section class=\"border-b border-hairline px-4 py-3\">headers</section>",
+        );
+        let red = what(&doc_verdict(&drawn), "mockup·hand-drawn");
+        assert!(red.contains("Section"), "{red}");
+
+        let mounted_without_the_bundle = green_run()
+            .replace("src=\"../../doc-assets/components/specimens.bundle.js\"", "src=\"mine.js\"");
+        assert!(
+            what(&doc_verdict(&mounted_without_the_bundle), "assets·specimen").contains("composes"),
+            "a mount with nothing to mount FROM renders an empty div beside correct prose"
+        );
+    }
+
+    // A mount is a component element, not a marking: run #4's drawn imitation
+    // carried every key and class the map demanded. `<section` is the browser's
+    // tag, `<Section` is the collection's - one character, and only one of them
+    // can be hand-drawn.
+    #[test]
+    fn the_mount_is_read_as_a_component_element_not_as_a_marking() {
+        let keyed_imitation = green_run().replace(
+            RUN_MOUNT,
+            "<div data-key=\"section\" class=\"border-b border-hairline px-4 py-3\">headers</div>",
+        );
+        assert!(what(&doc_verdict(&keyed_imitation), "mockup·hand-drawn").contains("Section"));
+
+        for near_miss in ["<Sections title=\"headers\">", "<SectionBand>"] {
+            let doc = green_run().replace("<Section title=\"headers\">", near_miss);
+            assert!(
+                doc_verdict(&doc).red(),
+                "{near_miss} is a different component - a prefix match would pass it"
+            );
+        }
+    }
+
+    // Only the verdicts that claim an existing component owe one. A propose has
+    // nothing to mount yet, and `n/a` was considered and rejected - neither is
+    // in the mockup at all.
+    #[test]
+    fn only_reuse_and_extend_owe_a_mount() {
+        for verdict in ["propose", "build local", "n/a", "dissolved"] {
+            let doc =
+                green_run().replace("<td>reuse</td>", &format!("<td>{verdict}</td>")).replace(
+                    RUN_MOUNT,
+                    "<div class=\"border-b border-hairline px-4 py-3\">headers</div>",
+                );
+            assert!(
+                !failures(&doc_verdict(&doc)).contains(&"mockup·hand-drawn".to_string()),
+                "{verdict} owes no mount"
+            );
+        }
+        let extended = green_run()
+            .replace("<td>reuse</td>", "<td>extend</td>")
+            .replace(RUN_MOUNT, "<div class=\"border-b border-hairline px-4 py-3\">headers</div>");
+        assert!(
+            what(&doc_verdict(&extended), "mockup·hand-drawn").contains("Section"),
+            "an extend mounts its base - the delta is the only part it draws"
         );
     }
 
@@ -3762,10 +3947,7 @@ chroma_floor: 40
     // and for nothing beyond that.
     #[test]
     fn a_run_that_has_not_reached_its_mockup_is_not_asked_to_mark_payloads() {
-        let mid_flow = green_run().replace(
-            "<div data-item=\"mockup\" data-wire=\"none\"><button data-state-toggle=\"mock\">flip</button></div>",
-            "",
-        );
+        let mid_flow = green_run().replace(RUN_MOCKUP, "");
         let checks = reds(&mid_flow);
         assert!(checks.contains(&"item·mockup".to_string()), "{checks:?}");
         assert!(!checks.contains(&"mono-for-wire-data·undeclared".to_string()), "{checks:?}");
