@@ -1,0 +1,15 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W10
+tests:
+  e2e:
+    count: 4
+    what: "xtask/tests/e2e_design_flow.rs (--features design-e2e), the flow's own e2e: a fake designing agent emits one artifact at a time and a fake human answers each, over a real git tree. Asserts the run is red for exactly the stages not yet written · the rulebook moving under an open run re-opens both halves of the close's step 1 · a rule-violating mockup reds at the stage that wrote it and the chain keeps it out of the tree · an unbuilt design refuses the epic merge until the drop is recorded · a build that adds a surface cites the design it read. W10 fixed two of these: the W9 mounting-predicate regression (fixture never mounted Section, silently broken since W9) and the htmldoc-layer skeleton."
+  integration:
+    count: 64
+    what: "xtask/tests/verify_doc.rs (9) — verify-doc over real files: conforming docs of all four types exit zero, a design run receipted against the rulebook on disk, multi-path output reports only red docs. xtask/tests/doc_hooks.rs (8) — the PostToolUse and Stop hooks: a green ready doc is silent, a red one refuses the turn, drafts and ungoverned paths stay quiet. xtask/tests/dod_gate.rs + mr.rs (40) + gate0_cache.rs (5) + ui.rs (2) — the merge gate's seams, manual-review identity and signature verification, Gate-0 caching."
+  unit:
+    count: 210
+    what: "xtask::doc — every Tier-1 predicate over the design-run contract: the 13 hard rules, receipt coverage against the live rulebook, the mounting predicates (mockup·hand-drawn, assets·specimen), frame density, gist/collapse, tune·drawn, review·recorded, keyboard-parity, elements·map. W10 added a_doc_without_the_htmldoc_layer_is_red_even_when_archived and, after the Tier-3 round, the_layer_counts_only_on_the_root_and_from_its_own_origin - the id on a stray div and a non-canonical bootstrap each red the one predicate that must fire, and both fail when the fix is reverted — both htmldoc predicates red in isolation, a layered archive still exempt, and the archived path proven because it returns ahead of every other check."
+note: "Branch carries E-DFLOW.W8, W9 and W10 (epic/design-flow is still at W7), so this manifest covers all three. W8 landed the design→build handoff (DEC-25) with its own gate predicates and e2e legs; W9 landed the greenfield run and the mounting predicates; W10 compacted the flow spec and rulebook, then added the htmldoc-layer predicates after a real defect shipped twice. Every suite green: 210 unit + 64 integration + 4 e2e."
