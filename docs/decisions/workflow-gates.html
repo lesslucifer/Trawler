@@ -323,6 +323,47 @@
     independent restructurings (pack, shard, stream) all lost their A/Bs against that floor, so do
     not retry them without changing the floor itself (a faster <em>trustworthy</em> verifier, or
     W4's safe-delta scoping).</p>
+
+<h2 id="dec-27"><span class="badge id">DEC-27</span> The human signature goes last — <code>mr confirm</code> refuses a tip whose tree can still move</h2>
+    <table data-c="dec-27-facts">
+      <tbody>
+        <tr><th>Status</th><td><span class="badge auto">accepted</span> · 2026-09-02</td></tr>
+        <tr><th>Origin</th><td>E-DFLOW.W11 — committed the defect against itself: the sign-off was taken before the review ran, and the review then found the attested report's cost section stated a backwards conclusion. Found by the WU's own <code>cr/v3</code>, fixed in it rather than filed</td></tr>
+        <tr><th>Where</th><td><code>xtask/src/mr.rs · unready_reasons · tip_unready</code> · <a href="../workflow.html#sign-last">workflow.html §sign-last</a></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-27-context">Context</h3>
+    <p>Every binding on a tip pins the diff it was made against — <code>cr/v3</code> its
+    <code>diff_sha256</code>, <code>mr/v1</code> the result report's bytes (DEC-10). So any tree change
+    after a binding orphans it, and a signature taken early is spent twice. The gate already refuses a
+    stale review at merge time (checks 3–5), so nothing false can <em>land</em>; what was unguarded is the
+    human's time and the meaning of their attestation. <code>mr confirm</code> would sign a tip with no
+    review at all, or one whose review said FAIL.</p>
+    <p>A circularity makes the order strict rather than merely preferable: a <code>test/v2</code> receipt
+    that honestly reports a missing test can only be acted on by <em>adding</em> the test — a tree change,
+    which invalidates a signature already given. Receipts therefore precede the signature; they cannot
+    follow it.</p>
+
+    <h3 id="dec-27-choices">Choices</h3>
+    <table data-c="dec-27-choices-table">
+      <thead><tr><th>Choice</th><th>Why — do not "simplify" it away</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Adopted:</strong> <code>mr confirm</code> refuses unless <code>test/v2</code>, <code>doc/v1</code> and a diff-bound <code>cr/v3</code> PASS are already on the tip, refusing <em>before</em> the signing prompt</td><td>Writing a receipt is the act that carries settling the thing it attests, so a missing receipt means the tree may still move. Refusing before the prompt is the point: a passphrase or Touch ID spent on a doomed tip is the cost being prevented</td></tr>
+        <tr><td><strong>Rejected:</strong> fold the <code>cr</code> hash into the signed payload</td><td>Would make the signature attest the verdict too — strictly stronger, and it breaks every existing <code>mr/v1</code> note, needing an <code>mr/v2</code> migration. The precondition buys the ordering with no compatibility break; revisit only if a signature over an unreviewed diff is ever observed</td></tr>
+        <tr><td><strong>Rejected:</strong> verify the <code>test/v2</code> claim against the diff</td><td>The receipt is written by the agent that adds the test; the two travel together. A gate reading the diff for test files would fire on honest multi-commit WUs and does not address the ordering defect this record is about</td></tr>
+        <tr><td><strong>Rejected:</strong> warn instead of refuse</td><td>Would not have stopped the founding instance — the warning would have been read and passed</td></tr>
+        <tr><td><strong>Rejected:</strong> a new numbered gate check</td><td>The merge gate already re-verifies the review (checks 3–5). A second check there would duplicate it; the gap was at the point of signing, so the guard belongs there</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dec-27-consequences">Consequences</h3>
+    <p>The order is now <strong>tree-changing work → <code>test/v2</code> + <code>doc/v1</code> →
+    <code>cr/v3</code> PASS → <code>mr confirm</code> → merge</strong>, and it is machine-refused rather
+    than remembered. One hole stays open by design: when no merge target resolves, the diff-binding half is
+    skipped rather than guessed — check 5 still refuses a stale review at the merge, so the failure mode is
+    a wasted signature, never a bad landing. Existing <code>mr/v1</code> notes verify unchanged; the signed
+    payload is untouched.</p>
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>

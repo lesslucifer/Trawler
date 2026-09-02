@@ -141,6 +141,61 @@ fn signed_note_body(
     )
 }
 
+pub const SIGN_LAST: &str = "\
+A signature binds the tree. Every later tree change - a fix, a missed test, a doc
+             edit - orphans it and costs another review and another signature, so the
+             tree settles BEFORE a human is asked to sign:
+               1. test/v2 + doc/v1 notes on the tip   (writing the receipt is what
+                  carries adding the test and settling the docs)
+               2. the code-review skill -> cr/v3 PASS bound to this exact diff
+               3. THEN cargo xtask mr confirm";
+
+/// Why a tip is not ready to be signed, given what its notes say. Pure so the
+/// rule is testable without a repo: `review` is the tip's `cr/v3` as
+/// `(verdict, reviewed_diff)`, and `diff_hash` the diff about to be attested
+/// (`None` when no merge target is resolvable, which drops only the binding
+/// check — the gate re-checks it at merge time either way).
+fn unready_reasons(
+    has_test: bool,
+    has_doc: bool,
+    review: Option<(&str, &str)>,
+    diff_hash: Option<&str>,
+) -> Vec<String> {
+    let mut missing = Vec::new();
+    if !has_test {
+        missing.push("no test/v2 note - the tests it attests may still be unwritten".to_string());
+    }
+    if !has_doc {
+        missing
+            .push("no doc/v1 note - the docs it accounts for may still be unwritten".to_string());
+    }
+    match review {
+        None => missing.push("no cr/v3 note - nobody has reviewed this tip".to_string()),
+        Some((verdict, _)) if verdict != "PASS" => {
+            missing.push(format!("the cr/v3 verdict is {verdict} - fix and re-review"));
+        }
+        Some((_, reviewed)) => {
+            if diff_hash.is_some_and(|h| h != reviewed) {
+                missing.push(
+                    "the cr/v3 note reviewed a different diff - re-review this tip".to_string(),
+                );
+            }
+        }
+    }
+    missing
+}
+
+/// [`unready_reasons`] against a real tip's notes.
+fn tip_unready(repo: &Path, tip: &str, diff_hash: Option<&str>) -> Vec<String> {
+    let cr = crate::git::parsed_note::<crate::notes::CrNote>(repo, "cr", tip);
+    unready_reasons(
+        note(repo, "test", tip).is_some(),
+        note(repo, "doc", tip).is_some(),
+        cr.as_ref().map(|c| (c.verdict.as_str(), c.diff_sha256.as_str())),
+        diff_hash,
+    )
+}
+
 /// The result report this confirm attests (sign-what-you-read): `--report`,
 /// else the single `*-result.html` candidate — tracked `docs/work/` at the tip
 /// for a WU; the local `docs/.archive/` for an epic, where DEC-3 has already
@@ -367,18 +422,37 @@ fn mr_confirm(
         return Ok((1, format!("{identity} is not listed in .mr-allowed\n{NOT_AUTHORISED}")));
     };
     let tip = git(repo, &["rev-parse", tip_ref])?;
+    let target = resolve_target(repo, level == "epic", tip_ref, target);
+    // Resolved once and carried to the signature below: the readiness check and
+    // the signed payload must speak about the same range, and each half is a
+    // full `git diff` over it.
+    let reviewed = match target.as_deref() {
+        Some(t) => {
+            let base = git(repo, &["merge-base", t, &tip])?;
+            let hash = diff_sha256(repo, &base, &tip)?;
+            Some((base, hash))
+        }
+        None => None,
+    };
+    let unready = tip_unready(repo, &tip, reviewed.as_ref().map(|(_, h)| h.as_str()));
+    if !unready.is_empty() {
+        let why = unready.iter().map(|r| format!("  - {r}")).collect::<Vec<_>>().join("\n");
+        return Ok((1, format!("{} is not ready to sign:\n{why}\n{SIGN_LAST}", short(&tip))));
+    }
     let report = resolve_report(repo, &level_word, &tip, report_flag, input)?;
     let rsha = report_sha(repo, &tip, &report)?;
     if !has_key_entry(&allowed, identity) {
         write_note(repo, "mr", &tip, &note_body(level, &tip, &tier, identity, &report, &rsha))?;
         return Ok((0, format!("mr/v1 note written on {} ({tier} {identity})", short(&tip))));
     }
-    let target = match resolve_target(repo, level == "epic", tip_ref, target) {
-        Some(t) => t,
-        None => wizard::ask(input, "merge target branch (e.g. epic/<slug> or main)")?,
+    let (target, base, hash) = if let (Some(t), Some((base, hash))) = (target, reviewed) {
+        (t, base, hash)
+    } else {
+        let t = wizard::ask(input, "merge target branch (e.g. epic/<slug> or main)")?;
+        let base = git(repo, &["merge-base", &t, &tip])?;
+        let hash = diff_sha256(repo, &base, &tip)?;
+        (t, base, hash)
     };
-    let base = git(repo, &["merge-base", &target, &tip])?;
-    let hash = diff_sha256(repo, &base, &tip)?;
     let key = signing_key(repo)?;
     let named_tip = if tip_ref == "HEAD" { branch } else { tip_ref.to_string() };
     let reason = confirm_reason(&named_tip, &target, &tip, identity);
@@ -1142,6 +1216,43 @@ mod tests {
         let after_key = append_key_line("username: vu\n", &key_line("vu", "ssh-ed25519 AAAA"));
         let after_email = append_key_line(&after_key, "email: vu@x.co");
         assert_eq!(after_email, "username: vu\nkey: vu ssh-ed25519 AAAA\nemail: vu@x.co\n");
+    }
+
+    #[test]
+    fn a_settled_reviewed_tip_is_ready_to_sign() {
+        let r = super::unready_reasons(true, true, Some(("PASS", "abc")), Some("abc"));
+        assert!(r.is_empty(), "{r:?}");
+    }
+
+    #[test]
+    fn every_unwritten_receipt_is_named_at_once() {
+        let r = super::unready_reasons(false, false, None, Some("abc"));
+        assert_eq!(r.len(), 3, "{r:?}");
+        assert!(r[0].contains("test/v2"), "{r:?}");
+        assert!(r[1].contains("doc/v1"), "{r:?}");
+        assert!(r[2].contains("cr/v3"), "{r:?}");
+    }
+
+    #[test]
+    fn a_failing_or_unbound_review_blocks_the_signature() {
+        let failed = super::unready_reasons(true, true, Some(("FAIL", "abc")), Some("abc"));
+        assert_eq!(failed.len(), 1);
+        assert!(failed[0].contains("verdict is FAIL"), "{failed:?}");
+
+        let stale = super::unready_reasons(true, true, Some(("PASS", "old")), Some("new"));
+        assert_eq!(stale.len(), 1);
+        assert!(stale[0].contains("different diff"), "{stale:?}");
+    }
+
+    // The binding check needs a diff to compare against; with no resolvable
+    // merge target it is skipped rather than guessed - the merge gate's
+    // 5·diff-binding still refuses a stale review later.
+    #[test]
+    fn an_unresolvable_target_drops_only_the_binding_check() {
+        let r = super::unready_reasons(true, true, Some(("PASS", "abc")), None);
+        assert!(r.is_empty(), "{r:?}");
+        let still_fails = super::unready_reasons(true, true, Some(("FAIL", "abc")), None);
+        assert_eq!(still_fails.len(), 1, "{still_fails:?}");
     }
 
     #[test]

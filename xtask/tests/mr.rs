@@ -79,10 +79,39 @@ fn result_report(repo: &Repo) -> &'static str {
     "docs/work/w-result.html"
 }
 
+/// The tree-settled notes a confirm now demands: `test/v2` + `doc/v1` (the tree
+/// has stopped moving) and a `cr/v3` PASS bound to this tip's diff.
+fn settle(repo: &Repo, tip: &str) {
+    settle_against(repo, tip, "main");
+}
+
+/// As [`settle`], for a tip whose confirm names an explicit `--target`.
+fn settle_against(repo: &Repo, tip: &str, target: &str) {
+    repo.git(&["notes", "--ref=test", "add", "-f", "-m", "schema: test/v2", tip]);
+    repo.git(&["notes", "--ref=doc", "add", "-f", "-m", "schema: doc/v1", tip]);
+    cr_note(repo, tip, "PASS", &diff_hash(repo, tip, target));
+}
+
+/// The `base..tip` diff hash a `cr/v3` note must carry to count as bound.
+fn diff_hash(repo: &Repo, tip: &str, target: &str) -> String {
+    let sha = repo.git(&["rev-parse", tip]);
+    let base = repo.git(&["merge-base", target, &sha]);
+    xtask::git::diff_sha256(repo.p(), &base, &sha).unwrap()
+}
+
+fn cr_note(repo: &Repo, tip: &str, verdict: &str, diff: &str) {
+    let sha = repo.git(&["rev-parse", tip]);
+    let body = format!(
+        "schema: cr/v3\nbase: {sha}\ndiff_sha256: {diff}\nverdict: {verdict}\ndimensions: []\n"
+    );
+    repo.git(&["notes", "--ref=cr", "add", "-f", "-m", &body, tip]);
+}
+
 #[test]
 fn confirm_writes_a_well_formed_note_attesting_the_report() {
     let repo = Repo::new(ALLOWED);
     let report = result_report(&repo);
+    settle(&repo, "HEAD");
     let (code, _) =
         mr::run(&["confirm", "epic", "HEAD", "--as", "a@b.co", "--report", report], repo.p())
             .unwrap();
@@ -102,12 +131,76 @@ fn confirm_writes_a_well_formed_note_attesting_the_report() {
 fn confirm_maps_wu_level_and_records_the_username_tier() {
     let repo = Repo::new(ALLOWED);
     let report = result_report(&repo);
+    settle(&repo, "HEAD");
     let (code, _) =
         mr::run(&["confirm", "wu", "HEAD", "--as", "vu", "--report", report], repo.p()).unwrap();
     assert_eq!(code, 0);
     let body = repo.git(&["notes", "--ref=mr", "show", "HEAD"]);
     assert!(body.contains("level: working-unit"), "{body}");
     assert!(body.contains("tier: username"), "{body}");
+}
+
+// E-DFLOW.W11 — a signature binds the tree, so the tree settles first. Each of
+// these refusals happens BEFORE the signing prompt: a human is never asked to
+// sign a tip that a later fix would orphan.
+#[test]
+fn confirm_is_refused_while_the_tip_carries_no_notes_at_all() {
+    let repo = Repo::new(ALLOWED);
+    let report = result_report(&repo);
+    let (code, out) =
+        mr::run(&["confirm", "wu", "HEAD", "--as", "vu", "--report", report], repo.p()).unwrap();
+    assert_eq!(code, 1);
+    assert!(out.contains("no test/v2 note"), "{out}");
+    assert!(out.contains("no doc/v1 note"), "{out}");
+    assert!(out.contains("no cr/v3 note"), "{out}");
+    assert!(out.contains("tree settles BEFORE"), "{out}");
+    assert!(!mr::tip_authorised(repo.p(), "HEAD"), "nothing may be written");
+}
+
+#[test]
+fn confirm_is_refused_when_the_review_has_not_run_yet() {
+    let repo = Repo::new(ALLOWED);
+    let report = result_report(&repo);
+    repo.git(&["notes", "--ref=test", "add", "-f", "-m", "schema: test/v2", "HEAD"]);
+    repo.git(&["notes", "--ref=doc", "add", "-f", "-m", "schema: doc/v1", "HEAD"]);
+    let (code, out) =
+        mr::run(&["confirm", "wu", "HEAD", "--as", "vu", "--report", report], repo.p()).unwrap();
+    assert_eq!(code, 1);
+    assert!(out.contains("no cr/v3 note"), "{out}");
+    assert!(!out.contains("no test/v2"), "the settled notes must not be reported: {out}");
+    assert!(!mr::tip_authorised(repo.p(), "HEAD"));
+}
+
+#[test]
+fn confirm_is_refused_while_the_review_verdict_is_fail() {
+    let repo = Repo::new(ALLOWED);
+    let report = result_report(&repo);
+    settle(&repo, "HEAD");
+    cr_note(&repo, "HEAD", "FAIL", &diff_hash(&repo, "HEAD", "main"));
+    let (code, out) =
+        mr::run(&["confirm", "wu", "HEAD", "--as", "vu", "--report", report], repo.p()).unwrap();
+    assert_eq!(code, 1);
+    assert!(out.contains("verdict is FAIL"), "{out}");
+    assert!(!mr::tip_authorised(repo.p(), "HEAD"));
+}
+
+#[test]
+fn confirm_is_refused_when_the_review_judged_a_different_diff() {
+    let repo = Repo::new(ALLOWED);
+    repo.git(&["checkout", "-q", "-b", "wu/e/w"]);
+    let report = result_report(&repo);
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "the work"]);
+    settle(&repo, "HEAD");
+    cr_note(&repo, "HEAD", "PASS", &"0".repeat(64));
+    let (code, out) = mr::run(
+        &["confirm", "wu", "HEAD", "--as", "vu", "--report", report, "--target", "main"],
+        repo.p(),
+    )
+    .unwrap();
+    assert_eq!(code, 1, "{out}");
+    assert!(out.contains("reviewed a different diff"), "{out}");
+    assert!(!mr::tip_authorised(repo.p(), "HEAD"));
 }
 
 #[test]
@@ -447,6 +540,7 @@ fn confirm_signs_a_note_that_the_w1_predicate_accepts() {
     let tip = repo.git(&["rev-parse", "HEAD"]);
 
     let report = result_report(&repo);
+    settle_against(&repo, &tip, &base);
     let (code, out) = mr::run(
         &["confirm", "wu", &tip, "--as", "vu", "--target", &base, "--report", report],
         repo.p(),
@@ -471,6 +565,7 @@ fn confirm_signature_breaks_when_the_tip_is_amended() {
     repo.git(&["commit", "-q", "-m", "the change"]);
     let tip = repo.git(&["rev-parse", "HEAD"]);
     let report = result_report(&repo);
+    settle_against(&repo, &tip, &base);
     mr::run(
         &["confirm", "epic", &tip, "--as", "vu", "--target", &base, "--report", report],
         repo.p(),
@@ -491,6 +586,7 @@ fn confirm_signature_breaks_when_the_tip_is_amended() {
 fn confirm_falls_back_to_a_plain_note_for_an_identity_only_signer() {
     let repo = Repo::new("email: a@b.co\nusername: vu\n");
     let report = result_report(&repo);
+    settle(&repo, "HEAD");
     // No key entry and no --target: the plain-note path (E-NMWF coexistence).
     let (code, _) =
         mr::run(&["confirm", "epic", "HEAD", "--as", "vu", "--report", report], repo.p()).unwrap();
@@ -559,6 +655,7 @@ fn confirm_signs_when_user_signingkey_is_a_public_key_path() {
     let tip = repo.git(&["rev-parse", "HEAD"]);
 
     let report = result_report(&repo);
+    settle_against(&repo, &tip, &base);
     let (code, out) = mr::run(
         &["confirm", "wu", &tip, "--as", "vuluu", "--target", &base, "--report", report],
         repo.p(),
@@ -647,6 +744,7 @@ fn confirm_signs_through_the_configured_signer_program() {
     let tip = repo.git(&["rev-parse", "HEAD"]);
 
     let report = result_report(&repo);
+    settle_against(&repo, &tip, &base);
     let (code, out) = mr::run(
         &["confirm", "wu", &tip, "--as", "vu", "--target", &base, "--report", report],
         repo.p(),
@@ -761,6 +859,7 @@ fn confirm_wizard_infers_level_tip_target_and_report_from_the_branch() {
     repo.write("docs/work/y-result.html", "<html>wu result</html>\n");
     repo.git(&["add", "-A"]);
     repo.git(&["commit", "-q", "-m", "the change + its result report"]);
+    settle_against(&repo, "HEAD", "epic/x");
 
     // No level, no tip, no --target, no --report: wu from the branch name, HEAD,
     // epic/x, and the single tracked docs/work/*-result.html.
@@ -778,6 +877,7 @@ fn confirm_wizard_infers_level_tip_target_and_report_from_the_branch() {
 fn confirm_wizard_asks_for_the_level_and_the_report_when_neither_infers() {
     let repo = Repo::new("username: vu\n");
     repo.write("docs/work/z-result.html", "<html>result</html>\n");
+    settle(&repo, "HEAD");
     // Identity-only signer on `main`: level and report come from piped answers.
     let (code, out) = mr::run_with_input(
         &["confirm", "--as", "vu"],
@@ -863,6 +963,7 @@ fn e2e_signed_manual_review_flow_with_a_software_key() {
     repo.git(&["add", "-A"]);
     repo.git(&["commit", "-q", "-m", "the change + result report"]);
     let tip = repo.git(&["rev-parse", "HEAD"]);
+    settle_against(&repo, &tip, &base);
     let (code, out) = mr::run(
         &[
             "confirm",
