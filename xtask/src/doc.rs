@@ -2891,6 +2891,12 @@ chroma_floor: 40
         found.into_iter().map(|f| f.check).collect()
     }
 
+    // The two calibration runs are COPIES kept under xtask/fixtures/, not the
+    // live docs. A design run is a T3 work doc: it is archived out of git when
+    // its epic closes, and a test that reads one stops compiling the day that
+    // happens. What these tests need is a frozen specimen of an accepted run,
+    // which is exactly what a fixture is.
+    //
     // Calibration: the reasoning columns of the accepted run #2 Frame must pass
     // untouched, or the thresholds measure the checker's taste, not the flow's
     // rule. Run #2 predates the ✓/✗ column (added at run #3), so it is expected
@@ -2899,7 +2905,7 @@ chroma_floor: 40
     #[test]
     fn the_accepted_run_2_frame_passes_every_density_limit() {
         let reported =
-            density_of(frame_of(include_str!("../../docs/work/2026-07-25-dflow-w4-run-2.html")));
+            density_of(frame_of(include_str!("../fixtures/run-2-frame-calibration.html")));
         assert_eq!(reported, vec!["frame·example".to_string()], "{reported:?}");
     }
 
@@ -3158,7 +3164,7 @@ chroma_floor: 40
 
     #[test]
     fn the_run_3_elements_map_is_a_live_two_half_map() {
-        let doc = reopened(include_str!("../../docs/work/2026-07-26-dflow-w4-run-3.html"));
+        let doc = reopened(include_str!("../fixtures/run-3-form-calibration.html"));
         assert!(!failures(&doc_verdict(&doc)).contains(&"elements·map".to_string()));
     }
 
@@ -3305,7 +3311,7 @@ chroma_floor: 40
 
     #[test]
     fn the_run_3_form_rules_hold_on_the_real_doc() {
-        let doc = reopened(include_str!("../../docs/work/2026-07-26-dflow-w4-run-3.html"));
+        let doc = reopened(include_str!("../fixtures/run-3-form-calibration.html"));
         let reds = failures(&doc_verdict(&doc));
         for check in [
             "elements·gist",
@@ -3619,11 +3625,17 @@ chroma_floor: 40
         assert!(!super::pin_matches("28f5437", blob), "another blob is another judgment");
     }
 
-    // Every design run in the tree, found rather than listed: the hand-typed trio
-    // this replaces had to be extended by whoever added a run, which is the same
-    // "somebody remembers" that left run #3 open. What it asserts is that the
-    // archived flag is load-bearing on each file it finds - lifted, the run is
-    // governed again - so an archived run can never pass a check vacuously.
+    // What this asserts is that the archived flag is load-bearing on each run it
+    // finds - lifted, the run is governed again - so an archived run can never
+    // pass a check vacuously.
+    //
+    // It scans docs/work/ AND xtask/fixtures/, and requires runs from the second
+    // rather than the first. docs/work/ is empty at an epic tip by rule
+    // (check_tracked_docs), so a test that demanded runs there asserted the
+    // opposite of what the epic gate enforces and could only pass mid-epic - it
+    // did, until E-DFLOW.W12 archived the epic's scratch and left it with nothing
+    // to find. The fixtures are the frozen specimens; docs/work/ is still scanned
+    // so a run being designed right now is held to the same property.
     //
     // It does NOT assert every run is archived: a run mid-design is open, and red,
     // for as long as it is being designed. Closing is enforced where the tree is
@@ -3631,7 +3643,11 @@ chroma_floor: 40
     #[test]
     fn every_archived_run_is_exempt_by_a_flag_that_is_doing_work() {
         let runs: Vec<(String, String)> = design_runs_in_the_tree();
-        assert!(runs.len() >= 3, "the discovery found no runs: {}", runs.len());
+        let archived = runs
+            .iter()
+            .filter(|(_, h)| super::design_run_status(h).as_deref() == Some("archived"))
+            .count();
+        assert!(archived >= 2, "the discovery found no archived runs: {archived}");
         for (path, html) in runs {
             let Some(status) = super::design_run_status(&html) else {
                 panic!("{path} is not a run")
@@ -3653,9 +3669,11 @@ chroma_floor: 40
     }
 
     fn design_runs_in_the_tree() -> Vec<(String, String)> {
-        let work = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/work");
-        let mut found: Vec<(String, String)> = std::fs::read_dir(work)
-            .expect("docs/work is where runs live")
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        let mut found: Vec<(String, String)> = ["fixtures", "../docs/work"]
+            .iter()
+            .filter_map(|dir| std::fs::read_dir(root.join(dir)).ok())
+            .flatten()
             .filter_map(|entry| {
                 let path = entry.ok()?.path();
                 let html = std::fs::read_to_string(&path).ok()?;
