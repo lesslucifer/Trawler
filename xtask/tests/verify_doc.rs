@@ -9,7 +9,10 @@ fn doc(artifact: &str, status: &str, body: &str) -> String {
     let status_attr =
         if status.is_empty() { String::new() } else { format!(" data-status=\"{status}\"") };
     format!(
-        "<!DOCTYPE html><html lang=\"en\"><body><main data-artifact=\"{artifact}\"{status_attr}>{body}</main></body></html>"
+        "<!DOCTYPE html><html lang=\"en\" data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>\
+         <main data-artifact=\"{artifact}\"{status_attr}>{body}</main>\
+         <script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+         </body></html>"
     )
 }
 
@@ -178,10 +181,13 @@ fn a_design_run_is_receipted_against_the_rulebook_on_disk() {
     };
     let run = |rows: &str| {
         format!(
-            "<html><body><script src=\"https://cdn.tailwindcss.com\"></script>\
+            "<html data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>\
+             <script src=\"https://cdn.tailwindcss.com\"></script>\
              <script src=\"../../doc-assets/components/specimens.bundle.js\"></script>\
              <style>.m{{color:var(--ink);}}</style>\
-             {}</body></html>",
+             {}\
+             <script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+             </body></html>",
             doc_main(&format!(
                 "<p data-item=\"frame\">d</p><p data-item=\"layout\">z</p>\
                  <div data-item=\"elements\" data-map>\

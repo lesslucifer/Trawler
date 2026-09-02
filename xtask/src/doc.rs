@@ -69,6 +69,7 @@ const HARD_PREDICATES: &[&str] = &[
 const RULEBOOK: &str = "docs/design-rules/design-rules-index.html";
 const VOCABULARY: &str = "scripts/design-vocabulary.mjs";
 const REGISTRY: &str = "scripts/design-registry.mjs";
+const HTMLDOC_BOOTSTRAP: &str = "htmldoc.js";
 pub const COMPONENTS: &str = "docs/work/components/";
 pub const COLLECTION: &str = "ui/src/components/";
 pub const SCREENS: &str = "ui/src/";
@@ -408,11 +409,22 @@ pub fn verify_html_against(
     let Some(artifact) = attrs(html, "data-artifact").into_iter().next() else {
         return Verdict::Ungoverned;
     };
+    // Before the exempt gate: a draft and an archived run both still have to
+    // render, and this is the one property whose absence no later check can see.
+    let mut layer = Vec::new();
+    check_htmldoc_layer(&mut layer, html);
     if let Some(status) = exempt_declared(html, &artifact) {
-        return Verdict::Exempt(status);
+        if layer.is_empty() {
+            return Verdict::Exempt(status);
+        }
+        return Verdict::Checked {
+            artifacts: vec![artifact.value],
+            failures: layer,
+            summary: None,
+        };
     }
 
-    let mut failures = Vec::new();
+    let mut failures = layer;
     check_escaped_markup(&mut failures, html);
     let mut artifacts: Vec<String> = Vec::new();
     let mut required: Vec<&str> = Vec::new();
@@ -833,6 +845,7 @@ pub fn verify_component(
     vocabulary: Option<&Vocabulary>,
 ) -> Verdict {
     let mut failures = Vec::new();
+    check_htmldoc_layer(&mut failures, html);
     check_escaped_markup(&mut failures, html);
     match roster {
         Some(roster) => check_retirement(&mut failures, name, roster),
@@ -2420,6 +2433,29 @@ fn attrs(html: &str, name: &str) -> Vec<Attr> {
 // prose opens a tag that swallows the sentence after it, classes and all. So
 // rather than guess, the case that cannot be parsed is named. Zero sites in the
 // corpus when it landed; it costs nothing to keep shut.
+// The shared stylesheet, the comment layer and the diff layer all arrive through
+// one bootstrap keyed by an id on <html>. A doc missing either renders unstyled -
+// every var(--ink) it writes resolves to nothing - and no other predicate sees it,
+// because they all read structure the doc still has.
+fn check_htmldoc_layer(failures: &mut Vec<Failure>, html: &str) {
+    if attrs(html, "data-htmldoc-id").into_iter().next().is_none() {
+        failures.push(Failure {
+            check: "htmldoc\u{b7}id".to_string(),
+            what: "no data-htmldoc-id on <html>".to_string(),
+            fix: "mint one - `curl -sS -X POST $SERVER/api/docs -H 'Content-Type: application/json' -d '{\"title\":\"...\"}'` - and stamp it on the <html> tag; the comment and diff layers scope every call by it".to_string(),
+        });
+    }
+    let loads_bootstrap =
+        attrs(html, "src").into_iter().any(|a| a.value.ends_with(HTMLDOC_BOOTSTRAP));
+    if !loads_bootstrap {
+        failures.push(Failure {
+            check: "htmldoc\u{b7}bootstrap".to_string(),
+            what: format!("the doc does not load {HTMLDOC_BOOTSTRAP}"),
+            fix: "add `<script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>` before </body> - it injects doc.css, so without it every var(--...) the doc writes resolves to nothing and the page renders unstyled".to_string(),
+        });
+    }
+}
+
 fn check_escaped_markup(failures: &mut Vec<Failure>, html: &str) {
     for node in nodes(html).iter().filter(|n| n.shape != Shape::Other) {
         // between the `<` and the `>` that closed it - and for a tag that never
@@ -2587,7 +2623,22 @@ mod tests {
     fn doc(artifact: &str, status: &str, body: &str) -> String {
         let status_attr =
             if status.is_empty() { String::new() } else { format!(" data-status=\"{status}\"") };
-        format!("<html><body><main data-artifact=\"{artifact}\"{status_attr}>{body}</main></body></html>")
+        format!(
+            "<html data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>\
+             <main data-artifact=\"{artifact}\"{status_attr}>{body}</main>\
+             <script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+             </body></html>"
+        )
+    }
+
+    // Every real doc carries the htmldoc layer; a fixture that omits it is
+    // testing the layer check, not the predicate it means to exercise.
+    fn with_layer(body: &str) -> String {
+        format!(
+            "<html data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>{body}\
+             <script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+             </body></html>"
+        )
     }
 
     fn wu_result_body() -> &'static str {
@@ -2716,7 +2767,7 @@ chroma_floor: 40
              <table data-item=\"review\"><tr><td>copy icon only</td><td>elements · mockup</td>\
              <td><code>CopyButton</code> @avoid</td></tr></table></main>"
         );
-        format!("<html><body>{body}</body></html>")
+        with_layer(&body)
     }
 
     fn green_run() -> String {
@@ -3412,6 +3463,56 @@ chroma_floor: 40
         assert!(format_verdict("d.html", &v).contains("draft"));
     }
 
+    // The defect this predicate exists for shipped twice before it was written:
+    // a run doc whose every var(--...) resolved to nothing, and W10's own proof
+    // run, styled but with both interactive layers dead. No other check sees it -
+    // they read structure a layerless doc still has.
+    #[test]
+    fn a_doc_without_the_htmldoc_layer_is_red_even_when_archived() {
+        let body = "<p data-item=\"outcome\">delivered</p><p data-item=\"deviations\">none</p>\
+                    <p data-item=\"evidence\">tests</p><p data-item=\"distillation\">DEC-9</p>\
+                    <p data-item=\"follow-ups\">none</p>";
+        assert!(
+            failures(&verify_html(&doc("wu-result", "", body))).is_empty(),
+            "the layer is present"
+        );
+
+        let no_id =
+            doc("wu-result", "", body).replace(" data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"", "");
+        assert_eq!(
+            failures(&verify_html(&no_id)),
+            vec!["htmldoc·id"],
+            "the id is the comment layer's scope"
+        );
+
+        let no_boot = doc("wu-result", "", body).replace(
+            "<script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>",
+            "",
+        );
+        assert_eq!(
+            failures(&verify_html(&no_boot)),
+            vec!["htmldoc·bootstrap"],
+            "the bootstrap injects doc.css"
+        );
+
+        // The trap: `archived` returns before every other predicate, so a closed
+        // run could carry the defect forever. A record still has to render.
+        let archived = no_id.replace(
+            "data-artifact=\"wu-result\"",
+            "data-artifact=\"wu-result\" data-status=\"archived\"",
+        );
+        assert_eq!(
+            failures(&verify_html(&archived)),
+            vec!["htmldoc·id"],
+            "archived does not excuse it"
+        );
+        let closed = doc("wu-result", "archived", body);
+        assert!(
+            matches!(verify_html(&closed), Verdict::Exempt(s) if s == "archived"),
+            "a layered archive stays exempt"
+        );
+    }
+
     // Tightening a stage's form re-opens every run that closed before the rule
     // existed. An archived run is a record of what the flow was, not work anyone
     // will redo.
@@ -3677,12 +3778,15 @@ chroma_floor: 40
 
     #[test]
     fn nested_same_tag_elements_resolve_their_own_close() {
-        let html = "<html><body><main data-artifact=\"wu-result\">\
-             <div data-item=\"outcome\"><div>inner</div></div>\
+        let html = doc(
+            "wu-result",
+            "",
+            "<div data-item=\"outcome\"><div>inner</div></div>\
              <div data-item=\"deviations\"><div></div></div>\
              <p data-item=\"evidence\">e</p><p data-item=\"distillation\">d</p>\
-             <p data-item=\"follow-ups\">none</p></main></body></html>";
-        let v = verify_html(html);
+             <p data-item=\"follow-ups\">none</p>",
+        );
+        let v = verify_html(&html);
         assert_eq!(failures(&v), vec!["item·deviations"], "nested-but-empty div is empty");
     }
 
@@ -4275,7 +4379,7 @@ chroma_floor: 40
     // them against each other, is the drift this epic exists to kill (DEC-16).
     #[test]
     fn a_design_file_whose_component_has_code_must_be_retired() {
-        let v = verify_component("<html><body>x</body></html>", "Section", Some(&roster()), None);
+        let v = verify_component(&with_layer("x"), "Section", Some(&roster()), None);
         assert!(what(&v, "components·unretired").contains("still holds a copy"));
         assert!(what(&v, "components·unretired").contains("distil the forks"));
     }
@@ -4284,14 +4388,13 @@ chroma_floor: 40
     // unbuilt, and the four T3/T4 files are exactly that case.
     #[test]
     fn a_design_file_for_an_unbuilt_component_is_green() {
-        let v =
-            verify_component("<html><body>x</body></html>", "BodyViewer", Some(&roster()), None);
+        let v = verify_component(&with_layer("x"), "BodyViewer", Some(&roster()), None);
         assert!(failures(&v).is_empty(), "{:?}", failures(&v));
     }
 
     #[test]
     fn a_design_file_without_the_registry_emitter_is_red() {
-        let v = verify_component("<html><body>x</body></html>", "Section", None, None);
+        let v = verify_component(&with_layer("x"), "Section", None, None);
         assert!(what(&v, "components·registry-unreadable").contains("cannot be answered unread"));
     }
 
@@ -4300,13 +4403,12 @@ chroma_floor: 40
     // from the other side.
     #[test]
     fn a_design_file_may_not_re_draw_a_class_the_vocabulary_owns() {
-        let redrawn =
-            "<html><head><style>.row .text-ink{color:#111;}</style></head><body>x</body></html>";
-        let v = verify_component(redrawn, "BodyViewer", Some(&roster()), Some(&vocab()));
+        let redrawn = with_layer("<style>.row .text-ink{color:#111;}</style>x");
+        let v = verify_component(&redrawn, "BodyViewer", Some(&roster()), Some(&vocab()));
         assert!(what(&v, "components·redrawn").contains("re-draws `text-ink`"));
 
-        let own = "<html><head><style>.row-sim .cap{color:var(--muted);}</style></head><body>x</body></html>";
-        let v = verify_component(own, "BodyViewer", Some(&roster()), Some(&vocab()));
+        let own = with_layer("<style>.row-sim .cap{color:var(--muted);}</style>x");
+        let v = verify_component(&own, "BodyViewer", Some(&roster()), Some(&vocab()));
         assert!(
             failures(&v).is_empty(),
             "a doc's own chrome is not the vocabulary's: {:?}",

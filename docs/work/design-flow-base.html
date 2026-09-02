@@ -31,6 +31,11 @@
 
     <h2 id="commands">Run it — every command, in flow order</h2>
     <p>Each command below is named again at the stage that needs it; this table is the single place they are all together.</p>
+    <p><strong>Author the doc through the <code>htmldoc</code> skill, before stage 1.</strong> A run doc is a
+    doc: it carries a minted <code>data-htmldoc-id</code> and the <code>htmldoc.js</code> bootstrap, which is
+    what injects <code>doc.css</code>. Without them every <code>var(--&hellip;)</code> the run writes resolves to
+    nothing and the page renders unstyled - <code>htmldoc·id</code> and <code>htmldoc·bootstrap</code>
+    red it, archived runs included.</p>
     <table data-c="tbl-commands">
       <thead><tr><th>When</th><th>Run</th><th>What it gives you</th></tr></thead>
       <tbody>
@@ -97,7 +102,7 @@ re-pin · green · archive"]]
       <pre class="mermaid">
 flowchart TB
   W["write / edit a run doc"]
-  V1["verify-doc · this doc&lt;br/&gt;11 items present and non-empty&lt;br/&gt;receipt (YAML): every soft slug · verdict in enum · why&lt;br/&gt;the rulebook pin vs the rulebook on disk&lt;br/&gt;elements: data-map + data-key&lt;br/&gt;review: what moved · the contract it hit&lt;br/&gt;mockup: state toggle · zero colour literals&lt;br/&gt;mockup: every reuse/extend MOUNTED, never drawn&lt;br/&gt;assets: the CDN + specimens.bundle.js, and not its parts twice"]
+  V1["verify-doc · this doc&lt;br/&gt;11 items present and non-empty&lt;br/&gt;receipt (YAML): every soft slug · verdict in enum · why&lt;br/&gt;the rulebook pin vs the rulebook on disk&lt;br/&gt;elements: data-map + data-key&lt;br/&gt;review: what moved · the contract it hit&lt;br/&gt;mockup: state toggle · zero colour literals&lt;br/&gt;mockup: every reuse/extend MOUNTED, never drawn&lt;br/&gt;assets: the CDN + specimens.bundle.js, and not its parts twice&lt;br/&gt;htmldoc: data-htmldoc-id + the htmldoc.js bootstrap - checked even when archived"]
   E["end of turn"]
   V2["verify-doc · every governed doc under docs/&lt;br/&gt;same checks — backstop for shell and script edits"]
   C["commit"]
