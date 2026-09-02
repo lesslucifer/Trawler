@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trawler — Component design (base spec &amp; template)</title>
+  <title>Trawler — Component design</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module" src="../../doc-assets/components/tw-config.js"></script>
+  <script type="module" src="../doc-assets/components/tw-config.js"></script>
   <style>
     .tmpl{border:1px dashed var(--accent);border-radius:6px;padding:10px 12px;margin:8px 0;background:color-mix(in srgb, var(--accent) 6%, transparent);}
     .tmpl::before{content:"TEMPLATE — copy & fill";display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
@@ -19,9 +19,9 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>Component design — base spec &amp; template</h1>
-      <p>The file format an AI agent follows to design <strong>one component = one file</strong>, and the review loop that confirms it. Component-agnostic: the reusable method, not one design. Canonical exemplar: <a href="components/header-table.html">HeaderTable</a> — copy its structure, replace its content.</p>
-      <div class="meta">Base spec · 2026-07-22 · Trawler · T3 (docs/work/) → promotion decided at W4 distillation · from E-DFLOW.W2 · sibling: <a href="design-flow-base.html">design-flow-base</a> (screens)</div>
+      <h1>Component design</h1>
+      <p>The file format an AI agent follows to design <strong>one component = one file</strong>, and the review loop that confirms it. Component-agnostic: the reusable method, not one design. A design file is transient by contract: it holds a component's contract only until the component is built, then retires into its TSDoc (<a href="decisions/dec-16-design-file-retirement.html">DEC-16</a>).</p>
+      <div class="meta">Process spec · rev 2026-09-02 · Trawler · T1 (docs/) · sibling: <a href="design-flow.html">design flow</a> (screens)</div>
     </div>
   </header>
   <main>
@@ -73,7 +73,7 @@ flowchart LR
       <pre>docs/work/components/<span class="ph">&lt;kebab-name&gt;</span>.html   <span class="ph">← mint data-htmldoc-id · snapshot on create (htmldoc skill)</span>
 
 &lt;head&gt;    <span class="ph">&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;
-          &lt;script type="module" src="../../doc-assets/components/tw-config.js"&gt;&lt;/script&gt;   ← imports ui/tailwind.config.js
+          &lt;script type="module" src="../doc-assets/components/tw-config.js"&gt;&lt;/script&gt;   ← imports ui/tailwind.config.js
           &lt;style&gt; doc scaffolding only — never a component rule &lt;/style&gt;</span>
 
 hero      <span class="ph">&lt;Name&gt; &lt;tier badge&gt; · one-liner · status: <strong>draft — awaiting confirmation</strong> · link: registry seed</span>
@@ -111,7 +111,7 @@ specimen  <span class="ph">live demo (or simplified sample) — last</span></pre
     </table>
 
     <h2 id="provenance">Provenance</h2>
-    <p>Extracted from the CopyText pilot (E-DFLOW.W2 — that file was retired in W7 under <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>, its forks in <a href="../decisions/dec-20-logic-lives-with-its-inputs.html">DEC-20</a>) after three review rounds; the rounds live in that doc's snapshots. The format's review-driven rules — example-first, spec-first/demo-last, why columns, the specimen scale-down rule — all came out of those rounds, not theory. T3 until W4 validates the flow that consumes these designs; whether this becomes a T1 process doc (or a section of the promoted design-flow doc) is decided at that distillation.</p>
+    <p>Extracted from the CopyText pilot (E-DFLOW.W2 — that file was retired in W7 under <a href="decisions/dec-16-design-file-retirement.html">DEC-16</a>, its forks in <a href="decisions/dec-20-logic-lives-with-its-inputs.html">DEC-20</a>) after three review rounds; the rounds live in that doc's snapshots. The format's review-driven rules — example-first, spec-first/demo-last, why columns, the specimen scale-down rule — all came out of those rounds, not theory. Promoted to T1 at E-DFLOW.W12, as its own doc rather than a section of the <a href="design-flow.html">design flow</a>: the two specs are read at different times — this one when a component is designed, that one when a screen is.</p>
   </main>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';

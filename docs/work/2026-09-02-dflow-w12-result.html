@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a983e539f34851f0dfabe69">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W12 result (epic cleanup)</title>
+  <style>
+    table{font-size:13px;width:100%;}
+    td code{white-space:nowrap;}
+    td.num{text-align:right;font-variant-numeric:tabular-nums}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W12 result — the epic cleanup</h1>
+      <p>Seventy work docs distilled and archived, two live specs promoted to T1 that the epic
+      plan promised and never delivered — and four tests that only passed because the scratch
+      was still there.</p>
+      <div class="meta">Result report · 2026-09-02 · Trawler · T3 ·
+        <code>wu/design-flow/epic-cleanup</code> → <code>epic/design-flow</code> ·
+        <a href="2026-09-02-dflow-w12-plan.html">plan</a></div>
+    </div>
+  </header>
+  <main data-artifact="wu-result">
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome-table">
+      <thead><tr><th>What</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Epic gate</td>
+          <td><strong>88 → 17 failures.</strong> Every remaining red is either this WU's own
+          gate sequence (4), a historical walk seam needing a recorded verdict (9), or the
+          three drop reasons W8 deferred to the epic <code>cr</code> note</td></tr>
+        <tr><td>Work docs</td>
+          <td><strong>70 archived</strong> to <code>docs/.archive/</code> (gitignored; content
+          stays in git history). Only this WU's own plan + result remain tracked, and the
+          <code>6·doc-note</code> rule fires only at the epic merge</td></tr>
+        <tr><td>T1 promotions</td>
+          <td><code>docs/design-flow.html</code> and <code>docs/component-design.html</code> —
+          moved, not copied, with git recording both as renames</td></tr>
+        <tr><td>Durable edges cut</td>
+          <td><strong>3</strong> — DEC-13's open question, the rulebook's contract pointer,
+          the roadmap's E-REPLAY dependency. Zero links from T1/T2 into <code>docs/work/</code></td></tr>
+        <tr><td>Tests</td>
+          <td><code>--workspace</code> <strong>370 passed, 0 failed</strong>; clippy
+          <code>-D warnings</code> clean; the flow e2e <strong>4 passed</strong></td></tr>
+        <tr><td>Governed docs</td>
+          <td><code>verify-doc</code> green — 35 docs, none red</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="promotion">The promotion the epic plan promised</h2>
+    <p>The epic's own distillation plan listed three targets. Two landed during the epic; the
+    third never did, and the gate found it the only way it can — <code>6·doc-note</code> red on
+    two files every design run reads.</p>
+    <table data-c="promotion-table">
+      <thead><tr><th>Promised</th><th>Status before W12</th></tr></thead>
+      <tbody>
+        <tr><td>Living T2 rulebook in <code>docs/design-rules/</code></td><td>landed (W3)</td></tr>
+        <tr><td>T2 decision records for the design system</td><td>landed — DEC-14…DEC-26</td></tr>
+        <tr><td><strong>T1 process doc — the design flow</strong></td>
+          <td><strong>never delivered.</strong> The spec sat in <code>docs/work/</code>, with
+          T1 <code>work-planning.html</code>, the T2 rulebook index and T2 DEC-24 all linking
+          <em>into</em> it — the T1→T3 edge the tier rule forbids</td></tr>
+      </tbody>
+    </table>
+    <p>Three defects surfaced in the move: the <code>doc-assets</code> prefix was wrong for the
+    new depth; the component-design spec's "canonical exemplar" linked to
+    <code>components/header-table.html</code>, a file W8 deleted; and
+    <code>data-artifact="base-flow"</code> is not a type <code>verify-doc</code> defines — only
+    T3's laxity had tolerated it.</p>
+
+    <h2 id="tests-found">What the sweep broke, and what that proved</h2>
+    <div class="callout warn">
+      <strong>Four tests read the epic's scratch.</strong> Three <code>include_str!</code> two
+      design runs as calibration fixtures — archiving them stopped the build compiling. A
+      fourth scanned <code>docs/work/</code> at runtime and demanded it hold at least three runs.
+    </div>
+    <table data-c="test-fix-table">
+      <thead><tr><th>Test</th><th>Was</th><th>Now</th></tr></thead>
+      <tbody>
+        <tr><td>3 × calibration<br><span class="badge id">frame · elements · form rules</span></td>
+          <td><code>include_str!</code> of <code>docs/work/</code> runs — thresholds measured
+          against real accepted runs, which is the point</td>
+          <td>the specimens are <strong>owned</strong>, frozen under <code>xtask/fixtures/</code>.
+          Same assertions, a path that cannot be swept</td></tr>
+        <tr><td><code>every_archived_run_is_exempt_<br>by_a_flag_that_is_doing_work</code></td>
+          <td><code>runs.len() &gt;= 3</code> over <code>docs/work/</code></td>
+          <td>scans <code>fixtures/</code> <em>and</em> <code>docs/work/</code>, counting
+          archived runs</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <strong>The fourth was a latent defect this sweep exposed, not caused.</strong> At an epic
+      tip <code>docs/work/</code> is empty <em>by rule</em> — <code>check_tracked_docs</code>
+      fires at <code>Level::Epic</code>, and <code>main</code> carries zero files there. So the
+      test asserted the exact opposite of what the epic gate enforces, and could only ever pass
+      mid-epic. It had never run against the tree it claimed to describe.
+    </div>
+
+    <h2 id="deviations">Deviations from the plan</h2>
+    <table data-item="deviations" data-c="deviations-table">
+      <thead><tr><th>Plan item</th><th>What happened</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Resolve where <code>design-flow-base.html</code> belongs — <em>open question
+          for the owner</em></td>
+          <td>Answered by the epic's own plan, not by the owner</td>
+          <td>The plan's default (T1) turned out to be the epic's <em>written promise</em>. No
+          judgment call was left to make</td></tr>
+        <tr><td>Promote one T1 doc</td><td>Promoted two</td>
+          <td><code>component-design.html</code> is separate substrate (components, not screens)
+          and its own meta line read "promotion decided at W4 distillation" — always intended,
+          never executed</td></tr>
+        <tr><td>Archive the 72 tracked work docs</td><td>Archived 70</td>
+          <td>This WU's own plan and result stay tracked until the epic merge; the rule fires
+          only at <code>Level::Epic</code></td></tr>
+        <tr><td>Judge the nine walk seams</td><td>Investigated, verdicts drafted, not yet written</td>
+          <td>They live on the epic <code>cr</code> note, which the code-review skill writes —
+          the next step, not this commit's</td></tr>
+        <tr><td>(not planned)</td><td>Fixed four tests + one latent defect</td>
+          <td>The archive sweep broke the build. Found by <code>--workspace</code>; a plain
+          <code>cargo test</code> passed on cached artifacts and hid it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="seams">The nine walk seams — investigated</h2>
+    <p>Each verdict below is evidence-backed and belongs on the epic <code>cr</code> note as a
+    <code>walk_waivers</code> entry. None is a blanket waiver.</p>
+    <table data-c="seams-table">
+      <thead><tr><th>Seam</th><th class="num">n</th><th>Finding</th></tr></thead>
+      <tbody>
+        <tr><td><code>f2a2b7ce75</code><br><span class="badge id">retirement-order</span></td><td class="num">2</td>
+          <td><strong>Walk misfire.</strong> <code>specimen.js</code> was <em>moved</em> to
+          <code>doc-assets/components/</code> — git records the rename — and still exists.
+          <code>specimen.css</code> was <em>dissolved</em> into <code>ui/tailwind.config.js</code>
+          (W5 step 3, "one vocabulary"), which the gate's own source comment cites. Neither was
+          ever a design file; the rule reads any deletion under <code>docs/work/components/</code>
+          as a retirement</td></tr>
+        <tr><td><code>f2a2b7ce75</code> · <code>989f4bfacd</code> · <code>d4454f596b</code><br>
+          <span class="badge id">run-closed</span></td><td class="num">3</td>
+          <td><strong>True at the seam, closed after.</strong> Run #3 carried no
+          <code>data-status</code> and run #1 carried <code>"ready"</code> at those merges. Both
+          were archived later (W6 step 5 and W4 respectively) and stayed archived until this
+          WU's sweep. The history is exactly as reported</td></tr>
+        <tr><td><code>8173f4721f</code> · <code>838eb95859</code><br>
+          <span class="badge id">notes</span></td><td class="num">3</td>
+          <td><strong>The schema did not exist yet.</strong> <code>cr/v3</code> was introduced in
+          W7 (<code>4517354</code>, "the schema string is its grandfather rule"); both seams
+          predate it. The grandfather clause covers a <code>cr/v2</code> note that predates a
+          <em>field</em> — these tips carry no <code>cr</code> note at all, so it cannot apply.
+          The W2 <code>doc</code> note is genuinely malformed (entries lack <code>action</code>)</td></tr>
+        <tr><td><code>838eb95859</code><br><span class="badge id">manifest</span></td><td class="num">1</td>
+          <td><strong>Not a WU merge.</strong> It is a <code>git pull</code> of
+          <code>epic/design-flow</code> into itself — a remote sync. Its <code>test</code> note
+          correctly says <code>level: commit</code>; the walk classifies any two-parent commit as
+          a working-unit seam</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence-table">
+      <thead><tr><th>What</th><th>Where</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Epic gate</td><td><code>cargo xtask verify-dod epic HEAD</code></td>
+          <td>88 → 17 failures</td></tr>
+        <tr><td>Governed docs</td><td><code>cargo xtask verify-doc</code> over the tracked tree</td>
+          <td>35 docs, none red</td></tr>
+        <tr><td>Workspace tests</td><td><code>cargo test --workspace</code></td>
+          <td>370 passed, 0 failed</td></tr>
+        <tr><td>Lints</td><td><code>cargo clippy --workspace --all-targets -- -D warnings</code></td>
+          <td>clean</td></tr>
+        <tr><td>Flow e2e <span class="badge id">epic acceptance</span></td>
+          <td><code>cargo test -p xtask --features design-e2e</code></td>
+          <td>4 passed</td></tr>
+        <tr><td>Durable link audit</td><td>every <code>href</code> in T1/T2 resolved on disk</td>
+          <td>0 broken · 0 pointing into <code>docs/work/</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation" data-c="distillation-table">
+      <thead><tr><th>Doc</th><th>Tier</th><th>Action</th><th>What</th></tr></thead>
+      <tbody>
+        <tr><td><code>docs/design-flow.html</code></td><td>T1</td><td>added (moved)</td>
+          <td>The staged flow, its per-stage artifacts and the gate — the doc the epic plan promised</td></tr>
+        <tr><td><code>docs/component-design.html</code></td><td>T1</td><td>added (moved)</td>
+          <td>The component-design contract, sibling to the flow spec</td></tr>
+        <tr><td><code>docs/decisions/dec-13-onboarding-capabilities.html</code></td><td>T2</td><td>updated</td>
+          <td>The proxy-revert question — raised, verified against <code>Onboarding.tsx</code>, and
+          <strong>answered by the owner during this WU</strong>: the unset affordance stays, its gating
+          is already correct, and the shipped assertion is inherited. It existed nowhere but W11's
+          result doc, which this WU archived</td></tr>
+        <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td><td>updated</td>
+          <td>DEC-13's row records the revert call and links to it; the <em>1 open</em> badge it
+          briefly carried came off when the owner answered</td></tr>
+        <tr><td><code>docs/design-rules/design-rules-index.html</code></td><td>T2</td><td>updated</td>
+          <td>A component's contract lives in its TSDoc, not a design file — DEC-16's end state,
+          which <code>KeyValueRow</code> already demonstrates</td></tr>
+        <tr><td><code>docs/backlog/roadmap.html</code></td><td>T2</td><td>updated</td>
+          <td>E-REPLAY carries run #7's facts inline — the <code>Field</code> proposal and its
+          warrant, and the three items left blocked on that epic</td></tr>
+        <tr><td>70 × <code>docs/work/*.html</code></td><td>T3</td><td>archived</td>
+          <td>Distilled, then <code>git rm</code>'d to <code>docs/.archive/</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups-table">
+      <thead><tr><th>Who</th><th>What</th></tr></thead>
+      <tbody>
+        <tr><td>this WU, next step</td>
+          <td>The epic <code>cr</code> note: nine <code>walk_waivers</code> entries with the
+          reasons above, and the three <code>design.dropped</code> records W8 wrote and deferred
+          here (BodyRenderer built as the seven-renderer family · CopyAllHeadersButton dissolved
+          into CopyText · HeaderTable built as a local function in <code>FlowDetail.tsx</code>)</td></tr>
+        <tr><td>the epic merge</td>
+          <td>Archive this WU's plan + result, then <code>test/v2</code> + <code>doc/v1</code> →
+          <code>cr/v3</code> PASS → <code>mr confirm</code> (last, DEC-27) → <code>--no-ff</code></td></tr>
+        <tr><td>the build WU</td>
+          <td>Keep the unset affordance and re-point its assertion at the new host — run #8 moves the
+          control into the step rail, and <em>inherited</em> binds the capability, not the coordinates.
+          The DEC-13 question W11 left open was answered in this WU, not deferred</td></tr>
+        <tr><td>a flow-cost WU <span class="badge id">optional</span></td>
+          <td>If run cost still matters, target call count, not bytes — W11 measured 17.6M prompt
+          tokens against a 3.4M target and showed why compaction cannot close it</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

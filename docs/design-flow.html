@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="6a5ca0dd9f34851f0dfa9223" data-artifact="base-flow" data-status="draft">
+<html lang="en" data-htmldoc-id="6a5ca0dd9f34851f0dfa9223">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trawler — Design flow (base spec &amp; templates)</title>
+  <title>Trawler — Design flow</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module" src="../../doc-assets/components/tw-config.js"></script>
+  <script type="module" src="../doc-assets/components/tw-config.js"></script>
   <style>
     .tmpl{border:1px dashed var(--accent);border-radius:6px;padding:10px 12px;margin:8px 0;background:color-mix(in srgb, var(--accent) 6%, transparent);}
     .tmpl::before{content:"TEMPLATE — copy & fill";display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
@@ -20,9 +20,9 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>Design flow — base spec &amp; templates</h1>
-      <p>The staged flow an AI agent follows to design a screen, with a copy-paste artifact template per stage. Screen-agnostic: the reusable method, not one design.</p>
-      <div class="meta">Base flow · rev 2026-09-01 (E-DFLOW.W10: compacted to real-run value) · Trawler · T3 (docs/work/)</div>
+      <h1>Design flow</h1>
+      <p>The staged flow an AI agent follows to design a screen, and the gate that refuses a design which skipped one. Screen-agnostic: the reusable method, with a copy-paste artifact template per stage.</p>
+      <div class="meta">Process spec · rev 2026-09-02 · Trawler · T1 (docs/)</div>
     </div>
   </header>
   <main>
@@ -124,7 +124,7 @@ flowchart TB
     </div>
 
     <h2 id="tiers">Component tier model (reference)</h2>
-    <p>Used at Elements. <strong>Owned</strong> by the <a href="2026-07-22-dflow-w2-registry-seed.html">W2 registry</a> (tier = the membership decision).</p>
+    <p>Used at Elements. <strong>Owned</strong> by the <a href="design-rules/design-rules-index.html">W2 registry</a> (tier = the membership decision).</p>
     <table data-c="tiers">
       <thead><tr><th>Tier</th><th>Example</th><th>In collection?</th><th>Contract</th></tr></thead>
       <tbody>
@@ -253,7 +253,7 @@ scroll / overflow: &lt;which zone is pinned · which region scrolls · every
       <p><strong>Form:</strong> a <strong>real build that mounts the real components</strong> — load the CDN plus <code>doc-assets/components/specimens.bundle.js</code> and render each composed element from <code>window.Trawler</code>. Stateful (a toggle across the states the Interaction table named).</p>
       <div class="tmpl" data-c="tmpl-mockup">
         <pre>&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;
-&lt;script src="../../doc-assets/components/specimens.bundle.js"&gt;&lt;/script&gt;
+&lt;script src="../doc-assets/components/specimens.bundle.js"&gt;&lt;/script&gt;
 &lt;script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"&gt;&lt;/script&gt;
 
 &lt;div class="app"&gt;
@@ -360,7 +360,7 @@ soft:
       </tbody>
     </table>
     <div class="callout warn" data-c="no-conformance">
-      <strong>Nothing judges the build against its design.</strong> The gate answers <em>is there a design, and is it this one</em> — never whether the code honoured it. The pointer is a mechanical check (<a href="../decisions/dec-25-design-build-handoff.html#no-conformance">DEC-25</a>).
+      <strong>Nothing judges the build against its design.</strong> The gate answers <em>is there a design, and is it this one</em> — never whether the code honoured it. The pointer is a mechanical check (<a href="decisions/dec-25-design-build-handoff.html#no-conformance">DEC-25</a>).
     </div>
 
     <h2 id="flow-e2e">What proves the harness — the flow e2e <span class="badge id">xtask/tests/e2e_design_flow.rs</span></h2>
