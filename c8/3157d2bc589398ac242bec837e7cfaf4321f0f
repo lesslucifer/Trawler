@@ -1,0 +1,15 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W12
+tests:
+  e2e:
+    count: 4
+    what: "xtask/tests/e2e_design_flow.rs --features design-e2e - the flow e2e the epic claims as its acceptance, run at this tip: the whole flow green through three tiers, a rule-violating mockup red at its own stage, a design nobody built refusing the epic merge until the drop is recorded, and a build citing the design it read. Untouched by this WU and still green, which is the assertion - a cleanup that moved two specs and 70 docs must not move the flow's behaviour."
+  integration:
+    count: 9
+    what: "xtask/tests/verify_doc.rs and dod_gate.rs over real temp git repos, unchanged and green: the doc gate still classifies tiers from paths and the epic gate still refuses a tracked docs/work/ file. This WU changes no gate rule, so the integration contract is a regression surface here, not a new one. The evidence that the promotion is correct is verify-doc green over the whole tracked tree (35 docs) with the two promoted specs now read at their T1 paths."
+  unit:
+    count: 213
+    what: "xtask --lib. Four tests read the epic's scratch and this WU repaired all four. Three include_str! two design runs as calibration fixtures - the frame density limits and the elements/interaction/tune form rules, measured against real accepted runs so the thresholds are the flow's and not the checker's - and now read frozen copies under xtask/fixtures/ instead of docs/work/. The fourth, every_archived_run_is_exempt_by_a_flag_that_is_doing_work, asserted runs.len() >= 3 over docs/work/; at an epic tip that directory is empty BY RULE (check_tracked_docs at Level::Epic) and main carries zero files there, so it asserted the opposite of what the epic gate enforces and could only pass mid-epic. It now scans fixtures/ AND docs/work/ and counts archived runs, so the property holds at an epic tip and a run being designed today is still held to it. Both fixtures are archived runs, so the flag it lifts is still load-bearing."
+note: "A cleanup WU: 70 work docs distilled and archived, two live specs promoted to T1, three durable T2 edges cut, and four tests fixed. cargo test --workspace 370 passed 0 failed; clippy --workspace --all-targets -D warnings clean; verify-doc 35 docs none red; verify-dod epic 88 failures to 17. The 17 that remain are this WU's own gate sequence, the nine historical walk seams (verdicts drafted in the result report, owed to the epic cr note), and the three design.dropped records W8 wrote and deferred to the epic merge."
