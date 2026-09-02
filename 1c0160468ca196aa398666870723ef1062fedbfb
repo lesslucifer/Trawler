@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 1c0160468ca196aa398666870723ef1062fedbfb
+base: 1b245bd61556eea5c2dc2ca4cc5bf7cf27d6c2ff
+tier: key
+signer: vuluu
+report: docs/.archive/work/2026-09-03-dflow-epic-result.html
+report_sha256: 2bdd8ac5f6e7dd3f595562585f1b7e5fe7500af589b09f781c5a86a9545e0b31
+date: 2026-09-03
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEA/kiDC49p7NTvygvhhkYkXumBOx2E/z7uCJn1/VBxObJ50fyHoYlmBGU
+  EQYzLtacQZUghUsMSH1iHuRJqZ9OYL
+  -----END SSH SIGNATURE-----
