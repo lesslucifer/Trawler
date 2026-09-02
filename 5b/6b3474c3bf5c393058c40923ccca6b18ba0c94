@@ -1,5 +1,5 @@
 schema: test/v2
-level: wu
+level: working-unit
 wu: E-DFLOW.W10
 tests:
   e2e:
