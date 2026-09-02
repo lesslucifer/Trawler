@@ -1,0 +1,44 @@
+schema: doc/v1
+wu: E-DFLOW.W10
+changes:
+  - path: docs/decisions/dec-25-design-build-handoff.html
+    tier: T2
+    action: added
+    distills: "DEC-25: a judged design becomes something built — design.implements/[path, blob, built] on the build WU's note, design.undesigned for every other rendered file it touches; the gate answers is there a design and is it this one, never whether the code honoured it"
+  - path: docs/decisions/dec-26-the-mockup-mounts.html
+    tier: T2
+    action: added
+    distills: "DEC-26: a mockup mounts the real components from window.Trawler; a hand-drawn component in correct utilities is a fork no class check can see"
+  - path: docs/decisions/dec-15-design-run-enforcement.html
+    tier: T2
+    action: updated
+    distills: "the Tier-1/2/3 split re-stated where W8 and W9 moved the predicates"
+  - path: docs/decisions/dec-16-design-file-retirement.html
+    tier: T2
+    action: updated
+    distills: "component design files retire into the registry's TSDoc; the four docs/work/components/ files this branch deletes are that retirement"
+  - path: docs/decisions/dec-24-design-review-dimension.html
+    tier: T2
+    action: updated
+    distills: "the design dimension's scope re-pointed at design-scope and the cr/v3 note"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "index DEC-25 and DEC-26"
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: updated
+    distills: "W10 distilled it 34% — all 13 hard + 17 soft slugs byte-faithful, explanatory prose cut; the receipt blob re-pinned to a2f45dd7"
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "v11 and v12: a UI Working Unit accounts for every rendered file it touches"
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "W10 compacted it 48% to real-run value, stated the never-read-the-checker-source and batched-fix-loop rules, and now states that a run doc is authored through the htmldoc skill"
+  - path: docs/work/components/
+    tier: T3
+    action: deleted
+    distills: "body-renderer, body-viewer, copy-all-headers-button, header-table — retired into the registry per DEC-16; the TSDoc is the contract"
+note: "Branch carries W8, W9 and W10. The W8/W9/W10 T3 records (discussions, plans, steps, results, runs #4–#7) were added and archived within this branch — lineage evidence sits at the seam that touched it, per DEC-3, not re-hung on the epic note. .claude/skills/code-review/SKILL.md is infrastructure markdown, not a docs/ tier; its design-dimension change distils to DEC-24. Run #7 (the replay composer) and the W10 proof run both gained a minted data-htmldoc-id this session — the defect the new htmldoc predicates now refuse. Epic-wide distillation — T3 archiving, T2 synthesis, flow-spec promotion to T1 — stays owed at the epic close, as W10's result records."
