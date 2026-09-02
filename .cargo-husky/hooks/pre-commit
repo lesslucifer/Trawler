@@ -22,8 +22,10 @@ fi
 echo "[pre-commit] cargo fmt --check"
 cargo fmt --all -- --check
 
+# --workspace, or only `trawler` is linted: the repo root is a package as well as
+# a workspace, and every hook, gate and design check lives in the xtask member.
 echo "[pre-commit] cargo clippy -D warnings"
-cargo clippy --all-targets --all-features -- -D warnings
+cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 # Conflicted merges never reach pre-merge-commit; their completion lands here
 # with MERGE_HEAD on disk - gate it the same way.

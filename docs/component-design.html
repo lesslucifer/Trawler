@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a60d37a9f34851f0dfa93b9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module" src="../doc-assets/components/tw-config.js"></script>
+  <style>
+    .tmpl{border:1px dashed var(--accent);border-radius:6px;padding:10px 12px;margin:8px 0;background:color-mix(in srgb, var(--accent) 6%, transparent);}
+    .tmpl::before{content:"TEMPLATE — copy & fill";display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+    .tmpl pre{margin:0;white-space:pre-wrap;font-family:var(--mono,monospace);font-size:12px;line-height:1.6;}
+    .ph{color:var(--muted);font-style:italic;}
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);}
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}</style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Component design</h1>
+      <p>The file format an AI agent follows to design <strong>one component = one file</strong>, and the review loop that confirms it. Component-agnostic: the reusable method, not one design. A design file is transient by contract: it holds a component's contract only until the component is built, then retires into its TSDoc (<a href="decisions/dec-16-design-file-retirement.html">DEC-16</a>).</p>
+      <div class="meta">Process spec · rev 2026-09-02 · Trawler · T1 (docs/) · sibling: <a href="design-flow.html">design flow</a> (screens)</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="what">What this is</h2>
+    <p>The per-component design format E-DFLOW.W2 converged on by piloting CopyText through live review rounds. A screen run's Elements stage names components; <strong>this file is where one of them actually gets designed</strong> — deeply enough that the build WU implements it without further decisions. The file compiles down to the component's registry TSDoc (code-as-truth): the doc is the long form with rationale and examples; the TSDoc is its usage summary; the generated index derives from that.</p>
+    <div class="diagram" data-c="compile-path">
+      <pre class="mermaid">
+flowchart LR
+  EL["Elements stage names<br/>a component"] --> DOC["design file<br/>docs/work/components/&lt;name&gt;.html"]
+  DOC --> LOOP{"review loop<br/>(comments, rounds)"}
+  LOOP -->|"changes"| DOC
+  LOOP -->|"confirmed"| BUILD["build WU:<br/>ui/src/components/*.tsx"]
+  BUILD --> TSDOC["TSDoc = the file's<br/>compile target"]
+  TSDOC --> IDX["generated index"]
+      </pre>
+      <div class="caption">One file per component under <code>docs/work/components/</code>. The design is done when the reviewer confirms it, not when the author does.</div>
+    </div>
+
+    <h2 id="principles">Principles (apply to every section)</h2>
+    <ul data-c="principles">
+      <li><strong>Example-first — the reader is not a designer.</strong> Every spec row carries a rendered example beside it (a swatch, a before→after pair, a timeline, a transcript). Terms alone fail review; this was the pilot's hardest-learned lesson.</li>
+      <li><strong>Specimens are written in the app's own Tailwind.</strong> Load the CDN plus <code>tw-config.js</code> (which imports <code>ui/tailwind.config.js</code> directly — no generated copy) and mark every specimen up with utility classes — <code>px-control-x py-control-y text-control rounded-button</code>, never a hand-written rule. <strong>The specimen's class string is the component's <code>className</code>, verbatim</strong>, so the build copies rather than translates and the two cannot drift. Wrap specimens in <code>.app</code>; a value that has no utility needs a named token in the config, not a literal here (E-DFLOW.W5 step 3).</li>
+      <li><strong>Every spec has a why.</strong> Each anatomy part and behavior rule traces to a driver (identity &amp; frame) or a shipped-code precedent (cite <code>file:line</code>). A spec that can't say why is a guess.</li>
+      <li><strong>Spec-first, demo-last.</strong> The reader meets the reasoning before the toy: identity &amp; frame → anatomy → behavior → states → forks → API — the live specimen closes the file.</li>
+      <li><strong>Forks show their losers.</strong> A settled decision renders its rejected alternatives visually, each with the reason it lost. Review catches ride in the winning card (see the exemplar's cursor sub-fork).</li>
+    </ul>
+
+    <h2 id="sections">The section contract</h2>
+    <table data-c="section-table">
+      <thead><tr><th>#</th><th>Section</th><th>Answers</th><th>Required form</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>Identity &amp; frame</strong></td><td>what is it, why does it exist, where does it stand?</td><td>one-sentence claim callout (what the do-nothing answer fails at) + fact table: tier + why · tenants · exists-today (code pointer or "no") · made-of + driver table, <strong>two columns</strong>: driver → design consequence, one line each</td></tr>
+        <tr><td>2</td><td><strong>Anatomy</strong></td><td>what parts are on screen?</td><td>annotated specimen (numbered badges) + one block per part: example swatch · spec · why</td></tr>
+        <tr><td>3</td><td><strong>Behavior</strong></td><td>what rules do the parts obey?</td><td>one block per rule: concrete example · spec · why. Opens by restating the split: <em>anatomy = what you see, behavior = what it does</em></td></tr>
+        <tr><td>4</td><td><strong>States</strong></td><td>every state it owns</td><td>swatch grid, each state pinned visually with a one-line caption · deliberate non-states called out (e.g. "no empty state — the screen omits the field")</td></tr>
+        <tr><td>5</td><td><strong>Forks</strong></td><td>which decisions were contested?</td><td>per fork: settled card + rejected alternative cards, all with visuals; badges <code>settled</code>/<code>rejected</code></td></tr>
+        <tr><td>6</td><td><strong>API + TSDoc</strong></td><td>the build contract</td><td>props table (minimal — every prop earns its row) + the registry TSDoc block the file compiles down to</td></tr>
+        <tr><td>7</td><td><strong>Use / avoid</strong></td><td>the fit-first contract</td><td>two cards: when reaching for it is right / wrong (name the component to use instead)</td></tr>
+        <tr><td>8</td><td><strong>Tokens</strong></td><td>mockup → build mapping</td><td>table: part → Tailwind classes, incl. any override the semantics force (see the exemplar's <code>cursor-text</code> note)</td></tr>
+        <tr><td>9</td><td><strong>Live specimen</strong></td><td>does it feel right?</td><td>interactive demo, last section — see the scale-down rule below</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="specimen-rule">
+      <strong>The specimen scales down, never away.</strong> Fully live when the behavior is cheap to re-implement in a doc (CopyText: ~20 lines). When it isn't — a collapsible JSON tree, a hex grid — a simplified sample stands in: static swatches plus explanation text, diagrams, or visualizations of the hard part. States stay visual either way; only the <em>interactivity</em> is negotiable.
+    </div>
+
+    <h2 id="skeleton">File skeleton</h2>
+    <div class="tmpl" data-c="tmpl-skeleton">
+      <pre>docs/work/components/<span class="ph">&lt;kebab-name&gt;</span>.html   <span class="ph">← mint data-htmldoc-id · snapshot on create (htmldoc skill)</span>
+
+&lt;head&gt;    <span class="ph">&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;
+          &lt;script type="module" src="../doc-assets/components/tw-config.js"&gt;&lt;/script&gt;   ← imports ui/tailwind.config.js
+          &lt;style&gt; doc scaffolding only — never a component rule &lt;/style&gt;</span>
+
+hero      <span class="ph">&lt;Name&gt; &lt;tier badge&gt; · one-liner · status: <strong>draft — awaiting confirmation</strong> · link: registry seed</span>
+identity  <span class="ph">claim callout (one sentence) + fact table (tier+why · tenants · exists-today · made-of) + driver table (driver → consequence)</span>
+anatomy   <span class="ph">annotated specimen + part blocks (example · spec · why)</span>
+behavior  <span class="ph">rule blocks (example · spec · why)</span>
+states    <span class="ph">swatch grid + non-state callout</span>
+forks     <span class="ph">settled + rejected cards, visual</span>
+api       <span class="ph">props table + TSDoc block</span>
+fit       <span class="ph">use / avoid cards</span>
+tokens    <span class="ph">mockup → Tailwind table</span>
+specimen  <span class="ph">live demo (or simplified sample) — last</span></pre>
+    </div>
+    <p>The part-block grid, swatches, timelines and chips are doc scaffolding: <strong>copy them from the exemplar</strong> — don't reinvent per file. Component styling is <em>not</em> copied at all any more — it is Tailwind utilities from the shared config. Headings and <code>data-c</code> blocks stay direct children of <code>&lt;main&gt;</code> (htmldoc diff rule).</p>
+
+    <h2 id="tsdoc">How the file compresses to TSDoc</h2>
+    <table data-c="tsdoc-map">
+      <thead><tr><th>TSDoc</th><th>Comes from</th></tr></thead>
+      <tbody>
+        <tr><td>first line</td><td>hero: <code>Name — one-liner</code></td></tr>
+        <tr><td><code>@tier</code></td><td>identity: tier + the why</td></tr>
+        <tr><td><code>@anatomy</code></td><td>anatomy parts, compressed to one line</td></tr>
+        <tr><td><code>@use</code> / <code>@avoid</code></td><td>use / avoid cards</td></tr>
+        <tr><td><code>@states</code></td><td>states grid, names + the one timing that matters</td></tr>
+        <tr><td><code>@madeof</code></td><td>identity: made-of</td></tr>
+      </tbody>
+    </table>
+    <p class="ph" style="font-style:normal;color:var(--muted);">Drivers, behavior details, forks, and tokens do <em>not</em> compress into TSDoc — they stay here as the rationale record. TSDoc is the usage summary an agent reuses from; this file is what an agent extends or re-litigates from.</p>
+
+    <h2 id="loop">The review loop</h2>
+    <table data-c="loop-table">
+      <tr><td><strong>Draft</strong></td><td>author the file → snapshot → hand the path to the reviewer with the settled forks called out</td></tr>
+      <tr><td><strong>Round</strong></td><td>reviewer comments (htmldoc layer) → snapshot before edits → address each comment → resolve with a reply stating what changed → share <code>?diff=latest</code></td></tr>
+      <tr><td><strong>Confirm</strong></td><td>reviewer says done → hero status flips to <strong>confirmed</strong> with the date. Only a confirmed design feeds the build WU</td></tr>
+    </table>
+
+    <h2 id="provenance">Provenance</h2>
+    <p>Extracted from the CopyText pilot (E-DFLOW.W2 — that file was retired in W7 under <a href="decisions/dec-16-design-file-retirement.html">DEC-16</a>, its forks in <a href="decisions/dec-20-logic-lives-with-its-inputs.html">DEC-20</a>) after three review rounds; the rounds live in that doc's snapshots. The format's review-driven rules — example-first, spec-first/demo-last, why columns, the specimen scale-down rule — all came out of those rounds, not theory. Promoted to T1 at E-DFLOW.W12, as its own doc rather than a section of the <a href="design-flow.html">design flow</a>: the two specs are read at different times — this one when a component is designed, that one when a screen is.</p>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

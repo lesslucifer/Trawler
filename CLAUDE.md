@@ -72,6 +72,9 @@ Standalone code commits outside a WU carry `test/v2` with `level: commit`.
   shared assets, dark-mode style, React widgets, the comment layer, and the
   snapshot/diff review flow are all owned by the global **`htmldoc` skill** — follow it; don't reinvent any of it (SUPER CRITICAL — ALWAYS FOLLOW THIS).
   **Snapshot a doc before editing it** and after a round share `<doc>.html?diff=latest`.
+- **Docs are visual-first**: lead with diagrams, tables, cards; prose only as
+  captions/one-liners. If a paragraph could be a diagram or table, make it one —
+  walls of text fail review.
 
 ## Documentation tiers — synthesize UP, never duplicate DOWN
 
@@ -82,7 +85,8 @@ plan/spec/test-plan/backlog fails that and is T3 (`docs/work/`), never T1.**
 Spec: `docs/documentation-system.html`. **T0** this file (edited only on
 explicit request — never silently or as a side effect) ·
 **T1** `docs/*.html` architecture + process · **T2** `docs/use-cases/` (what) &
-`docs/decisions/` (why), read index-first · **T3** `docs/work/` scratch, distill
+`docs/decisions/` (why) & `docs/design-rules/` (UI design musts — load before
+UI work), read index-first · **T3** `docs/work/` scratch, distill
 then archive · **T4** `src/` — the truth. One fact per tier (else link); code
 wins conflicts; never copy code into docs.
 

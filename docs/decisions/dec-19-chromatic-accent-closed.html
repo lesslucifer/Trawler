@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7bd0299f34851f0dfab750">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-19: chromatic accent is a closed set</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-19 — colour is a closed set, widened by amendment and never by a prop</h1>
+      <p>Six components each wanted a colour. Five were refused and one was granted — the difference is
+        not taste, it is whether the colour was <em>minted as a named token</em> or reached for at a
+        call site.</p>
+      <div class="meta">DEC-19 · 2026-08-12 · Trawler · E-DFLOW.W7 · distilled from MethodLabel D1 ·
+        IconButton D1 · DurationText D2 · StatusPill D2 · Notice D4 · TonedText D3 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>DEC-11's zero-chromatic-accent rule reserves colour for status outcomes. Every component that
+      designed a colour decision hit the same fork, and the file-by-file answers looked
+      inconsistent — <code>MethodLabel</code> got five new hues while <code>DurationText</code> was
+      refused one. Read together they are one rule, and it is not "no colour".</p>
+
+    <h2 id="choice">Choice</h2>
+    <div class="callout" data-c="rule">
+      <strong>The chromatic set is closed and lives in <code>ui/tailwind.config.js</code>.</strong>
+      Widening it is an amendment — a named token plus a record — and it is judged once, centrally.
+      What is refused is a component <em>deciding</em> a colour: a tint chosen per call site, a
+      threshold that maps a value to a tone, a prop that lets a caller paint.
+    </div>
+    <table data-c="tbl-verdicts">
+      <thead><tr><th>Wanted</th><th>Verdict</th><th>Because</th></tr></thead>
+      <tbody>
+        <tr><td><code>MethodLabel</code> — per-verb colour</td>
+          <td><span class="badge auto">granted</span></td>
+          <td>The verb is a primary scan target, and colour makes it pre-attentive. Granted as
+            <strong>five named tokens</strong> (GET · POST · PUT · DELETE · PATCH) joining ok/warn as
+            declared exceptions — the set widened, it was not breached. The
+            <strong>five-verb cap</strong> is what contains the flag-parade risk: HEAD, OPTIONS,
+            CONNECT, TRACE and non-standard verbs stay body tone, because plumbing verbs add noise
+            rather than scan value</td></tr>
+        <tr><td><code>Notice</code> — an <code>ok</code> tone</td>
+          <td><span class="badge auto">granted</span></td>
+          <td>Reverses this component's own "a notice is never an outcome" driver, which was true of
+            every tenant the read-only panel had. A screen appeared whose zone content <em>is</em> a
+            standing outcome, and the roster had nothing else that renders one. The boundary that
+            keeps it from spreading: <code>ok</code> is for a <strong>standing</strong> outcome, never
+            an acknowledgement of something the user just did — those stay confirm-at-point</td></tr>
+        <tr><td><code>DurationText</code> — warn for slow</td>
+          <td><span class="badge approval">refused</span></td>
+          <td>The threshold that makes a request slow is application-specific and this component
+            cannot know it. Hardcoding 1 s is a design judgment belonging to the screen, not the
+            primitive. Tinting an informational datum also bleeds the warning signal</td></tr>
+        <tr><td><code>IconButton</code> — an accent ring on hover</td>
+          <td><span class="badge approval">refused</span></td>
+          <td>Hover shifts mute → ink plus a 7% ink wash. A chromatic ring introduces accent for
+            decoration, which is the exact thing ok/warn are reserved against</td></tr>
+        <tr><td><code>StatusPill</code> — <code>ok</code> for 3xx</td>
+          <td><span class="badge approval">refused</span></td>
+          <td>The spec calls 3xx "successful redirection", but from the proxy's seat the intercepted
+            request was redirected, not served. <code>ok</code> would obscure infinite-redirect bugs.
+            Muted reads "informational / non-terminal"</td></tr>
+        <tr><td><code>TonedText</code> — a fourth tone</td>
+          <td><span class="badge approval">deferred by design</span></td>
+          <td>Left open <em>above</em> the primitive on purpose: a new tone is a DEC-11 amendment plus
+            a token, arriving in <code>StatusTone</code>. The component would gain a value, not a
+            design — so the first real tenant reopens the record instead of adding a prop here</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Options rejected</h2>
+    <table data-c="tbl-rejected">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Keep zero colour absolutely</strong> — <code>MethodLabel</code> in body tone,
+          the original W2 draft</td>
+          <td>Protects the calm, but the verb is the row's primary scan target and the cost of reading
+            it as text is paid on every row. The exception set widening under a name is safer than the
+            rule being breached ad hoc later</td></tr>
+        <tr><td><strong>A per-tone default glyph on <code>TonedText</code></strong>, to guarantee the
+          second channel</td>
+          <td>Puts a tone→glyph map back in the primitive — the mapping <code>StatusPill</code>'s own
+            fork had just removed — and would prefix a 404 with a ⚠ the flow list has never shown and
+            has no room for</td></tr>
+        <tr><td><strong>A <code>family</code> prop on <code>TonedText</code></strong> so a
+          sentence-shaped verdict can be Inter</td>
+          <td>Makes the primitive the app's general toned-anything, competing with
+            <code>Notice</code> — and lets two components render the same warn sentence in two
+            families, which is the drift this collection was built to end</td></tr>
+        <tr><td><strong>A configurable SLO threshold on <code>DurationText</code></strong></td>
+          <td>Not refused forever — but it is a T2 wrapper's mapping, not a primitive's prop</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li>A design run that wants a new colour is proposing a <strong>token plus an amendment to this
+        record</strong>, and says so. It is not a component-level choice.</li>
+      <li><code>colour-plus-text</code> still binds: a granted colour never carries meaning alone.
+        <code>MethodLabel</code>'s verb is the word, <code>StatusPill</code>'s is the code,
+        <code>Notice</code>'s <code>ok</code> carries ✓ on the same rules as <code>warn</code>'s ⚠.</li>
+      <li>GET shares the ok hue and DELETE the warn hue <strong>deliberately</strong> — same semantic
+        family (safe vs destructive); column position disambiguates method from status.</li>
+      <li>The enforcement surface is DEC-17's closed vocabulary: a colour not in the config emits no
+        CSS, so an ungranted tint cannot ship silently.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

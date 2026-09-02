@@ -23,6 +23,7 @@ usage:
   cargo xtask verify-dod commit-msg <msg-file>                (commit-msg hook: docs need an mr trailer)
   cargo xtask verify-dod range <old> <new>
   cargo xtask verify-doc <path> [<path>...]
+  cargo xtask design-scope <base> <head>                     (what the review's design dimension must judge, and the rulebook pin it writes)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
@@ -31,6 +32,7 @@ usage:
   cargo xtask ui build                                        (pnpm install + build → ui/dist/)
   cargo xtask ui dev                                          (pnpm install + launch the Tauri window)
   cargo xtask ui e2e                                          (build e2e app + drive the real window via WebdriverIO)
+  cargo xtask ui specimens [--check]                          (compile the collection for design files; --check renders each over file://)
   cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";
 
 pub fn repo_root() -> Result<PathBuf, String> {
@@ -42,6 +44,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
     match strs.as_slice() {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
+        ["design-scope", base, head] => design_scope(repo, base, head),
         ["gate0"] => gate0::gate0(repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
@@ -76,6 +79,64 @@ fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         ["range", old, new] => range(repo, old, new),
         _ => Err(USAGE.to_string()),
     }
+}
+
+// The review and the merge gate must not each decide for themselves what a
+// design artifact is - the same function answers both, and this is where a
+// reviewer reads it. Merge-base, matching the scope the review pins.
+fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), String> {
+    use std::fmt::Write as _;
+    let tip = git(repo, &["rev-parse", head])?;
+    let merge_base = git(repo, &["merge-base", base, &tip])?;
+    let names = git::diff_names(repo, &merge_base, &tip)?;
+    let gate = Gate { repo };
+    let artifacts = gate.design_artifacts(&tip, &names);
+    let (added, owed) = gate.surfaces(&tip, &merge_base);
+    if artifacts.is_empty() && owed.is_empty() {
+        return Ok((
+            0,
+            format!(
+                "no design artifact in {}..{} - the design dimension does not run, and the cr/v3 note carries no design section",
+                gate::short(&merge_base),
+                gate::short(&tip)
+            ),
+        ));
+    }
+    let mut out = String::new();
+    if !artifacts.is_empty() {
+        let pin = doc::rulebook_blob(repo, &tip).map_or_else(
+            || "<unreadable - the design pin cannot be written>".to_string(),
+            |blob| doc::pin_of(&blob).to_string(),
+        );
+        let _ = writeln!(
+            out,
+            "{} design artifact(s) to judge, against rulebook {pin}:\n{}",
+            artifacts.len(),
+            artifacts.join("\n")
+        );
+    }
+    // Printed as their own blocks so the artifact list a reviewer reads stays the
+    // artifact list: these are not judged, they are files whose note owes an
+    // answer. The two are separated because the answers differ - a new surface
+    // takes a citation and nothing else.
+    if !added.is_empty() {
+        let _ = writeln!(
+            out,
+            "{} new surface(s) - the cr/v3 note must cite the design each was built from (design.implements: [{{path, blob, built}}]):\n{}",
+            added.len(),
+            added.join("\n")
+        );
+    }
+    let touched: Vec<&String> = owed.iter().filter(|path| !added.contains(path)).collect();
+    if !touched.is_empty() {
+        let _ = writeln!(
+            out,
+            "{} rendered file(s) touched - each is cited the same way or declared (design.undesigned: [{{path, why}}]):\n{}",
+            touched.len(),
+            touched.iter().map(|p| p.as_str()).collect::<Vec<_>>().join("\n")
+        );
+    }
+    Ok((0, out.trim_end().to_string()))
 }
 
 fn gate_run(repo: &Path, level: Level, tip: &str, target: &str) -> Result<(i32, String), String> {

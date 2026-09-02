@@ -47,7 +47,7 @@ function JsonTree({ text }: { text: string }) {
     return <TextBody text={text} />;
   }
   return (
-    <div data-testid="body-json" className="font-mono text-xs text-ink-body">
+    <div data-testid="body-json" className="font-mono text-body text-ink-body">
       <JsonNode name="$" value={parsed} />
     </div>
   );
@@ -57,7 +57,7 @@ function TextBody({ text }: { text: string }) {
   return (
     <pre
       data-testid="body-text"
-      className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-xs text-ink-body"
+      className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-body text-ink-body"
     >
       {text}
     </pre>
@@ -68,7 +68,10 @@ function FormBody({ text }: { text: string }) {
   return (
     <dl
       data-testid="body-form"
-      className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-xs text-ink-body"
+      className={
+        // design-allow: grid-cols-[auto_1fr] — a two-column template shape, no size in it
+        "grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-body text-ink-body"
+      }
     >
       {formEntries(text).map(([key, value], i) => (
         <div key={i} className="contents">
@@ -106,7 +109,12 @@ function Rendered({ fetched, kind }: { fetched: BodyFetch; kind: BodyKind }) {
       return <ImageBody bytes={fetched.bytes} contentType={fetched.contentType} />;
     case "form":
       return <FormBody text={bodyText(fetched.bytes)} />;
+    // The screen keeps its inline renderers until a later WU rewires it to the
+    // collection (E-DFLOW.W5 Q2), so xml renders as text here exactly as before
+    // bodyKind gained its sixth kind — XmlRenderer's surface arrives with that
+    // rewiring, not with the dispatch split.
     case "text":
+    case "xml":
       return <TextBody text={bodyText(fetched.bytes)} />;
     case "hex":
       return <TextBody text={hexDump(fetched.bytes)} />;
@@ -127,7 +135,7 @@ function ModeButton({
       type="button"
       aria-pressed={active}
       onClick={onClick}
-      className={`rounded-button border border-hairline px-2 py-0.5 text-xs ${
+      className={`rounded-button border border-hairline px-2 py-chrome-tight text-body ${
         active ? "bg-canvas-soft text-ink" : "text-ink-mute hover:text-ink"
       }`}
     >
@@ -184,14 +192,14 @@ export function BodyViewer({ api, flow }: { api: TrawlerApi; flow: FlowView }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-1">
+      <div className="flex flex-wrap items-center gap-chrome-gap">
         <ModeButton active={leg === "request"} onClick={() => setLeg("request")}>
           request
         </ModeButton>
         <ModeButton active={leg === "response"} onClick={() => setLeg("response")}>
           response
         </ModeButton>
-        <span className="mx-1 text-ink-mute">·</span>
+        <span className="mx-chrome-gap text-ink-mute">·</span>
         <ModeButton active={decode} onClick={() => setDecode(true)}>
           decoded
         </ModeButton>
@@ -199,7 +207,7 @@ export function BodyViewer({ api, flow }: { api: TrawlerApi; flow: FlowView }) {
           raw
         </ModeButton>
         {loaded && (
-          <span className="ml-auto flex gap-1">
+          <span className="ml-auto flex gap-chrome-gap">
             {kind !== "image" && (
               <ModeButton active={false} onClick={copyBody}>
                 {copied ? "copied" : "copy body"}
@@ -213,15 +221,15 @@ export function BodyViewer({ api, flow }: { api: TrawlerApi; flow: FlowView }) {
       </div>
 
       {notice != null ? (
-        <p data-testid="body-notice" className="text-xs text-ink-mute">
+        <p data-testid="body-notice" className="text-body text-ink-mute">
           {notice}
         </p>
       ) : fetched === "error" ? (
-        <p data-testid="body-notice" className="text-xs text-warn">
+        <p data-testid="body-notice" className="text-body text-warn">
           failed to load body
         </p>
       ) : !loaded || kind == null ? (
-        <p className="text-xs text-ink-mute">loading…</p>
+        <p className="text-body text-ink-mute">loading…</p>
       ) : (
         <Rendered fetched={loaded} kind={kind} />
       )}

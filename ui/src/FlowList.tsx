@@ -11,7 +11,7 @@ const COLUMNS = "110px 70px 180px 1fr 70px 90px";
 function HeaderRow() {
   return (
     <div
-      className="grid gap-3 border-b border-hairline px-4 py-1 text-xs uppercase tracking-wide text-ink-mute"
+      className="grid gap-3 border-b border-hairline px-4 py-chrome-y text-body uppercase tracking-label text-ink-mute"
       style={{ gridTemplateColumns: COLUMNS }}
     >
       <span>Time</span>

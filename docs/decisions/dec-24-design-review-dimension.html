@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7c0d409f34851f0dfab83f">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-24: the design review is a dimension of the code review</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-24 — the design review is a dimension of the code review, not a skill of its own</h1>
+      <p>Where Tier-3 lives, why its verdict is <code>cr/v3</code>, and why a design-bearing diff is never
+        docs-only-exempt.</p>
+      <div class="meta">DEC-24 · 2026-08-12 · Trawler · E-DFLOW.W7 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p><a href="dec-15-design-run-enforcement.html">DEC-15</a> named three tiers and built one. Tier-1 is
+      mechanical and complete (13/13 predicates, W6). Tier-2 is the run's own receipt — a
+      <strong>self-claim</strong>, which is exactly the thing the dev workflow has never accepted from code:
+      <em>never judge your own diff</em>. Tier-3 is the missing reviewer, and the only open question was
+      where to put it.</p>
+
+    <h2 id="choice">Choice</h2>
+    <p><strong>Tier-3 is a dimension of the existing code review</strong>, not a separate skill. A closed
+      design goes through the same door code goes through.</p>
+    <table data-c="model">
+      <thead><tr><th></th><th>How</th></tr></thead>
+      <tbody>
+        <tr><td><strong>What activates it</strong></td>
+          <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code> — a <em>closed</em> run
+            (<code>data-status="archived"</code>) or a component design file present in the diff</td></tr>
+        <tr><td><strong>What it judges</strong></td>
+          <td>soft rules, the new-component warrant, and the reuse warrant, on the artifact. Rubric:
+            <code>.claude/skills/code-review/design-rubric.md</code></td></tr>
+        <tr><td><strong>What it excludes</strong></td>
+          <td>the thirteen hard rules (predicates own them; a second opinion is noise) · a per-rule verdict
+            table (that is Tier-2's receipt, and re-emitting it doubles the artifact and buries the
+            findings) · slugless taste · <strong>rulebook edits</strong></td></tr>
+        <tr><td><strong>Where the verdict lives</strong></td>
+          <td>the tip's <code>cr/v3</code> note, in a <code>design:</code> section</td></tr>
+        <tr><td><strong>What refuses it</strong></td>
+          <td><code>9·design</code> at the merge · <code>9·design-schema</code> for a pre-v3 note</td></tr>
+      </tbody>
+    </table>
+    <p class="kd"><strong>One function, two callers.</strong> <code>design-scope</code> is not a convenience —
+      it is the refusal to let the reviewer and the gate each decide what counts as design-bearing. Two
+      answers is how a gate and its subject drift.</p>
+
+    <h2 id="why-here">Why not a separate skill</h2>
+    <table data-c="rebuild">
+      <thead><tr><th>A design-review skill would have to rebuild</th><th>Which <code>cr</code> already has</th></tr></thead>
+      <tbody>
+        <tr><td>independence — the reviewer is not the author</td><td>the rule the code review exists for</td></tr>
+        <tr><td>freshness — the judgment is about the current bytes</td><td><code>base</code> +
+          <code>diff_sha256</code> binding</td></tr>
+        <tr><td>merge-time enforcement</td><td><code>verify-dod</code> reads the note at the seam</td></tr>
+        <tr><td>a home that outlives the artifact</td><td>a git note on a commit</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="section">The <code>design:</code> section — what each field refuses</h2>
+    <table data-c="section">
+      <thead><tr><th>Field</th><th>Refuses</th></tr></thead>
+      <tbody>
+        <tr><td><code>artifacts</code></td>
+          <td>a PASS covering a design nobody opened. Every path <code>design-scope</code> prints must
+            appear — judging one of two and passing both is the exact silence the bump exists for</td></tr>
+        <tr><td><code>rulebook</code></td>
+          <td>a verdict about a rulebook nobody read. Compared against the blob <strong>at the tip</strong>,
+            so a later Working Unit revising the rulebook cannot retroactively falsify a review that was
+            true when it ran</td></tr>
+        <tr><td><code>verdict</code></td><td>an overall PASS hiding a failing design dimension</td></tr>
+        <tr><td>the section's <em>presence</em></td>
+          <td>the whole point: on a design-bearing tip, a note saying nothing about the design is refused
+            rather than read as clean</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="grandfather">The schema string is the grandfather rule</h2>
+    <div class="callout">
+      A note declaring <code>cr/v2</code> says, <strong>in its own bytes</strong>, that it was written before
+      the design dimension existed — so the epic walk drops <code>9·design-schema</code> at seams, exactly
+      as it already drops manual review there. What it does <em>not</em> drop is a <code>cr/v3</code> note
+      missing or short-changing its design section: that note's own schema says the dimension was available.
+      <br><br>
+      <strong>No date cutoff, no remembered list, no waiver.</strong> A date cannot tell a note written
+      before the rule from one written badly after it; the artifact can. Measured: adding the rule cost
+      <strong>zero</strong> walk waivers, against three for the rule one step earlier.
+    </div>
+
+    <h2 id="asymmetry">Why Tier-2's receipt stays inline and Tier-3's verdict does not</h2>
+    <table data-c="asymmetry">
+      <thead><tr><th></th><th>Tier-2 · the receipt</th><th>Tier-3 · the verdict</th></tr></thead>
+      <tbody>
+        <tr><td>Is</td><td>a self-claim about an artifact</td><td>an independent judgment about a commit</td></tr>
+        <tr><td>Lives</td><td>in the run doc</td><td>in a git note</td></tr>
+        <tr><td>Because</td><td>a claim about a transient artifact belongs in it, and dies with it</td>
+          <td>the run is retired under <a href="dec-16-design-file-retirement.html">DEC-16</a>, and
+            <strong>commits outlive the files they carry</strong></td></tr>
+      </tbody>
+    </table>
+    <p class="kd">The <code>review</code> closing item is <strong>not</strong> this verdict: one is
+      provenance (a human overrode the design, and here is the contract it hit), the other a judgment.
+      Merging them loses the provenance half.</p>
+
+    <h2 id="exemption">A design-bearing diff is never docs-only-exempt</h2>
+    <p>The gate exempts a diff that touches no code — the rule that lets an incidental doc edit through
+      without notes. <strong>A design is a docs-only deliverable</strong>: the most common design Working
+      Unit writes a run, or a set of component design files, and no code at all. So the exemption was
+      handing this check precisely the diffs it was built to judge.</p>
+    <div class="callout warn" data-c="w2">
+      <strong>The evidence, not the argument.</strong> <code>8173f47</code> — the <strong>E-DFLOW.W2
+      merge</strong> — landed <code>component-design-base.html</code> and <strong>14 component design
+      files</strong>, the entire registry three later design runs are judged against, with <strong>no
+      <code>cr</code> note on its tip at all</strong>. Not a stale review; no review. Its
+      <code>test/v2</code> note gives the reason in its own words — <em>"design/docs-only WU"</em> — which
+      is exactly the claim this rule refuses. Nothing noticed for five Working Units.
+    </div>
+    <table data-c="exemption-rule">
+      <thead><tr><th>Diff</th><th>Gated?</th></tr></thead>
+      <tbody>
+        <tr><td>touches code</td><td><span class="badge auto">yes</span> unchanged</td></tr>
+        <tr><td>docs only, carries a design artifact</td><td><span class="badge auto">yes</span> the change</td></tr>
+        <tr><td>docs only, designs nothing</td><td><span class="badge approval">exempt</span> the exemption
+          is narrowed, not removed</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">It sits beside <code>6·run-closed</code>, which was already answerable at the merge for the
+      identical reason: the Working Unit that carried the design is ending.</p>
+
+    <h2 id="options">Options rejected</h2>
+    <table data-c="options">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>A separate <code>design-review</code> skill with its own note</td>
+          <td>four properties rebuilt, each a chance to rebuild it slightly differently —
+            <a href="#why-here">the table above</a></td></tr>
+        <tr><td>Keep the verdict inline in the run doc</td>
+          <td>DEC-16 retires the run. A judgment that dies with its subject cannot be re-read at the seam,
+            which is the only place a merge can enforce it</td></tr>
+        <tr><td>Judge draft runs too</td>
+          <td>Tier-3 judges a <em>finished</em> design. The merge that finishes a draft touches the file
+            again, and that review judges it — so the close and the review are one motion</td></tr>
+        <tr><td>Judge a <em>removed</em> design file</td>
+          <td>that is retirement, and <code>6·retirement-order</code> owns it (DEC-16). Asking a reviewer to
+            judge a contract the diff deletes is asking about the wrong thing</td></tr>
+        <tr><td>A date cutoff for grandfathering</td>
+          <td>it cannot distinguish a note written before the rule from one written badly after it —
+            <a href="#grandfather">the schema string can</a></td></tr>
+        <tr><td>A per-rule verdict table from the reviewer</td>
+          <td>that is Tier-2's receipt. Re-emitting it doubles the artifact and buries the findings, which
+            are the only thing the reviewer adds</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li><strong>The three tiers are complete.</strong> Tier-1 mechanical (W6, 13/13) · Tier-2 the run's own
+        receipt (shipped at W4 — the default DEC-15 held rather than answered) · Tier-3 this record.
+        <a href="../design-flow.html#flow-e2e">A flow e2e</a> drives all three.</li>
+      <li><strong>The finder is unproven, and W9 is its acceptance test.</strong> The planned calibration
+        against the three archived runs was waived — they are closed under older contracts — and the
+        replacement argument (that W7's own diff would exercise the tier) turned out to rest on a stale
+        branch ref: W7 carries no design artifact. So <em>everything around the judgment</em> is tested —
+        that it ran, over everything, against the right rulebook, and that its absence is loud — and the
+        judgment itself has never run. <strong>W9's fresh-screen run is where it first does</strong>, and
+        the defect class it is the sole owner of is the one run #3 shipped: whether a cited
+        <code>@avoid</code> is <em>faithfully</em> paraphrased, which W7 ② measured as mechanically
+        undecidable.</li>
+      <li><strong>Pass the base explicitly.</strong> Both <code>design-scope</code> and
+        <code>verify-dod</code> measure from a branch ref, and a local ref behind its remote silently
+        measures the wrong diff — that is how the false reading above happened. Filed as a tooling
+        follow-up; until it lands, the rule is a human one.</li>
+      <li><strong>W8 inherits a timing dependency.</strong> Tier-3 fires on the merge that lands a closed
+        design, which is <em>before</em> the design reaches development. Where the design gate sits relative
+        to a UI-touching Working Unit, and what evidence it hands the build, is W8's question — and its
+        answer cannot move the verdict earlier than the close.
+        <strong>Answered by <a href="dec-25-design-build-handoff.html">DEC-25</a>:</strong> the verdict stays
+        at the close, and what the build inherits is a <em>pointer to the exact bytes it covered</em> —
+        <code>design.implements: [{path, blob}]</code> in the same <code>design:</code> section, required of
+        a Working Unit that adds a new surface. An <strong>amendment inside a build Working Unit needs no new
+        rule</strong>: the amended design is a design artifact in that diff, so this record's own trigger
+        already demands a verdict on it, and the blob pin is what makes the amendment countable rather than
+        invisible. One consequence lands here: a note may now carry a <code>design:</code> section for its
+        citation alone, so <code>check_design</code> returns early on a diff with no design artifact and
+        <code>verdict</code> is optional — demanding a <code>PASS</code> over an empty artifact list is the
+        silence this record's <a href="#section">section table</a> exists to refuse, pointed the wrong
+        way.</li>
+      <li><strong>A rule that cannot be judged as written is a finding, never a same-run loosening.</strong>
+        The rubric forbids rulebook edits, which is DEC-15's own failure mode applied one tier up: a gate
+        that bends converts an open defect into a green receipt.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

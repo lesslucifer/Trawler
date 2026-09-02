@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a6c251a9f34851f0dfaaf38">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-16: design-file retirement order</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-16 — a design file is retired in one order: distil the why, verify the contract, then remove</h1>
+      <p>Code-as-truth retires the design file, but not everything in it survives the move. The order is what makes the removal lossless — and it is a gate's job, not an author's memory.</p>
+      <div class="meta">DEC-16 · 2026-07-29 · Trawler · E-DFLOW.W5 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>E-DFLOW.W5 built the T1/T2 collection, so the registry's truth moved from <code>docs/work/components/*.html</code> to the components' TSDoc in <code>ui/src/components/</code>. The epic's code-as-truth model then says the design files are transient and a later WU deletes them. The question that surfaced during review is <strong>what a deletion loses</strong>, because the answer is not "nothing".</p>
+    <p>A design file is roughly 600 lines. The TSDoc block it compiles down to is nine. The difference is not padding:</p>
+    <table data-c="what-a-file-holds">
+      <thead><tr><th>The file holds</th><th>Survives into TSDoc?</th></tr></thead>
+      <tbody>
+        <tr><td>The contract — first line, <code>@tier</code>, <code>@anatomy</code>, <code>@use</code>/<code>@avoid</code>, <code>@states</code>, <code>@madeof</code></td><td><strong>Yes</strong> — carried verbatim; that is the compile block's whole purpose</td></tr>
+        <tr><td><strong>Fork cards</strong> — the settled choice, the alternatives rejected, and why each was rejected</td><td><strong>No.</strong> CopyButton's D1 records why the confirm is a label-swap and not a chip or a toast; D2b records the adjacency test that licenses the icon form. Code shows the choice, never the road not taken</td></tr>
+        <tr><td><strong>Frame drivers</strong> — the use-case pressure each design consequence answers</td><td><strong>No.</strong> "the payload is usually not displayed → the label names what you'll get" is the reason the label is non-negotiable; without it the prop looks like a convenience</td></tr>
+        <tr><td>Anatomy specimens, token maps, live examples</td><td>Superseded — the component itself is the specimen, and the tokens are in <code>ui/tailwind.config.js</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="the-trap">
+      <p>The forks and drivers are exactly the part <strong>nobody re-reads</strong> — which is why the file looks redundant once the code exists. The redundancy is an illusion produced by reading only the part that was copied.</p>
+    </div>
+
+    <h2 id="choice">Choice</h2>
+    <p><strong>Retiring a design file is an ordered flow of three steps, and step 3 is gated on step 1.</strong></p>
+    <div class="diagram" data-c="order">
+      <pre class="mermaid">flowchart LR
+  D1["① distil the forks
+  → docs/decisions/
+  the WHY, which code cannot hold"] --> D2["② verify the TSDoc block
+  is complete
+  it becomes the only contract"]
+  D2 --> D3["③ then remove
+  the design file"]
+  D1 -.->|"skipped"| X["❌ silent data loss"]</pre>
+      <div class="caption">The order is the decision. Any two steps in isolation look reasonable; only the sequence is lossless.</div>
+    </div>
+    <table data-c="steps">
+      <thead><tr><th>Step</th><th>What it means</th><th>Why it is first / next / last</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>① distil the forks</strong></td>
+          <td>Every fork card whose reasoning still constrains future work moves to <code>docs/decisions/</code> — the settled value, the rejected alternatives, and the reason. A fork that was purely local ("which prop name") is a dead end and is recorded as such, not preserved.</td>
+          <td>It is the only step that can lose data, so it goes where it cannot be skipped by running out of time. Decisions are append-only (DEC-5), which is the right home for a why that outlives its file.</td>
+        </tr>
+        <tr>
+          <td><strong>② verify the TSDoc block is complete</strong></td>
+          <td>The component's TSDoc carries all six tags and matches the design file's compile block. After removal it is the <em>only</em> contract a reuse decision reads.</td>
+          <td>Removing the file promotes the TSDoc from copy to original. A missing <code>@avoid</code> line is survivable while two copies exist and unrecoverable after one is deleted.</td>
+        </tr>
+        <tr>
+          <td><strong>③ then remove</strong></td>
+          <td><code>git rm</code> the design file. The <code>doc/v1</code> note records <code>action: archived</code> with <code>distilled_to</code> naming where ① landed.</td>
+          <td>Last, because it is the irreversible one — and the gate already refuses an <code>archived</code> entry with no distillation lineage.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="enforcement">Enforcement — two predicates, landed in E-DFLOW.W7</h2>
+    <p>The same reasoning as DEC-15: a convention an agent must remember is a convention an agent forgets. The order is machine-checkable, so it is a check rather than a paragraph. Both halves now exist:</p>
+    <table data-c="predicates">
+      <thead><tr><th>Check</th><th>Refuses</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><code>6·retirement-order</code></td>
+          <td>Step ③ before step ①: a <code>docs/work/components/</code> file absent at the tip whose <code>doc/v1</code> <code>distilled_to</code> does not name a <code>docs/decisions/</code> record that really exists there. The general lineage rule accepts a dead-end reason — the right latitude for a scratch plan, and the wrong one for a file whose fork cards are the whole reason a removal loses something.</td>
+          <td><code>xtask/src/gate.rs</code></td></tr>
+        <tr><td><code>components·unretired</code></td>
+          <td>Step ③ never happening: a design file whose component <em>has</em> a roster entry is red until it is retired. The registry and the design files are disjoint sets, and this is what keeps them so — two contracts for one component, with nothing comparing them, is the drift this record exists to prevent.</td>
+          <td><code>xtask/src/doc.rs</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="w5-position">
+      <p><strong>W5 removed nothing</strong> — it built the code and left every design file in place. <strong>W7 removed sixteen</strong>, distilling their forks to <a href="dec-18-one-control-box.html">DEC-18</a> · <a href="dec-19-chromatic-accent-closed.html">DEC-19</a> · <a href="dec-20-logic-lives-with-its-inputs.html">DEC-20</a> · <a href="dec-21-props-need-a-truthful-source.html">DEC-21</a> · <a href="dec-22-time-is-absolute-and-local.html">DEC-22</a> · <a href="dec-23-collection-dependencies.html">DEC-23</a> first. Four files remained: <code>BodyViewer</code>, <code>BodyRenderer</code>, <code>HeaderTable</code> and <code>CopyAllHeadersButton</code>, none with a roster entry. <strong>W8 removed all four as drops</strong>, each with its reason in the epic's note — <code>docs/work/components/</code> is now empty, and the unbuilt case named below is closed by <a href="dec-25-design-build-handoff.html">DEC-25</a>.</p>
+    </div>
+
+    <h2 id="options">Options rejected</h2>
+    <table data-c="options">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>Delete the design files in W5, alongside the build</td><td>The build WU has the code fresh and the forks cold — precisely the wrong moment. Nothing forces the distillation, and the file that looks most redundant is the one whose forks were most contested.</td></tr>
+        <tr><td>Keep the design files forever as the fork archive</td><td>Two homes for one contract, which is the drift this epic exists to kill: the file's compile block and the component's TSDoc would diverge with nothing checking them. The forks need a permanent home; the contract already has one.</td></tr>
+        <tr><td>Copy the fork cards into the component's TSDoc</td><td>TSDoc is what a builder reads at the call site — it answers "may I use this here". A rejected-alternatives essay there is noise at the point of use, and the compile block's shape is fixed by the generated index (W2).</td></tr>
+        <tr><td>Record the order in the flow spec only</td><td>Tried, at epic scale, and it is what DEC-15 was written about: the run broke conventions <em>after</em> writing them down. Prose is where a rule goes to be forgotten.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li><s><strong>W7</strong> owns both halves: the predicate that refuses an undistilled removal, and the removal itself.</s> <strong>Landed.</strong> The order is refused by <code>6·retirement-order</code> in <code>xtask/src/gate.rs</code>, and W7 removed sixteen files behind it.</li>
+      <li><strong>A dead end <em>named</em> retires the file; a dead end <em>assumed</em> does not.</strong> The predicate first demanded a <code>docs/decisions/</code> record for every removal — and then refused the case this record calls the majority. <strong>Measured over W7's own sixteen retirements: two produced no record, correctly.</strong> <code>CopyText</code>'s two forks are carried verbatim by its <code>@states</code>; <code>KeyValueRow</code>'s three are carried by <code>@madeof</code> and superseded by <code>wrap-not-truncate</code> and <code>data-ink-first</code>. So <code>distilled_to</code> may be a reason instead of a path, provided <strong>it says what carries the fork</strong>:
+        <table data-c="carriers">
+          <thead><tr><th><code>distilled_to</code></th><th>Retires the file?</th></tr></thead>
+          <tbody>
+            <tr><td>a <code>docs/decisions/</code> path that exists at the tip</td><td><span class="badge auto">yes</span> the original rule, unchanged</td></tr>
+            <tr><td>a reason citing a TSDoc tag — <code>@use</code> · <code>@avoid</code> · <code>@states</code> · <code>@madeof</code> · <code>@tier</code></td><td><span class="badge auto">yes</span> the contract carries it, at the point of use</td></tr>
+            <tr><td>a reason citing a slug <strong>the rulebook declares</strong></td><td><span class="badge auto">yes</span> a rule outranks it. Checked against <strong>the rulebook that seam shipped</strong>, never the working tree — read the tree and a later slug rename reddens an already-merged retirement, on a branch no one may amend</td></tr>
+            <tr><td><code>"none"</code> · <code>"nothing survives"</code> · <code>"local prop shape"</code></td><td><span class="badge approval">no</span> a dead end <em>assumed</em> — the loss this record exists to prevent</td></tr>
+          </tbody>
+        </table>
+        The check the amendment keeps is the one that matters: <strong>every reason must point somewhere a reader can go</strong>. What it gives up is the assumption that "somewhere" is always a decision record.</li>
+      <li><strong>Retirement is not a design review.</strong> A <em>removed</em> design file is deliberately not a Tier-3 artifact (<a href="dec-24-design-review-dimension.html">DEC-24</a>): this predicate owns the removal, and asking a reviewer to judge a contract the diff deletes is asking about the wrong thing. A design file <em>present</em> in a diff is design-bearing; the same file removed is this rule's business.</li>
+      <li><strong>The decisions KB grows from component forks.</strong> Some fork cards become DEC records; most are local and die with the file. Judging which is which is distillation work, per file, and the judgment itself is recorded — a dead end named is not the same as a dead end assumed.</li>
+      <li><strong>A design file with no code is not retired, it is unbuilt.</strong> This order applies only when the component exists in <code>ui/src/components/</code>. <s>T3/T4 files (<code>ProtocolLine</code>, <code>HeaderTable</code>, <code>BodyViewer</code>) keep their files because the contract still lives there and nowhere else.</s>
+        <strong>Superseded on the survival clause by <a href="dec-25-design-build-handoff.html">DEC-25</a>
+        (E-DFLOW.W8).</strong> "Lives there and nowhere else" was a grant, and the grant was the defect: it
+        made a design file a permanent second address for a contract, with nothing comparing it to code and
+        nothing ever asking whether the component arrived. An unbuilt design is now a question its
+        <em>epic</em> must answer — <code>components·unbuilt</code> refuses the epic merge until the roster
+        carries the component or the note records the drop and why. Measured on this epic: all three files
+        named here were <strong>dropped with reasons</strong>, and only one of the four drops was ever truly
+        unbuilt. <strong>The retirement order above is untouched</strong> — distil, verify, remove, and both
+        its predicates stand exactly as written.</li>
+      <li><strong>Code wins conflicts, but only after ① has run.</strong> Code-as-truth is a statement about the <em>contract</em>. The why was never in the code and code-as-truth never claimed it was, so "the code is the truth" is not a licence to delete the reasoning.</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: false, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+    for (const [i, pre] of [...document.querySelectorAll('pre.mermaid')].entries()) {
+      const { svg } = await mermaid.render(`mmd-${i}`, pre.textContent);
+      pre.outerHTML = svg;
+    }
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

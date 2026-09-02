@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Run Trawler's multi-agent code review — a read-only run over a caller-supplied diff scope; mechanical gate, five isolated finders, adversarial verifiers, verdict, and a YAML evidence note on the reviewed tip. Use when a Working Unit or epic completes, before any merge, or to review recent commits. The caller defines the scope (WU branch vs its epic branch, epic vs main, or recent commits) — never assume a base.
+description: Run Trawler's multi-agent code review — a read-only run over a caller-supplied diff scope; mechanical gate, five isolated finders plus a design finder when the diff carries a design artifact, adversarial verifiers, verdict, and a YAML evidence note on the reviewed tip. Use when a Working Unit or epic completes, before any merge, or to review recent commits. The caller defines the scope (WU branch vs its epic branch, epic vs main, or recent commits) — never assume a base.
 ---
 
 # Code review — orchestration
@@ -36,7 +36,7 @@ and re-runs the full trio, so a skip can never vouch for a tree it did not
 verify. A non-zero exit ⇒ stop, report it to the caller, spawn no agents, write
 no evidence.
 
-## 3 · Find — five isolated finders, in parallel
+## 3 · Find — five isolated finders, in parallel (six with §3b)
 
 Spawn five subagents **in a single message** (fresh context each), one per
 dimension in `rubric.md`. Each finder prompt contains exactly:
@@ -51,6 +51,41 @@ dimension in `rubric.md`. Each finder prompt contains exactly:
   passes;
 - the return format: a list of candidate findings, each
   `{location: file:line, claim: <one falsifiable sentence>, severity: blocker|important|nit}`.
+
+## 3b · The design dimension — a sixth finder, when the diff earns it
+
+Run `cargo xtask design-scope <BASE> <HEAD_R>`. It prints three things — the
+design **artifacts** in scope with the rulebook blob to pin, the **new surfaces**
+the diff adds (a `@tier` component, a screen), and every other **rendered file**
+it touches (any non-test `.tsx` under `ui/src/`) — the same function the merge
+gate uses, so the two can never disagree about any of them.
+
+- **No artifact** ⇒ no design finder, and the note carries no `design:` section
+  unless a surface or a rendered file is listed.
+- **One or more artifacts** ⇒ spawn the design finder alongside the other five,
+  in the same message. Its prompt: the instruction to read
+  `.claude/skills/code-review/design-rubric.md` first, the artifact paths the
+  command printed, the scope, and the same return format as §3. It is Tier-3 of
+  the design flow — soft rules and the new-component warrant, never the hard
+  rules Tier-1 already owns.
+- **One or more new surfaces** ⇒ no finder runs, but the note owes
+  `design.implements`: one `{path, blob, built}` per design the build was built
+  from, the blob being `git rev-parse <HEAD_R>:<the design>` and `built` naming
+  the files that design produced. This is a citation, not a judgment — nothing
+  here judges the code against the design. A new surface takes **only** a
+  citation; no reason excuses one.
+- **One or more rendered files touched** ⇒ each is covered by a citation's
+  `built` list, or named in `design.undesigned: [{path, why}]`. Write the `why`
+  yourself, as a statement of fact about this diff — *what did the edit do, and
+  what made a design unnecessary*. "No design" is not a reason; "a copy fix
+  inside the existing layout" is. You are the independent party here, so this is
+  the one place the record can be trusted: a builder excusing its own work is
+  what the field exists to prevent. If the edit did re-shape a surface and no
+  design covers it, say so and **FAIL** — the gate cannot see that, only you can.
+
+Its candidates go through §4 verification like any other. The design verdict is
+`PASS` when no design finding survives verification unwaived, and it is recorded
+whether or not the overall review passes.
 
 ## 4 · Verify — one fresh verifier per candidate, in parallel
 
@@ -84,7 +119,7 @@ returning to the caller (§7) so finder quality stays visible.
   (pipe the working-tree diff in as well when it was in scope). The flags
   match `cargo xtask verify-dod`'s recomputation — the binding must be
   byte-identical.
-- The note body is one YAML document, contract `cr/v2`.
+- The note body is one YAML document, contract `cr/v3`.
   `cargo xtask verify-dod` parses it at every merge gate (see
   `docs/workflow.html`): a Working Unit is not merge-ready and an epic is
   not complete without a `PASS` note whose `diff_sha256` matches the tip
@@ -92,7 +127,7 @@ returning to the caller (§7) so finder quality stays visible.
   evidence.
 
 ```yaml
-schema: cr/v2
+schema: cr/v3
 scope: "WU capture-pagination -> epic/capture"   # the caller's label
 epic: E-CAP                     # identity block — matches the tip's other notes
 wu: E-CAP.W2                    # working-unit scope only
@@ -105,9 +140,32 @@ findings: { found: <n>, verified: <n>, waived: <n> }
 waivers:
   - finding: "<summary>"
     reason: "<reason>"
+design:                         # §3b — present iff design-scope listed anything
+  artifacts: [docs/work/<the run>.html]   # every artifact it listed, none omitted
+  rulebook: <blob it printed>   # what the design dimension judged against
+  findings: { found: <n>, verified: <n>, waived: <n> }
+  verdict: PASS                 # PASS | FAIL — artifacts only; omit when nothing was judged
+  implements:                   # one per design the build read; omit when none was listed
+    - path: docs/work/components/<the design>.html
+      blob: <git rev-parse HEAD_R:<that path>>
+      built: [ui/src/components/<what it produced>.tsx]   # the rendered files it covers
+  undesigned:                   # every other rendered file the diff touched
+    - path: ui/src/<the file>.tsx
+      why: "<what the edit did, and what made a design unnecessary>"
 verdict: PASS   # PASS | FAIL
 date: <YYYY-MM-DD>
 ```
+
+The `design:` block is what `verify-dod`'s `9·design` check reads: a
+design-bearing tip whose note omits it, judges fewer artifacts than the diff
+carries, or pins a rulebook the tip does not ship, is refused at the merge — as
+is a tip that adds a new surface and cites no design, or cites one whose path or
+blob the tip does not ship, or leaves a rendered file neither cited nor
+declared. The accounting is checked both ways: a `built` or `undesigned` entry
+naming a file the diff does not render is refused as readily as one left out,
+and a file given both answers is refused for contradicting itself. On a diff
+that renders nothing and carries no artifact the block is absent, and no check
+asks for it.
 
 - Attach it: `git notes --ref=cr add -f -m "<yaml>" HEAD_R`.
 - The pre-push hook syncs `refs/notes/*` to origin automatically. Audit any

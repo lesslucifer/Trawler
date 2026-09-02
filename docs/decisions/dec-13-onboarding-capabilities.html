@@ -42,7 +42,7 @@
     <p>The core stays a pure MITM proxy + read-only control API — it never touches the
     host's trust store or proxy settings. Onboarding's "do the work for the user" rule
     (UC-ONBOARD) needs exactly those writes, so they live <strong>in the native app</strong>
-    (<a href="../../ui/src-tauri/src/setup.ts">ui/src-tauri</a>), never in the core:</p>
+    (<a href="../../ui/src-tauri/src/setup.rs">ui/src-tauri</a>), never in the core:</p>
     <ul>
       <li><strong>CA install</strong> — <code>security add-trusted-cert</code> (macOS) /
       <code>certutil -addstore</code> (Windows); guided text elsewhere.</li>
@@ -113,6 +113,59 @@
           owner (DEC-12).</td></tr>
       </tbody>
     </table>
+
+    <h3 id="revert-open">The proxy revert stays where it is <span class="badge auto">decided 2026-09-02</span></h3>
+    <p>Raised by <strong>E-DFLOW.W11</strong>'s redesign of the setup screen — a question about
+    <em>this record's</em> capability, not about a layout — and <strong>answered by the owner</strong>:
+    the build keeps the unset affordance, with the gating it already has. The capability is
+    unchanged, so this record needed no amendment; what follows is why it was ever in doubt.</p>
+
+    <table data-c="dec-13-revert-question">
+      <thead><tr><th>What</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>What ships today</td>
+          <td><a href="../../ui/src/Onboarding.tsx">ui/src/Onboarding.tsx</a> renders
+          <em>Stop routing through Trawler</em> <strong>inside this screen's own set-proxy
+          step</strong>, gated on <code>showStop = auto &amp;&amp; state === "done"</code> —
+          so it appears only after that step succeeds.</td></tr>
+        <tr><td>What the redesign proposed</td>
+          <td>Run #8 first marked <em>unset the proxy</em> <strong>deliberately unused</strong>,
+          reasoning that undoing setup belongs to a settings surface rather than the doorway,
+          and that offering it mid-setup would compete with the step it completes.</td></tr>
+        <tr><td>Why that reasoning does not hold</td>
+          <td>Both halves are false against the shipped code: the affordance already lives in
+          this screen, and it appears only <em>after</em> the step succeeds — competing with
+          nothing. The run now carries the capability as <strong>blocked</strong>.</td></tr>
+        <tr><td>Why it reaches this record</td>
+          <td><a href="#local-os">Local-OS actions</a> names <strong>symmetric revert</strong>
+          as part of why the app may write OS state at all. Dropping the affordance narrows
+          that promise, so it cannot be settled by a design run's say-so.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Decision.</strong> The affordance stays, and its gating is already correct:
+      <code>showStop = auto &amp;&amp; state === "done"</code> shows it only when Trawler changed
+      <strong>this machine's</strong> system proxy and can change it back — <code>canAutoSetup</code>
+      limits it to macOS and Windows, and <code>target === defaultProxyTarget(os)</code> excludes a
+      run aimed at a phone, Firefox or a terminal, where no local setting was touched. The shipped
+      assertion "<em>Stop routing appears only after the proxy was set</em>" is therefore
+      <strong>inherited, not retired</strong>, and this record's symmetric-revert promise stands as
+      written. <em>A design run may not narrow a shipped capability by listing it unused.</em>
+    </div>
+
+    <p><strong>Inherited is about the capability, not the coordinates.</strong> Run #8 restructures
+    the screen into a step rail beside a workbench, so the control survives the redesign but need not
+    survive in the same place. The build WU re-points the assertion at the new host; what it may not
+    do is delete it.</p>
+
+    <p>Two revert paths exist, and only the in-screen one was ever in question:
+    <a href="../../ui/src/Onboarding.tsx">Onboarding.tsx</a>'s button, and the quit-time
+    <em>Remove or Keep</em> prompt in <a href="../../ui/src/closeConfirm.ts">closeConfirm.ts</a>,
+    which invokes the same <code>unset_proxy</code>. Both call
+    <a href="../../ui/src-tauri/src/setup.rs">setup.rs</a>, which runs the revert itself rather than
+    instructing the user — guided text is the fallback only where the app cannot act, as on Linux,
+    which has no auto-unset path.</p>
 
     <p><em>Status: active. Supersedes the epic-plan non-goal "no new backend/API endpoint"
     and W2's "no trust-store inspection", both for onboarding's scope only; the core's

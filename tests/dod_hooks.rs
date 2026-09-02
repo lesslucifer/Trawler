@@ -96,6 +96,23 @@ fn repo_with_wu_branch(env: &Env, tmp: &Path) -> PathBuf {
     repo
 }
 
+// The repo root is a package as well as a workspace, so a clippy call without
+// --workspace lints `trawler` and silently skips `xtask` - where every hook, gate
+// and design check lives. docs/testing-strategy.html rests on this pass keeping the
+// workflow-tooling suites compiling, and those suites are all in that member.
+#[test]
+fn the_pre_commit_clippy_pass_lints_every_workspace_member() {
+    let hook = fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join(".cargo-husky/hooks/pre-commit"),
+    )
+    .expect("read the versioned pre-commit hook");
+    let clippy = hook
+        .lines()
+        .find(|line| line.trim_start().starts_with("cargo clippy"))
+        .expect("the hook runs clippy");
+    assert!(clippy.contains("--workspace"), "xtask escapes the lint without --workspace: {clippy}");
+}
+
 #[test]
 fn test_repos_ignore_inherited_hook_env() {
     std::env::set_var("GIT_DIR", "/nonexistent/.git");

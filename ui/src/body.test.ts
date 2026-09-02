@@ -2,8 +2,13 @@ import {
   bodyKind,
   bodyNotice,
   bodyText,
+  byteLength,
   formEntries,
+  formPairCut,
   hexDump,
+  hexRows,
+  humanBytePair,
+  humanBytes,
   rawKind,
   saveFilename,
 } from "./body";
@@ -14,13 +19,63 @@ test("bodyKind dispatches on the mime type, ignoring parameters", () => {
   expect(bodyKind("application/problem+json")).toBe("json");
   expect(bodyKind("image/png")).toBe("image");
   expect(bodyKind("application/x-www-form-urlencoded")).toBe("form");
-  expect(bodyKind("text/html")).toBe("text");
   expect(bodyKind("text/plain; charset=iso-8859-1")).toBe("text");
-  expect(bodyKind("application/xml")).toBe("text");
-  expect(bodyKind("application/soap+xml")).toBe("text");
   expect(bodyKind("application/javascript")).toBe("text");
   expect(bodyKind("application/octet-stream")).toBe("hex");
   expect(bodyKind(null)).toBe("hex");
+});
+
+// Six renderers need six kinds: the flat "text" the five-kind contract returned
+// for markup left XmlRenderer's dispatch row unimplementable.
+test("bodyKind splits the markup sub-group from plain text", () => {
+  expect(bodyKind("application/xml")).toBe("xml");
+  expect(bodyKind("text/xml")).toBe("xml");
+  expect(bodyKind("text/html")).toBe("xml");
+  expect(bodyKind("application/soap+xml")).toBe("xml");
+  expect(bodyKind("text/html; charset=utf-8")).toBe("xml");
+  expect(bodyKind("text/csv")).toBe("text");
+});
+
+test("humanBytes reads at a glance: one decimal below 10, integer above", () => {
+  expect(humanBytes(0)).toBe("0 B");
+  expect(humanBytes(512)).toBe("512 B");
+  expect(humanBytes(4096)).toBe("4.0 KiB");
+  expect(humanBytes(14_336)).toBe("14 KiB");
+  expect(humanBytes(138_240)).toBe("135 KiB");
+  expect(humanBytes(1_048_576)).toBe("1.0 MiB");
+  expect(humanBytes(15_728_640)).toBe("15 MiB");
+});
+
+test("humanBytePair never renders a real cut as two identical sizes", () => {
+  for (const [shown, total] of [
+    [131_072, 131_083],
+    [131_072, 131_073],
+    [4096, 4097],
+    [1_048_576, 1_048_580],
+  ]) {
+    const [left, right] = humanBytePair(shown, total);
+    expect(left).not.toBe(right);
+  }
+});
+
+test("humanBytePair borrows no precision when the sizes already differ", () => {
+  expect(humanBytePair(4096, 148_480)).toEqual(["4.0 KiB", "145 KiB"]);
+  expect(humanBytePair(512, 4096)).toEqual(["512 B", "4.0 KiB"]);
+});
+
+test("byteLength counts bytes, not characters — what a cut marker must state", () => {
+  expect(byteLength("abc")).toBe(3);
+  expect(byteLength("héllo")).toBe(6);
+  expect(byteLength("日本")).toBe(6);
+});
+
+test("hexRows and hexDump agree — the pane and the clipboard cannot drift", () => {
+  const bytes = new TextEncoder().encode("PNG\r\n");
+  const [row] = hexRows(bytes);
+
+  expect(hexDump(bytes)).toBe(`${row.offset}  ${row.hex}  ${row.ascii}`);
+  expect(row.offset).toBe("00000000");
+  expect(row.ascii).toBe("|PNG..|");
 });
 
 test("rawKind sniffs stored bytes: printable UTF-8 is text, anything else hex", () => {
@@ -49,6 +104,34 @@ test("formEntries parses url-encoded pairs, decoding and keeping duplicates", ()
     ["b", "two words"],
     ["a", "2"],
   ]);
+});
+
+test("formPairCut lands on a pair boundary, never inside a percent-escape", () => {
+  const body = "a=1&price=%E2%82%AC99&b=2";
+
+  for (let at = 0; at <= body.length; at += 1) {
+    const kept = body.slice(0, formPairCut(body, at));
+    expect(kept).not.toMatch(/%[0-9A-Fa-f]?$/);
+    expect(formEntries(kept).map(([, v]) => v).join("")).not.toContain("�");
+  }
+});
+
+test("formPairCut keeps the key of a first pair that alone exceeds the cap", () => {
+  expect("k=%E2%82%ACvalue".slice(0, formPairCut("k=%E2%82%ACvalue", 4))).toBe("k=");
+});
+
+// A cut that returns more than it was asked for defeats the cap it exists to
+// enforce — a key longer than the cap is the case that does it. Returning the
+// whole length is the worse shape: the caller then draws a marker claiming a
+// truncation that did not happen.
+test("formPairCut never returns past the cap it was given", () => {
+  for (const body of ["averyveryverylongkey=v", "noequalsnoamp", "&a=1", "k=v", "", "a=1&b=2"]) {
+    for (let at = 0; at <= body.length + 2; at += 1) {
+      const cut = formPairCut(body, at);
+      expect(cut).toBeLessThanOrEqual(at);
+      if (body.length > at) expect(body.slice(0, cut)).not.toBe(body);
+    }
+  }
 });
 
 test("bodyNotice maps every non-captured state to a notice, captured to null", () => {

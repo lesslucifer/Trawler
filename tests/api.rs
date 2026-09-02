@@ -128,7 +128,7 @@ async fn body_endpoints_raw_decode_and_edges() {
 async fn decode_brotli_charset_and_xml_over_router() {
     let store = Arc::new(Store::new(1_000_000, 64));
     let br = brotli(br#"{"a":1}"#);
-    let latin1 = [b'c', b'a', b'f', b'\xe9'];
+    let latin1 = *b"caf\xe9";
     let flow = FlowBuilder::new()
         .req_header("Content-Type", "application/json")
         .req_header("Content-Encoding", "br")
