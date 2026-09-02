@@ -45,4 +45,88 @@ changes:
     tier: T3
     action: deleted
     distills: "body-renderer, body-viewer, copy-all-headers-button, header-table — retired into the registry per DEC-16; the TSDoc is the contract"
+  - path: docs/work/2026-08-12-dflow-w8-discussion.html
+    tier: T3
+    action: added
+    distills: "the address problem dissolves — a design nobody built is the epic's real gap"
+  - path: docs/work/2026-08-13-dflow-w8-plan.html
+    tier: T3
+    action: added
+    distills: "W8's six steps: the unbuilt sweep, the handoff, the pointer, the build leg"
+  - path: docs/work/2026-08-13-dflow-w8-result.html
+    tier: T3
+    action: added
+    distills: "W8 result — no UI change lands undesigned, the handoff proven in both directions"
+  - path: docs/work/2026-08-13-dflow-w8-step1-unbuilt.html
+    tier: T3
+    action: added
+    distills: "the epic answers for every design it wrote, and this one owed four answers"
+  - path: docs/work/2026-08-13-dflow-w8-step2-handoff.html
+    tier: T3
+    action: added
+    distills: "the flow spec's hand-over step, where a judged design becomes something built"
+  - path: docs/work/2026-08-13-dflow-w8-step3-pointer.html
+    tier: T3
+    action: added
+    distills: "a build that adds a surface names what it built from; the blob says which bytes"
+  - path: docs/work/2026-08-13-dflow-w8-step4-build-leg.html
+    tier: T3
+    action: added
+    distills: "the hand-over driven by a fake build over a real git tree"
+  - path: docs/work/2026-08-14-dflow-w9-discussion.html
+    tier: T3
+    action: added
+    distills: "the screen was designed after it shipped, and nothing was built from it"
+  - path: docs/work/2026-08-14-dflow-w9-plan.html
+    tier: T3
+    action: added
+    distills: "W9's seven steps, and the rule that Tier-3 must go red before it may go green"
+  - path: docs/work/2026-08-14-dflow-w9-run-4.html
+    tier: T3
+    action: added
+    distills: "design run #4 — the setup screen, greenfield, closed green after five Tier-3 submissions"
+  - path: docs/work/2026-08-14-dflow-w9-step0-numbers.html
+    tier: T3
+    action: added
+    distills: "seven predicates never red, and one that never had anything to judge"
+  - path: docs/work/2026-08-14-dflow-w9-step23-overlap-and-tier3.html
+    tier: T3
+    action: added
+    distills: "the overlap costs a reader two lines, and Tier-3 caught the planted defect first"
+  - path: docs/work/2026-08-14-dflow-w9-step4-handoff.html
+    tier: T3
+    action: added
+    distills: "the citation taken, both legs fired"
+  - path: docs/work/2026-08-14-dflow-w9-step45-mounting.html
+    tier: T3
+    action: added
+    distills: "the mockup mounts the components — the check that skipped instead of refusing (DEC-26)"
+  - path: docs/work/2026-08-22-dflow-run-5-dsh-project-explorer.html
+    tier: T3
+    action: added
+    distills: "design run #5 — the DSH project explorer panel, a separate draft"
+  - path: docs/work/2026-08-30-dflow-run-6-setup-redesign.html
+    tier: T3
+    action: added
+    distills: "design run #6 — the setup screen redesigned, zero proposals; W10's cost baseline"
+  - path: docs/work/2026-08-31-dflow-w10-plan.html
+    tier: T3
+    action: added
+    distills: "W10's plan — compact the base and the rulebook, stop reading the checker source, batch the fix loop"
+  - path: docs/work/2026-08-31-dflow-w9-result.html
+    tier: T3
+    action: added
+    distills: "W9 result — the fresh screen designed, Tier-3 red before green, build deferred to W11"
+  - path: docs/work/2026-09-01-dflow-w10-proof-run.html
+    tier: T3
+    action: added
+    distills: "the proof run against the compacted substrate; gained a minted data-htmldoc-id this session"
+  - path: docs/work/2026-09-01-dflow-w10-result.html
+    tier: T3
+    action: added
+    distills: "W10 result — the flow costs what a real run needs; 48%/34% reductions measured"
+  - path: docs/work/2026-09-02-dflow-run-7-replay-composer.html
+    tier: T3
+    action: added
+    distills: "design run #7 — the replay composer, the first run on a function that does not exist; one proposal (Field)"
 note: "Branch carries W8, W9 and W10. The W8/W9/W10 T3 records (discussions, plans, steps, results, runs #4–#7) were added and archived within this branch — lineage evidence sits at the seam that touched it, per DEC-3, not re-hung on the epic note. .claude/skills/code-review/SKILL.md is infrastructure markdown, not a docs/ tier; its design-dimension change distils to DEC-24. Run #7 (the replay composer) and the W10 proof run both gained a minted data-htmldoc-id this session — the defect the new htmldoc predicates now refuse. Epic-wide distillation — T3 archiving, T2 synthesis, flow-spec promotion to T1 — stays owed at the epic close, as W10's result records."
