@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7db06e9f34851f0dfab8b9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W8 step 3 (the trigger and the pointer)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W8 step ③ — a build that adds a surface names what it built from, and the blob says which bytes</h1>
+      <p>One trigger, one field, five refusals. Measured on the real repository, the trigger fires on
+        <strong>one of this epic's own seams</strong> — which the plan said it could not — and the thing
+        that grandfathers it is the discriminator the design section already had.</p>
+      <div class="meta">Step record · 2026-08-13 · Trawler · T3 (docs/work/) ·
+        <code>wu/design-flow/dev-integration</code> ·
+        plan: <a href="2026-08-13-dflow-w8-plan.html#step3">W8 ③</a> ·
+        rule: <a href="design-flow-base.html#handover">flow spec ⑨</a> ·
+        <a href="../workflow.html#design-handoff">workflow · design → build</a> ·
+        prior: <a href="2026-08-13-dflow-w8-step2-handoff.html">W8 ② the handoff, written</a></div>
+    </div>
+  </header>
+
+  <main>
+    <h2 id="verdict">Verdict</h2>
+    <div class="cards" data-c="verdict-cards">
+      <div class="card"><h3>1 trigger</h3><p>an <em>added</em> <code>@tier</code> file under
+        <code>ui/src/components/</code>, or an added non-test <code>.tsx</code> directly under
+        <code>ui/src/</code>. One function, three callers: the gate, the epic walk, and
+        <code>design-scope</code></p></div>
+      <div class="card"><h3>1 field</h3><p><code>design.implements: [{path, blob}]</code> on the existing
+        <code>cr/v3</code> <code>design:</code> section. No new note, no new schema version</p></div>
+      <div class="card"><h3>5 refusals</h3><p>no citation · an empty one · a path that does not resolve at
+        the tip · a blob the tip does not ship · a doc that is not a finished design (an unarchived run
+        named separately)</p></div>
+      <div class="card"><h3>1 plan row wrong</h3><p>D6·A said the trigger cannot fire on landed history. It
+        can — through the epic walk, on <strong>W5's own seam and its 25 surfaces</strong></p></div>
+    </div>
+
+    <h2 id="shape">The shape</h2>
+    <div class="diagram" data-c="dia-pointer">
+      <pre class="mermaid">
+flowchart TB
+  A["git diff --diff-filter=A base..tip"] --> S{"new_surface(path, bytes at tip)"}
+  S -->|"@tier under ui/src/components/"| Y["a surface owes a design"]
+  S -->|"non-test .tsx directly under ui/src/"| Y
+  S -->|"an edit · a test · a module · a deletion"| N["nothing owed"]
+  Y --> C{"cr note carries design.implements?"}
+  C -->|"absent · empty"| R1["red — the silence, and the stated nothing, named apart"]
+  C -->|"cited"| V["path resolves at the tip ·<br/>blob matches the tip's bytes ·<br/>it is a design artifact ·<br/>a run it names is archived"]
+  V -->|"any fails"| R2["red"]
+  V -->|"all hold"| G["green — the handoff is on the record"]
+      </pre>
+      <div class="caption">The same <code>new_surface</code> the gate calls is what
+        <code>cargo xtask design-scope</code> prints, so the note a reviewer writes and the note the gate
+        reads cannot disagree about which files are asking.</div>
+    </div>
+
+    <h2 id="pieces">What landed</h2>
+    <table data-c="tbl-pieces">
+      <thead><tr><th>Piece</th><th>Where</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td><code>new_surface</code></td><td><code>xtask/src/doc.rs</code></td>
+          <td>built on <code>registry_entry</code> from step ①, so roster membership and "owes a design"
+            are literally the same <code>@tier</code> test</td></tr>
+        <tr><td><code>Gate::new_surfaces</code></td><td><code>xtask/src/gate.rs</code></td>
+          <td>added paths at the tip, filtered by the predicate. <code>pub</code> because
+            <code>design-scope</code> is its second caller</td></tr>
+        <tr><td><code>design.implements</code></td><td><code>xtask/src/notes.rs</code></td>
+          <td><code>Option&lt;Vec&lt;Cited&gt;&gt;</code>: absent is a silence, <code>[]</code> is a stated
+            nothing, and the reds say which happened</td></tr>
+        <tr><td><code>check_handoff</code> · <code>check_citation</code></td><td><code>xtask/src/gate.rs</code></td>
+          <td>WU level only — the citation names a T3 design, which check 6 forces out of the tree by the
+            epic tip, so the WU is the only place it can resolve. The epic re-asks at every seam its walk
+            re-verifies</td></tr>
+        <tr><td><code>design-scope</code> prints surfaces</td><td><code>xtask/src/lib.rs</code></td>
+          <td>a second block, so the artifact list a reviewer judges stays exactly the artifact list</td></tr>
+        <tr><td>the code-review skill</td><td><code>.claude/skills/code-review/SKILL.md</code></td>
+          <td>§3b reads both blocks now, and the note template carries <code>implements</code>. A rule the
+            reviewer cannot write is a rule the gate can only punish</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviation">The measurement, and the plan row it broke</h2>
+    <div class="callout warn" data-c="d6a">
+      <p><strong>D6·A said: "the trigger cannot fire on landed history — no schema discriminator, no cutoff,
+        no walk waiver."</strong> Measured with <code>design-scope</code> over every first-parent seam:
+        it fires on <strong>W5's seam</strong> (<code>f2a2b7c</code>, <em>wu/design-flow/revise-registry</em>),
+        which added <strong>25 surfaces</strong> — twenty-odd registry components and the Gallery screen —
+        and the epic walk re-verifies that seam at WU level. The plan's "0 of 11" was measured over the
+        epic→main merges on <code>main</code>, which this epic's walk never re-verifies. It measured the
+        wrong seams.</p>
+      <p><strong>What grandfathers it is the discriminator that already exists.</strong> Every seam in this
+        epic carries a <code>cr/v2</code> note, and a <code>cr/v2</code> note cannot be given a citation
+        after the fact without claiming a reading nobody did — the identical argument
+        <a href="../decisions/dec-24-design-review-dimension.html">DEC-24</a> makes for the design section.
+        So the handoff's silence is reported as <code>9·design-schema</code> on a v2 note and
+        <code>9·design</code> on a v3 one, and the walk drops the former at seams exactly as it already
+        does. <strong>No new discriminator, no cutoff, no walk waiver</strong> — D6·A's conclusion holds
+        even though its premise did not.</p>
+    </div>
+    <table data-c="tbl-measure">
+      <thead><tr><th>Measured on the real repository</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>seams inside <code>main..epic/design-flow</code> where the trigger fires</td>
+          <td><strong>1</strong> — W5's, 25 surfaces (plus a back-merge of <code>main</code>, which
+            <code>is_landed_history</code> skips before any check runs)</td></tr>
+        <tr><td><code>7·walk·9·design</code> failures at the real epic gate</td>
+          <td><strong>0</strong> — the grandfathering, proven rather than argued</td></tr>
+        <tr><td><code>components·unbuilt</code> failures at the real epic gate</td>
+          <td><strong>4</strong>, naming BodyRenderer · BodyViewer · CopyAllHeadersButton · HeaderTable —
+            step ①'s predicate, still the epic's only new red</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="second">The second thing the code said</h2>
+    <div class="callout" data-c="empty-judgment">
+      <p><strong>A design section with nothing judged was being asked for a verdict and a rulebook pin.</strong>
+        <code>check_design</code> validated <code>verdict</code> and the pin whenever the section existed —
+        harmless while the only reason to write one was a judgment. A build's note now carries the section
+        for its <em>citation</em>, and an epic's for its <em>drop record</em>: demanding a
+        <code>PASS</code> over an empty artifact list would have made both notes claim a review nobody ran.</p>
+      <p>So <code>check_design</code> now returns as soon as the diff carries no design artifact, and
+        <code>verdict</code> is optional in the schema. Nothing judged, nothing claimed — and the design-bearing
+        path is untouched, which the existing tests and the flow e2e still assert.</p>
+    </div>
+
+    <h2 id="tests">Tests</h2>
+    <table data-c="tbl-tests">
+      <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">unit</span></td>
+          <td><code>doc.rs</code> — the predicate: a <code>@tier</code> component fires, an untiered one
+            does not, a screen fires, its test does not, a <code>.ts</code> module does not, a Rust file
+            does not.<br>
+            <code>gate.rs</code> — over a real temp repo: the trigger sees the added component and not its
+            test, its <code>.ts</code> sibling or an untouched component; an <em>edit</em> and a
+            <em>deletion</em> add no surface; then one red per way a citation can break (silence on v3,
+            silence on v2 routed to the schema check, an empty list, an unresolvable path, a mismatched
+            blob, a pin too short, a doc that is not a design, an unarchived run) and one green when it all
+            holds.<br>
+            <code>notes.rs</code> — absent and empty <code>implements</code> parse differently, and stay
+            that way.</td></tr>
+        <tr><td><span class="badge id">integration</span></td>
+          <td><code>dod_gate.rs</code> — the whole WU gate over a build that adds a <code>@tier</code>
+            component against a design its epic already carries: red with no citation and the red names the
+            surface, green with a resolvable one, and <strong>stale reds</strong> — the blob is compared
+            against the tip, so an edit to the design after the note was written is caught, while an
+            uncommitted edit to the working tree is not.</td></tr>
+        <tr><td><span class="badge id">e2e</span></td>
+          <td>Unchanged and green (<code>--features design-e2e</code>): the existing flow e2e's
+            <code>design-scope</code> parse is unaffected because its WU adds no surface. The build leg is
+            <a href="2026-08-13-dflow-w8-plan.html#step4">step ④</a>.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="closing">
+      The handoff is now refusable in both directions and printable in one command. What it still cannot do
+      is tell whether the build honoured the design it named — written down as a non-rule in two docs rather
+      than left as an assumption, and the reason step ④ drives the whole leg rather than asserting it.
+    </div>
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

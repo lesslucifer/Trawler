@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a896a9e9f34851f0dfabccb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — design run #5 (the DSH project explorer panel)</title>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .gist{font-weight:600}
+    details.why{margin-top:4px}
+    details.why summary{cursor:pointer;color:var(--muted);font-size:12px}
+    pre.tb{font-family:var(--mono,monospace);font-size:11px;line-height:1.45;margin:0;white-space:pre}
+    .ok{color:var(--ok)} .no{color:var(--warn)}
+    .statebtn{margin-top:10px;border:1px solid var(--line);border-radius:4px;padding:4px 10px;
+      background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit}
+    .statebtn+.statebtn{margin-left:6px}
+
+    /* ── mockup: TOKEN STAND-IN MAP ────────────────────────────────────────
+       This panel ships into DSH, whose palette is its own closed set of
+       --dsw-alias-* tokens (Theme.listTokens). A doc cannot read them, and
+       writing their hex values here would put colour literals in the mockup —
+       the one thing mockup CSS may never carry. So the doc's own dark tokens
+       stand in 1:1, and the mapping is declared in the Elements stage.
+       Every colour below is var(--…): zero literals, by construction. */
+    .a-stage{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+    .a-col{flex:1 1 320px;min-width:300px}
+    .a-cap{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+      margin-bottom:6px}
+    .a-cap.bad{color:var(--warn)} .a-cap.good{color:var(--ok)}
+
+    /* the shipped panel — run 1, the thing under review */
+    .s-panel{width:300px;display:flex;flex-direction:column;background:var(--paper);
+      border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:12px;
+      color:var(--ink);box-shadow:0 12px 32px var(--bg)}
+    .s-head{display:flex;align-items:center;gap:6px;padding:10px 10px 8px 12px;
+      border-bottom:1px solid var(--line);background:var(--bg)}
+    .s-title{font-weight:600;font-size:12px;flex:1}
+    .s-ico{width:22px;height:22px;display:grid;place-items:center;color:var(--muted);
+      border-radius:6px;font-size:13px}
+    .s-pick{padding:8px 10px;border-bottom:1px solid var(--line)}
+    .s-sel{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--line);
+      border-radius:7px;padding:5px 8px;font-size:12px;font-family:inherit}
+    .s-path{margin-top:6px;font-size:10px;color:var(--muted);white-space:nowrap;
+      overflow:hidden;text-overflow:ellipsis}
+    .s-tree{padding:6px 6px 10px 4px}
+    .s-row{display:flex;align-items:center;gap:5px;padding:3px 6px 3px 8px;border-radius:6px}
+    .s-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .s-foot{padding:7px 10px;border-top:1px solid var(--line);font-size:10px;
+      color:var(--muted);background:var(--bg)}
+
+    /* the proposed panel — zone A root row + zone B tree, nothing else */
+    .p-panel{width:300px;display:flex;flex-direction:column;background:var(--paper);
+      border:1px solid var(--line);font-size:12px;color:var(--ink)}
+    .p-root{display:flex;align-items:center;gap:8px;padding:8px;
+      border-bottom:1px solid var(--line)}
+    .p-proj{flex:1;display:flex;align-items:center;gap:6px;font-family:var(--mono,monospace);
+      font-size:12px;color:var(--ink);background:transparent;border:0;padding:4px;
+      text-align:left;cursor:pointer}
+    .p-refresh{width:32px;height:32px;display:grid;place-items:center;color:var(--muted);
+      background:transparent;border:0;cursor:pointer;font-size:13px}
+    .p-tree{padding:4px 0 8px}
+    .p-row{display:flex;align-items:flex-start;gap:6px;padding:6px 8px;width:100%;
+      background:transparent;border:0;color:var(--ink);text-align:left;cursor:pointer;
+      font-size:12px;font-family:inherit}
+    .p-row:hover{background:var(--bg)}
+    .p-chev{width:12px;flex:none;color:var(--muted);font-size:9px;line-height:16px}
+    .p-name{font-family:var(--mono,monospace);overflow-wrap:anywhere}
+    .p-dir{color:var(--ink)}
+    .p-hidden{padding:6px 8px 6px 26px;color:var(--muted);font-size:11px;
+      background:transparent;border:0;cursor:pointer;font-family:inherit;text-align:left;
+      width:100%}
+    .p-note{padding:6px 8px 6px 26px;color:var(--muted);font-size:11px}
+    .p-cur{background:var(--bg);outline:1px solid var(--line)}
+    .p-tag{margin-left:auto;flex:none;font-size:9px;letter-spacing:.04em;color:var(--ok);
+      font-family:inherit}
+
+    /* state visibility — the toggles below the stage drive these */
+    .a-copied .p-tag-slot{display:inline}
+    .p-tag-slot{display:none}
+    .a-empty .p-full{display:none}
+    .p-emptyonly{display:none}
+    .a-empty .p-emptyonly{display:block}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run #5 — the DSH project explorer panel</h1>
+      <p>The flow run against a panel that already shipped, blind, into a foreign host app — and the redesign it forces.</p>
+      <div class="meta">Draft · 2026-08-22 · Trawler · T3 (docs/work/) · rulebook <code>b769f7e4</code> · run in review</div>
+    </div>
+  </header>
+
+  <main data-artifact="design-run" data-status="draft">
+
+    <h2 id="why">Why this run exists</h2>
+    <p>A file-browser panel was built into the DSH web GUI as a live Cordis plugin and shipped
+    working. The reviewer's verdict: <em>"the plugin works but the UI / UX is not sufficient to me."</em>
+    It was designed blind — no stage, no rulebook, no registry — so this run does the work in the
+    order the flow prescribes, and the shipped panel becomes the run's <code>before</code>.</p>
+
+    <div class="callout warn" data-c="foreign-target">
+      <strong>This run has a foreign target, and that is a first.</strong> Every previous run designed a
+      Trawler screen: Trawler's tailwind config held the tokens, and <code>ui/src/components/</code> held the
+      components to mount. This panel renders inside <strong>DSH</strong> — a different application, with its own
+      closed token set (<code>--dsw-alias-*</code>) and no access to Trawler's collection. The consequence is
+      split, and the split is the interesting part:
+      <ul>
+        <li><strong>The soft rules transfer whole.</strong> They are design judgment, not Trawler facts —
+        and they are exactly what the reviewer's complaint is made of.</li>
+        <li><strong>The hard token rules transfer as shape, not as membership.</strong> "Colour only via named
+        tokens" holds; the token set it names is DSH's.</li>
+        <li><strong>The registry transfers as contract, never as mounts.</strong> No <code>CopyText</code> can be
+        mounted here. Its <code>@avoid</code> lines still judge the design — and they caught two defects.</li>
+      </ul>
+      Filed as findings 1 and 8; the verdict-vocabulary gap it opens is proposal <code>verdict-mirrored</code>.
+    </div>
+
+    <h2 id="frame">1 · Frame</h2>
+    <p>Purpose: a user mid-session in DSH browses the project they are working on and hands an exact
+    file path to the agent.</p>
+    <p>Given (functional input — received, not designed): workspace registry (id · path · title ·
+    recency) · per-level host <code>fs</code> listing (name · type · size) · <code>openPath</code> to the OS ·
+    clipboard write · DSH's closed <code>--dsw-alias-*</code> token set · two slot seats (frame overlay ·
+    sidebar foot)</p>
+    <p>Not given (may not be assumed to exist): file content read · git status per file · recursive or
+    fuzzy search · filesystem change events · persistence across a process restart · drag into the
+    composer</p>
+
+    <table data-item="frame" data-c="frame-table">
+      <thead><tr><th>Driver</th><th>why…</th><th>therefore (design consequence)</th><th>on this screen</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4" class="kd"><em>Goals — the ranking is the visual hierarchy</em></td></tr>
+        <tr>
+          <td>hand an exact path over</td>
+          <td>the panel's only durable output</td>
+          <td>the path outweighs every other mark in a row</td>
+          <td>✓ mono basename, whole row copies<br>✗ a name in chrome type beside a louder icon</td>
+        </tr>
+        <tr>
+          <td>read the project's shape</td>
+          <td>orientation precedes any path</td>
+          <td>depth reads from indent alone</td>
+          <td>✓ indent plus one chevron carries depth<br>✗ an icon column competing with names</td>
+        </tr>
+        <tr>
+          <td>reach a file in the OS</td>
+          <td>an escape hatch, not the job</td>
+          <td>no resident affordance of its own</td>
+          <td>✓ a modifier on the same target<br>✗ a second button on every row</td>
+        </tr>
+        <tr><td colspan="4" class="kd"><em>Constraints — hard boundaries</em></td></tr>
+        <tr>
+          <td>DSH owns the palette</td>
+          <td>a foreign host app, not Trawler</td>
+          <td>token rules re-express against <code>--dsw-alias-*</code></td>
+          <td>✓ every colour a DSH alias token<br>✗ a shadow written <code>rgba(0,0,0,.22)</code></td>
+        </tr>
+        <tr>
+          <td>no component may be mounted</td>
+          <td>the collection is another app's</td>
+          <td>every element is built local, contracts read only</td>
+          <td>✓ registry <code>@avoid</code> judges the design<br>✗ a receipt claiming reuse of CopyText</td>
+        </tr>
+        <tr>
+          <td>no filesystem watch</td>
+          <td>the host exposes no change event</td>
+          <td>staleness is structural; refresh is explicit</td>
+          <td>✓ refresh sits on the root row<br>✗ a spinner implying a live sync</td>
+        </tr>
+        <tr>
+          <td>the overlay is click-through</td>
+          <td>the layer must never block the app</td>
+          <td>only the panel opts into pointer events</td>
+          <td>✓ events on the panel rectangle alone<br>✗ a frame-wide scrim behind it</td>
+        </tr>
+        <tr>
+          <td>sidebar geometry is unpublished</td>
+          <td>no CSS variable carries the column width</td>
+          <td>the panel measures its own anchor</td>
+          <td>✓ dock read from the toggle's rect<br>✗ a hardcoded 280px left offset</td>
+        </tr>
+        <tr><td colspan="4" class="kd"><em>Qualities — Tune's yardstick</em></td></tr>
+        <tr>
+          <td>the tree is the only content</td>
+          <td>panel chrome competes with payload</td>
+          <td>no frame, no header band, no footer</td>
+          <td>✓ a hairline only where a seam is real<br>✗ a card with title, shadow, instructions</td>
+        </tr>
+        <tr>
+          <td>a handed path is verifiable</td>
+          <td>a wrong path costs an agent turn</td>
+          <td>the copy confirms where the eye already is</td>
+          <td>✓ copied appears on that row<br>✗ a toast in the frame corner</td>
+        </tr>
+        <tr>
+          <td colspan="4" class="kd">Non-goals: file preview · git status · recursive search · cross-restart persistence · drag into composer</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="layout">2 · Layout</h2>
+    <pre data-item="layout" class="tb">
+┌─────────────────────────────────┐
+│ A  project root row             │  ← the tree's root, not a title bar:
+│                                 │    project name IS the root node · refresh
+├─────────────────────────────────┤
+│ B  tree                         │  ← the whole content; scrolls
+│                                 │    one row per entry, depth by indent
+│                                 │    "N hidden" is a row, not a control
+│                                 │
+│                                 │
+└─────────────────────────────────┘
+   (no zone C — the shipped footer is deleted, see Tune)
+
+scroll / overflow: A is pinned · B is the only scrolling region · B's listing cap
+                   is owned by the host handler (2000 entries per level) and
+                   declared in the tree as a "listing truncated" row · the panel
+                   itself is height-capped to the frame, docked to the sidebar's
+                   measured right edge
+</pre>
+    <p class="kd">Two zones, because the run has two goals and the third is a modifier on the
+    first. The shipped panel had four (header · picker · tree · footer); three of them were chrome.</p>
+
+    <h2 id="elements">3 · Elements</h2>
+    <div data-item="elements" data-map data-c="elements-map">
+      <pre class="tb">
+Tree (placement + composition; ◆ = recurring, ▣ = composition)
+  <span data-key="panel">panel ▣</span>
+  ├─ A root row ── <span data-key="project-switch">project-switch</span> · <span data-key="refresh">refresh</span>
+  └─ B tree ────── <span data-key="file-row">file-row ◆</span> · <span data-key="hidden-row">hidden-row</span> · <span data-key="absence">absence</span>
+
+  <span data-key="file-row">file-row</span> = chevron · <span data-key="path-text">path-text ◆</span> · confirm slot
+  <span data-key="project-switch">project-switch</span> = <span data-key="path-text">path-text ◆</span> · popup list (filterable)
+</pre>
+      <table>
+        <thead><tr><th>Component</th><th>Placement · verdict</th><th>Fit (gist · why = the @avoid/@use trace)</th><th>Shape (reference) · States</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span data-key="panel">panel</span></td>
+            <td>T4 · build local<br><span class="kd">whole surface</span></td>
+            <td><div class="gist">A composition: broken down, never a registry entry.</div>
+              <details class="why"><summary>▸ why</summary>T4 by the tier model — a panel is built local and
+              waived from reuse. Its parts are the real entries, and every one of them is local too because
+              the collection belongs to another application.</details></td>
+            <td><pre class="tb">┌──────────┐
+│ root     │
+├──────────┤
+│ tree     │
+└──────────┘</pre>states: owns none — its children hold them</td>
+          </tr>
+          <tr>
+            <td><span data-key="path-text">path-text</span></td>
+            <td>T1 · build local<br><span class="kd">B rows · A root — shared</span></td>
+            <td><div class="gist">CopyText's contract, mirrored — it cannot be mounted.</div>
+              <details class="why"><summary>▸ why</summary><code class="ok">@use</code> "full-value fields grabbed
+              whole" lands exactly: a path is grabbed whole. <code class="ok">@avoid</code> "prose · showing anything
+              but the exact payload" both clear. So the fit is real and the verdict still cannot be
+              <em>reuse</em> — the component is Trawler's and this panel is DSH's. It is mirrored: same click-copy,
+              same ~2s confirm, same native-selection pass-through.<br>
+              <strong>This row caught a hard defect.</strong> <code>mono-for-wire-data</code> binds a payload to the mono
+              family, and a file path is payload ("wire data, shell commands, keys, ids"). The shipped panel
+              rendered names in the UI font.</details></td>
+            <td><pre class="tb">src/lib.rs
+└ click → copies
+  ↳ "copied" 2s</pre>states: rest · hover · focus · confirming (~2s, resets on value change) · drag-select native</td>
+          </tr>
+          <tr>
+            <td><span data-key="file-row">file-row</span></td>
+            <td>T3 · build local<br><span class="kd">B, every entry</span></td>
+            <td><div class="gist">A screen row: local by tier, waived from reuse.</div>
+              <details class="why"><summary>▸ why</summary>T3 = local screen row, build local and waive.
+              Composes <span data-key="path-text">path-text</span> for the name. Checked against
+              <code>KeyValueRow</code>'s shape — <code class="no">@avoid</code> "data needing sort/filter" excludes it,
+              since a tree row is ordered by the wire listing and filterable. So not that either, even by analogy.
+              <br>The whole row is the hit target, not the name — <code>generous-targets</code>, which the shipped
+              22px glyph buttons broke.</details></td>
+            <td><pre class="tb">▸ █ src/
+    █ main.rs
+  ↑ whole row = target</pre>states: rest · hover · focus · current (keyboard cursor) · confirming (via path-text) · expanded/collapsed (directories)</td>
+          </tr>
+          <tr>
+            <td><span data-key="project-switch">project-switch</span></td>
+            <td>T1 · build local<br><span class="kd">A root row</span></td>
+            <td><div class="gist">Select's contract at 5+ projects; the root row is its trigger.</div>
+              <details class="why"><summary>▸ why</summary><code class="ok">@use</code> "any single choice from five or
+              more options… a target picker" fits. <code class="no">@avoid</code> "two to four options (use
+              SegmentedControl)" is a live risk — a user with three projects gets a dropdown where a switch
+              belongs. Accepted deliberately: the count is unknown at design time and varies per user, and
+              Select's type-to-filter is what makes 20 projects usable. Filed as finding 6.<br>
+              Inherits Select's keyboard contract wholesale: ↑↓ move without selecting, Enter takes, Esc closes
+              unchanged, typing filters, focus returns to the trigger.</details></td>
+            <td><pre class="tb">TRA-DESIGN-FLOW ▾
+┌─────────────────┐
+│ trawler         │
+│ htmldoc-server  │
+└─────────────────┘</pre>states: rest · hover · focus · open · filtering · no-match · nothing-selected · empty (no projects)</td>
+          </tr>
+          <tr>
+            <td><span data-key="refresh">refresh</span></td>
+            <td>T1 · build local<br><span class="kd">A root row</span></td>
+            <td><div class="gist">IconButton's contract: the glyph is unambiguous alone.</div>
+              <details class="why"><summary>▸ why</summary><code class="ok">@use</code> "icon-only triggers unambiguous
+              in place" — ↻ on a tree is conventional. <code class="ok">@avoid</code> "actions with no fitting glyph"
+              clears; "primary actions" clears (it carries no weight at rest).<br>
+              Why it is resident at all, when the dotfile toggle is not: no filesystem watch exists, so refresh is
+              the only way the tree can ever be correct. It answers a Frame constraint, not a preference.</details></td>
+            <td><pre class="tb">   ↻   ← 32px target
+       bare, no frame</pre>states: rest · hover · focus · active · in-flight (the tree shows its own loading rows)</td>
+          </tr>
+          <tr>
+            <td><span data-key="hidden-row">hidden-row</span></td>
+            <td>T3 · build local<br><span class="kd">B, per level with hidden entries</span></td>
+            <td><div class="gist">The dotfile control, dissolved into a tree row that names the absence.</div>
+              <details class="why"><summary>▸ why</summary>The shipped design spent a permanent header glyph
+              (○/◉) on a rare preference. This replaces it with a mute row in the level that actually has hidden
+              entries — "12 hidden", one click to reveal. Three rules pay for it at once:
+              <code>absence-names-itself</code> (it says which nothing), <code>data-ink-first</code> (a row, not
+              chrome), <code>progressive-disclosure</code> (one act, in place).<br>
+              No registry analogue: <code>Notice</code>'s <code class="no">@avoid</code> forbids "a dismissible
+              message" and this is a toggle, not a message.</details></td>
+            <td><pre class="tb">  main.rs
+  12 hidden   ← mute, clickable</pre>states: collapsed (count shown) · revealed (row reads "hide 12") · absent (no hidden entries at this level)</td>
+          </tr>
+          <tr>
+            <td><span data-key="absence">absence</span></td>
+            <td>T1 · build local<br><span class="kd">B, empty · error · truncated · no projects</span></td>
+            <td><div class="gist">Notice's contract: one sentence naming which nothing this is.</div>
+              <details class="why"><summary>▸ why</summary><code class="ok">@use</code> "any zone that has nothing to
+              show and must say which nothing it is (empty · pending · capped · not captured)" — four of this
+              panel's five absences are exactly that list. <code class="ok">@avoid</code> "a dismissible message"
+              and "wrapping a notice in a card" both clear.<br>
+              The shipped panel wrote a bare "Empty", which names nothing —
+              <code>absence-names-itself</code> violated. Four sentences replace it.</details></td>
+            <td><pre class="tb">  nothing in this folder
+  listing stops at 2000
+  can't read this folder</pre>states: empty · error · truncated · no-projects · loading</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="kd"><strong>T4 break-down:</strong> <span data-key="panel">panel</span> →
+      <span data-key="project-switch">project-switch</span> (T1) · <span data-key="refresh">refresh</span> (T1) ·
+      <span data-key="file-row">file-row</span> (T3) · <span data-key="path-text">path-text</span> (T1) ·
+      <span data-key="hidden-row">hidden-row</span> (T3) · <span data-key="absence">absence</span> (T1)</p>
+      <p class="kd"><strong>Token stand-in map</strong> (the mockup's colours, declared once — the doc has no
+      access to DSH's palette and may write no literals):
+      <code>--paper</code>→<code>--dsw-alias-bg-overlay</code> ·
+      <code>--bg</code>→<code>--dsw-alias-bg-layer-2</code> ·
+      <code>--ink</code>→<code>--dsw-alias-label-primary</code> ·
+      <code>--muted</code>→<code>--dsw-alias-label-secondary</code> ·
+      <code>--line</code>→<code>--dsw-alias-border-l1</code> ·
+      <code>--ok</code>→<code>--dsw-alias-state-success-primary</code></p>
+      <p class="kd"><strong>Proposals</strong> (each needs a home before a build):
+      every row above is a propose-equivalent in a foreign app — see the
+      <a href="#proposals">proposals list</a> for the four that are real vocabulary gaps.</p>
+    </div>
+
+    <h2 id="interaction">4 · Interaction</h2>
+    <table data-item="interaction" data-c="interaction-table">
+      <thead><tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th><th>Keyboard path</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>hand a file to the agent</td>
+          <td>hand an exact path over</td>
+          <td>clicks a file row</td>
+          <td><div class="gist">One row confirms; nothing else moves.</div>
+            <details class="why"><summary>▸ why</summary><pre class="tb">B row      → "copied" tag, ~2s, then clears
+B tree     → UNCHANGED  (no reflow: the tag
+             occupies a slot the row already holds)
+A root row → UNCHANGED
+clipboard  → the @-relative path</pre>The reserved slot is the decision — a tag that
+            appears by growing the row makes every neighbour twitch on a copy.</details></td>
+          <td>Enter on the cursor row</td>
+        </tr>
+        <tr>
+          <td>open a file in the OS</td>
+          <td>reach a file in the OS</td>
+          <td>⌘/Ctrl-clicks a file row</td>
+          <td><div class="gist">The panel does not react; the OS does.</div>
+            <details class="why"><summary>▸ why</summary><pre class="tb">B row      → UNCHANGED  ← deliberate: the OS window
+             IS the feedback, and a second
+             confirm would claim the panel did it
+B tree     → UNCHANGED
+host       → openPath(path)</pre>Failure is the one case that must speak — an absence row
+            replaces the tree only if the host rejects the call.</details></td>
+          <td>⌘/Ctrl+Enter <span class="kd">(proposed)</span></td>
+        </tr>
+        <tr>
+          <td>walk into a folder</td>
+          <td>read the project's shape</td>
+          <td>clicks a directory row</td>
+          <td><div class="gist">The level opens under it; depth reads by indent.</div>
+            <details class="why"><summary>▸ why</summary><pre class="tb">B row      → chevron rotates, row stays put
+B tree     → child level inserted below, one
+             loading row while the host answers
+A root row → UNCHANGED</pre>Collapsing keeps the fetched level in memory — a
+            re-open must not re-hit the host.</details></td>
+          <td>→ expands, ← collapses <span class="kd">(proposed)</span></td>
+        </tr>
+        <tr>
+          <td>move through the tree</td>
+          <td>read the project's shape</td>
+          <td>presses ↑ / ↓</td>
+          <td><div class="gist">A cursor moves; nothing is taken.</div>
+            <details class="why"><summary>▸ why</summary><pre class="tb">B row      → cursor outline moves, no wrap
+B tree     → scrolls only to keep cursor in view
+clipboard  → UNCHANGED  ← movement never copies</pre>Straight from the rulebook's list
+            idiom: move without selecting, Enter takes.</details></td>
+          <td>↑ / ↓, no wrap</td>
+        </tr>
+        <tr>
+          <td>find a file by name</td>
+          <td>hand an exact path over</td>
+          <td>types</td>
+          <td><div class="gist">The visible tree narrows to matching rows.</div>
+            <details class="why"><summary>▸ why</summary><pre class="tb">B tree     → non-matching rows drop out;
+             matched rows keep their ancestors
+             so depth still reads
+A root row → UNCHANGED
+no match   → an absence row names it</pre>Scope is the loaded levels only — recursive
+            search is a Not-given, so the filter must not imply it reaches unopened folders. That limit
+            is the weakest point in this design; see blocked-on.</details></td>
+          <td>type-to-filter, always on</td>
+        </tr>
+        <tr>
+          <td>switch project</td>
+          <td>read the project's shape</td>
+          <td>clicks the root row</td>
+          <td><div class="gist">A filterable list opens over the tree.</div>
+            <details class="why"><summary>▸ why</summary><pre class="tb">A root row → becomes the open trigger
+B tree     → replaced wholesale on pick,
+             expansion state dropped with it
+             ← a new project's paths are not
+               the old one's; keeping them
+               would restore phantom folders</pre></details></td>
+          <td>Enter opens · ↑↓ move · Enter takes · Esc closes unchanged</td>
+        </tr>
+        <tr>
+          <td>reveal hidden entries</td>
+          <td>read the project's shape</td>
+          <td>clicks "N hidden"</td>
+          <td><div class="gist">Dotfiles appear in place, at every level.</div>
+            <details class="why"><summary>▸ why</summary><pre class="tb">B level    → hidden entries inserted in wire
+             order, the row now reads "hide 12"
+B other    → same, globally — a per-level
+  levels     toggle would strand the setting
+             where the user did not press it</pre></details></td>
+          <td>Enter on that row</td>
+        </tr>
+        <tr>
+          <td>refresh a stale tree</td>
+          <td>read the project's shape</td>
+          <td>clicks ↻</td>
+          <td><div class="gist">Loaded levels re-fetch; the shape survives.</div>
+            <details class="why"><summary>▸ why</summary><pre class="tb">B tree     → each open level shows a loading
+             row, then its new listing
+B expansion→ PRESERVED  ← the shipped panel
+             collapsed everything on refresh,
+             which punishes the user for
+             asking whether the tree is true
+A root row → UNCHANGED</pre></details></td>
+          <td>Enter on ↻ <span class="kd">(it is a button)</span></td>
+        </tr>
+        <tr>
+          <td>dismiss the panel</td>
+          <td>—</td>
+          <td>presses Esc</td>
+          <td><div class="gist">The panel closes; focus goes back to the toggle.</div>
+            <details class="why"><summary>▸ why</summary><pre class="tb">panel      → hidden, state kept in memory
+sidebar    → toggle regains focus
+             ← focus-returns-to-origin; the
+               shipped panel had no keyboard
+               path in or out at all</pre></details></td>
+          <td>Esc</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="mockup">5 · Draft mockup</h2>
+    <p class="kd">Shipped and proposed, same width, same tokens, side by side — the run's
+    <code>before</code> is a real artifact here, not a memory. Nothing is mounted: no component in this
+    panel exists in a collection this doc can load (Frame constraint 2), so every element is drawn as
+    the build-local thing it is.</p>
+    <div data-item="mockup" data-c="mockup-stage">
+      <div class="a-stage" id="mock">
+        <div class="a-col">
+          <div class="a-cap bad">✗ shipped — run 1, designed blind</div>
+          <div class="s-panel">
+            <div class="s-head">
+              <span class="s-title">Project files</span>
+              <span class="s-ico">○</span><span class="s-ico">↻</span><span class="s-ico">✕</span>
+            </div>
+            <div class="s-pick">
+              <div class="s-sel">TRA-DESIGN-FLOW &nbsp;▾</div>
+              <div class="s-path">/Users/macbook/Documents/proj/misc/TRA-DESIGN-FLOW</div>
+            </div>
+            <div class="s-tree">
+              <div class="s-row"><span class="p-chev">▸</span><span>▮</span><span class="s-name">docs</span></div>
+              <div class="s-row"><span class="p-chev">▸</span><span>▮</span><span class="s-name">src</span></div>
+              <div class="s-row"><span class="p-chev">&nbsp;</span><span>▯</span><span class="s-name">Cargo.toml</span></div>
+              <div class="s-row"><span class="p-chev">&nbsp;</span><span>▯</span><span class="s-name">CLAUDE.md</span></div>
+              <div class="s-row"><span class="p-chev">&nbsp;</span><span>▯</span><span class="s-name">a-very-long-generated-filename.rs</span></div>
+            </div>
+            <div class="s-foot">Click a file to copy its @path · ⌘/Ctrl-click to open</div>
+          </div>
+          <p class="kd" style="font-size:11px;margin-top:8px">4 zones · 3 of them chrome · 5 hard rules
+          broken · names in chrome type · a truncated name · a permanent instruction · no keyboard path</p>
+        </div>
+
+        <div class="a-col">
+          <div class="a-cap good">✓ proposed — 2 zones</div>
+          <div class="p-panel">
+            <div class="p-root">
+              <button class="p-proj"><span class="p-chev">▾</span><span>TRA-DESIGN-FLOW</span></button>
+              <button class="p-refresh">↻</button>
+            </div>
+            <div class="p-tree">
+              <div class="p-full">
+                <button class="p-row"><span class="p-chev">▸</span><span class="p-name p-dir">docs/</span></button>
+                <button class="p-row"><span class="p-chev">▾</span><span class="p-name p-dir">src/</span></button>
+                <button class="p-row p-cur" style="padding-left:26px"><span class="p-chev">&nbsp;</span><span class="p-name">lib.rs</span><span class="p-tag p-tag-slot">copied</span></button>
+                <button class="p-row" style="padding-left:26px"><span class="p-chev">&nbsp;</span><span class="p-name">main.rs</span></button>
+                <button class="p-row"><span class="p-chev">&nbsp;</span><span class="p-name">Cargo.toml</span></button>
+                <button class="p-row"><span class="p-chev">&nbsp;</span><span class="p-name">a-very-long-generated-filename.rs</span></button>
+                <button class="p-hidden">12 hidden</button>
+              </div>
+              <div class="p-emptyonly">
+                <div class="p-note">nothing in this folder</div>
+              </div>
+            </div>
+          </div>
+          <p class="kd" style="font-size:11px;margin-top:8px">2 zones · root row IS the tree root · mono
+          names, wrapped not clipped · the dotfile control is a row that names its absence · whole row is
+          the target · footer deleted</p>
+        </div>
+      </div>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="a-copied"
+        data-label-off="▶ show copied" data-label-on="◀ hide copied">▶ show copied</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="a-empty"
+        data-label-off="▶ show empty" data-label-on="◀ hide empty">▶ show empty</button>
+      <p class="kd" style="font-size:11px">Stubbed: the popup list, live clipboard, host listing, and the
+      keyboard cursor's motion. Real: zoning, seams, type, targets, the confirm slot, and both absences.</p>
+    </div>
+
+    <h2 id="tune">6 · Tune</h2>
+    <table data-item="tune" data-c="tune-table">
+      <thead><tr><th>Call</th><th>Before</th><th>After</th><th>Slug</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>the footer</td>
+          <td><pre class="tb">│ tree        │
+├─────────────┤
+│ Click a fi… │
+│ ⌘-click to… │</pre></td>
+          <td><pre class="tb">│ tree        │
+│             │
+│             │
+└─────────────┘</pre></td>
+          <td><code>data-ink-first</code><br><code>calm-microcopy</code></td>
+        </tr>
+        <tr>
+          <td>title bar → tree root</td>
+          <td><pre class="tb">Project files ○ ↻ ✕
+┌───────────────────┐
+│ PROJECT       ▾   │
+│ /Users/…/TRA-DE…  │
+└───────────────────┘
+▸ docs</pre></td>
+          <td><pre class="tb">▾ TRA-DESIGN-FLOW  ↻
+  ▸ docs
+  ▸ src</pre></td>
+          <td><code>data-ink-first</code><br><code>familiar-idioms</code></td>
+        </tr>
+        <tr>
+          <td>name type</td>
+          <td><pre class="tb">docs        (ui font)
+Cargo.toml  (ui font)</pre></td>
+          <td><pre class="tb">docs/       (mono)
+Cargo.toml  (mono)</pre></td>
+          <td><code>mono-for-wire-data</code><br><span class="kd">(hard)</span></td>
+        </tr>
+        <tr>
+          <td>long names</td>
+          <td><pre class="tb">a-very-long-generat…</pre></td>
+          <td><pre class="tb">a-very-long-generated
+-filename.rs</pre></td>
+          <td><code>wrap-not-truncate</code><br><span class="kd">(hard)</span></td>
+        </tr>
+        <tr>
+          <td>the dotfile control</td>
+          <td><pre class="tb">Project files ○ ↻ ✕
+              ↑
+     a permanent 22px
+     glyph for a rare
+     preference</pre></td>
+          <td><pre class="tb">  main.rs
+  12 hidden
+  ↑ a row, in the level
+    that has them</pre></td>
+          <td><code>absence-names-itself</code><br><code>progressive-disclosure</code></td>
+        </tr>
+        <tr>
+          <td>hit target</td>
+          <td><pre class="tb">▸ ▮ docs
+  ↑ 22px glyphs, and
+    the name is the
+    only copy target</pre></td>
+          <td><pre class="tb">┌───────────────────┐
+│ ▸  docs/          │ ← whole
+└───────────────────┘   row
+   ↻ 32px</pre></td>
+          <td><code>generous-targets</code></td>
+        </tr>
+        <tr>
+          <td>row icons</td>
+          <td><pre class="tb">▸ ▮ docs
+  ▯ Cargo.toml
+  ↑ chevron AND a
+    file/folder icon</pre></td>
+          <td><pre class="tb">▸ docs/
+  Cargo.toml
+  ↑ chevron and a
+    trailing slash</pre></td>
+          <td><code>data-ink-first</code><br><code>visual-weight-follows-goals</code></td>
+        </tr>
+        <tr>
+          <td>empty state</td>
+          <td><pre class="tb">  Empty</pre></td>
+          <td><pre class="tb">  nothing in this folder</pre></td>
+          <td><code>absence-names-itself</code><br><code>calm-microcopy</code></td>
+        </tr>
+        <tr>
+          <td>refresh semantics</td>
+          <td><pre class="tb">↻ → tree collapses
+    to the root</pre></td>
+          <td><pre class="tb">↻ → each open level
+    reloads in place</pre></td>
+          <td><code>progressive-disclosure</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <details class="why"><summary>▸ why — per call, and whether it loops back to Layout</summary>
+      <ul>
+        <li><strong>the footer</strong> — two lines of instruction, resident forever, teaching what one
+        click teaches once. Loops back to Layout: <strong>yes</strong> — zone C is deleted.</li>
+        <li><strong>title bar → tree root</strong> — "Project files" labels a panel that is visibly
+        project files, and the path line under the picker repeats what the name already says. Making the
+        project the root node collapses three chrome rows into one content row, and it is what every file
+        tree in the genre does. Loops back to Layout: <strong>yes</strong> — zones A and B merge into one
+        root-plus-tree structure.</li>
+        <li><strong>name type</strong> — a hard-rule breach found by the Elements pass, not by taste. A
+        path is payload; payload is mono. Loops back: no.</li>
+        <li><strong>long names</strong> — ellipsis on a payload is forbidden, and it is also a functional
+        defect: the user cannot read the name they are about to hand over. Wrapping costs a second line on
+        rare rows. Loops back: no.</li>
+        <li><strong>the dotfile control</strong> — the strongest call in the run. Spending permanent
+        header chrome on a rare preference inverts the hierarchy; dissolving it into the level that has
+        hidden entries pays three rules at once and removes a control entirely. Loops back: no.</li>
+        <li><strong>hit target</strong> — 22px glyphs against a 44px-ish comfortable floor, and the copy
+        target was the text width rather than the row. Loops back: no.</li>
+        <li><strong>row icons</strong> — two glyphs per row competing with the payload the row exists to
+        carry. A trailing slash says "directory" at zero ink. Loops back: no.</li>
+        <li><strong>empty state</strong> — "Empty" names no absence: empty folder, filtered to nothing,
+        and unreadable folder are three different facts. Loops back: no.</li>
+        <li><strong>refresh semantics</strong> — a behavioural defect the mockup surfaced: the shipped
+        handler drops every expansion, so checking whether the tree is current costs the user their place.
+        Loops back: no.</li>
+      </ul>
+    </details>
+
+    <h2 id="findings">Findings</h2>
+    <table data-c="findings-table">
+      <thead><tr><th>#</th><th>Stage</th><th>Finding</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Frame</td><td><strong>The flow has never had a foreign target, and the substrate
+        splits three ways under one.</strong> Soft rules transfer whole, hard token rules transfer as shape
+        but not membership, and the registry transfers as contract but not as mounts. Nothing in the base
+        spec says which of those three a run should do, because every previous run was a Trawler
+        screen.</td></tr>
+        <tr><td>2</td><td>Elements</td><td><strong>The registry earned its keep on a panel it cannot
+        supply a single component to.</strong> <code>CopyText</code>'s contract caught the
+        <code>mono-for-wire-data</code> breach; <code>Notice</code>'s <code>@use</code> list caught the
+        bare "Empty"; <code>IconButton</code>'s and <code>Select</code>'s <code>@avoid</code> lines
+        settled two placement questions. Read as pure contract, with zero reuse available, it still did
+        the work.</td></tr>
+        <tr><td>3</td><td>Elements</td><td><strong>The verdict vocabulary has no arm for a foreign
+        target.</strong> <code>reuse · extend · propose</code> all presume one collection. Every row here
+        is "the contract fits, and I still must build it myself" — which is not <em>propose</em> (nothing
+        new is being added to Trawler's collection) and is certainly not <em>reuse</em>. Written as
+        "build local" with the trace carrying the truth; proposal
+        <code>verdict-mirrored</code>.</td></tr>
+        <tr><td>4</td><td>Mockup</td><td><strong>Every hard token rule went unchecked, in both
+        directions.</strong> The predicates read Trawler's tailwind config, and this panel's tokens are
+        DSH's, so <code>spacing-scale</code>, <code>radius-tokens</code> and
+        <code>colour-tokens-only</code> have nothing to test — while the shipped panel breached all
+        three (3/5/7/22px spacing, four improvised radii, an <code>rgba()</code> shadow). A foreign-target
+        run is exactly where the gate is blind and the rules matter
+        most.</td></tr>
+        <tr><td>5</td><td>Interaction</td><td><strong>The shipped panel had no keyboard path at
+        all</strong> — pointer-only, every row. <code>keyboard-parity</code> is a hard rule with a
+        per-row predicate, and it never ran because the panel never came through the flow. Nine use-cases
+        now carry one; three needed bindings the conventions vocabulary does not
+        hold.</td></tr>
+        <tr><td>6</td><td>Elements</td><td><strong>A cardinality rule cannot be satisfied at design
+        time.</strong> <code>Select</code>'s <code>@avoid</code> says 2–4 options belong to
+        SegmentedControl, but the option count here is the user's project count — unknown, and variable
+        per user. The design picks Select and accepts the miss for small counts; a contract that keys on a
+        runtime quantity may need a third arm.</td></tr>
+        <tr><td>7</td><td>Tune</td><td><strong>The mockup surfaced a behavioural defect, not a visual
+        one.</strong> Drawing refresh made it obvious that the shipped handler drops every expansion —
+        the user pays for asking whether the tree is true. No visual stage would have found it; this is
+        the mockup-as-decision-stage claim holding on a real
+        case.</td></tr>
+        <tr><td>8</td><td>Frame</td><td><strong>Blind-shipping is the actual root cause, and it is a
+        process defect rather than a taste one.</strong> The panel was built and run without loading the
+        rulebook that <code>CLAUDE.md</code> marks as load-before-UI-work. Five hard and eight soft rules
+        were breached by a UI that worked on first
+        activation.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="receipt">Closing — receipt</h2>
+    <pre data-item="receipt">
+rulebook: b769f7e4ccbb2e4d02604f47e0fd1aa07e493cf9
+soft:
+  visual-weight-follows-goals: satisfied — the mono path is the heaviest mark in a row; the shipped design's heaviest marks were its title bar and its footer, which serve no goal
+  grouping-by-relatedness: satisfied — one hairline, under the root row, where the only real boundary is; the shipped panel drew four seams for two boundaries
+  ordering-by-priority: satisfied — project, then its tree; within a level, directories before files then the host's name order
+  progressive-disclosure: satisfied — a root and one level at rest, each deeper level and every hidden entry exactly one act away
+  data-ink-first: satisfied — no shadow, no panel radius, no per-row icon, no footer; a trailing slash carries directory-ness at zero ink
+  generous-targets: satisfied — the whole row copies, the root row switches project, refresh is 32px; the shipped 22px glyphs were the only targets
+  motion-informs: satisfied — one transition, the chevron rotation on expand; the ~2s confirm expires on its own and nothing else animates
+  empty-states-orient: satisfied — five absences, each naming what happened, and none inventing an action where the user cannot act
+  familiar-idioms: satisfied — the file-tree genre, followed to its conventions: project as root node, indent for depth, chevron for expandability
+  display-equals-payload: satisfied — a row shows the basename and copies the project-relative path; the two differ, so the tooltip carries the full path and the copy is never a silent transformation
+  labels-add-context: satisfied — "12 hidden" inside a level, not "12 hidden files in this folder"; the deleted footer was the worst offender in the shipped design
+  calm-microcopy: satisfied — "12 hidden", "nothing in this folder", "copied"; lowercase, terse, no instruction line
+  one-term-per-concept: satisfied-via-proposal — project, file, folder, hidden and tree are consistent here but absent from the lexicon; proposal lexicon-project-terms
+  confirm-at-point: satisfied — "copied" appears in the row that was clicked, in a slot the row already reserves, and expires
+  absence-names-itself: satisfied — empty folder, filtered to nothing, unreadable folder, listing capped, and no projects are five distinct sentences
+  focus-returns-to-origin: satisfied — Esc closes the panel and returns focus to the sidebar toggle; the project popup returns focus to the root row
+  choose-before-act: satisfied — the project root precedes its tree, so the path a row hands over is never ambiguous about which project it came from
+</pre>
+
+    <h2 id="capabilities">Closing — capabilities</h2>
+    <table data-item="capabilities" data-c="capabilities-table">
+      <thead><tr><th>Given capability</th><th>Verdict</th><th>Where / why</th></tr></thead>
+      <tbody>
+        <tr><td>workspace registry (id · path · title · recency)</td><td>used</td><td>zone A — the root row is the workspace title; recency picks the default project</td></tr>
+        <tr><td>per-level host <code>fs</code> listing</td><td>used</td><td>zone B — one call per expanded level, directories first then host name order</td></tr>
+        <tr><td><code>openPath</code> to the OS</td><td>used</td><td>⌘/Ctrl on a row; no resident affordance, per goal 3</td></tr>
+        <tr><td>clipboard write</td><td>used</td><td>the primary act — click or Enter on a file row</td></tr>
+        <tr><td>DSH <code>--dsw-alias-*</code> token set</td><td>used</td><td>every colour; the mockup declares its stand-in mapping at Elements</td></tr>
+        <tr><td>frame overlay seat</td><td>used</td><td>the panel, docked to the sidebar's measured right edge</td></tr>
+        <tr><td>sidebar foot seat</td><td>used</td><td>the toggle, and the anchor the dock geometry is measured from</td></tr>
+        <tr><td>entry <code>size</code> in bytes</td><td>deliberately unused</td><td>the listing returns it; no goal reads it, and a size column would compete with the path for row weight (goal 1). Available if a later run wants it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="proposals">Closing — proposals</h2>
+    <table data-item="proposals" data-c="proposals-table">
+      <thead><tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>key binding</td><td><code>→</code> expands, <code>←</code> collapses a tree row</td><td>the conventions vocabulary has list bindings (↑↓ move, Enter takes, Esc dismisses) but no tree axis; a tree needs a second one</td><td>rulebook · UX</td></tr>
+        <tr><td>key binding</td><td><code>⌘/Ctrl+Enter</code> — take the row's secondary action</td><td>keyboard-parity needs a path for ⌘-click, and the vocabulary has no modifier-Enter entry</td><td>rulebook · UX</td></tr>
+        <tr><td>lexicon term</td><td>project · folder · hidden · tree</td><td>the lexicon is wire-vocabulary (flow, request, decode, raw); a file browser's nouns are absent, and this run coined four</td><td>rulebook · UX</td></tr>
+        <tr><td>rulebook</td><td><code>verdict-mirrored</code> — a fourth Elements verdict for a foreign-target run</td><td>reuse · extend · propose all presume one collection; finding 3</td><td>flow spec (E-DFLOW)</td></tr>
+        <tr><td>rulebook</td><td>a foreign-target clause in the base spec: which rules bind, and how hard token rules re-express against another app's closed set</td><td>finding 1 — the spec is screen-agnostic within Trawler and silent outside it</td><td>flow spec (E-DFLOW)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="blocked-on">Closing — blocked-on</h2>
+    <table data-item="blocked-on" data-c="blocked-table">
+      <thead><tr><th>What is missing</th><th>Stage</th><th>Whose call</th><th>What the run did meanwhile</th></tr></thead>
+      <tbody>
+        <tr><td>Tier-1 predicates cannot judge a foreign token set</td><td>Mockup</td><td>flow spec (E-DFLOW)</td><td>declared the stand-in mapping and kept the mockup literal-free, so the predicate's <em>shape</em> still holds even though its membership test cannot run</td></tr>
+        <tr><td>no recursive listing, so type-to-filter reaches loaded levels only</td><td>Interaction</td><td>DSH host capability</td><td>scoped the filter to what is loaded; did not label it "search", which would promise a reach it has not got. The honest limit, not a workaround</td></tr>
+        <tr><td>no filesystem change events</td><td>Frame</td><td>DSH host capability</td><td>made refresh resident and explicit rather than implying live sync</td></tr>
+        <tr><td>no file content read handler exists yet</td><td>Frame</td><td>build (this plugin)</td><td>declared preview a non-goal for this run; the reviewer named it a candidate next step, and it is a separate run</td></tr>
+        <tr><td>dynamic plugins do not survive a process restart</td><td>Frame</td><td>build · harness composition</td><td>kept all panel state in memory per the platform's own guidance; permanence needs a composition row, which is not a design question</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="review">Closing — review</h2>
+    <table data-item="review" data-c="review-table">
+      <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>"the plugin works but the UI / UX is not sufficient to me"</td>
+          <td>the whole run exists because of it: frame · layout · elements · interaction · mockup · tune</td>
+          <td><code>data-ink-first</code>, <code>calm-microcopy</code>, <code>generous-targets</code>,
+          <code>absence-names-itself</code>, <code>visual-weight-follows-goals</code> — plus the hard
+          <code>mono-for-wire-data</code>, <code>wrap-not-truncate</code> and
+          <code>keyboard-parity</code>. A working UI that breached thirteen rules</td>
+        </tr>
+        <tr>
+          <td>"use htmldoc skill, you output the current sample design there. I will put comments, we'll communicate via the file"</td>
+          <td>mockup — the shipped panel is drawn beside the proposed one rather than described, so the
+          <code>before</code> is inspectable and commentable</td>
+          <td>the flow's own representation principle (the reviewer is the bottleneck; artifacts are
+          picture-first) and the htmldoc comment layer as the review channel</td>
+        </tr>
+        <tr>
+          <td>"Run your actual design flow on this panel"</td>
+          <td>nothing was overridden — the instruction chose the process, and the process chose the
+          design</td>
+          <td><code>CLAUDE.md</code>: design-rules are "UI design musts — load before UI work", which the
+          shipped panel skipped. Finding 8</td>
+        </tr>
+        <tr>
+          <td class="kd">awaiting comments on this doc</td>
+          <td class="kd">— (the run stays <code>draft</code> until the round closes)</td>
+          <td class="kd">the run is not closeable while a review round is open: step ⑦ needs a green
+          <code>verify-doc</code> and a filled review item</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="next">What I need from you</h2>
+    <div class="callout" data-c="asks">
+      <p>Comment anywhere — select text, or use the 💬 on any heading or block. The four calls where
+      your taste should overrule mine:</p>
+      <table>
+        <thead><tr><th>#</th><th>The call</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><strong>Project as tree root vs. a picker above the tree.</strong> I merged the
+          title bar, the picker and the path line into one root row. It is the biggest structural change
+          and the one most likely to be wrong.</td><td><a href="#tune">Tune</a>, call 2</td></tr>
+          <tr><td>2</td><td><strong>"12 hidden" as a tree row instead of a header toggle.</strong> Pays three
+          rules, but it puts a control inside the content.</td><td><a href="#tune">Tune</a>, call 5</td></tr>
+          <tr><td>3</td><td><strong>Mono file names.</strong> The hard rule says a path is payload, so mono.
+          It makes the tree denser and more technical-looking than the shipped
+          version.</td><td><a href="#tune">Tune</a>, call 3</td></tr>
+          <tr><td>4</td><td><strong>Wrapping long names instead of clipping them.</strong> Rule-correct and
+          readable, but it makes rows uneven.</td><td><a href="#tune">Tune</a>, call 4</td></tr>
+        </tbody>
+      </table>
+      <p>Also worth your judgment: whether <strong>file preview</strong> belongs in this panel at all
+      (currently a declared non-goal), and whether the panel should <strong>dock beside the sidebar</strong>
+      or take the details column on the right.</p>
+    </div>
+
+  </main>
+  <script type="module">
+    document.querySelectorAll('[data-state-toggle]').forEach((btn) => {
+      const target = document.getElementById(btn.dataset.stateToggle);
+      const cls = btn.dataset.stateClass;
+      btn.addEventListener('click', () => {
+        const on = target.classList.toggle(cls);
+        btn.textContent = on ? btn.dataset.labelOn : btn.dataset.labelOff;
+      });
+    });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

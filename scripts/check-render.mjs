@@ -42,8 +42,10 @@ if (!existsSync(CHROME)) {
 const PROBE = `<script>
   (function poll(tries) {
     /* spec-log is an output sink a click fills, not a mount — legitimately empty
-       on load. Everything else named spec-* must have rendered something. */
-    const mounts = [...document.querySelectorAll('[id^="spec-"], [id$="-demo"]')]
+       on load. Everything else named spec-* must have rendered something. A
+       design RUN mounts by zone inside its mockup rather than by specimen, so
+       an id in there is a mount too — that is the convention, not the prefix. */
+    const mounts = [...document.querySelectorAll('[id^="spec-"], [id$="-demo"], [data-item="mockup"] [id]')]
       .filter((m) => m.id !== 'spec-log');
     const pending = mounts.filter((m) => m.children.length === 0 && !m.textContent.trim());
     if (pending.length && tries < 120) return setTimeout(() => poll(tries + 1), 100);
@@ -92,9 +94,38 @@ const CAPTURE = `<script>
   }
 </script>`;
 
+/* Every test here reads a real TAG, never the page's prose. Docs about the design
+   flow quote `data-artifact="design-run"` and name specimens.bundle.js in code
+   spans constantly; a substring match calls half of docs/ a design run and then
+   fails it for having no mounts. The attribute must sit inside the tag that
+   declares it, and the bundle must be a src, not a mention. */
+const declares = (source, attr, value) =>
+  new RegExp(`<\\w+[^>]*\\s${attr}="[^"]*${value}`).test(source);
+const loadsBundle = (source) => /<script[^>]+src="[^"]*specimens\.bundle\.js"/.test(source);
+
+/* What this gate is answerable for, mirroring xtask/src/doc.rs `design_artifact`:
+   a component design file is one by its folder, a design run by its declaration. */
+function designArtifact(file, source) {
+  if (file.includes('/docs/work/components/')) return 'component design';
+  return declares(source, 'data-artifact', 'design-run') ? 'design run' : null;
+}
+
 async function check(file) {
   const source = await readFile(file, 'utf8');
-  if (!source.includes('specimens.bundle.js')) return { file, skipped: 'not migrated' };
+  /* A doc that loads no bundle used to return `skipped` and the loop CONTINUED
+     past it without printing a line -- so a design run that hand-drew every
+     component it claimed to reuse reported "all migrated design files render",
+     exit 0. That is DEC-15's silence-reads-as-pass inside a script: the only
+     check that could have caught run #4 was structurally unable to fail on it.
+     A skip is now always printed, and for a live design artifact it is a
+     refusal: the whole point of the migration is that a design mounts the
+     component instead of drawing it. */
+  if (!loadsBundle(source)) {
+    const artifact = designArtifact(file, source);
+    if (!artifact) return { file, skipped: 'not a design artifact' };
+    if (declares(source, 'data-status', 'archived')) return { file, skipped: `${artifact}, archived` };
+    return { file, fail: `a live ${artifact} loads no specimens.bundle.js — it draws its components instead of mounting them` };
+  }
 
   const instrumented = source
     .replace('<head>', '<head>\n' + CAPTURE)
@@ -136,10 +167,17 @@ async function htmlFilesUnder(dir) {
 }
 
 let failed = 0;
+let ignored = 0;
 for (const file of files) {
   const result = await check(file);
   const name = result.file.split('/').pop();
-  if (result.skipped) continue;
+  if (result.skipped) {
+    /* Everything in docs/ that is not a design artifact is counted, not listed:
+       naming several hundred unrelated pages would bury the skips that matter. */
+    if (result.skipped === 'not a design artifact') ignored += 1;
+    else console.log(`skip  ${name}  (${result.skipped})`);
+    continue;
+  }
   if (result.fail) {
     failed += 1;
     console.log(`FAIL  ${name}\n      ${result.fail}`);
@@ -150,5 +188,8 @@ for (const file of files) {
     console.log(`ok    ${name}  (${mounts} mounts, ${buttons} buttons, forced rules ≥${forced ?? 0})`);
   }
 }
-console.log(failed ? `\n${failed} file(s) failed` : '\nall migrated design files render');
+console.log(
+  `\n${failed ? `${failed} file(s) failed` : 'every design artifact that mounts renders'}` +
+    ` — ${ignored} non-design file(s) not looked at`,
+);
 process.exit(failed ? 1 : 0);

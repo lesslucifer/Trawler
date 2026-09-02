@@ -16,17 +16,14 @@
   <main>
 
     <h2 id="what-this-is">What this is</h2>
-    <p>Most rules are <strong>extracted</strong> — the codebase or a design run already made the decision and this is where it was written down. A marked minority are <strong>principle imports</strong>: established design principles admitted on faith, <a href="#lifecycle">promoted or killed</a> once runs have judged them. Rules are cited by <strong>slug</strong> (stable kebab name, never renamed once a receipt cites it — deprecate instead). A rule belongs here only if it binds <em>any</em> screen design; facts with a narrower home live there:</p>
-    <div class="callout" data-c="evidence-elsewhere">
-      <strong>This file is the rules, not the case history.</strong> Why a rule says what it says — the run that produced it, the defect that sharpened it, the counts that proved it — belongs with that work in <code>docs/work/</code> and is not repeated here. A rule that needs its war story told to be understood is a rule that is not yet written clearly enough.
-    </div>
+    <p>Most rules are <strong>extracted</strong> — the codebase or a design run already made the decision and this is where it was written down. A marked minority are <strong>principle imports</strong>. Rules are cited by <strong>slug</strong> (stable kebab name, never renamed once a receipt cites it — deprecate instead).</p>
     <table data-c="where-facts-live">
       <thead><tr><th>The fact is…</th><th>It lives in…</th><th>Example</th></tr></thead>
       <tbody>
         <tr><td>a rule binding any design</td><td><strong>this rulebook</strong></td><td><code>mono-for-wire-data</code></td></tr>
         <tr><td>one component's contract</td><td>its <a href="../work/2026-07-22-dflow-w2-registry-seed.html">registry design file</a></td><td>KeyValueRow's value cell is a CopyText</td></tr>
-        <tr><td>a stage's required artifact shape</td><td><a href="../work/design-flow-base.html">flow templates</a> (Tier-1 checks it as <em>completeness</em>, not as a rule)</td><td>"Layout is an annotated ASCII sketch"</td></tr>
-        <tr><td>a token's <strong>name or value</strong> — that is, who the members of a set <em>are</em></td><td>code — <a href="../../ui/tailwind.config.js">ui/tailwind.config.js</a>, which is the member list, not a copy of one</td><td><code>ink-mute: #aea69c</code> · the fact that <code>ink-mute</code> exists at all</td></tr>
+        <tr><td>a stage's required artifact shape</td><td><a href="../work/design-flow-base.html">flow spec</a> (Tier-1 checks it as <em>completeness</em>, not as a rule)</td><td>"Layout is an annotated ASCII sketch"</td></tr>
+        <tr><td>a token's <strong>name or value</strong></td><td>code — <a href="../../ui/tailwind.config.js">ui/tailwind.config.js</a></td><td><code>ink-mute: #aea69c</code></td></tr>
       </tbody>
     </table>
 
@@ -52,71 +49,53 @@ flowchart LR
         <thead><tr><th><code>binds</code></th><th>Violated in</th><th>Judged by</th></tr></thead>
         <tbody>
           <tr><td><code>screen</code></td><td>a screen's layout / composition decisions</td><td>the design run and its receipt</td></tr>
-          <tr><td><code>component</code></td><td>a built component's own markup</td><td>the lint rule and the component's design file — checked on every component change, not only on a design run</td></tr>
-          <tr><td><code>both</code></td><td>either — a screen can pick an illegal value, so can a component</td><td>both surfaces, each at its own level</td></tr>
+          <tr><td><code>component</code></td><td>a built component's own markup</td><td>the lint rule and the component's design file</td></tr>
+          <tr><td><code>both</code></td><td>either</td><td>both surfaces, each at its own level</td></tr>
         </tbody>
       </table>
-      A <code>screen</code> rule stops asking components to answer it; a <code>component</code> rule stops filling design receipts with <code>n/a</code>.
     </div>
     <div class="callout" id="litmus" data-c="litmus">
-      <strong>The hard/soft litmus is the check.</strong> If a mechanical predicate exists (grep the mockup, a non-empty table cell, a value ∈ a vocabulary) the rule is <span class="badge auto">hard</span>. If the check is a reviewer's question, it is <span class="badge approval">soft</span>. If neither can be written, it is not a rule yet — it stays out.
+      <strong>The hard/soft litmus is the check.</strong> If a mechanical predicate exists the rule is <span class="badge auto">hard</span>. If the check is a reviewer's question, it is <span class="badge approval">soft</span>. If neither can be written, it is not a rule yet — it stays out.
     </div>
     <div class="callout" data-c="consistency-model">
-      <strong>Consistency is vocabulary, not vigilance.</strong> Anywhere designs must agree <em>across screens</em> — colours, spacing, key bindings, words — a <a href="#vocabularies">vocabulary</a> fixes the options in one place and a rule forces every design to pick from it. A screen never re-decides what <code>warn</code> means, what Enter does, or what "decode" is called — it reuses the entry or proposes a new one (the same reuse-or-propose contract the registry uses for components).
+      <strong>Consistency is vocabulary, not vigilance.</strong> Anywhere designs must agree <em>across screens</em> — colours, spacing, key bindings, words — a <a href="#vocabularies">vocabulary</a> fixes the options in one place. A screen never re-decides what <code>warn</code> means — it reuses the entry or proposes a new one.
     </div>
 
     <h2 id="vocabularies">Vocabularies</h2>
-    <p>The fixed sets rules force designs to pick from. <strong>This section names the sets and their governing rules; it never lists their members</strong> — the member list is <a href="../../ui/tailwind.config.js">ui/tailwind.config.js</a>, read directly by the predicates and by the lint rule. A rulebook that re-states the config is a second copy of it, and a copy drifts.</p>
+    <p>The fixed sets rules force designs to pick from. <strong>This section names the sets and their governing rules; it never lists their members</strong> — the member list is <a href="../../ui/tailwind.config.js">ui/tailwind.config.js</a>.</p>
     <h3 id="token-sets-h">Token sets</h3>
     <table data-c="token-sets">
       <thead><tr><th>Set</th><th>The rule that forces a pick from it</th><th>Member list — <a href="../../ui/tailwind.config.js">config key</a></th></tr></thead>
       <tbody>
-        <tr><td><strong>colour</strong> — chrome inks and surfaces, plus the chromatic set below</td><td><code>colour-tokens-only</code> · <code>zero-accent</code></td><td><code>theme.colors</code> · washes in <code>theme.backgroundColor</code> · dimming steps in <code>theme.opacity</code></td></tr>
+        <tr><td><strong>colour</strong> — chrome inks and surfaces, plus the chromatic set</td><td><code>colour-tokens-only</code> · <code>zero-accent</code></td><td><code>theme.colors</code> · washes in <code>theme.backgroundColor</code> · dimming steps in <code>theme.opacity</code></td></tr>
         <tr><td><strong>type</strong> — families, sizes, line heights, tracking, one weight</td><td><code>type-tokens-only</code> · <code>mono-for-wire-data</code> · <code>uppercase-mute-labels</code></td><td><code>theme.fontFamily</code> · <code>fontSize</code> · <code>lineHeight</code> · <code>letterSpacing</code> · <code>fontWeight</code></td></tr>
-        <tr><td><strong>spacing</strong> — two partitions in one scale: the 8px <em>layout</em> ladder and the named <em>chrome</em> tokens a control needs</td><td><code>spacing-scale</code></td><td><code>theme.spacing</code> (numeric keys = layout, named keys = chrome) · derived <code>maxWidth</code></td></tr>
+        <tr><td><strong>spacing</strong> — two partitions in one scale: the 8px <em>layout</em> ladder and the named <em>chrome</em> tokens</td><td><code>spacing-scale</code></td><td><code>theme.spacing</code> (numeric keys = layout, named keys = chrome) · derived <code>maxWidth</code></td></tr>
         <tr><td><strong>radius</strong></td><td><code>radius-tokens</code></td><td><code>theme.borderRadius</code></td></tr>
-        <tr><td><strong>layers</strong> — named stacking levels, never raw numbers</td><td>— (no rule yet)</td><td><code>theme.zIndex</code></td></tr>
+        <tr><td><strong>layers</strong> — named stacking levels</td><td>— (no rule yet)</td><td><code>theme.zIndex</code></td></tr>
       </tbody>
     </table>
     <div class="callout" data-c="closed-vocabulary">
-      <strong>The vocabulary is closed, and "closed" is a property of each scale — checked per scale, never asserted once.</strong> Every scale <em>replaces</em> Tailwind's rather than extending it, so an off-list value emits no CSS at all. Tailwind drops an unknown utility <em>silently</em>, so the config is the definition and <code>npm run lint</code> (<code>design/vocabulary</code>) is the alarm (<a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a>).
-      <table>
-        <thead><tr><th>How a closed vocabulary leaks</th><th>What holds it shut</th></tr></thead>
-        <tbody>
-          <tr><td>A scale left <strong>undeclared</strong> inherits Tailwind's whole ladder. Every member of it emits, so nothing drawn from it can ever red — the leak is invisible by construction, and no amount of linting finds it</td><td>Legality is membership of a scale the config <strong>declares</strong>, not merely one Tailwind can emit. So the config names every scale the code draws from, at exactly the members it uses, and a class from any other scale reds on sight</td></tr>
-          <tr><td>One token <strong>name</strong> living in two scales that share a class prefix — the class then sets both properties at once, changing one silently</td><td>A unit test asserts no duplicate in the generated class list</td></tr>
-          <tr><td>Arbitrary <code>[…]</code> values, which emit whether or not a scale is closed — closing the config cannot reach them at all</td><td>The lint rule reds every one, unless a <a href="#pragma">pragma</a> excuses a template shape carrying no size</td></tr>
-        </tbody>
-      </table>
-      Out of scope by nature: <strong>structural</strong> classes (<code>flex</code>, <code>absolute</code>, <code>truncate</code>). Tailwind registers them whole rather than generating them from a theme key, so no scale could govern them and the rule has nothing to judge.
+      <strong>The vocabulary is closed, and "closed" is a property of each scale.</strong> Every scale <em>replaces</em> Tailwind's rather than extending it. The lint rule reds arbitrary <code>[…]</code> values unless a <a href="#pragma">pragma</a> excuses a template shape carrying no size.
     </div>
     <div class="callout" id="css-config" data-c="css-config">
-      <strong>The second sanctioned escape: a component may write raw CSS when it is configuring something that cannot take a class.</strong> A third-party styling API — an editor's theme object, a stylesheet — has no <code>className</code> to give it. Such a block is <strong>accepted</strong>, not excused, on three conditions.
-      <table>
-        <thead><tr><th>Condition</th><th>Why</th></tr></thead>
-        <tbody>
-          <tr><td>It covers the <em>styling API</em>, never a plain element. Anything with a <code>className</code> uses tokens</td><td>Otherwise it is a general way out, and the vocabulary is advisory</td></tr>
-          <tr><td><strong>Every colour in it must still be a palette value</strong> — asserted mechanically over all of <code>ui/src/</code></td><td>A literal that <em>is</em> a token renders the vocabulary; a literal that is not is a second copy of it, and a copy drifts — silently, because no class-reading check can see either one</td></tr>
-          <tr><td>Sizes and radii inside such a block are the author's to justify, and are <em>not</em> mechanically checked</td><td>Stated rather than implied — extracting lengths from arbitrary CSS-in-JS is noisy enough to be worse than honest silence</td></tr>
-        </tbody>
-      </table>
-      The shape worth remembering: <strong>the lint rule reads class names and the Tier-1 predicates read the design doc, so a value that is never a class is invisible to both.</strong> The colour guard is what makes this escape safe rather than a hole.
+      <strong>The second sanctioned escape: raw CSS configuring a third-party styling API.</strong> Every colour in it must still be a palette value, asserted mechanically over all of <code>ui/src/</code>.
     </div>
+
     <h3 id="chromatic-meanings">Chromatic meanings</h3>
-    <p>Every chromatic token is named for <em>what a colour means</em>, never for who uses it — and its meaning is fixed <strong>here</strong> while its membership is fixed in <a href="../../ui/tailwind.config.js">the config</a>. A tint stays consistent because its mapping lives in exactly one component: screens reuse the component, never re-map the colour. A new tint is a config edit under review, which is the only way one can arrive.</p>
+    <p>Every chromatic token is named for <em>what a colour means</em>, never for who uses it. A tint stays consistent because its mapping lives in exactly one component.</p>
     <table data-c="chromatic-meanings-table">
       <thead><tr><th>Token</th><th>Fixed meaning</th><th>Mapping owned by</th></tr></thead>
       <tbody>
-        <tr><td><code>ok</code></td><td>success outcome (2xx) · confirmation of a completed action · <strong>a request that only reads</strong> (GET)</td><td><code>StatusPill</code> status→tone · <code>CopyText</code>/<code>CopyButton</code> confirm · <code>MethodLabel</code> verb→tone</td></tr>
-        <tr><td><code>warn</code></td><td>failure outcome (4xx/5xx) · error states · <strong>a request that destroys</strong> (DELETE)</td><td><code>StatusPill</code> · <code>MethodLabel</code></td></tr>
+        <tr><td><code>ok</code></td><td>success outcome (2xx) · confirmation · a request that only reads (GET)</td><td><code>StatusPill</code> status→tone · <code>CopyText</code>/<code>CopyButton</code> confirm · <code>MethodLabel</code> verb→tone</td></tr>
+        <tr><td><code>warn</code></td><td>failure outcome (4xx/5xx) · error states · a request that destroys (DELETE)</td><td><code>StatusPill</code> · <code>MethodLabel</code></td></tr>
         <tr><td><code>create</code></td><td>a request that brings a resource into being (POST)</td><td><code>MethodLabel</code> verb→tone</td></tr>
         <tr><td><code>replace</code></td><td>a request that overwrites a resource whole (PUT)</td><td><code>MethodLabel</code> verb→tone</td></tr>
         <tr><td><code>amend</code></td><td>a request that alters part of a resource (PATCH)</td><td><code>MethodLabel</code> verb→tone</td></tr>
-        <tr><td><code>syn-key</code> · <code>syn-str</code> · <code>syn-num</code></td><td>the three body-pane syntax roles — a key, a string, a number inside a rendered payload. <strong>Three roles and no more:</strong> a full syntax theme is what the renderer family forbids, and punctuation stays <code>ink-mute</code> (DEC-11)</td><td><a href="../work/components/body-renderer.html">SourceSurface</a> — the pane JsonRenderer and XmlRenderer share</td></tr>
-        <tr><td><em>unknown</em> — an outcome that is neither success nor failure</td><td><strong>no tint. The neutral ink channel is the answer</strong> — a probe that fails and a probe that shrugs are both <em>unknown</em>, and on some screens that is the permanent case rather than an edge one. <code>colour-plus-text</code> already guarantees the text channel carries the meaning, so a third status hue would add nothing a reader needs</td><td>— (ink, never a colour)</td></tr>
+        <tr><td><code>syn-key</code> · <code>syn-str</code> · <code>syn-num</code></td><td>the three body-pane syntax roles — a key, a string, a number inside a rendered payload. Punctuation stays <code>ink-mute</code></td><td><code>SourceSurface</code> — the pane JsonRenderer and XmlRenderer share</td></tr>
+        <tr><td><em>unknown</em> — neither success nor failure</td><td>no tint — the neutral ink channel is the answer</td><td>— (ink, never a colour)</td></tr>
       </tbody>
     </table>
-    <p class="meta">Two tokens carry double duty on purpose: GET shares the <code>ok</code> hue and DELETE the <code>warn</code> hue because <em>reads succeed</em> and <em>destruction warns</em> are the same semantic family — which is why they need no token of their own. Hover and press feedback is <strong>not</strong> chromatic: the washes are ink-toned and live in <code>theme.backgroundColor</code>.</p>
+
     <h3 id="lexicon">Lexicon</h3>
     <table data-c="lexicon-table">
       <thead><tr><th>Term</th><th>Means</th><th>Never</th></tr></thead>
@@ -124,28 +103,27 @@ flowchart LR
         <tr><td><strong>flow</strong></td><td>one captured request/response exchange</td><td>transaction · call · entry</td></tr>
         <tr><td><strong>request / response</strong></td><td>the two legs of a flow, spelled out in labels</td><td>req / res in user-facing text</td></tr>
         <tr><td><strong>copy</strong></td><td>put on the clipboard, verbatim</td><td>grab · export · save</td></tr>
-        <tr><td><strong>decode</strong></td><td>reverse a wire <em>encoding</em> (gzip, base64…) — explicit, reversible. Names the <em>transport</em> step only</td><td>prettify · format · expand</td></tr>
-        <tr><td><strong>raw</strong></td><td>the decoded bytes with no re-indenting — what was sent, once transport encoding is off</td><td>source · original · plain</td></tr>
-        <tr><td><strong>pretty</strong></td><td>the re-indented view of those same bytes — a <em>rendering</em>, always named on screen and one act from raw</td><td>prettify · format · beautify · pretty-print</td></tr>
-        <tr><td><strong>none</strong></td><td>the empty-set microcopy for an absent value — the value <em>is</em> empty</td><td>empty · no data · nothing here</td></tr>
-        <tr><td><strong>no longer captured</strong></td><td>the capture ring moved past this flow. A third kind of absence, and <strong>not a fault</strong> — normal operation, so it never reads as an error the user caused</td><td>expired · deleted · gone · none</td></tr>
-        <tr><td><strong>first flow</strong></td><td>the proven-decrypted milestone — the moment traffic is being captured and read</td><td>verify · test · done · working</td></tr>
+        <tr><td><strong>decode</strong></td><td>reverse a wire <em>encoding</em> (gzip, base64…)</td><td>prettify · format · expand</td></tr>
+        <tr><td><strong>raw</strong></td><td>the decoded bytes with no re-indenting</td><td>source · original · plain</td></tr>
+        <tr><td><strong>pretty</strong></td><td>the re-indented view of those same bytes</td><td>prettify · format · beautify · pretty-print</td></tr>
+        <tr><td><strong>none</strong></td><td>the empty-set microcopy for an absent value</td><td>empty · no data · nothing here</td></tr>
+        <tr><td><strong>no longer captured</strong></td><td>the capture ring moved past this flow. Not a fault</td><td>expired · deleted · gone · none</td></tr>
+        <tr><td><strong>first flow</strong></td><td>the proven-decrypted milestone</td><td>verify · test · done · working</td></tr>
       </tbody>
     </table>
-    <p class="meta"><strong>The three body terms are one ladder, not three synonyms:</strong> wire bytes → <em>decode</em> (transport off) → <em>raw</em> (no indenting) → <em>pretty</em> (re-indented). Two different switches can sit on that ladder, so a screen must name <em>which</em> one it offers.</p>
+
     <h3 id="keyboard-conventions">Keyboard conventions</h3>
     <table data-c="keyboard-conventions-table">
       <thead><tr><th>Pattern</th><th>Keys</th><th>Sighting</th></tr></thead>
       <tbody>
         <tr><td>activate the focused element</td><td>Enter / Space</td><td><code>CopyText</code> trigger</td></tr>
         <tr><td>partial take from a value</td><td>native selection + ⌘C — never intercepted</td><td><code>CopyText</code> selection guard</td></tr>
-        <tr><td><strong>dismiss the surface</strong> — panel, dialog, popup; closes unchanged</td><td>Esc</td><td><code>Select</code> popup · ProxyCloseDialog · the flow detail panel</td></tr>
+        <tr><td><strong>dismiss the surface</strong> — unchanged</td><td>Esc</td><td><code>Select</code> popup · ProxyCloseDialog · flow detail panel</td></tr>
         <tr><td><strong>move within a list</strong> without selecting</td><td>↑ / ↓ — no wrap</td><td><code>Select</code> options</td></tr>
-        <tr><td><strong>narrow a list</strong></td><td>type-to-filter — always on, searchable or not</td><td><code>Select</code> filtering</td></tr>
-        <tr><td><strong>take the moved-to item</strong></td><td>Enter</td><td><code>Select</code> — a no-op while loading, empty, or filtered to nothing</td></tr>
+        <tr><td><strong>narrow a list</strong></td><td>type-to-filter — always on</td><td><code>Select</code> filtering</td></tr>
+        <tr><td><strong>take the moved-to item</strong></td><td>Enter</td><td><code>Select</code></td></tr>
       </tbody>
     </table>
-    <p class="meta">The four list bindings are one idiom, not four decisions: they belong to the searchable-list contract and a screen composing such a list inherits them rather than re-proposing them.</p>
 
     <h2 id="hard-rules">Hard rules <span class="badge auto">Tier-1</span></h2>
     <p>One line each — the predicate is the rule; the gate does the explaining.</p>
@@ -153,90 +131,79 @@ flowchart LR
       <thead><tr><th>Slug</th><th>Rule</th><th>Tier-1 check</th><th><a href="#binds">binds</a></th><th>Binds at</th></tr></thead>
       <tbody>
         <tr><td><code>colour-tokens-only</code></td><td>Colour only via named tokens — no hex/rgb/hsl literals</td><td>no colour literals; every colour class resolves to a config colour token</td><td><code>both</code></td><td>Draft mockup</td></tr>
-        <tr><td><code>spacing-scale</code></td><td><strong>Layout spacing from the 8px scale; control chrome from a named chrome token.</strong> Never a raw value, never an inherited default, in either case</td><td>every spacing class resolves to a project token in <code>theme.spacing</code> or the <code>maxWidth</code> it derives; arbitrary <code>[…]</code> sizes red — <strong>and so does every magnitude the mockup writes in its own <code>.a-</code> CSS</strong>, the one surface no class can reach. <strong>One membership test over both partitions</strong>: a chrome token standing in for a layout step is on-scale and passes, because which partition a context <em>calls for</em> is a reviewer's judgement and the predicate does not pretend to make it</td><td><code>both</code></td><td>Draft mockup</td></tr>
-        <tr><td><code>type-tokens-only</code></td><td>Only the named families, sizes, line heights, tracking and the one weight</td><td>each type class resolves to its config scale; the mockup's own <code>.a-</code> CSS is judged on its values the same way</td><td><code>both</code></td><td>Draft mockup</td></tr>
-        <tr><td><code>radius-tokens</code></td><td>Corner radii from the named set</td><td><code>border-radius</code> ∈ the config's <code>borderRadius</code> keys, as a class or as a declaration</td><td><code>component</code></td><td>Draft mockup</td></tr>
-        <tr><td><code>wrap-not-truncate</code></td><td>Long values wrap — never truncate, never widen the column</td><td>no <code>truncate</code>/<code>ellipsis</code>/<code>nowrap</code> on payload elements — <code>data-wire</code> and <code>font-mono</code> are both ways of being one, and both bind</td><td><code>component</code></td><td>Elements · Draft mockup</td></tr>
-        <tr><td><code>overflow-declared</code></td><td>A zone with unbounded content declares its scroll cap</td><td><strong>one overflow line under the Layout sketch</strong>, naming every zone the sketch marks unbounded — a cap owned by a component is declared <em>by reference</em> to it, not re-annotated</td><td><code>screen</code></td><td>Layout</td></tr>
-        <tr><td><code>state-declarations</code></td><td>Every component declares empty · loading · error · overflow ("—" counts, blank doesn't)</td><td>states column non-empty per catalog row, <strong>read against the registry verdict</strong> — a citation completes the cell for a <em>reuse</em>, never for a <em>propose</em></td><td><code>component</code></td><td>Elements</td></tr>
-        <tr><td><code>zero-accent</code></td><td>No chromatic colour beyond the palette's chromatic set, each matching its <a href="#chromatic-meanings">fixed meaning</a></td><td>chromatic classes ⊆ the config's chromatic set. With the config closed no legal class can break that, so what the predicate still catches is the value written <em>past</em> the config — an inline chromatic colour</td><td><code>both</code></td><td>Elements · Draft mockup</td></tr>
-        <tr><td><code>wire-order-preserved</code></td><td>Captured collections render in wire order unless a sort is declared with its why</td><td><code>data-order</code> on every catalog row marked <code>data-wire="collection"</code> — <code>data-order="wire"</code>, or the sort and why it beats the wire's. <strong>Declared, never read out of prose</strong>: no keyword can tell <em>"sorted newest first, because the ring is a stack"</em> from <em>"the rows look orderly"</em>, and one that scans the row's markup instead reads <code>border</code> as an answer. <strong>With an n/a path</strong>: a screen may render no captured collection at all</td><td><code>component</code></td><td>Elements</td></tr>
-        <tr><td><code>mono-for-wire-data</code></td><td><strong>Verbatim payloads render <code>mono</code>; UI chrome renders <code>ui</code>.</strong> A payload is anything the user reads or copies exactly — wire data, shell commands, keys, ids. <em>The subject is machine-readability, not provenance: a shell command never travelled a wire and is the most mono-deserving thing on a setup screen</em></td><td>every element the mockup marks <code>data-wire</code> carries the mono family. Which elements are payload is a fact about content, not markup, so the run <a href="#wire-marker">declares it</a> — a mockup that marks none and does not say <code>data-wire="none"</code> is red, because silence reads as correctly typed when nobody looked</td><td><code>both</code></td><td>Elements · Draft mockup</td></tr>
-        <tr><td><code>uppercase-mute-labels</code></td><td>Zone/column labels use the uppercase-mute pattern</td><td>whatever is uppercased and is not <code>font-mono</code> carries the uppercase-mute set — tracking from the token, never by hand. Read on both surfaces: the class list and the mockup's own CSS</td><td><code>component</code></td><td>Draft mockup</td></tr>
-        <tr><td><code>keyboard-parity</code></td><td>Every pointer interaction has a keyboard path from the <a href="#keyboard-conventions">conventions</a></td><td>a keyboard path is <strong>named</strong> per pointer use-case row — the cell is answered, or the row says the use case is passive. <strong>Whether the binding is one of the conventions is Tier-3</strong>: the predicate reads presence, not membership, because a proposal is legal and only a reader can tell a proposal from a stray word</td><td><code>both</code></td><td>Interaction</td></tr>
+        <tr><td><code>spacing-scale</code></td><td><strong>Layout spacing from the 8px scale; control chrome from a named chrome token.</strong> Never a raw value, never an inherited default</td><td>every spacing class resolves to a project token in <code>theme.spacing</code> or <code>maxWidth</code>; arbitrary <code>[…]</code> sizes red — and the mockup's own <code>.a-</code> CSS</td><td><code>both</code></td><td>Draft mockup</td></tr>
+        <tr><td><code>type-tokens-only</code></td><td>Only the named families, sizes, line heights, tracking and the one weight</td><td>each type class resolves to its config scale; the mockup's own <code>.a-</code> CSS is judged the same way</td><td><code>both</code></td><td>Draft mockup</td></tr>
+        <tr><td><code>radius-tokens</code></td><td>Corner radii from the named set</td><td><code>border-radius</code> ∈ the config's <code>borderRadius</code> keys</td><td><code>component</code></td><td>Draft mockup</td></tr>
+        <tr><td><code>wrap-not-truncate</code></td><td>Long values wrap — never truncate, never widen the column</td><td>no <code>truncate</code>/<code>ellipsis</code>/<code>nowrap</code> on payload elements</td><td><code>component</code></td><td>Elements · Draft mockup</td></tr>
+        <tr><td><code>overflow-declared</code></td><td>A zone with unbounded content declares its scroll cap</td><td><strong>one overflow line under the Layout sketch</strong>, naming every unbounded zone</td><td><code>screen</code></td><td>Layout</td></tr>
+        <tr><td><code>state-declarations</code></td><td>Every component declares empty · loading · error · overflow</td><td>states column non-empty per catalog row, read against the registry verdict</td><td><code>component</code></td><td>Elements</td></tr>
+        <tr><td><code>zero-accent</code></td><td>No chromatic colour beyond the palette's chromatic set</td><td>chromatic classes ⊆ the config's chromatic set; inline chromatic colour red</td><td><code>both</code></td><td>Elements · Draft mockup</td></tr>
+        <tr><td><code>wire-order-preserved</code></td><td>Captured collections render in wire order unless a sort is declared</td><td><code>data-order</code> on every catalog row marked <code>data-wire="collection"</code></td><td><code>component</code></td><td>Elements</td></tr>
+        <tr><td><code>mono-for-wire-data</code></td><td><strong>Verbatim payloads render <code>mono</code>; UI chrome renders <code>ui</code>.</strong></td><td>every element marked <code>data-wire</code> carries the mono family. <code>data-wire="none"</code> for no payload</td><td><code>both</code></td><td>Elements · Draft mockup</td></tr>
+        <tr><td><code>uppercase-mute-labels</code></td><td>Zone/column labels use the uppercase-mute pattern</td><td>uppercased non-mono carries the uppercase-mute set. Read on both surfaces</td><td><code>component</code></td><td>Draft mockup</td></tr>
+        <tr><td><code>keyboard-parity</code></td><td>Every pointer interaction has a keyboard path from the conventions</td><td>a keyboard path named per pointer use-case row</td><td><code>both</code></td><td>Interaction</td></tr>
         <tr><td><code>colour-plus-text</code></td><td>Colour is never the only channel — tinted values carry a text channel</td><td>text channel declared per chromatic row</td><td><code>both</code></td><td>Elements · Draft mockup</td></tr>
       </tbody>
     </table>
     <div class="callout" data-c="wire-marker" id="wire-marker">
       <strong>The one thing a mockup must declare: <code>data-wire</code>.</strong>
-      Three hard rules turn on which elements render a verbatim payload, and no
-      static reader can tell a wire value from a label by looking at it. So the
-      mockup says so: <code>data-wire="&lt;what it is&gt;"</code> on every payload
-      element, <code>data-wire="collection"</code> on a catalog row that renders a
-      captured collection, and <code>data-wire="none"</code> once when the screen
-      renders no payload at all. The n/a path is an answer; leaving the question
-      unanswered is not one.
+      Three hard rules turn on which elements render a verbatim payload. The mockup says so: <code>data-wire="&lt;what it is&gt;"</code> on every payload element, <code>data-wire="collection"</code> on a catalog row that renders a captured collection, and <code>data-wire="none"</code> once when the screen renders no payload at all.
       <br><br>
-      <strong>A collection row carries <code>data-order</code> beside it</strong> —
-      <code>"wire"</code>, or the sort and why. Same reason, one step further in: a
-      declaration is a fact the run states, and prose about ordering is not a
-      declaration. Judging it by keyword fails in both directions at once.
+      A collection row carries <code>data-order</code> beside it — <code>"wire"</code>, or the sort and why.
     </div>
 
-    <p class="meta">A new rule enters as <a href="#soft-rules">soft</a> unless a predicate for it can be written — an unchecked hard rule is a soft rule that lies about itself. Every rule in this table has one.</p>
-
     <h2 id="soft-rules">Soft rules <span class="badge approval">Tier-3</span></h2>
-    <p>Principles a reviewer judges — each with its DO/DON'T pair and the question the adversarial reviewer asks. Seed column: <em>extracted</em> = the codebase or a run already made this decision; <em>import</em> = an established principle admitted on faith, awaiting <a href="#lifecycle">promotion or a kill</a>.</p>
+    <p>Principles a reviewer judges — each with its DO/DON'T pair and the question the adversarial reviewer asks.</p>
     <table data-c="soft-rules-table">
       <thead><tr><th>Slug</th><th>Principle</th><th>DO · DON'T</th><th>Reviewer asks</th><th><a href="#binds">binds</a></th><th>Seed</th></tr></thead>
       <tbody>
         <tr>
           <td><code>visual-weight-follows-goals</code></td>
-          <td>The visual hierarchy matches the Frame's goal ranking — the top goal owns the most visual weight. <em>The ranking is the hierarchy.</em></td>
+          <td>The visual hierarchy matches the Frame's goal ranking — the top goal owns the most visual weight.</td>
           <td><span style="color:var(--ok)">✓ top goal "scan failures" → status column carries the most weight</span><br><span style="color:var(--warn)">✗ timestamps heavier than statuses</span></td>
           <td>Compare the Layout/mockup hierarchy against the Frame goal table, top to bottom — where do they diverge?</td>
           <td><code>screen</code></td>
-          <td><strong>extracted</strong> · a design run's Frame goal table</td>
+          <td><strong>extracted</strong></td>
         </tr>
         <tr>
           <td><code>grouping-by-relatedness</code></td>
-          <td>Visual proximity mirrors semantic relatedness; every separator marks a real boundary — decoration never separates. <em>Gestalt proximity.</em></td>
+          <td>Visual proximity mirrors semantic relatedness; every separator marks a real boundary.</td>
           <td><span style="color:var(--ok)">✓ hairline between request and response legs</span><br><span style="color:var(--warn)">✗ a divider inside one header set</span></td>
           <td>For each separator and cluster: does the visual boundary match a semantic one?</td>
           <td><code>screen</code></td>
-          <td><strong>extracted</strong> · <code>Section</code> — "the seam, not a card frame"</td>
+          <td><strong>extracted</strong></td>
         </tr>
         <tr>
           <td><code>ordering-by-priority</code></td>
-          <td>Within a zone, order follows the user's scan priority — never alphabet or implementation order. Captured collections are exempt (<code>wire-order-preserved</code> owns them).</td>
+          <td>Within a zone, order follows the user's scan priority — never alphabet or implementation order. Captured collections are exempt.</td>
           <td><span style="color:var(--ok)">✓ identity → request → response, the debugging read order</span><br><span style="color:var(--warn)">✗ zones ordered by build convenience</span></td>
           <td>Read each sequence aloud: whose priority does this order serve?</td>
           <td><code>screen</code></td>
-          <td><strong>extracted</strong> · FlowDetail zone order</td>
+          <td><strong>extracted</strong></td>
         </tr>
         <tr>
           <td><code>progressive-disclosure</code></td>
-          <td>The default view is the scan level; depth is one explicit, invited act away — never everything at once, never buried deeper.</td>
+          <td>The default view is the scan level; depth is one explicit, invited act away.</td>
           <td><span style="color:var(--ok)">✓ list row → detail panel · raw body → decode toggle</span><br><span style="color:var(--warn)">✗ full bodies inline in the list</span></td>
-          <td>At rest, is the scan clean? After one act, is the depth there? Anything need two?</td>
+          <td>At rest, is the scan clean? After one act, is the depth there?</td>
           <td><code>screen</code></td>
-          <td><strong>extracted</strong> · FlowList → FlowDetail — the detail panel <em>is</em> the list's depth level</td>
+          <td><strong>extracted</strong></td>
         </tr>
         <tr>
           <td><code>data-ink-first</code></td>
-          <td>Every non-data pixel earns its place — backgrounds, borders, icons, badges only when they inform. <em>Tufte's data-ink ratio.</em></td>
+          <td>Every non-data pixel earns its place — backgrounds, borders, icons, badges only when they inform.</td>
           <td><span style="color:var(--ok)">✓ tinted text is the whole StatusPill</span><br><span style="color:var(--warn)">✗ a bordered badge around every status</span></td>
           <td>Strip each piece of chrome in imagination: is any information lost?</td>
           <td><code>both</code></td>
-          <td><em>import</em> · <code>StatusPill</code> driver ④</td>
+          <td><em>import</em></td>
         </tr>
         <tr>
           <td><code>generous-targets</code></td>
-          <td>A hit target is the largest natural area — never a small glyph beside the thing it acts on. <em>Fitts's law.</em></td>
+          <td>A hit target is the largest natural area — never a small glyph beside the thing it acts on.</td>
           <td><span style="color:var(--ok)">✓ the whole value copies on click</span><br><span style="color:var(--warn)">✗ a 12px icon as the only target</span></td>
           <td>For each interaction: could the target be bigger for free?</td>
           <td><code>component</code></td>
-          <td><em>import</em> · <code>CopyText</code> whole-text target</td>
+          <td><em>import</em></td>
         </tr>
         <tr>
           <td><code>motion-informs</code></td>
@@ -244,101 +211,104 @@ flowchart LR
           <td><span style="color:var(--ok)">✓ confirm chip appears, expires</span><br><span style="color:var(--warn)">✗ hover glow, panels sliding for style</span></td>
           <td>For each animation: what does it tell the user? "Nothing" fails.</td>
           <td><code>component</code></td>
-          <td><em>import</em> · <code>CopyText</code> confirm</td>
+          <td><em>import</em></td>
         </tr>
         <tr>
           <td><code>empty-states-orient</code></td>
-          <td>A zone's empty state says what will appear and — <strong>where the user can cause it</strong> — how. Where they cannot, it explains what happened instead of inventing a call to action. A value-level absence stays a calm "none".</td>
-          <td><span style="color:var(--ok)">✓ "waiting for traffic — point a client at :7420" · ✓ "not captured — too large (12.0 MiB)", which instructs nothing because nothing would help</span><br><span style="color:var(--warn)">✗ a blank panel · ✗ a retry button on a flow the ring has dropped — an action that can only fail again is a lie about what the user can do</span></td>
+          <td>A zone's empty state says what will appear and — where the user can cause it — how. Where they cannot, it explains what happened.</td>
+          <td><span style="color:var(--ok)">✓ "waiting for traffic — point a client at :7420" · ✓ "not captured — too large"</span><br><span style="color:var(--warn)">✗ a blank panel · ✗ a retry button on a flow the ring has dropped</span></td>
           <td>Land on each empty state cold: do you know what happened, and — if you can act — what to do next?</td>
           <td><code>both</code></td>
-          <td><em>import</em> · the onboarding screen · <a href="../work/components/header-table.html">HeaderTable</a> "none"</td>
+          <td><em>import</em></td>
         </tr>
         <tr>
           <td><code>familiar-idioms</code></td>
-          <td>When a devtools convention exists for the job, prefer it; novelty needs a driver in the Frame. <em>Least surprise.</em> <strong>Genre precondition:</strong> it applies where an established genre exists — a list, a table, a wizard, a form. A bespoke surface answers <em>n/a</em> once, in the Frame, and carries no receipt row.</td>
-          <td><span style="color:var(--ok)">✓ network-table row grammar (method · path · status · time) · ✓ "a checklist rather than a wizard — no Back/Next, no step numbers"</span><br><span style="color:var(--warn)">✗ a novel traffic viz with no driver · ✗ a detail pane answering for an idiom it has none of</span></td>
-          <td>Does this surface have a genre? If yes: name the idiom it follows, or the Frame driver that justifies departing from it.</td>
+          <td>When a devtools convention exists for the job, prefer it; novelty needs a driver in the Frame.</td>
+          <td><span style="color:var(--ok)">✓ network-table row grammar (method · path · status · time) · ✓ "a checklist rather than a wizard"</span><br><span style="color:var(--warn)">✗ a novel traffic viz with no driver</span></td>
+          <td>Does this surface have a genre? If yes: name the idiom it follows, or the driver that justifies departing from it.</td>
           <td><code>screen</code></td>
-          <td><em>import</em> · FlowList mirrors devtools · a checklist screen that departed from wizard convention deliberately</td>
+          <td><em>import</em></td>
         </tr>
         <tr>
           <td><code>display-equals-payload</code></td>
-          <td>A displayed wire value is the payload verbatim, <strong>or a named and reversible view of it</strong> — never a silent transformation. <em>The trust contract of a debugging proxy: what is shown is either the bytes or something the screen tells you it is.</em></td>
-          <td><span style="color:var(--ok)">✓ the view is named — <em>pretty</em> / <em>raw</em>, <em>decoded</em> / <em>raw</em> — and one act switches it</span><br><span style="color:var(--warn)">✗ JSON pretty-printed with nothing saying so and no way back to the bytes</span></td>
+          <td>A displayed wire value is the payload verbatim, or a named and reversible view of it.</td>
+          <td><span style="color:var(--ok)">✓ the view is named — <em>pretty</em> / <em>raw</em>, <em>decoded</em> / <em>raw</em> — and one act switches it</span><br><span style="color:var(--warn)">✗ JSON pretty-printed with nothing saying so</span></td>
           <td>For every displayed wire value: is it the bytes, or a view? If a view — is it named on screen, and is one act enough to get back?</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <code>CopyText</code> driver ② · <a href="../work/components/body-viewer.html">BodyViewer</a> decode</td>
+          <td><strong>extracted</strong></td>
         </tr>
         <tr>
           <td><code>labels-add-context</code></td>
-          <td>A label carries only the fact its context doesn't already state. <em>Repeated context is noise in a dense panel.</em></td>
+          <td>A label carries only the fact its context doesn't already state.</td>
           <td><span style="color:var(--ok)">✓ "copy all"</span><br><span style="color:var(--warn)">✗ "copy request headers" (under that heading)</span></td>
           <td>Read each label in situ: does any word repeat its surroundings?</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/header-table.html">HeaderTable</a> sub-bar verdict</td>
+          <td><strong>extracted</strong></td>
         </tr>
         <tr>
           <td><code>calm-microcopy</code></td>
-          <td>Microcopy is lowercase, terse, unexcited. <em>A tool for reading traffic keeps its own voice quiet.</em></td>
+          <td>Microcopy is lowercase, terse, unexcited.</td>
           <td><span style="color:var(--ok)">✓ "copied" · "none"</span><br><span style="color:var(--warn)">✗ "Copied!" · "No headers found."</span></td>
           <td>Scan all microcopy for case, length, exclamation.</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <code>CopyText</code> · <a href="../work/components/header-table.html">HeaderTable</a></td>
+          <td><strong>extracted</strong></td>
         </tr>
         <tr>
           <td><code>one-term-per-concept</code></td>
-          <td>Every user-facing term comes from the <a href="#lexicon">lexicon</a> — one term per concept, one concept per term; new terms are proposed, never coined ad hoc. <em>Reuse-or-propose, for words.</em></td>
+          <td>Every user-facing term comes from the <a href="#lexicon">lexicon</a> — one term per concept, one concept per term.</td>
           <td><span style="color:var(--ok)">✓ "decode" everywhere</span><br><span style="color:var(--warn)">✗ "decode" here, "prettify" there</span></td>
-          <td>Check each label/microcopy term against the lexicon; unknown terms need a proposal entry. <em>Then check it against the component's own design file</em> — a built component whose labels disagree with its confirmed contract breaks this rule even when every word is in the lexicon.</td>
+          <td>Check each label/microcopy term against the lexicon; unknown terms need a proposal entry.</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/header-table.html">HeaderTable</a> "copy all" · <a href="../work/components/body-viewer.html">BodyViewer</a> decode</td>
+          <td><strong>extracted</strong></td>
         </tr>
         <tr>
           <td><code>confirm-at-point</code></td>
-          <td>Feedback for a user action lands at the interaction point, inline and transient — never a toast across the screen. <em>Verify without looking away.</em></td>
+          <td>Feedback for a user action lands at the interaction point, inline and transient — never a toast across the screen.</td>
           <td><span style="color:var(--ok)">✓ inline "copied" chip at the value</span><br><span style="color:var(--warn)">✗ a corner toast</span></td>
           <td>Trace each use-case's feedback: where does the eye have to go?</td>
           <td><code>component</code></td>
-          <td><strong>extracted</strong> · <code>CopyText</code> confirm chip</td>
+          <td><strong>extracted</strong></td>
         </tr>
         <tr>
           <td><code>absence-names-itself</code></td>
-          <td>Every distinct absence gets its own wording that names <em>which</em> absence it is. Two causes never share one sentence, and an absence that is normal operation never reads as a fault. <em>In a trust-critical tool, a wrong absence sentence is a false statement about the capture.</em></td>
-          <td><span style="color:var(--ok)">✓ five body absences, five sentences — empty · not captured (too large) · streaming · no response yet · no longer captured</span><br><span style="color:var(--warn)">✗ "none" for a response that has not arrived — which states that the response had no headers</span></td>
-          <td>List every way this surface can have nothing to show. Does each one have its own words, and does any of them blame the user for normal operation?</td>
+          <td>Every distinct absence gets its own wording that names <em>which</em> absence it is. Two causes never share one sentence.</td>
+          <td><span style="color:var(--ok)">✓ five body absences, five sentences — empty · not captured (too large) · streaming · no response yet · no longer captured</span><br><span style="color:var(--warn)">✗ "none" for a response that has not arrived</span></td>
+          <td>List every way this surface can have nothing to show. Does each one have its own words?</td>
           <td><code>both</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/body-viewer.html">BodyViewer</a> driver ④ — five absences, five notices · <a href="../work/components/header-table.html">HeaderTable</a>'s pending state</td>
+          <td><strong>extracted</strong></td>
         </tr>
         <tr>
           <td><code>focus-returns-to-origin</code></td>
-          <td>Dismissing a surface returns focus to whatever opened it. <em>A keyboard user who closes a popup and lands at the top of the document has been ejected from their own task.</em></td>
+          <td>Dismissing a surface returns focus to whatever opened it.</td>
           <td><span style="color:var(--ok)">✓ Esc closes the option list, focus is back on the trigger</span><br><span style="color:var(--warn)">✗ focus lost to <code>&lt;body&gt;</code> after a dialog closes</span></td>
-          <td>For each dismissable surface: close it from the keyboard — where is focus now, and can the next Tab continue the task?</td>
+          <td>For each dismissable surface: close it from the keyboard — where is focus now?</td>
           <td><code>component</code></td>
-          <td><strong>extracted</strong> · <code>Select</code> — <em>"closing always returns focus to the trigger"</em>, shipped</td>
+          <td><strong>extracted</strong></td>
         </tr>
         <tr>
           <td><code>choose-before-act</code></td>
-          <td>Within one control row, controls that <em>choose what you are looking at</em> come before controls that <em>act on it</em>, in reading order. <em>The subject precedes the verb.</em></td>
+          <td>Within one control row, controls that <em>choose what you are looking at</em> come before controls that <em>act on it</em>.</td>
           <td><span style="color:var(--ok)">✓ leg and view switches at the row's start, copy and save pushed to its end</span><br><span style="color:var(--warn)">✗ an action button ahead of the selector that decides what it acts on</span></td>
           <td>Read each control row left to right: does it say what you are looking at before it offers to do something to it?</td>
           <td><code>screen</code></td>
-          <td><strong>extracted</strong> · <a href="../work/components/body-viewer.html">BodyViewer</a> chrome bar — view switches at the start, copy and save at the end</td>
+          <td><strong>extracted</strong></td>
         </tr>
       </tbody>
     </table>
 
+    <div class="callout" data-c="known-violations" id="known-violations">
+      <strong>A rule this codebase currently breaks is not recorded here.</strong> It goes to the <a href="../backlog/roadmap.html#rmap-deferred">deferred backlog</a>. A rulebook that lists its own live exceptions teaches that the rules are negotiable.
+    </div>
+
     <h2 id="lifecycle">Lifecycle</h2>
-    <p>This doc is never finished — it is a <strong>living rulebook</strong>, and it IS the fourth T2 KB <code>docs/design-rules/</code> — a single file (the index carries the rulebook; it splits into topic files only if it ever outgrows one comfortable read) (design contracts — "what must every design satisfy"), sibling to use-cases/decisions/backlog: T1 is for shape that rarely changes, decisions/ is append-only (the DEC-5 precedent), and rules grow in place with the codebase. Why this home, and the wiring that makes growth stick, is <a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a>.</p>
+    <p>This doc is never finished — it is a <strong>living rulebook</strong>, the fourth T2 KB <code>docs/design-rules/</code>. Rules grow in place with the codebase (<a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a>).</p>
     <table data-c="lifecycle-table">
       <thead><tr><th>Event</th><th>What happens to this doc</th></tr></thead>
       <tbody>
-        <tr><td><strong>a design run</strong></td><td>consumes this list <em>frozen</em>. Findings are recorded against it, nothing is edited mid-run — a rulebook that moves while a run cites it invalidates the receipt</td></tr>
-        <tr><td><strong>a revision</strong>, after a run</td><td>rules added, retagged or sharpened in place from that run's findings. A cited slug is <strong>never renamed</strong> — deprecate with a pointer, so every past receipt stays valid</td></tr>
-        <tr><td><strong>promotion</strong> — an import proves itself</td><td>a rule marked <em>import</em> becomes <strong>extracted</strong> once the codebase or a run has made the decision for real: <strong>two independent sightings, or one sighting plus a finding it caught</strong>. Without this step an import stays a kill candidate forever, however much weight it pulls</td></tr>
-        <tr><td><strong>the harness</strong></td><td>hard rules become the Tier-1 predicates; the two rule tables become the receipt-coverage list; a receipt pins the rulebook version (git blob hash) it ran against</td></tr>
-        <tr><td><strong>epic distillation</strong></td><td>links into <code>docs/work/</code> re-point to the components' post-epic home when those T3 docs distil and archive</td></tr>
+        <tr><td><strong>a design run</strong></td><td>consumes this list <em>frozen</em>. Findings recorded against it, nothing edited mid-run</td></tr>
+        <tr><td><strong>a revision</strong>, after a run</td><td>rules added, retagged or sharpened in place. A cited slug is <strong>never renamed</strong></td></tr>
+        <tr><td><strong>the harness</strong></td><td>hard rules become the Tier-1 predicates; the two rule tables become the receipt-coverage list; a receipt pins the rulebook version (git blob hash)</td></tr>
+        <tr><td><strong>epic distillation</strong></td><td>links into <code>docs/work/</code> re-point to the components' post-epic home</td></tr>
       </tbody>
     </table>
     <h3 id="growth">How it grows</h3>
@@ -346,27 +316,23 @@ flowchart LR
       <thead><tr><th>Feed</th><th>Trigger</th><th>Mechanism that makes it stick</th></tr></thead>
       <tbody>
         <tr><td><strong>design runs</strong></td><td>a design needs a token, term, key binding, or rule that isn't here</td><td>reuse-or-propose: the design proposes the entry, the receipt records the proposal, confirmation lands it here</td></tr>
-        <tr><td><strong>every task's distillation</strong></td><td>a change locks a convention (second sighting), adds a vocabulary member, or ships UI contradicting a rule</td><td>new distillation-checklist row: <em>"Design convention surfaced, locked, or contradicted? → design-rules (rule or vocabulary entry; deprecate slugs, never rename)"</em> — the write-back rule makes it same-session, and the tip's <code>doc/v1</code> note attests the edit mechanically via <code>verify-dod</code></td></tr>
-        <tr><td><strong>rule revision</strong></td><td>a rule proves wrong or a hard check proves too crude</td><td>edit in place; slug immutability keeps every past design receipt valid — a receipt cites slugs, growth only adds coverage</td></tr>
+        <tr><td><strong>every task's distillation</strong></td><td>a change locks a convention, adds a vocabulary member, or ships UI contradicting a rule</td><td>new distillation-checklist row: write-back, same-session; tip's <code>doc/v1</code> attests the edit</td></tr>
+        <tr><td><strong>rule revision</strong></td><td>a rule proves wrong or a hard check proves too crude</td><td>edit in place; slug immutability keeps every past receipt valid</td></tr>
       </tbody>
     </table>
 
     <h3 id="pragma">The sanctioned escapes</h3>
-    <p>A closed vocabulary needs a way out, or the way out becomes "stop running the check". There are exactly two, both narrow: a <a href="#css-config">raw CSS block configuring a third-party styling API</a>, whose colours are still checked against the palette — and the pragma below, for a class carrying a template shape. Neither can excuse the thing the vocabulary exists to govern.</p>
+    <p>Exactly two narrow escapes: a <a href="#css-config">raw CSS block</a> whose colours are still checked — and the pragma below for a template shape.</p>
     <table data-c="pragma-table">
       <thead><tr><th>Rule of the escape</th><th>Why</th></tr></thead>
       <tbody>
-        <tr><td>Form is <code>design-allow: &lt;class&gt; — &lt;reason&gt;</code> in a comment, applying to the <strong>next line only</strong>. <strong>The comment is the host language's</strong>: <code>// design-allow: …</code> inside the <code>className</code> expression in <code>ui/src/</code>, and <code>&lt;!-- design-allow: … --&gt;</code> in a design run's mockup. The same rules either way, and one implementation of &ldquo;is this a size&rdquo;; only the comment syntax differs, because HTML has no <code>//</code> and JSX has no <code>&lt;!-- --&gt;</code> where it is needed. <strong>The class is a token and the separator is the rightmost one in it</strong>, so a class carrying its own <code>--</code> (a custom property) spells its reason after a space &mdash; glued, the class's own dashes are the split. <strong>The printed count is the design surface's</strong> &mdash; <code>verify-doc</code> tallies live suppressions per run; the lint rule reports per file and has no run to total</td><td>Same granularity as <code>eslint-disable-next-line</code>. JSX has no comment position inside an opening tag, so the expression container is the one place that works everywhere and keeps the pragma beside the class it excuses</td></tr>
-        <tr><td>The named class <strong>must appear on the line below</strong></td><td>An edited line stops matching and reds again — a stale pragma cannot go on protecting code it no longer describes</td></tr>
-        <tr><td>The reason must be non-empty</td><td>Mirrors the merge gate's <code>waived:</code> rule — a suppression with no argument is not a decision</td></tr>
-        <tr><td><strong>A pragma over a size value is rejected, never honoured</strong></td><td>It exists for template <em>shapes</em> — <code>grid-cols-[auto_1fr]</code>, a two-column layout with no size in it. The moment it could excuse <code>text-[11px]</code>, the vocabulary is advisory</td></tr>
-        <tr><td>The live count is printed on every run</td><td>Suppressions are visible debt, not a silent hole</td></tr>
+        <tr><td>Form is <code>design-allow: &lt;class&gt; — &lt;reason&gt;</code> in a comment, applying to the <strong>next line only</strong>. The comment is the host language's: <code>// design-allow: …</code> in JSX, <code>&lt;!-- design-allow: … --&gt;</code> in HTML mockup</td><td>Same granularity as <code>eslint-disable-next-line</code></td></tr>
+        <tr><td>The named class must appear on the line below</td><td>An edited line stops matching — stale pragma cannot protect silently</td></tr>
+        <tr><td>The reason must be non-empty</td><td>Mirrors the merge gate's <code>waived:</code> rule</td></tr>
+        <tr><td><strong>A pragma over a size value is rejected</strong></td><td>Exists for template <em>shapes</em>; the moment it could excuse <code>text-[11px]</code>, the vocabulary is advisory</td></tr>
+        <tr><td>The live count is printed on every run</td><td>Suppressions are visible debt</td></tr>
       </tbody>
     </table>
-
-    <div class="callout" id="known-violations" data-c="known-violations">
-      <strong>A rule this codebase currently breaks is not recorded here.</strong> It goes to the <a href="../backlog/roadmap.html#rmap-deferred">deferred backlog</a> with the ruling on which side is right, and the soft rule that catches it meanwhile keeps catching it. A rulebook that lists its own live exceptions teaches that the rules are negotiable — and the list is never pruned once the fix lands.
-    </div>
 
   </main>
   <script type="module">

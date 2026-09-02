@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a97ad269f34851f0dfabd86">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — design run #7 (the replay composer)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .gist{font-weight:600}
+    details.why{margin-top:4px}
+    details.why summary{cursor:pointer;color:var(--muted);font-size:12px}
+    pre.tb{font-family:var(--mono,monospace);font-size:11px;line-height:1.45;margin:0;white-space:pre}
+    .statebtn{margin-top:10px;border:1px solid var(--line);border-radius:4px;padding:4px 10px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit}
+    .statebtn+.statebtn{margin-left:6px}
+    .a-mock{display:block}
+    .a-zone{display:block}
+    .a-sent-only{display:none}
+    .sent .a-sent-only{display:block}
+    .sent .a-draft-only{display:none}
+  </style>
+</head>
+<body>
+<header class="doc-hero">
+  <div class="inner">
+    <h1>Design run #7 — the replay composer</h1>
+    <p>The first run of the design flow on a function that does not exist — capabilities read from the roadmap
+    and the owner's Given list, not from a shipped screen.</p>
+    <div class="meta">Design run · 2026-09-02 · Trawler · T3 (docs/work/) · rulebook <code>a2f45dd7</code> ·
+    <a href="design-flow-base.html">the flow it follows</a></div>
+  </div>
+</header>
+<main data-artifact="design-run" data-status="archived">
+
+<p>Every prior run redesigned a shipped surface and read its capabilities off the code. This one is also the
+first <em>editing</em> screen designed against a registry of 24 read-only components.</p>
+
+<h2 id="substrate">Substrate, frozen at the start</h2>
+<table>
+<tr><th>Input</th><th>Version</th><th>Read for</th></tr>
+<tr><td>component registry</td><td>24 entries, emitted from TSDoc</td><td>reuse-or-propose at Elements — @avoid first</td></tr>
+<tr><td>design rulebook</td><td><code>a2f45dd7</code> · 13 hard · 17 soft</td><td>rules per stage; the receipt covers all 17 soft</td></tr>
+<tr><td>the flow domain model</td><td><code>src/flow.rs</code> — RequestRec · BodyRec</td><td>what a seed flow can hand the draft, and what it cannot</td></tr>
+<tr><td>the Given list</td><td>owner-stated, 2026-09-02</td><td>the capabilities — no shipped screen exists to read them from</td></tr>
+</table>
+
+<h2 id="frame">1 · Frame</h2>
+<p data-item="frame" data-c="frame-given">Purpose: a developer debugging an API takes a captured request, changes one thing, and fires it again to see what changes.
+Given (functional input — received, not designed):
+  seed a draft from a captured flow · override method · override URL · override headers · override body · send · the result lands as a new flow · compose from scratch
+Not given (may not be assumed to exist):
+  saved request collections · environments or variables · auth helpers · multi-request sequences · response assertions · send history beyond the flow list</p>
+
+<table data-item="frame" data-c="frame">
+<tr><th>Driver</th><th>why…</th><th>therefore (design consequence)</th><th>on this screen</th></tr>
+
+<tr><td colspan="4" class="kd"><em>Goals — the ranking is the visual hierarchy</em></td></tr>
+<tr>
+  <td>see the edit against the original</td>
+  <td>replay is a diff act, not an authoring act</td>
+  <td>changed fields mark themselves; the seed stays readable</td>
+  <td>✓ edited header marked, original one act away<br>✗ a blank form the user retypes</td>
+</tr>
+<tr>
+  <td>fire it and read the outcome</td>
+  <td>the answer is the response, not the draft</td>
+  <td>send is one act; the result is not buried</td>
+  <td>✓ send, then the new flow named in place<br>✗ result only findable in the list</td>
+</tr>
+<tr>
+  <td>reach any part of the request</td>
+  <td>the bug can sit in any of five fields</td>
+  <td>method, URL, headers, body all editable, none nested deep</td>
+  <td>✓ every field on one surface<br>✗ body behind two disclosures</td>
+</tr>
+
+<tr><td colspan="4" class="kd"><em>Constraints — hard boundaries</em></td></tr>
+<tr>
+  <td>some seeds carry no body</td>
+  <td>BodyRec is streaming, too large, or empty</td>
+  <td>the body field states which absence, never a blank box</td>
+  <td>✓ "not captured — too large" in the field<br>✗ an empty editor implying an empty body</td>
+</tr>
+<tr>
+  <td>send leaves the app</td>
+  <td>a real request hits a real server</td>
+  <td>send is deliberate and never fires twice by accident</td>
+  <td>✓ in-flight disables send, names the wait<br>✗ a live-as-you-type re-send</td>
+</tr>
+<tr>
+  <td>the vocabulary is read-only</td>
+  <td>24 entries, none of them an input</td>
+  <td>the editable field is this run's proposal, not a forced reuse</td>
+  <td>✓ one proposed Field, cited once<br>✗ KeyValueRow bent past its @avoid</td>
+</tr>
+
+<tr><td colspan="4" class="kd"><em>Qualities — Tune's yardstick</em></td></tr>
+<tr>
+  <td>reads as the flow it came from</td>
+  <td>the user recognises the inspector's grammar</td>
+  <td>same identity bar, same header and body idiom</td>
+  <td>✓ method · URL · headers · body, that order<br>✗ a generic REST-client layout</td>
+</tr>
+<tr>
+  <td>quiet until it matters</td>
+  <td>most fields are untouched most of the time</td>
+  <td>only the changed and the failed draw the eye</td>
+  <td>✓ marks on the two edited rows only<br>✗ every field boxed and bordered</td>
+</tr>
+<tr><td colspan="4" class="kd">Non-goals: request collections · scripting · environment substitution · diffing two responses</td></tr>
+</table>
+<h2 id="layout">2 · Layout</h2>
+<p>Three zones. The draft is the screen; the seed is a reference the draft cites, and the outcome lands where the
+eye already is — under the button that caused it.</p>
+<table data-item="layout" data-c="layout"><tr><td><pre class="tb">┌─────────────────────────────────────────────┐
+│ A  identity — method · URL                   │  ← the request in one line; highest weight
+├─────────────────────────────────────────────┤
+│ B  request body — headers, then body         │  ← the edit surface; the tallest zone
+│                                              │
+│                                              │
+├─────────────────────────────────────────────┤
+│ C  send + outcome                            │  ← the act and its result, one zone
+└─────────────────────────────────────────────┘
+scroll / overflow: A pinned, never scrolls · B scrolls — the only unbounded zone, it owns
+                   headers (n rows) and body (n bytes); the pane caps at the
+                   BodyRenderer family's TEXT_MAX and states the cut · C pinned to the
+                   bottom so send is reachable without scrolling B to its end</pre></td></tr></table>
+
+<h2 id="elements">3 · Elements</h2>
+<div data-item="elements" data-c="elements" data-map>
+<pre class="tb">composer
+├─ A identity ── <span data-key="method-label">MethodLabel</span> · <span data-key="field">Field ▣</span>
+├─ B request  ── <span data-key="section">Section</span> ◆
+│                ├─ headers ── <span data-key="field">Field ▣</span>× · <span data-key="icon-button">IconButton</span> · <span data-key="button">Button</span>
+│                └─ body    ── <span data-key="field">Field ▣</span> · <span data-key="notice">Notice</span>
+└─ C send     ── <span data-key="button">Button</span> · <span data-key="status-line">StatusLine</span> · <span data-key="status-pill">StatusPill</span> · <span data-key="duration-text">DurationText</span></pre>
+
+<table>
+<tr><th>Component</th><th>Placement · verdict</th><th>Fit (gist · why)</th><th>Shape · States</th></tr>
+
+<tr data-key="field" data-wire="none">
+  <td>Field</td>
+  <td>T1 <strong>propose</strong> — A, B</td>
+  <td><div class="gist">nothing in 24 entries accepts typed input</div>
+      <details class="why"><div>@avoid read first: KeyValueRow says <em>"editable forms (that is Field)"</em> — it names
+      this component and refuses the job. CopyText displays a value and copies it, never edits. Select is
+      single-choice from a fixed set, @avoid <em>"free-text entry (that is a combobox, not this)"</em>.
+      SourceSurface @avoid <em>"making it editable"</em>. Four @avoid lines point the same way: the vocabulary
+      has no input, and bending any of them is a propose, not a reuse.</div></details></td>
+  <td><pre class="tb">┌──────────────────┐
+│ accept: text     │ ← edited: ink
+└──────────────────┘</pre>
+      new component must own: rest · hover · focus · edited · invalid · disabled · empty</td>
+</tr>
+
+<tr data-key="method-label" data-wire="none">
+  <td>MethodLabel</td>
+  <td>T2 <strong>reuse</strong> — A</td>
+  <td><div class="gist">the verb, toned by what it does to the resource</div>
+      <details class="why"><div>@avoid: per-call-site verb styling — cleared, the mapping stays inside.
+      @use: <em>"anywhere a flow's method must be shown — pass the raw method string"</em>. The draft's method
+      is a method; that it is editable is the Field beside it, not a change to this component.</div></details></td>
+  <td><pre class="tb">POST</pre>
+      per its design file — verb→tone, no interaction states</td>
+</tr>
+
+<tr data-key="section" data-wire="none">
+  <td>Section</td>
+  <td>T1 <strong>reuse</strong> — B (recurring ◆)</td>
+  <td><div class="gist">labels the two edit groups, headers and body</div>
+      <details class="why"><div>@avoid: no Section nested in a Section's content slot, and no band in a band —
+      cleared, B holds two sibling Sections at one level. @use: <em>"every labelled zone of a detail or
+      settings screen: request, response, headers, body panels"</em> — named exactly.</div></details></td>
+  <td><pre class="tb">HEADERS
+────────</pre>
+      none of its own — slot children own interaction</td>
+</tr>
+
+<tr data-key="notice" data-wire="none">
+  <td>Notice</td>
+  <td>T1 <strong>reuse</strong> — B</td>
+  <td><div class="gist">says which absence the seed body has</div>
+      <details class="why"><div>@use: <em>"any zone that has nothing to show and must say which nothing it is
+      (empty · pending · capped · not captured)"</em> — the BodyRec variants are that list. @avoid: transient
+      confirmations, dismissible messages — cleared, this absence is standing until the user types.</div></details></td>
+  <td><pre class="tb">⚠ not captured — too large</pre>
+      not interactive · mute bare · warn + ⚠ · action slot</td>
+</tr>
+
+<tr data-key="button" data-wire="none">
+  <td>Button</td>
+  <td>T1 <strong>reuse</strong> — B, C (recurring ◆)</td>
+  <td><div class="gist">send, and add header — both are labelled acts</div>
+      <details class="why"><div>@use: <em>"any action that needs a word and is not a copy: retry, close, save,
+      submit"</em>. @avoid: emphasis by styling — cleared, send carries no primary variant; it is the only
+      action in zone C, which is the emphasis. Its fork D4 line is binding: send disabled in-flight AND a
+      progress line beside it — both halves, honoured in Interaction.</div></details></td>
+  <td><pre class="tb">[ send ]</pre>
+      rest · hover · focus · active · disabled — no loading state of its own</td>
+</tr>
+
+<tr data-key="icon-button" data-wire="none">
+  <td>IconButton</td>
+  <td>T1 <strong>reuse</strong> — B</td>
+  <td><div class="gist">removes one header row; × is unambiguous in place</div>
+      <details class="why"><div>@use: <em>"icon-only triggers unambiguous in place: close ×"</em> — a row's ×
+      is that. @avoid: actions with no fitting glyph, and primary actions — cleared, removal is secondary and
+      × is the glyph.</div></details></td>
+  <td><pre class="tb">×</pre>
+      rest · hover · focus · active · disabled</td>
+</tr>
+
+<tr data-key="status-line" data-wire="none">
+  <td>StatusLine</td>
+  <td>T2 <strong>reuse</strong> — C</td>
+  <td><div class="gist">the send's resolved verdict, in-flight included</div>
+      <details class="why"><div>@use: <em>"any item that reports a resolved state with a reason — a health
+      check, a diagnostic row"</em>. Its in-flight state (spinner, outranks every other verdict) is exactly
+      Button's fork D4 second half. @avoid: an HTTP status — cleared, the status code goes to StatusPill
+      beside it, and this line carries the send's own verdict.</div></details></td>
+  <td><pre class="tb">◐ sending…</pre>
+      ok ✓ · warn ⚠ · muted ◐ ○ · in-flight spinner</td>
+</tr>
+
+<tr data-key="status-pill" data-wire="none">
+  <td>StatusPill</td>
+  <td>T2 <strong>reuse</strong> — C</td>
+  <td><div class="gist">the response status, toned by outcome</div>
+      <details class="why"><div>@use: <em>"anywhere a flow's HTTP outcome is shown — pass the raw status"</em>.
+      The replay's result is a flow, so its status is a flow status. @avoid: pre-resolving tone at the call
+      site — cleared, the raw number is passed.</div></details></td>
+  <td><pre class="tb">200</pre>
+      ok 2xx · warn 4xx/5xx · muted else</td>
+</tr>
+
+<tr data-key="duration-text" data-wire="none">
+  <td>DurationText</td>
+  <td>T1 <strong>reuse</strong> — C</td>
+  <td><div class="gist">how long the replayed request took</div>
+      <details class="why"><div>@use: <em>"the detail header identity bar"</em> — C is that bar for the result.
+      @avoid: a live-ticking counter while in-flight — cleared and binding: it holds blank until the
+      response lands, and StatusLine carries the waiting.</div></details></td>
+  <td><pre class="tb">142ms</pre>
+      fast · slow · pending (blank, holds width)</td>
+</tr>
+</table>
+
+<p>T4 break-down: composer (T4) → identity bar (T3, local) → Field (T1, proposed) · MethodLabel (T2) ·
+Section (T1) · Button (T1) · IconButton (T1) · StatusLine (T2) · StatusPill (T2) · DurationText (T1)</p>
+<p><strong>Proposals:</strong> Field (T1) — a single-line or multi-line text input that accepts and reports typed
+value · nothing existing fits: KeyValueRow, Select and SourceSurface each name the refusal in their own @avoid,
+and the collection has carried no input element since it was founded.</p>
+</div>
+<h2 id="interaction">4 · Interaction</h2>
+<table data-item="interaction" data-c="interaction">
+<tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th><th>Keyboard path</th></tr>
+
+<tr>
+  <td>seed from a captured flow</td>
+  <td>see the edit against the original</td>
+  <td>opens replay on a flow</td>
+  <td><div class="gist">the draft arrives filled, nothing marked yet</div>
+      <details class="why"><div>A → method and URL from the seed<br>B → headers in wire order; body per its BodyRec<br>C → UNCHANGED — no outcome until a send</div></details></td>
+  <td>Tab — focus lands on the URL Field</td>
+</tr>
+
+<tr>
+  <td>change one header</td>
+  <td>see the edit against the original</td>
+  <td>types in a header value</td>
+  <td><div class="gist">that row marks edited; its neighbours do not</div>
+      <details class="why"><div>A → UNCHANGED<br>B → the one row marks edited — the mark is the diff, and it is per-row because a whole-draft "modified" flag would not say which of twenty rows moved<br>C → UNCHANGED — an edit is not a send</div></details></td>
+  <td>Tab to the field, type; ↑/↓ move between rows without selecting</td>
+</tr>
+
+<tr>
+  <td>drop a header</td>
+  <td>reach any part of the request</td>
+  <td>clicks × on the row</td>
+  <td><div class="gist">the row goes; the set marks edited</div>
+      <details class="why"><div>B → row removed, focus moves to the next row's name field so the keyboard user is not dropped to body<br>A, C → UNCHANGED</div></details></td>
+  <td>Enter / Space on the focused ×</td>
+</tr>
+
+<tr>
+  <td>seed has no body to edit</td>
+  <td>reach any part of the request</td>
+  <td>opens replay on a streaming or oversized flow</td>
+  <td><div class="gist">the body field names which absence, and stays typeable</div>
+      <details class="why"><div>B → Notice in the body slot: "not captured — too large" · "streaming — not captured" · "none". Three causes, three sentences; the field still accepts a typed body, because the user may supply what the capture could not</div></details></td>
+  <td>Tab reaches the field past the Notice</td>
+</tr>
+
+<tr>
+  <td>send it</td>
+  <td>fire it and read the outcome</td>
+  <td>clicks send</td>
+  <td><div class="gist">send disables, the wait is named beside it</div>
+      <details class="why"><div>C → Button disabled for the whole in-flight window AND StatusLine "sending…" in the same zone — Button's fork D4 demands both halves or neither<br>C → DurationText stays blank; it never tickss<br>A, B → UNCHANGED — the draft stays readable while in flight</div></details></td>
+  <td>Enter / Space on send</td>
+</tr>
+
+<tr>
+  <td>read the result</td>
+  <td>fire it and read the outcome</td>
+  <td>waits for the response</td>
+  <td><div class="gist">status, duration and the new flow's name land in C</div>
+      <details class="why"><div>C → StatusLine resolves to ✓ or ⚠; StatusPill takes the status; DurationText fills<br>C → the result names itself as a flow, so the user knows where it went<br>A, B → UNCHANGED — the draft survives the send, ready for the next edit</div></details></td>
+  <td>focus stays on send — it re-enables in place</td>
+</tr>
+
+<tr>
+  <td>the send fails outright</td>
+  <td>fire it and read the outcome</td>
+  <td>sends to an unreachable host</td>
+  <td><div class="gist">the failure is a verdict, not an empty result</div>
+      <details class="why"><div>C → StatusLine ⚠ with the reason; StatusPill renders nothing — there is no HTTP status to show, and a muted "…" would imply one is coming<br>C → DurationText stays blank</div></details></td>
+  <td>focus stays on send</td>
+</tr>
+
+<tr>
+  <td>compose from scratch</td>
+  <td>reach any part of the request</td>
+  <td>opens the composer with no seed</td>
+  <td><div class="gist">an empty draft that says what it wants first</div>
+      <details class="why"><div>A → method defaults to GET, URL Field empty and focused<br>B → no header rows, one add; body empty<br>C → send disabled until the URL is non-empty — the one field without which there is no request</div></details></td>
+  <td>focus starts in the URL Field</td>
+</tr>
+</table>
+<h2 id="mockup">5 · Draft mockup</h2>
+<p>Every reuse verdict is mounted from <code>window.Trawler</code>. Screen-owned: the zone assembly, the header
+row grid, and <strong>Field</strong> — the run's one proposal, which has no component to mount.</p>
+
+<div data-item="mockup" data-c="mockup">
+<div class="a-mock" id="mock" style="max-width:720px">
+
+  <div class="a-zone" id="m-identity"></div>
+
+  <div class="a-zone" id="m-headers"></div>
+  <div class="a-zone" id="m-body"></div>
+
+  <div class="a-zone" id="m-send"></div>
+
+</div>
+<button class="statebtn" data-state-toggle="mock" data-state-class="sent"
+        data-label-off="▶ show sent · uncaptured body" data-label-on="◀ show draft · captured body">▶ show sent · uncaptured body</button>
+
+<script type="text/babel">
+  const { React, createRoot, MethodLabel, Section, Button, IconButton,
+          Notice, StatusLine, StatusPill, DurationText } = window.Trawler;
+
+  const mount = (id, node) => {
+    const host = document.getElementById(id);
+    if (host) createRoot(host).render(node);
+  };
+  const noop = () => {};
+
+  const Field = ({ value, placeholder, edited, multiline }) => {
+    const Tag = multiline ? "textarea" : "input";
+    return (
+      <Tag
+        defaultValue={value}
+        placeholder={placeholder}
+        rows={multiline ? 4 : undefined}
+        data-wire="request draft"
+        className={"w-full bg-transparent font-mono text-body rounded-control " +
+                   "px-chrome-x py-chrome-y border " +
+                   (edited ? "border-ink-mute text-ink" : "border-line text-ink-body")}
+      />
+    );
+  };
+
+  const HeaderRow = ({ name, value, edited }) => (
+    <div className="flex gap-2 items-center mb-chrome-y">
+      <div className="w-48 shrink-0"><Field value={name} edited={edited} /></div>
+      <div className="grow"><Field value={value} edited={edited} /></div>
+      <IconButton glyph="close" label="remove header" onClick={noop} />
+    </div>
+  );
+
+  mount("m-identity",
+    <div className="flex gap-2 items-center mb-4">
+      <MethodLabel method="POST" />
+      <div className="grow"><Field value="https://api.example.com/v1/orders" edited={false} /></div>
+    </div>);
+
+  mount("m-headers",
+    <Section title="headers">
+      <div data-wire="collection" data-order="wire">
+        <HeaderRow name="content-type" value="application/json" edited={false} />
+        <HeaderRow name="authorization" value="Bearer eyJhbGciOi…" edited={true} />
+        <HeaderRow name="accept" value="application/json" edited={false} />
+      </div>
+      <Button onClick={noop}>add header</Button>
+    </Section>);
+
+  mount("m-body",
+    <Section title="body">
+      <div className="a-draft-only">
+        <Field multiline value={'{\n  "sku": "TR-1140",\n  "qty": 2\n}'} edited={false} />
+      </div>
+      <div className="a-sent-only">
+        <Notice tone="warn">not captured — too large</Notice>
+        <div className="mt-chrome-y"><Field multiline placeholder="type a body to send" edited={false} /></div>
+      </div>
+    </Section>);
+
+  mount("m-send",
+    <div className="mt-4">
+      <div className="flex gap-2 items-center">
+        <Button onClick={noop}>send</Button>
+        <div className="a-draft-only"><StatusLine name="send" status={{ glyph: "○", tone: "muted", message: "Not sent yet." }} /></div>
+        <div className="a-sent-only"><StatusLine name="send" status={{ glyph: "✓", tone: "ok", message: "Landed as a new flow." }} /></div>
+      </div>
+      <div className="a-sent-only mt-chrome-y flex gap-2 items-center">
+        <StatusPill status={201} />
+        <DurationText value={142} />
+      </div>
+    </div>);
+</script>
+</div>
+<h2 id="tune">6 · Tune</h2>
+<table data-item="tune" data-c="tune">
+<tr><th>Call</th><th>Before</th><th>After</th><th>Slug</th></tr>
+
+<tr>
+  <td>the send zone's reading order</td>
+  <td><pre class="tb">◐ sending…   [ send ]</pre></td>
+  <td><pre class="tb">[ send ]   ◐ sending…</pre></td>
+  <td><code>choose-before-act</code></td>
+</tr>
+
+<tr>
+  <td>the edited mark</td>
+  <td><pre class="tb">HEADERS  • modified
+ content-type   …
+ authorization  …</pre></td>
+  <td><pre class="tb">HEADERS
+ content-type   …
+ authorization  …  ← marked</pre></td>
+  <td><code>data-ink-first</code></td>
+</tr>
+
+<tr>
+  <td>the result's weight</td>
+  <td><pre class="tb">┌─────────────┐
+│ 201 · 142ms │
+└─────────────┘</pre></td>
+  <td><pre class="tb">201  142ms</pre></td>
+  <td><code>data-ink-first</code></td>
+</tr>
+
+<tr>
+  <td>zone C's position</td>
+  <td><pre class="tb">A identity
+C send
+B headers/body ⟶ scrolls</pre></td>
+  <td><pre class="tb">A identity
+B headers/body ⟶ scrolls
+C send  (pinned)</pre></td>
+  <td><code>ordering-by-priority</code></td>
+</tr>
+</table>
+<details class="why"><summary>why</summary>
+<ul>
+<li><strong>send zone order</strong> — the verdict was reading before the control that causes it. The row now
+says what you are about to do, then what happened. Loops back to Layout: no.</li>
+<li><strong>edited mark</strong> — a zone-level "modified" badge is chrome that informs less than the per-row
+mark already does, and it duplicates it. Stripped; the row mark is the whole signal. Loops back to Layout: no.</li>
+<li><strong>result weight</strong> — the border around status and duration added no information; StatusPill's
+tint is already the channel. Loops back to Layout: no.</li>
+<li><strong>zone C position</strong> — C sat directly under the identity bar, which put the act before the thing
+it acts on and pushed the edit surface below the fold. Moving it to the bottom, pinned, serves the scan order
+identity → edit → fire. <strong>Loops back to Layout: yes</strong> — the sketch above is the post-tune order.</li>
+</ul>
+</details>
+
+<h2 id="closing">Closing artifacts</h2>
+
+<pre data-item="receipt" data-c="receipt">rulebook: a2f45dd7
+soft:
+  visual-weight-follows-goals: satisfied — zone B, the edit surface, is the tallest; goal 1 "see the edit against the original" owns the per-row mark
+  grouping-by-relatedness: satisfied — headers and body are two Sections in one zone; the seam between B and C separates editing from firing
+  ordering-by-priority: satisfied — identity → edit → fire, the debugging read order; Tune moved C to honour it
+  progressive-disclosure: satisfied — the draft is the scan level; the original of an edited value is one act away, not inline
+  data-ink-first: satisfied — Tune stripped a zone badge and a result border; the row mark and StatusPill's tint carry it
+  generous-targets: inherited — Button, IconButton and the proposed Field each own their hit area; Field's is the whole box
+  motion-informs: satisfied — the only transience is StatusLine's in-flight spinner, which reports the send is still out
+  empty-states-orient: satisfied — three body absences named separately, and the from-scratch draft says send needs a URL
+  familiar-idioms: satisfied — the REST-client grammar (method · URL · headers · body · send) and the inspector's own field order
+  display-equals-payload: satisfied — the seed values are the captured bytes verbatim; an edited field is the user's own text, marked as changed
+  labels-add-context: satisfied — "add header" under HEADERS, not "add request header"; "send", not "send request"
+  calm-microcopy: satisfied — "sending…" · "not sent yet" · "not captured — too large"
+  one-term-per-concept: satisfied — flow, request, body, none from the lexicon; the result "lands as a new flow"
+  confirm-at-point: satisfied — the send verdict lands beside the send button, never as a toast
+  absence-names-itself: satisfied — too large · streaming · none are three sentences, and a failed send renders no StatusPill rather than a muted one implying a pending status
+  focus-returns-to-origin: satisfied — send re-enables in place and keeps focus; removing a header moves focus to the next row, never to body
+  choose-before-act: satisfied — Tune's first call; the send button precedes its own verdict, and the method/URL identity precedes the edit surface
+</pre>
+
+<table data-item="capabilities" data-c="capabilities">
+<tr><th>Capability</th><th>Verdict</th><th>Where / why</th></tr>
+<tr><td>seed a draft from a captured flow</td><td>used</td><td>A and B arrive filled from the seed's RequestRec</td></tr>
+<tr><td>override method</td><td>used</td><td>A — MethodLabel over the draft's method</td></tr>
+<tr><td>override URL</td><td>used</td><td>A — the URL Field</td></tr>
+<tr><td>override headers</td><td>used</td><td>B — Field rows, add and ×</td></tr>
+<tr><td>override body</td><td>used</td><td>B — the multiline Field; typeable even when the seed body was not captured</td></tr>
+<tr><td>send</td><td>used</td><td>C — Button, disabled in flight per fork D4</td></tr>
+<tr><td>the result lands as a new flow</td><td>used</td><td>C — StatusLine names it; StatusPill and DurationText carry its outcome</td></tr>
+<tr><td>compose from scratch</td><td>used</td><td>the no-seed draft; send gated on a non-empty URL</td></tr>
+</table>
+
+<p data-item="proposals" data-c="proposals"><strong>Field (T1)</strong> — a text input that accepts and reports a typed value,
+single-line and multiline. Why nothing existing fits: KeyValueRow's @avoid names <em>"editable forms (that is
+Field)"</em>, Select's @avoid names <em>"free-text entry"</em>, SourceSurface's @avoid names <em>"making it
+editable"</em>, and CopyText displays a value it never mutates. Four entries refuse the job by name. Owner:
+E-REPLAY's build WU, as a collection T1 alongside Button.</p>
+
+<table data-item="blocked-on" data-c="blocked-on">
+<tr><th>What is missing</th><th>Stage</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
+<tr>
+  <td>the replay API contract — no endpoint exists to fire a draft or return its flow id</td>
+  <td>Interaction</td>
+  <td>E-REPLAY's API design, outside this run</td>
+  <td>designed the outcome as StatusLine + StatusPill + DurationText, which any contract returning a flow can fill</td>
+</tr>
+<tr>
+  <td>whether an edited draft survives navigation away from the composer</td>
+  <td>Interaction</td>
+  <td>E-REPLAY's build WU — it is a store question, not a layout one</td>
+  <td>designed the draft as surviving its own send; said nothing about leaving the screen</td>
+</tr>
+<tr>
+  <td>Field's own design file — states, validation, multiline growth</td>
+  <td>Elements</td>
+  <td>the component's design run, which this run's proposal opens</td>
+  <td>named the seven states the component must own; the mockup renders a screen-owned stand-in</td>
+</tr>
+</table>
+
+<table data-item="review" data-c="review">
+<tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr>
+<tr>
+  <td>design a new function rather than another redesign — the flow has only ever been run on shipped screens</td>
+  <td>the run's target: E-REPLAY's composer instead of the setup screen; Frame reads the roadmap line and the owner's Given list, no shipped code</td>
+  <td><code>taste</code> — the reviewer's call on what W10's optimisation still had to prove</td>
+</tr>
+<tr>
+  <td>the Given list, stated by the owner and accepted verbatim</td>
+  <td>Frame's Given/Not-given lines, and the capabilities list that answers all eight</td>
+  <td><code>capabilities-answered</code> — the flow spec's rule that every Given capability is answered by the end of the run</td>
+</tr>
+<tr>
+  <td>run it as a usual design flow — stop reading prior runs for reference</td>
+  <td>stages 5 and 6 authored from the flow spec and the registry alone; no prior run consulted after Frame</td>
+  <td><code>substrate-frozen</code> — the flow spec's rule that the registry and rulebook are the run's inputs, not other runs</td>
+</tr>
+</table>
+
+</main>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{darkMode:true,background:'#181b22'}});
+</script>
+<script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

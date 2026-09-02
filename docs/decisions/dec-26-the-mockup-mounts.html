@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7ee8909f34851f0dfaba86">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-26: the mockup mounts the components</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-26 — a mockup mounts the components it claims to reuse, and a skip that prints nothing is a pass</h1>
+      <p>W5 made a specimen the component itself. The design <em>run</em> never migrated, so run #4 hand-drew
+        seven components the registry already ships — in faultless utilities, past a green gate — and the one
+        check that could have said so was structurally unable to fail.</p>
+      <div class="meta">DEC-26 · 2026-08-14 · Trawler · E-DFLOW.W9 ④.5 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>Two migrations, one finished and one that stopped where nobody was looking.</p>
+    <table data-c="context">
+      <thead><tr><th>What W5 built</th><th>Where it reached</th></tr></thead>
+      <tbody>
+        <tr><td><code>scripts/build-specimens.mjs</code> compiles <code>ui/src/components/</code>, React and
+          the app theme into one classic script a <code>file://</code> page can run, read as
+          <code>window.Trawler</code>. <em>The specimen IS the component</em>, with "when" changed from load
+          time to author time</td>
+          <td><strong>component design files: 5 of 20</strong> loaded it at the W5 merge and still did at W7
+            — every one has since been retired under
+            <a href="dec-16-design-file-retirement.html">DEC-16</a>.
+            <strong>Design runs: 0 of 4</strong>, ever</td></tr>
+        <tr><td><code>scripts/check-render.mjs</code>, the render gate: real Chrome, real
+          <code>file://</code>, a clean console and every mount non-empty</td>
+          <td>reachable only from <code>cargo xtask ui specimens --check</code>. The installed hooks call
+            <code>verify-dod</code>, which never invokes it. Live population at W9: <strong>1 doc</strong> —
+            the W5 record that announced the migration</td></tr>
+      </tbody>
+    </table>
+    <p>The two facts compound. A run doc drew its components by hand; the gate that checks rendering
+      <strong>returned early on any file that did not already load the bundle</strong>, and the loop
+      <code>continue</code>d past that skip without printing it:</p>
+    <div class="callout warn">
+      <code>if (!source.includes('specimens.bundle.js')) return { file, skipped: 'not migrated' };</code><br>
+      <code>node scripts/check-render.mjs &lt;run #4&gt;</code> → <em>"all migrated design files render"</em>,
+      <strong>exit 0</strong>, on a mockup that hand-drew all seven of the components it declared
+      <em>reuse</em> or <em>extend</em>. This is <a href="dec-15-design-run-enforcement.html">DEC-15</a>'s
+      silence-reads-as-pass, inside a script: the check could not fail on the artifact it existed for.
+    </div>
+    <p>Tier-1 pointed the other way at the same time: <code>assets·specimen</code> <strong>required</strong>
+      the pre-bundle trio — the CDN, <code>tw-config.js</code>, <code>specimen.js</code> — so the predicate
+      encoded the unmigrated shape as the mandatory one.</p>
+    <p><strong>Why no other check could catch it.</strong> The vocabulary predicates judge class
+      <em>membership</em>. Run #4's imitation used the components' own utility strings, copied correctly, so
+      every class resolved and every rule went green. A hand-drawn reuse is the one fork that is invisible to
+      a check about classes, because the classes are right — what is wrong is that the rendering is the
+      doc's own invention, and nothing binds it to the component the catalog named.</p>
+
+    <h2 id="choice">Choice</h2>
+    <div class="callout">
+      <strong>A design run's mockup mounts every component it verdicted <em>reuse</em> or <em>extend</em>.</strong>
+      Only a <em>propose</em> row, a <em>build local</em> element and an <em>extend</em>'s declared delta may
+      be hand-drawn — each declared, one comment each. Imitating a built component is refused, not reviewed.
+    </div>
+    <table data-c="choice">
+      <thead><tr><th>Layer</th><th>Source</th><th>Why it is that one</th></tr></thead>
+      <tbody>
+        <tr><td><strong>composed</strong></td><td>the component, mounted from <code>window.Trawler</code></td>
+          <td>it cannot drift from what ships, because it is what ships</td></tr>
+        <tr><td><strong>screen-owned</strong></td><td>the HTML around the mounts and the run's
+          <code>.a-</code> CSS</td>
+          <td>zoning, seams, state visibility — and the three things with no component to mount</td></tr>
+        <tr><td><strong>stubbed</strong></td><td>—</td>
+          <td>now nearly empty: a mounted Select really opens, a mounted CopyText really copies</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="seen">How a mount is seen</h3>
+    <p><strong>By the component's element name, not by a marking.</strong> A marking is exactly what a
+      hand-drawn imitation can also carry — run #4's drawing carried every <code>data-key</code> the element
+      map demanded. <code>&lt;section&gt;</code> is the browser's tag; <code>&lt;Section&gt;</code> is the
+      collection's, and only one of them can be drawn.</p>
+    <div class="diagram" data-c="predicate">
+      <pre class="mermaid">flowchart LR
+  C["catalog row
+  data-key + verdict"] -->|"reuse · extend"| N["component name"]
+  C -->|"propose · build local · n/a"| X["owes nothing"]
+  N --> M{"&lt;Name in the
+  mockup slice?"}
+  M -->|no| R["mockup·hand-drawn
+  names every drawn component"]
+  M -->|yes| B{"the bundle
+  loaded?"}
+  B -->|no| A["assets·specimen
+  a mount with nothing to mount from"]
+  B -->|yes| G["green"]</pre>
+      <div class="caption">Hình 1 — the verdict word in the catalog is what owes the mount, and the element
+        name is what proves it. Read off the raw mockup slice: HTML's raw-text rule makes a
+        <code>&lt;script&gt;</code> body data to the tokeniser, and the mount script is where the composition
+        lives.</div>
+    </div>
+
+    <h3 id="assets">One tag, and not its parts twice</h3>
+    <p><code>assets·specimen</code> now accepts either shape, and refuses the overlap:</p>
+    <table data-c="assets">
+      <thead><tr><th>Shape</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td>CDN + <code>specimens.bundle.js</code></td><td><strong>green</strong> — theme, shared
+          behaviours and the collection, in the one order that works</td></tr>
+        <tr><td>CDN + <code>tw-config.js</code> + <code>specimen.js</code></td><td><strong>green</strong> for
+          a run that mounts nothing: a theme and a state switch are all such a run needs</td></tr>
+        <tr><td>the bundle <em>and</em> either part</td><td><strong>red</strong> — the bundle imports
+          <code>specimen.js</code> for its side effects, so a second copy binds every state toggle twice, and
+          two toggles per click is no toggle</td></tr>
+        <tr><td>a mount with no bundle</td><td><strong>red</strong> — an empty div beside correct prose reads
+          as "no specimen here" rather than "broken"</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="skip">A skip is printed, and for a live design artifact it is a refusal</h3>
+    <p><code>check-render.mjs</code> keeps its shape and loses its silence: every skip prints, a skip on a
+      doc that is not a design artifact is counted rather than listed, and a <strong>live</strong> design
+      artifact that loads no bundle <strong>fails</strong>. An archived run is skipped by name — closed under
+      an older contract, the same reason Tier-1 exempts it. The gate also learned the run's mount convention:
+      a design file mounts per specimen (<code>spec-*</code>), a run mounts per zone inside
+      <code>data-item="mockup"</code>.</p>
+    <p><strong>Not wired into <code>verify-dod</code>.</strong> It drives a real Chrome and the DoD gate is
+      hermetic — headless <code>cargo build</code> and <code>cargo test</code> stay GUI-free. Fixing the skip
+      is what made it able to fail; putting a browser in the merge gate is a separate call.</p>
+
+    <h2 id="cost">Cost — measured, not assumed</h2>
+    <p><code>check_vocabulary</code> scans <em>authored</em> classes, and the tokeniser treats a
+      <code>&lt;script&gt;</code> body as data. So every class a mounted component draws, and every class the
+      run writes inside its mount script, leaves Tier-1's sight. Taken over run #4's mockup, before and
+      after:</p>
+    <table data-c="cost">
+      <thead><tr><th>Measure</th><th>Before</th><th>After</th><th>Gated anywhere else?</th></tr></thead>
+      <tbody>
+        <tr><td>distinct class tokens in the mockup</td><td>74</td><td>21</td>
+          <td><strong>50 of the 53 that left</strong> are drawn by a collection component, where
+            <code>design/vocabulary</code> in <code>ui/eslint.config.js</code> reds them at source
+            (<code>cargo xtask ui build</code>). They moved from a copy to the original</td></tr>
+        <tr><td>the three that left with nothing behind them</td><td colspan="2">
+          <code>mt-3</code> · <code>mt-chrome-y</code> · <code>text-title</code></td>
+          <td><strong>no.</strong> Two are screen assembly written inside the mount script; one is the
+            declared delta, written as <code>@apply</code> in the run's own stylesheet. Both are places the
+            scanners do not read</td></tr>
+        <tr><td><code>uppercase-mute-labels</code> triggers</td><td>3</td><td>0</td>
+          <td>not a loss of coverage but of subject: the screen no longer draws an uppercase label, so it can
+            no longer mis-tone one. The component's own compliance was never this predicate's subject</td></tr>
+        <tr><td><code>colour-plus-text</code> triggers</td><td>4</td><td>0</td><td>same</td></tr>
+        <tr><td><code>mono-for-wire-data</code> marks</td><td>5</td><td>1</td>
+          <td><strong>no — this one is a real regression.</strong> Four payload marks moved into the mount
+            script. The screen still decides which elements are verbatim payload, and the gate now sees one of
+            those decisions</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn">
+      <strong>The honest summary.</strong> The migration is not a straight trade of one blindness for
+      another — 50 of 53 departing tokens are gated at their source, and two predicates lose a population
+      they should never have had. <strong>What genuinely goes unchecked is small and named: three tokens, and
+      four of five payload markings.</strong> The fix is one change — teach the tokeniser to read
+      <code>className</code> and attributes inside a <code>text/babel</code> block — and it is deliberately
+      not in this Working Unit, because widening the scanner is its own change with its own red-before-green.
+    </div>
+
+    <h2 id="alternatives">Alternatives</h2>
+    <table data-c="alternatives">
+      <thead><tr><th>Considered</th><th>Rejected because</th></tr></thead>
+      <tbody>
+        <tr><td>keep composing by class name, and add a rule that the strings match the component's</td>
+          <td>it is a diff between two copies, and it goes green the moment someone updates both. The gap this
+            closes is not "the strings drifted", it is "the rendering is the doc's own"</td></tr>
+        <tr><td>see the mount through <code>data-key</code> on the host, as the W9 plan proposed</td>
+          <td>run #4's hand-drawn imitation already carried every key. A marking a drawing can carry proves
+            nothing; the element name cannot be drawn</td></tr>
+        <tr><td>make <code>check-render.mjs</code> the enforcement, since it renders</td>
+          <td>it is in no gate, and putting a browser in a hermetic merge gate is a bigger decision than this
+            one. Tier-1 refuses statically; the render gate proves the mount is not empty</td></tr>
+        <tr><td>widen the class scanner to read JSX in the same change</td>
+          <td>it is a second red-before-green on a different subject. Named here with its measurement so it is
+            a follow-up rather than a discovery</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li><strong>Run #4's bytes changed</strong>, so its
+        <a href="dec-25-design-build-handoff.html">DEC-25</a> citation re-pins and the amendment re-enters
+        Tier-3 on the merge that lands it. That is the blob pin working.</li>
+      <li>A run that mounts needs Babel in the head — the mockup is JSX now, compiled in the browser like a
+        component design file's specimens.</li>
+      <li>An <em>extend</em> mounts its base; the delta is the only part it draws, and it is drawn where a
+        reader and the gate can both see it (the run's own stylesheet), not smuggled into a copy of the
+        component.</li>
+      <li>The <em>stubbed</em> layer nearly empties. Run #4 stubbed Select's popup, CopyText's clipboard and
+        StatusLine's spinner; mounted, all three are real.</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

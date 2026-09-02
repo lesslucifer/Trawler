@@ -93,12 +93,81 @@ pub struct Design {
     pub artifacts: Vec<String>,
     #[serde(default)]
     pub rulebook: String,
+    /// Absent when the section carries no judgment — a build's citation or an
+    /// epic's drop record. A design-bearing diff is refused without it.
+    #[serde(default)]
     pub verdict: String,
+    /// The designs this diff's new surfaces were built from, pinned by blob. An
+    /// absent field is a silence and an empty list is a stated nothing; both
+    /// refuse a build that added a surface, and the two stay distinguishable so
+    /// the red can say which one happened.
+    #[serde(default)]
+    pub implements: Option<Vec<Cited>>,
+    /// The designs this epic gave up on, each with the reason it went — the
+    /// `walk_waivers` shape, so a drop lands in the waiver bill the epic already
+    /// reports rather than beside it.
+    #[serde(default)]
+    pub dropped: Vec<Excused>,
+    /// The rendered files this diff touched that no design covers, each with why
+    /// it needed none. The edit case: a build re-shapes far more often than it
+    /// adds, and a gate that answered every edit with "go design it" would be
+    /// routed around — so the rule asks for the sentence, and refuses only the
+    /// silence.
+    #[serde(default)]
+    pub undesigned: Vec<Excused>,
+}
+
+#[derive(Deserialize)]
+pub struct Cited {
+    pub path: String,
+    #[serde(default)]
+    pub blob: String,
+    /// The rendered files this design produced. A citation with no `built` list
+    /// covers nothing: one design naming one path used to satisfy a diff that
+    /// added five surfaces.
+    #[serde(default)]
+    pub built: Vec<String>,
+}
+
+/// A path, and why it is not where the rule would otherwise put it: a design the
+/// epic gave up on, or a rendered file no design covers. One shape because it is
+/// one rule — an empty reason records that something happened, not why, so it
+/// records nothing.
+#[derive(Deserialize)]
+pub struct Excused {
+    pub path: String,
+    #[serde(default)]
+    pub why: String,
+}
+
+fn why_for<'a>(records: &'a [Excused], path: &str) -> Option<&'a str> {
+    records.iter().find_map(|r| {
+        let why = r.why.trim();
+        (r.path == path && !why.is_empty()).then_some(why)
+    })
 }
 
 impl Design {
     pub fn judged(&self, path: &str) -> bool {
         self.artifacts.iter().any(|a| a == path)
+    }
+
+    // An empty reason is not a drop, for the same reason an empty waiver is not
+    // a waiver: it records that something went, not why.
+    pub fn dropped_why(&self, path: &str) -> Option<&str> {
+        why_for(&self.dropped, path)
+    }
+
+    pub fn undesigned_why(&self, path: &str) -> Option<&str> {
+        why_for(&self.undesigned, path)
+    }
+
+    pub fn claims(&self, path: &str) -> bool {
+        self.undesigned.iter().any(|r| r.path == path)
+    }
+
+    pub fn built(&self) -> impl Iterator<Item = &str> {
+        self.implements.iter().flatten().flat_map(|c| c.built.iter()).map(String::as_str)
     }
 }
 
@@ -344,6 +413,73 @@ verdict: PASS
             serde_yaml::from_str("schema: cr/v2\nbase: a\ndiff_sha256: c\nverdict: PASS\n")
                 .expect("parses");
         assert!(v2.design.is_none());
+    }
+
+    // Absent and empty are different silences, and the note must keep them apart:
+    // one says nobody wrote a citation, the other says somebody wrote that there
+    // is none. Defaulting the field to an empty list would erase the difference.
+    #[test]
+    fn an_absent_implements_stays_distinct_from_an_empty_one() {
+        let note = |design: &str| -> CrNote {
+            serde_yaml::from_str(&format!(
+                "schema: cr/v3\nbase: a\ndiff_sha256: c\nverdict: PASS\n{design}"
+            ))
+            .expect("parses")
+        };
+
+        let cited = note(
+            "design:\n  verdict: PASS\n  implements:\n    - path: docs/work/components/status-pill.html\n      blob: 796c547\n",
+        );
+        let listed = cited.design.expect("design").implements.expect("implements");
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].path, "docs/work/components/status-pill.html");
+        assert_eq!(listed[0].blob, "796c547");
+
+        let stated_none = note("design:\n  verdict: PASS\n  implements: []\n");
+        assert_eq!(
+            stated_none.design.expect("design").implements.map(|c| c.len()),
+            Some(0),
+            "an empty list is present and empty"
+        );
+        assert!(
+            note("design:\n  verdict: PASS\n").design.expect("design").implements.is_none(),
+            "an absent field is absent, never an empty list"
+        );
+    }
+
+    // A drop is the epic's answer to "this design was never built" - so it says
+    // which one and why. The reasonless entry is the silence the record exists
+    // to refuse, exactly as a blank walk waiver is.
+    #[test]
+    fn a_drop_records_a_path_and_a_reason_or_it_is_no_drop() {
+        let yaml = "\
+schema: cr/v3
+base: aaaa
+diff_sha256: cccc
+verdict: PASS
+design:
+  artifacts: []
+  rulebook: 796c547
+  verdict: PASS
+  dropped:
+    - path: docs/work/components/body-renderer.html
+      why: \"never built; the panel renders bodies inline\"
+    - path: docs/work/components/header-table.html
+      why: \"   \"
+";
+        let note: CrNote = serde_yaml::from_str(yaml).expect("parses");
+        let design = note.design.expect("the design section");
+        assert_eq!(
+            design.dropped_why("docs/work/components/body-renderer.html"),
+            Some("never built; the panel renders bodies inline")
+        );
+        assert_eq!(design.dropped_why("docs/work/components/header-table.html"), None);
+        assert_eq!(design.dropped_why("docs/work/components/unlisted.html"), None);
+
+        let v2: CrNote =
+            serde_yaml::from_str("schema: cr/v2\nbase: a\ndiff_sha256: c\nverdict: PASS\n")
+                .expect("parses");
+        assert!(v2.design.is_none(), "a v2 note can drop nothing");
     }
 
     #[test]

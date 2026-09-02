@@ -47,12 +47,77 @@ pub fn write_note(repo: &Path, note_ref: &str, tip: &str, body: &str) -> Result<
     git(repo, &["notes", &ref_arg, "add", "-f", "-m", body, tip]).map(|_| ())
 }
 
-pub fn diff_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
+fn names_in(repo: &Path, base: &str, tip: &str, filter: &[&str]) -> Result<Vec<String>, String> {
     let range = format!("{base}..{tip}");
-    Ok(git(repo, &["diff", "--name-only", "--no-renames", &range])?
-        .lines()
-        .map(str::to_string)
-        .collect())
+    let mut args = vec!["diff", "--name-only", "--no-renames"];
+    args.extend_from_slice(filter);
+    args.push(&range);
+    Ok(git(repo, &args)?.lines().map(str::to_string).collect())
+}
+
+pub fn diff_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
+    names_in(repo, base, tip, &[])
+}
+
+// Renames are NOT detected here, and that is a deliberate refusal rather than an
+// oversight. A rename's destination looks exactly like a new surface, and git can
+// only pair it with a source by content similarity - which knows nothing about
+// surfaces. Two review rounds found that heuristic letting genuinely new screens
+// through: one scaffolded out of a deleted filler file, one copied from a live
+// component while an unrelated surface happened to retire in the same diff. The
+// gate therefore fails CLOSED: a rename of a built component is refused, because
+// its design was already retired and there is nothing left to cite. That is a
+// documented limitation with a reproduction, owned by W9 - not a hole.
+pub fn added_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
+    names_in(repo, base, tip, &["--diff-filter=A"])
+}
+
+// What the range leaves standing - added and modified, never deleted. Lower-case
+// `d` excludes deletions inside the diff itself, so nothing downstream has to ask
+// git whether each path still resolves at the tip: one process, not one per path.
+pub fn changed_names(repo: &Path, base: &str, tip: &str) -> Result<Vec<String>, String> {
+    names_in(repo, base, tip, &["--diff-filter=d"])
+}
+
+// Every path the range ever added under `prefix` - the commits, not the two
+// endpoints. A file added by one commit and removed by another nets out of an
+// endpoint diff, which is exactly how a design nobody built leaves no trace at
+// an epic tip.
+//
+// `--full-history` is the load-bearing flag, not boilerplate. With a pathspec,
+// git's default history simplification walks only the first parent past a merge
+// whose tree is TREESAME for that path - and a design added and `git rm`'d inside
+// one Working Unit branch makes its merge exactly that. Without the flag the add
+// commit is never visited and the epic greens on a design nobody built, which is
+// the one case this function exists to catch.
+pub fn added_under(repo: &Path, base: &str, tip: &str, prefix: &str) -> Vec<String> {
+    let range = format!("{base}..{tip}");
+    let mut paths: Vec<String> = git(
+        repo,
+        &[
+            "log",
+            "--full-history",
+            "--diff-filter=A",
+            "--name-only",
+            "--pretty=format:",
+            "--no-renames",
+            &range,
+            "--",
+            prefix,
+        ],
+    )
+    .unwrap_or_default()
+    .lines()
+    .filter(|line| !line.trim().is_empty())
+    .map(str::to_string)
+    .collect();
+    paths.sort();
+    paths.dedup();
+    paths
+}
+
+pub fn blob_of(repo: &Path, rev: &str, path: &str) -> Option<String> {
+    git(repo, &["rev-parse", &format!("{rev}:{path}")]).ok()
 }
 
 pub fn diff_sha256(repo: &Path, base: &str, tip: &str) -> Result<String, String> {
@@ -184,6 +249,13 @@ pub fn show_bytes(repo: &Path, rev: &str, path: &str) -> Result<Vec<u8>, String>
     } else {
         Err(format!("git show {spec}: {}", String::from_utf8_lossy(&out.stderr).trim_end()))
     }
+}
+
+/// The same blob as text, for the readers that judge source rather than hash it.
+/// Absent, unreadable and not-UTF-8 all collapse to `None` — every caller treats
+/// a path it cannot read as a path that declares nothing.
+pub fn read_utf8_at(repo: &Path, rev: &str, path: &str) -> Option<String> {
+    String::from_utf8(show_bytes(repo, rev, path).ok()?).ok()
 }
 
 pub fn sha256_hex(bytes: &[u8]) -> Result<String, String> {

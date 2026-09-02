@@ -33,14 +33,20 @@ fn write_json(path: &Path) -> String {
 }
 
 fn red_ready_doc() -> &'static str {
-    "<html><body><main data-artifact=\"wu-result\"><p data-item=\"outcome\">only this</p></main></body></html>"
+    "<html data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>\
+     <main data-artifact=\"wu-result\"><p data-item=\"outcome\">only this</p></main>\
+     <script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+     </body></html>"
 }
 
 fn green_ready_doc() -> &'static str {
-    "<html><body><main data-artifact=\"wu-result\">\
+    "<html data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>\
+     <main data-artifact=\"wu-result\">\
      <p data-item=\"outcome\">delivered</p><p data-item=\"deviations\">none</p>\
      <p data-item=\"evidence\">tests</p><p data-item=\"distillation\">DEC-9</p>\
-     <p data-item=\"follow-ups\">none</p></main></body></html>"
+     <p data-item=\"follow-ups\">none</p></main>\
+     <script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+     </body></html>"
 }
 
 fn stderr(out: &Output) -> String {

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a7c59909f34851f0dfab850">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW.W8 discussion (design → dev)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW.W8 — design → dev</h1>
+      <p><strong>Round 1 answered — six forks ruled, two questions left (<a href="#open">Still open</a>).</strong>
+        The harness is finished and has never handed anything to development:
+        the registry's only consumer in the whole app is a <strong>gallery</strong>, and three design
+        runs have produced zero lines of product code. W8 is requirement #4 — where the design gate
+        sits relative to a UI-touching Working Unit, and what evidence it hands the build. Six forks,
+        each with what it buys and what it costs.</p>
+      <div class="meta">Discussion · 2026-08-12 · Trawler · T3 (docs/work/) ·
+        wu/design-flow/dev-integration off <code>epic/design-flow</code> @ dcd0b7e ·
+        prior: <a href="2026-08-12-dflow-w7-result.html">W7 result</a> ·
+        plan: <a href="2026-07-16-design-flow-plan.html#wu-summaries">epic plan · W8</a> ·
+        flow: <a href="design-flow-base.html">the flow spec</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="mandate">The mandate</h2>
+
+    <p>From the epic plan, verbatim: <em>connect the completed, gated design flow to the existing dev
+      lifecycle — where a design gate sits relative to a UI-touching WU, and what evidence it hands to
+      development. Shape decided here, with the harness in hand.</em> Expected result: <strong>a
+      documented, exercised handoff</strong>. Two documents hand W8 a dependency rather than an answer:
+      <a href="../decisions/dec-24-design-review-dimension.html#consequences">DEC-24</a> ("Tier-3 fires on
+      the merge that lands a closed design — its answer cannot move the verdict earlier than the close")
+      and the epic plan's open question ("default: a passing design is a mandatory upstream gate, with
+      the dev gate later checking impl-vs-design").</p>
+
+    <h2 id="state">What is true today — measured, not recalled</h2>
+
+    <table data-c="tbl-measured">
+      <thead><tr><th>#</th><th>Measurement</th><th>How</th><th>What it means for W8</th></tr></thead>
+      <tbody>
+        <tr><td>M1</td>
+          <td><strong>24 components in the registry · 1 call site · 0 product screens.</strong> The only
+            file importing <code>ui/src/components/</code> is <code>ui/src/Gallery.tsx</code>, a showcase.
+            <code>App</code>, <code>FlowList</code> and <code>FlowDetail</code> still import the old ad-hoc
+            <code>ui/src/components.tsx</code> (<code>Field</code>, <code>StatusPill</code>,
+            <code>StatusDot</code>)</td>
+          <td><code>grep -l "@tier" ui/src/components/*.tsx</code> · import grep over <code>ui/src/</code></td>
+          <td>the handoff has never run <em>in either direction</em>. Requirement #4 is not a refinement of
+            an existing seam; there is no seam</td></tr>
+        <tr><td>M2</td>
+          <td><strong>3 design runs, 0 became code.</strong> Runs #1/#2 (flow detail panel) and #3 (setup
+            screen) are all archived records; both screens shipped from code written before or beside them</td>
+          <td>the three <a href="2026-07-16-dflow-run-1.html">run</a>
+            <a href="2026-07-25-dflow-w4-run-2.html">docs</a> vs the tree</td>
+          <td>whatever W8 rules, nothing has ever been consumed downstream — so the packet's shape is a
+            design decision, not an observation</td></tr>
+        <tr><td>M3</td>
+          <td><strong>10 of 11 landed UI Working Units touched <code>ui/src/**</code></strong> across
+            E-UIFOUND (2 WUs), E-UIINSPECT (3) and E-UISETUP (6). <strong>0 of 11</strong> added a file
+            under <code>ui/src/components/</code> — that folder is E-DFLOW.W5's and has never existed on
+            <code>main</code></td>
+          <td>first-parent seams of the three epic merges; <code>git diff --name-only</code> per seam</td>
+          <td>the two candidate triggers are measured and far apart: a path trigger fires on 10 of 11
+            (including a scaffold WU), a new-component trigger on 0 of 11 — <a href="#d2">D2</a></td></tr>
+        <tr><td>M4</td>
+          <td><strong>51 tracked docs under <code>docs/work/</code>, and the epic gate refuses every one
+            of them.</strong> <code>is_expected_tracked_doc</code> allows only flat <code>docs/</code>,
+            <code>use-cases/</code>, <code>decisions/</code>, <code>backlog/</code>,
+            <code>design-rules/</code>. Among the 51: the 3 archived runs, <strong>4 unbuilt component
+            contracts</strong> (BodyViewer · BodyRenderer · HeaderTable · CopyAllHeadersButton) and
+            <code>component-design-base.html</code>, the authoring format itself</td>
+          <td><code>git ls-tree -r --name-only HEAD -- docs/work</code> ·
+            <code>xtask/src/notes.rs:246</code> · gate check 6</td>
+          <td><strong>the packet has no address.</strong> DEC-16 says an unbuilt component's contract
+            "lives there and nowhere else"; the epic gate says nothing under <code>docs/work/</code>
+            survives the merge to <code>main</code>. That collision blocks the <em>epic</em>, not just
+            W8 — <a href="#d3">D3</a></td></tr>
+        <tr><td>M5</td>
+          <td><strong>Tier-3 has judged nothing.</strong> Its plumbing is proved end to end; the finder
+            has never read a real artifact</td>
+          <td><a href="2026-08-12-dflow-w7-result.html">W7 result</a>, follow-up 1</td>
+          <td>W8 must not build a second unproven judge. Anything it adds on the build side should reuse
+            a surface that already runs — <a href="#d4">D4</a></td></tr>
+      </tbody>
+    </table>
+
+    <div class="diagram" data-c="dia-gap">
+      <pre class="mermaid">
+flowchart LR
+  subgraph DES["the design lifecycle — finished, W1–W7"]
+    S["substrate: registry + rulebook"] --> R["6 stages → close (archived)"]
+    R --> T3["Tier-3 · design dimension of cr/v3<br/>fires at the merge that lands the closed design"]
+    T3 --> G1{"9·design<br/>refuses the merge"}
+  end
+  subgraph DEV["the dev lifecycle — unchanged since E1"]
+    W["UI-touching WU: code + tests"] --> CR["cr/v3 · five finders"]
+    CR --> G2{"verify-dod wu<br/>checks 1–9"}
+  end
+  G1 -.->|"?? nothing carries<br/>the design across"| W
+  G2 -.->|"?? nothing checks<br/>the code against it"| R
+      </pre>
+      <div class="caption">Both halves are built and gated. The two dotted edges are W8: what travels from
+        design to build (the packet, and what makes it mandatory), and whether anything travels back
+        (conformance). Today both are empty — measured at M1.</div>
+    </div>
+
+    <h2 id="forks">The forks</h2>
+
+    <p>Six, in dependency order — plus <a href="#d1a">D1a</a>, which round 1 opened.
+      <span class="badge auto">chosen</span> marks the ruling; the unmarked options are kept as the record
+      of what was weighed against it. Summary table: <a href="#ruled">where round 1 landed</a>.</p>
+
+    <h3 id="d1">D1 · The unit of coupling — where the design sits relative to the build</h3>
+
+    <table data-c="tbl-d1">
+      <thead><tr><th>Option</th><th>For</th><th>Against</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A · Design WU, then build WU</strong>, same epic
+            <span class="badge auto">chosen</span></td>
+          <td>Tier-3 fires at the design WU's merge, so the gate is <em>genuinely upstream</em> — a FAIL
+            costs a document, not built code. Docs-only design merges are now correctly gated rather than
+            exempt (DEC-24), so a design-only WU is a fully evidenced unit, not a hole. <strong>The WU
+            declares itself a design WU</strong>, and that declaration is what makes the design receipt
+            mandatory on its merge</td>
+          <td>two WUs per screen, two plans, two reports. A design can age between the two merges: if the
+            rulebook moves in between, <code>receipt·rulebook-stale</code> re-opens the closed run's
+            receipt — correct, and still rework</td></tr>
+        <tr><td><strong>B · One WU, design commit first</strong>
+            <span class="badge approval">not a shape — an outcome, see D1a</span></td>
+          <td>one plan, one report, one review pass; no aging window; the build's discoveries can amend
+            the design inside the same unit, which is where they are cheapest to act on. <strong>It is
+            also the shape the repo reached for unprompted</strong>: the one Working Unit that ever called
+            itself a design WU — E-UISETUP.W1, <em>"onboarding design + skeleton"</em> — landed the design
+            and 8 <code>ui/src/</code> files in a single commit</td>
+          <td><strong>the verdict lands after the code is written</strong> — DEC-24's flagged dependency,
+            in its own words. A FAIL then means reworking implementation, and the reviewer judges the
+            design with the implementation in front of them, which is exactly the position that
+            rationalises a weak design</td></tr>
+        <tr><td><strong>C · Design epic ahead of build epics</strong></td>
+          <td>the shape E-DFLOW itself ran; batches a whole surface's design while the substrate is fresh</td>
+          <td>the coarsest feedback loop available, and designs age across epic boundaries. The roadmap
+            plans no further design epics — every remaining UI epic is a build epic</td></tr>
+        <tr><td><strong>D · Per screen, not per WU</strong> — required whenever a screen is first built or
+            materially re-shaped; WU boundaries free</td>
+          <td>matches the artifact's real granularity (a run designs a <em>screen</em>, not a WU), and
+            tolerates a build split across several WUs without demanding a design from each</td>
+          <td>"materially re-shaped" is not mechanically decidable, so this option is only as good as
+            <a href="#d2">D2</a>'s trigger — on its own it is a rule only a human can apply, and M3 says
+            most UI work is re-shaping</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="d1a">D1a · When the build has to change the design — the exception, and what watches it</h3>
+
+    <p>Your question: A is the shape, but discovery is real — a small UI change nobody foresaw, or a
+      design WU whose build finds the design wrong. <strong>B does not need to be a second shape.</strong>
+      Three cases, and the machinery already in flight covers all three; nothing new is built for any of
+      them.</p>
+
+    <table data-c="tbl-d1a">
+      <thead><tr><th>Case</th><th>What happens</th><th>What controls it</th><th>What monitors it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1 · Small unplanned UI change</strong> mid-WU — a tweak to an existing screen, no
+            new surface</td>
+          <td>nothing. No design is required, none is written</td>
+          <td>D2·B's trigger <em>does not fire</em>: it fires on a new <code>@tier</code> component or a
+            new screen, not on re-shapes. This case is designed out, not waived</td>
+          <td>n/a — there is nothing to watch</td></tr>
+        <tr><td><strong>2 · Build WU amends the design</strong> its design WU closed</td>
+          <td>the build WU edits the design file in its own commit; its note's pointer cites the
+            <em>new</em> blob</td>
+          <td>DEC-24 already fires Tier-3 on <em>the merge that lands a closed design</em> — the amended
+            design is landing on this merge, so the design dimension re-judges it here, automatically. No
+            rule is added; the existing one simply applies twice</td>
+          <td><strong>the cited blob ≠ the blob the design WU closed.</strong> That difference <em>is</em>
+            the signal — no new note field, one comparison over notes already written</td></tr>
+        <tr><td><strong>3 · A genuinely new surface</strong> is discovered mid-build (a new
+            <code>@tier</code> component)</td>
+          <td>the trigger fires on the <em>build</em> WU's merge, so a design must land inside it — which
+            is option B, arrived at mechanically</td>
+          <td>gated identically to a design WU: same trigger, same receipt, same Tier-3 refusal. The cost
+            B was rejected for is still paid (verdict lands with code written) — but only on the WUs where
+            discovery actually happened, not by policy</td>
+          <td>a build WU whose note carries a design of <em>its own</em> is the exception, and it is one
+            grep. If that count climbs, planning is failing upstream — which is the thing worth watching,
+            not the individual WU</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="d1a-note">
+      <p>So the control is not a new permission and not a waiver: <strong>an amended or late design is
+        gated exactly like an on-time one</strong>, because the gate keys on <em>the merge that lands a
+        closed design</em>, not on which WU it belongs to. The only thing W8 adds for this is the pointer
+        it was adding anyway (D2·C) — the blob in it is what makes case 2 countable.</p>
+    </div>
+
+    <h3 id="d2">D2 · What makes the requirement fire — the trigger</h3>
+
+    <p>The load-bearing fork, and the one with numbers. A trigger that reds nearly every UI Working Unit
+      teaches agents to route around it — DEC-15 rejected "block on unimplemented predicates" for exactly
+      that reason.</p>
+
+    <table data-c="tbl-d2">
+      <thead><tr><th>Option</th><th>Would have fired on</th><th>For</th><th>Against</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A · Path trigger</strong> — the diff touches <code>ui/src/**</code></td>
+          <td><strong>10 of 11</strong> landed UI WUs</td>
+          <td>one predicate, no new vocabulary, nothing for an agent to declare or forget</td>
+          <td>it would have demanded a design run from a scaffold WU and from WUs whose UI delta was a
+            review fix. A gate that reds almost everything gets waived almost every time, and the waiver
+            bill is already at 4 of 12</td></tr>
+        <tr><td><strong>B · New-surface trigger</strong> — the diff <em>adds</em> a file under
+            <code>ui/src/components/</code> carrying <code>@tier</code>, or adds a screen
+            <span class="badge auto">chosen, with C</span></td>
+          <td><strong>0 of 11</strong></td>
+          <td>mechanically derivable from what already exists (<code>--diff-filter=A</code> plus the
+            <code>@tier</code> membership tag the roster oracle reads). It matches the flow's own output:
+            a <em>propose</em> verdict <strong>is</strong> a new component. And firing 0 times on landed
+            history means it grandfathers itself — no waiver, no cutoff (<a href="#d6">D6</a>)</td>
+          <td>silent on re-shapes of an existing screen, which M3 says is where most UI work lives. A
+            component added without <code>@tier</code> dodges it — though that tag is already the roster's
+            own membership waiver, stated where it cannot drift</td></tr>
+        <tr><td><strong>C · Declared coverage</strong> — the build WU's note names the design it
+            implements (path + blob), the gate checks it resolves and is closed
+            <span class="badge auto">chosen, with B</span></td>
+          <td>n/a — a carrier</td>
+          <td>the only option that makes the <em>link</em> checkable rather than the mere existence of a
+            design somewhere. It is what turns a packet into an address the review can follow</td>
+          <td><strong>a declaration is not a trigger</strong>: nothing demands it when the agent writes
+            nothing. Must be paired with A, B or D</td></tr>
+        <tr><td><strong>D · Judgment at plan time</strong> — the WU plan states whether a design is
+            needed; the review judges the answer</td>
+          <td>n/a — judgment</td>
+          <td>no false reds, and "does this need a design" is genuinely a plan-time question a human or
+            reviewer can answer well</td>
+          <td>silence reads as "no design needed" — the defect class this epic keeps finding. E-DFLOW.W2
+            landed 14 component design files with no code review at all on precisely such a silence, and
+            nothing noticed for five Working Units</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="d3">D3 · Where the packet lives — the address problem <span class="badge auto">dissolved by your rule</span></h3>
+
+    <div class="callout" data-c="collision">
+      <p><strong>Your reading is right, and it is stronger than any of A–D: there is no address problem,
+        because there is no artifact to address.</strong> The four homeless contracts (M4) only look
+        homeless because DEC-16 said an unbuilt design "lives there and nowhere else" — i.e. it granted
+        an unbuilt design the right to <em>survive</em> the epic. Take that right away and the intersection
+        empties: at the epic tip, every design either has code (its contract is TSDoc, the file retires per
+        DEC-16's order) or it has none (the merge is refused). Nothing is left needing a home. <strong>Gate
+        check 6 was never wrong — DEC-16 was.</strong></p>
+    </div>
+
+    <div class="diagram" data-c="dia-address">
+      <pre class="mermaid">
+flowchart TB
+  A["a closed design"] --> Q{"has code at<br/>the epic tip?"}
+  Q -->|"yes"| RET["retire per DEC-16:<br/>contract → TSDoc, forks → decisions/"]
+  RET --> ARC["record archives to git history<br/>(check 6 satisfied)"]
+  Q -->|"no"| RED["epic merge REFUSED"]
+  RED --> F1["build it — inside this epic"]
+  RED --> F2["drop it — a design nothing built<br/>is a proposal, not a contract"]
+      </pre>
+      <div class="caption">The rule as one predicate. There is no third branch and no new folder — the two
+        outcomes both end with nothing tracked under <code>docs/work/</code>, which is what the epic gate
+        already demands.</div>
+    </div>
+
+    <table data-c="tbl-d3">
+      <thead><tr><th>Option</th><th>For</th><th>Against</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A · A fifth expected tracked location</strong> — <code>docs/designs/</code> (T2),
+            holding closed runs and unbuilt component contracts</td>
+          <td>the build reads a path, not a sha. Unbuilt contracts stop being homeless, and the authoring
+            base gets a home too</td>
+          <td>a permanent home for what the epic calls transient; touches <code>xtask</code>, CLAUDE.md
+            and <code>documentation-system.html</code> (rule-bearing, so <code>Reviewed-By</code>). Risks
+            two homes for one contract once the component is built — mitigated, since
+            <code>components·unretired</code> already reds a design file whose component has a roster
+            entry</td></tr>
+        <tr><td><strong>B · Everything retires into code + decisions</strong> (the status quo intent)</td>
+          <td>one home per fact, and it is already built and enforced: contract → TSDoc, forks →
+            <code>docs/decisions/</code>, records → archived</td>
+          <td>the 4 unbuilt contracts must be <em>built or lost</em> before the epic can merge — and the
+            epic's non-goals forbid building feature components. A build WU would also have nothing
+            screen-level to read: the layout, the interaction table and the mockup live only in the run</td></tr>
+        <tr><td><strong>C · Git history is the address</strong> — archive as usual; the permanent pointer
+            is the commit sha plus the <code>cr/v3</code> <code>design:</code> section that already pins
+            artifacts and rulebook</td>
+          <td>costs nothing and changes no rule. Git keeps the bytes forever and the note already pins
+            them; <em>archived</em> has never meant <em>lost</em></td>
+          <td>a path nobody can open in a working tree is a packet nobody reads — and agents read the
+            tree. This is the option most likely to produce a handoff that exists only on paper</td></tr>
+        <tr><td><strong>D · Split by kind</strong> — live contracts with no code get a home (A, narrowed
+            to <code>docs/work/components/</code>'s successor); finished records go to history (C)</td>
+          <td>matches the two artifacts' different natures: a <em>contract</em> must be readable, a
+            <em>record</em> need only be recoverable. The live/finished predicate already exists and is
+            already machine-read — <code>data-status="archived"</code></td>
+          <td>two rules where the doc system has one, and a new tier row to explain. The split has to be
+            stated crisply or it decays into "put design docs wherever"</td></tr>
+        <tr><td><strong>E · No unbuilt design survives the epic</strong> — a closed design whose code has
+            not landed at the epic tip refuses the merge; built designs retire into TSDoc + decisions and
+            archive to history <span class="badge auto">chosen — your rule</span></td>
+          <td><strong>it adds no home, no tier row, no <code>xtask</code> location list entry, and no
+            CLAUDE.md edit.</strong> It also makes staleness impossible by construction — the aging window
+            D1·A was criticised for cannot exceed one epic. And a design that sat unbuilt through a whole
+            epic <em>should</em> be re-run against the current rulebook rather than resurrected</td>
+          <td>it is a real new constraint on epic planning: design and build must be scoped into the same
+            epic, so a design run can no longer be "banked" for later. And it is retroactive on E-DFLOW
+            itself — see the cost below</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>What the rule needs built, and what it costs today.</strong> Both rows are small; the
+      second is the one that needs your call.</p>
+
+    <table data-c="tbl-d3-cost">
+      <thead><tr><th></th><th>Item</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>build</td>
+          <td><strong>One predicate, in a function that already exists.</strong>
+            <code>check_retirement</code> (<code>xtask/src/doc.rs:702</code>) already reds a design file
+            whose component <em>is</em> in the roster. The rule is the same test negated, at epic scope:
+            a design named in a seam's <code>cr/v3</code> <code>design:</code> section whose component is
+            <em>not</em> in the roster at the epic tip → <code>components·unbuilt</code></td>
+          <td>the roster oracle and the note section are both already read by the walk. Check 6 alone is
+            not enough — it forces the <em>file</em> away, and would happily let an agent
+            <code>git rm</code> a design and merge with no code</td></tr>
+        <tr><td>cost</td>
+          <td><strong>E-DFLOW is the first epic the rule refuses.</strong> Its own W2 landed 4 component
+            contracts with no code (BodyViewer · BodyRenderer · HeaderTable · CopyAllHeadersButton), and
+            the epic's non-goals forbid building feature components</td>
+          <td>three exits: <strong>build them</strong> (breaks the non-goal, and is D5·A four times over) ·
+            <strong>drop them</strong> (they are flow-exercise output, never a product commitment; git
+            keeps the bytes and a future build re-runs the flow — my recommendation) ·
+            <strong>grandfather</strong> (rule binds epics opened after W8, which leaves the epic that
+            invented the rule exempt from it)</td></tr>
+        <tr><td>carve-out</td>
+          <td><code>component-design-base.html</code> is <strong>not</strong> a design</td>
+          <td>it is the authoring format — a process spec. It has no code and never will, so the rule must
+            exempt format/process docs explicitly, or it deletes its own rulebook. It gets promoted
+            alongside the flow spec at epic distillation, not built</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="d4">D4 · Conformance — does anything check the build against the design?</h3>
+
+    <table data-c="tbl-d4">
+      <thead><tr><th>Option</th><th>For</th><th>Against</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A · A review dimension</strong> — when a build WU cites a design, the code review
+            asks whether the code implements it</td>
+          <td>DEC-24's argument one tier down: independence, freshness, <code>diff_sha256</code> binding
+            and merge-time refusal <em>already exist</em>. Nothing new to build but a rubric section — and
+            M5 says W8 should not ship a second unproven judge on new machinery</td>
+          <td>judgment cannot see what it is not given: this is worthless without D2·C's declared pointer.
+            And it is a sixth/seventh finder on every UI merge — review cost is real</td></tr>
+        <tr><td><strong>B · A mechanical slice</strong> — every <em>propose</em> row in the cited design
+            ends as a registry entry or a recorded deviation; every <em>reuse</em> row's component is
+            actually imported</td>
+          <td>the run doc's proposals list and Elements catalog are the one part of a design with a
+            machine-comparable shape, and W7 ⓪'s parser already reads them. It closes the loop the flow
+            opened: a proposal is a promise to the build</td>
+          <td>an import is not a use — a screen can import a component and re-style it, the run-doc
+            "silent fork" defect one tier down. Partly covered already: <code>design/vocabulary</code>
+            binds token literals in built code (DEC-17's <em>binds</em> axis)</td></tr>
+        <tr><td><strong>C · Nothing</strong> — the design is an input; drift surfaces in the next design
+            run <span class="badge auto">chosen</span></td>
+          <td>cheapest, and honest about where a design's value mostly is: the thinking, not the
+            compliance</td>
+          <td>then nothing connects the two halves and requirement #4 is a paragraph. The epic's expected
+            result says <em>exercised</em></td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="d4-note">
+      <p><strong>C does not delete D2·C's pointer</strong> — the two are different things, and it is worth
+        being explicit or the pointer reads as decorative. What dies is the <em>judgment</em> (no reviewer
+        asks "does this code match that design"). What lives is the <em>mechanical</em> check: the cited
+        path resolves and the design is closed. That pointer still earns its place twice — it is the
+        address a build agent follows to read the design at all, and its blob is what makes
+        <a href="#d1a">D1a</a> case 2 (a build WU amending its design) countable without a new field.
+        Cost of keeping it: nothing new, it is the same field either way.</p>
+    </div>
+
+    <h3 id="d5">D5 · What "exercised" means — W8's acceptance artifact</h3>
+
+    <p>The epic plan's expected result is <em>a documented, <strong>exercised</strong> handoff</em>, and
+      the epic's non-goals say <em>no building of real feature components</em>. Those two lines point in
+      opposite directions; this fork is where they get reconciled, and it is the user's call.</p>
+
+    <table data-c="tbl-d5">
+      <thead><tr><th>Option</th><th>Exercises</th><th>For</th><th>Against</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A · Build one of the four unbuilt components</strong> through the new handoff
+            (CopyAllHeadersButton is the smallest)</td>
+          <td>design file → build → TSDoc → retirement</td>
+          <td>the real thing end to end, including DEC-16's ordered retirement, which no run has ever
+            executed on a file it authored. Closes W7 follow-up 7 and shrinks D3's homeless set</td>
+          <td>collides with the epic's non-goal. And a component is the <em>narrowest</em> leg — it never
+            touches a screen run, which is where the layout, interaction and mockup live</td></tr>
+        <tr><td><strong>B · Migrate one shipped screen onto the registry</strong> (FlowDetail off
+            <code>components.tsx</code>'s StatusPill)</td>
+          <td>registry → product code</td>
+          <td>exercises the direction M1 shows is actually broken — the registry has no product call site —
+            and pays debt W7 filed</td>
+          <td>same non-goal collision, larger; and it is a build with no design run in front of it, so it
+            exercises the second half only</td></tr>
+        <tr><td><strong>C · Extend the flow e2e with a build leg</strong> — a fake build WU consuming a
+            design, gated <span class="badge auto">chosen — in this WU</span></td>
+          <td>the checks</td>
+          <td>hermetic, deterministic, re-runnable; the e2e already drives a fake human and a fake agent
+            through all three tiers over real git and the real merge hook, and it found two live gate
+            holes no unit fixture could</td>
+          <td>proves plumbing, not practice. A fake build consuming a fake design cannot tell us the
+            packet is <em>useful</em> — only that it is enforced</td></tr>
+        <tr><td><strong>D · Retro-fit measurement</strong> over the 11 landed UI seams: what the new rule
+            would have demanded, and what it would have refused
+            <span class="badge approval">deferred — its own WU</span></td>
+          <td>the trigger's calibration</td>
+          <td>the calibration Tier-3 never got, done <em>before</em> the rule lands rather than after. M3
+            is the first two rows of it and already killed one option</td>
+          <td>measurement, not exercise — nothing is handed to anyone. Cannot stand alone against the
+            plan's wording</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="d6">D6 · Grandfathering — what stops a new rule reddening landed history</h3>
+
+    <p>Every mandatory check W8 adds is a check the epic walk re-runs over seams that predate it. W7
+      measured both outcomes: the <code>cr/v2</code>/<code>cr/v3</code> schema string as the discriminator
+      cost <strong>zero</strong> walk waivers; the rule one step earlier cost <strong>three</strong>. The
+      bill stands at 4, and W7 ③ filed a dozen as the point where the walk's verdict is mostly waiver.</p>
+
+    <table data-c="tbl-d6">
+      <thead><tr><th>Option</th><th>For</th><th>Against</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A · The trigger cannot fire on history</strong> (D2·B — no landed seam adds a
+            <code>@tier</code> component) <span class="badge auto">chosen</span></td>
+          <td>free: the trigger <em>is</em> the grandfather, measured at 0 of 11. No schema change, no
+            waiver, no cutoff</td>
+          <td>holds only while the trigger stays new-surface-shaped; widening it later re-opens this
+            question with history that is by then longer</td></tr>
+        <tr><td><strong>B · Self-dating on a schema string</strong> — a note version bump says, in its own
+            bytes, that a tip predates the rule</td>
+          <td>the mechanism already proved at zero cost, and it survives a later widening of the trigger</td>
+          <td>another schema version, on a note whose new section is relevant only to UI work</td></tr>
+        <tr><td><strong>C · A date or path cutoff</strong></td>
+          <td>trivial to write</td>
+          <td>already rejected with its reason in DEC-24: a date cannot tell a note written before the
+            rule from one written badly after it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="shape">The shape round 1 forces</h2>
+
+    <p>Five steps, down from seven — D4·C deleted the conformance dimension and D3·E deleted the doc-home
+      work. Each step is a dependency of the next.</p>
+
+    <table data-c="tbl-shape">
+      <thead><tr><th>#</th><th>What</th><th>Why here</th></tr></thead>
+      <tbody>
+        <tr><td>①</td><td><strong>Rule D3 into the rulebook</strong>: DEC-16's "lives there and nowhere
+            else" is superseded, and the epic gate gains <code>components·unbuilt</code>. Decide the 4
+            orphans (open Q1)</td>
+          <td>the only fork that blocks the <strong>epic</strong> merge rather than just W8, and the rule
+            everything downstream assumes: design and build share one epic</td></tr>
+        <tr><td>②</td><td><strong>Write the handoff</strong>: the flow spec gains a hand-over step;
+            <code>workflow.html</code> gains the design-WU declaration, the design row in the DoD-W table,
+            the lifecycle diagram, and <a href="#d1a">D1a</a>'s three cases</td>
+          <td>the rule has to exist in prose before it exists as a predicate, or the predicate is the
+            spec — which is how the registry gate went three Working Units unwritten</td></tr>
+        <tr><td>③</td><td><strong>Build the trigger + the declared pointer + its gate check</strong>
+            (D2·B+C)</td>
+          <td>D2's answer, mechanised. Reuses <code>design-scope</code>'s one-function-two-callers rule so
+            the reviewer and the gate cannot drift</td></tr>
+        <tr><td>④</td><td><strong>The e2e's build leg</strong> (D5·C): a fake build WU consuming a design,
+            gated — including D1a case 2, an amendment landing inside it</td>
+          <td>W7's lesson: the e2e found two live holes that unit fixtures could not. A handoff nobody has
+            driven is a claim. This is now W8's <em>whole</em> exercise — see open Q2</td></tr>
+        <tr><td>⑤</td><td><strong>Distillation</strong>: a new DEC for the handoff, consequence rows on
+            DEC-15/16/24 (16 is superseded, not annotated), the T1 edits, the result report</td>
+          <td>same-session distillation, per the doc rules</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="dropped">
+      <p><strong>Dropped from the draft shape:</strong> ⓪ the retro-fit measurement — deferred to its own
+        WU. Worth noting it does not block ③: the calibration that actually decided D2 is already in hand
+        (M3 measured both candidates at <strong>10 of 11</strong> and <strong>0 of 11</strong>, which is
+        what killed the path trigger). The deferred WU measures the <em>chosen</em> rule's retroactive
+        behaviour, which is a report, not an input. And ④ the conformance dimension — deleted by D4·C, so
+        no sixth finder lands on every UI merge.</p>
+    </div>
+
+    <h2 id="not-w8">Explicitly not W8</h2>
+
+    <table data-c="tbl-not">
+      <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>Tier-3's first real judgment, the over-fit exposure (7 predicates never red on a real
+          artifact), the fresh-screen generalization run</td><td>W9</td></tr>
+        <tr><td>Promoting the flow spec to T1 — ruled at W7·D6 to happen once, at epic distillation, after
+          W8 has settled where the gate sits. W8 writes the text; it does not move the file</td>
+          <td>epic distillation</td></tr>
+        <tr><td>The retro-fit measurement over the 11 landed UI seams (D5·D) — what the chosen rule would
+          have demanded and refused</td><td>its own WU, deferred at round 1</td></tr>
+        <tr><td>The walk-waiver bill (4 of 12)</td><td>epic merge</td></tr>
+        <tr><td>Gate commands defaulting to a ref nobody refreshes (W7 follow-up 3)</td>
+          <td>backlog · tooling</td></tr>
+        <tr><td><code>StatusDot</code> and <code>Field</code> joining the registry; retiring
+          <code>components.tsx</code></td><td>backlog · screen work — unless D5 rules otherwise</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="ruled">Where round 1 landed</h2>
+
+    <table data-c="tbl-ruled">
+      <thead><tr><th>Fork</th><th>Ruling</th><th>What it changes from the draft</th></tr></thead>
+      <tbody>
+        <tr><td><a href="#d1">D1</a></td>
+          <td><strong>A</strong> — design WU, then build WU, same epic. The WU declares itself a design WU;
+            that declaration is where the design receipt is required</td>
+          <td>as defaulted, plus the explicit declaration — which also gives ③ something to key on other
+            than a path heuristic</td></tr>
+        <tr><td><a href="#d1a">D1a</a></td>
+          <td><strong>B is not a second shape.</strong> Unforeseen small changes don't fire the trigger;
+            an amended design re-enters Tier-3 on the merge that lands it; a late-discovered surface makes
+            the build WU carry its own design, gated identically</td>
+          <td>new — answers "we sometimes need B, how do we control it". No new machinery, and the
+            monitoring signal is the pointer's blob</td></tr>
+        <tr><td><a href="#d2">D2</a></td>
+          <td><strong>B + C</strong> — new-surface trigger plus a declared, checked pointer</td>
+          <td>as defaulted</td></tr>
+        <tr><td><a href="#d3">D3</a></td>
+          <td><strong>E</strong> — no unbuilt design survives the epic. No new home, no new tracked
+            location, DEC-16 superseded</td>
+          <td><strong>replaces default D.</strong> Removes a T1/CLAUDE.md/xtask-location change from W8
+            and adds one epic-level predicate instead</td></tr>
+        <tr><td><a href="#d4">D4</a></td>
+          <td><strong>C</strong> — nothing judges the build against the design. D2·C's pointer survives as
+            a mechanical check, not a judgment</td>
+          <td><strong>replaces default A.</strong> Deletes step ④ and keeps the review at five finders on
+            UI merges</td></tr>
+        <tr><td><a href="#d5">D5</a></td>
+          <td><strong>C only</strong>, in this WU. D deferred to its own WU. A and B not taken</td>
+          <td>the non-goal holds: W8 writes no product code. Its exercise is the gated e2e leg</td></tr>
+        <tr><td><a href="#d6">D6</a></td>
+          <td><strong>A</strong> — the trigger cannot fire on history</td>
+          <td>as defaulted</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="open">Still open — two</h2>
+
+    <table data-c="tbl-open">
+      <thead><tr><th></th><th>Question</th><th>My recommendation</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Q1</strong></td>
+          <td>D3·E refuses E-DFLOW's own merge over W2's <strong>4 unbuilt component contracts</strong>.
+            Build them, drop them, or grandfather them?</td>
+          <td><strong>Drop them.</strong> They are output of a run done to prove the flow, not a product
+            commitment; git keeps the bytes, and a future build re-runs the flow against the rulebook of
+            its day — which is the rule's own argument. Building them breaks the non-goal and is four
+            components of unplanned product work; grandfathering exempts the epic that wrote the rule,
+            which is the weakest possible first application of it</td></tr>
+        <tr><td><strong>Q2</strong></td>
+          <td>Confirming the silence on D5·A/B: <strong>W8 writes no product code</strong> — so the handoff
+            is enforced and driven by the e2e, but never driven by a real agent building a real thing</td>
+          <td><strong>Accept it</strong>, and let W9's first real Tier-3 judgment be the same WU that
+            drives the handoff for real. Two unproven surfaces exercised by one run beats two half-runs.
+            Say the word if you want a real component in W8 instead</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Scope check.</strong> Round 1 made W8 smaller, not bigger: one trigger, one pointer, two
+      gate predicates, the T1 text, one e2e leg. No new doc home, no sixth finder. The risk is unchanged —
+      a handoff nobody drives reads exactly like one that works, which is the failure mode M1 already
+      caught this epic committing once, and Q2 is where that risk is being accepted.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

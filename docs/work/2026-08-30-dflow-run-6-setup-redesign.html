@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9410349f34851f0dfabd01">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — design run #6 (the setup screen, redesigned)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .gist{font-weight:600}
+    details.why{margin-top:4px}
+    details.why summary{cursor:pointer;color:var(--muted);font-size:12px}
+    pre.tb{font-family:var(--mono,monospace);font-size:11px;line-height:1.45;margin:0;white-space:pre}
+    .ok{color:var(--ok)} .no{color:var(--warn)}
+    .statebtn{margin-top:10px;border:1px solid var(--line);border-radius:4px;padding:4px 10px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit}
+    .statebtn+.statebtn{margin-left:6px}
+    /* mockup assembly — zoning, seams, state visibility. every value the design owns is a token utility on the element itself. */
+    .a-mock{display:block}
+    .a-zone{display:block}
+    .a-milestone{display:block}
+    .a-proven-only{display:none}
+    .proven .a-proven-only{display:block}
+    .proven .a-idle-only{display:none}
+    .a-chrome{display:flex;justify-content:flex-end;align-items:center;padding:2px 0 6px}
+    .a-chrome .a-idle-only{display:block}
+    .proven .a-chrome .a-idle-only{display:none}
+    .a-chrome .a-proven-only{display:none}
+    .proven .a-chrome .a-proven-only{display:block}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run #6 — the setup screen, redesigned</h1>
+      <p>The sixth run of the design flow, on the same screen as run #4 but designed fresh: the milestone is a verdict row (StatusLine, not Notice), the proof command lives with its verdict, and the way out is chrome. <strong>Zero proposals.</strong></p>
+      <div class="meta">Design run · 2026-08-30 · Trawler · T3 (docs/work/) · rulebook <code>b769f7e4</code> · run #4's target: <a href="2026-08-14-dflow-w9-run-4.html">the setup screen, greenfield</a> · <a href="design-flow-base.html">the flow it follows</a></div>
+    </div>
+  </header>
+
+  <main data-artifact="design-run" data-status="archived">
+
+    <h2 id="why">Why this run exists</h2>
+    <p>The reviewer found run #4's design not right. This run re-designs the same setup screen from scratch — same substrate, same capabilities, a different design thesis. Run #5 (the DSH project explorer panel) is a separate draft; this run is numbered #6 to avoid the collision.</p>
+
+    <div class="callout" data-c="redesign-thesis">
+      <strong>Redesign thesis: one milestone zone, one precondition zone, a chrome way out.</strong>
+      <ul>
+        <li><strong>Run #4</strong> rendered the milestone as a headline Notice (zone A) + a separate proof command (zone C) + a back button (zone D). The Notice needed a headline-size extension — the run's only proposal.</li>
+        <li><strong>Run #6</strong> merges the milestone verdict and its proof into one zone (A, StatusLine + CopyText), keeps the preconditions in a band (B), and moves the way out to chrome. The Notice extension is no longer needed: the milestone is a verdict row (StatusLine @use: "a health check, a diagnostic row"), and the proof command sits under it, one glance away. The redesign proposes nothing.</li>
+      </ul>
+    </div>
+
+    <h2 id="substrate">Substrate, frozen at the start</h2>
+    <table data-c="substrate">
+      <thead><tr><th>Input</th><th>Version</th><th>Read for</th></tr></thead>
+      <tbody>
+        <tr><td>component registry</td><td>24 entries, emitted from TSDoc</td><td>reuse-or-propose at Elements — <strong>@avoid first</strong></td></tr>
+        <tr><td>design rulebook</td><td><code>b769f7e4</code> · 13 hard · 17 soft</td><td>rules per stage; the receipt covers all 17 soft</td></tr>
+        <tr><td>the shipped screen</td><td><code>ui/src/Onboarding.tsx</code> · <code>setup.ts</code> · <code>onboardingMachine.ts</code></td><td><strong>capabilities only</strong> — what the screen must be able to do, never how it does it. Runs #1–#3 unread per D1</td></tr>
+        <tr><td>run #4</td><td><code>2026-08-14-dflow-w9-run-4.html</code></td><td>the design this run replaces; the substrate is the same, the decisions differ</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="frame">1 · Frame</h2>
+    <div data-item="frame">
+      <p><strong>Purpose:</strong> a first-run operator gets from a fresh install to one decrypted request.</p>
+      <p class="kd">Given (functional input — received, not designed):</p>
+    <ul>
+      <li>trust probe (trusted · untrusted · unknown)</li>
+      <li>proxy probe (ours · foreign · none · unknown)</li>
+      <li>observed traffic — any connection reaching Trawler</li>
+      <li>observed decrypt — a real https:// flow (trust proven)</li>
+      <li>one-click CA install (macOS, Windows)</li>
+      <li>one-click proxy set (macOS, Windows)</li>
+      <li>proxy unset</li>
+      <li>per-target instructions (6 trust · 7 proxy · removal · turn-off · unset)</li>
+      <li>copyable proxy command (per target)</li>
+      <li>copyable prove-it command (per target's proxy addr)</li>
+      <li>the configured proxy address</li>
+      <li>host OS from the webview UA</li>
+      <li>the ever-proven latch (once decrypted, capture is proven)</li>
+      <li>step navigation (next · back · goto) — deliberately unused</li>
+    </ul>
+    <p class="kd">Not given (may not be assumed to exist):</p>
+    <ul>
+      <li>remote trust probe (to a device on the network)</li>
+      <li>per-device attribution (which device each flow came from)</li>
+      <li>a reason for a failed handshake (the decrypt error is opaque)</li>
+      <li>firing the request itself (the app never fires; it only guides)</li>
+      <li>progress inside an elevated action (the OS prompt is opaque)</li>
+      <li>any confirmation that a manual install worked (the user tells us by closing the loop)</li>
+    </ul>
+
+    <table data-c="frame-table">
+      <thead><tr><th>Driver</th><th>why…</th><th>therefore (design consequence)</th><th>on this screen</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4" class="kd"><em>Goals — the ranking is the visual hierarchy</em></td></tr>
+        <tr>
+          <td>reach the first decrypted flow</td>
+          <td>the screen's whole reason</td>
+          <td>the milestone verdict owns the top of the column, and its proof is one glance away</td>
+          <td>✓ milestone verdict (StatusLine) + proof command in one zone, top of the column<br>✗ the verdict split across a headline and a separate command zone</td>
+        </tr>
+        <tr>
+          <td>tell the truth about where setup stands</td>
+          <td>a proxy that lies about its own state is not a proxy</td>
+          <td>every verdict comes from the domain resolver, never from screen prose; unknown must not look like a problem</td>
+          <td>✓ verifyStatus · trustStatus · proxyStatus resolver messages, no paraphrasing<br>✗ "can't check" rendered as a warning</td>
+        </tr>
+        <tr>
+          <td>the manual path is the main path</td>
+          <td>only macOS and Windows have one-click; every device works manually</td>
+          <td>the guide is one act away, not buried under failure; the one-click button sits above, not instead of, the disclosure</td>
+          <td>✓ "set it up by hand" disclosure, one act per precondition<br>✗ instructions hidden behind a "troubleshoot" link</td>
+        </tr>
+        <tr>
+          <td>leave and come back</td>
+          <td>a user who sets up on one device returns to add another</td>
+          <td>verdicts are the resting state; the proof command stays visible; the way out is chrome</td>
+          <td>✓ verdicts at rest, guides closed; the prove-it command always visible in the milestone zone; way out is a chrome affordance, not a zone<br>✗ a step cursor that resets on return</td>
+        </tr>
+        <tr><td colspan="4" class="kd"><em>Constraints — hard boundaries</em></td></tr>
+        <tr>
+          <td>the app never fires the request</td>
+          <td>epic non-goal; the app guides, the user fires</td>
+          <td>every command is copyable, never clickable</td>
+          <td>✓ CopyText for every command, no "run" button<br>✗ a clickable "send test request"</td>
+        </tr>
+        <tr>
+          <td>no cursor, no progress per step</td>
+          <td>StepList @avoid: "rendering per-step completion or a current-step highlight"</td>
+          <td>the screen is a checklist, not a wizard</td>
+          <td>✓ a flat list of what must be true, with no Back/Next<br>✗ numbered steps with a "1/3" indicator</td>
+        </tr>
+        <tr>
+          <td>the guide is never a priority inversion</td>
+          <td>choose-before-act: the subject precedes the verb</td>
+          <td>within a precondition row, the verdict (what is true) precedes the act (what to do about it)</td>
+          <td>✓ StatusLine first, then the Button, then the guide details<br>✗ a "fix it" button before the condition it fixes</td>
+        </tr>
+        <tr>
+          <td>fork D4: both halves or neither</td>
+          <td>Button @avoid: "disabling it without a progress line beside it"</td>
+          <td>every button for an elevated action must be disabled in-flight AND have a StatusLine in-flight message</td>
+          <td>✓ "installing" / "setting" spinner renders StatusLine ⟳, Button disabled<br>✗ Button disabled with no progress announcement</td>
+        </tr>
+        <tr><td colspan="4" class="kd"><em>Qualities — Tune's yardstick</em></td></tr>
+        <tr>
+          <td>one surface, two reading modes</td>
+          <td>first-run reads the guides; later visits read the verdicts</td>
+          <td>guides are closed at rest; the verdicts are the resting state; the milestone's proof is always visible</td>
+          <td>✓ verdicts at rest, guides one act away; the prove-it command is always visible in the milestone zone<br>✗ a guide open by default on first run</td>
+        </tr>
+        <tr>
+          <td>unknown must not look like no</td>
+          <td>a "can't check" verdict that reads as a fault is a false statement about the capture</td>
+          <td>every unknown/untrusted verdict is stated at the muted tone, not at warn</td>
+          <td>✓ trustStatus at "◐ can't check automatically" (muted), not "⚠ check failed"<br>✗ "untrusted" rendered as a warning</td>
+        </tr>
+        <tr>
+          <td>the milestone is one zone, not two</td>
+          <td>the outcome and the way to cause it are the same concept; splitting them across zones makes the screen read like a dashboard of unrelated pieces</td>
+          <td>the capture verdict and the prove-it command share one zone; the proof is always visible</td>
+          <td>✓ StatusLine (verifyStatus) + CopyText (proveItSnippet) in one zone, top of the column<br>✗ the verdict in a headline and the command in a separate bottom zone</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <h2 id="layout">2 · Layout</h2>
+    <div data-item="layout">
+      <p class="kd">Two zones, one chrome line. The column is capped at <code>max-w-dialog-max</code> and centred; the page behind it scrolls.</p>
+
+    <pre>┌──────────────────────────────────────┐
+│ chrome · ‹ back to flows (top-right)  │ ← once proven; chrome, not a zone
+├──────────────────────────────────────┤
+│ A  milestone (verdict + proof)        │ ← StatusLine(verifyStatus) + CopyText(proveItSnippet)
+│                                       │   "capture: waiting for your first request"
+│                                       │   "run this, or just open any site"
+│                                       │   curl -x http://127.0.0.1:7420 https://example.com
+├──────────────────────────────────────┤
+│ B  what has to be true (Section band) │
+│   ├ trust verdict · install · guide   │ ← Section: StatusLine + Button + details(Select+StepList+CopyText)
+│   └ route verdict · set · guide       │ ← Section: StatusLine + Button + details(Select+StepList+CopyText)
+└──────────────────────────────────────┘
+
+overflow: A is fixed (two lines + one command, ~60px). B is bounded: each
+          Section opens a guide whose StepList grows with the target —
+          StepList's own no-truncate-and-no-scroll rule is StepList's contract,
+          declared by reference, not re-annotated. The whole column is capped
+          at the dialog-max token and centred; the page behind it scrolls. No
+          zone scrolls internally.
+</pre>
+    </div>
+
+    <h2 id="elements">3 · Elements</h2>
+    <div data-item="elements" data-map>
+      <p class="kd">Placement tree (every component mention is keyed):</p>
+      <pre>┌─ A milestone (outcome + proof in one zone) ── <span data-key="status-line">StatusLine</span> ◆ · <span data-key="copy-text">CopyText</span> ◆
+│    └ caption: screen prose (one line)
+├─ B what has to be true (Section band) ── <span data-key="section">Section</span> ◆
+│   ├ B1 trust ── <span data-key="section">Section</span> ◆ · <span data-key="status-line">StatusLine</span> ◆ · <span data-key="button">Button</span> ◆ · guide ▣
+│   │    └ guide: <span data-key="select">Select</span> ◆ · <span data-key="step-list">StepList</span> ◆ · <span data-key="copy-text">CopyText</span> ◆
+│   └ B2 route ── <span data-key="section">Section</span> ◆ · <span data-key="status-line">StatusLine</span> ◆ · <span data-key="button">Button</span> ◆ · guide ▣
+│        └ guide: <span data-key="select">Select</span> ◆ · <span data-key="step-list">StepList</span> ◆ · <span data-key="copy-text">CopyText</span> ◆
+└ chrome ──── <span data-key="button">Button</span> ◆ (frame=bare, tone=mute)</pre>
+
+      <p>◆ recurring  ▣ composition (T4, broken down below)<br>
+      The caption in A is screen prose, not a component — it names no absence and carries no outcome.</p>
+
+      <table data-c="catalog">
+        <thead><tr><th>Component</th><th>Placement · verdict</th><th>Fit</th><th>Shape · States</th></tr></thead>
+        <tbody>
+          <tr data-key="status-line">
+            <td>StatusLine</td>
+            <td>T2 <span class="ok">reuse</span><br>A (milestone) · B1 (trust) · B2 (route)</td>
+            <td><div class="gist">reuse — the milestone is a health-check verdict, the preconditions are setup verdicts</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> read first — <em>"an HTTP status"</em> (no), <em>"a zone-level absence or one-sentence outcome with an action"</em> (A has no action of its own — the action is the CopyText below it, not inside the StatusLine; the StatusLine is pure display), <em>"a bare toned value with no verdict semantics"</em> (the glyph + message pair is exactly a verdict), <em>"re-resolving or re-ranking the verdict at the call site"</em> (the resolver's StepStatusView is passed through unchanged), <em>"shortening a domain message at the call site"</em> — hit (the <code>[UI_DEFER]</code> marker in <code>setup.ts</code>; the resolvers return full sentences, and StatusLine's ~40-char contract cannot be met by the component; the screen must not shorten; this is a <a href="#blocked-on">blocked-on</a> row, same as run #4).
+                <span class="ok">@use</span> — <em>"any item that reports a resolved state with a reason — a setup precondition, a health check, a diagnostic row"</em>. A is the capture health check; B1/B2 are setup preconditions. The name prop differentiates them: <code>name="capture"</code> (A), <code>name="trust"</code> (B1), <code>name="route"</code> (B2).
+              </details></td>
+            <td><pre class="tb">ok: ✓ captured — it's working, capturing traffic.
+muted: ○ waiting for your first request.
+warn: ⚠ traffic arriving but not decrypting
+in-flight: ⟳ installing…</pre>
+              Per StatusLine's own TSDoc — all states available. The name prop is the discriminator: A = "capture", B1 = "trust", B2 = "route".</td>
+          </tr>
+          <tr data-key="copy-text">
+            <td>CopyText</td>
+            <td>T1 <span class="ok">reuse</span><br>A (prove-it command) · B1·B2 guides (proxy command, the per-OS install command)</td>
+            <td><div class="gist">reuse — every command is a full value grabbed whole</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> first — <em>"prose"</em> (no, the commands are wire values), <em>"showing anything but the exact payload"</em> (the curl is the exact payload; the proxy command is the exact command), <em>"explicit copy actions with their own label"</em> (CopyButton's job — the payload is displayed, so CopyText owns it).
+                <span class="ok">@use</span> — <em>"full-value fields grabbed whole: the request URI, a flow id, every KeyValueRow value"</em>. The curl and the proxy command are full-value fields.
+              </details></td>
+            <td><pre class="tb">rest · hover · focus · confirming (~2 s)
+drag-select passes through to native selection</pre>
+              Per CopyText's own TSDoc.</td>
+          </tr>
+          <tr data-key="section">
+            <td>Section</td>
+            <td>T1 <span class="ok">reuse</span><br>B band · B1 (trust) · B2 (route)</td>
+            <td><div class="gist">reuse — the band is the rulebook's sanctioned two-level group label</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> first — <em>"unlabelled grouping"</em> (the band's label is "what has to be true"), <em>"a Section inside another Section's CONTENT slot"</em> (the band is variant="band", which renders its label as h2 and wraps the member Sections, not as a content slot — Section's own anatomy describes this), <em>"two levels is the cap"</em> (band→member Sections = exactly two levels), <em>"a Section that needs to collapse"</em> (the disclosure is inside the slot, not the Section itself), <em>"a screen drawing its own group label above a Section stack"</em> (the band is what Section's variant="band" is for).
+                <span class="ok">@use</span> — <em>"every labelled zone of a detail or settings screen"</em>, and <em>"variant='band' wherever a screen needs a second grouping level"</em>.
+              </details></td>
+            <td><pre class="tb">band variant: h2 label over member Sections at h3
+default variant: h2 heading, bottom hairline, transparent content slot</pre>
+              Per Section's own TSDoc.</td>
+          </tr>
+          <tr data-key="button">
+            <td>Button</td>
+            <td>T1 <span class="ok">reuse</span><br>B1 "install certificate" · B2 "set system proxy" · chrome "‹ back to flows"</td>
+            <td><div class="gist">reuse — every action needs a word and is not a copy</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> first — <em>"copy actions"</em> (no, these are install/set/navigate), <em>"actions whose glyph is unambiguous alone"</em> (all three need a word), <em>"emphasis by styling"</em> (bare/mute chrome, border for the preconditions), <em>"warn-toning inside a warn Notice"</em> (no Notice on this screen), <em>"leaving it enabled while in flight, or disabling it without a progress line"</em> (fork D4 — both halves: the in-flight StatusLine renders the ⟳ message, and the Button is disabled; the chrome back button is frame=bare tone=mute, disabled once proven — wait, actually the back button is only visible once proven, so it's an existence gate, not a disabling gate).
+                <span class="ok">@use</span> — <em>"any action that needs a word and is not a copy"</em>.
+              </details></td>
+            <td><pre class="tb">rest · hover · focus · active · disabled
+frame=border (default) for install/set
+frame=bare tone=mute for chrome way out</pre>
+              Per Button's own TSDoc. Fork D4: the running state renders a ⟳ StatusLine + disabled Button.</td>
+          </tr>
+          <tr data-key="select">
+            <td>Select</td>
+            <td>T1 <span class="ok">reuse</span><br>B1 guide (6 trust targets) · B2 guide (7 proxy targets)</td>
+            <td><div class="gist">reuse — 6–7 options, no multi-select, searchable</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> first — <em>"2–4 items"</em> (the counts are 6 and 7), <em>"multi-select"</em> (no), <em>"a freeform value"</em> (no, the options are from setup.ts's TARGETS/PROXY_TARGETS).
+                <span class="ok">@use</span> — <em>"a single choice from 5+ options"</em>.
+              </details></td>
+            <td><pre class="tb">rest · hover · focus · open · option-hover · option-selected</pre>
+              Per Select's own TSDoc.</td>
+          </tr>
+          <tr data-key="step-list">
+            <td>StepList</td>
+            <td>T2 <span class="ok">reuse</span><br>B1 guide (per-OS steps + removal) · B2 guide (per-OS steps + per-OS undo)</td>
+            <td><div class="gist">reuse — ordered instructions with no progress</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> first — <em>"rendering per-step completion or a current-step highlight"</em> (the steps are a flat list, not a state machine), <em>"nesting a second StepList"</em> (the removal/undo steps are part of the same list — <code>step.ts</code> returns them as a single array; run #4's approach of flattening removal into the same list is followed here).
+                <span class="ok">@use</span> — <em>"ordered instructions the user follows one at a time"</em>.
+              </details></td>
+            <td><pre class="tb">Static ordered list — no interaction state of its own.
+The only state is: the instruction content (per target from setup.ts).</pre>
+              Per StepList's own TSDoc.</td>
+          </tr>
+          <tr data-key="notice">
+            <td>Notice</td>
+            <td>T1 <span class="no">n/a</span><br>Considered-and-rejected</td>
+            <td><div class="gist">n/a — the milestone is a verdict, not a sentence; StatusLine owns it</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> — <em>"a status verdict with a glyph+name+message shape (that is StatusLine)"</em>. The milestone IS a glyph+name+message shape; StatusLine is the component for it. Run #4 used Notice because the milestone was a "one-sentence outcome" — but the domain already returns a verdict (verifyStatus), and StatusLine's @use explicitly includes "a health check, a diagnostic row". The redesign's thesis: the milestone is a verdict, not a headline sentence. Notice is not needed.
+              </details></td>
+            <td>—</td>
+          </tr>
+          <tr data-key="segmented-control">
+            <td>SegmentedControl</td>
+            <td>T1 <span class="no">n/a</span><br>Cardinality: 6–7 options</td>
+            <td><div class="gist">n/a — 6–7 options, SegmentedControl is for 2–4</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> — <em>"5+ options"</em>. The target pickers have 6 (trust) and 7 (proxy) items. Select is the correct component.
+              </details></td>
+            <td>—</td>
+          </tr>
+          <tr data-key="copy-button">
+            <td>CopyButton</td>
+            <td>T1 <span class="no">n/a</span><br>Every command is displayed</td>
+            <td><div class="gist">n/a — the payload is shown, not derived; CopyText owns it</div>
+              <details class="why"><summary>▸ why</summary>
+                <span class="no">@avoid</span> — <em>"showing a value the user grabs verbatim (that is CopyText)"</em>. Every command (the curl, the proxy command) is displayed verbatim. CopyButton is for hidden/derived payloads.
+              </details></td>
+            <td>—</td>
+          </tr>
+          <tr data-key="disclosure">
+            <td>disclosure</td>
+            <td>T0 <span class="no">build local</span><br>B1 · B2 guides</td>
+            <td><div class="gist">build local — native &lt;details&gt; fits the contract; no component in the collection</div>
+              <details class="why"><summary>▸ why</summary>
+                Same as run #4: the collection has no disclosure primitive, and native <code>&lt;details&gt;</code> fits the contract (toggle, open/closed, no animation). Not a proposal — T0 (foundation / native).
+              </details></td>
+            <td><pre class="tb">closed (summary visible) · open (steps visible)</pre></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="interaction">4 · Interaction</h2>
+    <p data-item="interaction" class="kd">Every use-case a user can perform on this screen, with the zones that respond.</p>
+
+    <table data-c="uc-table">
+      <thead><tr><th>Use case</th><th>What happens</th><th>Keyboard path</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>arrive at the setup screen for the first time</td>
+          <td>zone A shows the capture verdict ("○ waiting for your first request") + the prove-it command. B shows both preconditions as not-yet (○). Both guides closed. No way out (not yet proven)</td>
+          <td>Tab: A StatusLine → A CopyText → B1 StatusLine → B1 Button → B1 disclosure → B1 Select → B1 StepList → B1 CopyText → B2 StatusLine → B2 Button → B2 disclosure → B2 Select → B2 StepList → B2 CopyText. Tab wraps. No implicit focus start</td>
+        </tr>
+        <tr>
+          <td>install the certificate (one-click)</td>
+          <td>B1 Button → elevated OS prompt → the action runs: B1 StatusLine flips to ⟳ "Installing…", Button disabled. On success: B1 StatusLine → ✓ "Trusted on this machine". On failure: B1 StatusLine → ⚠ with error, guide open. A unaffected (no probe yet)</td>
+          <td>Tab to B1 Button, Enter. In-flight: no Tab target (Button disabled). After: Tab continues through the guide or to B2</td>
+        </tr>
+        <tr>
+          <td>install the certificate (manual)</td>
+          <td>B1 disclosure → open → Select the target platform → StepList shows per-OS steps → CopyText the command → execute it manually. After completing, the probe fires on next poll (or the user proceeds to route and the first probe confirms)</td>
+          <td>Tab to B1 disclosure summary, Enter to open. Tab through Select (arrow keys), StepList (read-only, focus skips), CopyText (Enter to copy). Tab to close</td>
+        </tr>
+        <tr>
+          <td>set the system proxy (one-click)</td>
+          <td>B2 Button → elevated OS prompt → B2 StatusLine ⟳ "Setting the proxy…", Button disabled. On success: ✓ "System proxy is set to Trawler". On failure: ⚠ with error, guide open</td>
+          <td>Tab to B2 Button, Enter. In-flight: same as B1</td>
+        </tr>
+        <tr>
+          <td>set the system proxy (manual)</td>
+          <td>B2 disclosure → open → Select the target → StepList shows per-OS steps → CopyText the proxy command → execute it manually. Undo steps are in the same list (setup.ts returns them as one array per target)</td>
+          <td>Tab to B2 disclosure summary, Enter. Tab through Select, StepList, CopyText</td>
+        </tr>
+        <tr>
+          <td>prove it works (copy the curl)</td>
+          <td>zone A CopyText → Enter/click → "copied" confirm chip. In the terminal, the curl produces a decrypted flow → probes fire → A StatusLine flips to ✓ "It's working — capturing traffic." B1/2 flip to ✓ as probes confirm</td>
+          <td>Tab to A CopyText, Enter. The confirm chip is transient (~2 s, no focus)</td>
+        </tr>
+        <tr>
+          <td>leave the setup screen (once proven)</td>
+          <td>chrome "‹ back to flows" Button → navigate to the flows list. Only visible once everProven is true</td>
+          <td>Tab to chrome Button, Enter. Focus returns to the flows list's first item</td>
+        </tr>
+        <tr>
+          <td>return to the setup screen after leaving</td>
+          <td>the screen loads with the saved state. Proven preconditions show ✓ verdicts, guides closed. The way out is visible. The prove-it command is still visible in A</td>
+          <td>Same as arrival, but the first Tab target is A StatusLine (the verdict is read, not acted on). The way out Tab is last</td>
+        </tr>
+        <tr>
+          <td>traffic arrives but does not decrypt</td>
+          <td>B2 flips to ✓ "Receiving traffic" (trafficSeen proven). B1 flips to ⚠ "Traffic arriving but not decrypting — install the certificate". A unchanged (not yet decrypted). The prove-it command still shows the curl — running it again would produce the same traffic</td>
+          <td>No keyboard path — this is a probe-driven state change, not a user action. Focus stays where it is</td>
+        </tr>
+        <tr>
+          <td>a decrypted flow arrives</td>
+          <td>all three verdicts flip to ✓. A StatusLine shows "✓ it's working — capturing traffic." The way out appears in chrome. The prove-it command stays (the next device needs it)</td>
+          <td>No keyboard path — probe-driven. Focus stays; the way out Button is now Tab-reachable at the end of the order</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="mockup">5 · Mockup</h2>
+    <div data-item="mockup" class="proven" id="mock">
+
+      <div class="a-chrome">
+        <div class="a-idle-only"><span class="kd" style="font-size:11px">set up your proxy …</span></div>
+        <div class="a-proven-only"><button class="rounded-button border border-hairline px-2 py-chrome-y text-ink-mute font-ui text-control" style="font-size:11.5px;background:transparent;cursor:pointer">‹ back to flows</button></div>
+      </div>
+
+      <div class="mx-auto max-w-dialog-max bg-canvas py-6 font-ui text-body text-ink-body">
+
+        <!-- A · milestone — StatusLine + CopyText, screen-owned assembly -->
+        <div class="a-zone" style="padding:0 16px 12px">
+          <div class="a-idle-only" id="m-status-idle"></div>
+          <div class="a-proven-only" id="m-status-proven"></div>
+          <div class="mt-2 font-mono" data-wire="shell command" id="m-curl"></div>
+          <p class="mt-chrome-y font-ui text-control text-ink-mute">run this, or just open any site</p>
+        </div>
+
+        <!-- B · preconditions band -->
+        <div class="a-zone" id="m-band"></div>
+
+      </div>
+
+      <script type="text/babel">
+        const { React, createRoot, StatusLine, Section, Button, Select, StepList, CopyText } = window.Trawler;
+
+        const mount = (id, node) => {
+          const host = document.getElementById(id);
+          if (host) createRoot(host).render(node);
+        };
+        const noop = () => {};
+
+        const command = (value, label) => (
+          <span data-wire="shell command" className="font-mono">
+            <CopyText value={value} label={label} />
+          </span>
+        );
+
+        const TRUST_TARGETS = [
+          { id: "macos", label: "macOS" },
+          { id: "windows", label: "Windows" },
+          { id: "linux", label: "Linux" },
+          { id: "firefox", label: "Firefox" },
+          { id: "ios-sim", label: "iOS Simulator" },
+          { id: "android", label: "Android" },
+        ];
+        const PROXY_TARGETS = [
+          ...TRUST_TARGETS.slice(0, 3),
+          { id: "firefox", label: "Firefox" },
+          { id: "terminal", label: "Terminal / CLI" },
+          { id: "ios-sim", label: "iOS Simulator" },
+          { id: "android", label: "Android" },
+        ];
+
+        const Guide = ({ targets, steps, undoTitle, undo }) => (
+          <details className="mt-2">
+            <summary className="cursor-pointer font-ui text-chrome text-ink-mute">set it up by hand</summary>
+            <div className="mt-chrome-y">
+              <Select options={targets} value="macos" onChange={noop} searchable={false} label="platform" />
+              <div className="mt-2"><StepList steps={steps} /></div>
+              <p className="mt-3 font-ui text-chrome text-ink-mute">{undoTitle}</p>
+              <div className="mt-chrome-y"><StepList steps={undo} /></div>
+            </div>
+          </details>
+        );
+
+        const Precondition = ({ title, idle, proven, act, guide }) => (
+          <Section title={title}>
+            <div className="a-idle-only"><StatusLine name={title} status={idle} /></div>
+            <div className="a-proven-only"><StatusLine name={title} status={proven} /></div>
+            <div className="mt-2"><Button onClick={noop}>{act}</Button></div>
+            {guide}
+          </Section>
+        );
+
+        mount("m-status-idle",
+          <StatusLine name="capture" status={{ glyph: "○", tone: "muted", message: "Waiting for your first request." }} />);
+        mount("m-status-proven",
+          <StatusLine name="capture" status={{ glyph: "✓", tone: "ok", message: "It's working — capturing traffic." }} />);
+        mount("m-curl",
+          <CopyText value="curl -x http://127.0.0.1:7420 https://example.com" label="the prove-it command" />);
+
+        mount("m-band",
+          <Section variant="band" title="what has to be true">
+            <Precondition
+              title="trust the certificate"
+              idle={{ glyph: "○", tone: "muted", message: "Not trusted on this machine yet" }}
+              proven={{ glyph: "✓", tone: "ok", message: "Trusted — confirmed by captured traffic" }}
+              act="install certificate"
+              guide={
+                <Guide
+                  targets={TRUST_TARGETS}
+                  steps={[
+                    "save Trawler's certificate as trawler-ca.pem",
+                    command("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem", "the trust command"),
+                  ]}
+                  undoTitle="to remove the certificate again"
+                  undo={[
+                    command('sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain', "the removal command"),
+                  ]}
+                />
+              }
+            />
+            <Precondition
+              title="route traffic through Trawler"
+              idle={{ glyph: "○", tone: "muted", message: "No traffic reaching Trawler yet" }}
+              proven={{ glyph: "✓", tone: "ok", message: "Receiving traffic" }}
+              act="set system proxy"
+              guide={
+                <Guide
+                  targets={PROXY_TARGETS}
+                  steps={[
+                    command("networksetup -setwebproxy Wi-Fi 127.0.0.1 7420 && networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 7420", "the proxy command"),
+                    "then run the prove-it curl above, or just open any site",
+                  ]}
+                  undoTitle="to turn the proxy off again"
+                  undo={[
+                    command("networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off", "the turn-off command"),
+                  ]}
+                />
+              }
+            />
+          </Section>
+        );
+      </script>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="proven"
+        data-label-off="▶ show proven" data-label-on="◀ hide proven">▶ show proven</button>
+    </div>
+
+    <h2 id="tune">6 · Tune</h2>
+    <p class="kd">What changed from run #4's design to this redesign, drawn as before/after with the rulebook slug that drove the call.</p>
+
+    <table data-item="tune" data-c="tune-table">
+      <thead><tr><th>Call</th><th>Before (run #4)</th><th>After (run #6)</th><th>Slug</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>the milestone's presentation</td>
+          <td><pre class="tb">A  Notice (headline size)
+   "waiting for your first
+   request — nothing has
+   reached trawler yet"
+   (extended — Notice has no
+   size axis; this was run #4's
+   one proposal)</pre></td>
+          <td><pre class="tb">A  StatusLine (body size)
+   "capture: ○ Waiting for
+   your first request."
+   (reuse — the milestone is a
+   health-check verdict, and
+   StatusLine owns verdict rows)</pre></td>
+          <td><code>visual-weight-follows-goals</code><br><code>labels-add-context</code><br><code>calm-microcopy</code></td>
+        </tr>
+        <tr>
+          <td>the proof command's placement</td>
+          <td><pre class="tb">C  a separate zone:
+   "run this, or just open
+   any site"
+   curl -x http://… :7420 …
+   (the command that proves
+   the whole screen, sitting
+   alone after the preconditions)</pre></td>
+          <td><pre class="tb">A  within the milestone zone:
+   "capture: ○ Waiting for
+   your first request."
+   curl -x http://… :7420 …
+   "run this, or just open
+   any site"
+   (the verdict and its proof
+   share one zone; the command
+   is always visible)</pre></td>
+          <td><code>one-term-per-concept</code><br><code>display-equals-payload</code></td>
+        </tr>
+        <tr>
+          <td>the way out</td>
+          <td><pre class="tb">D  a full bottom zone:
+   "‹ back to flows"
+   (a Button with its own
+   zone, once proven)</pre></td>
+          <td><pre class="tb">chrome  top-right corner:
+   "‹ back to flows"
+   (a Button in the chrome
+   line, once proven — no
+   zone of its own)</pre></td>
+          <td><code>data-ink-first</code><br><code>familiar-idioms</code></td>
+        </tr>
+        <tr>
+          <td>the preconditions (unchanged in anatomy)</td>
+          <td><pre class="tb">B  band "what has to be true"
+   ├ trust  Section: StatusLine
+   │        + Button + guide
+   └ route  Section: StatusLine
+            + Button + guide</pre></td>
+          <td><pre class="tb">B  band "what has to be true"
+   ├ trust  Section: StatusLine
+   │        + Button + guide
+   └ route  Section: StatusLine
+            + Button + guide</pre></td>
+          <td><code>grouping-by-relatedness</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="closing">Closing</h2>
+
+    <h3 id="receipt">Receipt</h3>
+    <pre data-item="receipt">
+rulebook: b769f7e4
+soft:
+  visual-weight-follows-goals: satisfied — the milestone verdict is the first element in reading order, the only element outside the band, and the only row that can carry ✓/ok; the ✓ at ok is the only chromatic mark on the screen at rest. Weight comes from position + the ✓, not from a size extension that the registry does not offer
+  grouping-by-relatedness: satisfied — the band group "what has to be true" holds the two preconditions; the milestone row sits above the band as a separate animal; the three verdicts are separated by the band's own hairline and the A→B gap
+  ordering-by-priority: satisfied — the screen reads top-to-bottom as the user's journey — the milestone (the goal), then the two things that must become true (the means), then the proof (the act that confirms the goal). The goal owns the top, the means follow, the proof is last
+  progressive-disclosure: satisfied — the default view is the verdicts (three StatusLines + the command); the guide is one act away per precondition. The prove-it command is always visible because it is the proof that does not retire
+  data-ink-first: satisfied — the way out is chrome, not a zone; the band label is Section's own mandatory heading (not added chrome); the only non-data pixels are the Section hairlines, the band's label, and the chrome button
+  generous-targets: satisfied — the whole value copies on click (CopyText); the whole row is the verdict target (StatusLine, no separate glyph target); the Button is the whole word
+  motion-informs: satisfied — the only transient element is CopyText's confirm chip (~2 s, at the interaction point). No other animation, glare, or slide
+  empty-states-orient: satisfied — the first-run state shows each verdict's mild "not yet" wording; the milestone row says "Waiting for your first request" and shows the command that causes one. The "can't check" cases are muted, never alarming
+  familiar-idioms: satisfied — the screen is a checklist (no Back/Next, no step numbers, no cursor). The "checklist" genre is the Frame's deliberate choice, argued in run #4 and carried forward
+  display-equals-payload: satisfied — every wire value (the curl, the proxy command) is displayed verbatim by CopyText. The verdicts are the resolver's own messages, not screen paraphrases
+  labels-add-context: satisfied — each Section's title names only what is not already stated by its content. The band label "what has to be true" is the group's context, not repeated in the member titles. The milestone's caption "run this, or just open any site" is the only microcopy that names the action
+  calm-microcopy: satisfied — all microcopy is lowercase, terse, unexcited; "copied", "none", "set it up by hand", "run this, or just open any site". No exclamation marks, no case
+  one-term-per-concept: satisfied — "capture", "trust", "route" are the three terms for the three concepts. The lexicon is used consistently; "first flow" (the milestone), "prove" (the command), "install" / "set" (the actions)
+  confirm-at-point: satisfied — the CopyText confirm chip lands at the value (the curl or the command), not as a toast. No other feedback needs a confirmation
+  absence-names-itself: satisfied — each missing/precondition state has its own wording from the resolver; "Not trusted on this machine yet" (trust idle), "No traffic reaching Trawler yet" (route idle), "Waiting for your first request" (milestone idle). No two absences share a sentence; none is a fault
+  focus-returns-to-origin: satisfied — the only dismissable surface is the guide's disclosure (details), which is HTML-native and returns focus to the &lt;summary&gt; on close. The chrome way out navigates to the flows list, which owns its own focus return
+  choose-before-act: satisfied — within each precondition row, StatusLine (the verdict of what is true) precedes Button (the action to make it true), and the guide (the how) comes after the Button. The milestone zone has the verdict (StatusLine) preceding the command (CopyText)
+</pre>
+
+    <h3 id="capabilities">Capabilities</h3>
+    <div data-item="capabilities">
+      <table data-c="capabilities-table">
+        <thead><tr><th>Capability</th><th>State</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>trust probe</td><td>used</td><td>B1 — trustStatus resolver drives the StatusLine verdict</td></tr>
+          <tr><td>proxy probe</td><td>used</td><td>B2 — proxyStatus resolver drives the StatusLine verdict</td></tr>
+          <tr><td>observed traffic</td><td>used</td><td>B2 — trafficSeen flips to ✓ "Receiving traffic"</td></tr>
+          <tr><td>observed decrypt</td><td>used</td><td>A — verifyStatus flips to ✓ "It's working — capturing traffic"</td></tr>
+          <tr><td>one-click CA install</td><td>used</td><td>B1 — "install certificate" Button, fork D4 (disabled + ⟳ StatusLine)</td></tr>
+          <tr><td>one-click proxy set</td><td>used</td><td>B2 — "set system proxy" Button, fork D4</td></tr>
+          <tr><td>proxy unset</td><td>used</td><td>B2 guide — undo StepList with the turn-off command</td></tr>
+          <tr><td>per-target instructions (trust)</td><td>used</td><td>B1 guide — Select target → StepList per-OS steps + removal</td></tr>
+          <tr><td>per-target instructions (proxy)</td><td>used</td><td>B2 guide — Select target → StepList per-OS steps + turn-off</td></tr>
+          <tr><td>copyable proxy command</td><td>used</td><td>B2 guide — CopyText of the proxy command per target</td></tr>
+          <tr><td>copyable prove-it command</td><td>used</td><td>A — CopyText of proveItSnippet(addr)</td></tr>
+          <tr><td>configured proxy address</td><td>used</td><td>Inferred: the prove-it curl and the proxy command both use it</td></tr>
+          <tr><td>host OS</td><td>used</td><td>Select default target derived from hostOs()</td></tr>
+          <tr><td>ever-proven latch</td><td>used</td><td>Chrome way out visibility — only once everProven is true</td></tr>
+          <tr><td>step navigation</td><td>deliberately unused</td><td>This screen is a checklist, not a wizard; no Back/Next, no cursor. The sole navigation is the chrome way out, which is a leave action, not a step</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="proposals">Proposals</h3>
+    <div data-item="proposals">
+      <p><strong>None.</strong> The redesign closes run #4's only proposal (Notice headline-size extension) by rendering the milestone as a StatusLine verdict — StatusLine already owns the verdict-row shape, and the registry covers the whole screen without growing. This is the second zero-proposal run (run #4's first version also claimed zero before Tier-3 found the Notice gap); the claim is that the extension was a taste choice (headline weight), not a contract gap, and the redesign achieves the hierarchy with position + ✓ rather than size.</p>
+    </div>
+
+    <h3 id="blocked-on">Blocked-on</h3>
+    <div data-item="blocked-on">
+      <table data-c="blocked-table">
+        <thead><tr><th>What</th><th>Why</th><th>Unblocked by</th></tr></thead>
+        <tbody>
+          <tr><td><code>StepStatusView.short</code></td><td>StatusLine @avoid "shortening a domain message at the call site" — the <code>[UI_DEFER]</code> marker in <code>setup.ts</code> (E-DFLOW.W5, r3·22). The resolvers return full sentences, and the screen must not truncate them. Same as run #4's blocked-on.</td><td><code>setup.ts</code> — <code>StepStatusView</code> gains a <code>short</code> field</td></tr>
+          <tr><td>proxy unset: unsetting member on <code>Running</code></td><td>The <code>Running</code> union (<code>"installing" | "setting" | null</code>) has no <code>"unsetting"</code> member, so the stop-routing action cannot legally render its in-flight state. Same as run #4.</td><td><code>Running</code> gains <code>"unsetting"</code></td></tr>
+          <tr><td>trust probe off macOS/Windows</td><td><code>canAutoSetup()</code> returns false for Linux, Firefox, iOS Simulator, Android — the one-click Button is absent, but the probe is still "unknown" (muted). The "install certificate" Button is shown for all targets (it's the one-click action, disabled on non-auto platforms); the manual guide is the fallback. Same as run #4.</td><td>Platform-specific probes (epic work, not this screen's decision)</td></tr>
+          <tr><td>device attribution</td><td>A user who sets up for one device returns to add another. The screen has no way to distinguish which device the verdicts describe. Same as run #4.</td><td>Per-device state (epic work, not this screen's scope)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="review">Review</h3>
+    <div data-item="review">
+      <p>The reviewer found run #4's design not right. This run is the response. The instruction below is the standing one; the run's own findings are in the Findings section.</p>
+      <table data-c="review-table">
+        <thead><tr><th>What was said</th><th>What it moved</th><th>Contract it hit</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>"The design in run #4 doesn't look right to me — re-run it as a fresh design"</td>
+            <td>frame · layout · elements · interaction · mockup · tune · receipt · capabilities · proposals · blocked-on · review</td>
+            <td><code>taste</code> — the reviewer's judgment overruled the previous design, and the flow's D1 (design fresh, blind to runs #1–#3) applies to this run too</td>
+          </tr>
+          <tr>
+            <td>"if run #5 exists it's a draft — ignore it, use run #6"</td>
+            <td>nothing</td>
+            <td><code>taste</code> — the numbering is a convention, not a design constraint</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="kd" style="margin-top:10px">Findings this run produces:</p>
+      <ol>
+        <li><strong>The milestone was split across two zones in run #4.</strong> The capture verdict lived in a Notice (A) and the proof command lived in a separate zone C. Merging them into one zone reduces the screen's zone count and makes the milestone a single concept — one-term-per-concept.</li>
+        <li><strong>Run #4's only proposal (Notice headline size) dissolves when the milestone is a verdict row.</strong> The extension existed because the milestone was rendered as a headline sentence, which Notice doesn't support. With the milestone as a StatusLine (a health-check verdict), the registry covers the whole screen without growing. This is evidence that a proposal can be an artifact of the previous design's shape, not a registry gap.</li>
+        <li><strong>The way out was a bottom zone in run #4.</strong> Chrome placement matches the shipped app's exit affordance and saves a zone — data-ink-first.</li>
+        <li><strong>wire-order-preserved: n/a.</strong> The setup screen renders no captured collection. Same as run #4's finding 6 (the third time this rule answers n/a).</li>
+      </ol>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

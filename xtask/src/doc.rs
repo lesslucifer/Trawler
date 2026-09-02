@@ -69,7 +69,10 @@ const HARD_PREDICATES: &[&str] = &[
 const RULEBOOK: &str = "docs/design-rules/design-rules-index.html";
 const VOCABULARY: &str = "scripts/design-vocabulary.mjs";
 const REGISTRY: &str = "scripts/design-registry.mjs";
+const HTMLDOC_BOOTSTRAP: &str = "https://htmldoc.wfomobile.com/htmldoc.js";
 pub const COMPONENTS: &str = "docs/work/components/";
+pub const COLLECTION: &str = "ui/src/components/";
+pub const SCREENS: &str = "ui/src/";
 
 fn checklist(artifact: &str) -> Option<&'static [&'static str]> {
     match artifact {
@@ -126,7 +129,79 @@ pub fn design_artifact(path: &str, html: &str) -> Option<&'static str> {
 }
 
 pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
-    crate::git::git(repo, &["rev-parse", &format!("{rev}:{RULEBOOK}")]).ok()
+    crate::git::blob_of(repo, rev, RULEBOOK)
+}
+
+fn shaped_file(file: &str, exts: &[&str]) -> bool {
+    !file.contains('/')
+        && !file.contains(".test.")
+        && file.rsplit_once('.').is_some_and(|(_, ext)| exts.contains(&ext))
+}
+
+fn collection_file(path: &str) -> bool {
+    path.strip_prefix(COLLECTION).is_some_and(|file| shaped_file(file, &["ts", "tsx"]))
+}
+
+// Everything a user meets that a design could have shaped: a non-test `.tsx`
+// anywhere under ui/src/. Depth is not membership - a surface moved into a
+// subfolder is still rendered - so this reads the basename, unlike the
+// collection's own deliberately flat test.
+pub fn ui_surface(path: &str) -> bool {
+    path.strip_prefix(SCREENS)
+        .and_then(|rest| rest.rsplit('/').next())
+        .is_some_and(|file| shaped_file(file, &["tsx"]))
+}
+
+// Anything rendered that the collection does not govern. The collection's own
+// test is deliberately flat because its oracle reads one directory, so a `.tsx`
+// nested below `ui/src/components/` is in nobody's registry - which makes it a
+// screen, not an exemption. Judging it by prefix instead would leave one folder
+// as the way to add a surface no design is owed for.
+fn screen_file(path: &str) -> bool {
+    ui_surface(path) && !collection_file(path)
+}
+
+// Membership is `@tier`, the same tag scripts/design-registry.mjs reads - so a
+// gate and the oracle cannot disagree about who is in the roster. Read from git
+// rather than through the oracle because a gate judges the roster its own tip
+// ships, and because an epic tip is often not the checkout.
+pub fn registry_entry(path: &str, source: &str) -> bool {
+    collection_file(path) && source.contains("@tier")
+}
+
+// Whether a path is a surface at one revision - the one answer both the roster
+// and the added-surface trigger want, so the two can never drift.
+//
+// The path test comes first and settles every screen, which is load-bearing
+// twice. It is what keeps a blob from being fetched for a path that could never
+// need one (fetching first cost ~12% of an epic gate's wall time). And it is what
+// stops a screen's membership from depending on a successful UTF-8 decode: bytes
+// that fail to decode read as "not a surface", so one stray byte in a new screen
+// would drop it out of the added set and let a stated reason stand in for the
+// design it owes.
+pub fn surface_at(repo: &Path, rev: &str, path: &str) -> bool {
+    screen_file(path)
+        || (collection_file(path)
+            && crate::git::read_utf8_at(repo, rev, path)
+                .is_some_and(|source| registry_entry(path, &source)))
+}
+
+pub fn surface_name(path: &str) -> Option<String> {
+    let file = path.rsplit('/').next()?;
+    Some(file.rsplit_once('.')?.0.to_string())
+}
+
+// Who counts as built, at one revision. Screens are in it as well as `@tier`
+// components: a screen design resolves where its screen was built, or designing
+// one would cost a drop record while designing nothing cost nothing - the
+// incentive inverted.
+pub fn roster_at(repo: &Path, rev: &str) -> BTreeSet<String> {
+    crate::git::git(repo, &["ls-tree", "-r", "--name-only", rev, "--", SCREENS])
+        .unwrap_or_default()
+        .lines()
+        .filter(|path| surface_at(repo, rev, path))
+        .filter_map(surface_name)
+        .collect()
 }
 
 // Every slug the rulebook declares, hard and soft. The gate reads it to check a
@@ -134,9 +209,7 @@ pub fn rulebook_blob(repo: &Path, rev: &str) -> Option<String> {
 // judging, never the working tree, so a later rename cannot unfollow a citation
 // that resolved when its seam was reviewed.
 pub fn rulebook_slugs(repo: &Path, rev: &str) -> Vec<String> {
-    crate::git::show_bytes(repo, rev, RULEBOOK)
-        .ok()
-        .and_then(|bytes| String::from_utf8(bytes).ok())
+    crate::git::read_utf8_at(repo, rev, RULEBOOK)
         .map(|html| rules_from_rulebook(&html).into_iter().map(|rule| rule.slug).collect())
         .unwrap_or_default()
 }
@@ -274,14 +347,20 @@ impl Roster {
     }
 }
 
+// No folder means no design is in flight, which is the resting state now that
+// no unbuilt design survives its epic - not an unreadable roster. The registry
+// half is the one that must be answerable, and it still is.
 pub fn roster(repo: &Path) -> Result<Roster, String> {
     let designed = std::fs::read_dir(repo.join(COMPONENTS))
-        .map_err(|e| format!("cannot read {COMPONENTS}: {e}"))?
-        .filter_map(|entry| {
-            let name = entry.ok()?.file_name().into_string().ok()?;
-            Some(component_name(name.strip_suffix(".html")?))
+        .map(|entries| {
+            entries
+                .filter_map(|entry| {
+                    let name = entry.ok()?.file_name().into_string().ok()?;
+                    Some(component_name(name.strip_suffix(".html")?))
+                })
+                .collect()
         })
-        .collect();
+        .unwrap_or_default();
     Ok(Roster { registry: oracle(repo, REGISTRY)?, designed })
 }
 
@@ -330,11 +409,24 @@ pub fn verify_html_against(
     let Some(artifact) = attrs(html, "data-artifact").into_iter().next() else {
         return Verdict::Ungoverned;
     };
+    // Before the exempt gate: a draft and an archived run both still have to
+    // render, and this is the one property whose absence no later check can see.
+    // Scope: governed docs only - an ungoverned page stays silent (the hooks'
+    // standing promise), so the 62 T1/T2 pages keep the layer by convention.
+    let mut layer = Vec::new();
+    check_htmldoc_layer(&mut layer, html);
     if let Some(status) = exempt_declared(html, &artifact) {
-        return Verdict::Exempt(status);
+        if layer.is_empty() {
+            return Verdict::Exempt(status);
+        }
+        return Verdict::Checked {
+            artifacts: vec![artifact.value],
+            failures: layer,
+            summary: None,
+        };
     }
 
-    let mut failures = Vec::new();
+    let mut failures = layer;
     check_escaped_markup(&mut failures, html);
     let mut artifacts: Vec<String> = Vec::new();
     let mut required: Vec<&str> = Vec::new();
@@ -624,6 +716,7 @@ fn check_composition(
     if let Some(review) = item("review") {
         check_review_record(failures, review);
     }
+    let owed = item("elements").map(mounts_owed).unwrap_or_default();
     if let Some(mockup) = item("mockup") {
         if !mockup.contains("data-state-toggle") {
             failures.push(Failure {
@@ -632,22 +725,9 @@ fn check_composition(
                 fix: "add data-state-toggle for the states the Interaction table named".to_string(),
             });
         }
+        check_mockup_mounts(failures, &owed, mockup);
     }
-    // the attribute, not the path: a prose mention of an asset composes nothing
-    for (attr, asset) in [
-        ("src", "https://cdn.tailwindcss.com"),
-        ("src", "../../doc-assets/components/tw-config.js"),
-        ("src", "../../doc-assets/components/specimen.js"),
-    ] {
-        if !html.contains(&format!("{attr}=\"{asset}\"")) {
-            failures.push(Failure {
-                check: "assets·specimen".to_string(),
-                what: format!("the run does not load {asset}"),
-                fix: "compose the component design files' own rendering instead of re-typing it"
-                    .to_string(),
-            });
-        }
-    }
+    check_assets(failures, html, !owed.is_empty());
     if let Some(literal) = colour_literal(html) {
         failures.push(Failure {
             check: "mockup·colour-literals".to_string(),
@@ -658,6 +738,101 @@ fn check_composition(
     }
     if let Some(frame) = item("frame") {
         check_frame_density(failures, frame);
+    }
+}
+
+// W5 made a specimen the component itself - build-specimens.mjs compiles
+// ui/src/components/ plus React into one classic script a file:// page can load
+// as window.Trawler - and the design RUN never migrated, so run #4 hand-drew
+// seven components the registry already ships. A drawn reuse is the silent fork
+// the mockup rules exist to stop, from the one direction no class check reaches:
+// every utility is correct and the rendering is still the doc's own invention.
+// `propose` has nothing to mount, `build local` and `n/a` are not composed, and
+// an `extend` mounts its base - the delta is the only part it draws.
+const MOUNTED: &[&str] = &["reuse", "extend"];
+const CDN: &str = "https://cdn.tailwindcss.com";
+const THEME: &str = "../../doc-assets/components/tw-config.js";
+const SPECIMEN: &str = "../../doc-assets/components/specimen.js";
+const BUNDLE: &str = "../../doc-assets/components/specimens.bundle.js";
+
+fn mounts_owed(elements: &str) -> Vec<String> {
+    let mut owed: Vec<String> = catalog_rows(elements)
+        .into_iter()
+        .filter(|(_, row)| MOUNTED.iter().any(|v| row.contains(&format!(">{v}<"))))
+        .map(|(name, _)| name)
+        .collect();
+    owed.sort_unstable();
+    owed.dedup();
+    owed
+}
+
+// The mount is read as a JSX tag rather than as a marking, because a marking is
+// exactly what a hand-drawn imitation can also carry. `<Notice` cannot be
+// written by drawing: the element name IS the component. Read off the raw
+// mockup slice on purpose - the tokeniser treats a <script> body as data (HTML's
+// raw-text rule), and the mount script is where the composition lives.
+fn check_mockup_mounts(failures: &mut Vec<Failure>, owed: &[String], mockup: &str) {
+    let drawn: Vec<&str> =
+        owed.iter().filter(|name| !mounted(mockup, name)).map(String::as_str).collect();
+    if drawn.is_empty() {
+        return;
+    }
+    failures.push(Failure {
+        check: "mockup·hand-drawn".to_string(),
+        what: format!("the mockup draws what the collection already ships: {}", drawn.join(" ")),
+        fix: format!("mount it - `const {{ {} }} = window.Trawler` and render the component inside data-item=\"mockup\"; only a propose row, a build local element and an extend's declared delta are drawn", drawn.join(", ")),
+    });
+}
+
+fn mounted(mockup: &str, name: &str) -> bool {
+    let tag = format!("<{name}");
+    mockup
+        .match_indices(&tag)
+        .any(|(at, _)| mockup[at + tag.len()..].starts_with([' ', '\n', '\t', '>', '/']))
+}
+
+// One tag, three things, in the order they must arrive: the app theme, the
+// shared specimen behaviours, then the collection. The trio the bundle replaces
+// stays legal for a run that mounts nothing - a theme and a state switch are all
+// such a run needs - but loading both double-binds every state toggle, because
+// the bundle imports specimen.js for its side effects.
+fn check_assets(failures: &mut Vec<Failure>, html: &str, mounting: bool) {
+    let loads = |asset: &str| html.contains(&format!("src=\"{asset}\""));
+    let mut fail = |what: String, fix: &str| {
+        failures
+            .push(Failure { check: "assets·specimen".to_string(), what, fix: fix.to_string() });
+    };
+    if !loads(CDN) {
+        fail(
+            format!("the run does not load {CDN}"),
+            "compose the app's own utilities instead of re-typing them",
+        );
+    }
+    if loads(BUNDLE) {
+        for asset in [THEME, SPECIMEN] {
+            if loads(asset) {
+                fail(
+                    format!("{asset} is loaded beside the bundle, which already folds it in"),
+                    "load the bundle alone - a second copy of specimen.js binds every state toggle twice, and two toggles per click is no toggle",
+                );
+            }
+        }
+        return;
+    }
+    if mounting {
+        fail(
+            format!("the mockup composes components but the run does not load {BUNDLE}"),
+            "a mounted component comes from window.Trawler - build it with `cargo xtask ui specimens` and load the bundle instead of re-typing the rendering",
+        );
+        return;
+    }
+    for asset in [THEME, SPECIMEN] {
+        if !loads(asset) {
+            fail(
+                format!("the run does not load {asset}"),
+                "compose the component design files' own rendering instead of re-typing it",
+            );
+        }
     }
 }
 
@@ -672,6 +847,7 @@ pub fn verify_component(
     vocabulary: Option<&Vocabulary>,
 ) -> Verdict {
     let mut failures = Vec::new();
+    check_htmldoc_layer(&mut failures, html);
     check_escaped_markup(&mut failures, html);
     match roster {
         Some(roster) => check_retirement(&mut failures, name, roster),
@@ -687,7 +863,7 @@ pub fn verify_component(
     Verdict::Checked { artifacts: vec!["component-design".to_string()], failures, summary: None }
 }
 
-fn component_designed(path: &str) -> Option<String> {
+pub fn component_designed(path: &str) -> Option<String> {
     let file = path.split(COMPONENTS).nth(1)?.strip_suffix(".html")?;
     (!file.contains('/')).then(|| component_name(file))
 }
@@ -2259,6 +2435,35 @@ fn attrs(html: &str, name: &str) -> Vec<Attr> {
 // prose opens a tag that swallows the sentence after it, classes and all. So
 // rather than guess, the case that cannot be parsed is named. Zero sites in the
 // corpus when it landed; it costs nothing to keep shut.
+// The shared stylesheet, the comment layer and the diff layer all arrive through
+// one bootstrap keyed by an id on <html>. A doc missing either renders unstyled -
+// every var(--ink) it writes resolves to nothing - and no other predicate sees it,
+// because they all read structure the doc still has.
+fn check_htmldoc_layer(failures: &mut Vec<Failure>, html: &str) {
+    // The runtime reads `document.documentElement.getAttribute(...)`, so the id
+    // counts only on <html>. Anywhere else it is a string the bootstrap will
+    // never find, and the layers it scopes stay dead on a doc that looks stamped.
+    let on_root = nodes(html)
+        .into_iter()
+        .find(|node| node.name.eq_ignore_ascii_case("html"))
+        .is_some_and(|node| node.attrs.iter().any(|(_, key, _)| key == "data-htmldoc-id"));
+    if !on_root {
+        failures.push(Failure {
+            check: "htmldoc\u{b7}id".to_string(),
+            what: "no data-htmldoc-id on <html>".to_string(),
+            fix: "mint one - `curl -sS -X POST $SERVER/api/docs -H 'Content-Type: application/json' -d '{\"title\":\"...\"}'` - and stamp it on the <html> tag itself; the runtime reads document.documentElement, so the id on any other element is one the comment and diff layers never find".to_string(),
+        });
+    }
+    let loads_bootstrap = attrs(html, "src").into_iter().any(|a| a.value == HTMLDOC_BOOTSTRAP);
+    if !loads_bootstrap {
+        failures.push(Failure {
+            check: "htmldoc\u{b7}bootstrap".to_string(),
+            what: format!("the doc does not load {HTMLDOC_BOOTSTRAP}"),
+            fix: format!("add `<script type=\"module\" src=\"{HTMLDOC_BOOTSTRAP}\"></script>` before </body> - it injects doc.css from its own origin, so a doc without it, or pointing at a copy elsewhere, renders with every var(--...) resolving to nothing"),
+        });
+    }
+}
+
 fn check_escaped_markup(failures: &mut Vec<Failure>, html: &str) {
     for node in nodes(html).iter().filter(|n| n.shape != Shape::Other) {
         // between the `<` and the `>` that closed it - and for a tag that never
@@ -2417,15 +2622,31 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 mod tests {
     use super::{
         attrs, check_frame_density, component_designed, declares_a_design, edit_distance,
-        elements_of, format_verdict, rules_from_rulebook, verify_component, verify_html,
-        verify_html_against, Component, Roster, Verdict, Vocabulary, CAPABILITY_STATES,
-        FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
+        elements_of, format_verdict, registry_entry, rules_from_rulebook, screen_file,
+        surface_name, ui_surface, verify_component, verify_html, verify_html_against, Component,
+        Roster, Verdict, Vocabulary, CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN,
+        FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
         let status_attr =
             if status.is_empty() { String::new() } else { format!(" data-status=\"{status}\"") };
-        format!("<html><body><main data-artifact=\"{artifact}\"{status_attr}>{body}</main></body></html>")
+        format!(
+            "<html data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>\
+             <main data-artifact=\"{artifact}\"{status_attr}>{body}</main>\
+             <script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+             </body></html>"
+        )
+    }
+
+    // Every real doc carries the htmldoc layer; a fixture that omits it is
+    // testing the layer check, not the predicate it means to exercise.
+    fn with_layer(body: &str) -> String {
+        format!(
+            "<html data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>{body}\
+             <script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+             </body></html>"
+        )
     }
 
     fn wu_result_body() -> &'static str {
@@ -2521,11 +2742,17 @@ chroma_floor: 40
         format!("<pre data-item=\"receipt\">rulebook: 28f5437\nsoft:\n{rows}</pre>")
     }
 
+    // The mockup the fixture ships, and the mount inside it: five tests swap one
+    // or the other, and a literal repeated five times drifts on the first edit.
+    const RUN_MOUNT: &str = "<script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>";
+    const RUN_MOCKUP: &str = "<div data-item=\"mockup\" data-wire=\"none\"><div id=\"m-zone\"></div>\
+             <script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>\
+             <button data-state-toggle=\"mock\">flip</button></div>";
+
     fn design_run(receipt_block: &str) -> String {
         let body = format!(
             "<script src=\"https://cdn.tailwindcss.com\"></script>\
-             <script src=\"../../doc-assets/components/tw-config.js\"></script>\
-             <script src=\"../../doc-assets/components/specimen.js\" defer></script>\
+             <script src=\"../../doc-assets/components/specimens.bundle.js\"></script>\
              <style>.mock{{color:var(--a-ink);}}</style>\
              <main data-artifact=\"design-run\">\
              <p data-item=\"frame\">drivers</p><p data-item=\"layout\">zones</p>\
@@ -2538,7 +2765,7 @@ chroma_floor: 40
              <table data-item=\"interaction\"><tr><td>land cold</td><td>orient</td>\
              <td><div class=\"gist\">B renders the real verdicts</div>\
              <details class=\"why\"><div>B → status</div></details></td></tr></table>\
-             <div data-item=\"mockup\" data-wire=\"none\"><button data-state-toggle=\"mock\">flip</button></div>\
+             {RUN_MOCKUP}\
              <table data-item=\"tune\"><tr><td>weight</td><td><pre class=\"tb\">before</pre></td>\
              <td><pre class=\"tb\">after</pre></td><td><code>data-ink-first</code></td></tr></table>\
              {receipt_block}\
@@ -2548,7 +2775,7 @@ chroma_floor: 40
              <table data-item=\"review\"><tr><td>copy icon only</td><td>elements · mockup</td>\
              <td><code>CopyButton</code> @avoid</td></tr></table></main>"
         );
-        format!("<html><body>{body}</body></html>")
+        with_layer(&body)
     }
 
     fn green_run() -> String {
@@ -3098,14 +3325,110 @@ chroma_floor: 40
     #[test]
     fn a_run_that_does_not_link_the_shared_specimens_is_red() {
         let doc = green_run()
-            .replace("src=\"../../doc-assets/components/tw-config.js\"", "src=\"own-theme.js\"");
+            .replace("src=\"../../doc-assets/components/specimens.bundle.js\"", "src=\"mine.js\"");
         assert!(what(&doc_verdict(&doc), "assets·specimen").contains("re-typing"));
 
-        let mentioned =
-            doc.replace("<style>", "<a href=\"x\">doc-assets/components/tw-config.js</a><style>");
+        let mentioned = doc.replace(
+            "<style>",
+            "<a href=\"x\">doc-assets/components/specimens.bundle.js</a><style>",
+        );
         assert!(
             doc_verdict(&mentioned).red(),
-            "naming the theme in prose composes nothing - the attribute is the proof"
+            "naming the bundle in prose composes nothing - the attribute is the proof"
+        );
+    }
+
+    // The trio the bundle replaces stays legal for a run that composes nothing:
+    // a theme and a state switch are all such a run needs, and W9 ④.5 migrates
+    // the flow without invalidating a run that never mounted.
+    #[test]
+    fn a_run_that_mounts_nothing_may_still_load_the_trio() {
+        let doc = green_run()
+            .replace(
+                "src=\"../../doc-assets/components/specimens.bundle.js\"></script>",
+                "src=\"../../doc-assets/components/tw-config.js\"></script>\
+                 <script src=\"../../doc-assets/components/specimen.js\" defer></script>",
+            )
+            .replace("<td>reuse</td>", "<td>propose</td>");
+        assert!(!doc_verdict(&doc).red(), "{:?}", failures(&doc_verdict(&doc)));
+    }
+
+    // Both at once is the migration's own trap: the bundle imports specimen.js
+    // for its side effects, so a second copy binds every toggle twice and the
+    // state switch stops switching while every predicate stays green.
+    #[test]
+    fn loading_the_bundle_beside_what_it_folds_in_is_red() {
+        let doc = green_run().replace(
+            "src=\"../../doc-assets/components/specimens.bundle.js\"></script>",
+            "src=\"../../doc-assets/components/specimens.bundle.js\"></script>\
+             <script src=\"../../doc-assets/components/specimen.js\" defer></script>",
+        );
+        assert!(what(&doc_verdict(&doc), "assets·specimen").contains("twice"));
+    }
+
+    // What run #4 shipped: seven components the registry already builds, drawn
+    // by hand in correct utilities, past a green gate. The verdict word in the
+    // catalog is what owes the mount.
+    #[test]
+    fn a_mockup_that_draws_a_reuse_instead_of_mounting_it_is_red() {
+        let drawn = green_run().replace(
+            RUN_MOUNT,
+            "<section class=\"border-b border-hairline px-4 py-3\">headers</section>",
+        );
+        let red = what(&doc_verdict(&drawn), "mockup·hand-drawn");
+        assert!(red.contains("Section"), "{red}");
+
+        let mounted_without_the_bundle = green_run()
+            .replace("src=\"../../doc-assets/components/specimens.bundle.js\"", "src=\"mine.js\"");
+        assert!(
+            what(&doc_verdict(&mounted_without_the_bundle), "assets·specimen").contains("composes"),
+            "a mount with nothing to mount FROM renders an empty div beside correct prose"
+        );
+    }
+
+    // A mount is a component element, not a marking: run #4's drawn imitation
+    // carried every key and class the map demanded. `<section` is the browser's
+    // tag, `<Section` is the collection's - one character, and only one of them
+    // can be hand-drawn.
+    #[test]
+    fn the_mount_is_read_as_a_component_element_not_as_a_marking() {
+        let keyed_imitation = green_run().replace(
+            RUN_MOUNT,
+            "<div data-key=\"section\" class=\"border-b border-hairline px-4 py-3\">headers</div>",
+        );
+        assert!(what(&doc_verdict(&keyed_imitation), "mockup·hand-drawn").contains("Section"));
+
+        for near_miss in ["<Sections title=\"headers\">", "<SectionBand>"] {
+            let doc = green_run().replace("<Section title=\"headers\">", near_miss);
+            assert!(
+                doc_verdict(&doc).red(),
+                "{near_miss} is a different component - a prefix match would pass it"
+            );
+        }
+    }
+
+    // Only the verdicts that claim an existing component owe one. A propose has
+    // nothing to mount yet, and `n/a` was considered and rejected - neither is
+    // in the mockup at all.
+    #[test]
+    fn only_reuse_and_extend_owe_a_mount() {
+        for verdict in ["propose", "build local", "n/a", "dissolved"] {
+            let doc =
+                green_run().replace("<td>reuse</td>", &format!("<td>{verdict}</td>")).replace(
+                    RUN_MOUNT,
+                    "<div class=\"border-b border-hairline px-4 py-3\">headers</div>",
+                );
+            assert!(
+                !failures(&doc_verdict(&doc)).contains(&"mockup·hand-drawn".to_string()),
+                "{verdict} owes no mount"
+            );
+        }
+        let extended = green_run()
+            .replace("<td>reuse</td>", "<td>extend</td>")
+            .replace(RUN_MOUNT, "<div class=\"border-b border-hairline px-4 py-3\">headers</div>");
+        assert!(
+            what(&doc_verdict(&extended), "mockup·hand-drawn").contains("Section"),
+            "an extend mounts its base - the delta is the only part it draws"
         );
     }
 
@@ -3129,16 +3452,13 @@ chroma_floor: 40
 
     #[test]
     fn no_artifact_means_ungoverned() {
-        assert!(matches!(
-            verify_html("<html><body><p>plain doc</p></body></html>"),
-            Verdict::Ungoverned
-        ));
+        assert!(matches!(verify_html(&with_layer("<p>plain doc</p>")), Verdict::Ungoverned));
     }
 
     #[test]
     fn artifact_mentioned_as_text_does_not_govern() {
-        let html = "<html><body><p>use <code>data-artifact=\"epic-plan\"</code> to opt in</p></body></html>";
-        assert!(matches!(verify_html(html), Verdict::Ungoverned));
+        let html = with_layer("<p>use <code>data-artifact=\"epic-plan\"</code> to opt in</p>");
+        assert!(matches!(verify_html(&html), Verdict::Ungoverned));
     }
 
     #[test]
@@ -3146,6 +3466,87 @@ chroma_floor: 40
         let v = verify_html(&doc("wu-result", "draft", ""));
         assert!(matches!(&v, Verdict::Exempt(s) if s == "draft"));
         assert!(format_verdict("d.html", &v).contains("draft"));
+    }
+
+    // The defect this predicate exists for shipped twice before it was written:
+    // a run doc whose every var(--...) resolved to nothing, and W10's own proof
+    // run, styled but with both interactive layers dead. No other check sees it -
+    // they read structure a layerless doc still has.
+    #[test]
+    fn a_doc_without_the_htmldoc_layer_is_red_even_when_archived() {
+        let body = "<p data-item=\"outcome\">delivered</p><p data-item=\"deviations\">none</p>\
+                    <p data-item=\"evidence\">tests</p><p data-item=\"distillation\">DEC-9</p>\
+                    <p data-item=\"follow-ups\">none</p>";
+        assert!(
+            failures(&verify_html(&doc("wu-result", "", body))).is_empty(),
+            "the layer is present"
+        );
+
+        let no_id =
+            doc("wu-result", "", body).replace(" data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"", "");
+        assert_eq!(
+            failures(&verify_html(&no_id)),
+            vec!["htmldoc·id"],
+            "the id is the comment layer's scope"
+        );
+
+        let no_boot = doc("wu-result", "", body).replace(
+            "<script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>",
+            "",
+        );
+        assert_eq!(
+            failures(&verify_html(&no_boot)),
+            vec!["htmldoc·bootstrap"],
+            "the bootstrap injects doc.css"
+        );
+
+        // The trap: `archived` returns before every other predicate, so a closed
+        // run could carry the defect forever. A record still has to render.
+        let archived = no_id.replace(
+            "data-artifact=\"wu-result\"",
+            "data-artifact=\"wu-result\" data-status=\"archived\"",
+        );
+        assert_eq!(
+            failures(&verify_html(&archived)),
+            vec!["htmldoc·id"],
+            "archived does not excuse it"
+        );
+        let closed = doc("wu-result", "archived", body);
+        assert!(
+            matches!(verify_html(&closed), Verdict::Exempt(s) if s == "archived"),
+            "a layered archive stays exempt"
+        );
+    }
+
+    // Both predicates shipped naming a placement they never checked: the id was
+    // read from anywhere in the document and the bootstrap from any src ending in
+    // the filename, so a stray id on a <div> and a local copy of the script both
+    // passed a doc whose layers were dead.
+    #[test]
+    fn the_layer_counts_only_on_the_root_and_from_its_own_origin() {
+        let body = "<p data-item=\"outcome\">delivered</p><p data-item=\"deviations\">none</p>\
+                    <p data-item=\"evidence\">tests</p><p data-item=\"distillation\">DEC-9</p>\
+                    <p data-item=\"follow-ups\">none</p>";
+
+        let misplaced = doc("wu-result", "", body)
+            .replace(" data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"", "")
+            .replace(
+                "<body>",
+                "<body><div data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\">stray</div>",
+            );
+        assert_eq!(
+            failures(&verify_html(&misplaced)),
+            vec!["htmldoc\u{b7}id"],
+            "the runtime reads document.documentElement, so only <html> carries it"
+        );
+
+        let elsewhere = doc("wu-result", "", body)
+            .replace("https://htmldoc.wfomobile.com/htmldoc.js", "./vendor/htmldoc.js");
+        assert_eq!(
+            failures(&verify_html(&elsewhere)),
+            vec!["htmldoc\u{b7}bootstrap"],
+            "a copy elsewhere serves a different doc.css, or none"
+        );
     }
 
     // Tightening a stage's form re-opens every run that closed before the rule
@@ -3413,12 +3814,15 @@ chroma_floor: 40
 
     #[test]
     fn nested_same_tag_elements_resolve_their_own_close() {
-        let html = "<html><body><main data-artifact=\"wu-result\">\
-             <div data-item=\"outcome\"><div>inner</div></div>\
+        let html = doc(
+            "wu-result",
+            "",
+            "<div data-item=\"outcome\"><div>inner</div></div>\
              <div data-item=\"deviations\"><div></div></div>\
              <p data-item=\"evidence\">e</p><p data-item=\"distillation\">d</p>\
-             <p data-item=\"follow-ups\">none</p></main></body></html>";
-        let v = verify_html(html);
+             <p data-item=\"follow-ups\">none</p>",
+        );
+        let v = verify_html(&html);
         assert_eq!(failures(&v), vec!["item·deviations"], "nested-but-empty div is empty");
     }
 
@@ -3683,10 +4087,7 @@ chroma_floor: 40
     // and for nothing beyond that.
     #[test]
     fn a_run_that_has_not_reached_its_mockup_is_not_asked_to_mark_payloads() {
-        let mid_flow = green_run().replace(
-            "<div data-item=\"mockup\" data-wire=\"none\"><button data-state-toggle=\"mock\">flip</button></div>",
-            "",
-        );
+        let mid_flow = green_run().replace(RUN_MOCKUP, "");
         let checks = reds(&mid_flow);
         assert!(checks.contains(&"item·mockup".to_string()), "{checks:?}");
         assert!(!checks.contains(&"mono-for-wire-data·undeclared".to_string()), "{checks:?}");
@@ -4014,7 +4415,7 @@ chroma_floor: 40
     // them against each other, is the drift this epic exists to kill (DEC-16).
     #[test]
     fn a_design_file_whose_component_has_code_must_be_retired() {
-        let v = verify_component("<html><body>x</body></html>", "Section", Some(&roster()), None);
+        let v = verify_component(&with_layer("x"), "Section", Some(&roster()), None);
         assert!(what(&v, "components·unretired").contains("still holds a copy"));
         assert!(what(&v, "components·unretired").contains("distil the forks"));
     }
@@ -4023,14 +4424,13 @@ chroma_floor: 40
     // unbuilt, and the four T3/T4 files are exactly that case.
     #[test]
     fn a_design_file_for_an_unbuilt_component_is_green() {
-        let v =
-            verify_component("<html><body>x</body></html>", "BodyViewer", Some(&roster()), None);
+        let v = verify_component(&with_layer("x"), "BodyViewer", Some(&roster()), None);
         assert!(failures(&v).is_empty(), "{:?}", failures(&v));
     }
 
     #[test]
     fn a_design_file_without_the_registry_emitter_is_red() {
-        let v = verify_component("<html><body>x</body></html>", "Section", None, None);
+        let v = verify_component(&with_layer("x"), "Section", None, None);
         assert!(what(&v, "components·registry-unreadable").contains("cannot be answered unread"));
     }
 
@@ -4039,13 +4439,12 @@ chroma_floor: 40
     // from the other side.
     #[test]
     fn a_design_file_may_not_re_draw_a_class_the_vocabulary_owns() {
-        let redrawn =
-            "<html><head><style>.row .text-ink{color:#111;}</style></head><body>x</body></html>";
-        let v = verify_component(redrawn, "BodyViewer", Some(&roster()), Some(&vocab()));
+        let redrawn = with_layer("<style>.row .text-ink{color:#111;}</style>x");
+        let v = verify_component(&redrawn, "BodyViewer", Some(&roster()), Some(&vocab()));
         assert!(what(&v, "components·redrawn").contains("re-draws `text-ink`"));
 
-        let own = "<html><head><style>.row-sim .cap{color:var(--muted);}</style></head><body>x</body></html>";
-        let v = verify_component(own, "BodyViewer", Some(&roster()), Some(&vocab()));
+        let own = with_layer("<style>.row-sim .cap{color:var(--muted);}</style>x");
+        let v = verify_component(&own, "BodyViewer", Some(&roster()), Some(&vocab()));
         assert!(
             failures(&v).is_empty(),
             "a doc's own chrome is not the vocabulary's: {:?}",
@@ -4068,6 +4467,67 @@ chroma_floor: 40
         assert_eq!(component_designed("docs/work/components/nested/x.html"), None);
         assert_eq!(component_designed("docs/work/2026-07-16-dflow-run-1.html"), None);
         assert_eq!(component_designed("docs/work/components/README.md"), None);
+    }
+
+    // The other half of the same question: who is in the roster. @tier is the
+    // membership tag, so a collection file without one is out - which is what
+    // keeps the gate's answer identical to the oracle's.
+    #[test]
+    fn a_collection_file_joins_the_roster_only_when_it_declares_a_tier() {
+        let tiered =
+            "/**\n * Button.\n * @tier T1 — primitive\n */\nexport const Button = () => null;\n";
+        assert!(registry_entry("ui/src/components/Button.tsx", tiered));
+        assert!(!registry_entry(
+            "ui/src/components/Button.tsx",
+            "export const Button = () => null;\n"
+        ));
+        assert!(
+            !registry_entry("ui/src/components/Button.test.tsx", tiered),
+            "a test is not an entry"
+        );
+        assert!(!registry_entry("ui/src/components/nested/Button.tsx", tiered));
+        assert!(
+            !registry_entry("ui/src/BodyViewer.tsx", tiered),
+            "a screen is not in the collection"
+        );
+        assert_eq!(surface_name("ui/src/components/CopyButton.tsx").as_deref(), Some("CopyButton"));
+        assert_eq!(
+            surface_name("ui/src/BodyViewer.tsx").as_deref(),
+            Some("BodyViewer"),
+            "a screen answers to its own name too - the roster carries both"
+        );
+    }
+
+    // The widened trigger, in one place: depth is not membership, an extension
+    // is, and the collection/screen split decides which half of the rule applies.
+    #[test]
+    fn every_rendered_file_is_a_surface_and_only_those_outside_the_collection_are_screens() {
+        for path in [
+            "ui/src/App.tsx",
+            "ui/src/components/Button.tsx",
+            "ui/src/panels/Inspector.tsx",
+            "ui/src/features/flows/Detail.tsx",
+        ] {
+            assert!(ui_surface(path), "{path} renders");
+        }
+        for path in [
+            "ui/src/App.test.tsx",
+            "ui/src/api.ts",
+            "ui/src/components/index.ts",
+            "ui/src/index.css",
+            "ui/tailwind.config.js",
+            "src/lib.rs",
+        ] {
+            assert!(!ui_surface(path), "{path} renders nothing");
+        }
+        assert!(screen_file("ui/src/panels/Inspector.tsx"), "a nested surface is still a screen");
+        assert!(!screen_file("ui/src/components/Button.tsx"), "the collection is not screens");
+        assert!(
+            screen_file("ui/src/components/status/StatusPill.tsx"),
+            "the collection's oracle reads one flat directory, so a file below it is in no registry - \
+             judging it by prefix would make one folder the way to add a surface owing no design"
+        );
+        assert!(!screen_file("ui/src/components/index.ts"), "a barrel renders nothing");
     }
 
     #[test]

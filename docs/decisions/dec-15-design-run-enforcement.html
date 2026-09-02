@@ -63,6 +63,27 @@
           </tbody>
         </table>
         <strong>Tier-3's judgment is not yet proved.</strong> Everything around it is — that it ran, over every artifact, against the right rulebook, and that its absence is loud — and DEC-24 records why the finder's first real exercise is W9's fresh-screen run rather than W7's own review.</li>
+      <li><strong>Three tiers govern the run; two predicates govern what happens to it.</strong> This model
+        stops at the design's close, and the gap after it was where three design runs produced zero lines of
+        product code. <a href="dec-25-design-build-handoff.html">DEC-25</a> (W8) extends the enforcement
+        surface past the close, with the same instrument and the same reasoning:
+        <table data-c="build-side">
+          <thead><tr><th>Check</th><th>Refuses</th><th>Level</th></tr></thead>
+          <tbody>
+            <tr><td><code>check_handoff</code> · <code>check_citation</code> (<code>9·design</code>)</td>
+              <td>a Working Unit that <em>adds a new surface</em> — a <code>@tier</code> component or a screen
+                — and does not cite the design it implements, by path <strong>and blob</strong></td>
+              <td><span class="badge id">WU</span></td></tr>
+            <tr><td><code>components·unbuilt</code></td>
+              <td>a component design the epic wrote whose component no roster entry carries at the tip, unless
+                the note records the drop and why</td>
+              <td><span class="badge id">epic</span></td></tr>
+          </tbody>
+        </table>
+        Both inherit this record's rule that <strong>a silence must never read as a pass</strong>: an absent
+        citation and a stated-empty one are separate reds, and an empty drop reason is not a drop. Neither
+        judges the build against the design — that would be a hand verdict on an unmeasured property, which is
+        the row this record refuses in its own receipt.</li>
       <li><strong>The flow is covered end to end.</strong> <code>xtask/tests/e2e_design_flow.rs</code> drives a fake human and a fake designing agent through all three tiers over a real git tree — the epic test level W1 through W6 each waived in identical words. Writing it found two live holes in this model's own enforcement, which is the same lesson as everything else in this record: <em>a check that has never been executed against an artifact built to break it is a claim</em>.</li>
       <li><strong>The completed tier is one surface, not two.</strong> 13/13 is <em>machine-checked (design)</em> — the label is printed, because the same rules bind built components too and that surface is the <code>design/vocabulary</code> ESLint rule, not this gate. Which surface owns a rule is the rulebook's <code>binds</code> axis (<a href="dec-17-closed-vocabulary.html">DEC-17</a>).</li>
       <li><strong>Truth lives in <code>xtask/src/doc.rs</code></strong>. The flow spec describes the checks for a reader; where the two disagree, the code wins, and a run doc's tally line is generated so it cannot drift.</li>

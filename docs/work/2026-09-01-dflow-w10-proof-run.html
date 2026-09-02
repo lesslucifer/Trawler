@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a97b2999f34851f0dfabd91">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — W10 proof: compacted-flow run (setup-screen, run #6 class)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>.m{color:var(--ink);}</style>
+</head>
+<body>
+<main data-artifact="design-run" data-status="archived">
+
+<p data-item="frame">Purpose: the user completes the proxy setup — installing the CA, pointing a client, confirming the first flow.
+Given: install CA · point client · trust cert · capture toggle · proxy unset · proxy auth
+Not given: remote probe · per-device attribution · reason for failed handshake</p>
+
+<table data-item="layout"><tr><td><pre>┌───────────────────────────┐
+│ A  status                  │  ← the running state: port, captures, auth
+├───────────────────────────┤
+│ B  guidance                │  ← headline + checklist, the user's script
+├───────────────────────────┤
+│ C  ca                      │  ← CA install/download block
+└───────────────────────────┘
+scroll / overflow: A pinned · B scrolls · C has no cap</pre></td></tr></table>
+
+<div data-item="elements" data-map>
+<pre><span data-key="section">Section</span> · <span data-key="statusline">StatusLine</span></pre>
+<table>
+<tr data-key="section"><td>Section</td><td>T1 reuse</td><td><div class="gist">frames one labelled zone</div><details class="why"><div>@use labelled zone · @avoid nesting</div></details></td><td>rest · hover</td></tr>
+<tr data-key="statusline"><td>StatusLine</td><td>T2 reuse</td><td><div class="gist">shows the running state</div><details class="why"><div>@use condensed status · @avoid no-verbatim</div></details></td><td>rest · loading · error</td></tr>
+</table>
+</div>
+
+<table data-item="interaction">
+<tr><td>land cold</td><td>orient</td><td>page loads</td><td><div class="gist">all three zones orient together</div><details class="why"><div>A → "standby"<br>B → full checklist<br>C → CA download</div></details></td><td>Tab</td></tr>
+<tr><td>install CA</td><td>guide</td><td>clicks download</td><td><div class="gist">the checklist advances, state waits</div><details class="why"><div>A → "waiting"<br>B → step 2 checked<br>C → button → file</div></details></td><td>Enter</td></tr>
+</table>
+
+<div data-item="mockup" data-wire="none">
+<div class="a-mock" id="mock">
+<div class="a-zone" id="m-status"></div>
+<div class="a-zone" id="m-guidance"></div>
+<div class="a-zone" id="m-ca"></div>
+</div>
+<button class="statebtn" data-state-toggle="mock" data-state-class="m-error" data-label-off="▶ show error" data-label-on="◀ show base">▶ show error</button>
+<script type="text/babel">
+const {React, createRoot, Section, StatusLine} = window.Trawler;
+createRoot(document.getElementById('m-guidance')).render(<Section title="setup">guidance</Section>);
+createRoot(document.getElementById('m-status')).render(<StatusLine status="standby"/>);
+</script>
+</div>
+
+<table data-item="tune">
+<tr><td>weight</td><td><pre class="tb">guidance + status + CA</pre></td><td><pre class="tb">status + guidance + CA</pre></td><td><code>visual-weight-follows-goals</code></td></tr>
+</table>
+<details class="why"><ul>
+<li><strong>weight</strong> — the running state is what a returning user checks first, and it sat
+below the checklist that only a first-run user reads. Moving it above the guidance makes the top
+goal own the top of the screen. <strong>Loops back to Layout: yes</strong> — the sketch and the
+mockup mount order above are the post-tune order.</li>
+</ul></details>
+
+<pre data-item="receipt">rulebook: a2f45dd
+soft:
+  visual-weight-follows-goals: satisfied — the status zone carries the most weight
+  grouping-by-relatedness: satisfied — three zones, three seams
+  ordering-by-priority: satisfied — status first, then guidance, then CA
+  progressive-disclosure: satisfied — checklist prevents overload
+  data-ink-first: satisfied — no card frames, no borders
+  generous-targets: inherited — components own their targets
+  motion-informs: n/a — no animation on this screen
+  empty-states-orient: satisfied — three zones, three distinct empty states
+  familiar-idioms: satisfied — devtools setup flow idiom
+  display-equals-payload: n/a — no wire payload rendered
+  labels-add-context: satisfied — "install CA" under that heading
+  calm-microcopy: satisfied — "standby" · "waiting"
+  one-term-per-concept: satisfied — lexicon terms used throughout
+  confirm-at-point: inherited — components own confirm
+  absence-names-itself: satisfied — three absences, three sentences
+  focus-returns-to-origin: n/a — no dismissable surface
+  choose-before-act: satisfied — view switches before action buttons
+</pre>
+
+<table data-item="capabilities">
+<tr><td>install CA</td><td>used</td><td>C zone CA download</td></tr>
+<tr><td>point client</td><td>used</td><td>B zone guidance</td></tr>
+<tr><td>trust cert</td><td>used</td><td>B zone guidance step 3</td></tr>
+<tr><td>capture toggle</td><td>deliberately unused</td><td>not needed — setup is pre-capture</td></tr>
+<tr><td>proxy unset</td><td>blocked</td><td>app cannot reverse its own writes — needs build WU</td></tr>
+<tr><td>proxy auth</td><td>deliberately unused</td><td>not surfaced in this screen</td></tr>
+</table>
+
+<p data-item="proposals">none</p>
+<p data-item="blocked-on">proxy unset reverse — build WU</p>
+
+<table data-item="review">
+<tr><td>move status to top</td><td>tune · layout · mockup — the sketch, the mount order and the zone letters all follow</td><td><code>visual-weight-follows-goals</code></td></tr>
+<tr><td>clarify CA wording</td><td>elements</td><td><code>taste</code></td></tr>
+</table>
+
+</main>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{darkMode:true,background:'#181b22'}});
+</script>
+<script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -80,7 +80,7 @@
       </tbody>
     </table>
     <div class="callout" data-c="w5-position">
-      <p><strong>W5 removed nothing</strong> — it built the code and left every design file in place. <strong>W7 removed sixteen</strong>, distilling their forks to <a href="dec-18-one-control-box.html">DEC-18</a> · <a href="dec-19-chromatic-accent-closed.html">DEC-19</a> · <a href="dec-20-logic-lives-with-its-inputs.html">DEC-20</a> · <a href="dec-21-props-need-a-truthful-source.html">DEC-21</a> · <a href="dec-22-time-is-absolute-and-local.html">DEC-22</a> · <a href="dec-23-collection-dependencies.html">DEC-23</a> first. Four files remain and are not violations: <code>BodyViewer</code>, <code>BodyRenderer</code>, <code>HeaderTable</code> and <code>CopyAllHeadersButton</code> have no roster entry, so their contract still lives in the file — the unbuilt case named below.</p>
+      <p><strong>W5 removed nothing</strong> — it built the code and left every design file in place. <strong>W7 removed sixteen</strong>, distilling their forks to <a href="dec-18-one-control-box.html">DEC-18</a> · <a href="dec-19-chromatic-accent-closed.html">DEC-19</a> · <a href="dec-20-logic-lives-with-its-inputs.html">DEC-20</a> · <a href="dec-21-props-need-a-truthful-source.html">DEC-21</a> · <a href="dec-22-time-is-absolute-and-local.html">DEC-22</a> · <a href="dec-23-collection-dependencies.html">DEC-23</a> first. Four files remained: <code>BodyViewer</code>, <code>BodyRenderer</code>, <code>HeaderTable</code> and <code>CopyAllHeadersButton</code>, none with a roster entry. <strong>W8 removed all four as drops</strong>, each with its reason in the epic's note — <code>docs/work/components/</code> is now empty, and the unbuilt case named below is closed by <a href="dec-25-design-build-handoff.html">DEC-25</a>.</p>
     </div>
 
     <h2 id="options">Options rejected</h2>
@@ -110,7 +110,16 @@
         The check the amendment keeps is the one that matters: <strong>every reason must point somewhere a reader can go</strong>. What it gives up is the assumption that "somewhere" is always a decision record.</li>
       <li><strong>Retirement is not a design review.</strong> A <em>removed</em> design file is deliberately not a Tier-3 artifact (<a href="dec-24-design-review-dimension.html">DEC-24</a>): this predicate owns the removal, and asking a reviewer to judge a contract the diff deletes is asking about the wrong thing. A design file <em>present</em> in a diff is design-bearing; the same file removed is this rule's business.</li>
       <li><strong>The decisions KB grows from component forks.</strong> Some fork cards become DEC records; most are local and die with the file. Judging which is which is distillation work, per file, and the judgment itself is recorded — a dead end named is not the same as a dead end assumed.</li>
-      <li><strong>A design file with no code is not retired, it is unbuilt.</strong> This order applies only when the component exists in <code>ui/src/components/</code>. T3/T4 files (<code>ProtocolLine</code>, <code>HeaderTable</code>, <code>BodyViewer</code>) keep their files because the contract still lives there and nowhere else.</li>
+      <li><strong>A design file with no code is not retired, it is unbuilt.</strong> This order applies only when the component exists in <code>ui/src/components/</code>. <s>T3/T4 files (<code>ProtocolLine</code>, <code>HeaderTable</code>, <code>BodyViewer</code>) keep their files because the contract still lives there and nowhere else.</s>
+        <strong>Superseded on the survival clause by <a href="dec-25-design-build-handoff.html">DEC-25</a>
+        (E-DFLOW.W8).</strong> "Lives there and nowhere else" was a grant, and the grant was the defect: it
+        made a design file a permanent second address for a contract, with nothing comparing it to code and
+        nothing ever asking whether the component arrived. An unbuilt design is now a question its
+        <em>epic</em> must answer — <code>components·unbuilt</code> refuses the epic merge until the roster
+        carries the component or the note records the drop and why. Measured on this epic: all three files
+        named here were <strong>dropped with reasons</strong>, and only one of the four drops was ever truly
+        unbuilt. <strong>The retirement order above is untouched</strong> — distil, verify, remove, and both
+        its predicates stand exactly as written.</li>
       <li><strong>Code wins conflicts, but only after ① has run.</strong> Code-as-truth is a statement about the <em>contract</em>. The why was never in the code and code-as-truth never claimed it was, so "the code is the truth" is not a licence to delete the reasoning.</li>
     </ul>
 

@@ -21,75 +21,64 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>Design flow — base spec &amp; templates</h1>
-      <p>The staged flow an AI agent follows to design a screen, with a copy-paste artifact template per stage. Screen-agnostic: the reusable method, not one design. Worked examples: <a href="2026-07-16-dflow-run-1.html">run #1</a> (bare flow, W1) · <a href="2026-07-25-dflow-w4-run-2.html">run #2</a> (against the registry + rulebook, W4).</p>
-      <div class="meta">Base flow · 2026-07-19 · <strong>rev 2026-07-25 (E-DFLOW.W4: consumes the registry + rulebook; revised again from run #2's findings)</strong> · Trawler · T3 (docs/work/) → promoted to a T1 process doc at epic distillation · from E-DFLOW.W1</div>
+      <p>The staged flow an AI agent follows to design a screen, with a copy-paste artifact template per stage. Screen-agnostic: the reusable method, not one design.</p>
+      <div class="meta">Base flow · rev 2026-09-01 (E-DFLOW.W10: compacted to real-run value) · Trawler · T3 (docs/work/)</div>
     </div>
   </header>
   <main>
-    <h2 id="status">What this is</h2>
-    <p>The <strong>written base flow</strong>: six stages, <a href="#close">a close</a> and
-      <a href="#review-tier">an independent review</a>, each with the concrete artifact <em>template</em> a real run converged on, plus the conventions that make an artifact reviewable. W1 produced the first cut from a bare hand-run; <strong>W4 wired it to the substrate</strong> — the design now <em>consumes</em> the <a href="2026-07-22-dflow-w2-registry-seed.html">component registry</a> (reuse-or-propose per element) and the <a href="../design-rules/design-rules-index.html">design rulebook</a> (rules cited per stage, all slugs receipted at the end) — and re-ran it on the flow detail panel (<a href="2026-07-25-dflow-w4-run-2.html">run #2</a>). It is distilled into the T1 process doc at epic distillation; until then it lives here in T3.</p>
+    <h2 id="how-to-read">How to run this flow</h2>
+    <p>This page is the flow spec — what an agent reads and follows. The <strong>checker</strong> (<code>cargo xtask verify-doc</code>) enforces the structural rules; its failure output names each failing check and its fix. <strong>Never read the checker source</strong> (<code>xtask/src/doc.rs</code>) — the failure output and the rulebook rows are the oracle. The <strong>edits are batched</strong>: apply all changes in one pass, <code>verify-doc</code> once, then batch residuals and verify again. The norm is <strong>edit twice, verify twice</strong> — never twelve edit→verify cycles.</p>
 
-    <h2 id="commands">Run it — every command, in flow order <span class="badge id">the whole harness</span></h2>
-    <p>A flow only its author can drive is not a flow. Each command below is named again at the stage that
-      needs it; this table is the single place they are all together, so a run can be started from here
-      without reading the rest first.</p>
+    <h2 id="commands">Run it — every command, in flow order</h2>
+    <p>Each command below is named again at the stage that needs it; this table is the single place they are all together.</p>
+    <p><strong>Author the doc through the <code>htmldoc</code> skill, before stage 1.</strong> A run doc is a
+    doc: it carries a minted <code>data-htmldoc-id</code> and the <code>htmldoc.js</code> bootstrap, which is
+    what injects <code>doc.css</code>. Without them every <code>var(--&hellip;)</code> the run writes resolves to
+    nothing and the page renders unstyled - <code>htmldoc·id</code> and <code>htmldoc·bootstrap</code>
+    red it, archived runs included.</p>
     <table data-c="tbl-commands">
       <thead><tr><th>When</th><th>Run</th><th>What it gives you</th></tr></thead>
       <tbody>
         <tr><td><strong>Before stage 1</strong><br><span class="kd">load the substrate</span></td>
           <td><code>node scripts/design-registry.mjs</code></td>
-          <td>the whole component vocabulary — tier, <code>@use</code>, <code>@avoid</code>,
-            <code>@states</code>, <code>@madeof</code> — read from the components' own TSDoc. Emitted, never
-            stored, so it cannot be stale. <strong>Read <code>@avoid</code> first</strong></td></tr>
+          <td>the whole component vocabulary — tier, <code>@use</code>, <code>@avoid</code>, <code>@states</code>, <code>@madeof</code> — read from the components' own TSDoc. Emitted, never stored. <strong>Read <code>@avoid</code> first</strong></td></tr>
         <tr><td></td><td><code>git hash-object docs/design-rules/design-rules-index.html</code></td>
-          <td>the rulebook blob to pin in the receipt. Read the rulebook itself for the rules and their
-            <em>Binds at</em> column</td></tr>
+          <td>the rulebook blob to pin in the receipt. Read the rulebook itself for the rules and their <em>Binds at</em> column</td></tr>
         <tr><td><strong>After every write</strong><br><span class="kd">Tier-1</span></td>
           <td><code>cargo xtask verify-doc &lt;the run&gt;</code></td>
-          <td>what the run still owes. Fires automatically on PostToolUse and at turn end, so a red is fed
-            back before the next stage — <a href="#flow-e2e">the e2e asserts it names exactly the stages not
-            yet written</a></td></tr>
+          <td>what the run still owes. Fires automatically on PostToolUse and at turn end</td></tr>
         <tr><td><strong>At <a href="#close">the close</a></strong></td>
-          <td><code>cargo xtask verify-doc &lt;the run&gt;</code> → green, <em>then</em>
-            <code>data-status="archived"</code></td>
-          <td>step ③ before step ④: a red run is not closeable, and archiving first would hide the reds</td></tr>
+          <td><code>cargo xtask verify-doc &lt;the run&gt;</code> → green, <em>then</em> <code>data-status="archived"</code></td>
+          <td>step ③ before step ④: a red run is not closeable</td></tr>
         <tr><td><strong>At the review</strong><br><span class="kd">Tier-3</span></td>
           <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code></td>
-          <td>every artifact the design dimension must judge, and the rulebook pin its verdict is a claim
-            about. <strong>The same function the merge gate calls</strong> — the note is written from this
-            output and nothing else</td></tr>
-        <tr><td></td><td>the <strong>code-review skill</strong> on the tip</td>
-          <td>a <code>cr/v3</code> note whose <code>design:</code> section carries the verdict. The design
-            finder activates only when <code>design-scope</code> reports artifacts</td></tr>
+          <td>every artifact the design dimension must judge, and the rulebook pin its verdict is a claim about. The <strong>code-review skill</strong> on the tip writes a <code>cr/v3</code> note</td></tr>
+        <tr><td><strong>At <a href="#handover">the hand-over</a></strong><br><span class="kd">the build WU</span></td>
+          <td><code>git rev-parse &lt;tip&gt;:&lt;the design&gt;</code></td>
+          <td>the blob to cite. <code>design.implements: [{path, blob}]</code> in <code>cr/v3</code> note</td></tr>
         <tr><td><strong>At the merge</strong></td>
           <td><code>cargo xtask verify-dod wu &lt;tip&gt; --target &lt;epic&gt;</code></td>
-          <td>every red the merge will refuse, before attempting it. The
-            <code>pre-merge-commit</code> hook runs the same thing</td></tr>
+          <td>every red the merge will refuse, before attempting it</td></tr>
       </tbody>
     </table>
     <div class="callout warn" data-c="stale-base">
-      <strong>Pass the base explicitly, and make sure it is current.</strong> <code>design-scope</code> and
-      <code>verify-dod</code> both measure from a branch ref. A local epic ref behind its remote silently
-      measures the wrong diff — it produced a false <em>"1 design artifact to judge"</em> in W7 ④, which a
-      whole acceptance argument then rested on. <code>git fetch</code> and pass
-      <code>origin/epic/&lt;slug&gt;</code> when in doubt.
+      <strong>Pass the base explicitly, and make sure it is current.</strong> <code>design-scope</code> and <code>verify-dod</code> both measure from a branch ref. <code>git fetch</code> and pass <code>origin/epic/&lt;slug&gt;</code> when in doubt.
     </div>
 
     <h2 id="principles">Principles (apply to every stage)</h2>
     <ul data-c="principles">
-      <li><strong>Load the substrate before stage 1.</strong> The registry index (the whole component vocabulary in one file) and the rulebook are <em>inputs</em>, read once at the start and never edited mid-run — a run that changes the rules it is judged by proves nothing. The versions read are named in the receipt.</li>
-      <li><strong>Representation is load-bearing — optimize for human perception.</strong> The reviewer is the bottleneck. Every artifact is picture- or table-first; prose is demoted to a compact reference. Walls of text and over-dense diagrams (mindmaps) failed review in the run. When a form isn't obvious, <em>pick it by comparison</em> (a throwaway side-by-side doc), don't assume.</li>
-      <li><strong>State the conclusion, collapse the proof.</strong> A run doc has two readers — an agent that needs the whole trace, and a human who needs the verdict — and the trace is <em>attestation</em>, not communication. Run #3's reviewer said it of three sections at once: <em>"we just need to write it so the AI agent considers it… I rarely read it."</em> So every dense cell is a one-line <code>&lt;div class="gist"&gt;</code> with the reasoning behind <code>&lt;details class="why"&gt;</code>: the Elements <code>@use</code>/<code>@avoid</code> trace, the Interaction per-zone deltas, the receipt, the hard-rules table. Nothing is deleted — the reuse-or-propose pass is worthless unattested and the receipt is machine-parsed — it just stops being the reading surface. <b>Checked</b>: <code>elements·gist</code> and <code>interaction·gist</code> red a row with no gist, a row that collapses nothing, and a gist over 14 words (the regression: the trace written straight into the visible column). <strong>A defect that lives only in collapsed evidence is a defect nobody reads</strong> — promote it to a finding, as run #3 had to for its spacing-scale breach.</li>
-      <li><strong>Cite by name, not coded ids.</strong> Drivers are cited by driver name, rules by slug, components by component name; the harness coverage-checks the named rows. Coded ids (G1/C2/…) were tried and dropped as noise.</li>
-      <li><strong>Reuse-or-propose, fit-first.</strong> Every element resolves to <em>reuse</em> (cite the component), <em>extend</em> (the component grows — never fork a copy), or <em>propose</em> (a new design file, tiered). Fit is judged against the entry's <code>@use</code>/<code>@avoid</code>: forcing a component past its <code>@avoid</code> line is a propose, not a reuse. <strong>Read <code>@avoid</code> first</strong> (added at run #3, which shipped a wrong reuse for a whole stage): the pass is a <em>rejection</em> test, not a matching test. A <code>@use</code> line describes the <em>action</em> and matches easily — run #3 cited CopyButton's "any one-click copy affordance" correctly while both CopyButton's and CopyText's <code>@avoid</code> lines partitioned the space against it. Where two components name each other in their <code>@avoid</code>s, that pair <em>is</em> the discriminator, and a fluent <code>@use</code> citation is not evidence of fit.</li>
-      <li><strong>Never re-decide what a component owns.</strong> A component's states, tones, hover/focus, microcopy and internal layout are its design file's truth; the screen cites them and never restates them (restating is duplication down a tier — the doc-system rule). The screen decides only placement, composition, and the coordinated response across components.</li>
-      <li><strong>Compose the artifacts, not just the components.</strong> A design file's specimen is written in the app's own Tailwind utilities, and a run doc loads the same theme (<code>doc-assets/components/tw-config.js</code>, importing the app config) and reuses those class strings instead of re-typing values; the doc behaviours a run needs — the keyed element map, the mockup's state switch — come from <code>doc-assets/components/specimen.js</code> instead of a fresh script per doc. Re-typing either is how a run silently forks the registry while claiming to reuse it, and it is invisible at review time because the copy looks deliberate.</li>
-      <li><strong>Every convention here is machine-checked — the checker is the truth, this page is the reading copy.</strong> A run doc declares <code>data-artifact="design-run"</code> and tags its eleven items; <code>cargo xtask verify-doc</code> then reds it on every write (PostToolUse) and at every turn end (Stop). What it checks: the eleven items non-empty · the receipt's soft-rule coverage against the <em>live</em> rulebook, verdict enum and citations · <a href="#close">the rulebook pin against the rulebook on disk</a> · every reviewer instruction naming what it moved and the contract it hit · a keyed <code>data-map</code> at Elements · every reuse citing an <code>@avoid</code> · a gist + collapsed trace per catalog and use-case row · Tune drawn and slug-cited · every <code>Given</code> capability answered · a state toggle in the mockup · both shared specimens linked · zero colour literals in the doc's own CSS · <a href="#frame-density">the Frame's density</a>. A rule an agent must remember is a rule an agent forgets — the three defects this flow has actually shipped (a lost element map, a re-typed component sheet, a Frame of paragraphs) all happened <em>after</em> the wording existed. <strong>Every predicate reads the <em>live</em> rule set, so tightening a stage's form re-opens closed runs</strong> — run #3's checks red runs #1 and #2, which are records of what the flow was rather than work anyone will redo. A finished run therefore carries <code>data-status="archived"</code>, which exempts it for the opposite reason to <code>draft</code>: finished under an older contract, not unfinished. <strong>A run still open is never archived</strong> — that hides exactly the reds the flow exists to surface. <strong>A finished one is archived when it finishes</strong>, newest included: waiting for a later run to replace it as the reference is what left run #3 red in the tree for two Working Units, because closing a run was nobody's step. It is <a href="#close">step 7</a> now, and <code>6·run-closed</code> refuses the merge of a Working Unit that carried a run it never closed. The pins that read a real artifact <strong>lift the flag themselves and assert the lift changed something</strong>, so an archived run cannot make them pass vacuously — the day one stops being archived, the pin fails instead of going quiet.</li>
-      <li><strong>Findings live in one table, tagged by stage — never as prose inside a stage.</strong> A stage carries its artifact and stops. Per-stage commentary duplicates the findings roll-up in the most verbose form available, and the reviewer reads the same thing twice.</li>
-      <li><strong>Nothing rides on taste alone.</strong> Every structural call cites a Frame driver; every judgment call ("weight", "grouping", "hero") cites a soft-rule slug. A call that can cite neither is a finding — either the design is arbitrary or the rulebook has a hole.</li>
-      <li><strong>One artifact per stage, cheapest commitment first.</strong> Each stage's artifact is the next stage's input. Stages loop back — Elements → Layout (a component contract breaks the zoning) and Tune → Layout (the assembled whole reads wrong); both loops are real, not decorative.</li>
-      <li><strong>Gaps escalate, they are never invented.</strong> Anything the design cannot decide because something upstream is missing — an undesigned domain state, a token that does not exist, a capability the API lacks — goes on the run's <a href="#closing">blocked-on list</a> with its owner. The flow never quietly fills an upstream hole.</li>
+      <li><strong>Load the substrate before stage 1.</strong> The registry index and the rulebook are <em>inputs</em>, read once at the start and never edited mid-run. The versions read are named in the receipt.</li>
+      <li><strong>Representation is load-bearing — optimize for human perception.</strong> The reviewer is the bottleneck. Every artifact is picture- or table-first; prose is demoted to a compact reference.</li>
+      <li><strong>State the conclusion, collapse the proof.</strong> Every dense cell is a one-line <code>&lt;div class="gist"&gt;</code> with the reasoning behind <code>&lt;details class="why"&gt;</code>. <b>Checked</b>: <code>elements·gist</code> and <code>interaction·gist</code> red a row with no gist, a row that collapses nothing, and a gist over 14 words.</li>
+      <li><strong>Cite by name, not coded ids.</strong> Drivers by driver name, rules by slug, components by component name.</li>
+      <li><strong>Reuse-or-propose, fit-first.</strong> Every element resolves to <em>reuse</em>, <em>extend</em>, or <em>propose</em>. Fit is judged against the entry's <code>@use</code>/<code>@avoid</code>: forcing a component past its <code>@avoid</code> line is a propose, not a reuse. <strong>Read <code>@avoid</code> first</strong>.</li>
+      <li><strong>Never re-decide what a component owns.</strong> A component's states, tones, hover/focus, microcopy and internal layout are its design file's truth; the screen cites them and never restates them.</li>
+      <li><strong>Compose the artifacts, not just the components.</strong> A specimen <em>is</em> the component. A run mounts the component; it does not re-type its values and it does not draw a picture of it.</li>
+      <li><strong>Every convention here is machine-checked — the checker is the truth, this page is the reading copy.</strong> <code>cargo xtask verify-doc</code> reds on every write (PostToolUse) and at every turn end (Stop). <strong>Never read the checker source</strong> — read <code>verify-doc</code>'s failure output and the rulebook rows instead.</li>
+      <li><strong>Findings live in one table, tagged by stage</strong> — never as prose inside a stage.</li>
+      <li><strong>Nothing rides on taste alone.</strong> Every structural call cites a Frame driver; every judgment call cites a soft-rule slug.</li>
+      <li><strong>One artifact per stage, cheapest commitment first.</strong> Each stage's artifact is the next stage's input. Stages loop back — Elements → Layout and Tune → Layout; both are real.</li>
+      <li><strong>Gaps escalate, they are never invented.</strong> Anything the design cannot decide because something upstream is missing goes on the <a href="#closing">blocked-on</a> list.</li>
     </ul>
 
     <div class="diagram" data-c="flow-diagram">
@@ -106,14 +95,14 @@ re-pin · green · archive"]]
   E -. contract breaks the zoning .-> L
   T -. reads wrong assembled .-> L
       </pre>
-      <div class="caption">Six stages between a substrate load and the closing lists, then <a href="#close">the close</a> — the step whose absence left run #3 open for two Working Units. Two real loop-backs into Layout.</div>
+      <div class="caption">Six stages between a substrate load and the closing lists, then <a href="#close">the close</a>. Two real loop-backs into Layout.</div>
     </div>
 
     <div class="diagram" data-c="verify-timeline">
       <pre class="mermaid">
 flowchart TB
   W["write / edit a run doc"]
-  V1["verify-doc · this doc&lt;br/&gt;11 items present and non-empty&lt;br/&gt;receipt (YAML): every soft slug · verdict in enum · why&lt;br/&gt;the rulebook pin vs the rulebook on disk&lt;br/&gt;elements: data-map + data-key&lt;br/&gt;review: what moved · the contract it hit&lt;br/&gt;mockup: state toggle · zero colour literals&lt;br/&gt;assets: tw-config.js + specimen.js linked"]
+  V1["verify-doc · this doc&lt;br/&gt;11 items present and non-empty&lt;br/&gt;receipt (YAML): every soft slug · verdict in enum · why&lt;br/&gt;the rulebook pin vs the rulebook on disk&lt;br/&gt;elements: data-map + data-key&lt;br/&gt;review: what moved · the contract it hit&lt;br/&gt;mockup: state toggle · zero colour literals&lt;br/&gt;mockup: every reuse/extend MOUNTED, never drawn&lt;br/&gt;assets: the CDN + specimens.bundle.js, and not its parts twice&lt;br/&gt;htmldoc: data-htmldoc-id + the htmldoc.js bootstrap - checked even when archived"]
   E["end of turn"]
   V2["verify-doc · every governed doc under docs/&lt;br/&gt;same checks — backstop for shell and script edits"]
   C["commit"]
@@ -131,11 +120,11 @@ flowchart TB
   V2 --&gt; C --&gt; V3 --&gt; M --&gt; V4 --&gt; EP --&gt; V5
   R -.-&gt;|lives in cr/v2| V4
       </pre>
-      <div class="caption">When what is verified. The harness proves a receipt is <em>complete and well-formed</em>, never that it is <em>true</em> — the right-hand lane stays human, and a green gate is not a good design.</div>
+      <div class="caption">When what is verified. The harness proves a receipt is <em>complete and well-formed</em>, never that it is <em>true</em>.</div>
     </div>
 
     <h2 id="tiers">Component tier model (reference)</h2>
-    <p>Used at Elements. <strong>Owned</strong> by the <a href="2026-07-22-dflow-w2-registry-seed.html">W2 registry</a> (tier = the membership decision) and the E-DFLOW decision record — referenced here, not duplicated.</p>
+    <p>Used at Elements. <strong>Owned</strong> by the <a href="2026-07-22-dflow-w2-registry-seed.html">W2 registry</a> (tier = the membership decision).</p>
     <table data-c="tiers">
       <thead><tr><th>Tier</th><th>Example</th><th>In collection?</th><th>Contract</th></tr></thead>
       <tbody>
@@ -148,33 +137,29 @@ flowchart TB
     </table>
 
     <h2 id="stages">The stages</h2>
-    <p><strong>Which rules bind where</strong> is the rulebook's own <em>Binds at</em> column — read it there, per stage, and never copy the list into a run or into this spec (one fact, one home). Each stage below names only <em>how</em> it consumes the substrate.</p>
+    <p><strong>Which rules bind where</strong> is the rulebook's own <em>Binds at</em> column — read it there, per stage, and never copy the list into a run or into this spec. Each stage below names only <em>how</em> it consumes the substrate.</p>
 
     <h3 id="s-frame">1 · Frame</h3>
       <p class="kd"><code>data-item="frame"</code></p>
     <div class="stage">
-      <p><strong>Question:</strong> who reads this screen and in what context, what job does it do, what are its ranked goals, hard constraints, and experience qualities? (The screen's <em>functional capabilities</em> — what it must be able to do — are an <em>input</em>, not the output.)</p>
-      <p><strong>Form:</strong> a <strong>driver table</strong> — <em>driver → why → therefore → on this screen</em>; the row <em>is</em> the reasoning, and it lands on a concrete ✓/✗ pair. Grouped Goals / Constraints / Qualities; no coded ids. <strong>Every cell is a clause, not a sentence, and never a paragraph</strong>: a Frame that reads as prose has stopped being a table and nobody reads it. The purpose line is one sentence; each capability list is one <code>·</code>-separated line.</p>
-
-      <p><strong>Why the row ends in an example</strong> (revised at run #3). The first three cells are all abstractions, and three abstractions in a row do not tell a reviewer whether the design is right — run #3's Frame was rewritten to clause density, passed every predicate, and was <em>still</em> hard to read. The <code>on this screen</code> cell is the row's only concrete artifact: the ✓ names the thing that honours the driver, the ✗ names the plausible thing that breaks it. It replaces the old <code>checked by</code> column (an observable criterion), which stated the test abstractly where the pair now shows it — and the ✗ does work the criterion never did, by naming the failure the design is actually at risk of. The pattern is the <a href="../design-rules/design-rules-index.html">rulebook</a>'s own DO/DON'T cell, which has held up across 14 soft rules.</p>
-
-      <p id="frame-density"><strong>Density is machine-checked</strong> — run #3 wrote a Frame at 2.5× the accepted density (mean 17.9 words per cell against run #2's 9.0, plus two commentary blocks that were not artifacts) with every word of the rule above already on this page. Six predicates, on two budgets: the three reasoning columns are held to one clause, the ✓/✗ pair to two.</p>
+      <p><strong>Question:</strong> who reads this screen and in what context, what job does it do, what are its ranked goals, hard constraints, and experience qualities?</p>
+      <p><strong>Form:</strong> a <strong>driver table</strong> — <em>driver → why → therefore → on this screen</em>; the row <em>is</em> the reasoning, and it lands on a concrete ✓/✗ pair. Grouped Goals / Constraints / Qualities. <strong>Every cell is a clause, not a sentence, and never a paragraph.</strong></p>
+      <p><strong>Density is machine-checked</strong> — six predicates on two budgets:</p>
       <table data-c="frame-density-checks">
-        <thead><tr><th>Check</th><th>Predicate</th><th>Why this shape</th></tr></thead>
+        <thead><tr><th>Check</th><th>Predicate</th></tr></thead>
         <tbody>
-          <tr><td colspan="3"><strong>Reasoning columns</strong> — driver · why · therefore <span class="kd">(calibrated on run #2: mean 9.0, max 35)</span></td></tr>
-          <tr><td><code>frame·cell-density</code></td><td>mean words per cell ≤ <b>12</b></td><td>the load-bearing one — a per-cell cap alone is dodged by splitting one paragraph across two rows, which keeps the prose and passes</td></tr>
-          <tr><td><code>frame·cell-length</code></td><td>longest cell ≤ <b>40</b></td><td>a ceiling under the mean, so one runaway cell cannot hide behind 40 short ones</td></tr>
-          <tr><td colspan="3"><strong>Example column</strong> — the ✓/✗ pair, detected by the glyphs <span class="kd">(calibrated on the rulebook's 14 DO/DON'T cells: mean 13.7, max 19)</span></td></tr>
-          <tr><td><code>frame·example</code></td><td>every driver row carries a ✓/✗ pair</td><td>run #1 left 7 of 11 criteria cells blank and the column rotted; an empty example column is the same failure in a new shape</td></tr>
-          <tr><td><code>frame·example-density</code></td><td>mean pair ≤ <b>24</b></td><td>two clauses, measured on their own budget — folding them into the one-clause mean would force the reasoning columns to pad or the examples to go vague</td></tr>
-          <tr><td><code>frame·example-length</code></td><td>longest pair ≤ <b>36</b></td><td>a pair, not a paragraph each</td></tr>
-          <tr><td colspan="3"><strong>Prose</strong> <span class="kd">(run #2: 2 blocks, longest 55)</span></td></tr>
-          <tr><td><code>frame·prose-blocks</code></td><td>≤ <b>3</b> <code>&lt;p&gt;</code></td><td>the three named lines — purpose · given · not-given; a fourth block is commentary, and commentary belongs in the findings table</td></tr>
-          <tr><td><code>frame·prose-length</code></td><td>longest <code>&lt;p&gt;</code> ≤ <b>60</b></td><td>"one sentence" and "one <code>·</code>-separated line", as a number</td></tr>
+          <tr><td colspan="2"><strong>Reasoning columns</strong> — driver · why · therefore</td></tr>
+          <tr><td><code>frame·cell-density</code></td><td>mean words per cell ≤ <b>12</b></td></tr>
+          <tr><td><code>frame·cell-length</code></td><td>longest cell ≤ <b>40</b></td></tr>
+          <tr><td colspan="2"><strong>Example column</strong> — the ✓/✗ pair</td></tr>
+          <tr><td><code>frame·example</code></td><td>every driver row carries a ✓/✗ pair</td></tr>
+          <tr><td><code>frame·example-density</code></td><td>mean pair ≤ <b>24</b></td></tr>
+          <tr><td><code>frame·example-length</code></td><td>longest pair ≤ <b>36</b></td></tr>
+          <tr><td colspan="2"><strong>Prose</strong></td></tr>
+          <tr><td><code>frame·prose-blocks</code></td><td>≤ <b>3</b> <code>&lt;p&gt;</code></td></tr>
+          <tr><td><code>frame·prose-length</code></td><td>longest <code>&lt;p&gt;</code> ≤ <b>60</b></td></tr>
         </tbody>
       </table>
-      <p class="kd">Frame only, from run #3 forward. Run #2 predates the example column, so it passes every density limit and fails <code>frame·example</code> alone — pinned as a test, not fixed retroactively. The other stage tables drift the same way and are candidates for the same treatment once there is an accepted run to calibrate each against — a threshold picked without one is the checker's taste, not the flow's rule.</p>
       <div class="tmpl" data-c="tmpl-frame">
         <pre><span class="ph">Purpose:</span> &lt;one sentence — user, context, the job this screen does&gt;
 
@@ -196,8 +181,7 @@ flowchart TB
           </tbody>
         </table>
       </div>
-      <p class="kd"><strong>Key distinctions:</strong> <strong>Not given is a first-class line</strong>, not an omission — a screen is shaped as hard by what it cannot observe as by what it can (run #3: no remote probe, no per-device attribution, no reason for a failed handshake), and an absence left unwritten gets silently invented downstream. Functional requirements are the <em>input</em>; the Frame's output is the <em>design lens</em> (goals become hierarchy, qualities become Tune's yardstick). The <code>on this screen</code> pair is <strong>screen-specific and falsifiable</strong>, never a restatement: "✓ clear hierarchy / ✗ unclear hierarchy" is noise, and a ✗ nobody would plausibly build is a strawman that makes a weak driver look tested. Write the ✗ someone <em>would</em> ship. <strong>Anything the rulebook already binds is not a driver</strong> (a11y, spacing, wrapping, state handling, calm microcopy, zero accent): the Frame holds only what is case-specific, and a quality that merely restates a soft rule is deleted, not written. A quality survives when it says <em>which</em> instance of a generic rule matters most here ("the leg boundary is this panel's strongest seam"). A <strong>substrate constraint</strong> is a first-class constraint row: a component contract the screen must design around (e.g. "Section must not nest") belongs in the table with the registry file as its "why".</p>
-      <p class="kd"><strong>Every <code>Given</code> capability is answered by the end of the run</strong> (added at run #3, which lost one). A capability received at the Frame can be written down and then silently dropped two stages later with every gate green: run #3 listed <code>proxy unset</code> as an elevated app action, then designed its undo zone as copyable commands only and filed a <a href="#closing">blocked-on</a> entry claiming the app cannot reverse its own writes — which the shipped code disproved. The receipt forces coverage of <em>rules</em>; nothing forced coverage of <em>capabilities</em>. So each Given item ends the run in one of three states: <strong>used</strong> (name where), <strong>deliberately unused</strong> (say why — a non-goal, a case the screen does not serve), or <strong>blocked</strong>. An unmentioned Given is the same defect class as an unreceipted rule, and it is worse in one way: a dropped capability makes the design look correctly constrained rather than under-designed.</p>
+      <p class="kd"><strong>Key distinctions:</strong> <strong>Not given is a first-class line</strong> — a screen is shaped as hard by what it cannot observe as by what it can. The <code>on this screen</code> pair is <strong>screen-specific and falsifiable</strong>, never a restatement. <strong>Anything the rulebook already binds is not a driver</strong> (a11y, spacing, wrapping, state handling, calm microcopy, zero accent): the Frame holds only what is case-specific. <strong>Every <code>Given</code> capability is answered by the end of the run</strong> — used, deliberately unused, or blocked.</p>
     </div>
 
     <h3 id="s-layout">2 · Layout</h3>
@@ -218,14 +202,14 @@ flowchart TB
 scroll / overflow: &lt;which zone is pinned · which region scrolls · every
                    unbounded zone's cap and who owns it&gt;</pre>
       </div>
-      <p class="kd"><strong>Key distinctions:</strong> draw.io was trialled and dropped — it added no value over ASCII for a region sketch (light-canvas island, static, poor diffs). Keep the sketch compact; a derived structural decision (e.g. "headers scroll-cap so the body stays reachable") rides as an annotation or a short callout. The overflow line under the sketch is not decoration — it is what <code>overflow-declared</code> checks, and a cap owned by a component is declared here <em>by reference</em> ("HeaderTable's rows cap").</p>
+      <p class="kd"><strong>Key distinctions:</strong> The overflow line under the sketch is not decoration — it is what <code>overflow-declared</code> checks.</p>
     </div>
 
     <h3 id="s-elements">3 · Elements</h3>
       <p class="kd"><code>data-item="elements"</code> — the same element carries <code>data-map</code></p>
     <div class="stage">
       <p><strong>Question:</strong> what concrete components fill each region, and for each one — does the registry already have it?</p>
-      <p><strong>Form:</strong> a <strong>tiered component catalog</strong> — a placement/composition tree (ties back to Layout zones) plus a one-row-per-distinct-component table whose load-bearing column is the <strong>registry verdict</strong>: <em>reuse</em> · <em>extend</em> · <em>propose</em>. This is the reuse-or-propose pass; the registry index is read here, once, and every row resolves against it. The tree and the table are <strong>one keyed artifact</strong>, not two: wrap both in <code>data-map</code> and give every component mention <code>data-key="&lt;component-file-slug&gt;"</code>, so one click lights every appearance and a reuse is visible rather than asserted. <strong>Both halves are checked</strong> (tightened at run #3, which shipped an inert map): a key must appear in the tree <em>and</em> in the catalog, and a component placed in the tree with no catalog row is red — it never faced the reuse-or-propose pass. The highlight styling ships inside <code>specimen.js</code> itself, so loading the behaviour is enough. The behaviour comes from <code>doc-assets/components/specimen.js</code> — <strong>never</strong> re-implemented per doc.</p>
+      <p><strong>Form:</strong> a <strong>tiered component catalog</strong> — a placement/composition tree tied to Layout zones, plus a one-row-per-distinct-component table whose load-bearing column is the <strong>registry verdict</strong>: <em>reuse</em> · <em>extend</em> · <em>propose</em>. The registry index is read here, once. Wrap both in <code>data-map</code> and give every component mention <code>data-key="&lt;component-file-slug&gt;"</code>. <strong>Both halves are checked</strong>.</p>
       <div class="tmpl" data-c="tmpl-elements">
         <pre>Tree (placement + composition; mark recurring components):
   panel
@@ -235,66 +219,66 @@ scroll / overflow: &lt;which zone is pinned · which region scrolls · every
         <table>
           <thead><tr><th>Component</th><th>Placement · verdict</th><th>Fit <span class="kd">(gist · <code>why</code> = the <code>@avoid</code>/<code>@use</code> trace)</span></th><th>Shape <span class="kd">(reference)</span> · States</th></tr></thead>
           <tbody>
-            <tr><td class="ph">&lt;name&gt;</td><td><span class="ph">&lt;T0–T4&gt; reuse | extend | propose</span><br><span class="ph">&lt;zone(s) — two = shared&gt;</span></td><td><div class="ph">&lt;gist: the verdict in one line, ≤14 words&gt;</div><span class="ph">&lt;details class="why"&gt; the @avoid it clears (read this FIRST) + the @use line it lands in — or the @avoid it hits, which forces extend/propose&lt;/details&gt;</span></td><td><span class="ph">&lt;a few lines of ASCII — what it looks like, reference only&gt;</span><br><span class="ph">&lt;per its design file (cite it) — or, for a propose, the states the new component must own&gt;</span></td></tr>
+            <tr><td class="ph">&lt;name&gt;</td><td><span class="ph">&lt;T0–T4&gt; reuse | extend | propose</span><br><span class="ph">&lt;zone(s) — two = shared&gt;</span></td><td><div class="ph">&lt;gist: the verdict in one line, ≤14 words&gt;</div><span class="ph">&lt;details class="why"&gt; the @avoid it clears (read this FIRST) + the @use line it lands in&lt;/details&gt;</span></td><td><span class="ph">&lt;a few lines of ASCII — what it looks like&gt;</span><br><span class="ph">&lt;per its design file (cite it) — or, for a propose, the states the new component must own&gt;</span></td></tr>
           </tbody>
         </table>
-        <p class="ph" style="margin:6px 0 0">T4 break-down (per composition): &lt;composition&gt; → &lt;lower-tier part (tier)&gt; · &lt;part (tier)&gt; …</p>
-        <p class="ph" style="margin:6px 0 0">Proposals (each becomes a design file before the build): &lt;name (tier)&gt; — &lt;what it is&gt; · &lt;why no existing entry fits&gt;</p>
+        <p class="ph" style="margin:6px 0 0">T4 break-down: &lt;composition&gt; → &lt;lower-tier part (tier)&gt; · &lt;part (tier)&gt; …</p>
+        <p class="ph" style="margin:6px 0 0">Proposals: &lt;name (tier)&gt; — &lt;what it is&gt; · &lt;why no existing entry fits&gt;</p>
       </div>
-      <p class="kd"><strong>Key distinctions:</strong> the T1↔T2 split is exactly <em>business logic</em> (primitive = presentation only; widget = carries logic). A component in two zones is a reuse; the placement line surfaces it. <strong>Tier · verdict · placement share one cell</strong> — three one-token columns cost more width than they carry, and the verdict reads better against its tier. <strong>Colour <code>@use</code> and <code>@avoid</code></strong> in the Fit column (ok / warn): the whole column is contract quotation, and which side a quote is on is the fastest thing a reviewer needs. A <span class="tier t4">T4</span> composition is built local and <strong>broken down</strong> — its lower-tier parts are the real registry entries. The <strong>Shape sketch is reference only</strong> (added at run #3): a few lines of ASCII so a reader can tell what a row <em>is</em> without opening its file — it binds nothing, and the component's design file wins any disagreement. For a proposal that file does not exist yet, so the sketch is the reviewer's only picture and is worth the most there. The <strong>States column is filled by reference</strong>, never by re-listing what the component's design file already owns — a bare citation is a complete cell, and the screen writes states only for a proposed component or for a state the screen itself coordinates. <strong>An <code>@avoid</code> hit is the stage's most valuable output</strong>: it means the design wants something the vocabulary does not have, so the verdict flips to extend/propose and the row carries the reason. This stage is also the most common source of a <strong>loop back to Layout</strong> — a component contract (nesting, self-labelling, an absent state) can make the zoning unbuildable, and the honest move is to re-zone, not to bend the contract silently.</p>
+      <p class="kd"><strong>Key distinctions:</strong> <strong>Tier · verdict · placement share one cell</strong>. <strong>Colour <code>@use</code> and <code>@avoid</code></strong> in the Fit column. The <strong>Shape sketch is reference only</strong>. The <strong>States column is filled by reference</strong>, never by re-listing what the component's design file already owns. An <strong><code>@avoid</code> hit</strong> is the stage's most valuable output — it means the design wants something the vocabulary does not have.</p>
     </div>
 
     <h3 id="s-interaction">4 · Interaction</h3>
       <p class="kd"><code>data-item="interaction"</code></p>
     <div class="stage">
       <p><strong>Question:</strong> what does the user actually <em>do</em> with this screen? (The use-cases — not each element's default states.)</p>
-      <p><strong>Form:</strong> a <strong>use-case table</strong>, each row grounded in a Frame goal, giving the user's action and the screen's response. <strong>The response is <code>zone → delta</code> lines, never prose</strong> (added at run #3, whose prose version hid the coordination): the column exists to show <em>which zones change together</em>, and a paragraph buries exactly that. One line per affected zone, <code>UNCHANGED</code> spelled out where not-changing is the decision, and a trailing <code>←</code> note only where the delta carries a judgment. Prose after the block is fine for the one clause a reader cannot infer.</p>
+      <p><strong>Form:</strong> a <strong>use-case table</strong>, each row grounded in a Frame goal. <strong>The response is <code>zone → delta</code> lines, never prose</strong> — one line per affected zone, <code>UNCHANGED</code> spelled out where not-changing is the decision.</p>
       <div class="tmpl" data-c="tmpl-interaction">
         <table>
           <thead><tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th><th>Keyboard path</th></tr></thead>
           <tbody>
             <tr><td class="ph">&lt;task&gt;</td><td class="ph">&lt;Frame goal&gt;</td><td class="ph">&lt;trigger / action&gt;</td><td><pre class="ph">&lt;zone&gt; → &lt;delta&gt;
 &lt;zone&gt; → &lt;delta&gt;   ← &lt;why, only where it is a decision&gt;
-&lt;zone&gt; → UNCHANGED  &lt;when that is the point&gt;</pre></td><td class="ph">&lt;the keys, from the rulebook's keyboard conventions — or "proposed: &lt;keys&gt;" when the vocabulary has no entry&gt;</td></tr>
+&lt;zone&gt; → UNCHANGED  &lt;when that is the point&gt;</pre></td><td class="ph">&lt;the keys, from the rulebook's keyboard conventions — or "proposed: &lt;keys&gt;"&gt;</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="kd"><strong>Key distinctions:</strong> per-element default interaction (hover/focus/confirm/tones) belongs to the <em>component</em> (the registry), <strong>not</strong> here — do not re-list it. State handling folds in as use-cases ("watch a live call" <em>is</em> the in-flight state); a state with no defined screen response (e.g. an error the domain never designed) is a <a href="#closing">blocked-on</a> entry, never something to invent. The keyboard column exists because <code>keyboard-parity</code> is checked per row: a pointer-only row is a red row, and a key that the conventions vocabulary does not yet hold is a <em>proposal</em> — a design that silently coins a binding is exactly what the vocabulary exists to stop.</p>
+      <p class="kd"><strong>Key distinctions:</strong> Per-element default interaction belongs to the <em>component</em>, not here. The keyboard column exists because <code>keyboard-parity</code> is checked per row.</p>
     </div>
 
     <h3 id="s-mockup">5 · Draft mockup</h3>
       <p class="kd"><code>data-item="mockup"</code> — the tagged element contains the state toggle</p>
     <div class="stage">
       <p><strong>Question:</strong> assembled, does it hold together as one screen?</p>
-      <p><strong>Form:</strong> a <strong>native HTML build assembled in the app's own Tailwind</strong> — load the CDN plus <code>doc-assets/components/tw-config.js</code> (which imports <code>ui/tailwind.config.js</code> directly, so a specimen and its component are written in the same class names) and mark the build up with the utility strings the component design files draw. Real widgets, and <em>stateful</em> (a toggle across the states the Interaction table named, from <code>doc-assets/components/specimen.js</code>). The finish line: lo-fi and structural, not hi-fi. It is a real build, so it is a truer test than a picture of one.</p>
+      <p><strong>Form:</strong> a <strong>real build that mounts the real components</strong> — load the CDN plus <code>doc-assets/components/specimens.bundle.js</code> and render each composed element from <code>window.Trawler</code>. Stateful (a toggle across the states the Interaction table named).</p>
       <div class="tmpl" data-c="tmpl-mockup">
-        <pre>&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;     &lt;!-- the app's utilities --&gt;
-&lt;script type="module" src="../../doc-assets/components/tw-config.js"&gt;&lt;/script&gt;  &lt;!-- imports ui/tailwind.config.js --&gt;
-&lt;script src="../../doc-assets/components/specimen.js" defer&gt;&lt;/script&gt;    &lt;!-- state switch + keyed map --&gt;
+        <pre>&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;
+&lt;script src="../../doc-assets/components/specimens.bundle.js"&gt;&lt;/script&gt;
+&lt;script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"&gt;&lt;/script&gt;
 
 &lt;div class="app"&gt;
-  &lt;div class="mock" id="mock"&gt;      &lt;!-- screen-owned: shell, ambient frame, scroll cap --&gt;
-    &lt;div class="bar"&gt;&lt;!-- screen-owned zoning + &lt;component class&gt; per element --&gt;&lt;/div&gt;
-    &lt;div class="border-b border-hairline px-4 py-3"&gt;&lt;!-- a composed Section: its component's own utilities --&gt;&lt;/div&gt;
-    &lt;!-- .complete-only / .inflight-only mark the state variants --&gt;
+  &lt;div class="a-mock" id="mock"&gt;
+    &lt;div class="a-zone" id="m-&lt;zone&gt;"&gt;&lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
 &lt;button class="statebtn" data-state-toggle="mock" data-state-class="&lt;state&gt;"
         data-label-off="▶ show &lt;state&gt;" data-label-on="◀ show &lt;base&gt;"&gt;▶ show &lt;state&gt;&lt;/button&gt;
 
-&lt;!-- the run doc's own &lt;style&gt; carries ASSEMBLY ONLY: shell, zoning, seams, caps,
-     state visibility. Zero component values — no colour, no control padding, no
-     radius, no hit area, no type. Declare each screen-owned exception inline. --&gt;</pre>
+&lt;script type="text/babel"&gt;
+  const { React, createRoot, Section, StatusLine } = window.Trawler;
+  const mount = (id, node) =&gt; createRoot(document.getElementById(id)).render(node);
+  mount("m-&lt;zone&gt;", &lt;Section title="&lt;label&gt;"&gt;&lt;StatusLine status={…} /&gt;&lt;/Section&gt;);
+&lt;/script&gt;</pre>
         <table>
           <thead><tr><th>Layer</th><th>Source</th><th>Rule</th></tr></thead>
           <tbody>
-            <tr><td><strong>composed</strong></td><td>the component's Tailwind utilities, by class name</td><td>anything with a <em>reuse</em> or <em>extend</em> verdict. Never restyled, never re-typed</td></tr>
-            <tr><td><strong>screen-owned</strong></td><td>the run doc's <code>&lt;style&gt;</code></td><td>assembly, plus each <em>propose</em>-verdict element (nothing to compose yet) and each T3 inline element — <strong>declared</strong>, one comment each</td></tr>
+            <tr><td><strong>composed</strong></td><td>the component itself, mounted from <code>window.Trawler</code></td><td>every <em>reuse</em> and <em>extend</em> verdict. <b>Checked</b>: <code>mockup·hand-drawn</code></td></tr>
+            <tr><td><strong>screen-owned</strong></td><td>the run doc's <code>&lt;style&gt;</code> + the HTML around the mounts</td><td>assembly, plus each <em>propose</em>-verdict element, each <em>build local</em> element, each T3 inline element, and an <em>extend</em>'s declared delta</td></tr>
             <tr><td><strong>stubbed</strong></td><td>—</td><td>a component's internals: code surfaces, live clipboard, renderer dispatch, transitions</td></tr>
           </tbody>
         </table>
       </div>
-      <p class="kd"><strong>Key distinctions:</strong> the mockup is a <em>decision</em> stage, not mere assembly — building it in real HTML forces details the earlier stages never surfaced (click-to-copy on long values, per-body copy affordances, raw-vs-decoded semantics, where a cap bites). A static picture (ASCII / draw.io) lets those slide. Prefer native <code>&lt;details&gt;</code>/inputs over hand-rolled widgets. The hard token rules are checked <em>here</em>, which is why no value is ever typed twice: the tokens live in <code>ui/tailwind.config.js</code> and the mockup only ever writes their utility names. <strong>Re-typing a component's values is not a shortcut, it is a silent fork</strong> — the mockup then looks compliant while rendering something the registry never agreed to, and a rule the component breaks turns green because the mockup quietly fixed it on the way in (both happened, once each, before this rule existed). When a component's specimen contradicts its own token table, or two files draw the same thing differently, <strong>compose it as drawn and file the conflict</strong> — the mockup is not the place to pick a winner. A component whose design file demands a token that <em>does not exist yet</em> cannot be mocked honestly — render its documented fallback and put the missing token on the <a href="#closing">blocked-on list</a>. <strong>Build what the screen decides, stub what a component owns:</strong> zones, seams, labels, caps and every state the Interaction table named are real in the mockup; a component's internals (a code surface, a live clipboard, a renderer family) are a static stand-in — the same scale-down rule the component design format uses for its specimens. Reimplementing a component in the mockup wastes the run and invites the mockup to contradict the registry.</p>
+      <p class="kd"><strong>Key distinctions:</strong> <strong>Mounting is what closes it for good</strong> — a hand-drawn component in correct utilities is still a fork no class check can see. <strong>Zero colour literals in the doc's own CSS</strong> — the tokens live in <code>ui/tailwind.config.js</code> and the mockup only ever writes their utility names. Build what the screen decides, stub what a component owns.</p>
     </div>
 
     <h3 id="s-tune">6 · Tune</h3>
@@ -303,125 +287,96 @@ scroll / overflow: &lt;which zone is pinned · which region scrolls · every
       <p><strong>Question:</strong> stepping back from the whole, what grouping, hierarchy, or redundancy is off — and why?</p>
       <p><strong>Form:</strong> a short <strong>before/after list</strong>; may loop back to Layout.</p>
       <div class="tmpl" data-c="tmpl-tune">
-        <pre>&lt;table data-item="tune"&gt;   <span class="ph">one row per call — before and after are DRAWN</span>
+        <pre>&lt;table data-item="tune"&gt;
 | Call        | Before                | After                 | Slug        |
 | &lt;aspect&gt;    | &lt;pre class="tb"&gt;      | &lt;pre class="tb"&gt;      | &lt;code&gt;slug |
 |             |  the old rendering  ‾ |  the new rendering  ‾ |  &lt;code&gt;slug |
 
-<span class="ph">&lt;details class="why"&gt;</span> one &lt;li&gt; per call: why, and <em>loops back to Layout: yes/no</em></pre>
+&lt;details class="why"&gt; one &lt;li&gt; per call: why, and <em>loops back to Layout: yes/no</em></pre>
       </div>
-      <p class="kd"><strong>Form:</strong> <strong>before and after are drawn, never described</strong> (added at run #3, whose prose version needed three sentences to say what a ragged column and an aligned one show at a glance). Tune judges how the screen <em>looks</em>; ASCII in two adjacent <code>&lt;pre class="tb"&gt;</code> cells makes the change the content. The reasoning collapses behind one <code>▸ why</code>. <b>Checked</b>: <code>tune·drawn</code> reds a row with fewer than two drawn cells, a row citing no slug, and a Tune stage that is prose instead of a table.</p>
-      <p class="kd"><strong>Key distinctions:</strong> Tune is load-bearing — it has genuinely sent design back to Layout, so it earns a distinct stage. <strong>Every tune call cites a soft-rule slug</strong> ("hero", "weight", "proximity" are not reasons); a call with no slug to cite is a rulebook hole and goes to the findings, not into the design. Conversely a soft rule that never gets cited across a whole run is a kill candidate — the receipt makes that visible.</p>
+      <p class="kd"><strong>Key distinctions:</strong> <strong>Before and after are drawn, never described</strong>. <b>Checked</b>: <code>tune·drawn</code> reds a row with fewer than two drawn cells, a row citing no slug, and a Tune stage that is prose instead of a table. <strong>Every tune call cites a soft-rule slug</strong>.</p>
     </div>
 
     <h2 id="closing">Closing artifacts — receipt · capabilities · proposals · blocked-on · review</h2>
-    <p>A run ends with five lists, not with the mockup. They are what a reviewer and (from W7) the harness consume; the design itself is only the first half of the deliverable.</p>
+    <p>A run ends with five lists, not with the mockup. They are what a reviewer and (from W7) the harness consume.</p>
     <div class="tmpl" data-c="tmpl-closing">
       <table>
         <thead><tr><th>List</th><th>One row per…</th><th>Row shape</th></tr></thead>
         <tbody>
-          <tr><td><strong>Receipt</strong> — <code>data-item="receipt"</code>, a <code>&lt;pre&gt;</code> of YAML, <strong>machine-read</strong></td><td>every <strong>soft</strong> slug in the rulebook, in rulebook order. <strong>Hard rules are never receipted</strong> — a rule with a Tier-1 predicate is judged by the predicate; a hand verdict on it is the one row that can be wrong for free, and a hard slug in the receipt is a red</td><td><pre>rulebook: &lt;blob sha&gt;
+          <tr><td><strong>Receipt</strong> — <code>data-item="receipt"</code>, a <code>&lt;pre&gt;</code> of YAML, <strong>machine-read</strong></td><td>every <strong>soft</strong> slug in the rulebook, in rulebook order. <strong>Hard rules are never receipted</strong></td><td><pre>rulebook: &lt;blob sha&gt;
 soft:
-  &lt;slug&gt;: &lt;verdict&gt; — &lt;one clause of evidence&gt;</pre>verdict ∈ <code>satisfied</code> · <code>inherited</code> (a component owns it — the citation is the proof) · <code>satisfied-via-proposal</code> (only an entry that does not exist yet closes it) · <code>n/a</code> · <code>blocked</code> (unsatisfiable as specified — name what is missing) · <code>violated</code> · <code>violated-inherited</code> (a component the screen composes and may not re-author breaks it). One line per slug; the why is a clause, and the tally is <em>computed</em>, never typed</td></tr>
-          <tr><td><strong>Proposals</strong></td><td>every entry the design needed and the vocabulary lacked</td><td>kind (component · component extension · token · lexicon term · key binding) · what · why nothing existing fits · owner</td></tr>
-          <tr><td><strong>Capabilities</strong> — <code>data-item="capabilities"</code></td><td>every capability the Frame listed under <em>Given</em></td><td>what it is · <code>used</code> · <code>deliberately unused</code> · <code>blocked</code> · where / why. Added at run #3, which listed <code>proxy unset</code> as given, designed its undo as commands only, and filed a blocked-on entry saying the app cannot reverse its own writes — the shipped code disproved it. <strong>The receipt forces coverage of rules; nothing forced coverage of capabilities.</strong> An unmentioned Given is the same defect class as an unreceipted rule and worse in one way: a dropped capability makes the design look correctly constrained rather than under-designed</td></tr>
-          <tr><td><strong>Blocked-on</strong></td><td>every decision the design could not make because something upstream is missing</td><td>what is missing · which stage hit it · whose call it is (domain/UX · API · build WU) · what the run did meanwhile</td></tr>
-          <tr><td><strong>Review</strong> — <code>data-item="review"</code></td><td>every <strong>reviewer instruction</strong> the run acted on. Added at W7 from run #2's finding 29: two instructions moved the Layout sketch, two catalog rows, two use-cases, the mockup, four receipt rows and the cross-check, and the run read as if the stages had produced all of it. Tune is the run's <em>own</em> stepping-back and the cross-check compares runs; neither records that <strong>a human overrode the design, and what contract the override hit</strong> — the strongest signal a run carries, and the one the artifact dropped</td><td>what the reviewer said · what it moved (name the stages, or <code>nothing</code> when the design argued and held — an instruction heard and refused is a first-class row) · the contract it hit, cited: a rule slug, a component's <code>@use</code>/<code>@avoid</code>, a decision record, or <code>taste</code> where the design genuinely had latitude. <strong>Not</strong> the Tier-3 verdict — one is provenance, the other a judgment, and merging them loses the provenance. <b>Checked</b>: <code>review·recorded</code> reds an item with no instruction row, a row naming no stage it moved, and a row citing no contract</td></tr>
+  &lt;slug&gt;: &lt;verdict&gt; — &lt;one clause of evidence&gt;</pre>verdict ∈ <code>satisfied</code> · <code>inherited</code> · <code>satisfied-via-proposal</code> · <code>n/a</code> · <code>blocked</code> · <code>violated</code> · <code>violated-inherited</code></td></tr>
+          <tr><td><strong>Proposals</strong></td><td>every entry the design needed and the vocabulary lacked</td><td>kind · what · why nothing existing fits · owner</td></tr>
+          <tr><td><strong>Capabilities</strong> — <code>data-item="capabilities"</code></td><td>every capability the Frame listed under <em>Given</em></td><td>what it is · <code>used</code> · <code>deliberately unused</code> · <code>blocked</code> · where / why</td></tr>
+          <tr><td><strong>Blocked-on</strong></td><td>every decision the design could not make because something upstream is missing</td><td>what is missing · which stage hit it · whose call it is · what the run did meanwhile</td></tr>
+          <tr><td><strong>Review</strong> — <code>data-item="review"</code></td><td>every <strong>reviewer instruction</strong> the run acted on</td><td>what the reviewer said · what it moved (name the stages) · the contract it hit: a rule slug, a component's <code>@use</code>/<code>@avoid</code>, a decision record, or <code>taste</code>. <b>Checked</b>: <code>review·recorded</code></td></tr>
         </tbody>
       </table>
     </div>
-    <p class="kd"><strong>Why forced coverage:</strong> a receipt that only lists the rules the design happened to think about proves nothing — the value is the row that reads <em>n/a</em> or <em>violated</em>, because that is where the rulebook is wrong or the design is. <em>inherited</em> is a first-class verdict, not a dodge: most component-level rules are satisfied by reusing the component, and the citation is the proof. Coverage is checked against the rulebook <em>on disk</em>, so adding or killing a rule re-opens every receipt; a receipt that cannot be checked (unreadable rulebook) is red, never silently green.</p>
-    <p class="kd"><strong>Why the hard/soft split:</strong> the receipt exists for what a machine cannot judge. Run #2 wrote <em>satisfied</em> against <code>spacing-scale</code> while its mockup re-typed three components' padding on-scale — the claim was false, the citation was fluent, and only composing the real CSS caught it. Hard rules therefore leave the receipt and become predicates; each one still unimplemented is printed on every verify (<code>hard rules: n/m machine-checked</code>, counted off the rulebook) so the gap stays visible instead of becoming a forgotten follow-up.</p>
-    <p class="kd"><strong>When a new predicate reds an artifact, the artifact is the suspect</strong> (added at run #3, which did the opposite). This run ended one capability <em>"dropped, then recovered"</em>, the three-state check went red, and a fourth state was added to the checker in the same commit that introduced the rule — so the code disagreed with this spec and the gate rubber-stamped the exact defect it existed to catch. Code review caught it, the author did not. <strong>A predicate's vocabulary is closed on purpose</strong>: an outcome that does not fit is the run reporting something under-designed, and widening the check deletes that signal while leaving the gate green. Loosening a predicate is a <em>rulebook</em> change — it needs its own reasoning, never a same-commit accommodation of the artifact that tripped it.</p>
+    <p class="kd"><strong>Why forced coverage:</strong> a receipt that only lists the rules the design happened to think about proves nothing. <em>inherited</em> is a first-class verdict, not a dodge. Coverage is checked against the rulebook <em>on disk</em>.</p>
+    <p class="kd"><strong>Why the hard/soft split:</strong> the receipt exists for what a machine cannot judge. Hard rules leave the receipt and become predicates; each one still unimplemented is printed on every verify.</p>
 
     <h2 id="close">7 · Close the run <span class="badge id">a step, not a side effect</span></h2>
-    <p>Run #3 sat open and red in the tree for two Working Units because archiving happened as a side effect of the <em>next</em> run being written — and run #3 had no next run. Closing is therefore its own step, with its own gate.</p>
+    <p><strong>Edits are batched, not cycled:</strong> apply all changes in one pass, <code>verify-doc</code> once, then batch residuals and verify again. The norm is <strong>edit twice, verify twice</strong> — never twelve edit→verify cycles.</p>
     <table data-c="tbl-close">
       <thead><tr><th>#</th><th>Do</th><th>What refuses it</th></tr></thead>
       <tbody>
-        <tr><td>①</td><td><strong>Re-pin the rulebook.</strong> <code>git hash-object docs/design-rules/design-rules-index.html</code>; if it no longer matches the receipt's <code>rulebook:</code>, the rulebook moved <em>under</em> the run — re-judge every soft row against the current one before re-pinning</td><td><code>receipt·rulebook-stale</code> names both versions. A pin that only had to be non-empty was a claim nothing checked for three Working Units</td></tr>
-        <tr><td>②</td><td><strong>Fill the <a href="#closing">review</a> item</strong> — one row per reviewer instruction, what it moved, the contract it hit</td><td><code>item·review</code> · <code>review·recorded</code></td></tr>
-        <tr><td>③</td><td><strong>Green the run</strong>: <code>cargo xtask verify-doc &lt;the run&gt;</code>. A red run is not closeable — closing a red run is what archiving would otherwise hide</td><td>every Tier-1 predicate</td></tr>
-        <tr><td>④</td><td><strong>Archive it</strong>: <code>data-status="archived"</code> beside its <code>data-artifact</code>, in the commit that finishes the run — newest included, never waiting for a successor</td><td><code>6·run-closed</code> refuses the <strong>merge</strong> of any tip whose diff carries a run still open. A run genuinely mid-design across a merge declares <code>data-status="draft"</code> instead, which says unfinished rather than closed</td></tr>
+        <tr><td>①</td><td><strong>Re-pin the rulebook.</strong> <code>git hash-object docs/design-rules/design-rules-index.html</code>; if it no longer matches the receipt's <code>rulebook:</code>, the rulebook moved <em>under</em> the run</td><td><code>receipt·rulebook-stale</code></td></tr>
+        <tr><td>②</td><td><strong>Fill the review item</strong> — one row per reviewer instruction, what it moved, the contract it hit</td><td><code>item·review</code> · <code>review·recorded</code></td></tr>
+        <tr><td>③</td><td><strong>Green the run</strong>: <code>cargo xtask verify-doc &lt;the run&gt;</code></td><td>every Tier-1 predicate</td></tr>
+        <tr><td>④</td><td><strong>Archive it</strong>: <code>data-status="archived"</code></td><td><code>6·run-closed</code> refuses the <strong>merge</strong> of any tip whose diff carries a run still open</td></tr>
       </tbody>
     </table>
-    <p class="kd"><strong>Why the merge and not the working tree.</strong> A run mid-design is legitimately red for days, so a sweep asserting "every run is archived or green" would hold the suite hostage to work in progress. The merge is the first moment the tree is <em>answerable</em> for the run: the Working Unit that carried it is ending. <code>archived</code> then exempts the run from every later rule — finished under an older contract, not unfinished — which is why ③ has to happen before ④ and not after.</p>
 
     <h2 id="review-tier">8 · The design review <span class="badge id">Tier-3 — the reviewer is not the author</span></h2>
-    <p>Everything up to ⑦ is the designing agent judging its own work: the stages are its design, the receipt is
-      its claim about that design, and the predicates check the claim's <em>shape</em>. The one thing missing is
-      the rule the dev workflow has always had — <strong>never judge your own diff</strong>. So the closed run
-      goes through the same door code goes through: the <strong>design dimension of the code review</strong>,
-      which fires on the merge that lands it.</p>
+    <p>Everything up to ⑦ is the designing agent judging its own work. The one thing missing is the rule the dev workflow has always had — <strong>never judge your own diff</strong>. So the closed run goes through the same door code goes through: the <strong>design dimension of the code review</strong>.</p>
     <table data-c="tbl-tier3">
       <thead><tr><th></th><th>How</th></tr></thead>
       <tbody>
         <tr><td><strong>What activates it</strong></td>
-          <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code> — a <em>closed</em> run
-            (<code>data-status="archived"</code>) or a component design file in the diff. A draft run is
-            unfinished and is judged by the merge that closes it, so ⑦ and ⑧ are one motion</td></tr>
+          <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code> — a <em>closed</em> run (<code>data-status="archived"</code>) or a component design file in the diff</td></tr>
         <tr><td><strong>What it judges</strong></td>
-          <td>soft rules and the new-component warrant, on the artifact — <em>not</em> the built code, and
-            <em>not</em> the thirteen hard rules Tier-1 already owns. The rubric is
-            <code>.claude/skills/code-review/design-rubric.md</code></td></tr>
+          <td>soft rules and the new-component warrant, on the artifact — the rubric is <code>.claude/skills/code-review/design-rubric.md</code></td></tr>
         <tr><td><strong>What it catches that ⑦ cannot</strong></td>
-          <td>a receipt that is complete, fluent and <strong>false</strong> — a <code>satisfied</code> the
-            design does not earn — and a component invented while an existing one fit. Both are defects the
-            author wrote and then attested</td></tr>
+          <td>a receipt that is complete, fluent and <strong>false</strong> — a <code>satisfied</code> the design does not earn</td></tr>
         <tr><td><strong>Where the verdict lives</strong></td>
-          <td>the tip's <code>cr/v3</code> note, in a <code>design:</code> section naming every artifact
-            judged and pinning the rulebook blob. Not in the run doc: the run is retired under
-            <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a> and the commit is not</td></tr>
+          <td>the tip's <code>cr/v3</code> note, in a <code>design:</code> section</td></tr>
         <tr><td><strong>What refuses it</strong></td>
-          <td><code>9·design</code> at the merge — a design-bearing tip whose note has no design section, skips
-            an artifact, pins another rulebook, or carries a failing design verdict. <strong>A design-bearing
-            diff is never docs-only-exempt</strong>: a design is a docs-only <em>deliverable</em>, and the
-            exemption was handing this check exactly the diffs it exists to judge — W2 landed 14 component
-            design files with no code review at all (found by the <a href="#flow-e2e">flow e2e</a>)</td></tr>
+          <td><code>9·design</code> at the merge</td></tr>
       </tbody>
     </table>
-    <p class="kd">Tier-2's receipt stays <em>inline</em> and Tier-3's verdict does not, and the asymmetry is the
-      point: a self-claim is part of the artifact and dies with it, while an independent judgment is about a
-      commit — and commits outlive the files they carry.</p>
+
+    <h2 id="handover">9 · Hand over to the build <span class="badge id">Tier-3 passed — now something gets built</span></h2>
+    <p>A judged design is still nothing but a file. The hand-over is the step that makes it consumable.</p>
+    <table data-c="tbl-handover">
+      <thead><tr><th>Half</th><th>What it says</th><th>What refuses it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The build names its design</strong></td>
+          <td>a Working Unit that <em>adds</em> a registry component or a screen cites <code>design.implements: [{path, blob, built}]</code> in its <code>cr/v3</code> note</td><td><code>9·design</code> at the WU merge</td></tr>
+        <tr><td><strong>An edit answers for itself</strong></td>
+          <td>every other UI-rendering file the diff touches is cited or <code>design.undesigned: [{path, why}]</code></td><td><code>9·design</code> at the WU merge</td></tr>
+        <tr><td><strong>No unbuilt design survives its epic</strong></td>
+          <td>every component design the epic added resolves to a roster entry at the epic tip or the epic's note records <code>design.dropped: [{path, why}]</code></td><td><code>components·unbuilt</code> at the epic merge</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="no-conformance">
+      <strong>Nothing judges the build against its design.</strong> The gate answers <em>is there a design, and is it this one</em> — never whether the code honoured it. The pointer is a mechanical check (<a href="../decisions/dec-25-design-build-handoff.html#no-conformance">DEC-25</a>).
+    </div>
 
     <h2 id="flow-e2e">What proves the harness — the flow e2e <span class="badge id">xtask/tests/e2e_design_flow.rs</span></h2>
-    <p>Every stage above is a rule an agent must follow and a predicate that refuses it, and the whole
-      point is the <em>sequence</em>: no unit test can tell whether a run can be driven from a blank page
-      to a landed merge. A fake designing agent emits one artifact at a time and a fake human answers each
-      with a taste instruction; all three tiers then judge the result over a real git tree, real
-      <code>node</code> oracles and the real merge hook. Feature-gated
-      (<code>--features design-e2e</code>) out of the default suite — re-run it when the flow or the
-      harness changes.</p>
+    <p>Every stage above is a rule an agent must follow and a predicate that refuses it, and the whole point is the <em>sequence</em>. A fake designing agent emits one artifact at a time and a fake human answers each; all three tiers then judge the result over a real git tree. Feature-gated (<code>--features design-e2e</code>).</p>
     <table data-c="tbl-e2e">
       <thead><tr><th>Asserts</th><th>The failure it refuses</th></tr></thead>
       <tbody>
         <tr><td>After every stage the run is red for <strong>exactly the stages not yet written</strong></td>
-          <td>the flow stalling, or prompting for work it has not reached. A half-written run that goes
-            quiet asks for nothing; one red for something else refused a stage that was not wrong. Both
-            were real: <code>mono-for-wire-data·undeclared</code> asked a Frame-stage run to mark the
-            payloads of a mockup five stages away</td></tr>
-        <tr><td>The rulebook moving under an open run re-opens <em>both</em> halves of
-          <a href="#close">the close's step ①</a> — the pin is stale and the new rule is unreceipted</td>
+          <td>the flow stalling, or prompting for work it has not reached</td></tr>
+        <tr><td>The rulebook moving under an open run re-opens <em>both</em> halves of the close's step ①</td>
           <td>a receipt that is complete against a rulebook nobody has read since</td></tr>
-        <tr><td>The <code>cr/v3</code> note is written from what <code>design-scope</code> printed, and
-          nothing else</td><td>the reviewer and the gate each deciding what counts as design-bearing</td></tr>
-        <tr><td>A rule-violating mockup reds <strong>at the stage that wrote it</strong>, and the chain
-          from there keeps it out of the tree: a run that cannot be greened cannot be closed
-          (<a href="#close">③</a>), and a run left open cannot merge (<code>6·run-closed</code>)</td>
-          <td>a breach surfacing only at the end, where it is expensive, or not at all</td></tr>
+        <tr><td>A rule-violating mockup reds <strong>at the stage that wrote it</strong>, and the chain from there keeps it out of the tree</td>
+          <td>a breach surfacing only at the end, where it is expensive</td></tr>
       </tbody>
     </table>
 
-    <h2 id="provenance">Provenance &amp; what feeds the rest of the epic</h2>
-    <table data-c="provenance">
-      <thead><tr><th>Run</th><th>What it hardened</th><th>What it fed</th></tr></thead>
-      <tbody>
-        <tr><td><a href="2026-07-16-dflow-run-1.html">#1</a> — bare flow, W1 (flow detail panel)</td><td>the six stages and each stage's artifact form (driver table · ASCII zones · tiered catalog · use-case table · built mockup · before/after tune)</td><td>component candidates → W2 registry · rule candidates → W3 rulebook · flow gaps → this revision</td></tr>
-        <tr><td><a href="2026-07-25-dflow-w4-run-2.html">#2</a> — against the frozen substrate, W4 (same panel, designed fresh)</td><td>the substrate-consuming shape above: substrate load, registry-verdict column, states-by-reference, keyboard column, app-token mockup, slug-cited tune, and the three closing lists</td><td>registry findings → W5 · rulebook findings → W6 · harness findings → W7</td></tr>
-        <tr><td><a href="2026-07-26-dflow-w4-run-3.html">#3</a> — a screen the substrate has never seen, W4 (the setup screen)</td><td>the Frame: <code>Not given</code> as a named line, the <code>on this screen</code> ✓/✗ column replacing <code>checked by</code>, and <a href="#frame-density">six density predicates</a> — the first stage form the harness enforces rather than describes. Elements: both halves of the keyed map checked, and a merged placement column with the Shape-is-reference-only rule. Closing: <strong>every <code>Given</code> capability answered</strong> (used · deliberately unused · blocked), after this run designed one away and only the cross-check caught it</td><td>the generalization test — a roster extracted from one read-only panel, asked to serve a write-oriented screen. <strong>Answer: 3 reuses / 4 proposals</strong> against run #2's 12/2 on identical substrate, splitting cleanly on <em>show data</em> vs <em>tell the user to act</em> → W5 · 28 findings</td></tr>
-      </tbody>
-    </table>
-    <p>This becomes the T1 design-flow process doc at epic distillation (sibling to <code>workflow.html</code> / <code>testing-strategy.html</code>), after W5–W7 have settled the substrate and the harness.</p>
   </main>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
