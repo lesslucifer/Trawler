@@ -1,0 +1,38 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W11
+changes:
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: added
+    distills: "DEC-27 - the human signature goes last. Why the order is strict (every binding pins the diff, and a test/v2 receipt reporting a missing test can only be acted on by a tree change that invalidates a signature already given), the four rejected alternatives, and the one hole left open by design (no resolvable target skips the binding half; check 5 still refuses at the merge). Written because every prior change to mr authority - DEC-7, DEC-9, DEC-10 - carries a decision record and a review round found this one had none. Numbered 27, not 12: the first draft took an id DEC-12 (native UI stack) already owned, and a third review round caught the collision before it landed"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-27 registered in the workflow-gates row, reachable index-first"
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "New section: the signature goes last, citing DEC-27. The five-step order and the enforcement in one line - the why lives in DEC-27, not here. Both DoD rows carry the precondition and link to it. T1 because it is a process rule binding every WU and epic; the commit carries its Reviewed-By trailer accordingly"
+  - path: docs/work/2026-08-31-dflow-w11-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan - requirement, mapping, expected result, test plan. Rebased onto the epic tip so the run it governs reads the optimised substrate it names"
+  - path: docs/work/2026-09-02-dflow-run-8-setup-fullscreen.html
+    tier: T3
+    action: added
+    distills: "design run #8 - the setup screen as a step rail beside a workbench, filling the main region. Closed green and archived: 17/17 soft, 13/13 hard, 0 suppressions, rulebook a2f45dd7. Zero proposals. The unset-the-proxy capability is blocked, not deliberately unused: the run/'s first answer gave two reasons the shipped code disproves, and the correction plus its blocked-on entry are on the record rather than quietly rewritten"
+  - path: docs/work/2026-09-02-dflow-w11-coverage-map.html
+    tier: T3
+    action: added
+    distills: "the retirement contract the build WU inherits - 32 assertions: 30 inherited, 1 retired (Next), 1 held on the DEC-13 revert question. Nothing deleted while the old design still ships. Its assertion-14 narrative tracks the run/'s corrected blocked verdict rather than the first answer"
+  - path: docs/work/2026-09-02-dflow-w11-result.html
+    tier: T3
+    action: added
+    distills: "the WU result - the measured cost (17.6M prompt against a 3.4M target) and why the target was unreachable as framed (prompt cost is context re-sent per call, not bytes read once), the per-stage timing, and the ordering defect this WU found in itself. Its DEC-13 section records both false reasons and the correction, and links the ordering rationale to DEC-27 rather than restating it"
+untouched:
+  - path: docs/use-cases/web-ui.html
+    why: "UC-ONBOARD needed no amendment. The plan expected one; it was read and found unnecessary - UC-ONBOARD is a contract about capability and truthfulness, and run #8 changed layout. Every promise survives verbatim. Recorded rather than edited: a cosmetic amendment to close a checklist item would be worse than leaving a true document alone"
+  - path: docs/decisions/dec-13-onboarding-capabilities.html
+    why: "No amendment, and one question owed, recorded in the run, the coverage map and the result. The shipped Stop routing affordance lives inside this screen/'s set-proxy step and appears only after that step succeeds, so both reasons the run first gave for dropping it were false. The capability is blocked pending the owner/'s call on where revert lives; a design run may not narrow a shipped capability by listing it unused"
+note: "One T1 edit, two T2 (DEC-27 and its index row), four T3 documents. The T2 synthesis is DEC-27 itself - the code change this WU makes is a gate rule, and gate rules are recorded as decisions in this project. verify-doc green over the whole governed tree - 103 docs, 0 red. Epic distillation remains owed at epic close."
