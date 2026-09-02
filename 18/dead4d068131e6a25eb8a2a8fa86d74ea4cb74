@@ -1,0 +1,26 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W11
+changes:
+  - path: docs/work/2026-08-31-dflow-w11-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan - requirement, mapping, expected result and the no-waiver test plan. Carried on the branch from before the W10 merge and rebased onto the epic tip, so the run it governs reads the optimised substrate it names"
+  - path: docs/work/2026-09-02-dflow-run-8-setup-fullscreen.html
+    tier: T3
+    action: added
+    distills: "design run #8 - the setup screen filling the main region as a step rail beside a workbench. Six stages, closed green and archived: 17/17 soft receipted, 13/13 hard machine-checked, 0 suppressions, rulebook a2f45dd7. Zero proposals; two @avoid hits carried rather than bent (SegmentedControl refused on cardinality, StatusLine's message-length contract filed under blocked-on)"
+  - path: docs/work/2026-09-02-dflow-w11-coverage-map.html
+    tier: T3
+    action: added
+    distills: "the retirement contract the build WU inherits - all 32 shipped onboarding assertions classified layout-bound vs capability-bound: 30 inherited, 2 retired, nothing deleted while the old design still ships. Flags the DEC-13 revert question as a question rather than taking it"
+  - path: docs/work/2026-09-02-dflow-w11-result.html
+    tier: T3
+    action: added
+    distills: "the WU result - the measured token cost (17.6M prompt against a 3.4M target), the per-stage timing, and the finding that W10's cost model measured file size where prompt cost is context re-sent per call"
+untouched:
+  - path: docs/use-cases/web-ui.html
+    why: "UC-ONBOARD needed no amendment. The plan expected one; it was read and found unnecessary - UC-ONBOARD is a contract about capability and truthfulness, and run #8 changed layout. Every promise survives verbatim: the disclosure still auto-opens on failure, status is still probe-or-capture and never the stepper cursor, only a decrypted flow reveals the list. Recorded in the result rather than edited, because a cosmetic amendment to close a checklist item would be worse than leaving a true document alone"
+  - path: docs/decisions/dec-13-onboarding-capabilities.html
+    why: "no amendment, but one real question is owed and is recorded in the result and the coverage map: run #8 lists unset-the-proxy as deliberately unused, which drops the shipped Stop routing affordance, while DEC-13 names symmetric revert as part of why the app may write OS state at all. A design run may not narrow a shipped capability by listing it unused - so either the build keeps an unset affordance or the removal is argued and DEC-13 amended. The build WU's call, with the owner"
+note: "Docs-only WU, four T3 documents, no T1 or T2 edit. verify-doc green over the whole governed tree (103 docs, 0 red). The two T2 docs the plan expected to amend are listed under untouched with the reasoning, so the absence is a recorded decision rather than a silent omission. Epic distillation (T3 archiving, the flow spec's promotion to T1) remains owed at epic close, not here."
