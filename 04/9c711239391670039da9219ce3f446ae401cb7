@@ -1,0 +1,13 @@
+schema: cr/v3
+scope: "WU E-DFLOW.W12 epic-cleanup -> epic/design-flow"
+epic: E-DFLOW
+wu: E-DFLOW.W12
+branch: wu/design-flow/epic-cleanup
+base: acc4a3232d9f963ac9b0d3f87e8c12abc1e72046
+head: 049c711239391670039da9219ce3f446ae401cb7
+diff_sha256: 38a03fef8b1e872fb54f1a0171431ff011d2adc0d1aaf821aff329ef17d2a3d0
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 8, verified: 0, waived: 0 }
+verdict: PASS
+date: 2026-09-03
+note: "Gate 0 green (fmt, clippy -D warnings, tests; cached 9472ff6f55). design-scope reports no design artifact, no new surface and no rendered file in acc4a3232d..049c711239, so the design dimension did not run and this note carries no design section. Eight candidates found across five dimensions, all eight refuted on independent verification: correctness 0, reuse 0, efficiency 0, simplification 3 (a double traversal that is a precondition guarding against a vacuous pass, a docs/work scan that is discovery coverage rather than dead weight, and a comment paragraph that states a real invariant - docs/work is empty at an epic tip by check_tracked_docs at Level::Epic - in the file's own established style), altitude 4 important + 1 nit (templates at T1 match the workflow.html/testing-strategy.html process-spec precedent and are mechanically checked predicates, not per-feature content; the mockup script tags are the THEME/BUNDLE constants asserted verbatim in xtask tests, and the Tailwind strings name tokens rather than copying values; naming docs/work/components/ is naming a code-enforced constant that three other T1 docs also name; and DEC-13 carrying an open question has precedent in workflow-gates.html, which already holds 'remains open' and 'one hole stays open by design'). Two verifiers surfaced a real defect while refuting the claim they were given - component-design.html still read 'T3 until W4 validates... whether this becomes a T1 process doc is decided at that distillation' while its meta line already said T1 - fixed in 049c711 before this verdict. Separately, an author-side link audit found the W12 plan citing three docs this same WU archived, and a pre-existing DEC-13 link to ui/src-tauri/src/setup.ts, a file that has never existed; both fixed, and every href in every doc now resolves on disk. The post-review delta (c5f474b..049c711) is docs-only: that tier-line fix and the owner's DEC-13 decision, which closes the open question this WU had homed rather than deferring it to the build WU."
