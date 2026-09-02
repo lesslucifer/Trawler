@@ -1,0 +1,36 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W8
+branch: wu/design-flow/dev-integration
+tests:
+  unit:
+    count: 7
+    covers: "7 new test functions, table-driven rather than one-case-per-fn, over the three files this WU changed (six at the steps, one at the review round). xtask/src/doc.rs (+2): new_surface - a @tier file under ui/src/components/ fires, an untiered collection file does not, a non-test .tsx directly under ui/src/ fires, its .test.tsx does not, a .ts module does not, a Rust file does not; and roster_at over a revision rather than the working tree. xtask/src/gate.rs (+2): over real temp repos - the trigger sees an added component and not its test, its .ts sibling or an untouched component, and an edit and a deletion add no surface; then one red per way a citation breaks (silence on v3, silence on v2 routed to 9·design-schema, an empty list, an unresolvable path, a mismatched blob, a pin too short, a doc that is not a design, an unarchived run) and one green when it all holds; plus components·unbuilt's four answers - unbuilt reds, a blank-reason drop still reds, a drop with a reason greens and is billed as a waiver, a built component owes nothing. xtask/src/notes.rs (+2): absent and empty design.implements parse differently and stay that way, and a drop parses as path + reason with a blank reason being no drop. And the review round added may_be_surface: it must admit every candidate the content test could still accept - a @tier component, an untiered component, a .ts under the collection, a screen - and refuse everything a path alone settles (a module, a test beside either, a nested file, a Rust file, a doc), asserted in both directions because the fix changes WHEN bytes are read and must not change what answer comes back. Totals at this tip: 197 xtask lib tests, all green"
+  integration:
+    count: 3
+    covers: "xtask/tests/dod_gate.rs 66 -> 69, the bounded contract driven through the real binary against temp trees. verify-dod wu reds a tip whose diff adds a @tier component and whose note names no design, and the red names the surface; greens on the same tip with a resolvable citation; and reds a STALE citation - the blob is compared against the tip, not the working tree, so a design edited after the note was written cannot pass. verify-dod epic reds a range that added a component design with no roster entry, stays red with a reasonless drop, greens and bills the reason as a waiver, and needs no record at all once the component lands. Totals at this tip: 69 dod_gate tests, all green"
+  e2e:
+    count: 2
+    covers: "NOT WAIVED - this WU's whole exercise, and the epic level the plan refused to defer. xtask/tests/e2e_design_flow.rs 2 -> 4 (--features design-e2e, out of the default suite as the existing flow e2e is): a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it and a_design_nobody_built_refuses_the_epic_merge_until_the_drop_is_recorded. Six cases over real git through the real merge hook - 8 merges, 5 refused and 3 landed. Each red is bound to its own message (cites no design / cites ... at blob / is a design artifact the design section does not name / components·unbuilt) rather than to a check name, because 9·design is a prefix of 9·design-schema and a bare substring assertion would pass on the wrong red"
+gates:
+  - "cargo xtask gate0 (fmt --all --check, clippy --workspace --all-targets --all-features -D warnings, cargo test --workspace): green"
+  - "cargo test --workspace: 65 lib + 11 api + 3 ca + 6 e2e_capture + 4 e2e_h2 + 197 xtask lib + 8 doc_hooks + 5 gate0_cache + 40 mr + 2 ui + 9 verify_doc, 0 failed"
+  - "cargo test -p xtask --features hook-tests --test dod_gate: 69 passed"
+  - "cargo test -p xtask --features design-e2e --test e2e_design_flow: 4 passed"
+  - "cargo test -p xtask --features debug-tests --test debug_serve: 1 passed"
+  - "npx tsc -b: exit 0"
+  - "npm run lint: exit 0"
+  - "npx vitest run: 492 passed across 40 files"
+  - "cargo xtask ui specimens --check: all migrated design files render"
+  - "cargo xtask verify-doc over all 84 tracked docs: none red, with docs/work/components/ absent rather than empty. Re-measured at this tip - an earlier revision of this note said 82, the count before step 5 added its own two docs, which the review caught"
+evidence:
+  - "the code review found the gate fetching a blob for EVERY added path before any path test, though only the @tier check needs the bytes: measured by its verifier at ~12-14% of a real epic walk's wall time (466 git spawns, 362 of them git show) and ~30% of a single WU gate. may_be_surface now decides from the path and the fetch short-circuits - 8 added paths become 0 fetches on this WU's own seam, and roster_at drops 52 fetches to 26 for the identical reason one caller over"
+  - "11 review candidates, one verifier each, 6 refuted - per-surface citation coverage (DEC-25's shape: one family contract spanned seven built components), the registry-oracle parity claim (scoped to membership; the full-contract check exists elsewhere and is stricter), the blob-pin duplication (PIN_MIN and pin_matches are already shared), a second design_run_status parse (only on an already-failing citation, tens of microseconds) and two git spawns per citation (~7ms against a 4.8s walk at 0-1 citations per WU)"
+  - "the trigger was measured over the real repository rather than asserted: it fires on 1 seam inside the epic (W5's, 25 surfaces) and produces 0 walk failures, because every seam here carries a cr/v2 note and the walk drops 9·design-schema at seams exactly as DEC-24 already had it. No new discriminator, no cutoff, no walk waiver"
+  - "the plan row this refutes was D6·A's premise - 0 of 11 landed UI seams - which measured the epic→main merges on main, seams this epic's walk never re-verifies. Recorded as a deviation rather than quietly re-measured"
+  - "components·unbuilt refuses its own author's epic on the first run: 4 of the 20 component designs E-DFLOW wrote have no roster entry, and writing the four reasons found that only one was ever truly unbuilt"
+  - "the epic half reads the range's commits (added_under), not the endpoint diff - check 6 forces the same files out of the tree by the epic tip, so an endpoint diff nets an add and a later git rm to nothing"
+  - "gate 0 was RED when step 4 began, from step 3: clippy --workspace --all-targets - the exact command gate0.rs runs - refused a 117-line lib test target that step 3's own cargo test never saw. Fixed by shrinking to 91 lines, not by the repo's first #[allow]"
+  - "two counts in immutable step records are corrected in the result report: step 4 reported 40 dod_gate tests where the real count at that same commit is 69 (40 is tests/mr.rs), and step 3's seam measurement ran over a local epic/design-flow 21 commits behind its remote - W7's seams were outside the range measured, and the conclusion survives only because W7's single added ui/src path is a test file"
+  - "no product code: W8 writes none, and the epic's non-goal holds. The handoff is driven by a fake build - a stub component and a one-line screen - which is the standing risk the plan named at Q2 and W9 pays"

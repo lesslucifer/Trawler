@@ -1,0 +1,21 @@
+level: commit
+gates:
+  - "cargo fmt --check: pass"
+  - "cargo clippy --workspace --all-targets -D warnings: clean"
+  - "cargo test --workspace: 300 pass, 0 fail (was 271)"
+  - "cargo test -p xtask --lib doc::: 87 pass (was 60)"
+  - "npx tsc -b: clean"
+  - "npm run lint (design/vocabulary over ui/src): 0 errors"
+  - "npx vitest run: 474/474 across 39 files (unchanged — this step adds no TS)"
+  - "cargo xtask ui specimens --check: all six migrated design files render"
+  - "cargo xtask verify-doc: green on the rulebook and the step 4 doc"
+evidence:
+  - "one green case and one red per way each of the twelve rules can be broken: off-list class, arbitrary size, inline chromatic colour, off-set radius, raw magnitude in the mockup's own CSS, uppercase label tracking by hand on either surface, chromatic element with no text, unmarked payload, marked payload not mono, payload that truncates, captured collection with no ordering, layout with no overflow line, zone the overflow line skips, blank states cell, propose row answering with an em dash, use case with no keyboard path"
+  - "false-positive guards, each a passing case: variant chains (hover:focus-visible:text-ink), the ! prefix, a legal slash step (bg-canvas/wash) vs an illegal one (bg-canvas/loose), relationship keywords (auto, 100%, min-content), a mono uppercase verb that is a value and not a label, whitespace-nowrap on chrome rather than payload, and a range answering for the zones it spans (B-D covers C)"
+  - "design-allow: valid pragma passes and increments the printed count; no reason reds; class absent from the line below reds; a pragma over a size is rejected AND suppresses nothing, asserted for both an arbitrary size (max-w-[460px]) and a plain token-shaped size (p-5)"
+  - "the emitter fails loudly: vocabulary(tempdir) with no ui/ returns Err naming design-vocabulary.mjs, and a design run verified without it reds vocabulary-unreadable rather than passing five rules unread (xtask/tests/verify_doc.rs)"
+  - "the rulebook and the predicate list are asserted to be ONE list against the live docs/design-rules/design-rules-index.html: no hard rule without a predicate, no predicate for a rule the book no longer states, and the count frozen at 13"
+  - "the gap line's surface label and suppression count asserted at both levels — unit (a synthetic 14th hard rule prints '2/3 machine-checked (design) — 1 unchecked: not-a-predicate') and integration (the real binary printing '2/2 machine-checked (design)' plus 'design-allow: 0 live suppression')"
+  - "emitter output measured against the real config: 4817 legal classes, 492 bases carrying a /step, chromatic set derived as exactly the eight the palette declares (amend create ok replace syn-key syn-num syn-str warn) with no list written by hand"
+  - "regression, run inside this step rather than deferred: all twelve predicates over docs/work/2026-07-25-dflow-w4-run-2.html and 2026-07-26-dflow-w4-run-3.html — 49 reds, each judged in the step doc's evidence table; 29 real, 2 the data-wire contract widening, 18 pre-existing W4 checks"
+  - "e2e: waived — 'flow e2e is W7 per the epic plan', same wording as W4 and W5"

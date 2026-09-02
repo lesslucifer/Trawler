@@ -1,0 +1,11 @@
+level: commit
+gates:
+  - "cargo fmt --check: pass"
+  - "cargo clippy --workspace --all-targets -D warnings: clean"
+  - "cargo xtask ui specimens: bundle rebuilt from the closed config"
+  - "cargo xtask ui specimens --check: all six migrated design files render"
+evidence:
+  - "node -e over ui/tailwind.config.js: destructuring cfg.theme.extend throws 'Cannot read properties of undefined (reading canvas)' — the defect reproduced before the fix"
+  - "doc-assets/components/specimens.bundle.js was dated 29 July (pre-step-1) and still carried the deleted method-get token plus the pre-closure palette; rebuilt after the fix"
+  - "forced-rule counts in check-render fall 7 -> 5 for button.html and copy-text.html — the deleted tokens no longer resolve, which is the closure working rather than a regression"
+  - "no test added: the failure mode is 'a generated file was never regenerated', which a unit test cannot observe. The alarm that would have caught it is a staleness check on the bundle — recorded as a follow-up, not faked here"

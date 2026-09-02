@@ -1,0 +1,13 @@
+level: commit
+gates:
+  - "npx vitest run eslint-rules/vocabulary.test.js: 23/23 (was 19)"
+  - "npx eslint src (excluding the one file carrying an out-of-band working-tree edit): 0 errors"
+  - "npx tsc -b: clean"
+  - "node eslint-rules/reconcile.mjs: unchanged — 208 authored, AGREE on 205, 3 arbitrary diverge by design"
+  - "cargo fmt --check / clippy -D warnings: clean (no Rust changed)"
+evidence:
+  - "regression test written red first for each defect, per docs/testing-strategy.html — the flat-map case reported 0 errors where 1 was expected; the modifier cases reported 0 where 1 and 2 were expected, and rejected the legal text-body/loose"
+  - "collectClasses: two sibling functions each declaring `const cls` now both contribute; false-negative only, so no pre-existing site changes verdict and the reconciler's 205 is unmoved"
+  - "classify: modifier steps now come from getClassList({includeMetadata:true}) per base — text-ink accepts disabled/wash/hairline/scrim, text-body accepts none/normal/loose, rounded-full and z-popup accept none"
+  - "probed against the real build: rounded-full/wash, z-popup/wash, border/hairline, text-body/wash all emit zero CSS and are now caught; bg-canvas-soft/wash and border-ink/hairline emit and stay legal"
+  - "all four live slash sites in ui/src/ are colour-bearing, so the broken and fixed rules agree on every class the app authors — the defect was reachable only by reading the rule"

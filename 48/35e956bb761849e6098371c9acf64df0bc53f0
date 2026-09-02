@@ -1,0 +1,13 @@
+level: commit
+waived: "config-only change; the 42 dropped classes are unobservable to any existing test by construction — Tailwind drops silently and the suite asserts class names on rendered DOM. The check that proves this commit is the before/after emitted-CSS diff recorded in docs/work/2026-08-04-dflow-w6-step1-closed-config.html; it becomes executable as step 2a lint rule tests."
+gates:
+  - "cargo fmt --check: pass"
+  - "cargo clippy -D warnings (pedantic): pass"
+  - "cargo test --workspace: 271 pass, 0 fail"
+  - "npx tsc -b: clean"
+  - "npx vitest run: 447/447 across 38 files"
+evidence:
+  - "emitted selectors 225 -> 183; 42 dropped, 0 changed declaration body"
+  - "probe: text-pink-500 p-5 w-96 text-method-get bg-syn-key all emit nothing"
+  - "probe: all 17 relationship-keyword and zero classes still emit"
+  - "probe: all 28 new token classes resolve, including bg-canvas-soft/wash"
