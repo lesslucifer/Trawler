@@ -339,13 +339,16 @@ fn capabilities() -> String {
 fn run_doc(status: &str, body: &str) -> String {
     let attr = if status.is_empty() { String::new() } else { format!(" data-status=\"{status}\"") };
     format!(
-        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">\
+        "<!DOCTYPE html><html lang=\"en\" data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\">\
+         <head><meta charset=\"utf-8\">\
          <title>Trawler — design run #4</title>\
          <script src=\"https://cdn.tailwindcss.com\"></script>\
          <script src=\"../../doc-assets/components/specimens.bundle.js\"></script>\
          <script src=\"https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js\"></script>\
          <style>.tb{{color:var(--ink);}}</style></head>\
-         <body><main data-artifact=\"design-run\"{attr}>{body}</main></body></html>\n"
+         <body><main data-artifact=\"design-run\"{attr}>{body}</main>\
+         <script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+         </body></html>\n"
     )
 }
 
