@@ -1,6 +1,10 @@
 schema: doc/v1
 wu: E-DFLOW.W10
 changes:
+  - path: docs/work/2026-07-16-design-flow-plan.html
+    tier: T3
+    action: updated
+    distills: "the epic's T3 plan gains its W10 and W11 entries — the requirement sentence, what it maps to and its expected outcome, per work-planning.html"
   - path: docs/decisions/dec-25-design-build-handoff.html
     tier: T2
     action: added
