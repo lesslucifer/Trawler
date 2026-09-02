@@ -1,0 +1,15 @@
+schema: test/v2
+level: epic
+epic: E-DFLOW
+branch: epic/design-flow
+tests:
+  e2e:
+    count: 4
+    what: "xtask/tests/e2e_design_flow.rs, feature-gated design-e2e - the epic's stated acceptance test, green at the tip. A fake designing agent emits one artifact at a time and a fake human answers each, and all three harness tiers judge the result over a real git tree: the whole flow runs green and the tiers land it; a run is red for exactly the stages not yet written, so the flow never stalls or prompts for work it has not reached; a rule-violating mockup reds at the stage that wrote it and the chain keeps it out of the tree; a design nobody built refuses the epic merge until the drop is recorded; and a build that adds a surface cites the design it read or the merge refuses it. It tests the plumbing, never design quality."
+  integration:
+    count: 96
+    what: "The harness against real temp git repos: xtask/tests/dod_gate.rs (the gate's rules including design-scope and the pin it writes), verify_doc.rs (Tier-1 over governed docs), doc_hooks.rs (the PostToolUse/Stop hooks), mr.rs (the whole mr surface - 44 tests), gate0_cache.rs, ui.rs, debug_serve.rs. Each asserts a bounded contract of the harness this epic built."
+  unit:
+    count: 270
+    what: "xtask --lib (213) plus the core crate (65) and the smaller binaries. The design half is doc.rs and gate.rs: the Tier-1 predicates, the receipt parser and its rulebook pin, the registry emitter's contract, the retirement and unbuilt-design rules, and the calibration tests that measure the density thresholds against two real accepted runs frozen under xtask/fixtures/. cargo test --workspace: 370 passed, 0 failed."
+note: "The epic's acceptance is the flow e2e plus eight real runs, all closed green and archived. Nothing is waived at any level. Twelve WUs, each gated at its own merge; the epic walk re-checks every seam and its nine reds are recorded as walk_waivers on the cr note, each with the commit that explains it - none is a design artifact left unjudged. cargo clippy --workspace --all-targets -D warnings: clean. verify-doc: 33 governed docs, none red, and every href in every doc resolves on disk."
