@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W8
+base: dcd0b7e35b8df6e1c35d29cee4950f51a9a8e9b9
+tip: c513030dad96744267128d94a8aa8cf159b7601d
+diff_sha256: fc11e2396df038be3dc609d0585cf1ffe86815292785a32fac5ba88cfc2053d1
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-08-14
