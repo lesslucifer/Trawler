@@ -1,0 +1,404 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W12
+changes:
+  - path: docs/design-flow.html
+    tier: T1
+    action: added
+    distills: "The staged design flow - its six stages, the per-stage artifact shapes, the closing lists, the close, the Tier-3 review and the build hand-over. Moved from docs/work/design-flow-base.html, not copied: the epic plan promised 'a new T1 process doc - the design flow, sibling to workflow.html' and it was never delivered, which is why the gate red on it. Fixed in the move: the doc-assets prefix for the new depth, and data-artifact='base-flow', a type verify-doc does not define."
+  - path: docs/component-design.html
+    tier: T1
+    action: added
+    distills: "The component-design contract - what a design file holds, its sections, the TSDoc it retires into. Moved from docs/work/component-design-base.html; its own meta line already read 'promotion decided at W4 distillation'. Its canonical-exemplar link pointed at components/header-table.html, a file W8 deleted, and now states the DEC-16 retirement contract it was illustrating."
+  - path: docs/decisions/dec-13-onboarding-capabilities.html
+    tier: T2
+    action: updated
+    distills: "The proxy-revert question, homed. It existed only in W11's result doc, which this WU archives - archiving it would have destroyed the sole copy of a real open question. Records what ships today (Onboarding.tsx renders 'Stop routing' inside the set-proxy step, gated on auto && state == done), what run #8 proposed, why that reasoning is false against the code, and the two answers open to the owner. Verified against the source, not restated from W11."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-13 carries a '1 open' badge and the question in its row, so it is findable index-first without opening the record."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: updated
+    distills: "'One component's contract' now names its TSDoc in ui/src/components/, not a registry design file in docs/work/. That is DEC-16's end state and KeyValueRow already demonstrates it - the old row pointed into T3 scratch this WU archives. Also repoints the flow-spec link to its new T1 path."
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: updated
+    distills: "E-REPLAY carries design run #7's facts inline instead of linking to the run doc: the Field proposal and its warrant (KeyValueRow, Select and SourceSurface each refuse it in their own @avoid), and the three things the run leaves blocked on that epic - the replay API contract, whether an edited draft survives navigation, and Field's own design file. A run doc is T3 and cannot be a durable dependency."
+  - path: docs/work-planning.html
+    tier: T1
+    action: updated
+    distills: "The design-run row's link follows the flow spec to its T1 path, closing a T1 to T3 edge."
+  - path: docs/decisions/dec-24-design-review-dimension.html
+    tier: T2
+    action: updated
+    distills: "Both links follow the promoted specs to their T1 paths."
+  - path: docs/work/2026-09-02-dflow-w12-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan - the failure census measured from the gate rather than guessed, the distillation targets, and the open question on where the flow spec belongs."
+  - path: docs/work/2026-09-02-dflow-w12-result.html
+    tier: T3
+    action: added
+    distills: "The result report - outcome, the promotion the epic plan promised, what the sweep broke and what that proved, deviations, the nine seam verdicts with their evidence, distillation and follow-ups."
+  - path: docs/work/2026-07-16-design-flow-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-16-dflow-elements-reps.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-16-dflow-frame-reps.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-16-dflow-mockup-reps.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-16-dflow-run-1.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-16-dflow-w1-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-20-dflow-w1-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-20-dflow-w2-discussion.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-22-dflow-w2-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-22-dflow-w2-registry-seed.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-22-dflow-w2-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-25-dflow-w3-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-25-dflow-w3-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-25-dflow-w4-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-25-dflow-w4-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-25-dflow-w4-run-2.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-26-dflow-w4-output-quality-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-26-dflow-w4-run-3.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-27-dflow-w5-discussion.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-27-dflow-w5-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-27-dflow-w5-specimens-in-react.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-27-dflow-w5-step3-discussion.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-27-dflow-w5-step3-evidence.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-07-29-dflow-w5-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-03-dflow-w6-discussion.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-03-dflow-w6-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-03-dflow-w6-step0-sweep.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-04-dflow-w6-step1-closed-config.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-09-dflow-w6-step2-lint-and-reexpression.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-09-dflow-w6-step2-quiz.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-10-dflow-w6-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-10-dflow-w6-step2-review-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-10-dflow-w6-step3-rulebook.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-10-dflow-w6-step4-predicates.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-10-dflow-w6-step5-regression.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-11-dflow-w7-discussion.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-11-dflow-w7-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-11-dflow-w7-step0-parser.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-11-dflow-w7-step1-registry.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-12-dflow-w7-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-12-dflow-w7-step2-registry-gate.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-12-dflow-w7-step3-close.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-12-dflow-w7-step4-tier3.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-12-dflow-w7-step5-e2e.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-12-dflow-w8-discussion.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-13-dflow-w8-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-13-dflow-w8-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-13-dflow-w8-step1-unbuilt.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-13-dflow-w8-step2-handoff.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-13-dflow-w8-step3-pointer.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-13-dflow-w8-step4-build-leg.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-14-dflow-w9-discussion.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-14-dflow-w9-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-14-dflow-w9-run-4.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-14-dflow-w9-step0-numbers.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-14-dflow-w9-step23-overlap-and-tier3.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-14-dflow-w9-step4-handoff.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-14-dflow-w9-step45-mounting.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-22-dflow-run-5-dsh-project-explorer.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-30-dflow-run-6-setup-redesign.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-31-dflow-w10-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-31-dflow-w11-plan.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-08-31-dflow-w9-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-09-01-dflow-w10-proof-run.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-09-01-dflow-w10-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-09-02-dflow-run-7-replay-composer.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-09-02-dflow-run-8-setup-fullscreen.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-09-02-dflow-w11-coverage-map.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/2026-09-02-dflow-w11-result.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/design-flow-discussion.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html", "docs/component-design.html", "docs/design-rules/design-rules-index.html", "docs/decisions/dec-13-onboarding-capabilities.html", "docs/backlog/roadmap.html"]
+    distills: "E-DFLOW scratch. Every durable fact it carried is in the T1/T2 docs this WU wrote or updated, or was already there. git rm'd to docs/.archive/ (gitignored); content reachable in git history."
+  - path: docs/work/component-design-base.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/component-design.html"]
+    distills: "Promoted, not deleted: this file IS docs/component-design.html now, moved by git mv so the history follows. It was live substrate every design run reads, which is why it could not simply be archived."
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: archived
+    distilled_to: ["docs/design-flow.html"]
+    distills: "Promoted, not deleted: this file IS docs/design-flow.html now, moved by git mv so the history follows. It was live substrate every design run reads, which is why it could not simply be archived."
