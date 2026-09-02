@@ -97,7 +97,3 @@ changes:
     tier: T2
     action: updated
     distills: "E-REPLAY carries design run #7's facts inline rather than linking a run doc that archives: the Field proposal and its warrant, and the three things the run leaves blocked on that epic."
-  - path: docs/work/2026-09-03-dflow-epic-result.html
-    tier: T3
-    action: archived
-    distills: "The epic result report - what each of the seven promises turned into, the 12-WU rollup, the five deviations including the missed token target, and the evidence. Written, then archived to docs/.archive/work/ in the close commit, which is where mr confirm reads it - the shape E-MRSIG, E-UIFOUND and E-UIINSPECT all closed with."
