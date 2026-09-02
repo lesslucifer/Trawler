@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a98494b9f34851f0dfabea4">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-DFLOW epic result</title>
+  <style>
+    table{font-size:13px;width:100%;}
+    td code{white-space:nowrap;}
+    td.num{text-align:right;font-variant-numeric:tabular-nums}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-DFLOW — epic result</h1>
+      <p>A design system and harness by which AI agents design UI consistently and verifiably:
+      a component registry in code, an enumerable rulebook, a six-stage flow, and a three-tier
+      gate that refuses a design which skipped a rule. Eight runs proved it; the last one
+      measured what it costs.</p>
+      <div class="meta">Epic result · 2026-09-03 · Trawler · T3 ·
+        <code>epic/design-flow</code> → <code>main</code> · 12 Working Units</div>
+    </div>
+  </header>
+  <main data-artifact="epic-result">
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome-table">
+      <thead><tr><th>The epic promised</th><th>What shipped</th></tr></thead>
+      <tbody>
+        <tr><td>A T1 process doc — the staged flow and its per-stage artifacts</td>
+          <td><code>docs/design-flow.html</code>, with <code>docs/component-design.html</code>
+          beside it for components. Both were written in W1–W2 and lived in <code>docs/work/</code>
+          until W12 promoted them — the promise was kept last, not first</td></tr>
+        <tr><td>A component registry — a collection, structured usage doc-comments, an index an
+          agent loads, and a check that fails when the index omits a file</td>
+          <td>24 components under <code>ui/src/components/</code>, each carrying its contract as
+          TSDoc (<code>@tier</code> · <code>@use</code> · <code>@avoid</code> · <code>@states</code>
+          · <code>@madeof</code>); <code>scripts/design-registry.mjs</code> emits the vocabulary
+          from the source rather than storing a second copy</td></tr>
+        <tr><td>A rulebook of enumerable, stable-id'd rules, each tagged hard or soft</td>
+          <td><code>docs/design-rules/design-rules-index.html</code> — a living T2 KB, not the T1
+          doc first planned (DEC-14): rules grow per task, and T1 is shape-only.
+          <strong>13 hard rules carry a Tier-1 predicate</strong> in the checker</td></tr>
+        <tr><td>A harness enforcing three tiers, emitting a receipt, red/green like the DoD gate</td>
+          <td>Tier-1 <code>cargo xtask verify-doc</code> (mechanical completeness + the hard
+          predicates + receipt coverage) · Tier-2 the run's own receipt · Tier-3 the design
+          dimension of the code review (DEC-24), pinned by <code>design-scope</code> and recorded
+          in a <code>cr/v3</code> note</td></tr>
+        <tr><td>The flow run once to a passing, receipted design</td>
+          <td><strong>Eight runs</strong>, not one — two hand-runs, five on shipped screens, and
+          one greenfield on a function that does not exist yet (the E-REPLAY composer)</td></tr>
+        <tr><td>A flow e2e (fake user + fake agent) proving the plumbing end to end</td>
+          <td><code>xtask/tests/e2e_design_flow.rs</code>, feature-gated <code>design-e2e</code> —
+          <strong>4 tests, green at the tip</strong></td></tr>
+        <tr><td>The flow connected to the dev workflow</td>
+          <td>DEC-25's build handoff: a WU that adds a surface cites the design it built from by
+          path + blob, every other rendered file is cited or declared <code>undesigned</code>, and
+          no design outlives its epic unbuilt without a recorded drop</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="wu-rollup">WU rollup</h2>
+    <table data-item="wu-rollup" data-c="wu-rollup-table">
+      <thead><tr><th>WU</th><th>What it settled</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">W1</span></td><td>The base flow, run by hand on the flow detail panel — six stages and the artifact shapes, learned by doing rather than designed up front</td></tr>
+        <tr><td><span class="badge id">W2</span></td><td>The registry seeded: five reusability tiers, per-component design files, an index</td></tr>
+        <tr><td><span class="badge id">W3</span></td><td>The rulebook seeded, homed in a new T2 KB (DEC-14) that the doc system and gate recognise</td></tr>
+        <tr><td><span class="badge id">W4</span></td><td>The integrated run — the flow consuming registry + rulebook, and the findings list that drove W5/W6</td></tr>
+        <tr><td><span class="badge id">W5</span></td><td>The registry revised; the specimens became the components, and <code>specimen.css</code> dissolved into one Tailwind vocabulary</td></tr>
+        <tr><td><span class="badge id">W6</span></td><td>The rulebook revised; six form rules became machine predicates</td></tr>
+        <tr><td><span class="badge id">W7</span></td><td>The harness: the three tiers wired, the flow e2e built, Tier-3 made a dimension of the code review</td></tr>
+        <tr><td><span class="badge id">W8</span></td><td>The design→build handoff, both directions — no UI change lands undesigned (DEC-25)</td></tr>
+        <tr><td><span class="badge id">W9</span></td><td>The fresh-screen run, greenfield, with Tier-3 red before green and the mockup mounting real components (DEC-26)</td></tr>
+        <tr><td><span class="badge id">W10</span></td><td>The flow's cost optimised — spec and rulebook compacted 42%, and a run on a function that does not exist</td></tr>
+        <tr><td><span class="badge id">W11</span></td><td>The fullscreen redesign re-run on the optimised flow; the cost model corrected; the signature moved last (DEC-27)</td></tr>
+        <tr><td><span class="badge id">W12</span></td><td>The cleanup: 70 work docs distilled and archived, the two specs promoted to T1, the proxy-revert question answered</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations from the epic plan</h2>
+    <table data-item="deviations" data-c="deviations-table">
+      <thead><tr><th>Plan said</th><th>What happened</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>9 Working Units</td><td>12</td>
+          <td>W10–W12 were added as the epic ran: cost optimisation, its acceptance re-run, and the cleanup. None was foreseeable at planning</td></tr>
+        <tr><td>A T1 rulebook doc</td><td>A T2 living KB</td>
+          <td>DEC-14. Rules grow per task; T1 is shape-only. Decided at W3 with the DEC-5 precedent</td></tr>
+        <tr><td>The flow run once, on the flow detail panel</td><td>Eight runs</td>
+          <td>Each answered a different question — a substrate the first run lacked, a second screen for reuse, a greenfield screen, a function with no code at all</td></tr>
+        <tr><td>Token cost ~3.4M for a full run</td><td>17.6M measured (W11)</td>
+          <td>W10's cost model measured file size; prompt cost is context re-sent per call. 169 calls × ~100K context is the bill, and compacting documents cannot move it. The finding is recorded, the target is not met</td></tr>
+        <tr><td>The T1 process doc lands with the flow</td><td>Landed at W12, the final WU</td>
+          <td>The spec sat in <code>docs/work/</code> for the whole epic while three durable docs linked into it. The epic gate found it, which is the gate working</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence-table">
+      <thead><tr><th>What</th><th>Where</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Workspace tests</td><td><code>cargo test --workspace</code></td><td>370 passed, 0 failed</td></tr>
+        <tr><td>Flow e2e <span class="badge id">epic acceptance</span></td><td><code>cargo test -p xtask --features design-e2e</code></td><td>4 passed</td></tr>
+        <tr><td>Lints</td><td><code>cargo clippy --workspace --all-targets -- -D warnings</code></td><td>clean</td></tr>
+        <tr><td>Governed docs</td><td><code>cargo xtask verify-doc</code></td><td>33 docs, none red</td></tr>
+        <tr><td>Link integrity</td><td>every <code>href</code> in every doc resolved on disk</td><td>0 broken</td></tr>
+        <tr><td>Epic tree</td><td><code>docs/work/</code> at the tip</td><td>empty in git; 72 docs in <code>docs/.archive/</code></td></tr>
+        <tr><td>The eight runs</td><td>archived, each closed green with a receipted rulebook pin</td><td>reachable in git history</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation" data-c="distillation-table">
+      <thead><tr><th>Tier</th><th>What the epic left there</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">T1</span></td>
+          <td><code>design-flow.html</code> · <code>component-design.html</code> — the flow and its
+          artifacts. <code>workflow.html</code> and <code>work-planning.html</code> touched where the
+          design gate meets the dev gate</td></tr>
+        <tr><td><span class="badge id">T2</span></td>
+          <td><code>design-rules/</code> — the living rulebook KB, a fourth T2 knowledge base.
+          Thirteen decision records, DEC-14 through DEC-26, plus DEC-27 on the signing order.
+          DEC-13 amended with the proxy-revert call</td></tr>
+        <tr><td><span class="badge id">T4</span></td>
+          <td>The registry itself: 24 components whose contracts are their TSDoc, and the checker
+          that enforces the flow — <code>xtask/src/doc.rs</code>, <code>gate.rs</code>,
+          <code>scripts/design-*.mjs</code>. Registry truth stayed in code, as planned</td></tr>
+        <tr><td><span class="badge id">T3</span></td>
+          <td>All 72 work docs archived out of git. Nothing durable was left behind: the three
+          T2/T1 edges that pointed into scratch were cut before the sweep</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups-table">
+      <thead><tr><th>Who</th><th>What</th></tr></thead>
+      <tbody>
+        <tr><td>the build WU <span class="badge id">next</span></td>
+          <td>Build run #8 through the DEC-25 handoff, execute the W11 coverage map (30 assertions
+          inherited, 1 retired, 1 now answered), keep the unset affordance and re-point its
+          assertion, and rewrite <code>onboarding.spec.ts</code> to the new selectors keeping its
+          journey spine. This is the UI epic the design epic deliberately did not do</td></tr>
+        <tr><td>a flow-cost WU <span class="badge id">optional</span></td>
+          <td>If run cost matters, target <em>call count</em>, not bytes. W11 showed the bill is
+          context × calls; substrate load alone was 29% of a run</td></tr>
+        <tr><td>tooling</td>
+          <td><code>mr commit</code> prints <code>error:</code> on a commit that actually succeeded,
+          and no gate checks link integrity in docs — W12 found three dead links by hand that
+          nothing would have caught</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
