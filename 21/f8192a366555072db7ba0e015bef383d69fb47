@@ -1,0 +1,67 @@
+schema: cr/v2
+scope: "WU E-DFLOW.W5 (wu/design-flow/revise-registry) -> epic/design-flow"
+epic: E-DFLOW
+wu: E-DFLOW.W5
+branch: wu/design-flow/revise-registry
+base: 989f4bfacdee1d433b5b385d5227fd5e36a3281d
+head: 21f8192a366555072db7ba0e015bef383d69fb47
+diff_sha256: 525489ade88a26bc39740387e3df235bfd19c8701138d359cc7abdf4099e50cd
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 13, verified: 9, waived: 0 }
+rounds:
+  - round: 3
+    scope: "a28dd06 - five isolated finders over the full WU diff, one verifier per candidate"
+    found: 9
+    verified: 5
+    verdict: FAIL
+    fixed_in: e48549d
+    findings:
+      - "FormRenderer truncate-then-decode: raw text sliced at TEXT_MAX before URLSearchParams, so a cut inside a %XX yielded a stray literal or U+FFFD - and CopyText handed that to the clipboard. Reproduced in node. Breaks the family's own rule: the cut is a render cap, never a payload cap (important)"
+      - "Select selected a row the user never looked at: `active` survived an options change under an open popup, so a same-length re-fetch or reorder left the index pointing at a different option. Reproduced with RTL. Inside the component's own contract, which puts remote options in scope (important)"
+      - "Gallery shipped into the production bundle: a static import pulled the dev-only screen and all 24 components into the release build, while the wdio plugin seven lines above already used a guarded dynamic import for exactly that reason. Measured with a fresh vite build (important)"
+      - "TextRenderer re-encodes the full untruncated body per render to size the CutMarker caption (nit - unreachable today, and the fix needs a prop the contract does not carry)"
+      - "check-render.mjs aborts its sweep on a Chrome-level rejection, so later files go unchecked (nit - the process still exits non-zero, so the gate never fails open, and xtask reads only the exit status)"
+  - round: 4
+    scope: "e48549d - adversarial review of the fix pass itself"
+    found: 2
+    verified: 2
+    verdict: FAIL
+    fixed_in: f191d28
+    findings:
+      - "formPairCut defeated the cap it exists to enforce: the first-pair fallback returned indexOf('=')+1 without consulting the cap, so a key longer than the cap returned a cut PAST it and `shown` came back longer than asked for (blocker)"
+      - "Select's reset broke the common case to fix the rare one: keying the effect on the options ARRAY meant a parent rebuilding its list every render - the ordinary React pattern - reset the highlight on every unrelated re-render, making arrow-key navigation unusable. Measured (blocker)"
+  - round: 5
+    scope: "f191d28 - independent re-review, found one the author had missed"
+    found: 1
+    verified: 1
+    verdict: FAIL
+    fixed_in: 2ff565e
+    findings:
+      - "formPairCut could return text.length while the caller's cut flag was true, so CutMarker read 'showing 11 B of 11 B' - a truncation that never happened, past humanBytePair's collision guard because the two numbers were genuinely equal rather than rounded together (blocker). The key < at guard already closed it; the missing piece was the test, now pinned both ways"
+  - round: 6
+    scope: "2ff565e - review of the fix for round 5"
+    found: 1
+    verified: 1
+    verdict: FAIL
+    fixed_in: bd3596e
+    findings:
+      - "The id-reconcile was fighting type-to-filter: keyed on the VISIBLE list, it also ran when the filter narrowed that list, where resetting to the first match is intended - so it put the highlight back on the previously-active option whenever that option survived the filter. Measured: highlight Chrome, type 'e', Enter selected chrome instead of the first match android (blocker)"
+  - round: 7
+    scope: "bd3596e - final pass over the whole fix chain"
+    found: 0
+    verified: 0
+    verdict: PASS
+    evidence: "every write to `active` traced pairwise (openWith, ArrowUp/Down, Enter, the input's onChange, the type-to-filter branch, onMouseEnter, the reconcile); the reconcile's changed-branch reads this render's fresh `visible`, so no cross-generation mismatch; Backspace is handled by the native input's onChange, which always pairs setFilter with setActive(0); close() not resetting active is inconsequential because openWith() recomputes it from `value`. formPairCut checked at exact TEXT_MAX, TEXT_MAX+1, leading-&, '&&&&'-only, no-= anywhere, and key-longer-than-cap: never past the cap, so the marker never under-states, and URLSearchParams tolerates every fragment it can produce. Non-vacuousness verified by reverting the reconcile in a /tmp copy - the reorder test reds. Production bundle re-measured independently: no Gallery or SegmentedControl identifier"
+refuted:
+  - "FormRenderer byteLength per render - gated behind `cut &&`, so it runs only on already-truncated bodies; the proposed bytes.length fix is out of scope at this layer"
+  - "lone unpaired surrogate at TextRenderer's slice boundary - real mechanism, cosmetic consequence: no throw, no DOM corruption, the cut is announced, and the clipboard path uses bodyText(bytes), the full payload, not the sliced value"
+  - "duplicated clipboard mock across the new suites - the idiom predates this diff (App/BodyViewer/FlowDetail at BASE do the same), so the rubric's pre-existing exclusion forbids reporting it"
+  - "className declared but never passed - an explicitly documented API prop in six confirmed design files, correctly wired in all seven components; zero callers is the expected state of a library built before its screens (Q2)"
+accepted_nits:
+  - "TextRenderer's per-render byteLength - recorded rather than fixed: no shipping path feeds it a multi-MB string (BodyViewer does not import the collection), the total is load-bearing for DEC-12's never-round-to-equal rule, and the fix needs a byte length the {text: string} contract does not carry"
+  - "check-render.mjs's missing catch around execFile - recorded rather than fixed: the gate still exits non-zero so it never fails open, maxBuffer is 64MB against small specimen docs, and xtask/src/ui.rs reads only the exit status"
+note: "Four fix rounds produced four defects, three of them introduced by the fix for the previous one, every one in the interaction between two individually-correct behaviours. Select now carries four tests, one per behaviour, because each was broken at some point by a fix for another: a reorder reconciles by id, an unchanged array rebuilt each render holds the highlight, narrowing by filter resets to the first match, and a vanished option falls back to the first row."
+gate0: "green - fmt + clippy -D warnings + workspace tests"
+rebound: "The PASS was reached on cb5eed5. Re-bound twice since, both times to a docs-only commit with zero files outside docs/ (verified by git diff --name-only): cb5eed5 corrected the result report's stale counts, 21f8192 added five missing follow-up rows. No reviewed behaviour changed, so the verdict carries; the diff_sha256 above is recomputed against the current tip so the binding is exact rather than approximately right."
+verdict: PASS
+date: 2026-08-02

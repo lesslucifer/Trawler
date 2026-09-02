@@ -1,0 +1,34 @@
+schema: cr/v2
+scope: "E-DFLOW.W6 step 2 (lint rule + re-expression) + its review fix, on wu/design-flow/revise-rulebook"
+epic: E-DFLOW
+wu: E-DFLOW.W6
+branch: wu/design-flow/revise-rulebook
+base: fdaa967184fbdd4a5fcac5eeec9dfda048b1d28e
+head: 5338775afab73f0ccb3967eee75f78ddade30366
+diff_sha256: 18c992134411820a34dffed4d78121b756a1d2c1c70fd5f1d1f38011e01fb0f3
+dimensions: [correctness, reuse, simplification, efficiency, altitude, no-removal]
+rounds:
+  - round: 1
+    tip: e242af2786d538ca5f5b77b1f06f04771c7523c2
+    dimensions: [correctness, reuse, simplification, efficiency, altitude, no-removal]
+    findings: { found: 17, verified: 2, refuted: 15 }
+    outcome: "FAIL — both verified findings were in the rule's own judgement, and both were silences the green gate could not see. Fixed in 5338775, each with its failing RuleTester case written first."
+    verified:
+      - "collectClasses keyed its declaration map by bare identifier name and kept only the last binding, so two same-named locals in one file left one unread"
+      - "the slash-modifier check tested the step against one global opacity set instead of the base's own modifier scale, so rounded-full/wash, z-popup/wash, border/hairline and text-body/wash all classified legal while Tailwind emits no CSS at all for them — and the legal text-body/loose was reported"
+  - round: 2
+    tip: 5338775afab73f0ccb3967eee75f78ddade30366
+    dimensions: [correctness, simplification, altitude, no-removal]
+    findings: { found: 5, verified: 1, refuted: 4 }
+    outcome: "PASS — the one survivor is latent and waived below."
+    scoping: "reuse and efficiency were not re-spawned in round 2: the fix commit adds no dependency and no hot path, and round 1's findings on both dimensions were refuted on measurement (the concat worklist copies ~73 strings across all 43 files, under 0.01% of a 1.0s lint run). Every other dimension re-ran at full BASE..HEAD_R scope. Round-2 finders were told not to re-litigate round 1's refuted candidates without new evidence."
+waivers:
+  - finding: "classify's `if (steps)` treats MODIFIERS.get(owner) as a presence check, but an empty Set is truthy — a modifier-bearing base with an empty modifier list would take the modifier branch and render the message with an empty step list"
+    reason: "unreachable under the pinned Tailwind: measured 0 of 417 metadata tuples carry an empty modifiers array, because getClassList only wraps an entry as a tuple when it has modifiers. Latent only. Handed to E-DFLOW.W6 step 3 together with the rest of the rule's rulebook work; the one-word guard `steps?.size` also gives such a base the offlist verdict that rounded-full/wash correctly gets."
+notable_refutations:
+  - "the no-removal sweep the trigger declared — every changed class's declaration body diffed byte-for-byte between BASE and tip — found nothing: most classes in the diff had already stopped emitting at BASE when step 1 closed their scales, so the re-expression restores rendering rather than removing it. Only py-[5px] -> py-control-y (5px -> 3px) changed a rendering value, and it is named in the run doc's #changed table"
+  - "the fix's own multi-binding resolution was raised as a blocker for introducing a false positive; the pre-fix code was measured to produce the identical false positive whenever the unused sibling was declared last, so the fix removed order-dependence rather than adding a defect. Zero incidence in ui/src/"
+  - "extracting the four repeated grid-cols-[auto_1fr] pragmas into a shared constant would make those classes invisible to the rule, since collectClasses does not follow imports"
+  - "the design-rules row that looked falsified by this WU had already been stale since step 1 closed fontSize and letterSpacing"
+verdict: PASS
+date: 2026-08-10

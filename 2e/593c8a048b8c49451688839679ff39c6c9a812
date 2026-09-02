@@ -1,0 +1,17 @@
+schema: cr/v3
+scope: "WU E-DFLOW.W9 -> epic/design-flow. The fresh screen, really built: run #4 designs the setup screen greenfield and closes green, Tier-3 goes red before green (5 doctored submissions then PASS), and the mockup mounts the components it claims to reuse (DEC-26)."
+epic: E-DFLOW
+wu: E-DFLOW.W9
+branch: wu/design-flow/fresh-screen
+base: 620c7c4a8ebf2b524f0ad1856e9f8131a7a4acdf
+head: 2e593c8a048b8c49451688839679ff39c6c9a812
+diff_sha256: bdd303377165033a797d9f8e8ee38b9c9dd6e55198618109ad19574c4d39db39
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 0, verified: 0, waived: 0 }
+design:
+  artifacts:
+    - docs/work/2026-08-14-dflow-w9-run-4.html
+  rulebook: b769f7e4ccbb2e4d02604f47e0fd1aa07e493cf9
+  verdict: PASS
+verdict: PASS
+date: 2026-08-31

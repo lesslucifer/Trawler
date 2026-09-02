@@ -1,0 +1,39 @@
+schema: cr/v3
+scope: "WU E-DFLOW.W8 dev-integration -> epic/design-flow"
+epic: E-DFLOW
+wu: E-DFLOW.W8
+branch: wu/design-flow/dev-integration
+base: dcd0b7e35b8df6e1c35d29cee4950f51a9a8e9b9
+head: efd5d40868b6fb7980cea55f7fbdbb6c9d584616
+diff_sha256: e34c30ae62ad3625186c59106f923257815ee7dcc3bf4e445b0203f22b921ed2
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 12, verified: 6, waived: 0 }
+waivers: []
+rounds:
+  - round: 1
+    scope: "dcd0b7e35b..4109404f71 - five finders, one verifier per candidate"
+    found: 11
+    verified: 5
+    refuted: 6
+    fixed_in: 3bc233569b8b29a25cdd09a319c4a304d4d87d2e
+    real:
+      - "efficiency, important: Gate::new_surfaces fetched git-show bytes for EVERY path added_names returns - an unscoped repo-wide diff - before any path test, though only registry_entry's @tier substring check needs the bytes. Its verifier measured a real epic walk at 466 git spawns, 362 of them git show, and put the waste at ~12-14% of 4.8-5.5s wall time, plus ~30% of a single 0.55-0.62s WU gate. Fixed by doc::may_be_surface, a path-only pre-filter that short-circuits the fetch: 8 added paths become 0 fetches on this WU's own seam. The same guard went into doc::roster_at (52 files to 26), where the standalone claim had been refuted as out-of-dimension - the identical defect one caller over is cheaper to close than to leave half open"
+      - "altitude, important: the result report's evidence line claimed verify-doc over 82 tracked docs while the tip it certifies ships 84 - the count predated step 5's own two docs, so the cited check had never seen them. Re-measured at the tip: 84, none red"
+      - "reuse+simplification, nit (both finders, converged): git::added_names was git::diff_names plus one --diff-filter=A argument. Factored to a private names_in, argument order preserved"
+      - "reuse+simplification, nit: registry_entry's and new_surface's path filters repeated one three-condition chain (not nested, not .test., extension set). Factored to shaped_file / collection_file / screen_file"
+      - "simplification, nit: show_bytes(..).ok().and_then(from_utf8) was inlined at three sites - Gate::new_surfaces, doc::roster_at and the pre-existing doc::rulebook_slugs the finder pointed at. Factored to git::read_utf8_at"
+      - "altitude, nit: the flow spec (T3) restated DEC-25's whole conformance rationale without linking it, while workflow.html (T1) cites it inline. Now links DEC-25#no-conformance for the why and the one piece of evidence that would reopen it"
+    refuted_summary: "per-surface citation coverage (DEC-25's shape - its own worked example is one family contract spanning seven built components, so requiring one citation per surface would refuse the documented precedent) · registry_entry being greener than scripts/design-registry.mjs (the parity claim is scoped to membership, which is the oracle's own first-pass filter; the full-contract check exists elsewhere and is stricter - the verify-doc hook shells out to the real script and collection.test.tsx fails outright on an incomplete block) · the blob-pin block as a third hand-copy (PIN_MIN and pin_matches are already shared; the three sites differ in blob source, cardinality and check-id scheme) · a second design_run_status parse (fires only on an already-failing citation; measured at 40-127 microseconds) · two git spawns per citation (~7ms against a 4.8s walk, at 0-1 citations per WU in the whole repo) · a non-empty-reason helper for three call sites (DistilledTo::recorded is a two-arm match on self, not a keyed search - the only shared fragment is str::trim().is_empty())"
+  - round: 2
+    scope: "4109404f71..efd5d40868 - the round-1 fixes only, plus the working tree"
+    found: 1
+    verified: 1
+    refuted: 0
+    fixed_in: efd5d40868b6fb7980cea55f7fbdbb6c9d584616
+    real:
+      - "altitude, nit: extracting shaped_file left the 'membership is @tier, the same tag the oracle reads' comment stranded above it rather than above registry_entry, which is what it describes. Moved back, no logic change"
+    verification: "may_be_surface traced as exactly the path-decidable disjunct of new_surface's condition, so it cannot refuse a path the content check would accept - a false green at the merge gate was the risk, and it is closed in both directions by its own test. In roster_at it collapses to collection_file, since SCREENS is a strict prefix of COLLECTION. read_utf8_at semantically identical at all three replaced sites; names_in preserves CLI argument order; the extracted filters reproduce the inlined logic verbatim. DEC-25#no-conformance confirmed to exist, so the new link is not dangling"
+notes_audited: "the tip's test/v2 and doc/v1 were reviewed as subjects, not accepted as claims. Round 1 caught the 82-vs-84 count in both the report and the note; round 2 re-checked every count against the tree - unit 197, dod_gate 69, design e2e 4, verify-doc 84 - and each matched"
+design_absent_because: "cargo xtask design-scope reports no design artifact and no new surface in dcd0b7e35b..efd5d40868 - a REMOVED design file is deliberately not a Tier-3 artifact (DEC-16, DEC-24), and this WU adds no ui/src surface. So the section is absent and no check asks for it, which the merge gate itself confirms"
+verdict: PASS
+date: 2026-08-13
