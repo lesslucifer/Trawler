@@ -7,7 +7,7 @@ base: f7ac58598addd7a761cf93e753f4268954c20899
 head: 18dead4d068131e6a25eb8a2a8fa86d74ea4cb74
 diff_sha256: 060ce3dca3e228a139a91c6b035f5602f47ef45d022e7cf9f8d03c2ff752bb4f
 dimensions: [correctness, reuse, simplification, efficiency, altitude, design]
-findings: { found: 17, verified: 4, waived: 0 }
+findings: { found: 17, verified: 5, waived: 0 }
 verified:
   - id: cost-conclusion-backwards
     severity: blocker
@@ -29,13 +29,18 @@ verified:
     location: "docs/work/2026-09-02-dflow-run-8-setup-fullscreen.html - Elements catalog, 8 rows"
     claim: "Eight per its design file citations link to ../design/components/*.html. That path has never existed in the working tree or in any commit in history."
     evidence: "Verified real, severity nit: no gate resolves links, the doc is archived T3, and the component name beside each link resolves the reference via the emitted registry. Prior accepted runs (run #7, w9-run-4) write the same phrase as plain text - run #8 is the outlier that made an idiom into a broken href."
+  - id: verdict-vocabulary-coined
+    severity: important
+    location: "docs/work/2026-09-02-dflow-run-8-setup-fullscreen.html - Elements catalog, SegmentedControl row"
+    claim: "The row reports the verdict as rejected, a token outside the flow's enum (reuse | extend | propose). The established mechanism for a considered-and-refused component is n/a."
+    evidence: "Run #6 (2026-08-30-dflow-run-6-setup-redesign.html) - the direct predecessor on this same screen, with the same cardinality reasoning - writes T1 n/a with 'Cardinality: 6-7 options' beneath it. Runs w4-run-3 and w9-run-4 do the same. Run #8 is the only doc in the corpus coining a new token. No predicate enforces the Elements verdict set, so nothing caught it; the underlying reasoning is sound and only the token is wrong."
 refuted:
   - "Epic plan left unreconciled with the descope - W9 set the precedent in this same epic (deferral recorded in its result doc, epic plan untouched), and no process doc requires retroactive amendment; epic distillation is owed at epic close."
   - "States column re-lists component states - the flow spec/'s own catalog template prescribes cite-plus-states, the Tier-1 predicate does not reach a non-dash cell, and run #7 re-lists more freely while citing less."
   - "run #8 narrows unset the proxy without warrant (as a blocker on the run artifact) - the run declares it deliberately unused and the closing artifacts raise it as an open question; the defect that survives is the coverage map/'s misclassification, filed above."
   - "Mermaid loaded with no diagram present - the htmldoc skeleton ships it; run #7 carries it identically."
   - "Token-gap of 53,592 between headline and stage sums - fully explained: exactly one API call at the 06:21:57 boundary, outside every stage window."
-  - "DEC-13 callout duplicated across result and coverage map - both are T3 siblings with different audiences, and the htmldoc rule asks each doc to stand alone."
+  - "DEC-13 callout duplicated across result and coverage map - the one-fact-per-tier rule is directional (never duplicate DOWN a tier), not a ban on same-tier repetition, and the htmldoc skill asks each doc to stand alone."
 design:
   artifacts: [docs/work/2026-09-02-dflow-run-8-setup-fullscreen.html]
   rulebook: a2f45dd71fe910eae825c38546681b76620e498d
