@@ -1,0 +1,44 @@
+schema: cr/v3
+scope: "WU E-DFLOW.W10 (branch carries W8+W9+W10) -> epic/design-flow"
+epic: E-DFLOW
+wu: E-DFLOW.W10
+branch: wu/design-flow/optimize-flow-cost
+base: dcd0b7e35b8df6e1c35d29cee4950f51a9a8e9b9
+head: 9164ed78e7398b823e1dac3f7d02a52e8169feff
+diff_sha256: dfc780412747395dfc3ed5b2c4494f4abce865bda04dc0a3b01319f5efd4235a
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 13, verified: 4, waived: 0 }
+waivers: []
+design:
+  artifacts:
+    - docs/work/2026-08-14-dflow-w9-run-4.html
+    - docs/work/2026-08-30-dflow-run-6-setup-redesign.html
+    - docs/work/2026-09-01-dflow-w10-proof-run.html
+    - docs/work/2026-09-02-dflow-run-7-replay-composer.html
+  rulebook: a2f45dd
+  findings: { found: 3, verified: 1, waived: 0 }
+  verdict: PASS
+verdict: PASS
+date: 2026-09-02
+note: "Round 1 was FAIL on four verified findings, all fixed in 9164ed7 and re-verified empirically on this tip.
+  (1) htmldoc-id read the attribute from anywhere in the document; the runtime reads document.documentElement, so
+  an id on a stray div with none on <html> passed green while the comment and diff layers stayed dead. Now read
+  from the <html> node, case-insensitively.
+  (2) htmldoc-bootstrap matched any src ending in the filename, so a local ./vendor/htmldoc.js - which serves no
+  doc.css - passed. Now the canonical URL exactly; re-verified that query-string, http and whitespace variants
+  all red and that no real doc uses one.
+  (3) DESIGN BLOCKER: the W10 proof run claimed visual-weight-follows-goals and ordering-by-priority satisfied
+  while its own Layout sketch and mockup mount order still rendered guidance first - the Tune call was recorded
+  and never applied, and the review row re-listed it as pending. Fixed by applying the tune call across the
+  sketch, the mounts, the interaction deltas and the capabilities table, and adding the loop-back declaration the
+  Tune template requires. Both receipt claims are now true of the artifact. Tier-1 could not see this: it checks a
+  receipt is complete, never that it is true.
+  (4) The predicates bind governed docs only - 37 of 99. The 62 ungoverned T1/T2 pages keep the layer by
+  convention and all 62 currently carry it. Left open deliberately: widening it breaks the hooks' standing promise
+  that an ungoverned doc is silent, a contract change owed its own WU and a decision record.
+  Refuted: three efficiency findings targeting pre-existing code the diff never touches (nodes() re-tokenising,
+  check_uppercase_mute_labels, check_colour_plus_text); blob_of/read_utf8_at as parallel implementations (one
+  returns a hash, the other content); run #7's generous-targets inherited verdict (two of three cited components
+  are real and TSDoc-proven, and the rule binds at component level); the Tune why-block as a mandatory cell (it is
+  an unenforced template convention, and tune-drawn does not check it).
+  Gate 0 green. 210 unit + 64 integration + 4 e2e. 99 docs, 0 red."
