@@ -28,6 +28,34 @@
 
     <h2 id="outcome">Outcome</h2>
     <div class="cards" data-item="outcome">
+      <div class="card"><h3>Manual review: run #7, a function that does not exist</h3>
+        <p>The optimised flow run on <strong>E-REPLAY's replay composer</strong> — the first run on a
+          greenfield function rather than a shipped screen, so the Frame reads the roadmap line and the
+          owner's capability list, not code. It is also the first <em>editing</em> screen designed against a
+          registry of 24 read-only components: four entries (KeyValueRow, Select, SourceSurface, CopyText)
+          refuse the job in their own <code>@avoid</code> text, so the run proposes one component
+          (<code>Field</code>) instead of bending a reuse — against run #6's zero proposals. Closed green:
+          17/17 soft, 13/13 hard, 0 suppressions. Archived as
+          <a href="2026-09-02-dflow-run-7-replay-composer.html">2026-09-02-dflow-run-7-replay-composer.html</a>.</p></div>
+      <div class="card"><h3>Every governed doc answers for its htmldoc layer</h3>
+        <p>Run #7 first shipped <strong>unstyled</strong>: it carried neither the minted
+          <code>data-htmldoc-id</code> nor the <code>htmldoc.js</code> bootstrap that injects
+          <code>doc.css</code>, so every <code>var(--…)</code> it wrote resolved to nothing — and
+          <code>verify-doc</code> was green throughout, because it checks the design-run contract and says
+          nothing about whether a doc can render. Two predicates now refuse it:
+          <code>htmldoc·id</code> and <code>htmldoc·bootstrap</code>, run <em>before</em> the exempt gate so
+          an archived run is held to them too. The predicate immediately found a second instance — this WU's
+          own proof run, which carried the bootstrap but no id, rendering styled with both interactive layers
+          dead.</p></div>
+      <div class="card"><h3>Tier-3 caught what the harness cannot</h3>
+        <p>The design dimension found the proof run's receipt <strong>complete, fluent and false</strong>: it
+          claimed <code>visual-weight-follows-goals</code> and <code>ordering-by-priority</code> satisfied
+          while its own Layout sketch and mockup mount order still rendered guidance first — the Tune call was
+          recorded and never applied. Fixed by applying it. The review also found both new predicates
+          under-verified their own names: the id was read from anywhere in the document (a stray
+          <code>&lt;div&gt;</code> passed while the layers stayed dead) and the bootstrap matched any
+          <code>src</code> ending in the filename (a local copy serving no stylesheet passed). Both now
+          checked where the runtime actually reads them.</p></div>
       <div class="card"><h3>Flow base compacted 48%</h3>
         <p><code>docs/work/design-flow-base.html</code> from 67,757 bytes to <strong>35,044 bytes</strong>
           (48.3% reduction). Cut: provenance table, long worked-example narratives, verbose explanatory
@@ -90,9 +118,20 @@
             <td>33.7% reduction; 13 hard + 17 soft slugs byte-faithful; verify-doc green</td></tr>
           <tr><td>Proof run (compact-substrate run-6-class)</td>
             <td><code>docs/work/2026-09-01-dflow-w10-proof-run.html</code></td>
-            <td>Archived; green (17/17 soft, 13/13 hard)</td></tr>
+            <td>Archived; green (17/17 soft, 13/13 hard). Tier-3 found two receipt verdicts false against its
+              own Layout; the Tune call they claimed is now applied across the sketch, the mounts, the
+              interaction deltas and the capabilities table</td></tr>
+          <tr><td>Manual-review run (greenfield function)</td>
+            <td><code>docs/work/2026-09-02-dflow-run-7-replay-composer.html</code></td>
+            <td>Archived; green (17/17 soft, 13/13 hard, 0 suppressions); one proposal — <code>Field</code></td></tr>
+          <tr><td>htmldoc layer predicates</td>
+            <td><code>xtask/src/doc.rs</code> — <code>htmldoc·id</code> · <code>htmldoc·bootstrap</code></td>
+            <td>Run before the exempt gate; two regression tests, each failing when its fix is reverted</td></tr>
+          <tr><td>Tier-3 design review</td>
+            <td><code>cr/v3</code> note on the WU tip</td>
+            <td>Round 1 FAIL on 4 verified findings (13 candidates); all fixed and re-verified; round 2 PASS</td></tr>
           <tr><td>Full governed tree verify-doc</td>
-            <td>32 docs under <code>docs/</code></td>
+            <td>99 docs under <code>docs/</code> (37 governed)</td>
             <td>0 red</td></tr>
           <tr><td>Live rulebook test</td>
             <td><code>xtask/src/doc.rs</code> — <code>every_hard_rule_in_the_live_rulebook_carries_a_predicate</code></td>
@@ -156,6 +195,11 @@
             token cost measured against run #6's turn-3 baseline (11.4M → ~3.4M expected). Completes
             W9's deferred steps: build handoff (DEC-25), contract amendment (UC-ONBOARD / DEC-13),
             screen retirement, coverage map.</td></tr>
+        <tr><td><strong>unscheduled</strong></td>
+          <td>The htmldoc predicates bind governed docs only — 37 of 99. The 62 ungoverned T1/T2 pages keep
+            the layer by convention and all 62 currently carry it, so the hole is latent, not live. Widening
+            it would break the hooks' standing promise that an ungoverned doc is silent: a contract change
+            owed its own WU and a decision record.</td></tr>
       </tbody>
     </table>
 
