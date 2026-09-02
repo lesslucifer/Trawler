@@ -1,5 +1,6 @@
 schema: test/v2
 level: working-unit
+epic: E-DFLOW
 wu: E-DFLOW.W10
 tests:
   e2e:
