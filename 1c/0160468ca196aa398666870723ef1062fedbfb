@@ -1,0 +1,103 @@
+schema: doc/v1
+epic: E-DFLOW
+changes:
+  - path: docs/design-flow.html
+    tier: T1
+    action: added
+    distills: "The staged design flow - six stages, the artifact shape each must produce, the closing lists, the close, the Tier-3 review and the build hand-over. The T1 process doc the epic plan promised as a sibling to workflow.html; authored across W1-W10 in docs/work/ and promoted at W12."
+  - path: docs/component-design.html
+    tier: T1
+    action: added
+    distills: "The component-design contract: what a design file holds and the TSDoc it retires into once its component is built (DEC-16). Promoted at W12 as its own doc rather than a section of the flow spec - the two are read at different times."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: added
+    distills: "The living rulebook - enumerable, slug-id'd design rules tagged hard or soft, and the closed vocabularies. A fourth T2 knowledge base (DEC-14), not the T1 doc first planned: rules grow per task and T1 is shape-only. 13 hard rules carry a Tier-1 predicate in the checker; the soft rules are what the receipt must answer for."
+  - path: docs/decisions/dec-14-design-rules-kb.html
+    tier: T2
+    action: added
+    distills: "Why the rulebook is a living T2 KB rather than a T1 doc."
+  - path: docs/decisions/dec-15-design-run-enforcement.html
+    tier: T2
+    action: added
+    distills: "The enforcement model: what a machine can check, what a receipt must answer for, and why silence reads as a pass unless the gate makes it loud."
+  - path: docs/decisions/dec-16-design-file-retirement.html
+    tier: T2
+    action: added
+    distills: "A design file holds a component's contract only until the component is built, then retires into its TSDoc - the registry and the design files stay disjoint, so no second contract can drift."
+  - path: docs/decisions/dec-17-closed-vocabulary.html
+    tier: T2
+    action: added
+    distills: "The design vocabulary is closed: a term not in it is a proposal, not a choice."
+  - path: docs/decisions/dec-18-one-control-box.html
+    tier: T2
+    action: added
+    distills: "One control box - the shared geometry every control renders inside."
+  - path: docs/decisions/dec-19-chromatic-accent-closed.html
+    tier: T2
+    action: added
+    distills: "Accent colour is closed: status carries meaning, decoration does not."
+  - path: docs/decisions/dec-20-logic-lives-with-its-inputs.html
+    tier: T2
+    action: added
+    distills: "Logic lives with its inputs - where a component's decisions belong."
+  - path: docs/decisions/dec-21-props-need-a-truthful-source.html
+    tier: T2
+    action: added
+    distills: "A prop needs a truthful source; a component may not invent the data it displays."
+  - path: docs/decisions/dec-22-time-is-absolute-and-local.html
+    tier: T2
+    action: added
+    distills: "Time is absolute and local - how timestamps are rendered and why."
+  - path: docs/decisions/dec-23-collection-dependencies.html
+    tier: T2
+    action: added
+    distills: "What a collection component may depend on."
+  - path: docs/decisions/dec-24-design-review-dimension.html
+    tier: T2
+    action: added
+    distills: "Tier-3 is a dimension of the code review, not a separate ceremony: the designing agent never judges its own design, exactly as no author judges their own diff."
+  - path: docs/decisions/dec-25-design-build-handoff.html
+    tier: T2
+    action: added
+    distills: "The design-to-build hand-over in both directions: a build cites the design it was built from by path and blob, every other rendered file is cited or declared undesigned, and no design outlives its epic unbuilt without a recorded drop. The gate answers 'is there a design, and is it this one' - never whether the code honoured it."
+  - path: docs/decisions/dec-26-the-mockup-mounts.html
+    tier: T2
+    action: added
+    distills: "A mockup mounts the real components rather than drawing them - a hand-drawn component in correct utilities is a fork no class check can see."
+  - path: docs/decisions/dec-13-onboarding-capabilities.html
+    tier: T2
+    action: updated
+    distills: "Amended with the proxy-revert call. W11's redesign proposed dropping the 'Stop routing' affordance on two premises the shipped code disproves; W12 homed the question here, and the owner answered: the affordance stays, its gating already scopes it to this machine, the capability is unchanged and the shipped assertion is inherited. Records that inherited binds the capability and not the coordinates, and that two revert paths exist. One pre-existing broken link fixed: setup.ts is setup.rs."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-14 through DEC-26 registered, and DEC-13's row records the revert call - the KB stays readable index-first."
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "DEC-27 added at W11: the human signature goes last, because every binding pins the diff and a later tree change orphans it. mr confirm now refuses a tip lacking test/v2, doc/v1 or a diff-bound cr/v3 PASS."
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "The design gate connected to the dev gate: where a design run is judged, what the cr/v3 note carries, and the signature-goes-last rule citing DEC-27."
+  - path: docs/work-planning.html
+    tier: T1
+    action: updated
+    distills: "The design-run artifact registered as a planned work-doc type, its items owned by the flow spec rather than restated here."
+  - path: docs/documentation-system.html
+    tier: T1
+    action: updated
+    distills: "docs/design-rules/ registered as the fourth T2 knowledge base, wired into the tier map, the gate's tracked-doc rule and the distillation checklist."
+  - path: docs/architecture.html
+    tier: T1
+    action: updated
+    distills: "The design harness placed in the system's shape alongside the DoD gate."
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: updated
+    distills: "E-REPLAY carries design run #7's facts inline rather than linking a run doc that archives: the Field proposal and its warrant, and the three things the run leaves blocked on that epic."
+  - path: docs/work/2026-09-03-dflow-epic-result.html
+    tier: T3
+    action: archived
+    distills: "The epic result report - what each of the seven promises turned into, the 12-WU rollup, the five deviations including the missed token target, and the evidence. Written, then archived to docs/.archive/work/ in the close commit, which is where mr confirm reads it - the shape E-MRSIG, E-UIFOUND and E-UIINSPECT all closed with."
