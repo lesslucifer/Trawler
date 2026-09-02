@@ -44,19 +44,23 @@ changes:
   - path: docs/work/components/body-renderer.html
     tier: T3
     action: deleted
-    distilled_to: "docs/decisions/dec-25-design-build-handoff.html — BodyRenderer was a family contract, not a component: all seven members shipped under their own names (JsonRenderer, XmlRenderer, TextRenderer, HexRenderer, ImageRenderer, FormRenderer, CutMarker), each carrying its own @use/@avoid/@states in the registry"
+    distilled_to: [docs/decisions/dec-25-design-build-handoff.html]
+    note: "a family contract, not a component: all seven members shipped under their own names, each carrying its own @use @avoid @states in the registry"
   - path: docs/work/components/body-viewer.html
     tier: T3
     action: deleted
-    distilled_to: "docs/decisions/dec-25-design-build-handoff.html — BodyViewer was built as the screen ui/src/BodyViewer.tsx, outside the registry — a screen is T4, so it has no roster entry by construction"
+    distilled_to: [docs/decisions/dec-25-design-build-handoff.html]
+    note: "built as the screen ui/src/BodyViewer.tsx, outside the registry — a screen is T4 and has no roster entry by construction; forks D2b, D3 and D4 are recorded in DEC-25"
   - path: docs/work/components/copy-all-headers-button.html
     tier: T3
     action: deleted
-    distilled_to: "docs/decisions/dec-25-design-build-handoff.html — CopyAllHeadersButton was dissolved by design review into CopyText and never built; the copy contract it proposed lives in CopyButton's and CopyText's @use/@avoid"
+    distilled_to: [docs/decisions/dec-25-design-build-handoff.html]
+    note: "dissolved by design review into CopyText and never built; the copy contract lives in CopyButton's and CopyText's @use @avoid"
   - path: docs/work/components/header-table.html
     tier: T3
     action: deleted
-    distilled_to: "docs/decisions/dec-25-design-build-handoff.html — HeaderTable was built as a local function in ui/src/FlowDetail.tsx and never extracted; its row contract lives in KeyValueRow's TSDoc"
+    distilled_to: [docs/decisions/dec-25-design-build-handoff.html]
+    note: "built as a local function in ui/src/FlowDetail.tsx and never extracted; its row contract lives in KeyValueRow's @use @avoid"
   - path: docs/work/2026-08-12-dflow-w8-discussion.html
     tier: T3
     action: added
