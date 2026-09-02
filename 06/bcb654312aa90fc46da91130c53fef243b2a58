@@ -1,0 +1,41 @@
+schema: cr/v3
+scope: "epic E-DFLOW -> main"
+epic: E-DFLOW
+branch: epic/design-flow
+base: 1b245bd61556eea5c2dc2ca4cc5bf7cf27d6c2ff
+head: 06bcb654312aa90fc46da91130c53fef243b2a58
+diff_sha256: 6ac5e7afb7e1e9841aaa170d3b10f7dca30552e5eecba83eebdd2c476422a6bd
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 0, verified: 0, waived: 0 }
+verdict: PASS
+date: 2026-09-03
+walk_waivers:
+  - seam: f2a2b7ce75
+    why: "specimen.css and specimen.js were never design files, so 6-retirement-order reads them wrong: it treats any deletion under docs/work/components/ as a retired design. specimen.js was MOVED to doc-assets/components/ - git records the rename in 3df15df ({docs/work => doc-assets}/components/specimen.js) and the file exists at the tip. specimen.css was DISSOLVED in dd7c1e0 (W5 step 3): the specimens and the app were drawing the same components in two vocabularies, and naming them in one - ui/tailwind.config.js, read by both - removed the second copy rather than distilling forks out of it. The gate's own source comment records this: 'W5 dissolved the specimen sheet that was the second copy'. Nothing was retired, so nothing was owed a distillation."
+  - seam: f2a2b7ce75
+    why: "run #3 carried no data-status at this seam and was archived afterwards, in 40ff32c (W6 step 5, the round that found the one red doc nobody had archived). It stayed archived through every later commit until W12 swept it out of the tree. The seam reports the state as it was, which is true; the close happened, later."
+  - seam: 989f4bfacd
+    why: "the same run #3, at the second seam that carries it. Archived in 40ff32c as above."
+  - seam: d4454f596b
+    why: "run #1 carried data-status=ready at this seam - a declaration that the run is open and checked, not a close - and was archived in f2bebc1 when W4 completed it. The seam is a true report of an open run at that merge; the close is in the history that follows it."
+  - seam: 8173f4721f
+    why: "cr/v3 did not exist when W2 merged. The schema was introduced at W7 in 4517354, whose own message names it 'the grandfather rule'. The grandfather clause covers a cr/v2 note that predates a FIELD; this tip carries no cr note at all, so the clause cannot reach it and the walk reports the absence. W2's work is not unreviewed - it went through three recorded review rounds - but the evidence predates the note contract that would carry it."
+  - seam: 8173f4721f
+    why: "the doc note on e0f85f30a1 omits `action` on its entries. It was written to the doc/v1 shape as it stood at W2, before action became required. The entries name their paths and tiers and are readable; the field the parser now demands was not a field then."
+  - seam: 838eb95859
+    why: "this is not a Working Unit merge. It is a git pull of epic/design-flow into itself - the two-parent commit a sync makes - and the walk classifies any two-parent commit on the epic as a WU seam. Its test note honestly says level: commit, because a remote sync is not a WU; the gate then asks a WU's question of it. Nothing was designed, built or reviewed at this seam that a WU gate would have judged."
+  - seam: 838eb95859
+    why: "the same sync merge, second red. No cr/v3 note exists on fdce56db59 for the same reason: it is a pull, not a WU, and predates cr/v3 besides."
+  - seam: f2a2b7ce75
+    why: "third red on this seam, listed for completeness with the two above: all three arise from the same W5 commit range, and none of them reports a design artifact left unjudged."
+design:
+  artifacts: []
+  rulebook: ""
+  findings: { found: 0, verified: 0, waived: 0 }
+  dropped:
+    - path: docs/work/components/body-renderer.html
+      why: "a family contract, not a component. Everything it specified was built and is in the roster - JsonRenderer, XmlRenderer, TextRenderer, HexRenderer, ImageRenderer, FormRenderer, SourceSurface - but under no single name, so no roster entry carries 'BodyRenderer'. Each member's contract is now its own TSDoc. Recorded at W8 step 1 and deferred to this note."
+    - path: docs/work/components/copy-all-headers-button.html
+      why: "the only true never-built of the epic's designs. The file's own title says (dissolved): the design review dissolved it into CopyText before any code existed, so no component was ever built and none is owed. Recorded at W8 step 1."
+    - path: docs/work/components/header-table.html
+      why: "built as a local function inside ui/src/FlowDetail.tsx, used by both header sections and never extracted into the collection - so the registry carries no entry to hold its contract. Recorded at W8 step 1."
