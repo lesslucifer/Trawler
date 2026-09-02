@@ -1,7 +1,6 @@
 schema: dod/v1
 level: epic
 epic: E-DFLOW
-branch: HEAD
 base: 1b245bd61556eea5c2dc2ca4cc5bf7cf27d6c2ff
 tip: 1c0160468ca196aa398666870723ef1062fedbfb
 diff_sha256: c15301fb4463d3e7d551aaba906f40f4348863fc7c17833ab655f1d74e38c4d0
