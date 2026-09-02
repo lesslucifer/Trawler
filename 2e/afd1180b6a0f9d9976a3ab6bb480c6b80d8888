@@ -1,0 +1,20 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W11
+tests:
+  e2e:
+    waived: "No user-facing flow changed. The WU carries a design run (an artifact, not a surface) and a change to mr confirm, a developer command with no app path - the two e2e suites that could speak to it (xtask/tests/e2e_design_flow.rs and ui/e2e/specs/onboarding.spec.ts) are untouched and still green. The retirement of onboarding.spec.ts is mapped in the coverage map and executed by the build WU, not here."
+  integration:
+    count: 44
+    what: "xtask/tests/mr.rs - the whole mr surface against real temp git repos. Four are new and assert this WU/'s own rule at the seam that enforces it: a tip with no notes names all three receipts at once; a tip carrying test/v2 + doc/v1 but no review names only the review; a FAIL verdict is refused; and a cr/v3 PASS bound to a different diff is refused. Each also asserts tip_authorised stays false - a refusal writes nothing. The regression proof is the other ten: every pre-existing confirm test failed against the new rule until it settled its tip first."
+  unit:
+    count: 24
+    what: "xtask::mr - four new over unready_reasons, the pure rule extracted so the branch table reads in one place: a settled, reviewed, diff-bound tip is ready; an unsettled one names test/v2, doc/v1 and cr/v3 in flow order rather than stopping at the first; a FAIL verdict and a stale diff each block alone; and an unresolvable merge target drops only the binding check - the one branch no integration test reaches, since an unresolvable target is not reproducible through the CLI. The other twenty cover the signature payload, note bodies, trailers and the .mr-allowed tiers, unchanged."
+design:
+  run: docs/work/2026-09-02-dflow-run-8-setup-fullscreen.html
+  status: archived
+  rulebook: a2f45dd7
+  receipt: "17/17 soft (13 satisfied, 4 inherited) - 13/13 hard machine-checked - 0 suppressions"
+  render: "scripts/check-render.mjs green: 5 mounts, 10 buttons, exit 0"
+note: "Two things land together. The design half (run #8, the coverage map, the measured cost) changes no code and is judged by the design dimension and verify-doc. The process half tightens mr confirm so a human is never asked to sign a tip whose tree can still move - a defect this WU committed against itself, caught by its own review, fixed here and recorded as DEC-27. Three review rounds ran and each found something the last had not: round 1 a backwards cost conclusion and a self-contradicting coverage map; round 2 the run/'s capabilities row still carrying a rationale the shipped code disproves, a duplicated CrNote reader, and a doubled merge-base/diff computation; round 3 an id collision (the new decision had taken DEC-12, already the native-UI-stack decision), the same capability correction left unpropagated to two sibling docs, and a resolved-target git failure that fell through to an interactive prompt instead of erroring. gate0 green; 103 governed docs, 0 red."
