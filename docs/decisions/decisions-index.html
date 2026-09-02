@@ -65,7 +65,7 @@
         <tr>
           <td><a href="dec-15-design-run-enforcement.html"><code>dec-15-design-run-enforcement.html</code></a></td>
           <td><span class="badge id">DEC-15</span></td>
-          <td>A design run is a governed artifact checked on every write; its receipt covers <strong>soft rules only</strong> — a rule with a Tier-1 predicate is judged by the predicate, never by the run's claim about itself — with coverage read from the rulebook on disk and the unimplemented gap printed rather than filed. The gate proves a receipt is complete and well-formed, never that it is true</td>
+          <td>A design run is a governed artifact checked on every write; its receipt covers <strong>soft rules only</strong> — a rule with a Tier-1 predicate is judged by the predicate, never by the run's claim about itself — with coverage read from the rulebook on disk and the unimplemented gap printed rather than filed. The gate proves a receipt is complete and well-formed, never that it is true — and a governed doc answers for its htmldoc layer (<code>data-htmldoc-id</code> on <code>&lt;html&gt;</code> + the bootstrap that injects <code>doc.css</code>) before the exempt gate, because a doc that cannot render is not a governed doc</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>

@@ -29,6 +29,17 @@
       </tbody>
     </table>
     <p>The receipt is YAML parsed by <code>serde_yaml</code> — the same <code>#[derive(Deserialize)]</code> path every gate note already uses — with a fixed seven-verdict enum: <code>satisfied</code> · <code>inherited</code> · <code>satisfied-via-proposal</code> · <code>blocked</code> · <code>n/a</code> · <code>violated</code> · <code>violated-inherited</code>. The last exists because a screen that <em>composes</em> a violating component must not read as the violator: without it, re-authoring a component's CSS turns a red row green, hiding a substrate bug and forking the component in one stroke.</p>
+    <p><strong>A doc that cannot render is not a governed doc</strong> (E-DFLOW.W10). Every governed doc
+      carries the two things the <code>htmldoc</code> skill owns — a minted <code>data-htmldoc-id</code> on
+      <code>&lt;html&gt;</code> and the <code>htmldoc.js</code> bootstrap that injects <code>doc.css</code> —
+      and <code>htmldoc·id</code> / <code>htmldoc·bootstrap</code> refuse a doc without them. They run
+      <em>before</em> the exempt gate, because a draft and an archived run both still have to render, and
+      this is the one property no later predicate can see: a layerless doc has every structure the others
+      read, and every <code>var(--…)</code> it writes resolves to nothing. Both are checked where the runtime
+      reads them — the id on the root element (<code>document.documentElement</code>), the bootstrap at its
+      canonical origin — because a check that accepts the id anywhere, or any file of that name, passes the
+      doc whose comment and diff layers are dead. Scope is the governed set: an ungoverned page stays silent,
+      which is the doc hooks' standing promise.</p>
     <p>Composition is checked too, because reuse that is only asserted is not reuse: the Elements catalog must be a keyed <code>data-map</code>, the mockup must carry a state toggle, both shared specimens must actually be <em>loaded</em> (the attribute, not a prose mention), and the run doc's own CSS must hold no colour literal — which is <code>colour-tokens-only</code>'s own Tier-1 predicate, implemented.</p>
 
     <h2 id="limit">What the gate does not prove</h2>
