@@ -1,0 +1,18 @@
+schema: test/v2
+level: working-unit
+epic: E-DFLOW
+wu: E-DFLOW.W11
+tests:
+  e2e:
+    waived: "docs-only diff. W11 adds no code and changes no behaviour - three documents (a closed design run, a coverage map, a result report) and the plan commit. The flow e2e that covers this WU's subject matter (xtask/tests/e2e_design_flow.rs, 4 tests) is unchanged and still green; W11 exercised the real flow by hand rather than extending its harness."
+  integration:
+    waived: "docs-only diff, no bounded contract added or changed. The design run was driven through the real Tier-1 harness end to end - cargo xtask verify-doc green on the run at close, and green over the whole governed tree (103 docs, 0 red) - which is the integration surface this WU actually touches, exercised rather than newly asserted."
+  unit:
+    waived: "docs-only diff, no code added or changed. No predicate was added, loosened or tightened: run #8 was held to the 13 hard predicates and the live rulebook exactly as they stood at a2f45dd7, and it passed 13/13 machine-checked with 0 design-allow suppressions."
+design:
+  run: docs/work/2026-09-02-dflow-run-8-setup-fullscreen.html
+  status: archived
+  rulebook: a2f45dd7
+  receipt: "17/17 soft (13 satisfied, 4 inherited) - 13/13 hard machine-checked - 0 suppressions"
+  render: "scripts/check-render.mjs green: 5 mounts, 10 buttons, exit 0"
+note: "W11 is a design + retirement-map WU: the build through DEC-25 handoff was scoped out by the owner during the WU, so no ui/src change accompanies the design. Every test level is waived for the same reason - the diff is three HTML documents - and each waiver names what was exercised instead rather than what was skipped. The coverage map (docs/work/2026-09-02-dflow-w11-coverage-map.html) is the contract the build WU inherits: 30 of 32 shipped onboarding assertions survive the redesign, 2 retire, and nothing is deleted while the old design still ships."
