@@ -42,6 +42,16 @@ pub fn note(repo: &Path, note_ref: &str, tip: &str) -> Option<String> {
     git(repo, &["notes", &ref_arg, "show", tip]).ok()
 }
 
+/// A tip's note parsed into its schema type; `None` when absent or unparseable —
+/// an unreadable note is treated as no note, so a malformed one never authorises.
+pub fn parsed_note<T: serde::de::DeserializeOwned>(
+    repo: &Path,
+    note_ref: &str,
+    tip: &str,
+) -> Option<T> {
+    note(repo, note_ref, tip).and_then(|raw| serde_yaml::from_str(&raw).ok())
+}
+
 pub fn write_note(repo: &Path, note_ref: &str, tip: &str, body: &str) -> Result<(), String> {
     let ref_arg = format!("--ref={note_ref}");
     git(repo, &["notes", &ref_arg, "add", "-f", "-m", body, tip]).map(|_| ())

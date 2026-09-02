@@ -819,7 +819,7 @@ impl Gate<'_> {
     }
 
     fn tip_cr_note(&self, tip: &str) -> Option<CrNote> {
-        note(self.repo, "cr", tip).and_then(|raw| serde_yaml::from_str::<CrNote>(&raw).ok())
+        crate::git::parsed_note(self.repo, "cr", tip)
     }
 
     // A walk seam either fails or, if the tip's cr/v2 note carries a matching

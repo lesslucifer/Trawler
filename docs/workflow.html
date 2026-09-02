@@ -97,7 +97,7 @@ flowchart TD
         <tr><td><code>test/v2</code> + <code>doc/v1</code> notes on the tip; review PASS bound to this exact diff</td><td><span class="badge auto">gate checks 1–6</span></td></tr>
         <tr><td>T2 synthesis: use-case/decision updated, or <code>t2_waived</code> with reason</td><td><span class="badge auto">gate check 6</span> · adequacy = epic review</td></tr>
         <tr><td><em>UI only:</em> every UI-rendering file the diff touches is <strong>accounted for</strong> — cited to the closed design it was built from (path + blob), or declared <code>undesigned</code> with a reason. An <em>added</em> surface may only be cited (<a href="#design-handoff">design → build</a>)</td><td><span class="badge auto">gate check 9</span></td></tr>
-        <tr><td>A listed <code>mr/v1</code> note attesting the WU result report — a human read the result and authorised the tip (always, not waivable)</td><td><span class="badge auto">gate check 8</span></td></tr>
+        <tr><td>A listed <code>mr/v1</code> note attesting the WU result report — a human read the result and authorised the tip (always, not waivable). <strong>Signed last</strong>: <code>mr confirm</code> refuses until <code>test/v2</code>, <code>doc/v1</code> and a diff-bound <code>cr/v3</code> PASS are already on the tip (<a href="#sign-last">why</a>)</td><td><span class="badge auto">gate check 8</span></td></tr>
         <tr><td>Merge <code>--no-ff</code> into the epic; notes on origin</td><td><span class="badge auto">pre-merge-commit hook</span> · <span class="badge auto">pre-push notes sync</span></td></tr>
       </tbody>
     </table>
@@ -112,7 +112,7 @@ flowchart TD
         <tr><td>Epic-scope notes on the tip; review PASS vs <code>main</code>, diff-bound</td><td><span class="badge auto">gate checks 1–6</span></td></tr>
         <tr><td>Docs distilled: T3 plan archived out of git (→ <code>docs/.archive/</code>, untracked) with lineage, T2 current, T1 only if the shape changed</td><td><span class="badge auto">gate check 6</span> (file-tree + diff facts) · adequacy = review</td></tr>
         <tr><td>Every component design the epic added is built — a roster entry at the tip — or the note records the drop and why (<a href="#design-handoff">design → build</a>)</td><td><span class="badge auto"><code>components·unbuilt</code></span></td></tr>
-        <tr><td>A listed <code>mr/v1</code> note attesting the epic result report — a human read the result and authorised the epic (always required, not waivable)</td><td><span class="badge auto">gate check 8</span></td></tr>
+        <tr><td>A listed <code>mr/v1</code> note attesting the epic result report — a human read the result and authorised the epic (always required, not waivable). <strong>Signed last</strong>, on the same rule as the WU (<a href="#sign-last">why</a>)</td><td><span class="badge auto">gate check 8</span></td></tr>
         <tr><td>Merge <code>--no-ff</code> into <code>main</code>; notes on origin; branches deleted</td><td><span class="badge auto">hooks</span> · merge ritual</td></tr>
       </tbody>
     </table>
@@ -214,6 +214,30 @@ flowchart TD
         <tr><td><strong>Epic</strong></td><td><strong>always</strong> — and the note must attest the epic result report</td><td>the <code>mr/v1</code> note on the tip</td><td>gate check 8</td></tr>
       </tbody>
     </table>
+
+    <h3 id="sign-last">The signature goes last — the tree settles before a human is asked
+    (<a href="decisions/workflow-gates.html#dec-27">DEC-27</a>)</h3>
+
+    <p data-c="sign-last-why">Every binding on a tip carries the diff it was made against:
+    <code>cr/v3</code> pins <code>diff_sha256</code>, <code>mr/v1</code> pins the result report's bytes.
+    So <strong>any tree change after a binding orphans it</strong> — a fix, a forgotten test, a doc edit —
+    and the cost is another review <em>and</em> another human signature. The order is therefore not a
+    preference:</p>
+
+    <table data-c="sign-last-order">
+      <thead><tr><th>#</th><th>Step</th><th>Why it comes first</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>the work, its tests, its docs, the result report</td><td>everything that changes the tree</td></tr>
+        <tr><td>2</td><td><code>test/v2</code> + <code>doc/v1</code> on the tip</td><td>writing the receipt is the act that carries adding the test and settling the docs — a missing receipt means the tree may still move</td></tr>
+        <tr><td>3</td><td>the code-review skill → <code>cr/v3</code> <strong>PASS</strong>, diff-bound</td><td>independent judgment, so the human signs something already checked</td></tr>
+        <tr><td>4</td><td><code>cargo xtask mr confirm</code></td><td>the first binding that costs a person; it goes last</td></tr>
+        <tr><td>5</td><td><code>merge --no-ff</code></td><td>the gate re-checks every note against the final diff</td></tr>
+      </tbody>
+    </table>
+
+    <p data-c="sign-last-enforced"><strong>Enforced, not merely documented</strong>:
+    <code>mr confirm</code> refuses steps 2–3 missing, and refuses <em>before</em> the signing prompt —
+    so the human is asked once, at the right moment.</p>
 
     <p data-c="mr-carrier">Rule-bearing docs are gated at <em>commit</em> time — reviewing after the commit
     exists is too late, and a git note can't hang on a commit that doesn't exist yet — so the authoriser
