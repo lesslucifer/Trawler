@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-DFLOW
 wu: E-DFLOW.W11
-branch: HEAD
 base: f7ac58598addd7a761cf93e753f4268954c20899
 tip: 2eafd1180b6a0f9d9976a3ab6bb480c6b80d8888
 diff_sha256: cbda9a7e25bce9ac36798be98d825e45d002b7c90b18ac473a5a038274b2ec24
