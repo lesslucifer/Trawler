@@ -1,0 +1,11 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W6
+branch: wu/design-flow/revise-rulebook
+changes:
+  - path: docs/work/2026-08-09-dflow-w6-step2-lint-and-reexpression.html
+    tier: T3
+    action: updated
+    distills: "new #review section — the two defects code review found in the rule's own judgement, each with what it did, why the green gate missed it, and the fix. Records the falsified sentence: the plan and this doc both claimed the slash split checks each half 'against its own scale', which the code did not do for the modifier half. Names the lesson for later steps: ①'s defects were found by diffing built CSS, ②'s only by an adversarial reader of the rule's source, and both were invisible to the lint run, the reconciler and all 467 tests at once"
+open:
+  - "the snapshot POST to the htmldoc server was blocked by the sandbox this session, so the doc's diff baseline is still its creation state rather than a pre-edit snapshot; the #review section is the only change since"

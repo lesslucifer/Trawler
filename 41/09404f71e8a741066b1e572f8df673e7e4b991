@@ -1,0 +1,91 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W8
+branch: wu/design-flow/dev-integration
+changes:
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "v11 - the design → build handoff a UI Working Unit owes: a Design → build section (the two halves, D1a's three drift cases, and the non-rule stated as loudly as the rules), a DoD-W row (a WU that adds a surface cites its design), a DoD-E row (every component design built or dropped on the record), gate-check rows (check 9 gains the build side, components·unbuilt gets its own) and one lifecycle node (design WU before build WU, same epic). Rule-bearing, so it landed as its own commit 592ff2b with a listed Reviewed-By trailer"
+  - path: docs/decisions/dec-25-design-build-handoff.html
+    tier: T2
+    action: added
+    distills: "DEC-25 - the design → build handoff. Why the coupling unit is the epic (the design and its build are never the same diff, and the epic merge is the last seam where an unbuilt design is still in the tree to be seen); why the pointer carries a blob and not just a path (a path cannot say which bytes, and the blob is what makes an amendment countable); why nothing judges conformance, with the revisit condition stated rather than filed - a real build that drifts from the design it cited in a way the pointer did not catch; D1a's three drift cases as consequences; the four drops this WU retires, with what carries each contract now; and the measurements behind each claim"
+  - path: docs/decisions/dec-16-design-file-retirement.html
+    tier: T2
+    action: updated
+    distills: "the survival clause superseded, and only that. 'The contract still lives there and nowhere else' was a grant, and the grant was the defect - it made a design file a permanent second address for a contract, with nothing comparing it to code and nothing ever asking whether the component arrived. An unbuilt design is now a question its epic must answer. The three-step retirement order and both its predicates are untouched, and the record's 'four files remain and are not violations' note is corrected to what W8 did with them"
+  - path: docs/decisions/dec-24-design-review-dimension.html
+    tier: T2
+    action: updated
+    distills: "the timing dependency it handed W8, answered on the build side: the Tier-3 verdict stays at the close and what the build inherits is a pointer to the exact bytes it covered; an amendment inside a build Working Unit needs no new rule, because the amended design is a design artifact in that diff and this record's own trigger already demands a verdict; and verdict became optional because a note may now carry the design section for its citation or its drop record alone, where demanding a PASS over an empty artifact list would have made it attest a review nobody ran"
+  - path: docs/decisions/dec-15-design-run-enforcement.html
+    tier: T2
+    action: updated
+    distills: "where its model stops. Three tiers govern the run; two predicates now govern what happens to it, and the gap between them was where three design runs produced zero lines of product code. The build-side pair lands as a consequence carrying its own table - not as a fourth row in tiers-done, which would claim a fourth tier W8 did not build - and both halves inherit this record's rule that a silence must never read as a pass"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "the DEC-25 row, so the record is reachable index-first, naming the supersession of DEC-16 it carries"
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: updated
+    distills: "ten links to the four retired component designs became plain code names - the rulebook cited three of the four as the PROVENANCE of a rule (syn-* roles, empty-states-instruct, labels-add-context, calm-microcopy, one-term-per-concept, view-not-truth). The name still says where the rule came from; the link no longer resolves, and this is how every already-built component's provenance is written. No rule text changed"
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "step 9 - Hand over to the build, after the Tier-3 review: the two halves of the rule with what refuses each, why the pointer is a blob, D1a's three drift cases, the deliberate absence of a conformance judgment, and one commands row (the git rev-parse <tip>:<design> a build agent runs to get the blob it cites). Still T3 - promotion is epic distillation's, per W7·D6"
+  - path: docs/work/2026-08-12-dflow-w8-discussion.html
+    tier: T3
+    action: added
+    distills: "the direction round - six decisions and two questions, including D3·E (no unbuilt design survives the epic, which dissolves the address problem instead of giving it a home), D4·C (nothing judges conformance) and Q1 (the four unbuilt contracts are dropped, not built and not grandfathered)"
+  - path: docs/work/2026-08-13-dflow-w8-plan.html
+    tier: T3
+    action: added
+    distills: "the plan - five steps, the rulings table, the test plan with no waiver at any level, and the standing risk named at planning: a handoff enforced by predicates and driven by a fake build reads exactly like one that works"
+  - path: docs/work/2026-08-13-dflow-w8-step1-unbuilt.html
+    tier: T3
+    action: added
+    distills: "step 1 - components·unbuilt, the measurement (20 designs, 16 in the roster, 4 not), the four drop reasons as the tree actually says them rather than as the plan assumed, and the three things the deletion moved"
+  - path: docs/work/2026-08-13-dflow-w8-step2-handoff.html
+    tier: T3
+    action: added
+    distills: "step 2 - the rule written before it was mechanised, and the finding that documentation-system.html needed zero lines, which is D3·E's own argument restated"
+  - path: docs/work/2026-08-13-dflow-w8-step3-pointer.html
+    tier: T3
+    action: added
+    distills: "step 3 - the trigger and the pointer, the five refusals, the measurement that refuted D6·A's premise while its conclusion held, and the second thing the code said: a design section with nothing judged was being asked for a verdict"
+  - path: docs/work/2026-08-13-dflow-w8-step4-build-leg.html
+    tier: T3
+    action: added
+    distills: "step 4 - the hand-over driven end to end over real git: six cases, eight merges, five refusals, zero rule defects, and the gate-0 red step 3 had left in a lib test target no step had linted"
+  - path: docs/work/2026-08-13-dflow-w8-result.html
+    tier: T3
+    action: added
+    distills: "the WU result report - the requirement leg by leg, the five-step ledger, six deviations including two corrections to immutable step records, the evidence, the distillation state and seven follow-ups. It states the gate state and not its own merge verdict, per W7 follow-up 13"
+  - path: docs/work/components/body-renderer.html
+    tier: T3
+    action: archived
+    distilled_to:
+      - docs/decisions/dec-25-design-build-handoff.html
+    distills: "a family contract, not a component: everything it specified was built as the seven-renderer family (SourceSurface, JsonRenderer, XmlRenderer, TextRenderer, HexRenderer, ImageRenderer, FormRenderer) and each member's contract is now its own TSDoc. No component is named BodyRenderer. DEC-25 records the drop and what carries the contract"
+  - path: docs/work/components/body-viewer.html
+    tier: T3
+    action: archived
+    distilled_to:
+      - docs/decisions/dec-25-design-build-handoff.html
+    distills: "built as the screen ui/src/BodyViewer.tsx, outside ui/src/components/ and so outside the registry its contract assumed. A screen's contract is not the collection's, which is why the roster never carried it. DEC-25 records the drop"
+  - path: docs/work/components/copy-all-headers-button.html
+    tier: T3
+    action: archived
+    distilled_to:
+      - docs/decisions/dec-25-design-build-handoff.html
+    distills: "the only true never-built: the design review dissolved it into CopyText before any code existed, and the file's own title said so. A dissolved proposal is a design decision, not a debt. DEC-25 records the drop"
+  - path: docs/work/components/header-table.html
+    tier: T3
+    action: archived
+    distilled_to:
+      - docs/decisions/dec-25-design-build-handoff.html
+    distills: "built as a local function in ui/src/FlowDetail.tsx, used by both header sections and never extracted into the collection. DEC-25 records the drop and names the open half: the day it becomes a registry component the trigger asks it for a design"
+t2_waived: null
+date: 2026-08-13

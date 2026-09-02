@@ -1,0 +1,91 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W8
+branch: wu/design-flow/dev-integration
+changes:
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "v12 - the design → build handoff a UI Working Unit owes, in two passes. At step 2 (592ff2b): a Design → build section, a DoD-W row, a DoD-E row, gate-check rows (check 9 gains the build side, components·unbuilt gets its own) and one lifecycle node. At step 6 (bdc8411): the touched half - every non-test .tsx under ui/src/ the diff leaves standing is cited or declared undesigned with a reason - plus a scope table saying what counts as a rendered file, the commit-level rule (UI work happens inside a Working Unit), the roster counting screens, and the drift row that said 'nothing' now saying 'one sentence'. The version line itself was part of step 6's fix: it still read v10, because step 2's commit message announced v11 without editing the file. Rule-bearing, so both passes landed as their own commits with a listed Reviewed-By trailer"
+  - path: docs/decisions/dec-25-design-build-handoff.html
+    tier: T2
+    action: added
+    distills: "DEC-25 - the design → build handoff, three halves. Why the coupling unit is the epic (the design and its build are never the same diff, and the epic merge is the last seam where an unbuilt design is still in the tree to be seen); why the pointer carries a blob and not just a path (a path cannot say which bytes, and the blob is what makes an amendment countable); why nothing judges conformance, with the revisit condition stated rather than filed; D1a's three drift cases as consequences; the four drops this WU retires; and the measurements behind each claim. Step 6 amended it in place rather than adding a DEC-26 - the record had not left this branch, so the rule keeps one record instead of gaining an erratum to an unmerged one. What step 6 changed in it: the touched half joins the added one with its own trigger, refusals and billing; the context gains the second failure that lived in the gap (a trigger keyed on added files reaches only surfaces that do not exist yet, and the screens all exist); the cases table's first row no longer says nothing is owed for an unforeseen small change; four more options are rejected with their reasons; the measured table is re-measured throughout, including the new binary run over the old epic history - 0 design failures across 9 seams, and 4 components·unbuilt becoming 3 because BodyViewer now resolves; and the body-viewer.html drop row says what it really was, a built design filed as unbuilt because the roster could not see screens. The review round then added four paragraphs it had earned: the added half and the roster are literally one function (doc::surface_at), why the path test must come first (a blob spared, and a screen whose bytes do not decode still a screen), why a rename is refused rather than exempted (DEC-16 has retired the design a citation would name, so the refusal is real - but the two attempts to exempt renames each let a genuinely new surface through, git pairing on similarity alone, so the gate fails closed and the exit is a declared rename the gate can check, not a guess), and why the range walk needs --full-history (git follows the TREESAME first parent past the merge that lands a design added and then removed). The other roster - the node oracle behind verify-doc - still reads the collection alone, and that asymmetry is now stated here rather than only in the result report"
+  - path: docs/decisions/dec-16-design-file-retirement.html
+    tier: T2
+    action: updated
+    distills: "the survival clause superseded, and only that. 'The contract still lives there and nowhere else' was a grant, and the grant was the defect - it made a design file a permanent second address for a contract, with nothing comparing it to code and nothing ever asking whether the component arrived. An unbuilt design is now a question its epic must answer. The three-step retirement order and both its predicates are untouched, and the record's 'four files remain and are not violations' note is corrected to what W8 did with them"
+  - path: docs/decisions/dec-24-design-review-dimension.html
+    tier: T2
+    action: updated
+    distills: "the timing dependency it handed W8, answered on the build side: the Tier-3 verdict stays at the close and what the build inherits is a pointer to the exact bytes it covered; an amendment inside a build Working Unit needs no new rule, because the amended design is a design artifact in that diff and this record's own trigger already demands a verdict; and verdict became optional because a note may now carry the design section for its citation or its drop record alone, where demanding a PASS over an empty artifact list would have made it attest a review nobody ran"
+  - path: docs/decisions/dec-15-design-run-enforcement.html
+    tier: T2
+    action: updated
+    distills: "where its model stops. Three tiers govern the run; two predicates now govern what happens to it, and the gap between them was where three design runs produced zero lines of product code. The build-side pair lands as a consequence carrying its own table - not as a fourth row in tiers-done, which would claim a fourth tier W8 did not build - and both halves inherit this record's rule that a silence must never read as a pass"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "the DEC-25 row, so the record is reachable index-first, naming the supersession of DEC-16 it carries - re-worded at step 6 to say three halves, the touched half that accounts for every rendered file a diff leaves standing, and that the roster counts screens"
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: updated
+    distills: "ten links to the four retired component designs became plain code names - the rulebook cited three of the four as the PROVENANCE of a rule (syn-* roles, empty-states-instruct, labels-add-context, calm-microcopy, one-term-per-concept, view-not-truth). The name still says where the rule came from; the link no longer resolves, and this is how every already-built component's provenance is written. No rule text changed"
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "step 9 - Hand over to the build, after the Tier-3 review: the three halves of the rule with what refuses each, why the pointer is a blob, D1a's three drift cases, the deliberate absence of a conformance judgment, and one commands row (the git rev-parse <tip>:<design> a build agent runs to get the blob it cites). Step 6 added the middle half - an edit answers for itself, one sentence and never a run, because most UI work re-shapes what exists and a gate that answered that with go-design-it would be routed around - and the note that a screen design is where the flow's own screen-bound rules live, so the hand-over reaches every rendered file rather than only the collection's. Still T3 - promotion is epic distillation's, per W7·D6"
+  - path: docs/work/2026-08-12-dflow-w8-discussion.html
+    tier: T3
+    action: added
+    distills: "the direction round - six decisions and two questions, including D3·E (no unbuilt design survives the epic, which dissolves the address problem instead of giving it a home), D4·C (nothing judges conformance) and Q1 (the four unbuilt contracts are dropped, not built and not grandfathered)"
+  - path: docs/work/2026-08-13-dflow-w8-plan.html
+    tier: T3
+    action: added
+    distills: "the plan - six steps, the rulings table, the test plan with no waiver at any level, and the standing risk named at planning: a handoff enforced by predicates and driven by a fake build reads exactly like one that works. Step 6 was added to the plan before it was built: its own worklist section, two expected rows, an order row, a widened requirement callout, and a regression bar that now names the widened trigger - 0 landed seams and 0 landed commits may red"
+  - path: docs/work/2026-08-13-dflow-w8-step1-unbuilt.html
+    tier: T3
+    action: added
+    distills: "step 1 - components·unbuilt, the measurement (20 designs, 16 in the roster, 4 not), the four drop reasons as the tree actually says them rather than as the plan assumed, and the three things the deletion moved"
+  - path: docs/work/2026-08-13-dflow-w8-step2-handoff.html
+    tier: T3
+    action: added
+    distills: "step 2 - the rule written before it was mechanised, and the finding that documentation-system.html needed zero lines, which is D3·E's own argument restated"
+  - path: docs/work/2026-08-13-dflow-w8-step3-pointer.html
+    tier: T3
+    action: added
+    distills: "step 3 - the trigger and the pointer, the five refusals, the measurement that refuted D6·A's premise while its conclusion held, and the second thing the code said: a design section with nothing judged was being asked for a verdict"
+  - path: docs/work/2026-08-13-dflow-w8-step4-build-leg.html
+    tier: T3
+    action: added
+    distills: "step 4 - the hand-over driven end to end over real git: six cases, eight merges, five refusals, zero rule defects, and the gate-0 red step 3 had left in a lib test target no step had linted"
+  - path: docs/work/2026-08-13-dflow-w8-result.html
+    tier: T3
+    action: added
+    distills: "the WU result report - the requirement leg by leg, the six-step ledger, seven deviations including two corrections to immutable step records, the evidence, the distillation state and nine follow-ups. It states the gate state and not its own merge verdict, per W7 follow-up 13. Plus both review rounds. Step 6 added: a step-6 section carrying the four measurements that forced it (8 screens and 0 designs, 14 landed UI seams of which 4 modified only, 1 cr/v3 note in the whole repo, and the inverted incentive), the deviation explaining why a five-step plan grew a sixth, an infrastructure distillation row for the code-review skill, and two follow-ups - the eight landed screens stay waived by ruling, and the two roster oracles still disagree about screens. The review rounds added their own tables: round 3's 19 candidates (11 refuted, two blockers, four smaller findings), round 4 finding one of those fixes had opened a hole of its own plus three wrong numbers in these docs, and round 5 finding the same fix still leaking - which is why the rename rows now read superseded and ruled-a-limitation, and why follow-up 10 carries the reproduction and the exit"
+  - path: docs/work/components/body-renderer.html
+    tier: T3
+    action: archived
+    distilled_to:
+      - docs/decisions/dec-25-design-build-handoff.html
+    distills: "a family contract, not a component: everything it specified was built as the seven-renderer family (SourceSurface, JsonRenderer, XmlRenderer, TextRenderer, HexRenderer, ImageRenderer, FormRenderer) and each member's contract is now its own TSDoc. No component is named BodyRenderer. DEC-25 records the drop and what carries the contract"
+  - path: docs/work/components/body-viewer.html
+    tier: T3
+    action: archived
+    distilled_to:
+      - docs/decisions/dec-25-design-build-handoff.html
+    distills: "built as the screen ui/src/BodyViewer.tsx, outside ui/src/components/ and so outside the registry its contract assumed. A screen's contract is not the collection's, which is why the roster never carried it. DEC-25 records the drop"
+  - path: docs/work/components/copy-all-headers-button.html
+    tier: T3
+    action: archived
+    distilled_to:
+      - docs/decisions/dec-25-design-build-handoff.html
+    distills: "the only true never-built: the design review dissolved it into CopyText before any code existed, and the file's own title said so. A dissolved proposal is a design decision, not a debt. DEC-25 records the drop"
+  - path: docs/work/components/header-table.html
+    tier: T3
+    action: archived
+    distilled_to:
+      - docs/decisions/dec-25-design-build-handoff.html
+    distills: "built as a local function in ui/src/FlowDetail.tsx, used by both header sections and never extracted into the collection. DEC-25 records the drop and names the open half: the day it becomes a registry component the trigger asks it for a design"
+t2_waived: null
+date: 2026-08-13

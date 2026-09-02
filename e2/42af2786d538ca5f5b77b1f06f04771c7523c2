@@ -1,0 +1,20 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W6
+branch: wu/design-flow/revise-rulebook
+changes:
+  - path: docs/work/2026-08-09-dflow-w6-step2-lint-and-reexpression.html
+    tier: T3
+    action: added
+    distills: "step 2's run doc — how the rule decides (getClassList() as the legality oracle, candidateRuleMap as the structural/scale-bearing discriminator, so no prefix table is hand-written), the five binding requirements with what proves each, the reconciliation against built CSS (208 authored / 235 emitted / agree on 205 / 3 arbitrary diverge by design), the first red list of 142 sites over 58 classes with the 5 variant-prefixed classes step 1 could not see, the nine classes that could not keep their value named rather than buried, the six pragmas each a template shape, and the chromatic correction with its cost stated plainly (zero-accent is now a five-member set, not a one-sentence rule)"
+  - path: docs/work/2026-08-09-dflow-w6-step2-quiz.html
+    tier: T3
+    action: added
+    distills: "the understanding quiz that preceded the build — sixteen closed questions and two open ones, each aimed at one thing step 2 decides; its wrong answers were the worklist for the explanation round"
+  - path: docs/work/components/method-label.html
+    tier: T3
+    action: updated
+    distills: "the design file's banner corrected from 'superseded in part, fork D1 overturned' to 're-expressed, not overturned' — D1 stands, verbs stay colour-coded at exactly the five hues W5 shipped, and the verb -> was -> now -> hex table records that only three of the five tokens were new because method-get was an exact alias of ok and method-delete of warn. A full rewrite is deferred to the WU's distillation"
+open:
+  - "docs/decisions DEC-17 is not yet written — step 3 owns it, and now owes: zero-accent restated as a FIVE-member chromatic set, chromatic-meanings rows for create/replace/amend, deletion of the table's dead verb-tokens row, a ruling on whether CutMarker's text-warn widens warn or earns its own case, and the measured 161/47 scale-bearing/structural split in place of the plan's guessed 144/56"
+  - "docs/work/components/method-label.html holds a corrected banner over otherwise pre-W6 content; the rewrite lands at distillation"

@@ -1,0 +1,87 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W6
+branch: wu/design-flow/revise-rulebook
+changes:
+  - path: docs/architecture.html
+    tier: T1
+    action: updated
+    distills: "the Lint row named cargo clippy and nothing else; the tree now has a second linter that is a gate - npm run lint carrying the project-local design/vocabulary rule. Committed with a human Reviewed-By trailer, as a rule-bearing doc must be"
+  - path: docs/decisions/dec-17-closed-vocabulary.html
+    tier: T2
+    action: added
+    distills: "DEC-17 - the design vocabulary is closed and legality is membership of a DECLARED scale, never of what Tailwind can emit. The config is the source of truth and the rulebook points at it; two enforcement surfaces off one derived oracle; why the code-side check is a local ESLint rule, with the five requirements on it and the defect each is earned by; the three traps and the fourth hole both checkers are blind to by construction; both sanctioned escapes; the data-wire declaration and its n/a path; the measured 161/47 split recorded as an output of the rule"
+  - path: docs/decisions/dec-15-design-run-enforcement.html
+    tier: T2
+    action: updated
+    distills: "the Tier-1 completion. Its W7 consequence is struck - W6 built all twelve predicates, because Tier-1 reads the config and DEC-17's closed vocabulary is its input, so the ordering was a dependency rather than a queue. Plus: the completed tier is one surface, which is why the gap line prints (design)"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "the DEC-17 row, so the record is reachable index-first"
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: updated
+    distills: "the WU's primary output. 19 W4 findings disposed; the binds axis routing each rule to the design run, to ui/src/, or both; vocabularies stopped listing members and started pointing at the config; three soft rules added (13 hard / 17 soft); the closed-vocabulary traps, the two sanctioned escapes and the data-wire marker stated; step 3's tiering pass moved this epic's finding numbers and measured counts out to the work docs; the two DEC-17 mentions are now links"
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: updated
+    distills: "the deferred ruling on the body-view switch labelled two ways - the doc is right and the build changes - kept out of the rulebook, which never lists its own live exceptions"
+  - path: docs/work/2026-08-03-dflow-w6-discussion.html
+    tier: T3
+    action: added
+    distills: "the direction round: two answers that superseded the epic plan, including the closed-vocabulary ruling that made ui/tailwind.config.js this WU's subject"
+  - path: docs/work/2026-08-03-dflow-w6-plan.html
+    tier: T3
+    action: added
+    distills: "the plan and its two revisions against executed evidence, including the standing requirement that no unmeasured scale-bearing split reach DEC-17"
+  - path: docs/work/2026-08-03-dflow-w6-step0-sweep.html
+    tier: T3
+    action: added
+    distills: "step 0 - every size-bearing scale enumerated from resolveConfig, and the correction that found the step's own scanner unsound and replaced it with a built-CSS oracle"
+  - path: docs/work/2026-08-04-dflow-w6-step1-closed-config.html
+    tier: T3
+    action: added
+    distills: "step 1 - theme.extend to theme, and the three defects in the closure itself, none found by the build"
+  - path: docs/work/2026-08-09-dflow-w6-step2-lint-and-reexpression.html
+    tier: T3
+    action: added
+    distills: "step 2 - the ESLint rule and the pragma, then the 142 violations across 58 classes it found and the 21 files re-expressed; the measured 161/47 split"
+  - path: docs/work/2026-08-09-dflow-w6-step2-quiz.html
+    tier: T3
+    action: added
+    distills: "step 2's pre-build quiz, kept as the record of which questions the rule had to answer before it was written"
+  - path: docs/work/2026-08-10-dflow-w6-step2-review-result.html
+    tier: T3
+    action: added
+    distills: "the code review of step 2 - two real defects inside the rule's own judgement out of 22 candidates"
+  - path: docs/work/2026-08-10-dflow-w6-step3-rulebook.html
+    tier: T3
+    action: added
+    distills: "step 3 - the 19 findings disposed one by one, the two rulings, the tiering pass, and this epic's case history moved off the T2"
+  - path: docs/work/2026-08-10-dflow-w6-step4-predicates.html
+    tier: T3
+    action: added
+    distills: "step 4 - the twelve predicates, the bridge, the surface label on the gap line, and the red-by-red evidence table (its arithmetic corrected by step 5)"
+  - path: docs/work/2026-08-10-dflow-w6-step5-regression.html
+    tier: T3
+    action: added
+    distills: "step 5 - the independent re-run: 49 reds reproduced exactly, zero predicates wrong, and the tenth defect it found doing it"
+  - path: docs/work/2026-08-10-dflow-w6-result.html
+    tier: T3
+    action: added
+    distills: "the WU result report - the requirement leg by leg, the six-step ledger, deviations, the distillation state and ten follow-ups. Named by the mr/v1 sign-off"
+  - path: docs/work/2026-07-26-dflow-w4-run-3.html
+    tier: T3
+    action: updated
+    distills: "data-status=\"archived\" - the run closed at W4 but never carried the flag, so it was the only red doc of 79 for two WUs. The process gap behind it is follow-up 8, owned by W7"
+  - path: docs/work/design-flow-base.html
+    tier: T3
+    action: updated
+    distills: "the archived-run policy amended to match DEC-15: a finished run is archived when it finishes, and the vacuum that the never-archive-the-newest rule was guarding is closed by a pin that lifts the flag itself and asserts the lift changed something"
+  - path: docs/work/components/method-label.html
+    tier: T3
+    action: updated
+    distills: "fork D3 re-opened: the verb tones are a palette gap rather than a deletion, and the design file records why the token names are what the config now declares"
+t2_waived: null
+date: 2026-08-11
