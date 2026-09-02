@@ -41,10 +41,22 @@ changes:
     tier: T3
     action: updated
     distills: "W10 compacted it 48% to real-run value, stated the never-read-the-checker-source and batched-fix-loop rules, and now states that a run doc is authored through the htmldoc skill"
-  - path: docs/work/components/
+  - path: docs/work/components/body-renderer.html
     tier: T3
     action: deleted
-    distills: "body-renderer, body-viewer, copy-all-headers-button, header-table — retired into the registry per DEC-16; the TSDoc is the contract"
+    distilled_to: "the component's own TSDoc in ui/src/components/ — retired per DEC-16; the registry entry emitted from that TSDoc is the contract, and a design file left beside it is a second truth"
+  - path: docs/work/components/body-viewer.html
+    tier: T3
+    action: deleted
+    distilled_to: "the component's own TSDoc in ui/src/components/ — retired per DEC-16; the registry entry emitted from that TSDoc is the contract, and a design file left beside it is a second truth"
+  - path: docs/work/components/copy-all-headers-button.html
+    tier: T3
+    action: deleted
+    distilled_to: "the component's own TSDoc in ui/src/components/ — retired per DEC-16; the registry entry emitted from that TSDoc is the contract, and a design file left beside it is a second truth"
+  - path: docs/work/components/header-table.html
+    tier: T3
+    action: deleted
+    distilled_to: "the component's own TSDoc in ui/src/components/ — retired per DEC-16; the registry entry emitted from that TSDoc is the contract, and a design file left beside it is a second truth"
   - path: docs/work/2026-08-12-dflow-w8-discussion.html
     tier: T3
     action: added
