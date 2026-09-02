@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-htmldoc-id="6a97ad269f34851f0dfabd86">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -24,17 +24,21 @@
   </style>
 </head>
 <body>
+<header class="doc-hero">
+  <div class="inner">
+    <h1>Design run #7 — the replay composer</h1>
+    <p>The first run of the design flow on a function that does not exist — capabilities read from the roadmap
+    and the owner's Given list, not from a shipped screen.</p>
+    <div class="meta">Design run · 2026-09-02 · Trawler · T3 (docs/work/) · rulebook <code>a2f45dd7</code> ·
+    <a href="design-flow-base.html">the flow it follows</a></div>
+  </div>
+</header>
 <main data-artifact="design-run" data-status="archived">
 
-<h1>Design run #7 — the replay composer</h1>
-<p>The seventh run of the design flow, and the first on a <strong>function that does not exist</strong>: E-REPLAY's
-composer. Every prior run redesigned a shipped surface and read its capabilities off the code. This one reads them
-off the roadmap line and the owner's Given list — and it is the first <em>editing</em> screen in a registry of
-24 read-only components.</p>
-<p class="kd">Design run · 2026-09-02 · Trawler · T3 (docs/work/) · rulebook <code>a2f45dd7</code> ·
-target: E-REPLAY composer, greenfield · <a href="design-flow-base.html">the flow it follows</a></p>
+<p>Every prior run redesigned a shipped surface and read its capabilities off the code. This one is also the
+first <em>editing</em> screen designed against a registry of 24 read-only components.</p>
 
-<h2>Substrate, frozen at the start</h2>
+<h2 id="substrate">Substrate, frozen at the start</h2>
 <table>
 <tr><th>Input</th><th>Version</th><th>Read for</th></tr>
 <tr><td>component registry</td><td>24 entries, emitted from TSDoc</td><td>reuse-or-propose at Elements — @avoid first</td></tr>
@@ -43,14 +47,14 @@ target: E-REPLAY composer, greenfield · <a href="design-flow-base.html">the flo
 <tr><td>the Given list</td><td>owner-stated, 2026-09-02</td><td>the capabilities — no shipped screen exists to read them from</td></tr>
 </table>
 
-<h2>1 · Frame</h2>
-<p data-item="frame">Purpose: a developer debugging an API takes a captured request, changes one thing, and fires it again to see what changes.
+<h2 id="frame">1 · Frame</h2>
+<p data-item="frame" data-c="frame-given">Purpose: a developer debugging an API takes a captured request, changes one thing, and fires it again to see what changes.
 Given (functional input — received, not designed):
   seed a draft from a captured flow · override method · override URL · override headers · override body · send · the result lands as a new flow · compose from scratch
 Not given (may not be assumed to exist):
   saved request collections · environments or variables · auth helpers · multi-request sequences · response assertions · send history beyond the flow list</p>
 
-<table data-item="frame">
+<table data-item="frame" data-c="frame">
 <tr><th>Driver</th><th>why…</th><th>therefore (design consequence)</th><th>on this screen</th></tr>
 
 <tr><td colspan="4" class="kd"><em>Goals — the ranking is the visual hierarchy</em></td></tr>
@@ -108,10 +112,10 @@ Not given (may not be assumed to exist):
 </tr>
 <tr><td colspan="4" class="kd">Non-goals: request collections · scripting · environment substitution · diffing two responses</td></tr>
 </table>
-<h2>2 · Layout</h2>
+<h2 id="layout">2 · Layout</h2>
 <p>Three zones. The draft is the screen; the seed is a reference the draft cites, and the outcome lands where the
 eye already is — under the button that caused it.</p>
-<table data-item="layout"><tr><td><pre class="tb">┌─────────────────────────────────────────────┐
+<table data-item="layout" data-c="layout"><tr><td><pre class="tb">┌─────────────────────────────────────────────┐
 │ A  identity — method · URL                   │  ← the request in one line; highest weight
 ├─────────────────────────────────────────────┤
 │ B  request body — headers, then body         │  ← the edit surface; the tallest zone
@@ -125,8 +129,8 @@ scroll / overflow: A pinned, never scrolls · B scrolls — the only unbounded z
                    BodyRenderer family's TEXT_MAX and states the cut · C pinned to the
                    bottom so send is reachable without scrolling B to its end</pre></td></tr></table>
 
-<h2>3 · Elements</h2>
-<div data-item="elements" data-map>
+<h2 id="elements">3 · Elements</h2>
+<div data-item="elements" data-c="elements" data-map>
 <pre class="tb">composer
 ├─ A identity ── <span data-key="method-label">MethodLabel</span> · <span data-key="field">Field ▣</span>
 ├─ B request  ── <span data-key="section">Section</span> ◆
@@ -250,8 +254,8 @@ Section (T1) · Button (T1) · IconButton (T1) · StatusLine (T2) · StatusPill 
 value · nothing existing fits: KeyValueRow, Select and SourceSurface each name the refusal in their own @avoid,
 and the collection has carried no input element since it was founded.</p>
 </div>
-<h2>4 · Interaction</h2>
-<table data-item="interaction">
+<h2 id="interaction">4 · Interaction</h2>
+<table data-item="interaction" data-c="interaction">
 <tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th><th>Keyboard path</th></tr>
 
 <tr>
@@ -326,11 +330,11 @@ and the collection has carried no input element since it was founded.</p>
   <td>focus starts in the URL Field</td>
 </tr>
 </table>
-<h2>5 · Draft mockup</h2>
+<h2 id="mockup">5 · Draft mockup</h2>
 <p>Every reuse verdict is mounted from <code>window.Trawler</code>. Screen-owned: the zone assembly, the header
 row grid, and <strong>Field</strong> — the run's one proposal, which has no component to mount.</p>
 
-<div data-item="mockup">
+<div data-item="mockup" data-c="mockup">
 <div class="a-mock" id="mock" style="max-width:720px">
 
   <div class="a-zone" id="m-identity"></div>
@@ -418,8 +422,8 @@ row grid, and <strong>Field</strong> — the run's one proposal, which has no co
     </div>);
 </script>
 </div>
-<h2>6 · Tune</h2>
-<table data-item="tune">
+<h2 id="tune">6 · Tune</h2>
+<table data-item="tune" data-c="tune">
 <tr><th>Call</th><th>Before</th><th>After</th><th>Slug</th></tr>
 
 <tr>
@@ -474,9 +478,9 @@ identity → edit → fire. <strong>Loops back to Layout: yes</strong> — the s
 </ul>
 </details>
 
-<h2>Closing artifacts</h2>
+<h2 id="closing">Closing artifacts</h2>
 
-<pre data-item="receipt">rulebook: a2f45dd7
+<pre data-item="receipt" data-c="receipt">rulebook: a2f45dd7
 soft:
   visual-weight-follows-goals: satisfied — zone B, the edit surface, is the tallest; goal 1 "see the edit against the original" owns the per-row mark
   grouping-by-relatedness: satisfied — headers and body are two Sections in one zone; the seam between B and C separates editing from firing
@@ -497,7 +501,7 @@ soft:
   choose-before-act: satisfied — Tune's first call; the send button precedes its own verdict, and the method/URL identity precedes the edit surface
 </pre>
 
-<table data-item="capabilities">
+<table data-item="capabilities" data-c="capabilities">
 <tr><th>Capability</th><th>Verdict</th><th>Where / why</th></tr>
 <tr><td>seed a draft from a captured flow</td><td>used</td><td>A and B arrive filled from the seed's RequestRec</td></tr>
 <tr><td>override method</td><td>used</td><td>A — MethodLabel over the draft's method</td></tr>
@@ -509,13 +513,13 @@ soft:
 <tr><td>compose from scratch</td><td>used</td><td>the no-seed draft; send gated on a non-empty URL</td></tr>
 </table>
 
-<p data-item="proposals"><strong>Field (T1)</strong> — a text input that accepts and reports a typed value,
+<p data-item="proposals" data-c="proposals"><strong>Field (T1)</strong> — a text input that accepts and reports a typed value,
 single-line and multiline. Why nothing existing fits: KeyValueRow's @avoid names <em>"editable forms (that is
 Field)"</em>, Select's @avoid names <em>"free-text entry"</em>, SourceSurface's @avoid names <em>"making it
 editable"</em>, and CopyText displays a value it never mutates. Four entries refuse the job by name. Owner:
 E-REPLAY's build WU, as a collection T1 alongside Button.</p>
 
-<table data-item="blocked-on">
+<table data-item="blocked-on" data-c="blocked-on">
 <tr><th>What is missing</th><th>Stage</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
 <tr>
   <td>the replay API contract — no endpoint exists to fire a draft or return its flow id</td>
@@ -537,7 +541,7 @@ E-REPLAY's build WU, as a collection T1 alongside Button.</p>
 </tr>
 </table>
 
-<table data-item="review">
+<table data-item="review" data-c="review">
 <tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr>
 <tr>
   <td>design a new function rather than another redesign — the flow has only ever been run on shipped screens</td>
@@ -561,5 +565,6 @@ E-REPLAY's build WU, as a collection T1 alongside Button.</p>
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
 mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{darkMode:true,background:'#181b22'}});
 </script>
+<script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
 </html>
