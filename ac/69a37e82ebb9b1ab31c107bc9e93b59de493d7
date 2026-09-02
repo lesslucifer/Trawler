@@ -1,0 +1,32 @@
+schema: doc/v1
+epic: E-DFLOW
+wu: E-DFLOW.W11
+changes:
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "New section: the signature goes last. States the five-step order (tree-changing work, then test/v2 + doc/v1, then cr/v3 PASS, then mr confirm, then merge), why it is load-bearing (every binding pins the diff, so a later tree change orphans it), and that mr confirm now enforces it before the signing prompt. Both DoD rows - working unit and epic - carry the precondition and link to it. T1 because it is a process rule that binds every WU and epic, not a fact about this one; the commit carries its Reviewed-By trailer accordingly"
+  - path: docs/work/2026-08-31-dflow-w11-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan - requirement, mapping, expected result, test plan. Rebased onto the epic tip so the run it governs reads the optimised substrate it names"
+  - path: docs/work/2026-09-02-dflow-run-8-setup-fullscreen.html
+    tier: T3
+    action: added
+    distills: "design run #8 - the setup screen as a step rail beside a workbench, filling the main region. Six stages, closed green and archived: 17/17 soft, 13/13 hard, 0 suppressions, rulebook a2f45dd7. Zero proposals; two @avoid hits carried rather than bent"
+  - path: docs/work/2026-09-02-dflow-w11-coverage-map.html
+    tier: T3
+    action: added
+    distills: "the retirement contract the build WU inherits - 32 assertions classified: 30 inherited, 1 retired (Next), 1 blocked on the DEC-13 revert question. Nothing deleted while the old design still ships"
+  - path: docs/work/2026-09-02-dflow-w11-result.html
+    tier: T3
+    action: added
+    distills: "the WU result - the measured cost (17.6M prompt against a 3.4M target) and why the target was unreachable as framed (prompt cost is context re-sent per call, not bytes read once), the per-stage timing, and the ordering defect this WU found in itself"
+untouched:
+  - path: docs/use-cases/web-ui.html
+    why: "UC-ONBOARD needed no amendment. The plan expected one; it was read and found unnecessary - UC-ONBOARD is a contract about capability and truthfulness, and run #8 changed layout. Every promise survives verbatim: the disclosure still auto-opens on failure, status is still probe-or-capture and never the stepper cursor, only a decrypted flow reveals the list. Recorded rather than edited - a cosmetic amendment to close a checklist item would be worse than leaving a true document alone"
+  - path: docs/decisions/dec-13-onboarding-capabilities.html
+    why: "No amendment, and one question owed, recorded in both the coverage map and the result. Run #8 lists unset-the-proxy as deliberately unused on the grounds it belongs to a settings surface, but the affordance ships inside the set-proxy step of this very screen, so the premise is false about where it lives. DEC-13 names symmetric revert as part of why the app may write OS state. The assertion is capability-bound and stands until the owner decides; a design run may not narrow a shipped capability by listing it unused"
+  - path: docs/decisions/
+    why: "No new decision record for the cost finding. It is a correction to W10/'s reasoning about its own optimisation, recorded in this WU/'s result where that reasoning lives; the durable form belongs in the T1 design-flow process doc that the epic distillation promotes, which is owed at epic close, not here"
+note: "One T1 edit (the ordering rule) and four T3 documents; no T2 change. The two T2 docs the plan expected to amend are listed under untouched with their reasoning, so the absence is a recorded decision rather than a silent omission. verify-doc green over the whole governed tree - 103 docs, 0 red. Epic distillation (T3 archiving, the flow spec/'s promotion to T1) remains owed at epic close."
