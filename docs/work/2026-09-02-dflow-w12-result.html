@@ -186,10 +186,13 @@
         <tr><td><code>docs/component-design.html</code></td><td>T1</td><td>added (moved)</td>
           <td>The component-design contract, sibling to the flow spec</td></tr>
         <tr><td><code>docs/decisions/dec-13-onboarding-capabilities.html</code></td><td>T2</td><td>updated</td>
-          <td>The proxy-revert question, verified against <code>Onboarding.tsx</code>, with the two
-          answers open to the owner. It existed nowhere but W11's result doc, which this WU archived</td></tr>
+          <td>The proxy-revert question — raised, verified against <code>Onboarding.tsx</code>, and
+          <strong>answered by the owner during this WU</strong>: the unset affordance stays, its gating
+          is already correct, and the shipped assertion is inherited. It existed nowhere but W11's
+          result doc, which this WU archived</td></tr>
         <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td><td>updated</td>
-          <td>DEC-13 flagged <em>1 open</em> so the question is findable without opening the record</td></tr>
+          <td>DEC-13's row records the revert call and links to it; the <em>1 open</em> badge it
+          briefly carried came off when the owner answered</td></tr>
         <tr><td><code>docs/design-rules/design-rules-index.html</code></td><td>T2</td><td>updated</td>
           <td>A component's contract lives in its TSDoc, not a design file — DEC-16's end state,
           which <code>KeyValueRow</code> already demonstrates</td></tr>
@@ -214,7 +217,9 @@
           <td>Archive this WU's plan + result, then <code>test/v2</code> + <code>doc/v1</code> →
           <code>cr/v3</code> PASS → <code>mr confirm</code> (last, DEC-27) → <code>--no-ff</code></td></tr>
         <tr><td>the build WU</td>
-          <td>Answer the DEC-13 revert question — the one thing W11 left genuinely undecided</td></tr>
+          <td>Keep the unset affordance and re-point its assertion at the new host — run #8 moves the
+          control into the step rail, and <em>inherited</em> binds the capability, not the coordinates.
+          The DEC-13 question W11 left open was answered in this WU, not deferred</td></tr>
         <tr><td>a flow-cost WU <span class="badge id">optional</span></td>
           <td>If run cost still matters, target call count, not bytes — W11 measured 17.6M prompt
           tokens against a 3.4M target and showed why compaction cannot close it</td></tr>
