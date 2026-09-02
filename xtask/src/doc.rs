@@ -69,7 +69,7 @@ const HARD_PREDICATES: &[&str] = &[
 const RULEBOOK: &str = "docs/design-rules/design-rules-index.html";
 const VOCABULARY: &str = "scripts/design-vocabulary.mjs";
 const REGISTRY: &str = "scripts/design-registry.mjs";
-const HTMLDOC_BOOTSTRAP: &str = "htmldoc.js";
+const HTMLDOC_BOOTSTRAP: &str = "https://htmldoc.wfomobile.com/htmldoc.js";
 pub const COMPONENTS: &str = "docs/work/components/";
 pub const COLLECTION: &str = "ui/src/components/";
 pub const SCREENS: &str = "ui/src/";
@@ -411,6 +411,8 @@ pub fn verify_html_against(
     };
     // Before the exempt gate: a draft and an archived run both still have to
     // render, and this is the one property whose absence no later check can see.
+    // Scope: governed docs only - an ungoverned page stays silent (the hooks'
+    // standing promise), so the 62 T1/T2 pages keep the layer by convention.
     let mut layer = Vec::new();
     check_htmldoc_layer(&mut layer, html);
     if let Some(status) = exempt_declared(html, &artifact) {
@@ -2438,20 +2440,26 @@ fn attrs(html: &str, name: &str) -> Vec<Attr> {
 // every var(--ink) it writes resolves to nothing - and no other predicate sees it,
 // because they all read structure the doc still has.
 fn check_htmldoc_layer(failures: &mut Vec<Failure>, html: &str) {
-    if attrs(html, "data-htmldoc-id").into_iter().next().is_none() {
+    // The runtime reads `document.documentElement.getAttribute(...)`, so the id
+    // counts only on <html>. Anywhere else it is a string the bootstrap will
+    // never find, and the layers it scopes stay dead on a doc that looks stamped.
+    let on_root = nodes(html)
+        .into_iter()
+        .find(|node| node.name.eq_ignore_ascii_case("html"))
+        .is_some_and(|node| node.attrs.iter().any(|(_, key, _)| key == "data-htmldoc-id"));
+    if !on_root {
         failures.push(Failure {
             check: "htmldoc\u{b7}id".to_string(),
             what: "no data-htmldoc-id on <html>".to_string(),
-            fix: "mint one - `curl -sS -X POST $SERVER/api/docs -H 'Content-Type: application/json' -d '{\"title\":\"...\"}'` - and stamp it on the <html> tag; the comment and diff layers scope every call by it".to_string(),
+            fix: "mint one - `curl -sS -X POST $SERVER/api/docs -H 'Content-Type: application/json' -d '{\"title\":\"...\"}'` - and stamp it on the <html> tag itself; the runtime reads document.documentElement, so the id on any other element is one the comment and diff layers never find".to_string(),
         });
     }
-    let loads_bootstrap =
-        attrs(html, "src").into_iter().any(|a| a.value.ends_with(HTMLDOC_BOOTSTRAP));
+    let loads_bootstrap = attrs(html, "src").into_iter().any(|a| a.value == HTMLDOC_BOOTSTRAP);
     if !loads_bootstrap {
         failures.push(Failure {
             check: "htmldoc\u{b7}bootstrap".to_string(),
             what: format!("the doc does not load {HTMLDOC_BOOTSTRAP}"),
-            fix: "add `<script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>` before </body> - it injects doc.css, so without it every var(--...) the doc writes resolves to nothing and the page renders unstyled".to_string(),
+            fix: format!("add `<script type=\"module\" src=\"{HTMLDOC_BOOTSTRAP}\"></script>` before </body> - it injects doc.css from its own origin, so a doc without it, or pointing at a copy elsewhere, renders with every var(--...) resolving to nothing"),
         });
     }
 }
@@ -3444,16 +3452,13 @@ chroma_floor: 40
 
     #[test]
     fn no_artifact_means_ungoverned() {
-        assert!(matches!(
-            verify_html("<html><body><p>plain doc</p></body></html>"),
-            Verdict::Ungoverned
-        ));
+        assert!(matches!(verify_html(&with_layer("<p>plain doc</p>")), Verdict::Ungoverned));
     }
 
     #[test]
     fn artifact_mentioned_as_text_does_not_govern() {
-        let html = "<html><body><p>use <code>data-artifact=\"epic-plan\"</code> to opt in</p></body></html>";
-        assert!(matches!(verify_html(html), Verdict::Ungoverned));
+        let html = with_layer("<p>use <code>data-artifact=\"epic-plan\"</code> to opt in</p>");
+        assert!(matches!(verify_html(&html), Verdict::Ungoverned));
     }
 
     #[test]
@@ -3510,6 +3515,37 @@ chroma_floor: 40
         assert!(
             matches!(verify_html(&closed), Verdict::Exempt(s) if s == "archived"),
             "a layered archive stays exempt"
+        );
+    }
+
+    // Both predicates shipped naming a placement they never checked: the id was
+    // read from anywhere in the document and the bootstrap from any src ending in
+    // the filename, so a stray id on a <div> and a local copy of the script both
+    // passed a doc whose layers were dead.
+    #[test]
+    fn the_layer_counts_only_on_the_root_and_from_its_own_origin() {
+        let body = "<p data-item=\"outcome\">delivered</p><p data-item=\"deviations\">none</p>\
+                    <p data-item=\"evidence\">tests</p><p data-item=\"distillation\">DEC-9</p>\
+                    <p data-item=\"follow-ups\">none</p>";
+
+        let misplaced = doc("wu-result", "", body)
+            .replace(" data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"", "")
+            .replace(
+                "<body>",
+                "<body><div data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\">stray</div>",
+            );
+        assert_eq!(
+            failures(&verify_html(&misplaced)),
+            vec!["htmldoc\u{b7}id"],
+            "the runtime reads document.documentElement, so only <html> carries it"
+        );
+
+        let elsewhere = doc("wu-result", "", body)
+            .replace("https://htmldoc.wfomobile.com/htmldoc.js", "./vendor/htmldoc.js");
+        assert_eq!(
+            failures(&verify_html(&elsewhere)),
+            vec!["htmldoc\u{b7}bootstrap"],
+            "a copy elsewhere serves a different doc.css, or none"
         );
     }
 

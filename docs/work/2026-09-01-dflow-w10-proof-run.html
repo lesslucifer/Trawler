@@ -17,9 +17,9 @@ Given: install CA · point client · trust cert · capture toggle · proxy unset
 Not given: remote probe · per-device attribution · reason for failed handshake</p>
 
 <table data-item="layout"><tr><td><pre>┌───────────────────────────┐
-│ A  guidance                │  ← headline + checklist, the user's script
+│ A  status                  │  ← the running state: port, captures, auth
 ├───────────────────────────┤
-│ B  status                  │  ← the running state: port, captures, auth
+│ B  guidance                │  ← headline + checklist, the user's script
 ├───────────────────────────┤
 │ C  ca                      │  ← CA install/download block
 └───────────────────────────┘
@@ -34,14 +34,14 @@ scroll / overflow: A pinned · B scrolls · C has no cap</pre></td></tr></table>
 </div>
 
 <table data-item="interaction">
-<tr><td>land cold</td><td>orient</td><td>page loads</td><td><div class="gist">all three zones orient together</div><details class="why"><div>A → full checklist<br>B → "standby"<br>C → CA download</div></details></td><td>Tab</td></tr>
-<tr><td>install CA</td><td>guide</td><td>clicks download</td><td><div class="gist">the checklist advances, state waits</div><details class="why"><div>A → step 2 checked<br>B → "waiting"<br>C → button → file</div></details></td><td>Enter</td></tr>
+<tr><td>land cold</td><td>orient</td><td>page loads</td><td><div class="gist">all three zones orient together</div><details class="why"><div>A → "standby"<br>B → full checklist<br>C → CA download</div></details></td><td>Tab</td></tr>
+<tr><td>install CA</td><td>guide</td><td>clicks download</td><td><div class="gist">the checklist advances, state waits</div><details class="why"><div>A → "waiting"<br>B → step 2 checked<br>C → button → file</div></details></td><td>Enter</td></tr>
 </table>
 
 <div data-item="mockup" data-wire="none">
 <div class="a-mock" id="mock">
-<div class="a-zone" id="m-guidance"></div>
 <div class="a-zone" id="m-status"></div>
+<div class="a-zone" id="m-guidance"></div>
 <div class="a-zone" id="m-ca"></div>
 </div>
 <button class="statebtn" data-state-toggle="mock" data-state-class="m-error" data-label-off="▶ show error" data-label-on="◀ show base">▶ show error</button>
@@ -55,6 +55,12 @@ createRoot(document.getElementById('m-status')).render(<StatusLine status="stand
 <table data-item="tune">
 <tr><td>weight</td><td><pre class="tb">guidance + status + CA</pre></td><td><pre class="tb">status + guidance + CA</pre></td><td><code>visual-weight-follows-goals</code></td></tr>
 </table>
+<details class="why"><ul>
+<li><strong>weight</strong> — the running state is what a returning user checks first, and it sat
+below the checklist that only a first-run user reads. Moving it above the guidance makes the top
+goal own the top of the screen. <strong>Loops back to Layout: yes</strong> — the sketch and the
+mockup mount order above are the post-tune order.</li>
+</ul></details>
 
 <pre data-item="receipt">rulebook: a2f45dd
 soft:
@@ -79,8 +85,8 @@ soft:
 
 <table data-item="capabilities">
 <tr><td>install CA</td><td>used</td><td>C zone CA download</td></tr>
-<tr><td>point client</td><td>used</td><td>A zone guidance</td></tr>
-<tr><td>trust cert</td><td>used</td><td>A zone guidance step 3</td></tr>
+<tr><td>point client</td><td>used</td><td>B zone guidance</td></tr>
+<tr><td>trust cert</td><td>used</td><td>B zone guidance step 3</td></tr>
 <tr><td>capture toggle</td><td>deliberately unused</td><td>not needed — setup is pre-capture</td></tr>
 <tr><td>proxy unset</td><td>blocked</td><td>app cannot reverse its own writes — needs build WU</td></tr>
 <tr><td>proxy auth</td><td>deliberately unused</td><td>not surfaced in this screen</td></tr>
@@ -90,7 +96,7 @@ soft:
 <p data-item="blocked-on">proxy unset reverse — build WU</p>
 
 <table data-item="review">
-<tr><td>move status to top</td><td>layout</td><td><code>visual-weight-follows-goals</code></td></tr>
+<tr><td>move status to top</td><td>tune · layout · mockup — the sketch, the mount order and the zone letters all follow</td><td><code>visual-weight-follows-goals</code></td></tr>
 <tr><td>clarify CA wording</td><td>elements</td><td><code>taste</code></td></tr>
 </table>
 
