@@ -33,12 +33,15 @@ pub struct Outcome {
 
 impl Outcome {
     /// Git's own account of what happened: its stderr, or its stdout when
-    /// stderr is empty (`commit` reports "nothing to commit" on stdout).
+    /// stderr is empty (`commit` reports "nothing to commit" on stdout). Git
+    /// can also say nothing at all, and a caller quoting that would end its
+    /// sentence on a bare colon — the wordless refusal this epic exists to
+    /// stop — so silence is reported as silence.
     pub fn said(&self) -> &str {
-        if self.stderr.is_empty() {
-            &self.stdout
-        } else {
-            &self.stderr
+        match (self.stderr.as_str(), self.stdout.as_str()) {
+            ("", "") => "git printed nothing",
+            ("", stdout) => stdout,
+            (stderr, _) => stderr,
         }
     }
 }
@@ -544,6 +547,14 @@ mod tests {
         assert!(!out.success);
         assert!(out.stderr.is_empty(), "git said it on stdout, not stderr: {}", out.stderr);
         assert!(out.said().contains("nothing to commit"), "got: {}", out.said());
+    }
+
+    #[test]
+    fn a_silent_git_is_reported_as_silence_not_as_an_empty_quote() {
+        let silent =
+            super::Outcome { success: false, stdout: String::new(), stderr: String::new() };
+        assert!(!silent.said().is_empty(), "a caller quoting this would trail off");
+        assert_eq!(silent.said(), "git printed nothing");
     }
 
     #[test]

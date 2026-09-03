@@ -1393,6 +1393,21 @@ mod tests {
     }
 
     #[test]
+    fn a_verdict_never_ends_on_a_bare_colon_when_git_said_nothing() {
+        // A message that quotes a silent git trails off exactly where the cause
+        // belongs - the wordless refusal this epic exists to stop.
+        for landed in [true, false] {
+            for success in [true, false] {
+                let (_, out) = commit_verdict(landed, &outcome(success, "", ""), SUCCESS);
+                assert!(!out.trim_end().ends_with(':'), "no cause after the colon: {out}");
+                if !(landed && success) {
+                    assert!(out.contains("git printed nothing"), "silence is named: {out}");
+                }
+            }
+        }
+    }
+
+    #[test]
     fn no_verdict_echoes_the_commit_message_body() {
         // git_env quoted the whole argument vector, so the body drowned the one
         // line git actually said (E-GATETRUTH P2a, Hình 5). What git says is
