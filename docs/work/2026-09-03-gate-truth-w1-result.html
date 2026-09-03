@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a98fc7a9f34851f0dfabed5">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATETRUTH.W1 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-GATETRUTH.W1 result — a citation resolves at the tip, or at the design's last state</h1>
+      <p>The decision landed as DEC-28, the T1 rule text agrees with it, and the plan's account of the deadlock
+        was corrected on the way: the gate was never the part that forced the retirement.</p>
+      <div class="meta">WU result · 2026-09-03 · Trawler · T3 (docs/work/) ·
+        <code>wu/gate-truth/citation-after-retirement</code> → <code>epic/gate-truth</code> ·
+        <a href="2026-09-03-gate-truth-w1-plan.html">WU plan</a> · <a href="2026-09-03-gate-truth-plan.html">epic plan</a> ·
+        <span class="badge id">E-GATETRUTH.W1</span></div>
+    </div>
+  </header>
+  <main data-artifact="wu-result">
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table>
+        <thead><tr><th>Planned</th><th>Shipped</th></tr></thead>
+        <tbody>
+          <tr><td>a decision record fixing what <code>design.implements</code> resolves against once the design file is gone from the WU tip</td>
+            <td><span class="badge auto">delivered</span> <a href="../decisions/dec-28-citation-after-retirement.html">DEC-28</a>: at the tip, or at the path's last state reachable from the tip, pin matching that state. Predicate stated as a flow and a case table W2 codes from</td></tr>
+          <tr><td>the two rejected alternatives with why</td>
+            <td><span class="badge auto">delivered, widened</span> six options rejected, not two — the decision round surfaced relaxing <code>components·unretired</code>, dropping check 9 from the walk, reversing DEC-16 and matching any historical blob, each recorded with its reason</td></tr>
+          <tr><td>DEC-25 superseded on the tip clause, DEC-16 intact, index current</td>
+            <td><span class="badge auto">delivered</span> callout at DEC-25's tip-resolution paragraph; DEC-16 untouched; index v12 registers DEC-28 and annotates DEC-25's row</td></tr>
+          <tr><td>the T1 workflow standard's design→build row states the rule, under a <code>Reviewed-By</code> trailer</td>
+            <td><span class="badge auto">delivered</span> the added-half row and the check-9 row, v13, signed by the owner</td></tr>
+          <tr><td>no gate code</td><td><span class="badge auto">held</span> the WU diff touches <code>docs/</code> only</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table>
+        <thead><tr><th>Plan said</th><th>What was true</th><th>Done about it</th></tr></thead>
+        <tbody>
+          <tr><td>DEC-16's retirement rule deletes the file, so the path is gone "at the epic tip"</td>
+            <td>the gate never reads the epic tip for a citation — the walk re-verifies each seam at that WU's own tip. What forces the deletion before the build WU's tip is verify-doc's <code>components·unretired</code>, an authoring-time check on the working tree that refuses every turn while the component and its design file coexist</td>
+            <td>the epic plan's P1 row and Hình 1 label corrected; DEC-28's context states the real mechanism and shows both histories</td></tr>
+          <tr><td>W1 chooses among three directions</td>
+            <td>the owner's questions widened the field to six, and one of them — cite the built <code>.tsx</code> — was nearly chosen until its consequence was laid out: every new surface could cite itself</td>
+            <td>all six recorded in DEC-28's options table; the epic plan's open question 1 records the decision and who made it</td></tr>
+          <tr><td>the new record would be DEC-27</td><td>DEC-27 was taken by E-DFLOW.W11</td><td>DEC-28; the epic plan's distillation row updated</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table>
+        <thead><tr><th>Claim</th><th>Where to look</th></tr></thead>
+        <tbody>
+          <tr><td>a deleted design file still resolves at an earlier tip</td>
+            <td><code>git show e0f85f3:docs/work/components/copy-button.html</code> returns the file, blob <code>5652d6c</code>, though W7 deleted it in <code>c908f54</code> and it is absent at HEAD — run during the decision round</td></tr>
+          <tr><td>the citation half runs at WU level only and the walk re-runs it at each seam's WU tip</td>
+            <td><code>xtask/src/gate.rs</code>: the <code>level == Level::Wu</code> guard before <code>check_handoff</code>; the walk's <code>verify(Level::Wu, wu_tip, mainline)</code>; the seam filter dropping only <code>8·manual-review</code> and <code>DESIGN_SCHEMA</code></td></tr>
+          <tr><td><code>components·unretired</code> reads the working tree at authoring time</td>
+            <td><code>xtask/src/doc.rs</code> <code>check_retirement</code>; <code>scripts/design-registry.mjs</code> reads <code>ui/src/components/</code> from disk; <code>.claude/hooks/verify-doc-stop.sh</code> runs verify-doc at every turn end</td></tr>
+          <tr><td>the hand-over e2e never retires the design it cites</td><td><code>xtask/tests/e2e_design_flow.rs</code>, the build leg over <code>StatusPill</code></td></tr>
+          <tr><td>docs green</td><td><code>cargo xtask verify-doc</code> over every doc this WU touches; every relative <code>href</code> the WU adds resolves on disk</td></tr>
+          <tr><td>tests</td><td>all three layers waived — docs-only WU; the regression fixture is W2's, named in DEC-28's consequences</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <table>
+        <thead><tr><th>Doc</th><th>Tier</th><th>Carries</th></tr></thead>
+        <tbody>
+          <tr><td><code>docs/decisions/dec-28-citation-after-retirement.html</code></td><td>T2</td><td>the why, the predicate, the rejected options — new</td></tr>
+          <tr><td><code>docs/decisions/dec-25-design-build-handoff.html</code></td><td>T2</td><td>superseded-on-clause pointer; record otherwise untouched, status active</td></tr>
+          <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td><td>DEC-28 row; DEC-25 row annotated; v12</td></tr>
+          <tr><td><code>docs/workflow.html</code></td><td>T1</td><td>the rule, in the added-half row and the check-9 row; v13; <code>Reviewed-By</code> trailer</td></tr>
+          <tr><td><code>docs/work/2026-09-03-gate-truth-plan.html</code></td><td>T3</td><td>P1 framing corrected, decision recorded in open question 1, DEC number fixed</td></tr>
+        </tbody>
+      </table>
+      <p>One fact per tier: the why in DEC-28, the rule in the workflow standard, the predicate in <code>xtask/src/gate.rs</code> once W2 lands it. Nothing copied.</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table>
+        <thead><tr><th>Owed</th><th>By</th></tr></thead>
+        <tbody>
+          <tr><td>the predicate's right-hand branch in <code>check_citation</code>, refusals naming the failed half, the <code>check_handoff</code> fix hint for a retired path, the e2e leg that retires inside the build WU, the two negative fixtures</td><td>E-GATETRUTH.W2</td></tr>
+          <tr><td>the relative-href predicate that would have made this WU's hand link audit mechanical</td><td>E-GATETRUTH.W4</td></tr>
+          <tr><td>none discovered beyond the plan</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
