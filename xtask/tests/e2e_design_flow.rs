@@ -160,6 +160,10 @@ impl Flow {
         fs::write(full, content).unwrap();
     }
 
+    fn remove(&self, rel: &str) {
+        fs::remove_file(self.path.join(rel)).unwrap();
+    }
+
     fn commit(&self, msg: &str) -> String {
         self.git(&["add", "-A"]);
         self.git(&["commit", "-q", "-m", msg]);
@@ -395,6 +399,14 @@ fn doc_changes(entries: &[(&str, &str)]) -> String {
         );
     }
     out
+}
+
+/// The doc-note entry DEC-16 demands of a design file this Working Unit retires:
+/// archived, and its forks carried somewhere named.
+fn retired(path: &str, carried_by: &str) -> String {
+    format!(
+        "  - path: {path}\n    tier: T3\n    action: archived\n    distilled_to: \"carried verbatim by {carried_by}\"\n"
+    )
 }
 
 fn bless(flow: &Flow, tip: &str, cr: &str, changes: &str) {
@@ -717,6 +729,34 @@ fn land_the_contract(flow: &Flow) -> String {
     flow.git(&["rev-parse", &format!("epic/x:{PILL_DESIGN}")])
 }
 
+/// The build Working Unit: the component the contract describes - and, per
+/// DEC-16, the contract retired in the same Working Unit, so the tip no longer
+/// ships the design the build read. This is the history every build WU produces
+/// (DEC-28), and the one E-DFLOW's fixtures never drove. Returns the tip and the
+/// doc-note changes a legal note carries.
+fn build_the_pill_and_retire_its_design(flow: &Flow) -> (String, String) {
+    flow.git(&["checkout", "-q", "-b", "wu/x/two", "epic/x"]);
+    flow.write(PILL, PILL_SOURCE);
+    flow.remove(PILL_DESIGN);
+    flow.write(WU_RESULT, "<html><body>the build WU result</body></html>\n");
+    let tip = flow.commit("build the pill, retire its design");
+    assert!(
+        show_bytes(&flow.path, &tip, PILL_DESIGN).is_err(),
+        "the build tip does not ship the design it cites"
+    );
+
+    let scope = design_scope(flow, "wu/x/two");
+    assert!(scope.artifacts.is_empty(), "the build judges no design - it consumes one");
+    assert_eq!(
+        scope.surfaces,
+        vec![PILL.to_string()],
+        "the surface it added is what owes a citation"
+    );
+    let changes =
+        format!("{}{}", doc_changes(&[(WU_RESULT, "updated")]), retired(PILL_DESIGN, "@states"));
+    (tip, changes)
+}
+
 /// The hand-over, driven: a Working Unit that adds a surface says which design
 /// it was built from and which bytes of it it read. The last leg is D1a case 2 —
 /// a build that amends the design it was handed re-enters Tier-3 on its own
@@ -726,20 +766,8 @@ fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it(
     let flow = Flow::new();
     let handed = land_the_contract(&flow);
 
-    // ① The build: the component the contract describes, and nothing else.
-    flow.git(&["checkout", "-q", "-b", "wu/x/two", "epic/x"]);
-    flow.write(PILL, PILL_SOURCE);
-    flow.write(WU_RESULT, "<html><body>the build WU result</body></html>\n");
-    let tip = flow.commit("build the pill");
-    let changes = doc_changes(&[(WU_RESULT, "updated")]);
-
-    let scope = design_scope(&flow, "wu/x/two");
-    assert!(scope.artifacts.is_empty(), "the build judges no design - it consumes one");
-    assert_eq!(
-        scope.surfaces,
-        vec![PILL.to_string()],
-        "the surface it added is what owes a citation"
-    );
+    // ① The build, on wu/x/two: the component, and the design retired with it.
+    let (tip, changes) = build_the_pill_and_retire_its_design(&flow);
 
     // ② The silent build: the trigger fired and the note names no design.
     bless(&flow, &tip, &cr_note(&flow, &tip, "cr/v3", ""), &changes);
@@ -755,14 +783,23 @@ fn a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it(
     assert!(!merged, "a new surface may not be declared undesigned: {said}");
     assert!(said.contains("new surface this diff adds"), "{said}");
 
-    // ③ Path and blob: the design, and which of its bytes the build read.
+    // ③ Path and blob: the design, and which of its bytes the build read. The
+    // path is gone from the tip; it resolves at its last state in the tip's
+    // history, and the pin must be that state's.
+    let mistyped = format!("design:\n{}", cites(&[(PILL_DESIGN, "0000000", PILL)]));
+    flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &mistyped));
+    let (merged, said) = merge_into(&flow, "epic/x", "wu/x/two");
+    assert!(!merged, "a pin the retired design never carried must not merge: {said}");
+    assert!(said.contains("before it left the tree"), "the red names the last state: {said}");
+
     let cited = format!("design:\n{}", cites(&[(PILL_DESIGN, &handed[..7], PILL)]));
     flow.note("cr", &tip, &cr_note(&flow, &tip, "cr/v3", &cited));
     let (merged, said) = merge_into(&flow, "epic/x", "wu/x/two");
-    assert!(merged, "a resolvable citation lands the build: {said}");
+    assert!(merged, "a citation resolving in the tip's history lands the build: {said}");
 
     // ④ The amendment: building the screen that hosts the pill exposes a gap in
-    // the pill's contract, so this Working Unit edits the design it was handed.
+    // the pill's contract, so this Working Unit re-opens the retired design and
+    // edits it - the design is back in the tree at this tip.
     flow.git(&["checkout", "-q", "-b", "wu/x/three", "epic/x"]);
     flow.write(SCREEN, SCREEN_SOURCE);
     flow.write(PILL_DESIGN, &pill_contract("rest · hover · empty"));

@@ -33,6 +33,14 @@ const DESIGN_SCHEMA: &str = "9·design-schema";
 const DESIGN: &str = "9·design";
 const UNBUILT: &str = "components·unbuilt";
 
+// Where a citation resolved: at the tip (`retired_at: None`), or at the last
+// commit reachable from it that still held the path.
+struct Resolved {
+    bytes: Vec<u8>,
+    blob: String,
+    retired_at: Option<String>,
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Level {
     Commit,
@@ -149,10 +157,9 @@ impl Gate<'_> {
             check_review(&mut report, parsed.cr.as_ref());
             self.check_design(&mut report, parsed.cr.as_ref(), &docs);
         }
-        // The citation names a T3 design, which check 6 forces out of the tree by
-        // the epic tip - so only the Working Unit that built the surface can
-        // resolve it. The epic re-asks the question where it is answerable: at
-        // every seam its walk re-verifies.
+        // A citation is answered by the Working Unit that built the surface - its
+        // tip, or its tip's history (DEC-28). The epic re-asks the question where
+        // it is answerable: at every seam its walk re-verifies.
         if level == Level::Wu {
             self.check_handoff(&mut report, parsed.cr.as_ref());
         }
@@ -522,7 +529,7 @@ impl Gate<'_> {
         }
         let check = if cr.schema == "cr/v3" { DESIGN } else { DESIGN_SCHEMA };
         let fix = format!(
-            "account for each on the {} note: design.implements: [{{ path: <the design>, blob: <git rev-parse {}:<the design>>, built: [<the files it produced>] }}], or design.undesigned: [{{ path, why }}] for a file that needed no design - an added surface takes only the citation. `cargo xtask design-scope` lists what the gate is asking about",
+            "account for each on the {} note: design.implements: [{{ path: <the design>, blob: <git rev-parse {}:<the design>, or <the last commit that held it>:<the design> once this WU retired it>, built: [<the files it produced>] }}], or design.undesigned: [{{ path, why }}] for a file that needed no design - an added surface takes only the citation. `cargo xtask design-scope` lists what the gate is asking about",
             cr.schema,
             short(&report.tip)
         );
@@ -601,21 +608,17 @@ impl Gate<'_> {
         }
     }
 
-    // A citation is checked, never trusted: the path resolves at the tip, the
-    // blob is the bytes the tip ships, and what it names is a finished design.
-    // `check` is the caller's, not this function's: a hand-written `cr/v2` note
-    // carrying a citation predates the field either way, and its refusals must be
-    // the ones the walk drops at a seam like every other refusal on that note.
+    // A citation is checked, never trusted: the path resolves at the tip or, once
+    // DEC-16 has retired it inside this Working Unit, at its last state reachable
+    // from the tip (DEC-28); the blob is the bytes that state ships; what it names
+    // is a finished design. `check` is the caller's, not this function's: a
+    // hand-written `cr/v2` note carrying a citation predates the field either way,
+    // and its refusals must be the ones the walk drops at a seam like every other
+    // refusal on that note.
     fn check_citation(&self, report: &mut Report, check: &str, cited: &crate::notes::Cited) {
-        let (Ok(bytes), Some(blob)) = (
-            crate::git::show_bytes(self.repo, &report.tip, &cited.path),
-            crate::git::blob_of(self.repo, &report.tip, &cited.path),
-        ) else {
-            report.failures.push(Failure::new(
-                check,
-                format!("design.implements names {}, which does not resolve at the tip", cited.path),
-                "cite a design the tip actually ships - a path that resolves nowhere is a citation nobody can follow".to_string(),
-            ));
+        let Some(Resolved { bytes, blob, retired_at }) =
+            self.resolve_citation(report, check, cited)
+        else {
             return;
         };
         let short_blob = crate::doc::pin_of(&blob);
@@ -629,14 +632,25 @@ impl Gate<'_> {
                 format!("pin the bytes the build read: blob: {short_blob}"),
             ));
         } else if !crate::doc::pin_matches(&cited.blob, &blob) {
-            report.failures.push(Failure::new(
-                check,
-                format!(
-                    "the build cites {} at blob {}; this tip ships {short_blob}",
-                    cited.path, cited.blob
+            let (what, fix) = match &retired_at {
+                None => (
+                    format!(
+                        "the build cites {} at blob {}; this tip ships {short_blob}",
+                        cited.path, cited.blob
+                    ),
+                    format!("the design moved after the note was written - re-read it and re-pin: blob: {short_blob}"),
                 ),
-                format!("the design moved after the note was written - re-read it and re-pin: blob: {short_blob}"),
-            ));
+                Some(commit) => (
+                    format!(
+                        "the build cites {} at blob {}; the path was last shipped at {short_blob} ({}) before it left the tree",
+                        cited.path,
+                        cited.blob,
+                        short(commit)
+                    ),
+                    format!("the design was amended before it was retired, or the pin names bytes the path never carried - re-read its last state and re-pin: blob: {short_blob}"),
+                ),
+            };
+            report.failures.push(Failure::new(check, what, fix));
         }
         // Bytes that do not decode are not a design either: returning here would
         // accept the one citation nobody can read as though Tier-3 had judged it.
@@ -664,6 +678,48 @@ impl Gate<'_> {
             )
         };
         report.failures.push(Failure::new(check, what, fix.to_string()));
+    }
+
+    fn resolve_citation(
+        &self,
+        report: &mut Report,
+        check: &str,
+        cited: &crate::notes::Cited,
+    ) -> Option<Resolved> {
+        if let (Ok(bytes), Some(blob)) = (
+            crate::git::show_bytes(self.repo, &report.tip, &cited.path),
+            crate::git::blob_of(self.repo, &report.tip, &cited.path),
+        ) {
+            return Some(Resolved { bytes, blob, retired_at: None });
+        }
+        let Some((commit, blob)) = crate::git::last_state(self.repo, &report.tip, &cited.path)
+        else {
+            report.failures.push(Failure::new(
+                check,
+                format!(
+                    "design.implements names {}, which no commit reachable from the tip ever shipped",
+                    cited.path
+                ),
+                "cite the design the build read - a path nothing in the tip's history shipped is a citation nobody can follow".to_string(),
+            ));
+            return None;
+        };
+        match crate::git::show_bytes(self.repo, &commit, &cited.path) {
+            Ok(bytes) => Some(Resolved { bytes, blob, retired_at: Some(commit) }),
+            Err(err) => {
+                report.failures.push(Failure::new(
+                    check,
+                    format!(
+                        "{} resolves at {} and cannot be read there: {err}",
+                        cited.path,
+                        short(&commit)
+                    ),
+                    "a citation the gate cannot read was never judged - cite a design git can show"
+                        .to_string(),
+                ));
+                None
+            }
+        }
     }
 
     fn check_manual_review(&self, report: &mut Report) {
@@ -1170,6 +1226,7 @@ mod tests {
 
     const PILL: &str = "ui/src/components/StatusPill.tsx";
     const PILL_DESIGN: &str = "docs/work/components/status-pill.html";
+    const RETIRED_DESIGN: &str = "docs/work/components/badge.html";
 
     struct Built {
         _dir: tempfile::TempDir,
@@ -1178,6 +1235,7 @@ mod tests {
         tip: String,
         later: String,
         blob: String,
+        retired_blob: String,
     }
 
     // One repo, two ranges, because the rule has two halves. `base..tip` ADDS the
@@ -1204,7 +1262,9 @@ mod tests {
         g(&["config", "commit.gpgsign", "false"]);
         write("src/lib.rs", "pub fn base() {}\n");
         write("ui/src/components/Section.tsx", "/**\n * Section.\n * @tier T2\n */\n");
+        write(RETIRED_DESIGN, "<html>the Badge contract, built and retired here</html>\n");
         let base = commit("base");
+        let retired_blob = g(&["rev-parse", &format!("{base}:{RETIRED_DESIGN}")]);
 
         write(PILL_DESIGN, "<html>the StatusPill contract</html>\n");
         write("docs/work/plan.html", "<html>a plan, not a design</html>\n");
@@ -1218,14 +1278,15 @@ mod tests {
         );
         write("ui/src/components/StatusPill.test.tsx", "test('x', () => {});\n");
         write("ui/src/Section.notes.ts", "export const notes = 1;\n");
-        let tip = commit("build the pill");
+        std::fs::remove_file(repo.join(RETIRED_DESIGN)).unwrap();
+        let tip = commit("build the pill, retire the badge design");
         let blob = g(&["rev-parse", &format!("{tip}:{PILL_DESIGN}")]);
 
         write(PILL, "/**\n * StatusPill, revised.\n * @tier T1\n */\n");
         std::fs::remove_file(repo.join("ui/src/components/Section.tsx")).unwrap();
         let later = commit("revise the pill, retire Section");
 
-        Built { _dir: dir, repo, base, tip, later, blob }
+        Built { _dir: dir, repo, base, tip, later, blob, retired_blob }
     }
 
     fn note_yaml(schema: &str, base: &str, design: &str) -> String {
@@ -1279,15 +1340,17 @@ mod tests {
         );
 
         // The silence names the surface; a stated nothing is not that silence;
-        // then a path nobody can follow, bytes the tip does not ship, a pin too
-        // short to be a blob, a doc Tier-3 never judged, and an open run. Then the
-        // three ways an accounting contradicts itself.
+        // then a path nobody ever shipped, bytes the tip does not ship, bytes a
+        // retired design never carried, a pin too short to be a blob, a doc Tier-3
+        // never judged, and an open run. Then the three ways an accounting
+        // contradicts itself.
         let cite = |path: &str, pin: &str| implements(path, pin, PILL);
         for (section, red) in [
             (String::new(), "StatusPill.tsx"),
             ("design:\n  verdict: PASS\n  implements: []\n".to_string(), "empty"),
-            (cite("docs/work/gone.html", blob), "does not resolve"),
+            (cite("docs/work/gone.html", blob), "no commit reachable from the tip ever shipped"),
             (cite(PILL_DESIGN, "0000000"), "this tip ships"),
+            (cite(RETIRED_DESIGN, "0000000"), "before it left the tree"),
             (cite(PILL_DESIGN, "abc"), "names no blob"),
             (cite("docs/work/plan.html", blob), "not a design artifact"),
             (cite("docs/work/run-5.html", blob), "not archived"),
@@ -1308,6 +1371,10 @@ mod tests {
         assert!(
             checked(&v3(&cite(PILL_DESIGN, &blob[..7]))).is_empty(),
             "path resolves, blob matches, it is a design, and the citation names what it built"
+        );
+        assert!(
+            checked(&v3(&cite(RETIRED_DESIGN, &built.retired_blob[..7]))).is_empty(),
+            "a design retired in this diff resolves at its last state, and the pin matches it (DEC-28)"
         );
     }
 

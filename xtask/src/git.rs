@@ -130,6 +130,19 @@ pub fn blob_of(repo: &Path, rev: &str, path: &str) -> Option<String> {
     git(repo, &["rev-parse", &format!("{rev}:{path}")]).ok()
 }
 
+/// The newest commit reachable from `tip` whose tree holds `path`, with the blob
+/// it holds there — a design's last state before DEC-16 retired it, which is
+/// where DEC-28 resolves a citation the tip no longer ships. `None` when nothing
+/// reachable from `tip` ever held the path. `--full-history` for the reason
+/// [`added_under`] records: the add-then-remove inside one branch is the shape
+/// this exists to find, and default simplification skips it.
+pub fn last_state(repo: &Path, tip: &str, path: &str) -> Option<(String, String)> {
+    git(repo, &["log", "--full-history", "--format=%H", tip, "--", path])
+        .ok()?
+        .lines()
+        .find_map(|commit| blob_of(repo, commit, path).map(|blob| (commit.to_string(), blob)))
+}
+
 pub fn diff_sha256(repo: &Path, base: &str, tip: &str) -> Result<String, String> {
     let range = format!("{base}..{tip}");
     let diff = cmd(repo)
@@ -302,7 +315,7 @@ pub fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
 mod tests {
     use std::process::Command;
 
-    use super::{sha256_hex, ssh_sign, ssh_verify};
+    use super::{git, last_state, sha256_hex, ssh_sign, ssh_verify};
 
     #[test]
     fn ssh_sign_then_verify_roundtrips() {
@@ -358,6 +371,107 @@ mod tests {
         assert_eq!(out, reason);
         let unset = ssh_sign(stub.to_str().unwrap(), "/some/key", "ns", b"payload", None).unwrap();
         assert_eq!(unset, "", "no reason means no variable, so the signer falls back");
+    }
+
+    struct History {
+        _dir: tempfile::TempDir,
+        repo: std::path::PathBuf,
+    }
+
+    impl History {
+        fn new() -> Self {
+            let dir = tempfile::tempdir().unwrap();
+            let repo = dir.path().to_path_buf();
+            let g = |args: &[&str]| git(&repo, args).unwrap();
+            g(&["init", "-q", "-b", "main"]);
+            g(&["config", "user.email", "t@t"]);
+            g(&["config", "user.name", "t"]);
+            g(&["config", "commit.gpgsign", "false"]);
+            let history = Self { _dir: dir, repo };
+            history.write("README", "base\n");
+            history.commit("base");
+            history
+        }
+
+        fn git(&self, args: &[&str]) -> String {
+            git(&self.repo, args).unwrap()
+        }
+
+        fn write(&self, rel: &str, body: &str) {
+            let full = self.repo.join(rel);
+            std::fs::create_dir_all(full.parent().unwrap()).unwrap();
+            std::fs::write(full, body).unwrap();
+        }
+
+        fn remove(&self, rel: &str) {
+            std::fs::remove_file(self.repo.join(rel)).unwrap();
+        }
+
+        fn commit(&self, msg: &str) -> String {
+            self.git(&["add", "-A"]);
+            self.git(&["commit", "-q", "-m", msg]);
+            self.git(&["rev-parse", "HEAD"])
+        }
+
+        fn blob(&self, rev: &str, path: &str) -> String {
+            self.git(&["rev-parse", &format!("{rev}:{path}")])
+        }
+    }
+
+    const DESIGN: &str = "docs/work/components/badge.html";
+
+    #[test]
+    fn last_state_is_the_blob_the_path_held_just_before_it_left_the_tree() {
+        let h = History::new();
+        h.write(DESIGN, "v1\n");
+        let added = h.commit("add the design");
+        let first = h.blob(&added, DESIGN);
+        h.write(DESIGN, "v2\n");
+        let amended = h.commit("amend the design");
+        let last = h.blob(&amended, DESIGN);
+        h.remove(DESIGN);
+        let tip = h.commit("retire the design");
+
+        assert_ne!(first, last, "the amendment moved the bytes");
+        assert_eq!(
+            last_state(&h.repo, &tip, DESIGN),
+            Some((amended, last)),
+            "the last state, not the first - an amended design is cited as it left"
+        );
+        assert_eq!(last_state(&h.repo, &tip, "docs/work/components/never.html"), None);
+    }
+
+    #[test]
+    fn last_state_reaches_only_the_history_the_tip_stands_on() {
+        let h = History::new();
+        h.git(&["checkout", "-q", "-b", "elsewhere"]);
+        h.write(DESIGN, "on another branch\n");
+        h.commit("a design the tip never reaches");
+        h.git(&["checkout", "-q", "main"]);
+        h.write("README", "moved on\n");
+        let tip = h.commit("main moves on without it");
+
+        assert_eq!(last_state(&h.repo, &tip, DESIGN), None, "unreachable history is not history");
+    }
+
+    #[test]
+    fn last_state_sees_through_a_merge_that_added_and_removed_the_path_in_one_branch() {
+        let h = History::new();
+        h.git(&["checkout", "-q", "-b", "wu/x/one"]);
+        h.write(DESIGN, "designed and built here\n");
+        let added = h.commit("design and build");
+        let blob = h.blob(&added, DESIGN);
+        h.remove(DESIGN);
+        h.commit("retire it, DEC-16");
+        h.git(&["checkout", "-q", "main"]);
+        h.git(&["merge", "--no-ff", "-q", "-m", "merge wu/x/one", "wu/x/one"]);
+        let tip = h.git(&["rev-parse", "HEAD"]);
+
+        assert_eq!(
+            last_state(&h.repo, &tip, DESIGN),
+            Some((added, blob)),
+            "the merge is TREESAME for the path - only --full-history visits the add"
+        );
     }
 
     #[test]

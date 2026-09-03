@@ -908,6 +908,139 @@ fn a_build_that_adds_a_component_must_cite_the_design_the_tip_ships() {
     );
 }
 
+const PILL_WITH_CARRIERS: &str =
+    "/**\n * StatusPill states one verdict.\n * @tier T1 — primitive\n\
+ * @use one verdict inside a row\n * @avoid a sentence\n * @states rest · hover\n\
+ * @madeof nothing\n */\nexport const StatusPill = () => null;\n";
+
+// History B (DEC-28): the design landed on the epic, and the Working Unit that
+// builds its component also retires the file - verify-doc's components·unretired
+// refuses every turn while the two coexist, so the tip never ships the design the
+// build read. With `amended`, the WU also edits the design before retiring it, so
+// the last state is not the state the epic handed over.
+fn wu_building_a_component_and_retiring_its_design(amended: bool) -> (Repo, String, String) {
+    let repo = Repo::new();
+    repo.git(&["checkout", "-q", "-b", "epic/x"]);
+    repo.write(COMPONENT_DESIGN, "<html><body>the StatusPill contract</body></html>\n");
+    let handed = repo.commit("the design WU landed the contract");
+    let handed_blob = repo.git(&["rev-parse", &format!("{handed}:{COMPONENT_DESIGN}")]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    let mut last_blob = handed_blob.clone();
+    if amended {
+        repo.write(
+            COMPONENT_DESIGN,
+            "<html><body>the contract, amended before the build</body></html>\n",
+        );
+        let amend = repo.commit("amend the contract");
+        last_blob = repo.git(&["rev-parse", &format!("{amend}:{COMPONENT_DESIGN}")]);
+    }
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\n");
+    repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
+    repo.write("ui/src/components/StatusPill.tsx", PILL_WITH_CARRIERS);
+    std::fs::remove_file(repo.path.join(COMPONENT_DESIGN)).unwrap();
+    let tip = repo.commit("build the pill and retire its design");
+    bless_wu(&repo, &tip);
+    let changes = format!(
+        "{WU_CHANGES}  - path: {COMPONENT_DESIGN}\n    tier: T3\n    action: archived\n    distilled_to: \"the contract is carried verbatim by @states and @use\"\n"
+    );
+    repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &changes, None));
+    (repo, handed_blob, last_blob)
+}
+
+fn cites_the_design(repo: &Repo, path: &str, pin: &str) -> String {
+    let base = repo.sha("epic/x");
+    let tip = repo.sha("wu/x/one");
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    format!(
+        "{}design:\n  implements:\n    - path: {path}\n      blob: {pin}\n      built: [ui/src/components/StatusPill.tsx]\n",
+        cr_note("E9", Some("E9.W1"), &base, &sha, "PASS").replace("cr/v2", "cr/v3")
+    )
+}
+
+#[test]
+fn a_build_that_retires_the_design_it_cites_lands_and_the_epic_walk_agrees() {
+    let (repo, handed, _) = wu_building_a_component_and_retiring_its_design(false);
+    let tip = repo.sha("wu/x/one");
+    assert!(
+        xtask::git::show_bytes(&repo.path, &tip, COMPONENT_DESIGN).is_err(),
+        "the fixture is History B only if the tip does not ship the design"
+    );
+
+    repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, &handed[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        report.green(),
+        "the citation resolves at the design's last state (DEC-28): {}",
+        format_report(&report)
+    );
+
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "merge wu/x/one", "wu/x/one"]);
+    std::fs::remove_file(repo.path.join(WU_RESULT)).unwrap();
+    repo.commit("archive the wu result out of git");
+    bless_epic(&repo, T2_ENTRY);
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        report.green(),
+        "the walk re-asks the citation at the seam and history answers it: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn a_citation_of_a_path_no_reachable_commit_ever_shipped_is_still_refused() {
+    let (repo, handed, _) = wu_building_a_component_and_retiring_its_design(false);
+    let tip = repo.sha("wu/x/one");
+    let typo = "docs/work/components/staus-pill.html";
+    repo.note("cr", &tip, &cites_the_design(&repo, typo, &handed[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    let said = format_report(&report);
+    assert!(
+        said.contains(&format!("{typo}, which no commit reachable from the tip ever shipped")),
+        "the red names the path half, not the tip: {said}"
+    );
+}
+
+#[test]
+fn a_citation_of_bytes_a_retired_design_never_carried_names_its_last_state() {
+    let (repo, handed, _) = wu_building_a_component_and_retiring_its_design(false);
+    let tip = repo.sha("wu/x/one");
+    repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, "0000000"));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    let said = format_report(&report);
+    assert!(
+        said.contains(&format!("was last shipped at {} (", &handed[..7])),
+        "the red names the blob half - the last state to re-pin: {said}"
+    );
+    assert!(
+        !said.contains("this tip ships"),
+        "the tip ships nothing, and the red does not say it does: {said}"
+    );
+}
+
+#[test]
+fn a_design_amended_then_retired_in_one_wu_is_cited_at_its_last_state_not_its_first() {
+    let (repo, handed, last) = wu_building_a_component_and_retiring_its_design(true);
+    let tip = repo.sha("wu/x/one");
+    assert_ne!(handed, last, "the amendment moved the bytes");
+
+    repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, &handed[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"9·design"),
+        "the build cites the bytes it was handed, not the bytes it left: {}",
+        format_report(&report)
+    );
+    assert!(format_report(&report).contains(&format!("was last shipped at {}", &last[..7])));
+
+    repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, &last[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "re-pinned to the last state, it lands: {}", format_report(&report));
+}
+
 // The case an added-only trigger can never see: a Working Unit that re-shapes a
 // surface that already exists, which is where most UI work lives once the screens
 // are built. No design is demanded of it - a gate that answered every edit with
