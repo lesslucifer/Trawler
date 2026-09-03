@@ -1,0 +1,37 @@
+schema: cr/v3
+scope: "WU E-GATETRUTH.W2 (wu/gate-truth/citation-predicate) -> epic/gate-truth"
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W2
+branch: wu/gate-truth/citation-predicate
+base: b5664d9b79640ecadc452e00fe150dda64908bcb
+head: 327353f7f84cb4931637c987416cab6539d969ef
+diff_sha256: 31c4de95770f333133af1aa2cee7ab6da7d753c123c25d87296a360adbc2114f
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 19, verified: 1, waived: 0 }
+verified:
+  - location: xtask/src/gate.rs:688
+    severity: important
+    what: "Widening citation resolution to the tip's history opens a green path for a design amended inside the WU and retired in it, whose amendment no Tier-3 design section ever judged. check_design's artifact set comes from doc_blobs(tip, names), whose show_bytes(tip, path) errors for the deleted design, so design_artifacts_of is empty and check_design returns early - no design.verdict or design.rulebook demanded. The identical amendment kept in the tree is refused ('is a design artifact the design section does not name', e2e leg 4). Pre-diff the same tip was refused on the citation ('does not resolve at the tip'), so the diff is what makes the unjudged amendment reachable. DEC-25 D1a: an amendment to the handed design re-enters Tier-3 on the merge that lands it; DEC-28 consequences: the bytes the build read, judged by Tier-3 at the merge that landed them. a_design_amended_then_retired_in_one_wu_is_cited_at_its_last_state_not_its_first asserts report.green() on a note with no design section, codifying the gap."
+refuted:
+  - "git log default order lacks a parent-after-child guarantee so last_state can return a stale blob - false: the default walk enqueues parents only when a commit is popped, so a descendant always precedes its ancestor regardless of dates (40-commit scrambled-date chain reproduced); commits that merely still hold the old blob are TREESAME and never listed; --topo-order would be a no-op"
+  - "a gitlink at the tip yields a misleading 'before it left the tree' - false: the same show_bytes fails again at the found commit, the Err arm fires with an accurate message, Resolved is never built; no submodules in the repo"
+  - "missing tests for tip-is-merge and delete-re-add-delete - DEC-28 names neither shape; both return the DEC-28-correct answer by hand-reproduced walk"
+  - "blob_of hand-rolled in fixtures - the rev-parse idiom is the file's pre-existing convention (dod_gate.rs:516, :872; e2e :717) and blob_of's Option would trade a diagnostic panic for a bare unwrap"
+  - "the new fixture re-implements wu_building_a_component - opposite histories (design on main vs on epic/x, tip ships vs lacks the design); 5 of ~18 lines shared; one-fixture-per-history is the file's convention, and the topology is load-bearing for the epic-walk assertion"
+  - "cites_the_design duplicates the v3/cites closures - those are function-local; .replace('cr/v2','cr/v3') is 5x at base, 6x at tip; the helper is itself the de-duplicating move"
+  - "retired() duplicates doc_changes - distills and distilled_to are different fields of different types, and distilled_to is the sole trigger of check 6; extending doc_changes would churn six unrelated callers"
+  - "the Err arm at gate.rs:706 is unreachable - false: rev-parse resolves a gitlink without its object while show fails 'bad object' (reproduced); collapsing it to a silent None would ACCEPT the citation; per-case refusals are the file's convention (check_attested_report)"
+  - "two integration tests should be table-driven - bodies differ (a per-case negative assertion), the table lives at the unit layer, and testing-strategy.html mandates spec-shaped test names"
+  - "Resolved is heavier than a tuple - a 3-tuple with two String slots is the same information unnamed; every 3+-field aggregate in xtask is a named struct; clippy flags neither"
+  - "fixture returns a discarded blob and re-derives the tip - the amended caller needs both blobs and cannot re-derive the last one without reimplementing the code under test; re-deriving the tip via repo.sha is the file's idiom at ~25 sites"
+  - "the fix hint is three deep and unbalanced - 6/6 brackets, depth 2, same as pre-diff; two runnable rev-parse forms; the widening is the exact deliverable DEC-28 names"
+  - "git log needs -n 1 --diff-filter=AM - that one-liner skips merge commits and returns the wrong last state on a conflicting-merge history (reproduced); realistic list lengths are 2-18 with 2-5 rev-parse spawns, ~30ms, on a cold fallback"
+  - "show_bytes at the found commit should be cat-file - both are one process; last_state never fetched content; no cat-file helper exists"
+  - "the tuple eagerly spawns blob_of after show_bytes failed - byte-identical to the pre-diff code, moved into the helper"
+  - "uncached per seam, N x M walks - the walk verifies each seam once and check_handoff runs at Level::Wu only, so each citation is resolved exactly once; the docs cache collapses three call sites within one verify, not across seams"
+  - "expected result 5 undelivered - its Where column is git.rs tests; the None assertion is delivered verbatim and the None -> path-half refusal is asserted twice; the arm cannot distinguish never-held from unreachable"
+  - "result doc outcome omits expected 5 and 9 - the standard maps outcome against the requirement, the W1 result uses the same shape, both facts are true in code and cited in the evidence table"
+  - "stale comment above a_repo_that_builds_then_re_shapes_a_pill - no false statement; the comment's subject is the two-halves rule, and the retired design is not a surface"
+verdict: FAIL
+date: 2026-09-03
+note: "Gate 0 green (cached 5996d54e27). design-scope: no artifact, no surface, no rendered file in b5664d9..327353f - no design section. Round 1. One verified finding, important: the artifact set check_design judges is read at the tip, so a design amended and retired inside one WU is never demanded a Tier-3 verdict once the citation resolves through history. Fix loop: a failing named regression test first (the amended-then-retired fixture must red on 9·design until the note's design section names the design), then the artifact set widened to the last state of a component design the WU retired with different bytes than its base held, at Level::Wu, through the one function design-scope and the gate share; then re-run this review on the fixed tip."
