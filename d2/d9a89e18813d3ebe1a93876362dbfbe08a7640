@@ -1,0 +1,34 @@
+schema: doc/v1
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W2
+branch: wu/gate-truth/citation-predicate
+changes:
+  - path: docs/decisions/dec-29-retired-design-judged-where-it-left.html
+    tier: T2
+    action: added
+    distills: "DEC-29 - at a WU seam, a component design the range removed at bytes the base never held is a design artifact of that seam: read at its last state, judged by the cr/v3 design section, owed DEC-16's archived entry in doc/v1, listed by design-scope with where to read it. One retired at judged bytes is not. Context: the two reads of one file after DEC-28, the one-WU shape DEC-25 D1c names; four rejected options; supersedes two DEC-24 clauses."
+  - path: docs/decisions/dec-24-design-review-dimension.html
+    tier: T2
+    action: updated
+    distills: "Superseded-on-clause callouts at 'a component design file present in the diff' and at the rejected option 'judge a removed design file', pointing to DEC-29; the meta line records the partial supersession; status active."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-29 registered index-first; DEC-24's row annotated with the two superseded clauses; v13."
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "Two rule-bearing lines - the cr/v3 row's design-bearing definition and the check-9 row - now say that at a WU seam a component design the range retired at bytes the base never held is an artifact, judged at its last state and owed its DEC-16 archived entry, linking DEC-29; v14. Committed under a Reviewed-By trailer signed by the owner."
+  - path: docs/work/2026-09-03-gate-truth-plan.html
+    tier: T3
+    action: updated
+    distills: "The distillation plan takes the DEC-29 and DEC-24 rows; v4."
+  - path: docs/work/2026-09-03-gate-truth-w2-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan - requirement, mapping to P1 / DEC-28 / DEC-25 / DEC-16 / the epic e2e, the change as a flow and a touches table, the fixture constraint, expected result per observable, test plan with no waivers, non-goals."
+  - path: docs/work/2026-09-03-gate-truth-w2-result.html
+    tier: T3
+    action: added
+    distills: "The WU result v3 - outcome against the plan plus what the review's two rounds added, deviations per round, evidence naming every test and the regression proof, the distillation ledger across T1/T2/T3, follow-ups with the blind spot closed."
+note: "One T1 edit under the owner's trailer, three T2 (DEC-29 new, DEC-24 callouts, index), three T3. The T2 synthesis is DEC-29; DEC-28 is unchanged and its 'W2 owes' bullet is settled by the code. verify-doc green over every governed doc; every relative href the WU adds resolves on disk."
