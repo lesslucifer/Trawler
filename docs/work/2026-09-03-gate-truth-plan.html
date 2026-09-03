@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a98ef599f34851f0dfabeaf" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATETRUTH epic plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-GATETRUTH — the gate tells the truth</h1>
+      <p>Three deferred E-DFLOW problems: a rule pair that makes a legal note impossible, and two places the gate refuses correctly but names the wrong cause.</p>
+      <div class="meta">Draft v1 · 2026-09-03 · Trawler · T3 epic plan · <span class="badge id">E-GATETRUTH</span></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">
+      E-DFLOW closed green but left three defects in the gate and its tooling, all
+      of the same shape: <strong>the gate's verdict is right and its explanation is
+      wrong</strong> — or, in one case, no correct note can be written at all. The
+      first is a blocker-in-waiting: <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>
+      (retire a design once built) and <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a>
+      (a new surface must cite the design it was built from) contradict each other,
+      so the first epic to add a registry component under a <code>cr/v3</code> note
+      cannot produce a note the gate will accept. The other two cost real time in
+      W12 — three debugging rounds on a commit that had already succeeded, two wrong
+      diagnoses on a merge whose signature was valid — because the message sent the
+      reader somewhere the fault was not. Now, because the next UI epic hits the
+      blocker on its first component, and because a gate that misdirects erodes the
+      trust the whole DoD model rests on.
+    </p>
+
+    <h2 id="problems">The three problems</h2>
+    <table>
+      <thead><tr><th>#</th><th>Problem</th><th>Severity</th><th>Verified at</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge id">P1</span></td>
+          <td>DEC-16 retires the design file; DEC-25 requires citing it; <code>check_citation</code> resolves the cited path <em>at the tip</em>, where it no longer exists. <code>design.undesigned</code> is refused for an added surface, so <strong>the note has no legal form</strong>.</td>
+          <td><span class="badge approval">blocker-in-waiting</span></td>
+          <td><code>xtask/src/gate.rs:609</code> · <code>:560</code></td>
+        </tr>
+        <tr>
+          <td><span class="badge id">P2a</span></td>
+          <td><code>mr commit</code> prints <code>error:</code> on a commit that succeeded — <code>git_env</code> formats any non-success as an error echoing the entire message body, burying git's real stderr.</td>
+          <td><span class="badge auto">friction</span></td>
+          <td><code>xtask/src/mr.rs:381</code> · <code>xtask/src/git.rs:24</code></td>
+        </tr>
+        <tr>
+          <td><span class="badge id">P2b</span></td>
+          <td>Nothing checks doc link integrity. <code>verify-doc</code> checks structure, not whether <code>href</code>s resolve. Three real dead links shipped, incl. a T2 decision record pointing at a source file that <strong>never existed</strong>.</td>
+          <td><span class="badge auto">friction</span></td>
+          <td><code>xtask/src/doc.rs</code> — no href predicate</td>
+        </tr>
+        <tr>
+          <td><span class="badge id">P3</span></td>
+          <td>The manual-review roster <code>.mr-allowed</code> is gitignored and per-worktree. A merge in another worktree judges a valid signature <em>invalid</em> and reports "no valid mr/v1 note" — when the truth is "this checkout does not list the signing key".</td>
+          <td><span class="badge approval">blocker (multi-worktree)</span></td>
+          <td><code>xtask/src/mr.rs:478</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="diagram" data-c="p1-deadlock">
+      <pre class="mermaid">
+flowchart TD
+  W2["design WU: adds docs/work/components/x.html"] --> W5["build WU: builds ui/src/components/X.tsx"]
+  W5 --> C["cr/v3 note must carry design.implements[path, blob]"]
+  W5 --> W7["DEC-16: design file deleted once built"]
+  W7 --> T["at the epic tip, the path resolves nowhere"]
+  C --> CC{"check_citation resolves path at the tip"}
+  T --> CC
+  CC -- "path missing" --> F1["REFUSED: 'names X, which does not resolve at the tip'"]
+  C -.->|"alternative"| U["design.undesigned + reason"]
+  U --> CH{"check_handoff: added surface?"}
+  CH -- yes --> F2["REFUSED: 'only a design answers for a new surface'"]
+  F1 --> D["no legal note exists"]
+  F2 --> D
+      </pre>
+      <div class="caption">Hình 1 — P1: both roads out of the citation are refused. DEC-16 removes the only path a citation may name; the reason-based escape hatch is closed by design.</div>
+    </div>
+
+    <div class="callout warn">
+      <strong>Why E-DFLOW did not hit P1.</strong> Its 25 components landed under
+      <code>cr/v2</code>-era seams. <code>check_handoff</code> downgrades the check to
+      <code>DESIGN_SCHEMA</code> for a <code>cr/v2</code> note, and the epic walk filters
+      that class out (<code>xtask/src/gate.rs:894</code>). A fresh <code>cr/v3</code>
+      note gets <code>DESIGN</code>, which is <strong>not</strong> filtered.
+    </div>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <p data-item="use-cases">
+      <strong>A process epic — it delivers no <code>UC-*</code> behaviour and changes
+      none.</strong> Nothing user-visible in the proxy or the UI moves. What changes is
+      the workflow's own contract, so the truth lands in T2 decisions and the T1 process
+      docs instead: the meaning of a design citation after retirement (a new decision
+      record superseding the P1 half of <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a>),
+      the roster's worktree scope (extending <a href="../decisions/workflow-gates.html">DEC-10</a>
+      rather than reversing it), and the link-integrity predicate as a stated
+      <code>verify-doc</code> obligation in <a href="../work-planning.html">work-planning</a>.
+      The <a href="../workflow.html">workflow standard's</a> "design → build" table is
+      rule-bearing text that P1 will contradict once fixed, so it is edited under a
+      <code>Reviewed-By</code> trailer as a T1 rule change.
+    </p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>Checkable by a reader who was not here:</p>
+      <table>
+        <thead><tr><th>#</th><th>Observable after</th><th>How to check</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>An epic that adds a registry component, retires its design per DEC-16, and writes a <code>cr/v3</code> citation <strong>passes</strong> check 9 and the epic walk.</td>
+            <td>A gate test builds exactly that history (design added → built → design deleted → <code>cr/v3</code> note) and asserts green. It reds against today's code.</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>A citation naming a path that never existed, or pinning a blob no commit ever held, is still <strong>refused</strong> — the fix widens where a citation may resolve, never whether it is checked.</td>
+            <td>Negative gate tests for both, asserting the refusal survives.</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>mr commit</code> on a succeeding commit prints no <code>error:</code>; on a failing one it prints git's stderr without echoing the message body.</td>
+            <td>Integration test on a temp repo: assert exit 0 + no <code>error:</code>; assert a forced-fail case names the real cause and omits the body.</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>verify-doc</code> reds a doc whose relative <code>href</code> resolves nowhere in the tree, and stays green on archived-doc and <code>docs/.archive/</code> links.</td>
+            <td>Unit tests per case; a run over today's <code>docs/</code> is green (the three known dead links are already gone or get fixed here).</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>A merge whose <code>mr/v1</code> signer is absent from the running checkout's roster reports <strong>that</strong>, naming the signer and the roster path — distinct from a signature that fails against a listed key.</td>
+            <td>Gate test asserting the two messages differ and each names its own cause.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-item="non-goals">
+      <li><strong>Making <code>.mr-allowed</code> tracked.</strong> DEC-10 gitignored it deliberately — locally mutable, and a tracked roster is a tempting diff target. P3 improves the <em>diagnosis</em>; any move to share the roster must argue against DEC-10 on its merits and is out of scope here.</li>
+      <li><strong>Judging a build against its design.</strong> DEC-25 holds: the gate asks <em>is there a design, and is it this one</em>, never whether the code honoured it. P1 must not smuggle in a content check.</li>
+      <li><strong>Reversing DEC-16.</strong> Keeping design files standing after build would "fix" P1 by reintroducing the drift DEC-16 exists to prevent.</li>
+      <li><strong>A general docs link-checker</strong> — external <code>http(s)</code> links, anchors into other docs, and image assets stay unchecked. P2b resolves relative file <code>href</code>s only.</li>
+      <li>Any change to proxy, capture, store, or UI runtime code. No <code>src/</code> or <code>ui/src/</code> behaviour moves in this epic.</li>
+    </ul>
+
+    <h2 id="wus">Working units</h2>
+
+    <div data-item="wu-summaries">
+
+      <div data-wu="E-GATETRUTH.W1">
+        <h3 id="w1">E-GATETRUTH.W1 — decide what a citation means after retirement</h3>
+        <p data-item="wu-summary">
+          The decision record for P1, and only that: a T2 decision fixing what
+          <code>design.implements</code> resolves against once DEC-16 has retired the file,
+          chosen among the three candidate directions (resolve against history · cite the
+          TSDoc that now carries the contract · a <code>design.retired</code> variant carrying
+          the last-known blob plus the retiring commit). Includes the T1 edit to the
+          workflow standard's design→build table, which today states the tip-resolution rule
+          the fix changes. <strong>No gate code.</strong>
+        </p>
+        <p data-item="wu-maps-to">
+          E-GATETRUTH · P1 · supersedes the citation-resolution half of DEC-25; leaves DEC-16 intact.
+        </p>
+        <p data-item="wu-expected">
+          A numbered decision record in <code>docs/decisions/</code> stating the chosen
+          semantics, the two rejected alternatives with why, and the exact predicate W2 must
+          implement. <code>docs/workflow.html</code> and the decisions index reflect it. The
+          T1 edit carries a <code>Reviewed-By</code> trailer (rule-bearing doc, DoD-C).
+        </p>
+        <p data-item="wu-deps">none — first WU; W2 depends on it.</p>
+      </div>
+
+      <div data-wu="E-GATETRUTH.W2">
+        <h3 id="w2">E-GATETRUTH.W2 — implement the citation predicate</h3>
+        <p data-item="wu-summary">
+          Change <code>check_citation</code> (<code>xtask/src/gate.rs:609</code>) to W1's
+          decided predicate so a retired design can still be cited, while a fabricated path
+          or an unpinnable blob is still refused. Carries the regression history that would
+          have caught P1: a fixture epic that adds, builds, and retires a component under a
+          <code>cr/v3</code> note.
+        </p>
+        <p data-item="wu-maps-to">E-GATETRUTH · P1 · implements W1's decision.</p>
+        <p data-item="wu-expected">
+          Expected results 1 and 2 hold. The gate is green on the legal history and red on
+          both negative cases, with a message naming which half failed.
+        </p>
+        <p data-item="wu-deps">E-GATETRUTH.W1 (the predicate must be decided before it is coded).</p>
+      </div>
+
+      <div data-wu="E-GATETRUTH.W3">
+        <h3 id="w3">E-GATETRUTH.W3 — the gate names the cause it actually found</h3>
+        <p data-item="wu-summary">
+          Both misdirection defects, together because they are one fault in two places.
+          <strong>P2a</strong>: <code>mr_commit</code> checks whether <code>HEAD</code> moved
+          before reporting failure, and the error path prints git's stderr alone instead of
+          re-echoing the commit message. <strong>P3</strong>: when an <code>mr/v1</code> note
+          carries a <code>signer</code> the local roster does not list,
+          <code>tip_authorised</code>'s caller says exactly that — naming the signer and the
+          checkout's roster path — distinct from a signature that fails against a listed key.
+        </p>
+        <p data-item="wu-maps-to">E-GATETRUTH · P2a + P3 · no rule changes, message and control-flow only.</p>
+        <p data-item="wu-expected">
+          Expected results 3 and 5 hold. A <code>git log</code> is no longer needed to learn
+          that a commit succeeded, and a roster gap no longer reads as a bad signature.
+        </p>
+        <p data-item="wu-deps">none — independent of W1/W2; may land in parallel.</p>
+      </div>
+
+      <div data-wu="E-GATETRUTH.W4">
+        <h3 id="w4">E-GATETRUTH.W4 — verify-doc resolves the links it ships</h3>
+        <p data-item="wu-summary">
+          A <code>verify-doc</code> predicate resolving every relative <code>href</code>
+          against the tree, with the two known wrinkles handled: an archived doc may reference
+          other archived docs, and links into <code>docs/.archive/</code> are expected to be
+          unresolvable from a clean checkout. The ad-hoc check run by hand in W12 is the
+          prototype. Fixes any dead link it finds in today's tree.
+        </p>
+        <p data-item="wu-maps-to">E-GATETRUTH · P2b · extends the work-planning standard's verify-doc obligations.</p>
+        <p data-item="wu-expected">
+          Expected result 4 holds. The DEC-13 class of defect — a T2 record pointing at a
+          source file that never existed — is mechanically impossible to ship again.
+        </p>
+        <p data-item="wu-deps">none — independent; may land in parallel with W1–W3.</p>
+      </div>
+
+    </div>
+
+    <h2 id="e2e">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <p>
+        The epic's user is an agent running the workflow, so the end-to-end flow is
+        <strong>a full gated WU merge on a synthetic repo</strong> — the only test that
+        proves the three fixes compose rather than each passing alone.
+      </p>
+      <table>
+        <thead><tr><th>Step</th><th>Asserts</th><th>Covers</th></tr></thead>
+        <tbody>
+          <tr><td>Build a temp repo: epic branch, a design doc, a component built from it, the design deleted per DEC-16.</td><td>the history P1 makes ungateable exists</td><td>P1</td></tr>
+          <tr><td>Commit a rule-bearing doc through <code>mr commit</code>.</td><td>exit 0, no <code>error:</code> on success</td><td>P2a</td></tr>
+          <tr><td>Run <code>verify-doc</code> over that repo's docs, one link deliberately dead.</td><td>red, naming the dead href; green once fixed</td><td>P2b</td></tr>
+          <tr><td>Write <code>test/v2</code>, <code>doc/v1</code>, a <code>cr/v3</code> note carrying the citation; sign <code>mr/v1</code>; run <code>verify-dod</code> from a <em>second worktree</em> whose roster lists the key.</td><td>green — the merge the blocker refuses today</td><td>P1</td></tr>
+          <tr><td>Re-run it from a worktree whose roster omits the signer.</td><td>red, naming the signer and the roster — not "no valid note"</td><td>P3</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Hermetic per the testing standard: temp repo, temp worktrees, generated throwaway
+        signing key, no network. <strong>No waiver intended.</strong>
+      </p>
+    </div>
+
+    <h2 id="distillation">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <table>
+        <thead><tr><th>Doc</th><th>Tier</th><th>Absorbs</th></tr></thead>
+        <tbody>
+          <tr><td><code>docs/decisions/dec-27-&lt;citation-after-retirement&gt;.html</code> <em>(new, number confirmed at authoring)</em></td><td>T2</td><td>W1's decision: what a citation resolves against once the design is retired; supersedes the DEC-25 half, leaves DEC-16 standing</td></tr>
+          <tr><td><code>docs/decisions/dec-25-design-build-handoff.html</code></td><td>T2</td><td>a superseded-by pointer to the new record — the rule moved, the record stays</td></tr>
+          <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td><td>the new record, index-first reading</td></tr>
+          <tr><td><code>docs/decisions/workflow-gates.html</code></td><td>T2</td><td>P3's roster scope: DEC-10 extended with the worktree-locality consequence and the diagnosis rule</td></tr>
+          <tr><td><code>docs/workflow.html</code></td><td>T1</td><td>the design→build table's citation rule, which today states tip-resolution — a rule-bearing edit, <code>Reviewed-By</code> required</td></tr>
+          <tr><td><code>docs/work-planning.html</code></td><td>T1</td><td>link integrity as a stated <code>verify-doc</code> obligation</td></tr>
+          <tr><td>this plan + the WU/epic results</td><td>T3</td><td>archived out of git at close per DEC-3</td></tr>
+        </tbody>
+      </table>
+      <p>One fact per tier: the <em>why</em> lives in the decision records, the <em>rule</em> in T1, the <em>predicate</em> in <code>xtask/src/gate.rs</code>. No copies.</p>
+    </div>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions">
+      <table>
+        <thead><tr><th>#</th><th>Question</th><th>Proposed default</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Which P1 direction does W1 choose?</td>
+            <td><strong>Resolve against history.</strong> The blob is pinned regardless, so <code>&lt;commit that had it&gt;:&lt;path&gt;</code> stays verifiable and the citation keeps meaning <em>the design bytes the build read</em> — unchanged from today. Citing TSDoc changes what a citation <em>is</em>; a <code>design.retired</code> variant adds a second form to keep in step. W1 decides on the merits and may overturn this.</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>How far back may a citation resolve — anywhere in history, or only within the epic that retired it?</td>
+            <td><strong>Reachable from the tip.</strong> Simple to state and to check; an unreachable commit is not history the tip stands on.</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Should P3 also warn at <code>mr confirm</code> time that sibling worktrees lack the key?</td>
+            <td><strong>No.</strong> The follow-ups note there is no reliable way to enumerate sibling worktrees; <code>git worktree list</code> would make it best-effort at best. The diagnosis fix removes the confusion at the point it actually bites.</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Does W4's link check run at authoring time (harness hook) or at the gate?</td>
+            <td><strong>Authoring time</strong>, inside <code>verify-doc</code> — same trigger as every other doc check, per the work-planning standard's stated reason: by gate time the work already stands on the broken doc.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
