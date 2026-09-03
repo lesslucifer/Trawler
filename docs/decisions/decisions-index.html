@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v11 · 2026-08-12 · Trawler</div>
+      <div class="meta">v12 · 2026-09-03 · Trawler</div>
     </div>
   </header>
   <main>
@@ -169,7 +169,9 @@
             UI work happens inside a Working Unit; the roster counts screens, so a screen design resolves.
             <strong>Nothing judges conformance</strong>: there is no measured drift to catch until a real
             build produces one. Supersedes <strong>DEC-16</strong>'s <em>"lives there and nowhere else"</em>
-            — the grant that made a design file a permanent second address for a contract</td>
+            — the grant that made a design file a permanent second address for a contract.
+            <strong>Tip-resolution clause superseded by DEC-28</strong>: a citation resolves at the tip or at the
+            design's last state reachable from it</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
@@ -187,6 +189,20 @@
             not assumed: 50 of the 53 class tokens that leave Tier-1's scan are gated at source by
             <code>design/vocabulary</code>; three tokens and four of five payload markings are not, and the
             scanner widening that would recover them is a named follow-up</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-28-citation-after-retirement.html"><code>dec-28-citation-after-retirement.html</code></a></td>
+          <td><span class="badge id">DEC-28</span></td>
+          <td>A design citation <strong>resolves at the WU tip, or at the design's last state reachable from
+            it</strong> — the blob the path held before the commit that removed it — and the pin must match that
+            state. Needed because <code>components·unretired</code> forces DEC-16's retirement inside the build
+            WU, before its tip, so DEC-25's "resolve at the tip" left a <code>cr/v3</code> build with no legal
+            note. Note shape unchanged; the citation still means <em>the design bytes the build read</em>, only
+            where the gate looks widened from the tip to its history. Rejected: citing the built
+            <code>.tsx</code> (every surface could cite itself — DEC-25's added-surface rule goes vacuous), a
+            <code>design.retired</code> field, relaxing <code>components·unretired</code>, dropping check 9 from
+            the epic walk. Supersedes the tip clause of <strong>DEC-25</strong>; DEC-16 untouched</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

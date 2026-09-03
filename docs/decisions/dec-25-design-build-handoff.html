@@ -172,6 +172,17 @@
       DEC-24 applies to its rulebook pin, and for the same reason: a later Working Unit editing the design
       must not retroactively falsify a citation that was true when it was written, on a branch nobody may
       amend.</p>
+    <div class="callout" data-c="superseded-tip-clause">
+      <strong>Superseded on the tip-resolution clause by <a href="dec-28-citation-after-retirement.html">DEC-28</a>
+      (E-GATETRUTH.W1).</strong> "The path must resolve at the tip" assumed the design file would still be
+      standing at the build WU's tip. It is not: <code>components·unretired</code> reds the file the turn the
+      component exists, so DEC-16's retirement lands inside the build WU, before its tip, and the citation this
+      record demands had no legal form. A citation now resolves at the tip <em>or</em>, when the tip does not
+      ship the path, at the path's last state reachable from the tip — with the pin matching that state, so an
+      amendment stays countable. The comparison is still never against the working tree, and the option
+      rejected below as "gate the citation at the epic level too" keeps its conclusion: the WU seam is where the
+      citation is judged. What answers there is the seam's history, not its tree.
+    </div>
     <p class="kd"><code>design.implements</code> is <code>Option&lt;Vec&lt;Cited&gt;&gt;</code>: <strong>absent
       is a silence, <code>[]</code> is a stated nothing</strong>, and the two reds say which happened. That is
       DEC-15's rule — a silence must never read as a pass — applied to the field rather than to the run.</p>
