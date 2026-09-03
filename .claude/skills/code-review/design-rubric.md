@@ -13,7 +13,7 @@ the merge gate enforces. Two kinds:
 | Artifact | Is judged when |
 |---|---|
 | **Design run** — a doc declaring `data-artifact="design-run"` | it is **closed** at the head (`data-status="archived"`). A `draft` run is unfinished; it is judged by the review of the merge that closes it. |
-| **Component design file** — `docs/work/components/<slug>.html` | it is present at the head. A *removed* one is retirement, not design (`6·retirement-order` owns it). |
+| **Component design file** — `docs/work/components/<slug>.html` | it is present at the head — or, at a WU seam, the range removed it at bytes the base never held (amended or authored in the WU that retired it), in which case `design-scope` prints `git show <commit>:<path>` and you judge those bytes (DEC-29). A design removed at the bytes it was judged at is retirement, not design (`6·retirement-order` owns it). |
 
 Judge **every** artifact the command lists. The note's `design.artifacts` must
 name each one, so an unjudged artifact is a red merge, not a quiet omission.

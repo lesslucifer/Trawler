@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9932e89f34851f0dfabeff">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-29: a design retired at unjudged bytes is judged where it left</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-29 — a component design the WU retired at bytes its base never held is a design artifact of that WU</h1>
+      <p>Tier-3 judges every design a seam carries. Once DEC-28 lets a build cite a design the tip no longer ships,
+        the seam that amended — or authored — that design and then retired it is the only seam that can judge those
+        bytes, and its gate asks it to, reading them at the design's last state. The same seam owes DEC-16's
+        retirement order for it.</p>
+      <div class="meta">DEC-29 · 2026-09-03 · Trawler · E-GATETRUTH.W2 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>Found by the W2 code review, round 1. DEC-28 made History B legal — a build WU that retires the design it
+      built from, because <code>components·unretired</code> forces the retirement before the tip. The moment the
+      citation resolved through history, a second check stopped seeing the file:</p>
+    <table data-c="two-reads">
+      <thead><tr><th>Check</th><th>Read the design from</th><th>History B, design retired unchanged</th><th>History B, design amended then retired</th></tr></thead>
+      <tbody>
+        <tr><td>check 9, citation half</td><td>the tip — after DEC-28, the tip's history</td><td><span class="badge auto">resolves</span> at the last state</td><td><span class="badge auto">resolves</span> if the pin is the amended blob</td></tr>
+        <tr><td>check 9, artifact half (<a href="dec-24-design-review-dimension.html">DEC-24</a>)</td><td>the tip's tree only</td><td>nothing to judge — correct, the design WU's seam judged it</td><td><span class="badge approval">nothing to judge</span> — the amendment nobody read, green</td></tr>
+        <tr><td>the same amendment, file kept in the tree</td><td>the tip's tree</td><td>—</td><td><span class="badge approval">refused</span> "is a design artifact the design section does not name"</td></tr>
+      </tbody>
+    </table>
+    <div class="caption">Same amendment, opposite verdicts, decided by whether the WU also deleted the file. Before
+      DEC-28 the citation refused both tips, so the asymmetry had no consequence.</div>
+
+    <p>A second shape has the same hole and is <a href="dec-25-design-build-handoff.html">DEC-25</a> D1c's own case:
+      a design authored, built and retired between one base and one tip. It nets out of the endpoint diff
+      entirely — neither the artifact set nor <code>6·doc-note</code> ever hears of it, and an honest
+      <code>archived</code> entry for it is refused as a phantom.</p>
+
+    <h2 id="choice">Choice</h2>
+    <div class="callout" data-c="choice">
+      <strong>At a Working Unit seam, a component design the range removed whose last state the base never held is
+      a design artifact of that seam.</strong> The gate reads it at the last commit reachable from the tip that
+      shipped it (the same place DEC-28 resolves a citation), demands the <code>cr/v3</code> design section name and
+      judge it, and demands the <code>doc/v1</code> note record its retirement in DEC-16 order (<code>action:
+      archived</code>, <code>distilled_to</code>). <code>design-scope</code> lists it beside the artifacts the tip
+      ships and says where to read it. A design retired at exactly the bytes the base held is not an artifact here:
+      it was judged where it landed.
+    </div>
+
+    <table data-c="cases">
+      <thead><tr><th>Case</th><th>Artifact of this seam?</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>design present at base, retired unchanged</td><td><span class="badge auto">no</span></td><td>the bytes were judged at the merge that landed them; the citation still resolves (DEC-28)</td></tr>
+        <tr><td>design present at base, amended in the WU, retired</td><td><span class="badge approval">yes</span></td><td>DEC-25 D1a: an amendment re-enters Tier-3 on the merge that lands it — whether or not the file also left</td></tr>
+        <tr><td>design authored, built and retired in the WU</td><td><span class="badge approval">yes</span></td><td>DEC-25 D1c: the build WU carries its own design, gated identically; no other merge can judge it</td></tr>
+        <tr><td>a file under <code>docs/work/components/</code> that is not a component design (a note, a nested draft)</td><td><span class="badge auto">no</span></td><td>the artifact test is the same one the tip's docs pass; the directory is not the criterion</td></tr>
+        <tr><td>the epic gate over the whole range</td><td><span class="badge auto">not asked</span></td><td>the walk re-verifies each seam at its own tip with the same set — the epic's own note re-judges nothing</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="options">Options rejected</h2>
+    <table data-c="options">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Keep DEC-24's reading — a removed design is retirement, not a review subject</strong></td>
+          <td>true for a design retired at judged bytes, and that case stays out. For amended or authored bytes it
+            leaves the one seam that could judge them asking nobody, while the citation half of the same check
+            resolves to those very bytes — one check reading one file two ways</td></tr>
+        <tr><td><strong>Match any historical blob for the artifact set too</strong> — every state the range held</td>
+          <td>a design amended twice would be judged at a superseded revision; the last state is what the build read
+            and what the pin must match (DEC-28 §last state)</td></tr>
+        <tr><td><strong>Apply it at the epic gate as well</strong></td>
+          <td>every design an epic authored and retired would owe the epic note a second judgment. The seams already
+            judged them, and the walk re-asks each seam at its own tip</td></tr>
+        <tr><td><strong>Leave the one-WU retirement order unenforced</strong>, as a follow-up</td>
+          <td>the gate would recognise the design for Tier-3 and stay blind to it for DEC-16 — and refuse the honest
+            <code>archived</code> entry as a phantom. Recognising a file in one check and denying it in the next is
+            the misdirection this epic exists to remove</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul data-c="consequences">
+      <li><strong><a href="dec-24-design-review-dimension.html">DEC-24</a> is superseded on two clauses</strong>: "a
+        component design file present in the diff" now reads the range's last state for a design the WU retired at
+        bytes the base never held; the rejected option "judge a removed design file" holds only for a design removed
+        at the bytes it was judged at. Everything else in DEC-24 stands.</li>
+      <li><strong><a href="dec-16-design-file-retirement.html">DEC-16</a> reaches the one-WU design</strong>: the
+        archived entry with its <code>distilled_to</code> is owed for a design the endpoint diff never shows, and
+        <code>6·retirement-order</code> reads it as for any other. Its consequence "a removed design file is not a
+        Tier-3 artifact" is superseded for unjudged bytes — such a file is both checks' business; the order and both
+        predicates stand.</li>
+      <li><strong><a href="dec-25-design-build-handoff.html">DEC-25</a> D1a and D1c hold as written</strong> — this
+        record is how they hold once DEC-16 forces the retirement into the build WU.</li>
+      <li><strong>The truth is the code.</strong> <code>xtask/src/gate.rs</code> owns the artifact set
+        (<code>retired_designs</code>, joined into <code>design_artifacts</code> for <code>design-scope</code> and the
+        gate alike); this record owns why.</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

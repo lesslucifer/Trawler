@@ -22,7 +22,7 @@
     <div class="inner">
       <h1>Design flow</h1>
       <p>The staged flow an AI agent follows to design a screen, and the gate that refuses a design which skipped one. Screen-agnostic: the reusable method, with a copy-paste artifact template per stage.</p>
-      <div class="meta">Process spec · rev 2026-09-02 · Trawler · T1 (docs/)</div>
+      <div class="meta">Process spec · rev 2026-09-03 · Trawler · T1 (docs/)</div>
     </div>
   </header>
   <main>
@@ -334,7 +334,7 @@ soft:
       <thead><tr><th></th><th>How</th></tr></thead>
       <tbody>
         <tr><td><strong>What activates it</strong></td>
-          <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code> — a <em>closed</em> run (<code>data-status="archived"</code>) or a component design file in the diff</td></tr>
+          <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code> — design-bearing as <a href="workflow.html#evidence">the workflow standard</a> defines it (a closed run, a component design file, or one the WU retired at unjudged bytes — <a href="decisions/dec-29-retired-design-judged-where-it-left.html">DEC-29</a>)</td></tr>
         <tr><td><strong>What it judges</strong></td>
           <td>soft rules and the new-component warrant, on the artifact — the rubric is <code>.claude/skills/code-review/design-rubric.md</code></td></tr>
         <tr><td><strong>What it catches that ⑦ cannot</strong></td>

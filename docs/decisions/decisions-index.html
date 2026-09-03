@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v12 · 2026-09-03 · Trawler</div>
+      <div class="meta">v14 · 2026-09-03 · Trawler</div>
     </div>
   </header>
   <main>
@@ -72,7 +72,7 @@
           <td><a href="dec-16-design-file-retirement.html"><code>dec-16-design-file-retirement.html</code></a></td>
           <td><span class="badge id">DEC-16</span></td>
           <td>Retiring a design file whose component is built runs in one order — <strong>distil the forks to <code>docs/decisions/</code>, verify the TSDoc block is complete, then remove</strong> — because code-as-truth carries the contract and never the <em>why</em>: the fork cards and frame drivers are the part nobody re-reads, which is exactly why the file looks redundant. W7 enforces the order as a predicate, not a paragraph</td>
-          <td><span class="badge auto">active</span></td>
+          <td><span class="badge auto">active</span> · survival clause superseded by DEC-25 · Tier-3 exclusion clause superseded by DEC-29</td>
         </tr>
         <tr>
           <td><a href="dec-17-closed-vocabulary.html"><code>dec-17-closed-vocabulary.html</code></a></td>
@@ -157,7 +157,7 @@
             <strong>a design-bearing diff is never docs-only-exempt</strong>: a design is a docs-only
             <em>deliverable</em>, and the exemption had already let W2 land 14 component design files with
             no code review at all</td>
-          <td><span class="badge auto">active</span></td>
+          <td><span class="badge auto">active</span> · two clauses superseded by DEC-29</td>
         </tr>
         <tr>
           <td><a href="dec-25-design-build-handoff.html"><code>dec-25-design-build-handoff.html</code></a></td>
@@ -203,6 +203,19 @@
             <code>.tsx</code> (every surface could cite itself — DEC-25's added-surface rule goes vacuous), a
             <code>design.retired</code> field, relaxing <code>components·unretired</code>, dropping check 9 from
             the epic walk. Supersedes the tip clause of <strong>DEC-25</strong>; DEC-16 untouched</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-29-retired-design-judged-where-it-left.html"><code>dec-29-retired-design-judged-where-it-left.html</code></a></td>
+          <td><span class="badge id">DEC-29</span></td>
+          <td>At a WU seam, <strong>a component design the range removed at bytes the base never held is a design
+            artifact of that seam</strong> — amended before retirement, or authored and retired in one WU — read at
+            its last state, judged by the <code>cr/v3</code> design section, and owed DEC-16's archived entry in
+            <code>doc/v1</code>; <code>design-scope</code> lists it and says where to read it. One retired at the
+            bytes it was judged at is not. Found by the W2 review: once DEC-28 resolved a citation through history,
+            the artifact half of check 9 still read the tip alone and greened an amendment nobody judged. Rejected:
+            keeping DEC-24's reading, matching any historical blob, applying it at the epic gate, leaving the one-WU
+            retirement order unenforced. Supersedes two clauses of <strong>DEC-24</strong> and the Tier-3 exclusion clause of <strong>DEC-16</strong>; DEC-16's order and predicates and DEC-25 stand</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

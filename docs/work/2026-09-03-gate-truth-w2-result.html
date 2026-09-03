@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a992aa19f34851f0dfabefa">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATETRUTH.W2 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-GATETRUTH.W2 result — the gate reads a retired design where history kept it</h1>
+      <p>The predicate DEC-28 stated in words is now the code: a citation the tip does not ship resolves at the
+        path's last state reachable from the tip. The history every build WU produces is green; a path nobody
+        shipped and a blob the path never carried are red, each naming the half that failed. The review found what
+        the widening exposed — a design amended or authored and then retired in one WU reached the merge judged by
+        nobody — and that became DEC-29.</p>
+      <div class="meta">WU result v7 · 2026-09-03 · Trawler · T3 (docs/work/) ·
+        <code>wu/gate-truth/citation-predicate</code> → <code>epic/gate-truth</code> ·
+        <a href="2026-09-03-gate-truth-w2-plan.html">WU plan</a> · <a href="2026-09-03-gate-truth-plan.html">epic plan</a> ·
+        <span class="badge id">E-GATETRUTH.W2</span></div>
+    </div>
+  </header>
+  <main data-artifact="wu-result">
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table>
+        <thead><tr><th>Planned</th><th>Shipped</th></tr></thead>
+        <tbody>
+          <tr><td><code>check_citation</code> resolves an absent-at-tip path at its last state reachable from the tip, pin matching that state</td>
+            <td><span class="badge auto">delivered</span> <code>resolve_citation</code> in <code>xtask/src/gate.rs</code> tries the tip, then <code>git::last_state</code>; the resolved bytes flow into the unchanged decode / design-artifact / archived-run tail. The left branch prints today's messages, word for word</td></tr>
+          <tr><td>one history helper</td>
+            <td><span class="badge auto">delivered</span> <code>git::last_state(repo, tip, path)</code>: <code>git log --full-history</code> over the tip, the newest listed commit whose tree holds the path, with its blob</td></tr>
+          <tr><td>two refusals naming the failed half</td>
+            <td><span class="badge auto">delivered</span> path half: <em>which no commit reachable from the tip ever shipped</em> · blob half: <em>the path was last shipped at &lt;blob&gt; (&lt;commit&gt;) before it left the tree</em>, fix: re-read its last state and re-pin. "Does not resolve at the tip" is gone</td></tr>
+          <tr><td>the <code>check_handoff</code> fix hint covers a retired design</td>
+            <td><span class="badge auto">delivered</span> <em>blob: &lt;git rev-parse tip:&lt;the design&gt;, or &lt;the last commit that held it&gt;:&lt;the design&gt; once this WU retired it&gt;</em></td></tr>
+          <tr><td>fixtures at all three levels, none waived</td>
+            <td><span class="badge auto">delivered</span> three unit tests on the helper, three rows in the in-crate case table, four integration tests over History B, the hand-over e2e retiring the design inside the build WU</td></tr>
+          <tr><td>—</td>
+            <td><span class="badge approval">added by the review, rounds 1 and 2</span> <a href="../decisions/dec-29-retired-design-judged-where-it-left.html">DEC-29</a>: the artifact set <code>9·design</code> judges at a WU seam includes a component design the range removed at bytes the base never held — amended before retirement, or authored and retired in one WU — read at its last state; only a design artifact counts, not every file under the directory; the same seam owes DEC-16's <code>archived</code> entry for it, which <code>6·doc-note</code> now asks for and no longer refuses as a phantom. <code>Gate::retired_designs</code>, joined into <code>design_artifacts</code> so <code>design-scope</code> lists it and says where to read it. DEC-24 superseded on two clauses; the T1 design-bearing and check-9 rows state the rule</td></tr>
+          <tr><td>the History B fixture reds against today's code</td>
+            <td><span class="badge auto">held</span> all four <code>dod_gate</code> fixtures fail with the previous <code>gate.rs</code> and <code>git.rs</code> swapped back in; pass with this WU's</td></tr>
+          <tr><td>no <code>src/</code>, <code>ui/</code>, or docs outside <code>docs/work/</code></td><td><span class="badge approval">deviated</span> <code>src/</code> and <code>ui/</code> untouched; the review's rounds moved the truth into T2 (DEC-29, DEC-24, DEC-16, the index) and T1 (the workflow standard's cr/v3, check-6 and check-9 rows, the doc/v1 schema owner, the design-flow activation row), and the epic plan — see deviations and the ledger</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table>
+        <thead><tr><th>Plan said</th><th>What was true</th><th>Done about it</th></tr></thead>
+        <tbody>
+          <tr><td>the e2e's leg ② retires the design and steps ② / ②b / ③ hold as written</td>
+            <td>they hold, and the leg grew past clippy's 100-line ceiling for one function</td>
+            <td>leg ① extracted into <code>build_the_pill_and_retire_its_design</code>; step ③ also drives a wrong pin through the real hook before the right one lands</td></tr>
+          <tr><td>leg ④ "edits the design it was handed"</td>
+            <td>after leg ② the design is gone from <code>epic/x</code>, so leg ④'s write re-adds it</td>
+            <td>the leg's comment says so — it re-opens the retired design; every assertion it makes (stale pin red, unjudged amendment red, re-judged lands) is unchanged</td></tr>
+          <tr><td>the blob-half message reads <em>shipped at 9f3c2a1 (c1), never at deadbee — re-pin</em></td>
+            <td>the epic plan marked its <em>after</em> column "target shape, not final wording"</td>
+            <td>shipped wording states the last state and where it was, then the fix says why the pin can differ (amended before retirement, or bytes the path never carried)</td></tr>
+          <tr><td>the citation is the only check the widening touches</td>
+            <td>the review's round 1 verified that resolving through history opened a green path DEC-25 D1a forbids: a design amended and then retired in the same WU reached the merge with no Tier-3 verdict, because <code>check_design</code> read its artifacts from the tip and the file was gone there. Pre-W2 the citation refused that tip anyway; the widening made the gap reachable</td>
+            <td>failing tests first — the amended-then-retired fixture refuses the re-pinned note until the design section names the design; a design authored, built and retired in one WU is refused the same way — then <code>retired_designs</code> at <code>Level::Wu</code>; both land once judged. Second commit on the branch</td></tr>
+          <tr><td>the fixture that reds on check 6 has "reproduced a different bug"</td>
+            <td>true for a design present at the base. A design authored <em>and</em> retired in one WU nets out of the endpoint diff, so <code>6·doc-note</code> refused an archived entry for it as a phantom and <code>6·retirement-order</code> was never asked — first left as a follow-up, then verified by round 2 as a hole the widening made reachable</td>
+            <td>the doc-note check owes an entry for every retired design the range knows; the one-WU fixture refuses the judged-and-cited note until the retirement is recorded, then lands. Third commit</td></tr>
+          <tr><td>no doc rule text; DEC-28's "W2 owes" is settled by the code</td>
+            <td>round 2 verified that the T1 design-bearing definition ("the diff touches … a component design file"), the check-9 row ("names every design artifact in the diff") and DEC-24's "present in the diff" plus its rejected option "judge a removed design file" now stated an activation condition the code contradicts</td>
+            <td>DEC-29 written; DEC-24 carries two superseded-on-clause callouts; the index registers it (v13); the two T1 rows edited under a <code>Reviewed-By</code> trailer signed by the owner (v14); the epic plan's distillation plan takes both rows</td></tr>
+          <tr><td>the T1 and T2 edits end with the design-bearing and check-9 rows</td>
+            <td>round 3 verified that the check-6 row and the doc/v1 schema owner still stated the exact-match rule, design-flow.html restated the old activation, DEC-16's Tier-3 exclusion bullet had no pointer, and this doc's blast-radius row was stale from v1</td>
+            <td>DEC-16 annotated at the bullet; the index tightened (v14); DEC-29's consequence names the DEC-16 clause; the check-6 row, the schema owner's paragraph and sample, and the design-flow row point at DEC-29 under a second <code>Reviewed-By</code> trailer; this row corrected</td></tr>
+          <tr><td>the reviewer's instructions were scope, not subject</td>
+            <td>round 4 verified that the code-review skill's own files still stated the old rules: the design rubric's activation row (a removed design is retirement, not design) and the skill's blob-pin form (<code>git rev-parse &lt;HEAD_R&gt;:&lt;the design&gt;</code> only, which fails on every build WU that retires its design). The blob-pin form was stale since W1 and the activation row since DEC-29, both inert until this WU made the history legal; no mechanical check reads skill text</td>
+            <td>both rows corrected as infrastructure (markdown): the rubric names the retired case and where design-scope says to read it; the skill and its note template give the last-state pin. The check-9 row's one-clause repeat of check 6's obligation is a declared waiver</td></tr>
+          <tr><td>design-scope's retired block</td>
+            <td>round 2 found it counted every removed file under <code>docs/work/components/</code> and had no test</td>
+            <td><code>retired_designs</code> applies the artifact test; <code>design_scope_names_a_design_retired_at_unjudged_bytes_and_where_to_read_it</code> drives the CLI over an amended-then-retired range with stray files beside it</td></tr>
+          <tr><td>the in-crate case table gains three rows</td>
+            <td>the fixture had no retired design to cite</td>
+            <td><code>a_repo_that_builds_then_re_shapes_a_pill</code> now writes a badge design at the base and removes it in the tip commit, exposing <code>retired_blob</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table>
+        <thead><tr><th>Claim</th><th>Where to look</th></tr></thead>
+        <tbody>
+          <tr><td>the predicate, as code</td><td><code>xtask/src/gate.rs</code>: <code>resolve_citation</code>, the <code>retired_at</code> match in <code>check_citation</code>, the <code>Resolved</code> type · <code>xtask/src/git.rs</code>: <code>last_state</code></td></tr>
+          <tr><td>a retired design at unjudged bytes is an artifact; one retired unchanged is not; its retirement is owed in order</td>
+            <td><code>xtask/src/gate.rs</code>: <code>retired_designs</code>, the <code>judged</code> set and <code>retired_paths</code> in <code>verify</code>, <code>check_docs</code>; test <code>a_design_retired_at_bytes_the_base_never_held_is_an_artifact_the_seam_judges</code> · <code>xtask/tests/dod_gate.rs</code>: <code>a_design_authored_built_and_retired_in_one_wu_is_judged_by_that_wu</code> (refused on <code>6·doc-note</code>, then on <code>9·design</code>, then green), the last leg of the amended-then-retired test, and <code>design_scope_names_a_design_retired_at_unjudged_bytes_and_where_to_read_it</code></td></tr>
+          <tr><td>the helper's reach and its last-state rule</td><td><code>xtask/src/git.rs</code> tests: <code>last_state_is_the_blob_the_path_held_just_before_it_left_the_tree</code> · <code>last_state_reaches_only_the_history_the_tip_stands_on</code> · <code>last_state_sees_through_a_merge_that_added_and_removed_the_path_in_one_branch</code></td></tr>
+          <tr><td>every way a citation fails, and the retired green</td><td><code>xtask/src/gate.rs</code> test <code>a_build_that_adds_a_surface_cites_a_design_the_tip_ships_or_reds</code>: rows <em>no commit reachable from the tip ever shipped</em>, <em>before it left the tree</em>, and the closing <code>RETIRED_DESIGN</code> assertion</td></tr>
+          <tr><td>History B green at the WU merge and at the epic walk; the negatives red with the new messages; amended-then-retired cited at its last state</td>
+            <td><code>xtask/tests/dod_gate.rs</code>: <code>a_build_that_retires_the_design_it_cites_lands_and_the_epic_walk_agrees</code> · <code>a_citation_of_a_path_no_reachable_commit_ever_shipped_is_still_refused</code> · <code>a_citation_of_bytes_a_retired_design_never_carried_names_its_last_state</code> · <code>a_design_amended_then_retired_in_one_wu_is_cited_at_its_last_state_not_its_first</code></td></tr>
+          <tr><td>the fixture is legal on check 6 too</td><td>the same fixture's <code>doc/v1</code> entry: <code>action: archived</code>, <code>distilled_to</code> naming <code>@states</code> and <code>@use</code>, which <code>PILL_WITH_CARRIERS</code> carries</td></tr>
+          <tr><td>the merge the blocker refused, through the real hook</td><td><code>xtask/tests/e2e_design_flow.rs</code>: <code>build_the_pill_and_retire_its_design</code> and step ③ of <code>a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it</code></td></tr>
+          <tr><td>regression proof</td><td>run at <code>bfd33f1</code>, the first W2 code commit, where <code>lib.rs</code> was still the epic tip's: with the epic tip's <code>gate.rs</code> and <code>git.rs</code> swapped into that tree, <code>cargo test -p xtask --all-features --test dod_gate</code> reported the four History B tests FAILED and 70 of 74 passed; restored, 74 passed. The swap no longer compiles at the tip (<code>lib.rs</code> calls <code>retired_designs</code>). Each review-driven test was red before its fix commit and green after; at the tip, 76 pass</td></tr>
+          <tr><td>everything else still green</td><td><code>cargo test -p xtask --all-features</code>: lib, <code>dod_gate</code>, <code>e2e_design_flow</code>, <code>mr</code>, <code>verify_doc</code>, <code>doc_hooks</code>, <code>gate0_cache</code>, <code>ui</code> all pass; <code>cargo clippy --all-features --all-targets -D warnings</code> clean</td></tr>
+          <tr><td>docs green</td><td><code>cargo xtask verify-doc</code> over the WU plan and this result; every relative <code>href</code> they add resolves on disk</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <table>
+        <thead><tr><th>Doc</th><th>Tier</th><th>Carries</th></tr></thead>
+        <tbody>
+          <tr><td><code>xtask/src/gate.rs</code> · <code>xtask/src/git.rs</code></td><td>T4</td><td>the predicate — the truth DEC-28 defers to</td></tr>
+          <tr><td><code>docs/decisions/dec-28-citation-after-retirement.html</code></td><td>T2</td><td>unchanged: the why, the flow, the case table. Its "W2 owes" bullet is settled by this WU's code — every item on it is in the outcome table above</td></tr>
+          <tr><td><code>docs/decisions/dec-29-retired-design-judged-where-it-left.html</code></td><td>T2</td><td>new — why a design retired at unjudged bytes is an artifact of the seam that retired it, the case table, four rejected options</td></tr>
+          <tr><td><code>docs/decisions/dec-24-design-review-dimension.html</code></td><td>T2</td><td>superseded-on-clause callouts at "present in the diff" and at the rejected option "judge a removed design file"; status active</td></tr>
+          <tr><td><code>docs/decisions/dec-16-design-file-retirement.html</code></td><td>T2</td><td>superseded-on-clause pointer at the Tier-3 exclusion bullet; order and predicates untouched</td></tr>
+          <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td><td>DEC-29 row; DEC-24 and DEC-16 rows annotated; v14</td></tr>
+          <tr><td><code>docs/workflow.html</code></td><td>T1</td><td>the design-bearing definition, the check-9 row and the check-6 row read the range's retired design; v15; <code>Reviewed-By</code> trailers</td></tr>
+          <tr><td><code>docs/documentation-system.html</code></td><td>T1</td><td>the doc/v1 paragraph and sample: one entry per doc file in the gated diff <em>or retired by it at unjudged bytes</em>; v7; <code>Reviewed-By</code> trailer</td></tr>
+          <tr><td><code>docs/design-flow.html</code></td><td>T1</td><td>the activation row points at the workflow standard's definition instead of restating it; <code>Reviewed-By</code> trailer</td></tr>
+          <tr><td><code>docs/work/2026-09-03-gate-truth-plan.html</code></td><td>T3</td><td>distillation plan takes the DEC-29 and DEC-24 rows; v4</td></tr>
+          <tr><td><code>.claude/skills/code-review/SKILL.md</code> · <code>design-rubric.md</code></td><td>infra</td><td>the reviewer's instructions: the last-state blob pin (DEC-28) and the retired design as an artifact to judge (DEC-29)</td></tr>
+          <tr><td><code>docs/work/2026-09-03-gate-truth-w2-plan.html</code> · this result</td><td>T3</td><td>the plan and its outcome; archived at epic close per DEC-3</td></tr>
+        </tbody>
+      </table>
+      <p>One fact per tier: the why in DEC-28 and DEC-29, the rule in the workflow standard, the predicate and the artifact set in <code>xtask/src/gate.rs</code>. Nothing copied.</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table>
+        <thead><tr><th>Owed</th><th>By</th></tr></thead>
+        <tbody>
+          <tr><td>the epic-level composed e2e — all four fixes in one gated merge from a second worktree (epic plan §E2E); this WU ships its step-1 history</td><td>E-GATETRUTH close</td></tr>
+          <tr><td>the two misdirection fixes and the link predicate</td><td>E-GATETRUTH.W3 · W4</td></tr>
+          <tr><td>the retirement-order blind spot for a one-WU design, first filed here as a follow-up, was closed in this WU under DEC-29 after round 2 of the review verified it as reachable</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

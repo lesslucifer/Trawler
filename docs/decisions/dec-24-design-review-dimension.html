@@ -11,7 +11,7 @@
       <h1>DEC-24 — the design review is a dimension of the code review, not a skill of its own</h1>
       <p>Where Tier-3 lives, why its verdict is <code>cr/v3</code>, and why a design-bearing diff is never
         docs-only-exempt.</p>
-      <div class="meta">DEC-24 · 2026-08-12 · Trawler · E-DFLOW.W7 · status: active</div>
+      <div class="meta">DEC-24 · 2026-08-12 · Trawler · E-DFLOW.W7 · status: active · superseded on two clauses by DEC-29 (2026-09-03)</div>
     </div>
   </header>
   <main>
@@ -31,7 +31,10 @@
       <tbody>
         <tr><td><strong>What activates it</strong></td>
           <td><code>cargo xtask design-scope &lt;base&gt; &lt;head&gt;</code> — a <em>closed</em> run
-            (<code>data-status="archived"</code>) or a component design file present in the diff</td></tr>
+            (<code>data-status="archived"</code>) or a component design file present in the diff.
+            <strong>Superseded on the "present in the diff" clause by <a href="dec-29-retired-design-judged-where-it-left.html">DEC-29</a>
+            (E-GATETRUTH.W2):</strong> at a WU seam, a component design the range removed at bytes the base never
+            held is an artifact too, read at its last state</td></tr>
         <tr><td><strong>What it judges</strong></td>
           <td>soft rules, the new-component warrant, and the reuse warrant, on the artifact. Rubric:
             <code>.claude/skills/code-review/design-rubric.md</code></td></tr>
@@ -146,7 +149,10 @@
             again, and that review judges it — so the close and the review are one motion</td></tr>
         <tr><td>Judge a <em>removed</em> design file</td>
           <td>that is retirement, and <code>6·retirement-order</code> owns it (DEC-16). Asking a reviewer to
-            judge a contract the diff deletes is asking about the wrong thing</td></tr>
+            judge a contract the diff deletes is asking about the wrong thing.
+            <strong>Superseded for unjudged bytes by <a href="dec-29-retired-design-judged-where-it-left.html">DEC-29</a>:</strong>
+            holds for a design removed at the bytes it was judged at; one amended or authored in the WU and then
+            removed is judged by that WU, at its last state</td></tr>
         <tr><td>A date cutoff for grandfathering</td>
           <td>it cannot distinguish a note written before the rule from one written badly after it —
             <a href="#grandfather">the schema string can</a></td></tr>

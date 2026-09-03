@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>DEC-16 — a design file is retired in one order: distil the why, verify the contract, then remove</h1>
       <p>Code-as-truth retires the design file, but not everything in it survives the move. The order is what makes the removal lossless — and it is a gate's job, not an author's memory.</p>
-      <div class="meta">DEC-16 · 2026-07-29 · Trawler · E-DFLOW.W5 · status: active</div>
+      <div class="meta">DEC-16 · 2026-07-29 · Trawler · E-DFLOW.W5 · status: active · superseded on the Tier-3 exclusion clause by DEC-29 (2026-09-03)</div>
     </div>
   </header>
   <main>
@@ -108,7 +108,11 @@
           </tbody>
         </table>
         The check the amendment keeps is the one that matters: <strong>every reason must point somewhere a reader can go</strong>. What it gives up is the assumption that "somewhere" is always a decision record.</li>
-      <li><strong>Retirement is not a design review.</strong> A <em>removed</em> design file is deliberately not a Tier-3 artifact (<a href="dec-24-design-review-dimension.html">DEC-24</a>): this predicate owns the removal, and asking a reviewer to judge a contract the diff deletes is asking about the wrong thing. A design file <em>present</em> in a diff is design-bearing; the same file removed is this rule's business.</li>
+      <li><strong>Retirement is not a design review.</strong> A <em>removed</em> design file is deliberately not a Tier-3 artifact (<a href="dec-24-design-review-dimension.html">DEC-24</a>): this predicate owns the removal, and asking a reviewer to judge a contract the diff deletes is asking about the wrong thing. A design file <em>present</em> in a diff is design-bearing; the same file removed is this rule's business.
+        <strong>Superseded for unjudged bytes by <a href="dec-29-retired-design-judged-where-it-left.html">DEC-29</a>
+        (E-GATETRUTH.W2):</strong> a design removed at bytes its base never held — amended or authored in the WU that
+        retired it — is a Tier-3 artifact of that WU <em>and</em> this rule's business; the exclusion holds for a design
+        removed at the bytes it was judged at.</li>
       <li><strong>The decisions KB grows from component forks.</strong> Some fork cards become DEC records; most are local and die with the file. Judging which is which is distillation work, per file, and the judgment itself is recorded — a dead end named is not the same as a dead end assumed.</li>
       <li><strong>A design file with no code is not retired, it is unbuilt.</strong> This order applies only when the component exists in <code>ui/src/components/</code>. <s>T3/T4 files (<code>ProtocolLine</code>, <code>HeaderTable</code>, <code>BodyViewer</code>) keep their files because the contract still lives there and nowhere else.</s>
         <strong>Superseded on the survival clause by <a href="dec-25-design-build-handoff.html">DEC-25</a>
