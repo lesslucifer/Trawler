@@ -538,11 +538,10 @@ fn roster_path(repo: &Path) -> String {
     repo.join(".mr-allowed").display().to_string()
 }
 
-/// Why `tip` is or is not authorised. The predicate is `tip_authorised`'s,
-/// unchanged: a `key`-backed signer authorises only when the note's `sig`
-/// verifies over the recomputed `base..tip` change-hash (plus the report hash
-/// when the note names one); an identity-only signer authorises by being
-/// listed. Only the account of a refusal is new.
+/// Why `tip` is or is not authorised: a `key`-backed signer authorises only
+/// when the note's `sig` verifies over the recomputed `base..tip` change-hash
+/// (plus the report hash when the note names one); an identity-only signer
+/// authorises by being listed.
 pub fn authorisation(repo: &Path, tip: &str) -> Authorisation {
     let Some(raw) = note(repo, "mr", tip) else { return Authorisation::NoNote };
     let Ok(mr) = serde_yaml::from_str::<crate::notes::MrNote>(&raw) else {
@@ -577,9 +576,8 @@ pub fn authorisation(repo: &Path, tip: &str) -> Authorisation {
     }
 }
 
-/// Is there a valid `mr/v1` note on `tip` authorising it? A `key`-backed signer
-/// authorises only when the note's `sig` verifies over the recomputed
-/// `base..tip` change-hash; an identity-only signer authorises by being listed.
+/// Is there a valid `mr/v1` note on `tip` authorising it? [`authorisation`]
+/// collapsed to the bool the gates have always asked for.
 pub fn tip_authorised(repo: &Path, tip: &str) -> bool {
     matches!(authorisation(repo, tip), Authorisation::Authorised)
 }
@@ -1397,19 +1395,20 @@ mod tests {
     #[test]
     fn no_verdict_echoes_the_commit_message_body() {
         // git_env quoted the whole argument vector, so the body drowned the one
-        // line git actually said (E-GATETRUTH P2a, Hình 5).
-        let said = format!("fatal: something\n{BODY_LINE}");
+        // line git actually said (E-GATETRUTH P2a, Hình 5). What git says is
+        // quoted; the body reaches the verdict only if the code puts it there,
+        // so no quadrant's git output may mention it - otherwise the assertion
+        // passes on the echo it exists to refuse.
         for landed in [true, false] {
             for success in [true, false] {
-                let (_, out) = commit_verdict(landed, &outcome(success, &said, &said), SUCCESS);
-                assert!(
-                    !out.contains(BODY_LINE) || said.contains(BODY_LINE),
-                    "the verdict must not add the body: {out}"
+                let (_, out) = commit_verdict(
+                    landed,
+                    &outcome(success, "nothing staged", "fatal: no"),
+                    SUCCESS,
                 );
+                assert!(!out.contains(BODY_LINE), "the verdict must not add the body: {out}");
+                assert!(!out.contains("--cleanup=verbatim"), "nor the argument vector: {out}");
             }
         }
-        let (_, out) = commit_verdict(false, &outcome(false, "", "fatal: refused"), SUCCESS);
-        assert!(!out.contains(BODY_LINE), "the body is not part of any verdict: {out}");
-        assert!(!out.contains("--cleanup=verbatim"), "nor is the argument vector: {out}");
     }
 }
