@@ -83,8 +83,8 @@ flowchart TD
     </div>
 
     <div class="callout warn">
-      <strong>Why E-DFLOW did not hit P1.</strong> Its 25 components landed under
-      <code>cr/v2</code>-era seams. <code>check_handoff</code> downgrades the check to
+      <strong>Why E-DFLOW did not hit P1.</strong> Its 24 registry components landed at one
+      seam (W5) under a <code>cr/v2</code> note. <code>check_handoff</code> downgrades the check to
       <code>DESIGN_SCHEMA</code> for a <code>cr/v2</code> note, and the epic walk filters
       that class out (<code>xtask/src/gate.rs:894</code>). A fresh <code>cr/v3</code>
       note gets <code>DESIGN</code>, which is <strong>not</strong> filtered.
@@ -348,7 +348,7 @@ and no citation names it
           <td><span class="badge approval">RED</span> "flow-badge.html was shipped at 9f3c2a1 (c1), never at deadbee — re-pin" — expected result 2</td>
         </tr>
         <tr>
-          <td>E-DFLOW's 25 real components</td>
+          <td>E-DFLOW's 24 real components</td>
           <td>legal, under <code>cr/v2</code> notes</td>
           <td><span class="badge auto">GREEN</span> — the check was downgraded to <code>DESIGN_SCHEMA</code> and filtered at the walk; the question was never asked</td>
           <td>unchanged; the fixture in row 1 is the <code>cr/v3</code> case E-DFLOW never exercised</td>
