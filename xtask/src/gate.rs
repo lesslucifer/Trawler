@@ -791,15 +791,44 @@ impl Gate<'_> {
             Level::Wu => "every working-unit merge requires manual review",
             Level::Commit => return,
         };
-        if !crate::mr::tip_authorised(self.repo, &report.tip) {
-            report.failures.push(Failure::new(
-                "8·manual-review",
-                format!("{why} - tip {} has no valid mr/v1 note", short(&report.tip)),
+        // Each cause gets its own sentence and its own fix: "no valid mr/v1
+        // note" was true of all four, so a reader chased the two it was not
+        // (DEC-10's per-checkout roster makes the unlisted-signer case a
+        // routine one, not an exotic failure).
+        let tip = short(&report.tip);
+        let (what, fix) = match crate::mr::authorisation(self.repo, &report.tip) {
+            crate::mr::Authorisation::Authorised => {
+                self.check_attested_report(report);
+                return;
+            }
+            crate::mr::Authorisation::NoNote => (
+                format!("{why} - tip {tip} has no mr/v1 note"),
                 crate::mr::NOT_AUTHORISED.to_string(),
-            ));
-            return;
-        }
-        self.check_attested_report(report);
+            ),
+            crate::mr::Authorisation::Unreadable(schema) => (
+                match schema {
+                    Some(s) => format!("the note on {tip} declares schema {s}, not mr/v1"),
+                    None => format!("the mr/v1 note on {tip} does not parse"),
+                },
+                format!("re-run `cargo xtask mr confirm` to write the note again - the gate never repairs one by hand\n{}", crate::mr::NOT_AUTHORISED),
+            ),
+            crate::mr::Authorisation::UnhashableRange { base } => (
+                format!(
+                    "the mr/v1 note on {tip} names base {}, which this repo's history does not hold",
+                    short(&base)
+                ),
+                "the signature covers a range this checkout cannot recompute - re-run `cargo xtask mr confirm` against the branch this merge is made from".to_string(),
+            ),
+            crate::mr::Authorisation::UnlistedSigner { signer, roster } => (
+                format!("{tip} is signed by {signer}, whom {roster} does not list"),
+                format!("this checkout's roster decides, and it is per-checkout by design (DEC-10) - add {signer}'s key line to that file (`cargo xtask mr setup` registers your own), or merge from the checkout that signed\n{}", crate::mr::NOT_AUTHORISED),
+            ),
+            crate::mr::Authorisation::StaleSignature { signer } => (
+                format!("{tip}'s mr/v1 signature by {signer} does not verify over base..tip"),
+                format!("the diff or the attested report changed after signing - re-run `cargo xtask mr confirm` on the tip as it now stands\n{}", crate::mr::NOT_AUTHORISED),
+            ),
+        };
+        report.failures.push(Failure::new("8·manual-review", what, fix));
     }
 
     // Sign-what-you-read (DEC-10): the mr/v1 note must name the level's result
