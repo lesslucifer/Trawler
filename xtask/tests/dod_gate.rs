@@ -1098,8 +1098,6 @@ fn a_design_authored_built_and_retired_in_one_wu_is_judged_by_that_wu() {
     repo.write("ui/src/components/StatusPill.tsx", PILL_WITH_CARRIERS);
     std::fs::remove_file(repo.path.join(COMPONENT_DESIGN)).unwrap();
     let tip = repo.commit("build the pill and retire its design");
-    // The default doc note: the endpoint diff never touches the design, so no
-    // entry is owed for it, and a phantom one is refused by 6·doc-note.
     bless_wu(&repo, &tip);
     assert!(
         !xtask::git::diff_names(&repo.path, &repo.sha("epic/x"), &tip)
@@ -1108,6 +1106,23 @@ fn a_design_authored_built_and_retired_in_one_wu_is_judged_by_that_wu() {
         "the endpoint diff nets the design out - only the range knows it existed"
     );
 
+    // Judged and cited - and still refused: the design left the tree in this WU,
+    // so DEC-16's retirement order is owed here too, and the default doc note
+    // carries no archived entry for a file the endpoint diff never shows.
+    repo.note("cr", &tip, &judges_and_cites_the_design(&repo, &blob[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["6·doc-note"], "{}", format_report(&report));
+    assert!(
+        format_report(&report)
+            .contains(&format!("{COMPONENT_DESIGN} changed in the diff but has no entry")),
+        "the retirement is owed an entry: {}",
+        format_report(&report)
+    );
+
+    let changes = format!(
+        "{WU_CHANGES}  - path: {COMPONENT_DESIGN}\n    tier: T3\n    action: archived\n    distilled_to: \"the contract is carried verbatim by @states and @use\"\n"
+    );
+    repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &changes, None));
     repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, &blob[..7]));
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
     assert!(checks_of(&report).iter().all(|c| *c == "9·design"), "{}", format_report(&report));
@@ -1121,8 +1136,45 @@ fn a_design_authored_built_and_retired_in_one_wu_is_judged_by_that_wu() {
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
     assert!(
         report.green(),
-        "judged at its last state and cited, it lands: {}",
+        "retired in order, judged at its last state and cited, it lands: {}",
         format_report(&report)
+    );
+}
+
+// The reviewer's half of the same rule: design-scope names the retired design
+// beside the ones the tip ships and says where its bytes are read - and only a
+// design artifact counts, not every file that ever sat under the components dir.
+#[test]
+fn design_scope_names_a_design_retired_at_unjudged_bytes_and_where_to_read_it() {
+    let (repo, _, last) = wu_building_a_component_and_retiring_its_design(true);
+    repo.git(&["checkout", "-q", "wu/x/one"]);
+    repo.write("docs/work/components/NOTES.md", "not a design\n");
+    repo.write("docs/work/components/sub/draft.html", "<html>not a component design</html>\n");
+    repo.commit("stray files under the components dir");
+    std::fs::remove_file(repo.path.join("docs/work/components/NOTES.md")).unwrap();
+    std::fs::remove_file(repo.path.join("docs/work/components/sub/draft.html")).unwrap();
+    let tip = repo.commit("and gone again");
+    let amend = repo.sha(&format!("{tip}~3"))[..10].to_string();
+
+    let args: Vec<String> =
+        ["design-scope", "epic/x", "wu/x/one"].iter().map(|s| (*s).to_string()).collect();
+    let (code, out) = xtask::run(&args, &repo.path).unwrap();
+    assert_eq!(code, 0, "{out}");
+    assert!(out.contains("1 design artifact(s) to judge"), "{out}");
+    assert!(out.contains(COMPONENT_DESIGN), "{out}");
+    assert!(
+        out.contains("1 of them left the tree in this range"),
+        "the count is of artifacts: {out}"
+    );
+    assert!(
+        out.contains(&format!("git show {amend}:{COMPONENT_DESIGN}")),
+        "the reviewer is told where the last state is read: {out}"
+    );
+    assert!(!out.contains("NOTES.md") && !out.contains("draft.html"), "not artifacts: {out}");
+    assert_eq!(
+        repo.git(&["rev-parse", &format!("{amend}:{COMPONENT_DESIGN}")])[..7],
+        last[..7],
+        "and that is the amended state the pin must match"
     );
 }
 

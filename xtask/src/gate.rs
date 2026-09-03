@@ -132,12 +132,11 @@ impl Gate<'_> {
         // built and retired it - a component design whose last state the base never
         // held (DEC-25 D1a). The tip is where the walk re-reads a seam, so the same
         // set comes back at every re-verification.
+        let retired =
+            if level == Level::Wu { self.retired_designs(&base, &tip, &names) } else { Vec::new() };
+        let retired_paths: Vec<String> = retired.iter().map(|d| d.path.clone()).collect();
         let mut judged = docs.clone();
-        if level == Level::Wu {
-            judged.extend(
-                self.retired_designs(&base, &tip, &names).into_iter().map(|d| (d.path, d.html)),
-            );
-        }
+        judged.extend(retired.into_iter().map(|d| (d.path, d.html)));
         // A design is a docs-only deliverable, so the docs/infra exemption would
         // hand the design dimension exactly the diffs it exists to judge - the
         // most common design Working Unit writes a run and no code at all. The
@@ -184,7 +183,7 @@ impl Gate<'_> {
         if level == Level::Commit {
             Self::check_ui_outside_a_wu(&mut report, &names);
         }
-        self.check_docs(&mut report, parsed.doc.as_ref(), &names);
+        self.check_docs(&mut report, parsed.doc.as_ref(), &names, &retired_paths);
         if level == Level::Epic {
             self.walk(&mut report, target_ref)?;
         }
@@ -278,8 +277,21 @@ impl Gate<'_> {
         }
     }
 
-    fn check_docs(&self, report: &mut Report, doc: Option<&DocNote>, names: &[String]) {
-        let doc_paths: Vec<&String> = names.iter().filter(|p| is_doc(p)).collect();
+    // `retired` is what the endpoint diff cannot show: a design authored and retired
+    // between base and tip nets out of `names`, and DEC-16's order is owed for it
+    // exactly as for one the base held.
+    fn check_docs(
+        &self,
+        report: &mut Report,
+        doc: Option<&DocNote>,
+        names: &[String],
+        retired: &[String],
+    ) {
+        let doc_paths: Vec<&String> = names
+            .iter()
+            .filter(|p| is_doc(p))
+            .chain(retired.iter().filter(|p| !names.contains(p)))
+            .collect();
         if let Some(doc) = doc {
             let entries: BTreeMap<&str, &crate::notes::DocChange> =
                 doc.changes.iter().map(|c| (c.path.as_str(), c)).collect();
@@ -420,6 +432,7 @@ impl Gate<'_> {
                     return None;
                 }
                 let html = crate::git::read_utf8_at(self.repo, &commit, &path)?;
+                crate::doc::design_artifact(&path, &html)?;
                 Some(RetiredDesign { path, commit, html })
             })
             .collect()
