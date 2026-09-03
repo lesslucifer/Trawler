@@ -1,0 +1,12 @@
+schema: test/v2
+level: working-unit
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W1
+tests:
+  unit:
+    waived: "A docs-only Working Unit - the diff touches seven files under docs/ and nothing under xtask/, src/, tests/ or ui/. No code was added or changed, so there is no code for a unit test to cover."
+  integration:
+    waived: "The WU's contract is a rule stated in words (DEC-28) and mirrored in the T1 workflow standard, not a code boundary. The test that proves the rule is W2's fixture epic - design added, component built, design retired, cr/v3 citation - which cannot exist before the predicate it exercises. What was checked mechanically: cargo xtask verify-doc green over all seven touched docs, and every relative href the WU adds resolving on disk (a hand audit, as W12 ran; W4 makes it a predicate)."
+  e2e:
+    waived: "The epic's e2e is a full gated WU merge on a synthetic repo and runs once W2 has landed the predicate. No user-facing flow changed; this is a process epic touching no UC."
+note: "E-GATETRUTH.W1 decides what a design citation resolves against once components-unretired has forced DEC-16's retirement inside the build WU. Four commits, all docs-only: the WU plan plus the epic plan's corrected P1 mechanism, DEC-28 with DEC-25's superseded-on-clause pointer and the index row, the WU result, and the T1 workflow-standard edit carrying its Reviewed-By trailer. Nothing in the gate changes here; W2 codes the predicate this WU fixed in words."
