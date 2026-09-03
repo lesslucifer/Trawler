@@ -1,0 +1,54 @@
+schema: cr/v3
+scope: "WU E-GATETRUTH.W2 (wu/gate-truth/citation-predicate) -> epic/gate-truth"
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W2
+branch: wu/gate-truth/citation-predicate
+base: b5664d9b79640ecadc452e00fe150dda64908bcb
+head: 03b2ef5a1669437e1f1f82d042d11f029f392423
+diff_sha256: b718f08a382f98d77507aee0325ec030d6ffed26d584440e7e2fb0019d200d92
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 12, verified: 3, waived: 0 }
+rounds: 4
+history:
+  - round: 1
+    tip: 327353f7f84cb4931637c987416cab6539d969ef
+    verdict: FAIL
+    verified: 1
+    what: "an amended-then-retired design reached a green merge unjudged by Tier-3; fixed in 9cd716c"
+  - round: 2
+    tip: d18c23feb5ae220e1eb1968d999cd5ed9ef9cad3
+    verdict: FAIL
+    verified: 4
+    what: "design-scope's retired block unfiltered and untested; the one-WU design escaped 6·doc-note; T1 and DEC-24 stated the old activation; fixed in 522413a, ccfe33d, d2d9a89"
+  - round: 3
+    tip: d2d9a89e18813d3ebe1a93876362dbfbe08a7640
+    verdict: FAIL
+    verified: 5
+    what: "check-6 row, doc/v1 schema owner, design-flow row, DEC-16 bullet and the result doc's blast-radius row still stated the old rules; fixed in fdad5d4 and 03b2ef5"
+  - round: 4
+    tip: 03b2ef5a1669437e1f1f82d042d11f029f392423
+    verdict: FAIL
+    verified: 3
+verified:
+  - location: .claude/skills/code-review/design-rubric.md:16
+    severity: important
+    what: "the design finder's activation row still says a component design file is judged only when present at the head and a removed one is retirement, not design - a near-verbatim copy of the DEC-24 rejected option DEC-29 supersedes; a finder following it omits the retired artifact design-scope lists and 9·design refuses the merge. The skill is the schema owner of the note check 9 reads; no mechanical check reads its text"
+  - location: .claude/skills/code-review/SKILL.md:73
+    severity: important
+    what: "section 3b and the note template (line 150) give the design.implements blob only as git rev-parse <HEAD_R>:<the design>, which fails on every build WU that retires the design it cites (History B); the tip-only pin DEC-28 superseded, stale since W1 but inert until this WU made the history legal. gate.rs's own fix hint states both forms"
+  - location: docs/workflow.html:343
+    severity: nit
+    what: "the check-9 row's new sub-clause 'and owed its DEC-16 archived entry in doc/v1' states the obligation check 6 states three rows above, over the same file set - an intra-table repeat the base did not have; accurate, cites DEC-29, misleads no reader"
+refuted:
+  - "design-flow.html's row links and restates - the parenthetical carries category labels under an explicit ownership disclaimer and none of the rule's operative content; the edit removed a standalone restatement; T1 linking T2 is the house pattern"
+  - "check-6 restates the doc/v1 schema owner's paragraph - the overlap is the base's pre-existing split (the gate table states what check 6 compares, the owner states the note's contents), extended consistently; both cite DEC-29"
+  - "the doc/v1 YAML comment duplicates the paragraph - same doc, same tier; the rule is inter-tier; the comment it replaced did the same beside the same paragraph"
+  - "the YAML comment leads authors to phantom entries at Epic level - the sample declares itself WU-level three ways; the amended half is in the epic diff and required, the authored half nets out and DEC-29 rejects asking the epic for it"
+  - "'which the endpoint diff cannot show' overstates - the relative attaches to the unjudged bytes, true of both halves; DEC-16's added text has no such sentence; the code comments are scoped"
+  - "the result doc's ledger caption 'nothing copied' is false - its subject is tier placement, not textual uniqueness; design-flow's edit removed a copy and documentation-system owns the doc/v1 fact"
+  - "the outcome row enumerates the ledger - the checklist's outcome item asks what actually shipped, and a negative plan commitment is checkable only by naming what moved"
+  - "a follow-ups row owes nothing - the W1 result closes its table the same way; 'the filed item is no longer owed' is the accounting the item asks for"
+  - "the DEC-16 and DEC-24 meta-line markers over-mark - the index rules callout mandates flipping the superseded record; DEC-25's bare meta line is the under-marked case, not the norm"
+verdict: FAIL
+date: 2026-09-03
+note: "Gate 0 green (cached 12e1a1763f). design-scope: no artifact, no surface, no rendered file. Round 4. Code untouched since round 2 and clean on every dimension; the two important findings are the reviewer's own instructions - the design rubric's activation row and the skill's blob-pin form - which every earlier round read as scope instructions rather than review subjects. Fix loop: both skill files corrected as infrastructure (markdown), the result doc's ledger takes them, the check-9 sub-clause is the trigger's declared waiver on the next round, then round 5."
