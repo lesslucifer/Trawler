@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W2
+branch: wu/gate-truth/citation-predicate
+changes:
+  - path: docs/work/2026-09-03-gate-truth-w2-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan - requirement, mapping to P1 / DEC-28 / DEC-25 / DEC-16 / the epic e2e, the change as a flow and a touches table, the fixture constraint (retiring inside the WU also fires 6-retirement-order), expected result per observable, test plan with no waivers, non-goals."
+  - path: docs/work/2026-09-03-gate-truth-w2-result.html
+    tier: T3
+    action: added
+    distills: "The WU result - outcome against the plan, four deviations, evidence pointers to every test by name and the regression proof, the distillation ledger (T4 owns the predicate; DEC-28 and workflow.html unchanged), follow-ups."
+t2_waived: "No T2 fact moved: W1 landed the rule in DEC-28 and the T1 workflow standard; this WU makes xtask/src/gate.rs agree with them, and the code is the tier that owns the predicate. DEC-28's consequences already name what W2 owed; the result doc records that every item is shipped."
