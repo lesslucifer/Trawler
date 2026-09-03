@@ -2096,8 +2096,12 @@ fn a_signature_this_checkouts_roster_lists_no_key_for_names_the_signer_and_the_r
     repo.write(".mr-allowed", "email: a@b.co\n");
     let out = check_8_message(&repo);
 
+    // The roster's own absolute path, not the bare file name: NOT_AUTHORISED
+    // already ends "must be listed in .mr-allowed", so asserting the name alone
+    // passes on that boilerplate even when the message names no path at all.
+    let roster = repo.path.join(".mr-allowed").display().to_string();
     assert!(out.contains("is signed by vuluu"), "the signer is named: {out}");
-    assert!(out.contains(".mr-allowed"), "and the roster this checkout read: {out}");
+    assert!(out.contains(&roster), "and the roster this checkout read ({roster}): {out}");
     assert!(!out.contains("has no mr/v1 note"), "the note exists and is valid: {out}");
     assert!(!out.contains("does not verify"), "the signature is not the fault: {out}");
 }
@@ -2189,13 +2193,11 @@ fn every_check_8_cause_keeps_the_check_id_and_the_receipts_shape() {
         Some("schema: mr/v2\nlevel: working-unit\ntip: x\ntier: key\nsigner: vuluu\n".to_string()),
         Some(note.replace("report_sha256: ", "report_sha256: 0")),
     ] {
-        match body {
-            None => repo.git(&["notes", "--ref=mr", "remove", &tip]),
-            Some(b) => {
-                repo.note("mr", &tip, &b);
-                String::new()
-            }
-        };
+        if let Some(b) = body {
+            repo.note("mr", &tip, &b);
+        } else {
+            repo.git(&["notes", "--ref=mr", "remove", &tip]);
+        }
         let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
         assert_eq!(checks_of(&report), vec!["8·manual-review"]);
     }

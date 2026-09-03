@@ -29,8 +29,27 @@ impl Repo {
         repo
     }
 
+    /// As [`Repo::new`], stopping before the initial commit: `HEAD` is unborn,
+    /// the state a first commit moves away from.
+    fn new_unborn(allowed: &str) -> Self {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().to_path_buf();
+        let repo = Self { _dir: dir, path };
+        repo.git(&["init", "-q", "-b", "main"]);
+        repo.git(&["config", "user.email", "gate@test"]);
+        repo.git(&["config", "user.name", "gate"]);
+        repo.git(&["config", "commit.gpgsign", "false"]);
+        repo.write(".mr-allowed", allowed);
+        repo
+    }
+
     fn git(&self, args: &[&str]) -> String {
         xtask::git::git(&self.path, args).unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    /// [`Repo::git`] without the panic — for asking whether a ref resolves.
+    fn git_raw(&self, args: &[&str]) -> Result<String, String> {
+        xtask::git::git(&self.path, args)
     }
 
     fn write(&self, rel: &str, content: &str) {
@@ -1052,6 +1071,41 @@ fn commit_that_lands_reports_success_and_no_error() {
     assert_eq!(code, 0, "{out}");
     assert!(!out.contains("error"), "a landed commit prints no error: {out}");
     assert_ne!(repo.git(&["rev-parse", "HEAD"]), before, "HEAD moved");
+}
+
+/// The first commit in a repo: `HEAD` resolves to nothing before it and to a
+/// commit after, so "did HEAD move" has to answer over an absent state too -
+/// the one input `head_commit` returns `None` for.
+#[test]
+fn the_first_commit_in_a_repo_lands_from_an_unborn_head() {
+    let repo = Repo::new_unborn("email: a@b.co\n");
+    assert!(repo.git_raw(&["rev-parse", "HEAD"]).is_err(), "HEAD is unborn");
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+
+    let (code, out) =
+        mr::run(&["commit", "-m", "docs: the first commit", "--as", "a@b.co"], repo.p()).unwrap();
+
+    assert_eq!(code, 0, "the first commit lands like any other: {out}");
+    assert!(!out.contains("HEAD did not move"), "it moved - from nothing to a commit: {out}");
+    assert!(!repo.git(&["rev-parse", "HEAD"]).is_empty(), "HEAD now names a commit");
+}
+
+/// An unborn `HEAD` that stays unborn: git refuses, nothing landed, and the
+/// verdict must not claim a first commit that was never made.
+#[test]
+fn a_refused_first_commit_is_a_failure_not_a_phantom_landing() {
+    let repo = Repo::new_unborn("email: a@b.co\n");
+    refusing_commit_msg_hook(&repo);
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+
+    let (code, out) =
+        mr::run(&["commit", "-m", "docs: refused", "--as", "a@b.co"], repo.p()).unwrap();
+
+    assert_eq!(code, 1, "nothing landed: {out}");
+    assert!(out.contains("HEAD did not move"), "and the verdict says so: {out}");
+    assert!(repo.git_raw(&["rev-parse", "HEAD"]).is_err(), "HEAD is still unborn");
 }
 
 #[test]

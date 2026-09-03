@@ -792,8 +792,8 @@ impl Gate<'_> {
             Level::Commit => return,
         };
         // Each cause gets its own sentence and its own fix: "no valid mr/v1
-        // note" was true of all four, so a reader chased the two it was not
-        // (DEC-10's per-checkout roster makes the unlisted-signer case a
+        // note" was true of every refusal, so a reader chased the causes it was
+        // not (DEC-10's per-checkout roster makes the unlisted-signer case a
         // routine one, not an exotic failure).
         let tip = short(&report.tip);
         let (what, fix) = match crate::mr::authorisation(self.repo, &report.tip) {
