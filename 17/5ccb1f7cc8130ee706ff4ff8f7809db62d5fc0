@@ -1,0 +1,30 @@
+schema: cr/v3
+scope: "WU E-GATETRUTH.W2 (wu/gate-truth/citation-predicate) -> epic/gate-truth"
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W2
+branch: wu/gate-truth/citation-predicate
+base: b5664d9b79640ecadc452e00fe150dda64908bcb
+head: 175ccb1f7cc8130ee706ff4ff8f7809db62d5fc0
+diff_sha256: 9c59eee42e0b14914801a94b42d4d382976ee10b2c097cc8bf5aac009c5dfc62
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 2, verified: 1, waived: 1 }
+rounds: 6
+history:
+  - { round: 1, tip: 327353f7f84cb4931637c987416cab6539d969ef, verdict: FAIL, verified: 1, what: "an amended-then-retired design reached a green merge unjudged; fixed in 9cd716c" }
+  - { round: 2, tip: d18c23feb5ae220e1eb1968d999cd5ed9ef9cad3, verdict: FAIL, verified: 4, what: "retired block unfiltered and untested; one-WU design escaped 6·doc-note; T1 and DEC-24 stale; fixed in 522413a, ccfe33d, d2d9a89" }
+  - { round: 3, tip: d2d9a89e18813d3ebe1a93876362dbfbe08a7640, verdict: FAIL, verified: 5, what: "check-6 row, doc/v1 schema owner, design-flow row, DEC-16 bullet, result blast-radius row; fixed in fdad5d4, 03b2ef5" }
+  - { round: 4, tip: 03b2ef5a1669437e1f1f82d042d11f029f392423, verdict: FAIL, verified: 3, what: "design-rubric activation row and SKILL.md blob pin stale; check-9 clause repeats check 6; fixed in 264721e, the clause waived" }
+  - { round: 5, tip: 264721e220ba1e7a5c2b7a49e6adc75e351c19de, verdict: FAIL, verified: 1, what: "the round-4 deviation row dated both skill items 'since W1'; fixed in 175ccb1" }
+  - { round: 6, tip: 175ccb1f7cc8130ee706ff4ff8f7809db62d5fc0, verdict: FAIL, verified: 1 }
+verified:
+  - location: docs/work/2026-09-03-gate-truth-w2-result.html:102
+    severity: nit
+    what: "the regression-proof row describes the base-gate swap as run at the tip ('with the epic tip's gate.rs and git.rs in the tree ... 70 passed; at the tip, 76 passed'); the experiment was run at bfd33f1, where lib.rs was unchanged and dod_gate had 74 tests - at the tip the swap does not compile (lib.rs calls retired_designs) and 4 + 70 is not 76. The test/v2 note repeats the swap without the count. A real result misdescribed in provenance, not invented"
+waivers:
+  - finding: "the check-9 row's sub-clause 'and owed its DEC-16 archived entry in doc/v1' repeats check 6's obligation within one table (docs/workflow.html:343)"
+    reason: "verified minor in round 4: accurate, cites DEC-29, mirrors DEC-29's consequences pairing the two checks; check 9's row is where a reader of the design section learns the second obligation; removing one clause would cost a further owner-signed T1 round for a style point"
+refuted:
+  - "'both inert until this WU made the history legal' is false for the activation row - the row matched the code until 9cd716c inside this WU, which is the moment named; the 19-minute gap to DEC-29 is a dating-convention nuance, and the rubric's operative instruction (judge every artifact design-scope lists) carried the widened set from 9cd716c on"
+verdict: FAIL
+date: 2026-09-03
+note: "Gate 0 green (cached 281357e707). design-scope: no artifact, no surface, no rendered file. Round 6. Code, T1, T2 and the skill files clean; one provenance nit in the result doc's evidence row and the test note, fixed on the next tip rather than waived - the mr/v1 signer attests that report."
