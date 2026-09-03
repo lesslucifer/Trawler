@@ -1,0 +1,22 @@
+schema: doc/v1
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W3
+branch: wu/gate-truth/name-the-cause
+changes:
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "DEC-10 gains one consequence: because the roster is local while notes are repo-wide, a valid signature and an unlisted signer are routinely the same tip read from two checkouts, so check 8 names which of the two it found - the signer and the roster path it read, distinct from a signature that fails against a listed key. The decision is otherwise unchanged and no clause is superseded."
+  - path: docs/work/2026-09-03-gate-truth-w3-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan: requirement, mapping, the change (the four commit quadrants, the six authorisation leaves), expected result, test plan, non-goals, and the two fixture constraints - the git shim for the quadrant no hook can produce, and the gitignored roster a second worktree needs."
+  - path: docs/work/2026-09-03-gate-truth-w3-result.html
+    tier: T3
+    action: added
+    distills: "The WU result: what shipped against each planned item, five deviations (the identity-only-listing leaf, the shipped failure wording, the e2e needing full gate notes, the clippy invocation that missed a workspace finding the hook caught), the evidence pointers, both regression proofs, and the follow-up that check_commit_trailer has the same shape one level up."
+  - path: docs/work/2026-09-03-gate-truth-plan.html
+    tier: T3
+    action: updated
+    distills: "The W3 row points at the result and names gate.rs among the files the WU touches."
+t2_waived: "docs/workflow.html needs no edit: its check-8 row already lists absent, unlisted, failed-verify and missing-report as red causes and never stated the one-sentence refusal this WU replaced, so no T1 rule text contradicts the fix. The T2 synthesis this WU owes is DEC-10's consequence, which is recorded above."
