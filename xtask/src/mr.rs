@@ -1363,7 +1363,7 @@ mod tests {
         let (code, out) = commit_verdict(true, &outcome(true, "", ""), SUCCESS);
         assert_eq!((code, out.as_str()), (0, SUCCESS));
 
-        // The W12 shape: the commit is in the log and git exited non-zero.
+        // The commit is in the log and git exited non-zero anyway.
         let (code, out) =
             commit_verdict(true, &outcome(false, "", "warning: gpg said something"), SUCCESS);
         assert_eq!(code, 0, "HEAD moved, so the commit landed: {out}");

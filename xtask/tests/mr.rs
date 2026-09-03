@@ -1128,8 +1128,8 @@ fn a_commit_git_refuses_names_gits_own_line_and_never_the_message_body() {
 }
 
 /// A `git` shim first on `PATH` that execs the real git and then exits 1 after a
-/// `commit` — the W12 quadrant no hook can produce (git ignores `post-commit`'s
-/// exit status), reproduced for the one code path that reads git's exit code.
+/// `commit` — the only way to reach the landed-and-non-zero quadrant, since git
+/// ignores a `post-commit` hook's exit status.
 #[cfg(unix)]
 #[test]
 fn a_commit_that_lands_while_git_exits_non_zero_is_reported_as_a_success() {

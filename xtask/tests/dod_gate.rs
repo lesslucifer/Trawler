@@ -2043,8 +2043,8 @@ fn range_rejects_an_untrailered_claude_md_commit() {
 }
 
 // ---------------------------------------------------------------------------
-// E-GATETRUTH.W3 — check 8 names the cause it found. One sentence over four
-// causes cost W12 two wrong diagnoses on a merge whose signature was valid.
+// Check 8 names the cause it found: one sentence over every cause sends a
+// reader to the causes it was not.
 // ---------------------------------------------------------------------------
 
 /// A key-backed `mr/v1` note over `epic/x..tip`, the shape `mr confirm` writes,

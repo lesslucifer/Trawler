@@ -536,8 +536,8 @@ mod tests {
 
     #[test]
     fn an_outcome_falls_back_to_stdout_for_what_git_said() {
-        // `git commit` with nothing staged reports on stdout, not stderr - the
-        // W12 case where the one useful line was not on the stream git failed on.
+        // `git commit` with nothing staged reports on stdout, not stderr, so
+        // the one useful line is not on the stream git failed on.
         let h = History::new();
         let out = git_outcome(&h.repo, &["commit", "-m", "nothing staged"], &[]).expect("git runs");
         assert!(!out.success);
