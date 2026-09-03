@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W1
+changes:
+  - path: docs/decisions/dec-28-citation-after-retirement.html
+    tier: T2
+    action: added
+    distills: "DEC-28 - a design citation resolves at the WU tip, or at the design's last state reachable from it, with the pin matching that state. The context shows the two histories (DEC-25's assumed one and the one components-unretired actually forces), why nobody hit it (cr/v2 class dropped at the walk, W11 cited a run, the e2e never retires), the predicate as a flow and a case table for W2, why the last state and not any state (amendments stay countable), why reachable-from-tip with --full-history, six rejected options including the four the owner's decision round surfaced, and what W2 owes."
+  - path: docs/decisions/dec-25-design-build-handoff.html
+    tier: T2
+    action: updated
+    distills: "A superseded-on-clause callout at the tip-resolution paragraph pointing to DEC-28: the clause assumed the design file still stands at the build WU's tip, and it does not. The record's three halves, blob pin, no-conformance rule and status stay as written - the DEC-16 precedent for a partial supersession."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-28 registered index-first; DEC-25's row annotated with the superseded clause; v12."
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "Two rule-bearing lines - the design->build added-half row and the check-9 row - now state that a citation resolves at the tip or at its last state reachable from the tip, linking DEC-28 for the why; v13. Committed under a Reviewed-By trailer, signed by the owner."
+  - path: docs/work/2026-09-03-gate-truth-plan.html
+    tier: T3
+    action: updated
+    distills: "The epic plan's P1 framing corrected: the mechanism is verify-doc's components-unretired forcing retirement inside the build WU, not the gate reading the epic tip; Hinh 1's label fixed; open question 1 records the owner's decision; the distillation row takes DEC-28 (DEC-27 belongs to E-DFLOW.W11); the worked examples mark the chosen direction."
+  - path: docs/work/2026-09-03-gate-truth-w1-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan - requirement, mapping to P1 / DEC-25 / DEC-16 / W2, expected result per doc, test plan with all three layers waived and the reasons."
+  - path: docs/work/2026-09-03-gate-truth-w1-result.html
+    tier: T3
+    action: added
+    distills: "The WU result - outcome against the plan, three deviations (mechanism, six options not three, DEC-28 not DEC-27), evidence pointers, the distillation ledger, follow-ups owed to W2 and W4."
+note: "One T1 edit, three T2 (DEC-28 new, DEC-25 pointer, index), three T3 (WU plan, WU result, epic plan corrections). The T2 synthesis is DEC-28 itself. verify-doc green over all seven; zero dead relative hrefs among them."
