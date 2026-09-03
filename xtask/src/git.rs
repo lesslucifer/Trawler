@@ -19,12 +19,9 @@ pub fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
     git_env(repo, args, &[])
 }
 
-/// What git actually did: its exit disposition and both streams, kept apart.
-/// [`git_env`] collapses this into a `Result` whose error text quotes the whole
-/// argument vector — fine for a query, wrong for a command whose effect is
-/// visible elsewhere: a `git commit` that lands and then exits non-zero is a
-/// success the collapsed form cannot express, and the quoted args bury git's
-/// own line under the commit message body (E-GATETRUTH P2a).
+/// What git actually did: its exit disposition and both streams, kept apart —
+/// for a caller whose verdict is not git's exit code, which [`git_env`]'s
+/// `Result` cannot express.
 pub struct Outcome {
     pub success: bool,
     pub stdout: String,
@@ -32,11 +29,10 @@ pub struct Outcome {
 }
 
 impl Outcome {
-    /// Git's own account of what happened: its stderr, or its stdout when
-    /// stderr is empty (`commit` reports "nothing to commit" on stdout). Git
-    /// can also say nothing at all, and a caller quoting that would end its
-    /// sentence on a bare colon — the wordless refusal this epic exists to
-    /// stop — so silence is reported as silence.
+    /// Git's own account of what happened: its stderr, its stdout when stderr
+    /// is empty (`commit` reports "nothing to commit" on stdout), and a named
+    /// silence when git wrote to neither — never `""`, which would leave a
+    /// caller's sentence ending on a bare colon.
     pub fn said(&self) -> &str {
         match (self.stderr.as_str(), self.stdout.as_str()) {
             ("", "") => "git printed nothing",

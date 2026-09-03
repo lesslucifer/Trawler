@@ -350,9 +350,8 @@ fn pick_identity(allowed: &[Allowed], input: &mut dyn std::io::BufRead) -> Resul
 /// What `mr commit` reports, from the two facts it can read: whether `HEAD`
 /// moved, and what git said. Git's exit code alone is not the verdict — a
 /// commit that lands and then exits non-zero (a `post-commit` hook, a signer
-/// that warns) is a success, and reporting it as a failure sent a reader
-/// through three debugging rounds on a commit that was already in the log
-/// (E-GATETRUTH P2a). `git.said()` is quoted; the commit message body never is.
+/// that warns) is a success. What git said is quoted; the commit message body
+/// never is.
 fn commit_verdict(landed: bool, outcome: &crate::git::Outcome, success: &str) -> (i32, String) {
     match (landed, outcome.success) {
         (true, true) => (0, success.to_string()),
@@ -506,8 +505,7 @@ fn mr_confirm(
 
 /// Why a tip is, or is not, authorised for manual review — one variant per way
 /// the answer is reached. `tip_authorised` collapses this to a bool; the gate
-/// reports the variant, because one sentence over four causes cost W12 two wrong
-/// diagnoses on a merge whose signature was valid (E-GATETRUTH P3).
+/// reports the variant it reached.
 pub enum Authorisation {
     Authorised,
     NoNote,
@@ -1394,8 +1392,6 @@ mod tests {
 
     #[test]
     fn a_verdict_never_ends_on_a_bare_colon_when_git_said_nothing() {
-        // A message that quotes a silent git trails off exactly where the cause
-        // belongs - the wordless refusal this epic exists to stop.
         for landed in [true, false] {
             for success in [true, false] {
                 let (_, out) = commit_verdict(landed, &outcome(success, "", ""), SUCCESS);
@@ -1409,11 +1405,9 @@ mod tests {
 
     #[test]
     fn no_verdict_echoes_the_commit_message_body() {
-        // git_env quoted the whole argument vector, so the body drowned the one
-        // line git actually said (E-GATETRUTH P2a, Hình 5). What git says is
-        // quoted; the body reaches the verdict only if the code puts it there,
-        // so no quadrant's git output may mention it - otherwise the assertion
-        // passes on the echo it exists to refuse.
+        // The body reaches a verdict only if the code puts it there, so no
+        // quadrant's git output may mention it - otherwise the assertion passes
+        // on the echo it exists to refuse.
         let said = "nothing staged";
         for landed in [true, false] {
             for success in [true, false] {
