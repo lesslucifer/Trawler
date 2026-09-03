@@ -1,0 +1,59 @@
+schema: cr/v3
+scope: "WU E-GATETRUTH.W2 (wu/gate-truth/citation-predicate) -> epic/gate-truth"
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W2
+branch: wu/gate-truth/citation-predicate
+base: b5664d9b79640ecadc452e00fe150dda64908bcb
+head: d2d9a89e18813d3ebe1a93876362dbfbe08a7640
+diff_sha256: 7caf7b49148fa363bd98f33c3cd1be1d68fbc98c67796220b5636f00ad18a342
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 17, verified: 5, waived: 0 }
+rounds: 3
+history:
+  - round: 1
+    tip: 327353f7f84cb4931637c987416cab6539d969ef
+    verdict: FAIL
+    verified: 1
+    what: "a design amended then retired inside one WU reached a green merge with no Tier-3 verdict once the citation resolved through history - check_design read its artifacts from the tip alone. Fixed in 9cd716c (retired_designs at Level::Wu, joined into design_artifacts)."
+  - round: 2
+    tip: d18c23feb5ae220e1eb1968d999cd5ed9ef9cad3
+    verdict: FAIL
+    verified: 4
+    what: "design-scope's retired block bypassed the artifact test; a design authored and retired in one WU escaped 6·doc-note and had its honest archived entry refused as a phantom; the block had no test; T1 (workflow.html design-bearing and check-9 rows) and DEC-24 stated an activation condition the code contradicts. Fixed in 522413a, ccfe33d (DEC-29, DEC-24 callouts, index) and d2d9a89 (T1 rows under the owner's trailer)."
+  - round: 3
+    tip: d2d9a89e18813d3ebe1a93876362dbfbe08a7640
+    verdict: FAIL
+    verified: 5
+verified:
+  - location: docs/workflow.html:340
+    severity: important
+    what: "the check-6 row still says doc/v1 matches git diff --name-only exactly (no missing/phantom entries) while check_docs now owes an entry for a retired design the range knows and accepts its archived entry; the row that owns the doc/v1 completeness rule states a rule the gate contradicts, and contradicts the check-9 row edited beside it"
+  - location: docs/documentation-system.html:197
+    severity: important
+    what: "the doc/v1 schema owner still says 'exactly one entry per doc file in the gated diff ... cross-checks it against git diff --name-only - no missing entries, no phantom entries' and its YAML sample repeats it; false for a design authored and retired in one WU; a second T1 location, named by workflow.html as the schema owner"
+  - location: docs/design-flow.html:337
+    severity: important
+    what: "the T1 design-flow doc's section 8 restates the activation rule as 'a component design file in the diff' with no link to workflow.html or DEC-29, so the two T1 process docs now state one rule with different content; fix is a pointer, not a third restatement"
+  - location: docs/decisions/dec-16-design-file-retirement.html:111
+    severity: important
+    what: "DEC-16's consequence 'Retirement is not a design review. A removed design file is deliberately not a Tier-3 artifact (DEC-24) ... the same file removed is this rule's business' is false for a design removed at bytes the base never held and carries no superseded-on-clause pointer, while the index row says DEC-16 stands; DEC-24's mirror of the same proposition was annotated in this diff"
+  - location: docs/work/2026-09-03-gate-truth-w2-result.html:44
+    severity: important
+    what: "the outcome row 'no src/, ui/, or docs outside docs/work/' is marked held with 'the WU diff: xtask/ and two T3 docs' while the range touches four docs outside docs/work/ and three T3 docs - contradicted by the same document's deviations and ledger; a false attestation the mr/v1 signer would sign"
+refuted:
+  - "a direct-child .html note under components is counted as a retired artifact against DEC-29's row - the path-only definition is pre-existing and shared with the tip side; verify-doc forces such a file through the component contract; DEC-29's normative clause says the artifact test is the tip's"
+  - "the design-scope test covers no direct-child non-design .html - there is no such shape; the two stray shapes are DEC-29's own excluded cases"
+  - "a sibling-branch design gets billed a retirement it did not own - the sibling never merged, so no seam judged it; the demand is DEC-29's third case"
+  - "the archived-entry literal is duplicated - inline literals are the file's idiom (5 at base, 7 at tip); the one-WU test must write two note bodies"
+  - "the design-scope CLI invocation should reuse range_run - range_run hardcodes verify-dod range; the args+run pair is the file's idiom at four sites"
+  - "design_artifact(..)?; as a statement is obscure - doc.rs:3680 uses the identical idiom; the closure's every line is a ?-guard"
+  - "the check_docs comment triplicates a why - it alone states the DEC-16 obligation at the site that enforces it"
+  - "the closing assert_eq only checks test ancestry - it ties the printed commit to the fixture's last blob, a distinct drift"
+  - "the stray-file half duplicates doc.rs unit tests - it pins the integration filter 522413a added, which no unit test reaches"
+  - "design_artifacts' 'from one function' is false - the shared function is the artifact classifier, as pre-diff; the Level::Wu gating is DEC-29's rejected option 'apply it at the epic gate'"
+  - "DEC-28's 'DEC-16 is untouched' is stale - DEC-29 widens check 6's input set, not the order or predicates; DEC-28 describes its own scope in an append-only corpus"
+  - "DEC-24's callout style diverges - three coexisting forms exist; partial supersession leaves the text un-struck correctly"
+  - "design-scope joins retired designs unconditionally while the gate gates on Level::Wu (carried over from round 2, refuted there: the walk re-verifies each seam at Level::Wu, the direction is conservative, and surfaces already had the same shape)"
+verdict: FAIL
+date: 2026-09-03
+note: "Gate 0 green (cached 4d4cecdd82). design-scope: no artifact, no surface, no rendered file. Round 3. Code and tests are correct on every dimension; the five verified findings are the tiers catching up with DEC-29: the check-6 row and the doc/v1 schema owner still state the exact-match rule, design-flow.html restates the old activation, DEC-16's Tier-3 exclusion bullet has no pointer, and the result doc's blast-radius row is stale from v1. Fix loop: T2/T3 edits, the three T1 edits under one Reviewed-By trailer, then round 4 on the fixed tip."
