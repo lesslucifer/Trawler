@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-GATETRUTH — the gate tells the truth</h1>
       <p>Three deferred E-DFLOW problems: a rule pair that makes a legal note impossible, and two places the gate refuses correctly but names the wrong cause.</p>
-      <div class="meta">Draft v1 · 2026-09-03 · Trawler · T3 epic plan · <span class="badge id">E-GATETRUTH</span></div>
+      <div class="meta">Draft v2 · 2026-09-03 · Trawler · T3 epic plan · <span class="badge id">E-GATETRUTH</span></div>
     </div>
   </header>
   <main>
@@ -50,7 +50,7 @@
         </tr>
         <tr>
           <td><span class="badge id">P2b</span></td>
-          <td>Nothing checks doc link integrity. <code>verify-doc</code> checks structure, not whether <code>href</code>s resolve. Three real dead links shipped, incl. a T2 decision record pointing at a source file that <strong>never existed</strong>.</td>
+          <td>Nothing checks doc link integrity. <code>verify-doc</code> checks structure, not whether <code>href</code>s resolve. Four dead <code>href</code>s shipped in W12 alone: three in a T3 plan whose targets the same WU archived, and one in a T2 decision record pointing at a source file that <strong>never existed</strong>.</td>
           <td><span class="badge auto">friction</span></td>
           <td><code>xtask/src/doc.rs</code> — no href predicate</td>
         </tr>
@@ -151,6 +151,17 @@ flowchart TD
 
     <h2 id="wus">Working units</h2>
 
+    <table data-c="wu-reading-guide">
+      <thead><tr><th>WU</th><th>Fixes</th><th>The problem in one sentence</th><th>Done looks like</th><th>Touches</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">W1</span></td><td>P1</td><td>Two rules contradict, and nobody has written down which one wins.</td><td>One decision record stating a single sentence: <em>a citation resolves against X</em>.</td><td>docs only</td><td><a href="#ex-w1">the same note, three meanings</a></td></tr>
+        <tr><td><span class="badge id">W2</span></td><td>P1</td><td>The gate still encodes the losing rule.</td><td>Green on the legal history, red on a fake path and a fake blob.</td><td><code>gate.rs</code> + tests</td><td><a href="#ex-w2">three histories, three verdicts</a></td></tr>
+        <tr><td><span class="badge id">W3</span></td><td>P2a · P3</td><td>The verdict is right and the sentence is wrong, in two places.</td><td>Each message names the cause it actually found.</td><td><code>mr.rs</code> · <code>git.rs</code> + tests</td><td><a href="#ex-w3a">a commit that "failed"</a> · <a href="#ex-w3b">a key the checkout never met</a></td></tr>
+        <tr><td><span class="badge id">W4</span></td><td>P2b</td><td>There is no verdict on links at all.</td><td><code>verify-doc</code> reds a dead <code>href</code>.</td><td><code>doc.rs</code> + tests</td><td><a href="#ex-w4">four links that shipped dead</a></td></tr>
+      </tbody>
+    </table>
+    <p class="caption">Read the table left to right: W1 decides, W2 enforces, W3 and W4 are independent and can run in parallel with both.</p>
+
     <div data-item="wu-summaries">
 
       <div data-wu="E-GATETRUTH.W1">
@@ -174,6 +185,7 @@ flowchart TD
           T1 edit carries a <code>Reviewed-By</code> trailer (rule-bearing doc, DoD-C).
         </p>
         <p data-item="wu-deps">none — first WU; W2 depends on it.</p>
+        <p>Worked example: <a href="#ex-w1">the same note, three possible meanings</a>.</p>
       </div>
 
       <div data-wu="E-GATETRUTH.W2">
@@ -191,6 +203,7 @@ flowchart TD
           both negative cases, with a message naming which half failed.
         </p>
         <p data-item="wu-deps">E-GATETRUTH.W1 (the predicate must be decided before it is coded).</p>
+        <p>Worked example: <a href="#ex-w2">three histories, three verdicts</a>.</p>
       </div>
 
       <div data-wu="E-GATETRUTH.W3">
@@ -210,6 +223,7 @@ flowchart TD
           that a commit succeeded, and a roster gap no longer reads as a bad signature.
         </p>
         <p data-item="wu-deps">none — independent of W1/W2; may land in parallel.</p>
+        <p>Worked examples: <a href="#ex-w3a">a commit that "failed"</a> · <a href="#ex-w3b">a key this checkout never met</a>.</p>
       </div>
 
       <div data-wu="E-GATETRUTH.W4">
@@ -227,9 +241,219 @@ flowchart TD
           source file that never existed — is mechanically impossible to ship again.
         </p>
         <p data-item="wu-deps">none — independent; may land in parallel with W1–W3.</p>
+        <p>Worked example: <a href="#ex-w4">four links that shipped dead</a>.</p>
       </div>
 
     </div>
+
+    <h2 id="examples">Worked examples — one per WU</h2>
+    <p>Every example uses the same imaginary component, <code>FlowBadge</code>, and the same signer, <code>vuluu</code>. Messages marked <em>today</em> are what the shipped code prints; messages marked <em>after</em> are the target shape, not final wording.</p>
+
+    <h3 id="ex-w1">W1 · the same note, three possible meanings</h3>
+    <table data-c="ex-w1-history">
+      <thead><tr><th>Commit</th><th>What it does</th><th>Design file at that commit</th></tr></thead>
+      <tbody>
+        <tr><td><code>c1</code> design</td><td>adds <code>docs/work/components/flow-badge.html</code>, blob <code>9f3c2a1</code></td><td>present</td></tr>
+        <tr><td><code>c2</code> build</td><td>adds <code>ui/src/components/FlowBadge.tsx</code>; its TSDoc now carries the contract</td><td>present</td></tr>
+        <tr><td><code>c3</code> retire</td><td>deletes the design file, as DEC-16 requires once the build lands</td><td><strong>gone</strong></td></tr>
+        <tr><td>tip</td><td>the WU merge; the <code>cr/v3</code> note is written here</td><td><strong>gone</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="caption">Hình 2 — the history every design→build WU produces under DEC-16. The note is judged at the tip, where the design no longer exists.</div>
+
+    <table data-c="ex-w1-two-notes">
+      <thead><tr><th>The note the agent writes</th><th>What the gate says today</th><th>Which rule refused it</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><pre>schema: cr/v3
+design:
+  implements:
+    - path: docs/work/components/flow-badge.html
+      blob: 9f3c2a1
+      built: [ui/src/components/FlowBadge.tsx]</pre></td>
+          <td><pre>design.implements names docs/work/components/flow-badge.html,
+which does not resolve at the tip
+  cite a design the tip actually ships</pre></td>
+          <td>DEC-25 as coded: <code>check_citation</code> runs <code>git show &lt;tip&gt;:&lt;path&gt;</code>. DEC-16 guarantees that fails.</td>
+        </tr>
+        <tr>
+          <td><pre>schema: cr/v3
+design:
+  undesigned:
+    - path: ui/src/components/FlowBadge.tsx
+      why: the design was retired per DEC-16</pre></td>
+          <td><pre>ui/src/components/FlowBadge.tsx is a new surface this diff adds,
+and no citation names it
+  only a design answers for a new surface - a reason does not</pre></td>
+          <td>DEC-25's escape-hatch rule: a <em>reason</em> may excuse an edit, never a new file.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="caption">Hình 3 — P1 in two rows. Both notes are refused, each by a rule that is correct on its own. There is no third note shape.</div>
+
+    <table data-c="ex-w1-directions">
+      <thead><tr><th>Direction W1 may choose</th><th>What the note looks like</th><th>What the gate would check</th><th>What it costs</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Resolve against history</strong> <span class="badge auto">proposed default</span></td>
+          <td>unchanged from row 1 above</td>
+          <td>is there a commit reachable from the tip where <code>flow-badge.html</code> had blob <code>9f3c2a1</code>? <code>c1</code> qualifies → green</td>
+          <td>nothing in the note changes; a citation keeps meaning <em>the design bytes the build read</em></td>
+        </tr>
+        <tr>
+          <td>Cite the TSDoc</td>
+          <td><code>path: ui/src/components/FlowBadge.tsx</code>, blob of the <code>.tsx</code></td>
+          <td>resolves at the tip today, no gate change</td>
+          <td>a citation now names code, not a design; Tier-3 judged the HTML, never the <code>.tsx</code></td>
+        </tr>
+        <tr>
+          <td>A <code>design.retired</code> variant</td>
+          <td><pre>retired:
+  - path: docs/work/components/flow-badge.html
+    blob: 9f3c2a1
+    retired_in: c3</pre></td>
+          <td>does <code>c3</code>'s parent hold that blob at that path?</td>
+          <td>a second note shape to keep in step with <code>implements</code> forever</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <strong>What W1 is, and is not.</strong> W1 writes one sentence — <em>a citation resolves
+      against …</em> — into a decision record, and edits the one line of
+      <code>docs/workflow.html</code> that today says "at the tip". It changes no code. W2
+      cannot start first, because <code>gate.rs</code> has to encode exactly that sentence and
+      nothing else.
+    </div>
+
+    <h3 id="ex-w2">W2 · three histories, three verdicts</h3>
+    <table data-c="ex-w2-verdicts">
+      <thead><tr><th>Fixture</th><th>Truth</th><th>Gate today</th><th>Gate after W2</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Hình 2 history, note from row 1 of Hình 3</td>
+          <td>legal — the design existed, was built, was retired</td>
+          <td><span class="badge approval">RED</span> "does not resolve at the tip"</td>
+          <td><span class="badge auto">GREEN</span> — expected result 1</td>
+        </tr>
+        <tr>
+          <td>same, but <code>path: docs/work/components/flwo-badge.html</code> (typo)</td>
+          <td>fabricated — no commit ever held that path</td>
+          <td><span class="badge approval">RED</span>, right verdict, cause "does not resolve at the tip"</td>
+          <td><span class="badge approval">RED</span> "no commit reachable from the tip ever shipped flwo-badge.html" — expected result 2</td>
+        </tr>
+        <tr>
+          <td>same path, <code>blob: deadbee</code></td>
+          <td>unpinnable — the file existed, never with those bytes</td>
+          <td><span class="badge approval">RED</span>, but says "this tip ships …", and the tip ships nothing</td>
+          <td><span class="badge approval">RED</span> "flow-badge.html was shipped at 9f3c2a1 (c1), never at deadbee — re-pin" — expected result 2</td>
+        </tr>
+        <tr>
+          <td>E-DFLOW's 25 real components</td>
+          <td>legal, under <code>cr/v2</code> notes</td>
+          <td><span class="badge auto">GREEN</span> — the check was downgraded to <code>DESIGN_SCHEMA</code> and filtered at the walk; the question was never asked</td>
+          <td>unchanged; the fixture in row 1 is the <code>cr/v3</code> case E-DFLOW never exercised</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="caption">Hình 4 — W2 assumes W1 keeps the proposed default. The two negative rows hold under any of the three directions; only the green row's mechanism moves.</div>
+
+    <h3 id="ex-w3a">W3 · P2a — a commit that "failed"</h3>
+    <pre data-c="ex-w3a-today">$ cargo xtask mr commit -m "E-GATETRUTH.W1: what a citation means after retirement
+
+The decision record. Three directions weighed, one chosen ..." --as vuluu
+
+error: git commit -S -m E-GATETRUTH.W1: what a citation means after retirement
+
+The decision record. Three directions weighed, one chosen ...
+    (… every remaining line of the commit message …)
+
+Reviewed-By: key vuluu
+ --cleanup=verbatim: &lt;the single line git actually said&gt;
+
+$ git log -1 --oneline
+ab12cd3 E-GATETRUTH.W1: what a citation means after retirement   ← it landed</pre>
+    <div class="caption">Hình 5 — today. <code>git_env</code> formats every non-zero exit as <code>git &lt;all args&gt;: &lt;stderr&gt;</code>, and the args include <code>-m &lt;the whole body&gt;</code>. The one useful line is last, and HEAD had already moved.</div>
+    <table data-c="ex-w3a-rounds">
+      <thead><tr><th>Round</th><th>What the reader concluded from the message</th><th>What was true</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>the commit failed → re-run it</td><td>git replied "nothing to commit" — the first run had landed</td></tr>
+        <tr><td>2</td><td>the signer must be broken → inspect the key setup</td><td>the key had signed fine; the commit carries a valid <code>gpgsig</code></td></tr>
+        <tr><td>3</td><td>read <code>git log</code></td><td>the commit was there all along</td></tr>
+      </tbody>
+    </table>
+    <pre data-c="ex-w3a-after">on success:
+  signed doc commit with Reviewed-By: key vuluu
+
+on a real failure:
+  error: git commit -S failed and HEAD did not move
+    &lt;git's stderr, alone — the message body is not echoed&gt;</pre>
+    <div class="caption">Hình 6 — after W3. <code>mr_commit</code> asks whether <code>HEAD</code> moved before it calls anything a failure; the failure path prints git's stderr and nothing else. Expected result 3.</div>
+
+    <h3 id="ex-w3b">W3 · P3 — a key this checkout never met</h3>
+    <div class="diagram" data-c="ex-w3b-worktrees">
+      <pre class="mermaid">
+flowchart LR
+  subgraph A["worktree A · TRA-DFLOW"]
+    RA[".mr-allowed<br/>key: vuluu ssh-ed25519 AAAA…"]
+    CA["cargo xtask mr confirm wu ab12cd3 --as vuluu"]
+  end
+  subgraph G["shared .git"]
+    N["refs/notes/mr on ab12cd3<br/>signer: vuluu · sig: …"]
+  end
+  subgraph B["worktree B · TRA-GATE-TRUTH"]
+    RB[".mr-allowed<br/>(absent, or lists another key)"]
+    M["git merge --no-ff → verify-dod"]
+    V{"tip_authorised?"}
+  end
+  RA --> CA --> N
+  N --> V
+  RB --> V
+  V -- "allowed_signers for vuluu is empty → false" --> F["8·manual-review: tip ab12cd3 has no valid mr/v1 note"]
+      </pre>
+      <div class="caption">Hình 7 — notes are repo-wide, the roster is per-worktree. B reads a valid note and a roster with no line for its signer, and reports the absence of a note.</div>
+    </div>
+    <table data-c="ex-w3b-causes">
+      <thead><tr><th>What is actually true</th><th>Message today</th><th>Message after W3</th></tr></thead>
+      <tbody>
+        <tr><td>no <code>mr/v1</code> note on the tip</td><td>tip ab12cd3 has no valid mr/v1 note</td><td>unchanged — this one was right</td></tr>
+        <tr><td>a valid note signed by <code>vuluu</code>; this checkout's roster has no line for <code>vuluu</code></td><td>tip ab12cd3 has no valid mr/v1 note</td><td>ab12cd3 is signed by vuluu, whom <code>…/TRA-GATE-TRUTH/.mr-allowed</code> does not list — run <code>cargo xtask mr setup</code> here, or merge from the checkout that signed</td></tr>
+        <tr><td><code>vuluu</code> is listed; the signature fails over <code>base..tip</code></td><td>tip ab12cd3 has no valid mr/v1 note</td><td>ab12cd3's mr/v1 signature by vuluu does not verify over base..tip — the diff changed after signing; re-confirm</td></tr>
+      </tbody>
+    </table>
+    <div class="caption">Hình 8 — one sentence covers three causes, so a reader in W12 tried the other two first: "the note was never written", then "it was signed over a different diff". Both wrong. Expected result 5 makes the three rows print three sentences.</div>
+
+    <h3 id="ex-w4">W4 · four links that shipped dead</h3>
+    <table data-c="ex-w4-links">
+      <thead><tr><th>Doc</th><th>Tier</th><th>Dead <code>href</code></th><th>Why dead</th><th>Class</th></tr></thead>
+      <tbody>
+        <tr><td>W12 plan</td><td>T3</td><td>the E-DFLOW epic plan</td><td>archived by the same WU that wrote the link</td><td>target retired</td></tr>
+        <tr><td>W12 plan</td><td>T3</td><td>the W11 result</td><td>same</td><td>target retired</td></tr>
+        <tr><td>W12 plan</td><td>T3</td><td>W8 step 1</td><td>same</td><td>target retired</td></tr>
+        <tr><td>DEC-13</td><td><strong>T2</strong></td><td><code>../../ui/src-tauri/src/setup.ts</code></td><td>the file is <code>setup.rs</code>; a <code>.ts</code> never existed at that path</td><td><strong>target never existed</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="caption">Hình 9 — all four found by a hand audit in W12; <code>verify-doc</code> was green on 35 docs while they stood. The DEC-13 row is the one that matters: a permanent record that pointed a reader at a file no commit ever held.</div>
+    <pre data-c="ex-w4-output">today:
+  $ cargo xtask verify-doc docs/decisions/dec-13-onboarding-capabilities.html
+  green
+
+after W4:
+  $ cargo xtask verify-doc docs/decisions/dec-13-onboarding-capabilities.html
+  docs/decisions/dec-13-onboarding-capabilities.html
+    link: href "../../ui/src-tauri/src/setup.ts" resolves to no file in the tree
+      point at the file that exists, or drop the href</pre>
+    <table data-c="ex-w4-wrinkles">
+      <thead><tr><th>Link</th><th>Verdict after W4</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>a live doc → <code>docs/decisions/dec-16-….html</code></td><td><span class="badge auto">green</span></td><td>resolves in the tree</td></tr>
+        <tr><td>a live doc → a file that never existed</td><td><span class="badge approval">red</span></td><td>the DEC-13 class</td></tr>
+        <tr><td>a live doc → a doc archived out of git</td><td><span class="badge approval">red</span></td><td>the W12-plan class; rewrite as plain text marked archived, as c5f474b did</td></tr>
+        <tr><td>an archived doc → another archived doc</td><td><span class="badge auto">green</span></td><td>siblings in <code>docs/.archive/</code> resolve together</td></tr>
+        <tr><td>any doc → <code>docs/.archive/…</code></td><td><span class="badge auto">green</span></td><td>gitignored, so unresolvable from a clean checkout by design</td></tr>
+        <tr><td><code>https://…</code>, <code>#anchor</code> into another doc, images</td><td>not checked</td><td>non-goal</td></tr>
+      </tbody>
+    </table>
+    <div class="caption">Hình 10 — the predicate W4 ships: relative file <code>href</code>s only, with the two archive wrinkles green. Expected result 4.</div>
 
     <h2 id="e2e">E2E test plan</h2>
     <div data-item="e2e-plan">
