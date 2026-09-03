@@ -1,0 +1,16 @@
+schema: test/v2
+level: working-unit
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W2
+branch: wu/gate-truth/citation-predicate
+tests:
+  unit:
+    count: 5
+    covers: "git::last_state - the last state after amend-then-delete is the amended blob, a never-held path is None, history the tip does not reach is None, and a merge that added and removed the path inside one branch is seen through (--full-history). gate.rs case table a_build_that_adds_a_surface_cites_a_design_the_tip_ships_or_reds gains a design amended and retired in the diff: matching pin green, wrong pin and the handed pin red on the blob half, never-shipped path red on the path half. gate.rs a_design_retired_at_bytes_the_base_never_held_is_an_artifact_the_seam_judges: retired_designs returns the amended design at its last state, design_artifacts lists it beside the tip's, and a design retired at the bytes its base held is not an artifact."
+  integration:
+    count: 6
+    covers: "dod_gate.rs over History B (design on the epic, component built and design retired in one WU, doc/v1 archived entry naming a TSDoc carrier): green at the WU merge and at the epic walk over that seam; a typo path red naming the path half; a pin the path never carried red naming the last state's blob and not 'this tip ships'; amended-then-retired red at the handed blob, red on 9·design until the design section names the design, green judged and re-pinned. A design authored, built and retired in one WU (netted out of the endpoint diff) is refused on 6·doc-note until its archived entry is recorded, then on 9·design until judged, then lands. design-scope over an amended-then-retired range lists the artifact, counts one, prints the git show line for its last state, and omits stray non-design files under the components directory. The four History B fixtures fail against the epic tip's gate.rs and git.rs; each review-driven fixture failed before its fix commit."
+  e2e:
+    count: 1
+    covers: "e2e_design_flow.rs a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it: the build leg retires PILL_DESIGN inside the build WU (build_the_pill_and_retire_its_design), design-scope lists no artifact for an unchanged retirement, the silent and excused notes still refuse through the real --no-ff hook, a wrong pin refuses naming the last state, and the citation pinning the handed blob lands the merge."
+note: "E-GATETRUTH.W2 codes DEC-28: check_citation resolves a path the tip does not ship at its last state reachable from the tip; two refusals name the failed half; check_handoff's fix hint covers a retired design. The review's two rounds added DEC-29: a component design the WU retired at bytes its base never held is an artifact 9·design demands a judgment over and 6·doc-note demands a DEC-16 archived entry for, at Level::Wu, through the function design-scope shares. cargo test -p xtask --all-features green across every binary; clippy pedantic clean with --all-features --all-targets."
