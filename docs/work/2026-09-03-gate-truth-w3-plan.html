@@ -156,7 +156,7 @@ flowchart TD
           <tr><td>8</td><td><code>tip_authorised</code> returns the same bool as before on every leaf; the existing <code>tip_authorised_*</code> tests are unedited and green</td><td><code>xtask/tests/mr.rs</code></td></tr>
           <tr><td>9</td><td>a WU merge run from a second worktree whose roster omits the signer is refused by the installed hook naming that worktree's roster, and lands once the key line is added there — Hình 7 with the right sentence</td><td><code>xtask/tests/mr.rs</code></td></tr>
           <tr><td>10</td><td>the check id, the receipt's <code>checks:</code> line and the walk's check-8 filter are unchanged</td><td><code>xtask/tests/dod_gate.rs</code></td></tr>
-          <tr><td>11</td><td>no file under <code>src/</code>, <code>ui/</code>, or <code>docs/</code> outside <code>docs/work/</code> changes; <code>cargo clippy</code> pedantic clean</td><td>the WU diff</td></tr>
+          <tr><td>11</td><td>no file under <code>src/</code> or <code>ui/</code> changes, and no T1 (flat <code>docs/*.html</code>); the only doc outside <code>docs/work/</code> is the T2 distillation this WU owes, <code>docs/decisions/workflow-gates.html</code> — see the touches table. <code>cargo clippy</code> pedantic clean</td><td>the WU diff</td></tr>
         </tbody>
       </table>
     </div>
