@@ -11,8 +11,10 @@
       <h1>E-GATETRUTH.W2 result — the gate reads a retired design where history kept it</h1>
       <p>The predicate DEC-28 stated in words is now the code: a citation the tip does not ship resolves at the
         path's last state reachable from the tip. The history every build WU produces is green; a path nobody
-        shipped and a blob the path never carried are red, each naming the half that failed.</p>
-      <div class="meta">WU result v2 · 2026-09-03 · Trawler · T3 (docs/work/) ·
+        shipped and a blob the path never carried are red, each naming the half that failed. The review found what
+        the widening exposed — a design amended or authored and then retired in one WU reached the merge judged by
+        nobody — and that became DEC-29.</p>
+      <div class="meta">WU result v3 · 2026-09-03 · Trawler · T3 (docs/work/) ·
         <code>wu/gate-truth/citation-predicate</code> → <code>epic/gate-truth</code> ·
         <a href="2026-09-03-gate-truth-w2-plan.html">WU plan</a> · <a href="2026-09-03-gate-truth-plan.html">epic plan</a> ·
         <span class="badge id">E-GATETRUTH.W2</span></div>
@@ -36,7 +38,7 @@
           <tr><td>fixtures at all three levels, none waived</td>
             <td><span class="badge auto">delivered</span> three unit tests on the helper, three rows in the in-crate case table, four integration tests over History B, the hand-over e2e retiring the design inside the build WU</td></tr>
           <tr><td>—</td>
-            <td><span class="badge approval">added by the review</span> the artifact set <code>9·design</code> judges at a WU seam includes a component design the range removed at bytes the base never held — amended before retirement, or authored and retired in one WU — read at its last state. <code>Gate::retired_designs</code>, joined into <code>design_artifacts</code> so <code>design-scope</code> lists it and says where to read it</td></tr>
+            <td><span class="badge approval">added by the review, rounds 1 and 2</span> <a href="../decisions/dec-29-retired-design-judged-where-it-left.html">DEC-29</a>: the artifact set <code>9·design</code> judges at a WU seam includes a component design the range removed at bytes the base never held — amended before retirement, or authored and retired in one WU — read at its last state; only a design artifact counts, not every file under the directory; the same seam owes DEC-16's <code>archived</code> entry for it, which <code>6·doc-note</code> now asks for and no longer refuses as a phantom. <code>Gate::retired_designs</code>, joined into <code>design_artifacts</code> so <code>design-scope</code> lists it and says where to read it. DEC-24 superseded on two clauses; the T1 design-bearing and check-9 rows state the rule</td></tr>
           <tr><td>the History B fixture reds against today's code</td>
             <td><span class="badge auto">held</span> all four <code>dod_gate</code> fixtures fail with the previous <code>gate.rs</code> and <code>git.rs</code> swapped back in; pass with this WU's</td></tr>
           <tr><td>no <code>src/</code>, <code>ui/</code>, or docs outside <code>docs/work/</code></td><td><span class="badge auto">held</span> the WU diff: <code>xtask/</code> and two T3 docs</td></tr>
@@ -62,8 +64,14 @@
             <td>the review's round 1 verified that resolving through history opened a green path DEC-25 D1a forbids: a design amended and then retired in the same WU reached the merge with no Tier-3 verdict, because <code>check_design</code> read its artifacts from the tip and the file was gone there. Pre-W2 the citation refused that tip anyway; the widening made the gap reachable</td>
             <td>failing tests first — the amended-then-retired fixture refuses the re-pinned note until the design section names the design; a design authored, built and retired in one WU is refused the same way — then <code>retired_designs</code> at <code>Level::Wu</code>; both land once judged. Second commit on the branch</td></tr>
           <tr><td>the fixture that reds on check 6 has "reproduced a different bug"</td>
-            <td>true for a design present at the base. A design authored <em>and</em> retired in one WU nets out of the endpoint diff, so <code>6·doc-note</code> refuses an archived entry for it as a phantom and <code>6·retirement-order</code> is never asked</td>
-            <td>the one-WU fixture carries the default doc note; the blind spot is recorded under follow-ups, not fixed here — it predates W2 and is not P1</td></tr>
+            <td>true for a design present at the base. A design authored <em>and</em> retired in one WU nets out of the endpoint diff, so <code>6·doc-note</code> refused an archived entry for it as a phantom and <code>6·retirement-order</code> was never asked — first left as a follow-up, then verified by round 2 as a hole the widening made reachable</td>
+            <td>the doc-note check owes an entry for every retired design the range knows; the one-WU fixture refuses the judged-and-cited note until the retirement is recorded, then lands. Third commit</td></tr>
+          <tr><td>no doc rule text; DEC-28's "W2 owes" is settled by the code</td>
+            <td>round 2 verified that the T1 design-bearing definition ("the diff touches … a component design file"), the check-9 row ("names every design artifact in the diff") and DEC-24's "present in the diff" plus its rejected option "judge a removed design file" now stated an activation condition the code contradicts</td>
+            <td>DEC-29 written; DEC-24 carries two superseded-on-clause callouts; the index registers it (v13); the two T1 rows edited under a <code>Reviewed-By</code> trailer signed by the owner (v14); the epic plan's distillation plan takes both rows</td></tr>
+          <tr><td>design-scope's retired block</td>
+            <td>round 2 found it counted every removed file under <code>docs/work/components/</code> and had no test</td>
+            <td><code>retired_designs</code> applies the artifact test; <code>design_scope_names_a_design_retired_at_unjudged_bytes_and_where_to_read_it</code> drives the CLI over an amended-then-retired range with stray files beside it</td></tr>
           <tr><td>the in-crate case table gains three rows</td>
             <td>the fixture had no retired design to cite</td>
             <td><code>a_repo_that_builds_then_re_shapes_a_pill</code> now writes a badge design at the base and removes it in the tip commit, exposing <code>retired_blob</code></td></tr>
@@ -77,15 +85,15 @@
         <thead><tr><th>Claim</th><th>Where to look</th></tr></thead>
         <tbody>
           <tr><td>the predicate, as code</td><td><code>xtask/src/gate.rs</code>: <code>resolve_citation</code>, the <code>retired_at</code> match in <code>check_citation</code>, the <code>Resolved</code> type · <code>xtask/src/git.rs</code>: <code>last_state</code></td></tr>
-          <tr><td>a retired design at unjudged bytes is an artifact; one retired unchanged is not</td>
-            <td><code>xtask/src/gate.rs</code>: <code>retired_designs</code>, the <code>judged</code> set in <code>verify</code>; test <code>a_design_retired_at_bytes_the_base_never_held_is_an_artifact_the_seam_judges</code> · <code>xtask/tests/dod_gate.rs</code>: <code>a_design_authored_built_and_retired_in_one_wu_is_judged_by_that_wu</code> and the last leg of the amended-then-retired test</td></tr>
+          <tr><td>a retired design at unjudged bytes is an artifact; one retired unchanged is not; its retirement is owed in order</td>
+            <td><code>xtask/src/gate.rs</code>: <code>retired_designs</code>, the <code>judged</code> set and <code>retired_paths</code> in <code>verify</code>, <code>check_docs</code>; test <code>a_design_retired_at_bytes_the_base_never_held_is_an_artifact_the_seam_judges</code> · <code>xtask/tests/dod_gate.rs</code>: <code>a_design_authored_built_and_retired_in_one_wu_is_judged_by_that_wu</code> (refused on <code>6·doc-note</code>, then on <code>9·design</code>, then green), the last leg of the amended-then-retired test, and <code>design_scope_names_a_design_retired_at_unjudged_bytes_and_where_to_read_it</code></td></tr>
           <tr><td>the helper's reach and its last-state rule</td><td><code>xtask/src/git.rs</code> tests: <code>last_state_is_the_blob_the_path_held_just_before_it_left_the_tree</code> · <code>last_state_reaches_only_the_history_the_tip_stands_on</code> · <code>last_state_sees_through_a_merge_that_added_and_removed_the_path_in_one_branch</code></td></tr>
           <tr><td>every way a citation fails, and the retired green</td><td><code>xtask/src/gate.rs</code> test <code>a_build_that_adds_a_surface_cites_a_design_the_tip_ships_or_reds</code>: rows <em>no commit reachable from the tip ever shipped</em>, <em>before it left the tree</em>, and the closing <code>RETIRED_DESIGN</code> assertion</td></tr>
           <tr><td>History B green at the WU merge and at the epic walk; the negatives red with the new messages; amended-then-retired cited at its last state</td>
             <td><code>xtask/tests/dod_gate.rs</code>: <code>a_build_that_retires_the_design_it_cites_lands_and_the_epic_walk_agrees</code> · <code>a_citation_of_a_path_no_reachable_commit_ever_shipped_is_still_refused</code> · <code>a_citation_of_bytes_a_retired_design_never_carried_names_its_last_state</code> · <code>a_design_amended_then_retired_in_one_wu_is_cited_at_its_last_state_not_its_first</code></td></tr>
           <tr><td>the fixture is legal on check 6 too</td><td>the same fixture's <code>doc/v1</code> entry: <code>action: archived</code>, <code>distilled_to</code> naming <code>@states</code> and <code>@use</code>, which <code>PILL_WITH_CARRIERS</code> carries</td></tr>
           <tr><td>the merge the blocker refused, through the real hook</td><td><code>xtask/tests/e2e_design_flow.rs</code>: <code>build_the_pill_and_retire_its_design</code> and step ③ of <code>a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it</code></td></tr>
-          <tr><td>regression proof</td><td>with the epic tip's <code>gate.rs</code> and <code>git.rs</code> in the tree, <code>cargo test -p xtask --all-features --test dod_gate</code> reports the four History B tests FAILED and 70 passed; the two review-driven tests were red on the first W2 commit and green on the second; at the tip, 75 passed</td></tr>
+          <tr><td>regression proof</td><td>with the epic tip's <code>gate.rs</code> and <code>git.rs</code> in the tree, <code>cargo test -p xtask --all-features --test dod_gate</code> reports the four History B tests FAILED and 70 passed; each review-driven test was red before its fix commit and green after; at the tip, 76 passed</td></tr>
           <tr><td>everything else still green</td><td><code>cargo test -p xtask --all-features</code>: lib, <code>dod_gate</code>, <code>e2e_design_flow</code>, <code>mr</code>, <code>verify_doc</code>, <code>doc_hooks</code>, <code>gate0_cache</code>, <code>ui</code> all pass; <code>cargo clippy --all-features --all-targets -D warnings</code> clean</td></tr>
           <tr><td>docs green</td><td><code>cargo xtask verify-doc</code> over the WU plan and this result; every relative <code>href</code> they add resolves on disk</td></tr>
         </tbody>
@@ -99,11 +107,15 @@
         <tbody>
           <tr><td><code>xtask/src/gate.rs</code> · <code>xtask/src/git.rs</code></td><td>T4</td><td>the predicate — the truth DEC-28 defers to</td></tr>
           <tr><td><code>docs/decisions/dec-28-citation-after-retirement.html</code></td><td>T2</td><td>unchanged: the why, the flow, the case table. Its "W2 owes" bullet is settled by this WU's code — every item on it is in the outcome table above</td></tr>
-          <tr><td><code>docs/workflow.html</code></td><td>T1</td><td>unchanged: W1's rule text already states what the code now does</td></tr>
+          <tr><td><code>docs/decisions/dec-29-retired-design-judged-where-it-left.html</code></td><td>T2</td><td>new — why a design retired at unjudged bytes is an artifact of the seam that retired it, the case table, four rejected options</td></tr>
+          <tr><td><code>docs/decisions/dec-24-design-review-dimension.html</code></td><td>T2</td><td>superseded-on-clause callouts at "present in the diff" and at the rejected option "judge a removed design file"; status active</td></tr>
+          <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td><td>DEC-29 row; DEC-24 row annotated; v13</td></tr>
+          <tr><td><code>docs/workflow.html</code></td><td>T1</td><td>the design-bearing definition and the check-9 row read the range's last state for a retired design; v14; <code>Reviewed-By</code> trailer</td></tr>
+          <tr><td><code>docs/work/2026-09-03-gate-truth-plan.html</code></td><td>T3</td><td>distillation plan takes the DEC-29 and DEC-24 rows; v4</td></tr>
           <tr><td><code>docs/work/2026-09-03-gate-truth-w2-plan.html</code> · this result</td><td>T3</td><td>the plan and its outcome; archived at epic close per DEC-3</td></tr>
         </tbody>
       </table>
-      <p>One fact per tier held: nothing was copied into a doc that the code now owns. No T2 fact moved.</p>
+      <p>One fact per tier: the why in DEC-28 and DEC-29, the rule in the workflow standard, the predicate and the artifact set in <code>xtask/src/gate.rs</code>. Nothing copied.</p>
     </div>
 
     <h2 id="follow-ups">Follow-ups</h2>
@@ -113,7 +125,7 @@
         <tbody>
           <tr><td>the epic-level composed e2e — all four fixes in one gated merge from a second worktree (epic plan §E2E); this WU ships its step-1 history</td><td>E-GATETRUTH close</td></tr>
           <tr><td>the two misdirection fixes and the link predicate</td><td>E-GATETRUTH.W3 · W4</td></tr>
-          <tr><td>a design authored and retired inside one WU nets out of the endpoint diff, so DEC-16's retirement order (<code>6·retirement-order</code>, the archived <code>doc/v1</code> entry with its <code>distilled_to</code>) is never demanded of it — the range knows the file existed, the doc-note check does not. Found while fixturing the review's finding; predates W2</td><td>a decision, or a later gate WU — not P1</td></tr>
+          <tr><td>the retirement-order blind spot for a one-WU design, first filed here as a follow-up, was closed in this WU under DEC-29 after round 2 of the review verified it as reachable</td><td>—</td></tr>
         </tbody>
       </table>
     </div>
