@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-GATETRUTH — the gate tells the truth</h1>
       <p>Three deferred E-DFLOW problems: a rule pair that makes a legal note impossible, and two places the gate refuses correctly but names the wrong cause.</p>
-      <div class="meta">Draft v2 · 2026-09-03 · Trawler · T3 epic plan · <span class="badge id">E-GATETRUTH</span></div>
+      <div class="meta">Draft v3 · 2026-09-03 · Trawler · T3 epic plan · <span class="badge id">E-GATETRUTH</span></div>
     </div>
   </header>
   <main>
@@ -38,9 +38,9 @@
       <tbody>
         <tr>
           <td><span class="badge id">P1</span></td>
-          <td>DEC-16 retires the design file; DEC-25 requires citing it; <code>check_citation</code> resolves the cited path <em>at the tip</em>, where it no longer exists. <code>design.undesigned</code> is refused for an added surface, so <strong>the note has no legal form</strong>.</td>
+          <td>DEC-25 requires a new surface to cite its design; verify-doc's <code>components·unretired</code> reds the design file the moment the built component exists in the working tree, so DEC-16's retirement is forced <em>inside the build WU</em>, before its tip; <code>check_citation</code> resolves the cited path at that tip, where it no longer exists. <code>design.undesigned</code> is refused for an added surface, so <strong>the note has no legal form</strong>. The epic walk plays no part: it re-reads each WU at its own tip.</td>
           <td><span class="badge approval">blocker-in-waiting</span></td>
-          <td><code>xtask/src/gate.rs:609</code> · <code>:560</code></td>
+          <td><code>xtask/src/gate.rs:609</code> · <code>:560</code> · <code>xtask/src/doc.rs:878</code></td>
         </tr>
         <tr>
           <td><span class="badge id">P2a</span></td>
@@ -69,7 +69,7 @@ flowchart TD
   W2["design WU: adds docs/work/components/x.html"] --> W5["build WU: builds ui/src/components/X.tsx"]
   W5 --> C["cr/v3 note must carry design.implements[path, blob]"]
   W5 --> W7["DEC-16: design file deleted once built"]
-  W7 --> T["at the epic tip, the path resolves nowhere"]
+  W7 --> T["at the build WU's own tip, the path resolves nowhere"]
   C --> CC{"check_citation resolves path at the tip"}
   T --> CC
   CC -- "path missing" --> F1["REFUSED: 'names X, which does not resolve at the tip'"]
@@ -295,7 +295,7 @@ and no citation names it
       <thead><tr><th>Direction W1 may choose</th><th>What the note looks like</th><th>What the gate would check</th><th>What it costs</th></tr></thead>
       <tbody>
         <tr>
-          <td><strong>Resolve against history</strong> <span class="badge auto">proposed default</span></td>
+          <td><strong>Resolve against history</strong> <span class="badge auto">chosen · DEC-28</span></td>
           <td>unchanged from row 1 above</td>
           <td>is there a commit reachable from the tip where <code>flow-badge.html</code> had blob <code>9f3c2a1</code>? <code>c1</code> qualifies → green</td>
           <td>nothing in the note changes; a citation keeps meaning <em>the design bytes the build read</em></td>
@@ -355,7 +355,7 @@ and no citation names it
         </tr>
       </tbody>
     </table>
-    <div class="caption">Hình 4 — W2 assumes W1 keeps the proposed default. The two negative rows hold under any of the three directions; only the green row's mechanism moves.</div>
+    <div class="caption">Hình 4 — W1 chose history resolution (DEC-28). The two negative rows hold under any of the three directions; only the green row's mechanism moved.</div>
 
     <h3 id="ex-w3a">W3 · P2a — a commit that "failed"</h3>
     <pre data-c="ex-w3a-today">$ cargo xtask mr commit -m "E-GATETRUTH.W1: what a citation means after retirement
@@ -483,7 +483,7 @@ after W4:
       <table>
         <thead><tr><th>Doc</th><th>Tier</th><th>Absorbs</th></tr></thead>
         <tbody>
-          <tr><td><code>docs/decisions/dec-27-&lt;citation-after-retirement&gt;.html</code> <em>(new, number confirmed at authoring)</em></td><td>T2</td><td>W1's decision: what a citation resolves against once the design is retired; supersedes the DEC-25 half, leaves DEC-16 standing</td></tr>
+          <tr><td><code>docs/decisions/dec-28-citation-after-retirement.html</code> <em>(new; DEC-27 was taken by E-DFLOW.W11)</em></td><td>T2</td><td>W1's decision: what a citation resolves against once the design is retired; supersedes the DEC-25 half, leaves DEC-16 standing</td></tr>
           <tr><td><code>docs/decisions/dec-25-design-build-handoff.html</code></td><td>T2</td><td>a superseded-by pointer to the new record — the rule moved, the record stays</td></tr>
           <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td><td>the new record, index-first reading</td></tr>
           <tr><td><code>docs/decisions/workflow-gates.html</code></td><td>T2</td><td>P3's roster scope: DEC-10 extended with the worktree-locality consequence and the diagnosis rule</td></tr>
@@ -503,12 +503,12 @@ after W4:
           <tr>
             <td>1</td>
             <td>Which P1 direction does W1 choose?</td>
-            <td><strong>Resolve against history.</strong> The blob is pinned regardless, so <code>&lt;commit that had it&gt;:&lt;path&gt;</code> stays verifiable and the citation keeps meaning <em>the design bytes the build read</em> — unchanged from today. Citing TSDoc changes what a citation <em>is</em>; a <code>design.retired</code> variant adds a second form to keep in step. W1 decides on the merits and may overturn this.</td>
+            <td><strong>Decided at W1 (owner, 2026-09-03): resolve against history</strong> — recorded as <a href="../decisions/dec-28-citation-after-retirement.html">DEC-28</a>. Tip first; when the WU tip does not ship the path, its last state reachable from the tip, and the pin must match that state. Two further directions surfaced in the decision round and were rejected there: relaxing <code>components·unretired</code> so retirement waits for a later WU, and dropping check 9 from the epic walk.</td>
           </tr>
           <tr>
             <td>2</td>
             <td>How far back may a citation resolve — anywhere in history, or only within the epic that retired it?</td>
-            <td><strong>Reachable from the tip.</strong> Simple to state and to check; an unreachable commit is not history the tip stands on.</td>
+            <td><strong>Decided at W1: reachable from the tip.</strong> Simple to state and to check; an unreachable commit is not history the tip stands on.</td>
           </tr>
           <tr>
             <td>3</td>
