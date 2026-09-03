@@ -1,0 +1,30 @@
+schema: cr/v3
+scope: "WU E-GATETRUTH.W1 (wu/gate-truth/citation-after-retirement) -> epic/gate-truth"
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W1
+branch: wu/gate-truth/citation-after-retirement
+base: 1c8d587a7b9b3f0750e0d98a3ddccd4f9ff1d618
+head: 058c60bd8d0dae38903b249409f66891faeb4c06
+diff_sha256: f66ebfbd0ebd5a7697994d89f4a12455c544a47f07c07b850771aa2ce4328e0f
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 7, verified: 0, waived: 0 }
+rounds: 2
+history:
+  - round: 1
+    verdict: FAIL
+    verified: 1
+    what: "DEC-28 and the epic plan's inherited callout said E-DFLOW landed 25 registry components under cr/v2 notes; git ls-tree at W5's tip 21f8192 and at the merge into main 5d251c4 count 24, added at that single seam whose cr note is cr/v2. Off by one, fixed in 058c60b. Eight other candidates refuted."
+  - round: 2
+    verdict: PASS
+    verified: 0
+    what: "Seven candidates, all refuted on independent verification. No regressions from the fix."
+refuted:
+  - "DEC-25's superseded-on-clause callout restates DEC-28 rather than pointing - same-tier (T2->T2) restatement; the one-fact-per-tier rule is directional (never duplicate DOWN) and each doc stands alone (W11 cr precedent); DEC-16's own callout for DEC-25 is the imitated instrument at comparable length"
+  - "No prior in-place supersession callout exists in the codebase - false: dec-16-design-file-retirement.html:114 carries 'Superseded on the survival clause by DEC-25', added in 4109404, present at the base"
+  - "DEC-28's 'W2 owes' bullet quotes the check_handoff fix hint and names a code branch - the quoted fragment is a user-facing message whose misdirection for a retired path is the bullet's point; naming functions and the paying WU is house style (DEC-25 'W9 pays it', DEC-16 'W7 owns both halves')"
+  - "DEC-28's 'W2 owes' duplicates the W1 result's follow-ups row - T2 is the durable owner of a decision's consequence; T3 is archived at epic close (DEC-3); a result's follow-ups item must be readable on its own"
+  - "The W1 result's evidence example (e0f85f3, blob 5652d6c) is not the file's last state (56c443d at c908f54^) - the row claims only that a deleted file resolves at an earlier tip, recorded as run; DEC-28 never cites the example and nothing frames it as W2's template"
+  - "The mermaid node 'first commit at which the path exists = last state L' resolves to the removal commit - false: 'at which the path exists' is the filter; reproduced in a temp repo (add, amend, delete): newest-first order is [delete, amend, add], the first at which the path exists is the amend commit, the last state"
+verdict: PASS
+date: 2026-09-03
+note: "Gate 0 green (cached 7a824416d9). design-scope: no artifact, no surface, no rendered file in 1c8d587a7b..058c60bd8d - no design section. Docs-only WU: DEC-28 (a citation resolves at the WU tip, or at the design's last state reachable from it), DEC-25's superseded-on-clause callout, the index row, two rule-bearing lines in workflow.html under a Reviewed-By trailer signed by the owner, the epic plan's corrected P1 mechanism, the WU plan and result. Round 1 (tip f8022ba) failed on one verified nit, a component count off by one, fixed in 058c60b with the notes carried forward; round 2 on the fixed tip found seven candidates and verified none. Correctness confirmed against the sources named: the Level::Wu guard before check_handoff, the walk's verify(Level::Wu, wu_tip, mainline), the seam filter dropping only 8·manual-review and DESIGN_SCHEMA, check_retirement reading the working-tree roster from the Stop hook, the hand-over e2e never retiring PILL_DESIGN, DEC-27 already owned, and the copy-button.html history demonstration."
