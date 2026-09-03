@@ -14,7 +14,7 @@
         shipped and a blob the path never carried are red, each naming the half that failed. The review found what
         the widening exposed — a design amended or authored and then retired in one WU reached the merge judged by
         nobody — and that became DEC-29.</p>
-      <div class="meta">WU result v4 · 2026-09-03 · Trawler · T3 (docs/work/) ·
+      <div class="meta">WU result v5 · 2026-09-03 · Trawler · T3 (docs/work/) ·
         <code>wu/gate-truth/citation-predicate</code> → <code>epic/gate-truth</code> ·
         <a href="2026-09-03-gate-truth-w2-plan.html">WU plan</a> · <a href="2026-09-03-gate-truth-plan.html">epic plan</a> ·
         <span class="badge id">E-GATETRUTH.W2</span></div>
@@ -72,6 +72,9 @@
           <tr><td>the T1 and T2 edits end with the design-bearing and check-9 rows</td>
             <td>round 3 verified that the check-6 row and the doc/v1 schema owner still stated the exact-match rule, design-flow.html restated the old activation, DEC-16's Tier-3 exclusion bullet had no pointer, and this doc's blast-radius row was stale from v1</td>
             <td>DEC-16 annotated at the bullet; the index tightened (v14); DEC-29's consequence names the DEC-16 clause; the check-6 row, the schema owner's paragraph and sample, and the design-flow row point at DEC-29 under a second <code>Reviewed-By</code> trailer; this row corrected</td></tr>
+          <tr><td>the reviewer's instructions were scope, not subject</td>
+            <td>round 4 verified that the code-review skill's own files still stated the old rules: the design rubric's activation row (a removed design is retirement, not design) and the skill's blob-pin form (<code>git rev-parse &lt;HEAD_R&gt;:&lt;the design&gt;</code> only, which fails on every build WU that retires its design). Stale since W1, inert until this WU made the history legal; no mechanical check reads skill text</td>
+            <td>both rows corrected as infrastructure (markdown): the rubric names the retired case and where design-scope says to read it; the skill and its note template give the last-state pin. The check-9 row's one-clause repeat of check 6's obligation is a declared waiver</td></tr>
           <tr><td>design-scope's retired block</td>
             <td>round 2 found it counted every removed file under <code>docs/work/components/</code> and had no test</td>
             <td><code>retired_designs</code> applies the artifact test; <code>design_scope_names_a_design_retired_at_unjudged_bytes_and_where_to_read_it</code> drives the CLI over an amended-then-retired range with stray files beside it</td></tr>
@@ -118,6 +121,7 @@
           <tr><td><code>docs/documentation-system.html</code></td><td>T1</td><td>the doc/v1 paragraph and sample: one entry per doc file in the gated diff <em>or retired by it at unjudged bytes</em>; v7; <code>Reviewed-By</code> trailer</td></tr>
           <tr><td><code>docs/design-flow.html</code></td><td>T1</td><td>the activation row points at the workflow standard's definition instead of restating it; <code>Reviewed-By</code> trailer</td></tr>
           <tr><td><code>docs/work/2026-09-03-gate-truth-plan.html</code></td><td>T3</td><td>distillation plan takes the DEC-29 and DEC-24 rows; v4</td></tr>
+          <tr><td><code>.claude/skills/code-review/SKILL.md</code> · <code>design-rubric.md</code></td><td>infra</td><td>the reviewer's instructions: the last-state blob pin (DEC-28) and the retired design as an artifact to judge (DEC-29)</td></tr>
           <tr><td><code>docs/work/2026-09-03-gate-truth-w2-plan.html</code> · this result</td><td>T3</td><td>the plan and its outcome; archived at epic close per DEC-3</td></tr>
         </tbody>
       </table>

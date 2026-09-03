@@ -70,7 +70,10 @@ gate uses, so the two can never disagree about any of them.
   rules Tier-1 already owns.
 - **One or more new surfaces** ⇒ no finder runs, but the note owes
   `design.implements`: one `{path, blob, built}` per design the build was built
-  from, the blob being `git rev-parse <HEAD_R>:<the design>` and `built` naming
+  from, the blob being `git rev-parse <HEAD_R>:<the design>` — or, when the WU
+  retired the design it read (DEC-16 forces this inside the build WU), the blob
+  at its last state, `git rev-parse <the last commit that held it>:<the design>`,
+  which `design-scope` prints (DEC-28) — and `built` naming
   the files that design produced. This is a citation, not a judgment — nothing
   here judges the code against the design. A new surface takes **only** a
   citation; no reason excuses one.
@@ -147,7 +150,7 @@ design:                         # §3b — present iff design-scope listed anyth
   verdict: PASS                 # PASS | FAIL — artifacts only; omit when nothing was judged
   implements:                   # one per design the build read; omit when none was listed
     - path: docs/work/components/<the design>.html
-      blob: <git rev-parse HEAD_R:<that path>>
+      blob: <git rev-parse HEAD_R:<that path>, or <the last commit that held it>:<that path> once this WU retired it (DEC-28)>
       built: [ui/src/components/<what it produced>.tsx]   # the rendered files it covers
   undesigned:                   # every other rendered file the diff touched
     - path: ui/src/<the file>.tsx
