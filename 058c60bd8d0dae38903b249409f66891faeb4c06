@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 058c60bd8d0dae38903b249409f66891faeb4c06
+base: 1c8d587a7b9b3f0750e0d98a3ddccd4f9ff1d618
+tier: key
+signer: vuluu
+report: docs/work/2026-09-03-gate-truth-w1-result.html
+report_sha256: b93aa4e19202162fcc31250602c083c6781f64edc394020052c0aa6d6fbfd75c
+date: 2026-09-03
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAJET0SuZ2GCXyOVaqrfpBmxSto0HuDdbqPXV+jCdocalr3NXa8y7ayQ8
+  r0eZn7QU8qyodQYLya08MelvdMLQwO
+  -----END SSH SIGNATURE-----
