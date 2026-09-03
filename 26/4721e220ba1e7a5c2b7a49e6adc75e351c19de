@@ -1,0 +1,34 @@
+schema: cr/v3
+scope: "WU E-GATETRUTH.W2 (wu/gate-truth/citation-predicate) -> epic/gate-truth"
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W2
+branch: wu/gate-truth/citation-predicate
+base: b5664d9b79640ecadc452e00fe150dda64908bcb
+head: 264721e220ba1e7a5c2b7a49e6adc75e351c19de
+diff_sha256: f77f57097a692b88cde840e5fc7b456076a581c21d1fcc8195bf18070f4ef424
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 7, verified: 1, waived: 1 }
+rounds: 5
+history:
+  - { round: 1, tip: 327353f7f84cb4931637c987416cab6539d969ef, verdict: FAIL, verified: 1, what: "an amended-then-retired design reached a green merge unjudged; fixed in 9cd716c" }
+  - { round: 2, tip: d18c23feb5ae220e1eb1968d999cd5ed9ef9cad3, verdict: FAIL, verified: 4, what: "retired block unfiltered and untested; one-WU design escaped 6·doc-note; T1 and DEC-24 stale; fixed in 522413a, ccfe33d, d2d9a89" }
+  - { round: 3, tip: d2d9a89e18813d3ebe1a93876362dbfbe08a7640, verdict: FAIL, verified: 5, what: "check-6 row, doc/v1 schema owner, design-flow row, DEC-16 bullet, result blast-radius row; fixed in fdad5d4, 03b2ef5" }
+  - { round: 4, tip: 03b2ef5a1669437e1f1f82d042d11f029f392423, verdict: FAIL, verified: 3, what: "design-rubric activation row and SKILL.md blob pin stale; check-9 clause repeats check 6; fixed in 264721e, the clause waived" }
+  - { round: 5, tip: 264721e220ba1e7a5c2b7a49e6adc75e351c19de, verdict: FAIL, verified: 1 }
+verified:
+  - location: docs/work/2026-09-03-gate-truth-w2-result.html:76
+    severity: nit
+    what: "'Stale since W1' follows both skill-file items but is true only of the blob-pin form; the design rubric's activation row restated DEC-24's active reading and became stale with DEC-29 in this WU"
+waivers:
+  - finding: "the check-9 row's sub-clause 'and owed its DEC-16 archived entry in doc/v1' repeats check 6's obligation within one table (docs/workflow.html:343)"
+    reason: "verified minor in round 4: the clause is accurate, cites DEC-29, and mirrors DEC-29's consequences pairing the two checks; check 9's row is where a reader of the design section learns the second obligation; removing one clause would cost a further owner-signed T1 round for a style point"
+refuted:
+  - "SKILL.md says design-scope prints three things but it now prints four - the retired block is a subset annotation of the artifacts list ('N of them'), inside the artifacts branch; no new category or note duty"
+  - "'which design-scope prints' sends the reviewer to a silent tool for an unchanged retirement - the clause hands over the rev-parse command itself; design-scope still prints the surfaces block; the base ships the bytes (rev-parse BASE:path); the gate's fix hint and the retired-branch red name the blob"
+  - "the note-template blob slot is long and re-derives section 3b - base/head slots carry in-slot glosses too; the line is the gate's own fix hint verbatim plus the DEC tag"
+  - "the rubric row states one predicate twice - condition plus its two mechanisms is the house idiom in five artifacts; the authored case cannot be derived from the byte condition"
+  - "the 3b sentence's em-dash aside - the file's register (38 em-dashes); the spine parses"
+  - "the rubric's <commit> reads as a full sha - a metavariable; the printed 10-char form is a valid commit-ish, test-pinned"
+verdict: FAIL
+date: 2026-09-03
+note: "Gate 0 green (cached c532e14aec). design-scope: no artifact, no surface, no rendered file. Round 5. One verified nit in the result doc's dating of the round-4 deviation, fixed on the next tip rather than waived: the mr/v1 signer attests that report. The check-9 clause is the trigger's declared waiver and is recorded above."
