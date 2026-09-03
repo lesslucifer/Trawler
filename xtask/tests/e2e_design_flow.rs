@@ -483,6 +483,8 @@ fn design_scope(flow: &Flow, branch: &str) -> Scope {
         if line.contains("design artifact(s) to judge") {
             block = 0;
             scope.pin = line.trim_end_matches(':').split_whitespace().last().unwrap().to_string();
+        } else if line.contains("left the tree in this range") {
+            block = 3;
         } else if line.contains("new surface(s)") {
             block = 1;
         } else if line.contains("rendered file(s) touched") {
@@ -491,7 +493,8 @@ fn design_scope(flow: &Flow, branch: &str) -> Scope {
             match block {
                 0 => scope.artifacts.push(line.to_string()),
                 1 => scope.surfaces.push(line.to_string()),
-                _ => scope.touched.push(line.to_string()),
+                2 => scope.touched.push(line.to_string()),
+                _ => {}
             }
         }
     }

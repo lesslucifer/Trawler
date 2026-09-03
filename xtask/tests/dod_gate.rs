@@ -948,13 +948,32 @@ fn wu_building_a_component_and_retiring_its_design(amended: bool) -> (Repo, Stri
     (repo, handed_blob, last_blob)
 }
 
-fn cites_the_design(repo: &Repo, path: &str, pin: &str) -> String {
+fn v3_note_with(repo: &Repo, design: &str) -> String {
     let base = repo.sha("epic/x");
     let tip = repo.sha("wu/x/one");
     let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
-    format!(
-        "{}design:\n  implements:\n    - path: {path}\n      blob: {pin}\n      built: [ui/src/components/StatusPill.tsx]\n",
-        cr_note("E9", Some("E9.W1"), &base, &sha, "PASS").replace("cr/v2", "cr/v3")
+    cr_note_v3(&base, &sha, design)
+}
+
+fn implements(path: &str, pin: &str) -> String {
+    format!("  implements:\n    - path: {path}\n      blob: {pin}\n      built: [ui/src/components/StatusPill.tsx]\n")
+}
+
+fn cites_the_design(repo: &Repo, path: &str, pin: &str) -> String {
+    v3_note_with(repo, &format!("design:\n{}", implements(path, pin)))
+}
+
+/// The note a build writes when it also amended (or authored) the design it
+/// retired: Tier-3's judgment of the design's last state, and the citation.
+fn judges_and_cites_the_design(repo: &Repo, pin: &str) -> String {
+    let tip = repo.sha("wu/x/one");
+    v3_note_with(
+        repo,
+        &format!(
+            "{}{}",
+            design_section(&[COMPONENT_DESIGN], &pin_of(repo, &tip), "PASS"),
+            implements(COMPONENT_DESIGN, pin)
+        ),
     )
 }
 
@@ -1036,9 +1055,75 @@ fn a_design_amended_then_retired_in_one_wu_is_cited_at_its_last_state_not_its_fi
     );
     assert!(format_report(&report).contains(&format!("was last shipped at {}", &last[..7])));
 
+    // Re-pinned, the citation resolves - and the amendment itself is still a design
+    // artifact this WU carried, which nobody judged: DEC-25 D1a re-enters Tier-3 on
+    // the merge that lands an amendment, whether or not the file also left the tree.
     repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, &last[..7]));
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
-    assert!(report.green(), "re-pinned to the last state, it lands: {}", format_report(&report));
+    assert!(checks_of(&report).iter().all(|c| *c == "9·design"), "{}", format_report(&report));
+    assert!(
+        format_report(&report).contains(&format!(
+            "{COMPONENT_DESIGN} is a design artifact the design section does not name"
+        )),
+        "an amended-then-retired design is judged at its last state: {}",
+        format_report(&report)
+    );
+
+    repo.note("cr", &tip, &judges_and_cites_the_design(&repo, &last[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        report.green(),
+        "judged and re-pinned to the last state, it lands: {}",
+        format_report(&report)
+    );
+}
+
+// The one-WU design: authored, built and retired between the same base and tip,
+// so the endpoint diff never shows the file at all. Nobody judged it before this
+// merge, and this merge is the only one that can.
+#[test]
+fn a_design_authored_built_and_retired_in_one_wu_is_judged_by_that_wu() {
+    let repo = Repo::new();
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    repo.write(
+        COMPONENT_DESIGN,
+        "<html><body>the StatusPill contract, designed here</body></html>\n",
+    );
+    let designed = repo.commit("design the pill");
+    let blob = repo.git(&["rev-parse", &format!("{designed}:{COMPONENT_DESIGN}")]);
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\n");
+    repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
+    repo.write("ui/src/components/StatusPill.tsx", PILL_WITH_CARRIERS);
+    std::fs::remove_file(repo.path.join(COMPONENT_DESIGN)).unwrap();
+    let tip = repo.commit("build the pill and retire its design");
+    // The default doc note: the endpoint diff never touches the design, so no
+    // entry is owed for it, and a phantom one is refused by 6·doc-note.
+    bless_wu(&repo, &tip);
+    assert!(
+        !xtask::git::diff_names(&repo.path, &repo.sha("epic/x"), &tip)
+            .unwrap()
+            .contains(&COMPONENT_DESIGN.to_string()),
+        "the endpoint diff nets the design out - only the range knows it existed"
+    );
+
+    repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, &blob[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(checks_of(&report).iter().all(|c| *c == "9·design"), "{}", format_report(&report));
+    assert!(
+        format_report(&report).contains("is a design artifact the design section does not name"),
+        "a design nobody judged is refused even though the citation resolves: {}",
+        format_report(&report)
+    );
+
+    repo.note("cr", &tip, &judges_and_cites_the_design(&repo, &blob[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        report.green(),
+        "judged at its last state and cited, it lands: {}",
+        format_report(&report)
+    );
 }
 
 // The case an added-only trigger can never see: a Working Unit that re-shapes a

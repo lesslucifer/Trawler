@@ -33,6 +33,14 @@ const DESIGN_SCHEMA: &str = "9·design-schema";
 const DESIGN: &str = "9·design";
 const UNBUILT: &str = "components·unbuilt";
 
+/// A component design the Working Unit retired at bytes its base never held,
+/// read at the last commit that shipped them.
+pub struct RetiredDesign {
+    pub path: String,
+    pub commit: String,
+    pub html: String,
+}
+
 // Where a citation resolved: at the tip (`retired_at: None`), or at the last
 // commit reachable from it that still held the path.
 struct Resolved {
@@ -120,12 +128,22 @@ impl Gate<'_> {
         // the walk calls verify once per seam, so a per-site fetch multiplies whole
         // sweeps of `git show` by the number of seams.
         let docs = if level == Level::Commit { Vec::new() } else { self.doc_blobs(&tip, &names) };
+        // What Tier-3 must have judged: the docs at the tip, and - at the seam that
+        // built and retired it - a component design whose last state the base never
+        // held (DEC-25 D1a). The tip is where the walk re-reads a seam, so the same
+        // set comes back at every re-verification.
+        let mut judged = docs.clone();
+        if level == Level::Wu {
+            judged.extend(
+                self.retired_designs(&base, &tip, &names).into_iter().map(|d| (d.path, d.html)),
+            );
+        }
         // A design is a docs-only deliverable, so the docs/infra exemption would
         // hand the design dimension exactly the diffs it exists to judge - the
         // most common design Working Unit writes a run and no code at all. The
         // merge that closes a design is answerable for it whether or not any
         // code moved, for the same reason `6·run-closed` already is.
-        let designs = !design_artifacts_of(&docs).is_empty();
+        let designs = !design_artifacts_of(&judged).is_empty();
         let gated = code_changed || designs;
         let mut report = Report {
             level,
@@ -155,7 +173,7 @@ impl Gate<'_> {
         check_manifest(&mut report, parsed.test.as_ref());
         if level != Level::Commit {
             check_review(&mut report, parsed.cr.as_ref());
-            self.check_design(&mut report, parsed.cr.as_ref(), &docs);
+            self.check_design(&mut report, parsed.cr.as_ref(), &judged);
         }
         // A citation is answered by the Working Unit that built the surface - its
         // tip, or its tip's history (DEC-28). The epic re-asks the question where
@@ -371,8 +389,40 @@ impl Gate<'_> {
             .collect()
     }
 
-    pub fn design_artifacts(&self, tip: &str, names: &[String]) -> Vec<String> {
-        design_artifacts_of(&self.doc_blobs(tip, names))
+    /// Every design artifact a Working Unit seam must have judged - what
+    /// `design-scope` prints and what `9·design` demands, from one function.
+    pub fn design_artifacts(&self, base: &str, tip: &str, names: &[String]) -> Vec<String> {
+        let mut docs = self.doc_blobs(tip, names);
+        docs.extend(self.retired_designs(base, tip, names).into_iter().map(|d| (d.path, d.html)));
+        design_artifacts_of(&docs)
+    }
+
+    // A component design the range removed whose last state the base never held:
+    // amended before DEC-16 retired it, or authored and retired between the same
+    // base and tip. Either way those bytes were read by a build and judged by
+    // nobody, and the endpoint diff cannot show them - an authored-and-retired
+    // file nets out of it entirely, which is why the range's adds are consulted.
+    pub fn retired_designs(&self, base: &str, tip: &str, names: &[String]) -> Vec<RetiredDesign> {
+        let mut candidates: Vec<String> = names
+            .iter()
+            .filter(|p| p.starts_with(crate::doc::COMPONENTS))
+            .cloned()
+            .chain(crate::git::added_under(self.repo, base, tip, crate::doc::COMPONENTS))
+            .collect();
+        candidates.sort();
+        candidates.dedup();
+        candidates
+            .into_iter()
+            .filter(|path| crate::git::blob_of(self.repo, tip, path).is_none())
+            .filter_map(|path| {
+                let (commit, blob) = crate::git::last_state(self.repo, tip, &path)?;
+                if crate::git::blob_of(self.repo, base, &path).as_deref() == Some(blob.as_str()) {
+                    return None;
+                }
+                let html = crate::git::read_utf8_at(self.repo, &commit, &path)?;
+                Some(RetiredDesign { path, commit, html })
+            })
+            .collect()
     }
 
     // Tier-3, enforced where Tier-2 could not be: the design dimension of the
@@ -1235,6 +1285,7 @@ mod tests {
         tip: String,
         later: String,
         blob: String,
+        handed_blob: String,
         retired_blob: String,
     }
 
@@ -1262,9 +1313,16 @@ mod tests {
         g(&["config", "commit.gpgsign", "false"]);
         write("src/lib.rs", "pub fn base() {}\n");
         write("ui/src/components/Section.tsx", "/**\n * Section.\n * @tier T2\n */\n");
-        write(RETIRED_DESIGN, "<html>the Badge contract, built and retired here</html>\n");
+        write(RETIRED_DESIGN, "<html>the Badge contract</html>\n");
         let base = commit("base");
-        let retired_blob = g(&["rev-parse", &format!("{base}:{RETIRED_DESIGN}")]);
+        let handed_blob = g(&["rev-parse", &format!("{base}:{RETIRED_DESIGN}")]);
+
+        write(
+            RETIRED_DESIGN,
+            "<html>the Badge contract, amended before the build read it</html>\n",
+        );
+        let amended = commit("amend the badge design");
+        let retired_blob = g(&["rev-parse", &format!("{amended}:{RETIRED_DESIGN}")]);
 
         write(PILL_DESIGN, "<html>the StatusPill contract</html>\n");
         write("docs/work/plan.html", "<html>a plan, not a design</html>\n");
@@ -1279,14 +1337,14 @@ mod tests {
         write("ui/src/components/StatusPill.test.tsx", "test('x', () => {});\n");
         write("ui/src/Section.notes.ts", "export const notes = 1;\n");
         std::fs::remove_file(repo.join(RETIRED_DESIGN)).unwrap();
-        let tip = commit("build the pill, retire the badge design");
+        let tip = commit("build the pill, retire the amended badge design");
         let blob = g(&["rev-parse", &format!("{tip}:{PILL_DESIGN}")]);
 
         write(PILL, "/**\n * StatusPill, revised.\n * @tier T1\n */\n");
         std::fs::remove_file(repo.join("ui/src/components/Section.tsx")).unwrap();
         let later = commit("revise the pill, retire Section");
 
-        Built { _dir: dir, repo, base, tip, later, blob, retired_blob }
+        Built { _dir: dir, repo, base, tip, later, blob, handed_blob, retired_blob }
     }
 
     fn note_yaml(schema: &str, base: &str, design: &str) -> String {
@@ -1351,6 +1409,7 @@ mod tests {
             (cite("docs/work/gone.html", blob), "no commit reachable from the tip ever shipped"),
             (cite(PILL_DESIGN, "0000000"), "this tip ships"),
             (cite(RETIRED_DESIGN, "0000000"), "before it left the tree"),
+            (cite(RETIRED_DESIGN, &built.handed_blob[..7]), "before it left the tree"),
             (cite(PILL_DESIGN, "abc"), "names no blob"),
             (cite("docs/work/plan.html", blob), "not a design artifact"),
             (cite("docs/work/run-5.html", blob), "not archived"),
@@ -1375,6 +1434,42 @@ mod tests {
         assert!(
             checked(&v3(&cite(RETIRED_DESIGN, &built.retired_blob[..7]))).is_empty(),
             "a design retired in this diff resolves at its last state, and the pin matches it (DEC-28)"
+        );
+    }
+
+    // The design a build WU amended and retired is judged at that seam, from the
+    // bytes history kept; one it retired unchanged was judged where it landed.
+    #[test]
+    fn a_design_retired_at_bytes_the_base_never_held_is_an_artifact_the_seam_judges() {
+        let built = a_repo_that_builds_then_re_shapes_a_pill();
+        let gate = Gate { repo: &built.repo };
+        let names = crate::git::diff_names(&built.repo, &built.base, &built.tip).unwrap();
+
+        let retired = gate.retired_designs(&built.base, &built.tip, &names);
+        assert_eq!(retired.len(), 1, "one design left the tree at amended bytes");
+        assert_eq!(retired[0].path, RETIRED_DESIGN);
+        assert!(
+            retired[0].html.contains("amended before the build read it"),
+            "the last state's bytes"
+        );
+        assert_eq!(
+            crate::git::blob_of(&built.repo, &retired[0].commit, RETIRED_DESIGN).unwrap()[..7],
+            built.retired_blob[..7]
+        );
+        let mut artifacts = gate.design_artifacts(&built.base, &built.tip, &names);
+        artifacts.sort();
+        assert_eq!(
+            artifacts,
+            vec![RETIRED_DESIGN.to_string(), PILL_DESIGN.to_string()],
+            "design-scope and the gate list the retired design beside the one the tip ships"
+        );
+
+        let amend =
+            crate::git::git(&built.repo, &["rev-parse", &format!("{}^", built.tip)]).unwrap();
+        let unchanged = crate::git::diff_names(&built.repo, &amend, &built.tip).unwrap();
+        assert!(
+            gate.retired_designs(&amend, &built.tip, &unchanged).is_empty(),
+            "retired at the bytes the base already held - judged where it landed, not here"
         );
     }
 
