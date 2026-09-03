@@ -13,7 +13,7 @@
         commit is never called a failure and a real failure quotes git's own line instead of the message body. Check 8
         classifies an <code>mr/v1</code> note into one of six leaves and prints the one it reached, so a roster this
         checkout never had a key for no longer reads as a missing note. What the gate accepts did not move.</p>
-      <div class="meta">WU result v1 · 2026-09-03 · Trawler · T3 (docs/work/) ·
+      <div class="meta">WU result v2 · 2026-09-03 · Trawler · T3 (docs/work/) ·
         <code>wu/gate-truth/name-the-cause</code> → <code>epic/gate-truth</code> ·
         <a href="2026-09-03-gate-truth-w3-plan.html">WU plan</a> · <a href="2026-09-03-gate-truth-plan.html">epic plan</a> ·
         <span class="badge id">E-GATETRUTH.W3</span></div>
@@ -68,6 +68,12 @@
           <tr><td>clippy was clean before the commit</td>
             <td>it was not: my run omitted <code>--workspace</code>, so only the root package was linted while the finding was in <code>xtask</code>'s test target. The pre-commit hook lints the workspace and refused the commit</td>
             <td>the hook's exact invocation is what a check must reproduce. Recorded here because the gap was in the verification, not the code</td></tr>
+          <tr><td>the fixtures at all three levels assert what they claim</td>
+            <td><span class="badge approval">added by the review, round 1</span> one did not. <code>no_verdict_echoes_the_commit_message_body</code> built its fixture string to contain the body line and then accepted the verdict if <em>either</em> the verdict lacked the body <em>or</em> the fixture contained it — a tautology, so its four iterations could not fail. The verifier proved it by reintroducing the P2a bug (appending git's stdout to every verdict) and watching the test pass</td>
+            <td>the fixture's git output no longer mentions the body, so the assertion is about what the code adds rather than what it was handed, and both claims are checked in every quadrant. Proof it now bites: with the verdict re-formatted to quote the argument vector as <code>git_env</code> did, the test fails; restored, it passes. The intent was never unguarded — the sibling integration test drives a hook-refused commit end to end with no escape clause — but a regression guard that cannot fail misreports its own coverage</td></tr>
+          <tr><td>the doc comments say each thing once</td>
+            <td><span class="badge approval">added by the review, round 1</span> <code>authorisation</code> and <code>tip_authorised</code> carried the same predicate sentence twice, against the project's comment convention</td>
+            <td>the description lives on <code>authorisation</code>, which implements it; <code>tip_authorised</code> says it is the boolean collapse</td></tr>
         </tbody>
       </table>
     </div>
@@ -90,6 +96,8 @@
           <tr><td>regression proof, P3</td><td>with <code>check_manual_review</code> reverted to the single "has no valid mr/v1 note" sentence: 5 of the 6 new <code>dod_gate</code> tests FAILED, 77 of 82 passed. The sixth is the invariant test above, which correctly passes both ways. Restored: 82 passed</td></tr>
           <tr><td>everything else still green</td><td><code>cargo test -p xtask --all-features</code>: lib 225, <code>dod_gate</code> 82, <code>mr</code> 56, <code>e2e_design_flow</code> 4, <code>verify_doc</code> 9, <code>doc_hooks</code> 8, <code>gate0_cache</code> 5, <code>debug_serve</code> 2, <code>ui</code> 1 — all pass. <code>cargo test --all-features</code> over the root package: green. <code>cargo clippy --workspace --all-targets --all-features -D warnings</code> clean; <code>cargo fmt --all --check</code> clean</td></tr>
           <tr><td>docs green</td><td><code>cargo xtask verify-doc</code> over the WU plan and this result; every relative <code>href</code> and anchor they add resolves on disk</td></tr>
+          <tr><td>what the review found</td>
+            <td>round 1 over <code>917fff4..a1f60f8</code>: Gate 0 green, no design artifact, five finders. Correctness and altitude returned empty — correctness proved <code>tip_authorised</code>'s truth table unchanged for every input (including the reordered identity-only-listing case) and <code>git_env</code>'s Ok and Err values byte-identical; altitude confirmed every non-goal held and that the workflow standard's check-8 row needs no edit. Eight candidates went to verification: <strong>one verified real</strong> (the tautological assertion, fixed in <code>96ae46f</code>), one verified real as a nit (the duplicated predicate comment, fixed in the same commit), six refuted — the two extra <code>rev-parse</code> spawns are the fix's mechanism on a human-invoked command, the empty-stderr allocation is nanoseconds against a millisecond spawn, the private note-body helpers cannot be shared because integration tests link as external consumers so <code>pub(crate)</code> is unreachable and the four sites build deliberately different note shapes, the fourth verdict quadrant is a required arm of an exhaustive match with its own passing test, <code>Unreadable</code>'s <code>Option</code> is load-bearing because a parse failure yields no schema string at all, and migrating <code>diff_sha256</code> onto <code>Outcome</code> would corrupt the hash by trimming bytes</td></tr>
         </tbody>
       </table>
     </div>
