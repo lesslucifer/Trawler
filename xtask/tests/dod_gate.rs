@@ -2092,7 +2092,7 @@ fn a_signature_this_checkouts_roster_lists_no_key_for_names_the_signer_and_the_r
     let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
     assert!(report.green(), "the roster lists the key: {}", format_report(&report));
 
-    // The DEC-10 shape (Hình 7): repo-wide note, per-checkout roster without it.
+    // The DEC-10 shape: a repo-wide note, a per-checkout roster without it.
     repo.write(".mr-allowed", "email: a@b.co\n");
     let out = check_8_message(&repo);
 

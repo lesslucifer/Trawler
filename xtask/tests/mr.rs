@@ -1334,11 +1334,10 @@ fn settle_for_a_gated_merge(repo: &Repo, tip: &str) {
     ]);
 }
 
-/// E-GATETRUTH.W3 — Hình 7 end to end: notes are repo-wide, the roster is
-/// per-worktree. Worktree A signs; worktree B merges and must be told which of
-/// the two it is missing. `.mr-allowed` is gitignored, exactly the DEC-10
-/// layout — a committed roster would follow the checkout and the gap would
-/// never open, so the fixture would prove nothing.
+/// Notes are repo-wide, the roster is per-worktree: worktree A signs, worktree
+/// B merges and must be told which of the two it is missing. `.mr-allowed` is
+/// gitignored, exactly the DEC-10 layout — a committed roster would follow the
+/// checkout and the gap would never open, so the fixture would prove nothing.
 #[cfg(unix)]
 #[test]
 fn e2e_a_merge_judged_from_a_worktree_without_the_signers_key_says_so_and_lands_once_listed() {
