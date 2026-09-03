@@ -1,0 +1,13 @@
+schema: cr/v3
+scope: "WU E-GATETRUTH.W1 (wu/gate-truth/citation-after-retirement) -> epic/gate-truth"
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W1
+branch: wu/gate-truth/citation-after-retirement
+base: 1c8d587a7b9b3f0750e0d98a3ddccd4f9ff1d618
+head: f8022ba769e45abe4b610aca2c20e83b76f1a03a
+diff_sha256: b2a56bcb951c86476aafada4429baf4383a181398bc4f548bbd76c656494a21b
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 1, waived: 0 }
+verdict: FAIL
+date: 2026-09-03
+note: "Gate 0 green (cached 232034ad9e). design-scope: no artifact, no surface, no rendered file in 1c8d587a7b..f8022ba769 - no design section. Nine candidates across five dimensions (reuse 0, simplification 2, efficiency 3, altitude 3, correctness 1); eight refuted on independent verification - the DEC-25 callout and the W1 result follow-ups restate DEC-28 at the same or a lower tier, which the one-fact-per-tier rule (directional, never duplicate DOWN; each doc stands alone; W11's cr note precedent) permits; the PIN_MIN row belongs to a table scoped to the whole predicate; the mermaid node 'first commit at which the path exists = last state L' is disambiguated by its own label, the Choice callout and the 'why the last state' section; naming a git shape in a T2 record is house style (DEC-16, DEC-25, DEC-9/10) and the record's 'the code wins' clause grants W2 latitude; DEC-11 imposes no per-predicate caching obligation and the fallback fires only off the hot path. One verified, nit: dec-28-citation-after-retirement.html:66 and the epic plan's inherited callout say E-DFLOW landed 25 registry components under cr/v2 notes; git ls-tree at W5's tip (21f8192) and at the merge into main (5d251c4) count 24, added at that single seam whose cr note is cr/v2 - the argument holds, the number is off by one. FAIL on that unwaived nit; the fix is a docs-only correction and a re-review of the fixed tip."
