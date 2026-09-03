@@ -1,0 +1,27 @@
+schema: cr/v3
+scope: "WU E-GATETRUTH.W2 (wu/gate-truth/citation-predicate) -> epic/gate-truth"
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W2
+branch: wu/gate-truth/citation-predicate
+base: b5664d9b79640ecadc452e00fe150dda64908bcb
+head: 3879e344d10b146ad9c2eab96d169f3332dc4207
+diff_sha256: 25127d18665845b7a10ba597b8b04bf5e8571368967796fae417a830611466f4
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 1, verified: 0, waived: 1 }
+rounds: 7
+history:
+  - { round: 1, tip: 327353f7f84cb4931637c987416cab6539d969ef, verdict: FAIL, verified: 1, what: "an amended-then-retired design reached a green merge with no Tier-3 verdict once the citation resolved through history; fixed in 9cd716c (retired_designs at Level::Wu, joined into design_artifacts)" }
+  - { round: 2, tip: d18c23feb5ae220e1eb1968d999cd5ed9ef9cad3, verdict: FAIL, verified: 4, what: "design-scope's retired block unfiltered and untested; a design authored and retired in one WU escaped 6·doc-note and had its archived entry refused as a phantom; T1 rows and DEC-24 stated the old activation; fixed in 522413a, ccfe33d (DEC-29), d2d9a89" }
+  - { round: 3, tip: d2d9a89e18813d3ebe1a93876362dbfbe08a7640, verdict: FAIL, verified: 5, what: "check-6 row, doc/v1 schema owner, design-flow row, DEC-16's Tier-3 exclusion bullet and the result doc's blast-radius row still stated the old rules; fixed in fdad5d4, 03b2ef5" }
+  - { round: 4, tip: 03b2ef5a1669437e1f1f82d042d11f029f392423, verdict: FAIL, verified: 3, what: "the review skill's own design-rubric activation row and blob-pin form stated the superseded rules; the check-9 row's one-clause repeat of check 6; fixed in 264721e, the clause waived" }
+  - { round: 5, tip: 264721e220ba1e7a5c2b7a49e6adc75e351c19de, verdict: FAIL, verified: 1, what: "the round-4 deviation row dated both skill items since W1; fixed in 175ccb1" }
+  - { round: 6, tip: 175ccb1f7cc8130ee706ff4ff8f7809db62d5fc0, verdict: FAIL, verified: 1, what: "the regression-proof row described the base-gate swap as run at the tip; fixed in 3879e34 and in the test note" }
+  - { round: 7, tip: 3879e344d10b146ad9c2eab96d169f3332dc4207, verdict: PASS, verified: 0, what: "one candidate - the outcome row's present-tense summary of the swap - refuted: the outcome column states the fixture's discriminating property and the evidence row owns the method and its caveat, the doc's uniform convention" }
+waivers:
+  - finding: "the check-9 row's sub-clause 'and owed its DEC-16 archived entry in doc/v1' repeats check 6's obligation within one table (docs/workflow.html:343)"
+    reason: "verified minor in round 4: the clause is accurate, cites DEC-29, and mirrors DEC-29's consequences pairing the two checks; check 9's row is where a reader of the design section learns the second obligation; removing one clause would cost a further owner-signed T1 round for a T1 style point"
+refuted:
+  - "the outcome row 'all four dod_gate fixtures fail with the previous gate.rs and git.rs swapped back in' lacks the tip-compile caveat - the outcome column is a verdict, the evidence row two sections below carries the run's commit (bfd33f1) and the caveat, per the WU-result checklist's outcome/evidence split; every sibling row follows the same shape"
+verdict: PASS
+date: 2026-09-03
+note: "Gate 0 green (cached 6ea248dd4c). design-scope: no artifact, no surface, no rendered file in b5664d9..3879e34 - no design section. Seven rounds. W2 codes DEC-28 (check_citation resolves a path the tip does not ship at its last state reachable from the tip, two refusals naming the failed half, the fix hint covering a retired design) and, through the review, DEC-29 (a component design the WU retired at bytes its base never held is an artifact of that seam for 9·design and 6·doc-note, through the function design-scope shares). Fifteen verified findings across rounds 1-6, every one fixed on the branch with a failing test first where code moved; sixty-odd candidates refuted on independent verification, each recorded on its round's tip. The code has been untouched since round 3 (522413a) and clean on every dimension since; rounds 3-6 were the tiers and the reviewer's own instructions catching up with DEC-29, three T1 edits under the owner's trailers. One waiver, recorded above."
