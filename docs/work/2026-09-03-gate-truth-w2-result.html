@@ -14,7 +14,7 @@
         shipped and a blob the path never carried are red, each naming the half that failed. The review found what
         the widening exposed — a design amended or authored and then retired in one WU reached the merge judged by
         nobody — and that became DEC-29.</p>
-      <div class="meta">WU result v6 · 2026-09-03 · Trawler · T3 (docs/work/) ·
+      <div class="meta">WU result v7 · 2026-09-03 · Trawler · T3 (docs/work/) ·
         <code>wu/gate-truth/citation-predicate</code> → <code>epic/gate-truth</code> ·
         <a href="2026-09-03-gate-truth-w2-plan.html">WU plan</a> · <a href="2026-09-03-gate-truth-plan.html">epic plan</a> ·
         <span class="badge id">E-GATETRUTH.W2</span></div>
@@ -99,7 +99,7 @@
             <td><code>xtask/tests/dod_gate.rs</code>: <code>a_build_that_retires_the_design_it_cites_lands_and_the_epic_walk_agrees</code> · <code>a_citation_of_a_path_no_reachable_commit_ever_shipped_is_still_refused</code> · <code>a_citation_of_bytes_a_retired_design_never_carried_names_its_last_state</code> · <code>a_design_amended_then_retired_in_one_wu_is_cited_at_its_last_state_not_its_first</code></td></tr>
           <tr><td>the fixture is legal on check 6 too</td><td>the same fixture's <code>doc/v1</code> entry: <code>action: archived</code>, <code>distilled_to</code> naming <code>@states</code> and <code>@use</code>, which <code>PILL_WITH_CARRIERS</code> carries</td></tr>
           <tr><td>the merge the blocker refused, through the real hook</td><td><code>xtask/tests/e2e_design_flow.rs</code>: <code>build_the_pill_and_retire_its_design</code> and step ③ of <code>a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it</code></td></tr>
-          <tr><td>regression proof</td><td>with the epic tip's <code>gate.rs</code> and <code>git.rs</code> in the tree, <code>cargo test -p xtask --all-features --test dod_gate</code> reports the four History B tests FAILED and 70 passed; each review-driven test was red before its fix commit and green after; at the tip, 76 passed</td></tr>
+          <tr><td>regression proof</td><td>run at <code>bfd33f1</code>, the first W2 code commit, where <code>lib.rs</code> was still the epic tip's: with the epic tip's <code>gate.rs</code> and <code>git.rs</code> swapped into that tree, <code>cargo test -p xtask --all-features --test dod_gate</code> reported the four History B tests FAILED and 70 of 74 passed; restored, 74 passed. The swap no longer compiles at the tip (<code>lib.rs</code> calls <code>retired_designs</code>). Each review-driven test was red before its fix commit and green after; at the tip, 76 pass</td></tr>
           <tr><td>everything else still green</td><td><code>cargo test -p xtask --all-features</code>: lib, <code>dod_gate</code>, <code>e2e_design_flow</code>, <code>mr</code>, <code>verify_doc</code>, <code>doc_hooks</code>, <code>gate0_cache</code>, <code>ui</code> all pass; <code>cargo clippy --all-features --all-targets -D warnings</code> clean</td></tr>
           <tr><td>docs green</td><td><code>cargo xtask verify-doc</code> over the WU plan and this result; every relative <code>href</code> they add resolves on disk</td></tr>
         </tbody>
