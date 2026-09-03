@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a990daa9f34851f0dfabeef">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATETRUTH.W2 plan (implement the citation predicate)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-GATETRUTH.W2 — implement the citation predicate</h1>
+      <p>The gate encodes DEC-28: a citation the tip does not ship resolves at the path's last state reachable
+        from the tip. Green on the history every build WU now produces, red on a path nobody shipped and on a
+        blob the path never carried — each refusal naming the half that failed.</p>
+      <div class="meta">WU plan · 2026-09-03 · Trawler · T3 (docs/work/) ·
+        <code>wu/gate-truth/citation-predicate</code> off <code>epic/gate-truth</code> @ <code>b5664d9</code> ·
+        <a href="2026-09-03-gate-truth-plan.html">epic plan</a> · <a href="2026-09-03-gate-truth-w1-result.html">W1 result</a> ·
+        <span class="badge id">E-GATETRUTH.W2</span></div>
+    </div>
+  </header>
+  <main data-artifact="wu-plan">
+
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement">
+      <strong><code>check_citation</code> implements <a href="../decisions/dec-28-citation-after-retirement.html">DEC-28</a>:
+      when the WU tip does not ship a cited path, the citation resolves at that path's last state reachable
+      from the tip and is green when the pin matches that state; a path no reachable commit ever held, and a pin
+      that differs from the last state, are still refused — each by a message naming the half that failed (path
+      or blob) — and the <code>check_handoff</code> fix hint says where to read the blob for a retired path.
+      The fixtures that would have caught P1 exist at all three test levels.</strong>
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <div data-item="maps-to">
+      <table>
+        <thead><tr><th>Serves</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td><a href="2026-09-03-gate-truth-plan.html#w2">E-GATETRUTH · W2</a> · problem <span class="badge id">P1</span></td>
+            <td>the summary block's promise: <code>check_citation</code> encodes W1's decided predicate; the regression history that would have caught P1</td></tr>
+          <tr><td><a href="2026-09-03-gate-truth-plan.html#expected">epic expected results 1 and 2</a></td>
+            <td>1: the legal history passes check 9 and the epic walk · 2: a fabricated path and an unpinnable blob stay refused</td></tr>
+          <tr><td><a href="../decisions/dec-28-citation-after-retirement.html#choice">DEC-28</a></td>
+            <td>implements its predicate exactly — the flow and the case table; its consequences list names what this WU owes</td></tr>
+          <tr><td><a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a></td>
+            <td>untouched — the three halves, the blob pin, the no-conformance rule; only the tip clause DEC-28 superseded moves in code</td></tr>
+          <tr><td><a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a></td>
+            <td>untouched — the fixtures retire in DEC-16 order and pass <code>6·retirement-order</code> on their own merit</td></tr>
+          <tr><td><a href="2026-09-03-gate-truth-plan.html#e2e">epic E2E steps 1 and 4</a></td>
+            <td>this WU's fixture is the history those steps build; the composed run over all four fixes stays owed at the epic close</td></tr>
+        </tbody>
+      </table>
+      <p>A process epic: no <code>UC-*</code> is delivered or changed. No rule changes — W1 wrote the rule; this WU makes the code agree with it.</p>
+    </div>
+
+    <h2 id="design">The change</h2>
+    <div class="diagram" data-c="branch">
+      <pre class="mermaid">
+flowchart LR
+  subgraph today["check_citation today — untouched left branch"]
+    T{"git show tip:path"} -- ships --> P{"pin matches?"} -- yes --> A["decode · design artifact · archived if a run"]
+    P -- no --> R1["red: re-pin to the tip's blob"]
+  end
+  T -- "absent" --> L{"newest commit reachable from tip<br/>whose tree holds path"}
+  L -- none --> R2["red · path half<br/>no commit reachable from the tip ever shipped path"]
+  L -- "L, blob b" --> M{"pin matches b?"}
+  M -- no --> R3["red · blob half<br/>path was last shipped at b (L), the build cites pin — re-read and re-pin"]
+  M -- yes --> A
+  style L fill:#1f2a3a,stroke:#5b8def
+  style M fill:#1f2a3a,stroke:#5b8def
+      </pre>
+      <div class="caption">Hình 1 — the new right branch, joined to the existing tail. Everything after resolution runs over the bytes history returned, unchanged. Today's "does not resolve at the tip" refusal is replaced by the two halves; no other message on the left branch moves.</div>
+    </div>
+
+    <table data-c="touches">
+      <thead><tr><th>Where</th><th>What changes</th><th>Guardrail</th></tr></thead>
+      <tbody>
+        <tr><td><code>xtask/src/git.rs</code></td>
+          <td>one helper answering DEC-28's reach question: for <code>(tip, path)</code>, the newest commit reachable from <code>tip</code> whose tree holds <code>path</code>, and the blob it holds — <code>None</code> when no reachable commit ever held it</td>
+          <td><code>--full-history</code> is load-bearing, for the reason <code>added_under</code> already records: a path added and removed inside one branch is exactly what default simplification hides. The reach is <code>tip</code>'s history, never <code>base..tip</code> — DEC-28 §reach</td></tr>
+        <tr><td><code>xtask/src/gate.rs</code> · <code>check_citation</code></td>
+          <td>the absent-at-tip arm resolves via the helper instead of refusing; the two new refusals name the path half and the blob half; the resolved bytes flow into the unchanged decode / artifact / run checks</td>
+          <td>the left branch is byte-for-byte today's behaviour: pin-too-short, stale-pin-at-tip, not-UTF-8, not-a-design, open-run messages unchanged. No content judgment enters — DEC-25's no-conformance rule holds</td></tr>
+        <tr><td><code>xtask/src/gate.rs</code> · <code>check_handoff</code></td>
+          <td>the fix hint gains the retired case: how to read the blob when the design left the tree in this WU</td>
+          <td>one hint, two readings — the tip's blob or the last state's; no new note field, the shape stays <code>path · blob · built</code></td></tr>
+        <tr><td><code>xtask/src/gate.rs</code> · tests</td>
+          <td>the in-crate case table gains the three right-branch rows</td>
+          <td>rows, not a new test — the table already drives every way a citation fails</td></tr>
+        <tr><td><code>xtask/tests/dod_gate.rs</code></td>
+          <td>a History B fixture and the two negatives; the epic walk over the History B seam</td>
+          <td>the existing tip-resolution tests stay and stay green — the fix widens where a citation resolves, never whether it is checked</td></tr>
+        <tr><td><code>xtask/tests/e2e_design_flow.rs</code></td>
+          <td>the build leg retires the design inside the build WU and lands through the real merge hook</td>
+          <td>the fixture must also satisfy <code>6·retirement-order</code> — see below</td></tr>
+        <tr><td><code>src/</code> · <code>ui/</code> · <code>docs/</code> outside <code>docs/work/</code></td><td>nothing</td><td>the WU diff</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="fixture-constraint">
+      <strong>The fixture has to be legal all the way, not just on check 9.</strong> Deleting a design file
+      inside the build WU also fires <code>6·retirement-order</code>: the <code>doc/v1</code> note must carry the
+      file as <code>action: archived</code> with a <code>distilled_to</code> that names a T2 record or a TSDoc carrier
+      (<code>@use · @avoid · @states · @madeof · @tier</code>). The e2e's <code>PILL_SOURCE</code> already carries all
+      five, so the dead-end form the existing retirement test uses
+      (<code>a_dead_end_that_names_what_carries_the_fork_retires_the_file</code>) is the pattern. A fixture that
+      greens check 9 and reds check 6 has not reproduced History B — it has reproduced a different bug.
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <thead><tr><th>#</th><th>Observable after</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>History B — design present at the base, component added and design deleted inside the WU, <code>cr/v3</code> note pinning the design's blob — is <span class="badge auto">green</span> at the WU merge and at the epic walk over that seam</td><td><code>xtask/tests/dod_gate.rs</code></td></tr>
+          <tr><td>2</td><td>the same history with a path no reachable commit ever held is <span class="badge approval">red</span> on <code>9·design</code>, and the message says no commit reachable from the tip ever shipped it — not "at the tip"</td><td><code>xtask/tests/dod_gate.rs</code> · <code>xtask/src/gate.rs</code> tests</td></tr>
+          <tr><td>3</td><td>the same history with a pin the path never carried is <span class="badge approval">red</span> on <code>9·design</code>, and the message names the last state's blob and the pin</td><td>same</td></tr>
+          <tr><td>4</td><td>a design amended then retired in one WU, cited at its pre-amendment blob, is <span class="badge approval">red</span> by the same blob-half message — the last state, not any state (DEC-28 §last-state)</td><td><code>xtask/tests/dod_gate.rs</code></td></tr>
+          <tr><td>5</td><td>a path present on a branch not reachable from the tip does not resolve — refused on the path half</td><td><code>xtask/src/git.rs</code> tests</td></tr>
+          <tr><td>6</td><td>every refusal on today's left branch prints the same message it prints today; the existing tip-resolution tests are unedited and green</td><td><code>xtask/src/gate.rs</code> · <code>xtask/tests/dod_gate.rs</code></td></tr>
+          <tr><td>7</td><td>the <code>check_handoff</code> fix hint tells a reader with a retired design where to read its blob</td><td><code>xtask/src/gate.rs</code></td></tr>
+          <tr><td>8</td><td>the hand-over e2e's build leg retires the design inside the build WU, and the merge lands through the installed hook — the leg E-DFLOW never exercised</td><td><code>xtask/tests/e2e_design_flow.rs</code></td></tr>
+          <tr><td>9</td><td>the common path costs nothing extra: the history lookup runs only when the tip lacks the path</td><td><code>xtask/src/gate.rs</code></td></tr>
+          <tr><td>10</td><td>no file under <code>src/</code>, <code>ui/</code>, or <code>docs/</code> outside <code>docs/work/</code> changes; <code>cargo clippy</code> pedantic clean</td><td>the WU diff</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table>
+        <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge id">unit</span> commit</td>
+            <td><code>xtask/src/git.rs</code>: on a temp repo, the helper returns the deleting commit's parent state after an add → delete; <code>None</code> for a path never held; <code>None</code> for a path held only on a branch the tip does not reach; the last state after amend → delete is the amended blob. <code>xtask/src/gate.rs</code> case table
+              <code>a_build_that_adds_a_surface_cites_a_design_the_tip_ships_or_reds</code> gains: retired path + matching pin → no failure; retired path + differing pin → the blob-half message; never-held path → the path-half message. Its existing rows are unchanged.</td></tr>
+          <tr><td><span class="badge id">integration</span> WU</td>
+            <td><code>xtask/tests/dod_gate.rs</code>: a History B fixture (design at the base; the WU adds <code>StatusPill.tsx</code>, deletes the design, records it archived with a carrier in <code>doc/v1</code>). Asserts: cited at the design's blob → green, receipt lists <code>9·design</code>; typo path → red naming the path half; <code>0000000</code> pin → red naming the last state's blob; amended-then-retired, cited at the old blob → red on the blob half; <code>Level::Epic</code> walk over the merged seam → green. Existing tests <code>a_build_that_adds_a_component_must_cite_the_design_the_tip_ships</code> and the retirement-order set run unedited.</td></tr>
+          <tr><td><span class="badge id">e2e</span> epic</td>
+            <td><code>xtask/tests/e2e_design_flow.rs</code>: leg ② of
+              <code>a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it</code> deletes <code>PILL_DESIGN</code> in the build commit, the <code>doc/v1</code> note carries the archived entry with a TSDoc carrier, and steps ② / ②b / ③ hold as written — the silent build and the excused build still refuse, the cited build lands via the real <code>--no-ff</code> hook. Hermetic: temp repo, no network. The epic-level composed run (all four fixes in one gated merge from a second worktree) is the epic's e2e, owed at the epic close, not waived here — this WU ships its step-1 history.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-c="non-goals">
+      <li><strong>No new note field.</strong> <code>design.retired</code> was rejected in DEC-28; the shape stays <code>path · blob · built</code>.</li>
+      <li><strong>No content check.</strong> The gate asks whether the design existed and which bytes were read, never whether the build honoured them.</li>
+      <li><strong>No change to when retirement happens.</strong> <code>components·unretired</code> and <code>6·retirement-order</code> are untouched; the WU changes what the gate accepts, not when the file must go.</li>
+      <li><strong>No doc rule text.</strong> W1 landed the T1 and T2 truth; this WU's distillation is the result doc plus the epic plan's W2 row. DEC-28's "W2 owes" bullet is settled by the code, and the result doc says so.</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
