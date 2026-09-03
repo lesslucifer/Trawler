@@ -1,0 +1,16 @@
+schema: test/v2
+level: working-unit
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W2
+branch: wu/gate-truth/citation-predicate
+tests:
+  unit:
+    count: 4
+    covers: "git::last_state - the last state after amend-then-delete is the amended blob, a never-held path is None, history the tip does not reach is None, and a merge that added and removed the path inside one branch is seen through (--full-history). gate.rs case table a_build_that_adds_a_surface_cites_a_design_the_tip_ships_or_reds gains a design retired in the diff: matching pin green, wrong pin red on the blob half, never-shipped path red on the path half."
+  integration:
+    count: 4
+    covers: "dod_gate.rs over History B (design on the epic, component built and design retired in one WU, doc/v1 archived entry naming a TSDoc carrier): green at the WU merge and at the epic walk over that seam; a typo path red naming the path half; a pin the path never carried red naming the last state's blob and not 'this tip ships'; amended-then-retired red at the handed blob and green at the last state. All four fail against the previous gate.rs and git.rs."
+  e2e:
+    count: 1
+    covers: "e2e_design_flow.rs a_build_that_adds_a_surface_cites_the_design_it_read_or_the_merge_refuses_it: the build leg retires PILL_DESIGN inside the build WU (build_the_pill_and_retire_its_design), the silent and excused notes still refuse through the real --no-ff hook, a wrong pin refuses naming the last state, and the citation pinning the handed blob lands the merge."
+note: "E-GATETRUTH.W2 codes DEC-28: check_citation resolves a path the tip does not ship at its last state reachable from the tip; two refusals name the failed half; check_handoff's fix hint covers a retired design. cargo test -p xtask --all-features green across every binary; clippy pedantic clean with --all-features --all-targets."
