@@ -14,7 +14,7 @@
         shipped and a blob the path never carried are red, each naming the half that failed. The review found what
         the widening exposed — a design amended or authored and then retired in one WU reached the merge judged by
         nobody — and that became DEC-29.</p>
-      <div class="meta">WU result v3 · 2026-09-03 · Trawler · T3 (docs/work/) ·
+      <div class="meta">WU result v4 · 2026-09-03 · Trawler · T3 (docs/work/) ·
         <code>wu/gate-truth/citation-predicate</code> → <code>epic/gate-truth</code> ·
         <a href="2026-09-03-gate-truth-w2-plan.html">WU plan</a> · <a href="2026-09-03-gate-truth-plan.html">epic plan</a> ·
         <span class="badge id">E-GATETRUTH.W2</span></div>
@@ -41,7 +41,7 @@
             <td><span class="badge approval">added by the review, rounds 1 and 2</span> <a href="../decisions/dec-29-retired-design-judged-where-it-left.html">DEC-29</a>: the artifact set <code>9·design</code> judges at a WU seam includes a component design the range removed at bytes the base never held — amended before retirement, or authored and retired in one WU — read at its last state; only a design artifact counts, not every file under the directory; the same seam owes DEC-16's <code>archived</code> entry for it, which <code>6·doc-note</code> now asks for and no longer refuses as a phantom. <code>Gate::retired_designs</code>, joined into <code>design_artifacts</code> so <code>design-scope</code> lists it and says where to read it. DEC-24 superseded on two clauses; the T1 design-bearing and check-9 rows state the rule</td></tr>
           <tr><td>the History B fixture reds against today's code</td>
             <td><span class="badge auto">held</span> all four <code>dod_gate</code> fixtures fail with the previous <code>gate.rs</code> and <code>git.rs</code> swapped back in; pass with this WU's</td></tr>
-          <tr><td>no <code>src/</code>, <code>ui/</code>, or docs outside <code>docs/work/</code></td><td><span class="badge auto">held</span> the WU diff: <code>xtask/</code> and two T3 docs</td></tr>
+          <tr><td>no <code>src/</code>, <code>ui/</code>, or docs outside <code>docs/work/</code></td><td><span class="badge approval">deviated</span> <code>src/</code> and <code>ui/</code> untouched; the review's rounds moved the truth into T2 (DEC-29, DEC-24, DEC-16, the index) and T1 (the workflow standard's cr/v3, check-6 and check-9 rows, the doc/v1 schema owner, the design-flow activation row), and the epic plan — see deviations and the ledger</td></tr>
         </tbody>
       </table>
     </div>
@@ -69,6 +69,9 @@
           <tr><td>no doc rule text; DEC-28's "W2 owes" is settled by the code</td>
             <td>round 2 verified that the T1 design-bearing definition ("the diff touches … a component design file"), the check-9 row ("names every design artifact in the diff") and DEC-24's "present in the diff" plus its rejected option "judge a removed design file" now stated an activation condition the code contradicts</td>
             <td>DEC-29 written; DEC-24 carries two superseded-on-clause callouts; the index registers it (v13); the two T1 rows edited under a <code>Reviewed-By</code> trailer signed by the owner (v14); the epic plan's distillation plan takes both rows</td></tr>
+          <tr><td>the T1 and T2 edits end with the design-bearing and check-9 rows</td>
+            <td>round 3 verified that the check-6 row and the doc/v1 schema owner still stated the exact-match rule, design-flow.html restated the old activation, DEC-16's Tier-3 exclusion bullet had no pointer, and this doc's blast-radius row was stale from v1</td>
+            <td>DEC-16 annotated at the bullet; the index tightened (v14); DEC-29's consequence names the DEC-16 clause; the check-6 row, the schema owner's paragraph and sample, and the design-flow row point at DEC-29 under a second <code>Reviewed-By</code> trailer; this row corrected</td></tr>
           <tr><td>design-scope's retired block</td>
             <td>round 2 found it counted every removed file under <code>docs/work/components/</code> and had no test</td>
             <td><code>retired_designs</code> applies the artifact test; <code>design_scope_names_a_design_retired_at_unjudged_bytes_and_where_to_read_it</code> drives the CLI over an amended-then-retired range with stray files beside it</td></tr>
@@ -109,8 +112,11 @@
           <tr><td><code>docs/decisions/dec-28-citation-after-retirement.html</code></td><td>T2</td><td>unchanged: the why, the flow, the case table. Its "W2 owes" bullet is settled by this WU's code — every item on it is in the outcome table above</td></tr>
           <tr><td><code>docs/decisions/dec-29-retired-design-judged-where-it-left.html</code></td><td>T2</td><td>new — why a design retired at unjudged bytes is an artifact of the seam that retired it, the case table, four rejected options</td></tr>
           <tr><td><code>docs/decisions/dec-24-design-review-dimension.html</code></td><td>T2</td><td>superseded-on-clause callouts at "present in the diff" and at the rejected option "judge a removed design file"; status active</td></tr>
-          <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td><td>DEC-29 row; DEC-24 row annotated; v13</td></tr>
-          <tr><td><code>docs/workflow.html</code></td><td>T1</td><td>the design-bearing definition and the check-9 row read the range's last state for a retired design; v14; <code>Reviewed-By</code> trailer</td></tr>
+          <tr><td><code>docs/decisions/dec-16-design-file-retirement.html</code></td><td>T2</td><td>superseded-on-clause pointer at the Tier-3 exclusion bullet; order and predicates untouched</td></tr>
+          <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td><td>DEC-29 row; DEC-24 and DEC-16 rows annotated; v14</td></tr>
+          <tr><td><code>docs/workflow.html</code></td><td>T1</td><td>the design-bearing definition, the check-9 row and the check-6 row read the range's retired design; v15; <code>Reviewed-By</code> trailers</td></tr>
+          <tr><td><code>docs/documentation-system.html</code></td><td>T1</td><td>the doc/v1 paragraph and sample: one entry per doc file in the gated diff <em>or retired by it at unjudged bytes</em>; v7; <code>Reviewed-By</code> trailer</td></tr>
+          <tr><td><code>docs/design-flow.html</code></td><td>T1</td><td>the activation row points at the workflow standard's definition instead of restating it; <code>Reviewed-By</code> trailer</td></tr>
           <tr><td><code>docs/work/2026-09-03-gate-truth-plan.html</code></td><td>T3</td><td>distillation plan takes the DEC-29 and DEC-24 rows; v4</td></tr>
           <tr><td><code>docs/work/2026-09-03-gate-truth-w2-plan.html</code> · this result</td><td>T3</td><td>the plan and its outcome; archived at epic close per DEC-3</td></tr>
         </tbody>
