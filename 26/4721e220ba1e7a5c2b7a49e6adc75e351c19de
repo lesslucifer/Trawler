@@ -1,0 +1,46 @@
+schema: doc/v1
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W2
+branch: wu/gate-truth/citation-predicate
+changes:
+  - path: docs/decisions/dec-29-retired-design-judged-where-it-left.html
+    tier: T2
+    action: added
+    distills: "DEC-29 - at a WU seam, a component design the range removed at bytes the base never held is a design artifact of that seam: read at its last state, judged by the cr/v3 design section, owed DEC-16's archived entry in doc/v1, listed by design-scope with where to read it. One retired at judged bytes is not. Context: the two reads of one file after DEC-28, the one-WU shape DEC-25 D1c names; four rejected options; supersedes two DEC-24 clauses and DEC-16's Tier-3 exclusion clause."
+  - path: docs/decisions/dec-24-design-review-dimension.html
+    tier: T2
+    action: updated
+    distills: "Superseded-on-clause callouts at 'a component design file present in the diff' and at the rejected option 'judge a removed design file', pointing to DEC-29; the meta line records the partial supersession; status active."
+  - path: docs/decisions/dec-16-design-file-retirement.html
+    tier: T2
+    action: updated
+    distills: "Superseded-on-clause pointer at the consequence 'a removed design file is deliberately not a Tier-3 artifact' - holds for a design removed at the bytes it was judged at; one removed at unjudged bytes is both checks' business (DEC-29). Order and both predicates untouched; status active."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-29 registered index-first; DEC-24's and DEC-16's rows annotated with the superseded clauses; v14."
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "Three rule-bearing lines - the cr/v3 row's design-bearing definition, the check-9 row and the check-6 row - now read the range's retired design at bytes the base never held, linking DEC-29; v15. Two commits under Reviewed-By trailers signed by the owner."
+  - path: docs/documentation-system.html
+    tier: T1
+    action: updated
+    distills: "The doc/v1 paragraph and its sample: one entry per doc file in the gated diff, plus at a WU seam per component design the range retired at unjudged bytes (DEC-29); v7. Reviewed-By trailer."
+  - path: docs/design-flow.html
+    tier: T1
+    action: updated
+    distills: "The design dimension's activation row points at the workflow standard's design-bearing definition instead of restating it, naming DEC-29; rev 2026-09-03. Reviewed-By trailer."
+  - path: docs/work/2026-09-03-gate-truth-plan.html
+    tier: T3
+    action: updated
+    distills: "The distillation plan takes the DEC-29 and DEC-24 rows; v4."
+  - path: docs/work/2026-09-03-gate-truth-w2-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan - requirement, mapping to P1 / DEC-28 / DEC-25 / DEC-16 / the epic e2e, the change as a flow and a touches table, the fixture constraint, expected result per observable, test plan with no waivers, non-goals."
+  - path: docs/work/2026-09-03-gate-truth-w2-result.html
+    tier: T3
+    action: added
+    distills: "The WU result v5 - outcome against the plan plus what the review's four rounds added, deviations per round, evidence naming every test and the regression proof, the distillation ledger across T1/T2/T3, follow-ups."
+note: "Three T1 edits under the owner's trailers, four T2 (DEC-29 new; DEC-24, DEC-16 and the index annotated), three T3. The T2 synthesis is DEC-29; DEC-28 is unchanged and its 'W2 owes' bullet is settled by the code. verify-doc green over every governed doc; every relative href the WU adds resolves on disk."
