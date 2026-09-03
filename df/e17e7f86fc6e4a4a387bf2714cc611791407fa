@@ -1,0 +1,22 @@
+schema: cr/v3
+scope: "WU E-GATETRUTH.W3 (wu/gate-truth/name-the-cause) -> epic/gate-truth"
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W3
+branch: wu/gate-truth/name-the-cause
+base: 917fff452a87cca01fbdae0136048b371a72f1df
+head: dfe17e7f86fc6e4a4a387bf2714cc611791407fa
+diff_sha256: 73b6188d5ae59bc16810fc6a42302e8408764aa79e5692db66a96598444981ea
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 20, verified: 9, waived: 0 }
+rounds: 8
+history:
+  - { round: 1, tip: a1f60f8c1178383fb90a66eaae540b7b818b1735, verdict: FAIL, verified: 2, what: "no_verdict_echoes_the_commit_message_body asserted a tautology - its fixture contained the searched-for body line, so the OR clause was always true and four iterations could not fail; proved by reintroducing the P2a bug and watching it pass. Also a predicate sentence duplicated across authorisation() and tip_authorised. Fixed in 96ae46f. Correctness and altitude returned empty; six candidates refuted, including that pub(crate) cannot reach integration tests and that migrating diff_sha256 onto Outcome would corrupt the change hash by trimming bytes" }
+  - { round: 2, tip: 6505077, verdict: FAIL, verified: 3, what: "the roster assertion checked the bare string .mr-allowed, which NOT_AUTHORISED's closing line already contains, so it passed with the roster path dropped from the message entirely; the unborn-HEAD branch of head_commit had no test; check_manual_review's comment said four causes where the enum has five leaves. Fixed in 0a37190" }
+  - { round: 3, tip: bb42b20138eba2a2b0bf17564eec1608071445bd, verdict: FAIL, verified: 2, what: "the clean-success quadrant asserted the body's ABSENCE against the one arm that returns the success line alone and never reads outcome, so it held however that arm was written; plus four false claims in the WU's own records - two arithmetic errors in a fixture count, a scope claim contradicted by the diff, and a P2a regression figure gone stale when round 2 added two tests. Fixed in 8f7a1c6 and bb42b20" }
+  - { round: 4, tip: ce90a6a17f6809a1b617768b1e55fe1408f0645d, verdict: FAIL, verified: 1, what: "the WU's only shipped-code defect, and the epic's own failure mode: when git wrote to neither stream, said() returned empty and three verdict arms ended their sentence on a bare colon. Found by probing the shipped function with an input no fixture covered. Fixed in 2a49b92, failing test first. The claims audit returned clean" }
+  - { round: 5, tip: 2e51ac774a0fe641ba3d85dd041fbace4555dc97, verdict: FAIL, verified: 1, what: "four comments carried epic narrative rather than a non-obvious why, against the project convention that domain rationale lives in docs/; two test comments repeated a phrase verbatim across files. Fixed in 60e94c5, ten net lines removed. Correctness clean on the said() fix and a second claims audit clean; the git_env bare-colon path judged pre-existing and out of scope, since git_env's text is a promise this WU keeps byte-identical" }
+  - { round: 6, tip: 09c150fa9c29ade35556d2e5e934bf9e5f1f3236, verdict: FAIL, verified: 0, what: "the previous comment sweep stopped at the source doc comments and left four references naming a work unit where the why belonged, one restating verbatim the sentence the same commit had removed. Fixed in 09c150f. Everything else clean, including intra-doc links and both shipped guarantees" }
+  - { round: 7, tip: 09c150fa9c29ade35556d2e5e934bf9e5f1f3236, verdict: PASS, verified: 0, what: "clean across all five dimensions; verified empirically that git ignores a post-commit hook's exit status, so the PATH shim really is the only route to the landed-and-non-zero quadrant, and that the replaced comment's old claim of four causes was itself wrong where the new wording avoids the count" }
+  - { round: 8, tip: dfe17e7f86fc6e4a4a387bf2714cc611791407fa, verdict: PASS, verified: 0, what: "the final delta - two comments citing a figure in a T3 plan archived at epic close, so the citation would dangle. Comment-only, suite green, both replacement sentences verified against DEC-10 and the tests' own setup" }
+verdict: PASS
+date: 2026-09-03
