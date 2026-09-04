@@ -59,7 +59,7 @@
         <tr>
           <td><a href="web-ui.html#uc-6"><code>web-ui.html</code></a></td>
           <td><span class="badge id">UC-6</span></td>
-          <td>Take the capture out as a HAR 1.2 file over <code>GET /flows/export</code> — the export selects what the listing lists, and a body Trawler never captured is marked as such rather than exported empty</td>
+          <td>The HAR 1.2 round trip: out over <code>GET /flows/export</code> — the export selects what the listing lists — and back in over <code>POST /flows/import</code>, whose entries become ordinary flows marked <code>imported</code> and selectable by that mark. A body Trawler never captured is marked as such in both directions, never treated as empty; a malformed document is refused whole, changing nothing</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>
