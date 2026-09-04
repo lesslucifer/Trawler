@@ -1,0 +1,16 @@
+schema: test/v2
+level: wu
+wu: E-REDESIGN.W1
+tests:
+  e2e:
+    waived: "Design WU — it touches no product code and no screen (git diff epic/redesign..HEAD -- ui/src/ is empty). The E-DFLOW.W9 precedent the epic plan cites for exactly this case. No user-visible surface moves, so there is nothing for a UC spec to exercise; the epic's e2e (UC-4 / UC-5 / UC-ONBOARD) runs against the built screens from W4 onward."
+  integration:
+    waived: "Same precedent. There is no bounded contract in code to exercise — the contract IS the design file, and its shape is judged mechanically by verify-doc (component-design artifact: htmldoc layer, escaped markup, components·redrawn, components·unretired) plus the render gate below."
+  unit:
+    waived: "Same precedent. Three HTML contracts have no unit under them. Each component's real unit tests land in W2 beside its .tsx and will assert the states these designs declare."
+verified:
+  - "cargo xtask verify-doc — 40 docs checked, none red (the three new designs green as component-design, the WU plan green as wu-plan)."
+  - "cargo xtask ui specimens --check — all three design files render over file:// in headless Chrome with zero console errors; every spec-* mount fills (field 3 buttons, status-dot 13, disclosure 1 mount)."
+  - "cargo test — 107 passed, 0 failed (unchanged by this WU; run because the tw-config.js commit touches a repo asset)."
+  - "cargo clippy --all-targets — clean, and gate0 ran fmt + clippy -D warnings on both commits."
+note: "Carries one standalone code commit (e71987c, tw-config.js's stale import). It is a build-asset path fix with no product surface and no test level of its own — the evidence that it works is the render gate above, which could not have passed with the import unresolved."
