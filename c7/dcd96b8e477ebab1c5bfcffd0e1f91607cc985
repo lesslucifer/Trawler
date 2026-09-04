@@ -1,5 +1,5 @@
 schema: test/v2
-level: wu
+level: working-unit
 wu: E-REDESIGN.W1
 tests:
   e2e:
