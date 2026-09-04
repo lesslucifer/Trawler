@@ -1,0 +1,39 @@
+schema: cr/v3
+scope: "WU wu/redesign/gap-components -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W1
+branch: wu/redesign/gap-components
+base: 0794cb9fe6ae7a8ca6e780c6c7ab8404a6a42b91
+head: 0da08611fa7b107a412364750360d583024bb3ea
+diff_sha256: 4a151a41479dd29d75623b1ada2625733ea2c90b8b87892fdfabd472d4f3b7ea
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 8, verified: 6, waived: 0 }
+rounds:
+  - round: 1
+    tip: 9a28f1279ad146dc5ce7035d0e329cb7bf2536ed
+    verified:
+      - "field.html — the F4 fork and three other places claimed Select's in-popup filter carries no aria-label of its own. Select.tsx:176 has aria-label=\"filter options\", distinct from the listbox's aria-label={label} at :201. Found independently by the reuse and design finders. Fixed in 08101f7: the conclusion stands on the double-frame grounds, and the reasoning now rests on Select FIXING that name where Field's B3 requires the caller to supply one."
+      - "status-dot.html — the tri-state argument turned on 'checking is transient, muted is terminal'. Contradicted by DEC-19 ('Muted reads informational / non-terminal'), which the same file cites as authority, and by StatusPill's shipped @states filing null/pending under muted. Fixed in 08101f7: rebuilt on the authority axis — TonedText takes a caller-passed tone while DotStatus is produced only by dotStatus(), so collapsing the types would make 'connected' caller-suppliable."
+      - "status-dot.html — the new-component warrant never ran IconButton, the nearest structural sibling cited four times as precedent, through a reuse-or-propose fork. Fixed in 08101f7: fork S2b added — the Button shell is genuinely shared, but IconButton is a T1 contracted to hold no business logic, and an extension would return the tone map to the call site, which StatusPill's @avoid and DEC-20 both forbid."
+      - "WU plan — named tw-config.js as the specimens' theme source; these three files load specimens.bundle.js, which build-specimens.mjs compiles against ui/tailwind.config.js. Same config, wrong mechanism. Fixed in 08101f7."
+      - "test/v2 note — claimed the render gate covered the tw-config.js fix. It does not: nothing in this diff loads that file any more. Corrected on the tip; the standalone commit is now recorded at level: commit with the direct before/after node resolution check as its evidence."
+    also_raised:
+      - "A pre-existing T1 inconsistency: component-design.html's file skeleton still prescribes the pre-DEC-26 tw-config.js loading shape. NOT fixed here — E-REDESIGN's non-goals freeze the flow spec — and recorded instead as a row in the living backlog (c7dcd96), so the next epic revising those specs picks it up."
+  - round: 2
+    tip: c7dcd96b8e477ebab1c5bfcffd0e1f91607cc985
+    scope: "re-review of the corrections by fresh design and correctness finders"
+    verified:
+      - "test/v2 note — listed dec-26-the-mockup-mounts.html among the files still loading tw-config.js; that file names it in prose only. Exactly two files carry a live script tag: design-flow.html:8 and component-design.html:8. Corrected on the tip."
+    result: "Both re-reviewers independently confirmed all four round-1 corrections hold against shipped code. The design finder judged the authority-axis rebuild a genuine improvement rather than a second rationalisation, having verified TonedText's caller-passed tone prop and the absence of any caller-facing DotStatus constructor."
+design:
+  artifacts:
+    - docs/work/components/disclosure.html
+    - docs/work/components/field.html
+    - docs/work/components/status-dot.html
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 3, verified: 3, waived: 0 }
+  verdict: PASS
+note: "No design.implements and no design.undesigned: design-scope reports artifacts only — this WU adds no new surface and touches no rendered file (git diff BASE..HEAD -- ui/src/ is empty). The first design.implements citation in the repo is owed by W2, which builds these three and retires their files under DEC-16."
+verdict: PASS
+rescoped: "Re-pinned twice after the reviewed round, both times for the WU result report only (5666a58 added it; 0da0861 gave it the component showcases and the live registry mount the owner asked for). No reviewed artifact, no code and no design file changed in either — design-scope reports the same three artifacts against the same rulebook aeff5b0, and the render gate covers the result doc's mount."
+date: 2026-09-04
