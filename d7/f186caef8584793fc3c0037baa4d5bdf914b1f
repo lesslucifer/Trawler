@@ -1,0 +1,52 @@
+schema: cr/v3
+scope: "WU wu/redesign/gap-components-build -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W2
+branch: wu/redesign/gap-components-build
+base: 15e996dbf84b00d93e434334e4c7c82e13a23e72
+head: d7f186caef8584793fc3c0037baa4d5bdf914b1f
+diff_sha256: 4cd88b86ca9036da5f17c74d05ee4f82f388e3d758a19a1e91fb3c64c060bebd
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 7, verified: 3, waived: 0 }
+rounds:
+  - round: 1
+    tip: 4748d32e76cc0905f633a5039d2dee2a1acab2c3
+    verified:
+      - "CORRECTNESS, important — the three components this WU built were absent from the app bundle. Adding Field and StatusDot to ui/src/components/index.ts collided with the legacy ui/src/components.tsx, and every screen imports the bare './components', which bundlers resolve to the file over the directory's index. Verified in the built output: dist/assets/index-*.js carried the legacy Field's 'px-3 py-chrome-y' and the bare-button StatusDot, while px-control-x, min-h-control and w-glyph were absent entirely. NOT pre-existing — at BASE the barrel exported neither name, so the specifier had exactly one source; this diff manufactured the collision and then lost to it. Silent by construction: both specifiers are valid, tsc compiled without a word, and all 529 unit tests passed, because they import ./Field and ./index directly and never take the app's resolution path. Fixed in 142a428."
+      - "CORRECTNESS, nit — Disclosure's defaultOpen seeds per VALUE, not per mount: React re-applies `open` whenever the prop value changes between renders, so a parent computing it from changing state can reopen a panel the user closed. The shipped test named 'a re-render does not yank a closed panel back open' only exercises the unchanged-value case. Confirmed empirically by probe. Held at nit and NOT fixed: the design's driver ② explicitly wants ManualPanel's `open={state === \"failed\"}` to force the panel open when an action newly fails — the changing-value case working as intended — and Disclosure has no call site until W10. Recorded as deviation D5 in the result and assigned to W10, which is where the tenant arrives and the semantics become answerable against a real screen."
+    also_raised:
+      - "EFFICIENCY, nit — two Fields and two StatusDots shipping in one bundle. True when raised, and resolved by the same fix: the legacy kit is deleted."
+    refuted:
+      - "REUSE, important — 'Field should compose Button per DEC-18 rather than repeat its class string.' DEC-18's own canonical example is Select's trigger (Select.tsx:156), which shares the box by matching class string, not by rendering a Button; and Field renders an <input> where Button renders a <button>, so composition is not mechanically available. The retired design's F2 fork stages and settles exactly this question, citing DEC-18 by name."
+      - "REUSE, nit — 'enforcing the box parity by a test repeats DEC-18's prose-is-not-a-comparison failure.' Backwards: a machine-checked comparison is the antidote DEC-18 asks for; prose was the disease."
+      - "SIMPLIFICATION, nit — 'use Tailwind's group / group-open: instead of the arbitrary-variant selectors.' Tested empirically: `group` is a hard design/vocabulary ERROR under the closed-vocabulary lint (DEC-17), because a marker class that emits no CSS is indistinguishable from a typo. The proposed alternative fails CI. The finder had verified only that it compiles under vanilla Tailwind."
+  - round: 2
+    tip: d38dc11ae6c00ade72d2892d2da925eb7fa63416
+    scope: "re-review of the fix and its blast radius by fresh correctness, reuse+simplification and altitude finders"
+    verified:
+      - "REUSE, important — the result report claimed deleting the legacy kit removed 'the third copy of the tone map'. Wrong on both the count and the referent: three tone maps exist, this WU removed ONE (TONE_CLASS), and 'the third copy' is the epic plan's own name for the inline literal at Onboarding.tsx:360, which belongs to W10. Two remain — TonedText's, the registry's legitimate owner, and W10's. Corrected in d7f186c. (The finder counted two by grepping the Record<StatusTone,…> type, which the inline literal does not use; the correction names all three.)"
+    also_raised:
+      - "ALTITUDE, unfiled — the epic plan still described W4 and W11 as owning work that landed in this WU. Judged too minor to file since the correction was discoverable in W2's follow-ups, but fixed anyway in d7f186c: W4's row now states what remains, W11's kit deletion is struck through, and W2's row records that it grew at review. A plan that still promises work already done is how a follow-up gets lost."
+    result: "Correctness and altitude returned EMPTY. Correctness independently re-verified the fix's blast radius: pending flows still render '…' (relocated to StatusPill per DEC-20), no reference to FlowRow.tone survives, nothing sorts or filters on the changed field, the deleted legacy test's three assertions are covered more thoroughly by the registry's own suites, and the new regression test genuinely fails when the bare specifier returns (proved by reverting App.tsx's import in a throwaway edit). Altitude verified the scope-change record is honest and complete, that the 'layout untouched' claim holds against the actual diff (only import specifiers and the StatusPill prop shape changed — grid, testids and JSX structure are identical), that the fix is tightly bounded to what the defect required, and that FlowRow carrying a raw status with StatusPill deriving tone+phrase is exactly DEC-20's named pattern."
+design:
+  implements:
+    - path: docs/work/components/field.html
+      blob: dc8c47b1f45caf027087a23ba77108a0e3f646a4
+      built: [ui/src/components/Field.tsx]
+    - path: docs/work/components/status-dot.html
+      blob: 62d5aa163c9b39a25a6189a0034192d4c2248f0c
+      built: [ui/src/components/StatusDot.tsx]
+    - path: docs/work/components/disclosure.html
+      blob: 46e9879bc6ea68b6aa2b2698856a9961ad3ca037
+      built: [ui/src/components/Disclosure.tsx]
+  undesigned:
+    - path: ui/src/components/Section.tsx
+      why: "A one-line TSDoc edit, no rendered output. Its @avoid said 'put the disclosure inside the slot' in lowercase, which matched no roster name, so the redirect stayed unverifiable even once Disclosure existed — the same phantom-redirect failure this epic exists to close. The edit names Disclosure and states the direction the design established. The component's markup, props and behaviour are untouched."
+    - path: ui/src/App.tsx
+      why: "An import-specifier change only: the header's Field and StatusDot call sites are byte-identical, because the registry components' props already matched the legacy ones. No markup, layout or testid moved. This was forced by the round-1 finding — the bare './components' specifier resolved to the legacy kit, so the components this WU built were not in the app bundle."
+    - path: ui/src/FlowList.tsx
+      why: "The status cell's prop shape changed and NOTHING ELSE did — <StatusPill tone={row.tone}>{row.status}</StatusPill> became <StatusPill status={row.status} />, because the registry component derives tone and the reason phrase from the raw status rather than taking a tone resolved at the call site (DEC-20). The grid, the row markup, the testids and every other cell are identical. This RE-SHAPES a surface the epic assigned to W4 behind W3's design run, and no design covers it — stated plainly rather than excused: the owner chose it over shipping a WU whose deliverable the app could not reach, W3 still designs the same layout, and W2's result records the cost. Not FAILED because the change is the prop shape of one already-designed registry component, not a new or re-laid-out surface — W3's Elements stage meets the same six cells it always would."
+    - path: ui/src/FlowDetail.tsx
+      why: "The same one-cell prop-shape change as FlowList, plus dropping the now-unused statusTone import — the call site no longer pre-resolves the tone. The identity bar's markup and every other element are untouched. Same standing as FlowList above: it re-shapes a cell ahead of W5's design run, is disclosed rather than excused, and is bounded to the component swap the collision fix required."
+verdict: PASS
+date: 2026-09-04
