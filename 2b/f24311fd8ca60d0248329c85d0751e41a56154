@@ -17,7 +17,7 @@ changes:
   - path: docs/decisions/dec-16-design-file-retirement.html
     tier: T2
     action: updated
-    distills: "Tier-3 exclusion clause marked superseded by DEC-29; the survival clause supersession by DEC-25 left as it stood."
+    distills: "Tier-3 exclusion clause marked superseded by DEC-29; the survival-clause supersession by DEC-25 left as it stood."
   - path: docs/decisions/dec-24-design-review-dimension.html
     tier: T2
     action: updated
@@ -46,26 +46,6 @@ changes:
     tier: T1
     action: updated
     distills: "design-scope design-bearing definition extended to a design the WU retired at unjudged bytes (DEC-29)."
-  - path: CLAUDE.md
-    tier: T0
-    action: updated
-    distills: "The doc-tier rule the user asked for mid-W4: decide a doc tier before creating it, and a plan/spec/test-plan/backlog is T3, never T1."
-  - path: .claude/skills/code-review/SKILL.md
-    tier: infra
-    action: updated
-    distills: "The review reads a retired design where the gate does - the blob-pin form for a design this WU retired (DEC-28)."
-  - path: .claude/skills/code-review/design-rubric.md
-    tier: infra
-    action: updated
-    distills: "The design-dimension activation row for a design the range removed at bytes its base never held (DEC-29), and the boundary against retirement, which 6-retirement-order owns."
-  - path: .claude/hooks/verify-doc-stop.sh
-    tier: infra
-    action: updated
-    distills: "The tracked-doc layout check runs ahead of the docs-only exemption; the hook stated behaviour W4 own change falsified."
-  - path: docs/work/2026-09-03-gate-truth-plan.html
-    tier: T3
-    action: archived
-    distilled_to: [docs/decisions/dec-28-citation-after-retirement.html, docs/decisions/dec-29-retired-design-judged-where-it-left.html, docs/workflow.html, docs/work-planning.html]
-t2_waived: "not waived - DEC-28 and DEC-29 are the epic T2 record; every code change traces to one of them"
-note: "The four WU plans, the four WU results and the epic result were added and archived within this range, so the endpoint diff cannot show them; they live untracked in docs/.archive/ (DEC-3) and the epic report bytes are attested by the mr/v1 hash on this tip."
+t2_waived: "not waived - DEC-28 and DEC-29 are the epic T2 record; every code change in the range traces to one of them"
+note: "Three classes of change this endpoint diff cannot show, recorded here because a reader of the note is owed them. (1) T3: the epic plan, four WU plans, four WU results and the epic result were all created after the gate base 5d251c4 and archived within the range, so they cancel out of the diff; they live untracked in docs/.archive/ (DEC-3) and the epic report bytes are attested by the mr/v1 hash on this tip. (2) T0: CLAUDE.md gained the doc-tier rule the user asked for mid-W4 (decide the tier before creating a doc; a plan/spec/test-plan/backlog is T3, never T1), landed under a Reviewed-By trailer on W4 signed commit. (3) infra, outside doc/v1 accounting: .claude/skills/code-review/SKILL.md (the blob-pin form for a design this WU retired, DEC-28) and design-rubric.md (the design-dimension activation row for a design removed at bytes its base never held, DEC-29, and the boundary against retirement, which 6-retirement-order owns), plus .claude/hooks/verify-doc-stop.sh, where the tracked-doc layout check now runs ahead of the docs-only exemption."
 date: 2026-09-04
