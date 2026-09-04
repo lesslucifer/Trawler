@@ -41,6 +41,14 @@ impl Ring {
     }
 }
 
+/// One page of a filtered listing. `next_cursor` is the id to resume after, and
+/// its absence means the walk reached the oldest row the ring still holds.
+#[derive(Default, Debug)]
+pub struct FlowPage {
+    pub flows: Vec<Flow>,
+    pub next_cursor: Option<FlowId>,
+}
+
 #[derive(Default, Debug)]
 pub struct FlowFilter {
     pub host: Option<String>,
@@ -178,6 +186,36 @@ impl Store {
             .collect()
     }
 
+    /// One bounded page of `list`, resumed at `after`. The whole walk happens
+    /// under one lock, so a page is a consistent slice of the ring rather than
+    /// a stitch of two reads.
+    ///
+    /// `after` names a row, not an offset, which is what makes the walk safe
+    /// against a live capture: a concurrent insert lands newer than the cursor
+    /// and so sits behind the walk, and an eviction only removes rows the walk
+    /// would otherwise have reached. When the cursor row is itself evicted the
+    /// ring has no position to resume from, so the page is empty and final —
+    /// restarting from the newest row would re-serve everything the caller
+    /// already holds.
+    pub fn page(&self, filter: &FlowFilter, limit: usize, after: Option<FlowId>) -> FlowPage {
+        let ring = self.inner.lock().expect("store lock");
+        let mut walk = ring.order.iter().rev();
+
+        if let Some(cursor) = after {
+            if !walk.any(|id| *id == cursor) {
+                return FlowPage::default();
+            }
+        }
+
+        let mut matching =
+            walk.filter_map(|id| ring.flows.get(id)).filter(|flow| filter.matches(flow));
+        let flows: Vec<Flow> = matching.by_ref().take(limit).cloned().collect();
+        // Peeking one past the page is what lets a full final page report no
+        // cursor, so a caller stops on `next_cursor` rather than on an empty page.
+        let next_cursor = matching.next().and(flows.last()).map(|flow| flow.id);
+        FlowPage { flows, next_cursor }
+    }
+
     fn announce_evictions(&self, evicted: Vec<FlowId>) {
         for flow_id in evicted {
             let _ = self.tx.send(FlowEvent::FlowEvicted { flow_id });
@@ -296,6 +334,107 @@ mod tests {
     }
 
     #[test]
+    fn page_walks_newest_first_and_ends_without_a_cursor() {
+        let s = store();
+        for u in ["http://a/", "http://b/", "http://c/", "http://d/", "http://e/"] {
+            s.insert(FlowBuilder::new().uri(u).build());
+        }
+
+        let first = s.page(&FlowFilter::default(), 2, None);
+        assert_eq!(uris(&first.flows), vec!["http://e/", "http://d/"]);
+
+        let second = s.page(&FlowFilter::default(), 2, first.next_cursor);
+        assert_eq!(uris(&second.flows), vec!["http://c/", "http://b/"]);
+
+        let last = s.page(&FlowFilter::default(), 2, second.next_cursor);
+        assert_eq!(uris(&last.flows), vec!["http://a/"]);
+        assert_eq!(last.next_cursor, None);
+    }
+
+    #[test]
+    fn a_page_that_exactly_empties_the_ring_reports_no_cursor() {
+        let s = store();
+        s.insert(FlowBuilder::new().uri("http://a/").build());
+        s.insert(FlowBuilder::new().uri("http://b/").build());
+
+        let page = s.page(&FlowFilter::default(), 2, None);
+        assert_eq!(uris(&page.flows), vec!["http://b/", "http://a/"]);
+        assert_eq!(page.next_cursor, None, "a full final page must not hand out a dead cursor");
+    }
+
+    #[test]
+    fn page_limit_beyond_the_ring_returns_everything_once() {
+        let s = store();
+        for u in ["http://a/", "http://b/"] {
+            s.insert(FlowBuilder::new().uri(u).build());
+        }
+        let page = s.page(&FlowFilter::default(), 99, None);
+        assert_eq!(uris(&page.flows), vec!["http://b/", "http://a/"]);
+        assert_eq!(page.next_cursor, None);
+    }
+
+    #[test]
+    fn page_of_an_empty_ring_is_empty_and_final() {
+        let page = store().page(&FlowFilter::default(), 5, None);
+        assert!(page.flows.is_empty());
+        assert_eq!(page.next_cursor, None);
+    }
+
+    #[test]
+    fn page_walks_the_filtered_set_not_the_whole_ring() {
+        let s = store();
+        for i in 0..6 {
+            let host = if i % 2 == 0 { "keep" } else { "drop" };
+            s.insert(FlowBuilder::new().uri(&format!("http://{host}/{i}")).build());
+        }
+        let filter = || FlowFilter { host: Some("keep".into()), ..Default::default() };
+
+        let first = s.page(&filter(), 2, None);
+        assert_eq!(uris(&first.flows), vec!["http://keep/4", "http://keep/2"]);
+        let second = s.page(&filter(), 2, first.next_cursor);
+        assert_eq!(uris(&second.flows), vec!["http://keep/0"]);
+        assert_eq!(second.next_cursor, None);
+    }
+
+    #[test]
+    fn a_cursor_the_ring_no_longer_holds_ends_the_walk() {
+        let s = store();
+        s.insert(FlowBuilder::new().uri("http://a/").build());
+        let page = s.page(&FlowFilter::default(), 2, Some(FlowId::new()));
+        assert!(
+            page.flows.is_empty() && page.next_cursor.is_none(),
+            "an evicted cursor must not silently restart the walk at the newest row"
+        );
+    }
+
+    #[test]
+    fn a_cursor_the_filter_excludes_still_positions_the_walk() {
+        let s = store();
+        s.insert(FlowBuilder::new().uri("http://keep/old").build());
+        let pivot = FlowBuilder::new().uri("http://drop/pivot").build();
+        let pivot_id = pivot.id;
+        s.insert(pivot);
+        s.insert(FlowBuilder::new().uri("http://keep/new").build());
+
+        let filter = FlowFilter { host: Some("keep".into()), ..Default::default() };
+        let page = s.page(&filter, 5, Some(pivot_id));
+        assert_eq!(uris(&page.flows), vec!["http://keep/old"]);
+    }
+
+    #[test]
+    fn an_insert_between_pages_stays_behind_the_walk() {
+        let s = store();
+        for u in ["http://a/", "http://b/", "http://c/"] {
+            s.insert(FlowBuilder::new().uri(u).build());
+        }
+        let first = s.page(&FlowFilter::default(), 2, None);
+        s.insert(FlowBuilder::new().uri("http://newcomer/").build());
+
+        let second = s.page(&FlowFilter::default(), 2, first.next_cursor);
+        assert_eq!(uris(&second.flows), vec!["http://a/"], "a newer row is not served twice");
+    }
+
+    #[test]
     fn status_filter_excludes_responseless() {
         let s = store();
         s.insert(FlowBuilder::new().build());
@@ -372,6 +511,78 @@ mod tests {
             let got: Vec<String> = list.iter().map(|f| f.request.uri.clone()).collect();
             let expected: Vec<String> = (0..n).rev().map(|i| format!("http://h/{i}")).collect();
             proptest::prop_assert_eq!(got, expected);
+        }
+
+        /// The WU's central claim: walking a live ring by cursor serves every row
+        /// that survives the walk exactly once. Inserts and evictions are driven
+        /// between pages, so the walk is never over a frozen store.
+        #[test]
+        fn paging_a_live_ring_never_duplicates_or_skips(
+            seed in proptest::collection::vec(0usize..12, 1..25),
+            churn in proptest::collection::vec(0usize..12, 0..12),
+            limit in 1usize..5,
+            max in 20usize..200,
+        ) {
+            let s = Store::new(max, 512);
+            let body = |sz: usize| if sz == 0 { BodyRec::Empty } else { captured(&vec![0u8; sz]) };
+            for sz in &seed {
+                s.insert(FlowBuilder::new().req_body(body(*sz)).build());
+            }
+
+            let before: Vec<FlowId> =
+                s.list(&FlowFilter::default()).iter().map(|f| f.id).collect();
+
+            let mut served = Vec::new();
+            let mut cursor = None;
+            let budget = limit * (1 + seed.len() + churn.len());
+            let mut churn = churn.iter();
+            loop {
+                let page = s.page(&FlowFilter::default(), limit, cursor);
+                served.extend(page.flows.iter().map(|f| f.id));
+                let Some(next) = page.next_cursor else { break };
+                cursor = Some(next);
+                if let Some(sz) = churn.next() {
+                    s.insert(FlowBuilder::new().req_body(body(*sz)).build());
+                }
+            }
+
+            let mut seen = std::collections::HashSet::new();
+            for id in &served {
+                proptest::prop_assert!(seen.insert(*id), "row {id} served twice");
+            }
+            proptest::prop_assert!(served.len() <= budget, "the walk must terminate, not cycle");
+
+            // Every row that was present when the walk started and is still held
+            // now was reachable by the walk — nothing was skipped over.
+            let after: std::collections::HashSet<FlowId> =
+                s.list(&FlowFilter::default()).iter().map(|f| f.id).collect();
+            for id in before.iter().filter(|id| after.contains(id)) {
+                proptest::prop_assert!(seen.contains(id), "row {id} survived but was skipped");
+            }
+        }
+
+        #[test]
+        fn a_page_walk_matches_the_unpaged_listing_on_a_still_ring(
+            n in 0usize..25,
+            limit in 1usize..6,
+        ) {
+            let s = Store::new(1_000_000, 512);
+            for i in 0..n {
+                s.insert(FlowBuilder::new().uri(&format!("http://h/{i}")).build());
+            }
+
+            let mut walked = Vec::new();
+            let mut cursor = None;
+            loop {
+                let page = s.page(&FlowFilter::default(), limit, cursor);
+                walked.extend(page.flows.iter().map(|f| f.id));
+                let Some(next) = page.next_cursor else { break };
+                cursor = Some(next);
+            }
+
+            let listed: Vec<FlowId> =
+                s.list(&FlowFilter::default()).iter().map(|f| f.id).collect();
+            proptest::prop_assert_eq!(walked, listed, "paging must re-slice the listing, not redefine it");
         }
 
         #[test]

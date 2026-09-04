@@ -14,7 +14,7 @@ use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
 use super::decode;
-use super::view::{self, FlowSummary, FlowView};
+use super::view::{self, FlowPageView, FlowSummary, FlowView};
 use crate::flow::{header_value, BodyRec, FlowId, Header};
 use crate::store::{FlowFilter, Store};
 
@@ -31,6 +31,8 @@ pub struct ListQuery {
     status: Option<u16>,
     content_type: Option<String>,
     q: Option<String>,
+    limit: Option<String>,
+    cursor: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -44,10 +46,11 @@ enum Leg {
     Response,
 }
 
-pub async fn list_flows(
-    Query(query): Query<ListQuery>,
-    State(state): State<AppState>,
-) -> Json<Vec<FlowSummary>> {
+/// Two shapes, selected by whether paging was asked for: without `limit` the
+/// whole filtered list as a bare array — the contract every existing client
+/// already reads — and with it an envelope, because an array cannot carry the
+/// cursor that continues the walk.
+pub async fn list_flows(Query(query): Query<ListQuery>, State(state): State<AppState>) -> Response {
     let filter = FlowFilter {
         host: query.host,
         method: query.method,
@@ -55,8 +58,31 @@ pub async fn list_flows(
         content_type: query.content_type,
         q: query.q,
     };
-    let summaries = state.store.list(&filter).iter().map(FlowSummary::from).collect();
-    Json(summaries)
+
+    let cursor = match query.cursor.as_deref().map(parse_cursor) {
+        Some(Ok(id)) => Some(id),
+        Some(Err(reason)) => return bad_request(reason),
+        None => None,
+    };
+
+    let Some(limit) = query.limit.as_deref() else {
+        // A cursor without a limit is a client that believes it is paging, so it
+        // is refused rather than silently served the whole unbounded listing.
+        if cursor.is_some() {
+            return bad_request("cursor requires limit");
+        }
+        let summaries: Vec<FlowSummary> =
+            state.store.list(&filter).iter().map(FlowSummary::from).collect();
+        return Json(summaries).into_response();
+    };
+
+    let limit = match limit.parse::<usize>() {
+        Ok(0) | Err(_) => return bad_request("limit must be a positive integer"),
+        Ok(limit) => limit,
+    };
+
+    let page = state.store.page(&filter, limit, cursor);
+    Json(FlowPageView::from(&page)).into_response()
 }
 
 /// One-shot counterpart to the `connection` SSE event: "has any traffic reached
@@ -162,7 +188,15 @@ fn parse_flow_id(id: &str) -> Option<FlowId> {
 }
 
 fn bad_id() -> Response {
-    (StatusCode::BAD_REQUEST, "invalid flow id").into_response()
+    bad_request("invalid flow id")
+}
+
+fn bad_request(reason: &'static str) -> Response {
+    (StatusCode::BAD_REQUEST, reason).into_response()
+}
+
+fn parse_cursor(cursor: &str) -> Result<FlowId, &'static str> {
+    parse_flow_id(cursor).ok_or("cursor must be a flow id")
 }
 
 fn wants_decode(query: &BodyQuery) -> bool {
@@ -171,7 +205,84 @@ fn wants_decode(query: &BodyQuery) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use axum::body::to_bytes;
+    use axum::extract::{Query, State};
+    use axum::http::StatusCode;
+    use serde_json::Value;
+
+    use super::AppState;
+    use crate::store::Store;
+    use crate::test_support::FlowBuilder;
+
+    fn state_with(uris: &[&str]) -> AppState {
+        let store = Arc::new(Store::new(1_000_000, 64));
+        for uri in uris {
+            store.insert(FlowBuilder::new().uri(uri).build());
+        }
+        AppState { store, ca_cert_pem: Arc::new("PEM".into()) }
+    }
+
+    async fn list(state: &AppState, query: &str) -> (StatusCode, Value) {
+        let uri = format!("http://x/flows?{query}").parse::<axum::http::Uri>().expect("uri");
+        let query = Query::try_from_uri(&uri).expect("query");
+        let response = super::list_flows(query, State(state.clone())).await;
+        let status = response.status();
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.expect("body");
+        let value = serde_json::from_slice(&bytes)
+            .unwrap_or(Value::String(String::from_utf8_lossy(&bytes).into_owned()));
+        (status, value)
+    }
+
+    #[tokio::test]
+    async fn without_a_limit_the_listing_is_the_bare_array_it_has_always_been() {
+        let state = state_with(&["http://a/", "http://b/"]);
+        let (status, value) = list(&state, "").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(value.as_array().expect("an array, not an envelope").len(), 2);
+    }
+
+    #[tokio::test]
+    async fn a_limit_switches_the_response_to_the_paging_envelope() {
+        let state = state_with(&["http://a/", "http://b/", "http://c/"]);
+        let (status, value) = list(&state, "limit=2").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(value["flows"].as_array().expect("flows").len(), 2);
+        assert!(value["next_cursor"].is_string());
+
+        let cursor = value["next_cursor"].as_str().expect("cursor");
+        let (_, next) = list(&state, &format!("limit=2&cursor={cursor}")).await;
+        assert_eq!(next["flows"].as_array().expect("flows").len(), 1);
+        assert!(next["next_cursor"].is_null());
+    }
+
+    #[tokio::test]
+    async fn paging_composes_with_the_filters() {
+        let state = state_with(&["http://keep/1", "http://drop/1", "http://keep/2"]);
+        let (_, value) = list(&state, "host=keep&limit=1").await;
+        assert_eq!(value["flows"][0]["uri"], "http://keep/2");
+        assert!(value["next_cursor"].is_string());
+    }
+
+    #[tokio::test]
+    async fn malformed_paging_parameters_are_refused_by_name() {
+        let state = state_with(&["http://a/"]);
+        for (query, named) in [
+            ("limit=0", "limit"),
+            ("limit=none", "limit"),
+            ("limit=-1", "limit"),
+            ("cursor=not-a-uuid&limit=2", "cursor"),
+            ("cursor=00000000-0000-0000-0000-000000000000", "cursor"),
+        ] {
+            let (status, value) = list(&state, query).await;
+            assert_eq!(status, StatusCode::BAD_REQUEST, "query {query}");
+            assert!(
+                value.as_str().is_some_and(|reason| reason.contains(named)),
+                "refusal for {query} must name {named}, got {value}"
+            );
+        }
+    }
 
     #[tokio::test]
     async fn ui_page_serves_the_embedded_shell_as_html() {
