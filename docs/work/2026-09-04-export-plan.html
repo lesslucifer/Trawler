@@ -9,8 +9,8 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-EXPORT — a capture leaves the ring and comes back</h1>
-      <p>HAR export and import, a store that can be cleared, and a listing that pages — the first epic in which a flow outlives the process that captured it.</p>
-      <div class="meta">Draft v1 · 2026-09-04 · Trawler · T3 epic plan · <span class="badge id">E-EXPORT</span></div>
+      <p>HAR export and import, a pasted curl command as a flow, a store that can be cleared, and a listing that pages — the first epic in which a flow outlives the process that captured it.</p>
+      <div class="meta">Draft v2 · 2026-09-04 · Trawler · T3 epic plan · <span class="badge id">E-EXPORT</span></div>
     </div>
   </header>
   <main>
@@ -25,8 +25,10 @@
       impossible — <strong>hand a capture to someone else</strong>, <strong>open the
       capture they handed you</strong>, and <strong>clear the noise before reproducing a
       bug</strong>. This epic delivers all three over the interchange format the tools in
-      this space already speak, <strong>HAR 1.2</strong>, plus the paging a listing needs
-      once a session is long enough to be worth exporting. Now, because
+      this space already speak, <strong>HAR 1.2</strong>, plus a second, single-request way in
+      — <strong>paste a <code>curl</code> command</strong>, the exact inverse of the
+      copy-as-curl the app already ships — and the paging a listing needs once a session is
+      long enough to be worth exporting. Now, because
       <a href="../backlog/roadmap.html">the roadmap</a> makes E-EXPORT the independent
       Wave-2 Function track alongside the UI work, and because every later epic that
       produces flows (E-REPLAY, E-RULE, E-PERSIST) is easier to build and to test against
@@ -49,8 +51,8 @@
         </tr>
         <tr>
           <td>Serialization</td>
-          <td><code>FlowView</code> / <code>FlowSummary</code> — the API's own JSON, one-way</td>
-          <td>a HAR projection and a HAR parser, both round-trippable</td>
+          <td><code>FlowView</code> / <code>FlowSummary</code> — the API's own JSON, one-way. <code>toCurl</code> (<code>ui/src/flow.ts</code>) renders a request as curl, also one-way</td>
+          <td>a HAR projection and a HAR parser, both round-trippable; a curl parser inverting <code>toCurl</code></td>
         </tr>
         <tr>
           <td>Flow provenance</td>
@@ -70,6 +72,7 @@
 flowchart LR
   P["proxy · Recorder"] -->|"insert"| S["Store · the ring"]
   F["a .har file"] -->|"POST /flows/import (W3)"| S
+  CU["a pasted curl command"] -->|"POST /flows/import?format=curl (W7)"| S
   S -->|"GET /flows/export (W2)"| F2["a .har file"]
   S -->|"DELETE /flows (W4)"| X["gone — announced on the bus"]
   S -->|"GET /flows?limit&amp;cursor (W1)"| L["a page of summaries"]
@@ -97,6 +100,9 @@ flowchart LR
               by that mark, and is otherwise an ordinary flow — same detail endpoints, same
               body endpoints, same ring rules. Export then import of the same capture
               preserves method, URI, status, versions, headers, timings and captured bodies.
+              A single request can also come in as a pasted <code>curl</code> command — the
+              inverse of UC-5's copy-as-curl — landing as a request-only flow, marked the
+              same way.
             </td>
           </tr>
           <tr>
@@ -114,8 +120,8 @@ flowchart LR
               The listing contract gains opt-in paging: <code>GET /flows</code> with no paging
               parameters still returns the whole filtered list (the shell and app keep working
               untouched), and with <code>limit</code> returns a bounded page plus a cursor for
-              the next one. The native app's flow list gains the export, import and clear
-              controls (UC-4's surface is where they live).
+              the next one. The native app's flow list gains the export, import (file and curl
+              paste) and clear controls (UC-4's surface is where they live).
             </td>
           </tr>
         </tbody>
@@ -163,6 +169,11 @@ flowchart LR
             <td>A malformed or hostile <code>.har</code> (not JSON, wrong version, missing <code>log.entries</code>, an entry with no request, a body claiming a size it does not have) is refused with a status and a reason — never a panic, never a partially-populated store.</td>
             <td>Unit tests per malformation; a proptest feeding arbitrary bytes to the parser asserting it never panics.</td>
           </tr>
+          <tr>
+            <td>8</td>
+            <td>A <code>curl</code> command copied out of a browser's network panel and pasted into Trawler appears as a flow — method, URL, headers and body intact, marked <code>imported</code>, with no response. A command using a flag the parser does not support is refused naming that flag.</td>
+            <td>Unit tests over real browser-emitted commands (Chrome, Firefox, Safari shapes, incl. multi-line continuations); a proptest asserting <code>toCurl</code> → parse round-trips to the same request; the e2e pastes one through the app.</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -171,8 +182,8 @@ flowchart LR
     <ul data-item="non-goals">
       <li><strong>Persistence.</strong> The store stays an in-memory ring; a HAR file is an artifact a user asks for, not an autosave. Named sessions surviving restart is <span class="badge id">E-PERSIST</span>, and this epic must not smuggle in a durable store behind the export path.</li>
       <li><strong>Replaying an imported flow.</strong> Import puts a flow in the ring so it can be read; firing it at a server is <span class="badge id">E-REPLAY</span>. An imported flow is inspectable, not executable.</li>
-      <li><strong>Formats other than HAR 1.2.</strong> No <code>.saz</code>, no Charles <code>.chls</code>, no curl-script or Postman-collection export. One format, done properly.</li>
-      <li><strong>Streaming a huge export.</strong> The export is built and returned in one response, bounded by the ring's own byte cap. If a cap-sized export proves too heavy the fix is a follow-up epic, not a streaming encoder here.</li>
+      <li><strong>Capture formats other than HAR 1.2.</strong> No <code>.saz</code>, no Charles <code>.chls</code>, no Postman collection. One capture format, done properly — the curl parser below is a single-request convenience, not a second capture format.</li>
+      <li><strong>Exporting a whole capture as a curl script.</strong> W7 parses a pasted curl command <em>in</em>; it does not write a shell script <em>out</em>. Copy-as-curl already serializes one request (UC-5), and a runnable multi-request script is a different artifact with its own ordering and dependency problems.</li>
       <li><strong>Editing on import.</strong> Entries land as they are read. Rewriting a header or a host on the way in is a rules concern (<span class="badge id">E-RULE</span>).</li>
       <li><strong>Making the API writable in general.</strong> The CORS grant currently advertises <code>GET, OPTIONS</code> (<code>src/api/mod.rs</code>) because the API is read-only. This epic widens it exactly as far as the new methods require, and states that widening as a decision — it does not open the surface.</li>
     </ul>
@@ -270,7 +281,9 @@ flowchart LR
           <a href="../design-flow.html">the design flow</a>: where export, import and clear
           live on a screen whose chrome is currently a filter bar and a list; what a
           destructive action asks before it acts; how an imported flow is marked in a row
-          without adding a column; and what each control says while it is working. The run
+          without adding a column; how a pasted <code>curl</code> command is accepted and how
+          its refusal reads (W7's parser names the flag it rejected — the screen decides where
+          that lands); and what each control says while it is working. The run
           resolves every element to reuse / extend / propose against the registry
           (<code>Button</code>, <code>IconButton</code>, <code>Notice</code>,
           <code>useConfirm</code> already exist), and must answer the lexicon problem this
@@ -293,10 +306,11 @@ flowchart LR
         <p data-item="wu-summary">
           The controls W5 designed, built in <code>ui/src/</code> and cited to that design
           (<code>design.implements</code>, path + blob, per the design→build rule): the API
-          client gains <code>exportHar</code>, <code>importHar</code> and <code>clearFlows</code>;
-          the flow-list surface gains the controls; the imported mark appears in the row; the
-          clear confirmation is wired through the existing <code>useConfirm</code>. Save and
-          open dialogs go through the Tauri layer the app already uses for native calls.
+          client gains <code>exportHar</code>, <code>importHar</code>, <code>importCurl</code>
+          and <code>clearFlows</code>; the flow-list surface gains the controls, including the
+          curl paste target; the imported mark appears in the row; the clear confirmation is
+          wired through the existing <code>useConfirm</code>. Save and open dialogs go through
+          the Tauri layer the app already uses for native calls.
         </p>
         <p data-item="wu-maps-to">E-EXPORT · UC-4 amended · implements W5's design.</p>
         <p data-item="wu-expected">
@@ -305,6 +319,40 @@ flowchart LR
           built component's TSDoc per <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>.
         </p>
         <p data-item="wu-deps">E-EXPORT.W5 (the design must close first) · W2 · W3 · W4 (the endpoints it calls).</p>
+      </div>
+
+      <div data-wu="E-EXPORT.W7">
+        <h3 id="w7">E-EXPORT.W7 — paste a curl command, get a flow</h3>
+        <p data-item="wu-summary">
+          The inverse of the copy-as-curl the app already ships
+          (<code>toCurl</code>, <code>ui/src/flow.ts:67</code>): a parser that turns a pasted
+          <code>curl</code> command line into a flow, reached as
+          <code>POST /flows/import?format=curl</code> and, in the app, as a paste target on
+          the same import control W5 designs. It handles what the ecosystem actually pastes —
+          the flags browsers' "Copy as cURL" emits (<code>-X</code>, <code>-H</code>,
+          <code>--data</code>/<code>--data-raw</code>/<code>--data-binary</code>,
+          <code>-d</code>, <code>--url</code>, <code>-b</code>, shell quoting, and
+          line-continuation backslashes across multiple lines) and refuses everything else
+          with a reason naming the flag it did not understand. A parsed command yields a
+          request-only flow, marked <code>imported</code> exactly as a HAR entry is: it has no
+          response, because nothing has been sent — the same shape a captured flow has
+          between request and reply, which the store, the API and the UI already handle.
+        </p>
+        <p data-item="wu-maps-to">
+          E-EXPORT · UC-6 extended to a second, single-request import form · the inverse of
+          UC-5's copy-as-curl · requested at plan review.
+        </p>
+        <p data-item="wu-expected">
+          Expected result 8 holds. Round-trip against the existing serializer is proven as a
+          property: any flow rendered by <code>toCurl</code> and parsed back compares equal on
+          method, URI, headers and body — the two functions are inverses, asserted rather than
+          assumed.
+        </p>
+        <p data-item="wu-deps">
+          E-EXPORT.W3 — reuses its <code>source</code> marking and its refusal contract;
+          the parser is a second format behind the same import endpoint. Independent of W5/W6,
+          though its paste affordance is designed in W5 if it lands first.
+        </p>
       </div>
 
     </div>
@@ -326,7 +374,8 @@ flowchart LR
           <tr><td>Subscribe to <code>/stream</code>, then <code>DELETE /flows</code>.</td><td>the listing empties, the subscriber receives the clear event, the connection tally is unchanged</td><td>W4</td></tr>
           <tr><td><code>POST /flows/import</code> with the exported bytes.</td><td>the listing returns the same flows, each <code>source=imported</code>; <code>?source=captured</code> is empty; each is readable at <code>/flows/{id}</code> and its body endpoints</td><td>W3</td></tr>
           <tr><td>Post a truncated copy of the same file.</td><td>refused with a reason; the store still holds exactly the previous import</td><td>W3</td></tr>
-          <tr><td>WebDriver: launch the built app against that engine, use the export control, the clear control, then the import control on the exported file.</td><td>the list empties and refills; the imported rows carry the mark</td><td>W5 · W6</td></tr>
+          <tr><td>Post a browser-shaped <code>curl</code> command to <code>/flows/import?format=curl</code>, then one carrying an unsupported flag.</td><td>the first appears as a request-only flow marked <code>imported</code>; the second is refused naming the flag</td><td>W7</td></tr>
+          <tr><td>WebDriver: launch the built app against that engine, use the export control, the clear control, the import control on the exported file, then paste a curl command.</td><td>the list empties and refills; the imported rows carry the mark; the pasted request appears</td><td>W5 · W6 · W7</td></tr>
         </tbody>
       </table>
       <p>
@@ -348,7 +397,7 @@ flowchart LR
           <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td><td>both new records</td></tr>
           <tr><td><code>docs/design-rules/design-rules-index.html</code></td><td>T2</td><td>W5's lexicon answer: <em>export</em> as an operation name versus the reserved <em>copy</em> meaning — the rulebook's Lexicon row updated, or a new row, per what the run decides</td></tr>
           <tr><td><code>docs/architecture.html</code></td><td>T1</td><td>only if the store's shape changed at the seam level — removal and ingest are new store capabilities, so the module's one-line contract there is re-checked at close and edited only if it is now false</td></tr>
-          <tr><td><code>docs/backlog/roadmap.html</code></td><td>T2</td><td>E-EXPORT struck from the Wave-2 sequence, landed-so-far updated; anything punted here added to the Deferred table</td></tr>
+          <tr><td><code>docs/backlog/roadmap.html</code></td><td>T2</td><td>E-EXPORT struck from the Wave-2 sequence, landed-so-far updated; <strong>a Deferred row for streaming a cap-sized export</strong> (deferred at plan review — revisit when a real capture proves the one-shot response too heavy), plus anything else punted during the work</td></tr>
           <tr><td>this plan + the six WU results + the epic result</td><td>T3</td><td>archived out of git at close per <a href="../decisions/decisions-index.html">DEC-3</a></td></tr>
         </tbody>
       </table>
@@ -361,8 +410,13 @@ flowchart LR
 
     <h2 id="open-questions">Open questions</h2>
     <div data-item="open-questions">
+      <p>
+        Questions 1&ndash;7 were <strong>settled at the plan review</strong> — every proposed
+        default confirmed as written. They stay on the record as the decisions they are, not as
+        open items; question 8 is new, raised by W7.
+      </p>
       <table>
-        <thead><tr><th>#</th><th>Question</th><th>Proposed default</th></tr></thead>
+        <thead><tr><th>#</th><th>Question</th><th>Answer</th></tr></thead>
         <tbody>
           <tr>
             <td>1</td>
@@ -387,7 +441,7 @@ flowchart LR
           <tr>
             <td>5</td>
             <td>Which word does the UI use for export, given the rulebook reserves it against <em>copy</em>?</td>
-            <td><strong>Export, for the file operation only</strong> — the reserved meaning bans it as a synonym for <em>copy</em> (putting bytes on the clipboard), which is a different operation. W5 states this in the run and the rulebook row is clarified at distillation rather than left ambiguous.</td>
+            <td><strong>Export</strong> — for the file operation only — the reserved meaning bans it as a synonym for <em>copy</em> (putting bytes on the clipboard), which is a different operation. W5 states this in the run and the rulebook row is clarified at distillation rather than left ambiguous.</td>
           </tr>
           <tr>
             <td>6</td>
@@ -398,6 +452,11 @@ flowchart LR
             <td>7</td>
             <td>Is <code>insta</code> a new dependency, given the WU obligation to snapshot-lock a new wire contract?</td>
             <td><strong>Yes, dev-dependency, added in W2.</strong> The testing standard names it as the tool for exactly this and nothing in the tree has needed it until a serialized document format arrived.</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>How much of <code>curl</code> does W7's parser accept? The tool has hundreds of flags and a full shell grammar sits behind any pasted command.</td>
+            <td><strong>The flags browsers emit, and a refusal for the rest.</strong> The parser's job is to accept what a developer actually pastes — a browser's "Copy as cURL" and Trawler's own <code>toCurl</code> — not to reimplement curl. Anything outside that set is refused <em>naming the flag</em>, which is honest and actionable, where silently ignoring a flag would produce a flow subtly unlike the request the user pasted. W7 fixes the exact accepted set; flags that change the request's meaning if dropped (<code>--compressed</code>, <code>-u</code>) are the ones to decide deliberately.</td>
           </tr>
         </tbody>
       </table>
