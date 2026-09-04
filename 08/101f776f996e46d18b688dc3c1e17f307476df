@@ -8,13 +8,13 @@ changes:
   - path: docs/work/components/field.html
     tier: T3
     action: added
-    distills: "Field's contract — T1, the app's one text input; Select's box per DEC-18; aria-label required; no validity state"
+    distills: "Field's contract — T1, the app's one text input; Select's box per DEC-18; aria-label required; no validity state. F4's reasoning corrected at review: Select fixes its filter's name where Field requires the caller to supply one"
   - path: docs/work/components/status-dot.html
     tier: T3
     action: added
-    distills: "StatusDot's contract — T2, capture health plus the only route back to setup; the DotStatus-is-not-StatusTone argument; the 24px target and the accessible name the shipped version lacks"
+    distills: "StatusDot's contract — T2, capture health plus the only route back to setup; the DotStatus-is-not-StatusTone argument (rebuilt at review on the authority axis, not transient-vs-terminal); the 24px target and the accessible name the shipped version lacks; S2b's IconButton reuse-or-propose fork"
   - path: docs/work/components/disclosure.html
     tier: T3
     action: added
     distills: "Disclosure's contract — T1 slot-based, answering the epic plan's open question on tier; native <details>; the UA-triangle suppression"
-note: "Nothing distils to T2 or T1 in this WU, and that is the design, not an omission. A component design file is a transient contract by DEC-16 — it holds the component's truth only until the build retires it into TSDoc, which is W2. The two T2 write-backs this work implies are both W2's or later: (1) the rulebook's chromatic-meanings table gains StatusDot as a second owner of ok/warn and its first ink-mute row — recorded as a PROPOSAL in status-dot.html because the rulebook is frozen input for a run and grows at distillation per DEC-14, and the epic's distillation plan already reserves the row; (2) the decision record on why the app's one text input and one state dot are registry entries rather than screen-local, which the epic plan assigns to its own distillation. No T2 doc states anything this WU contradicts today."
+note: "Nothing distils to T2 or T1 in this WU, and that is the design, not an omission. A component design file is a transient contract by DEC-16 — it holds the component's truth only until the build retires it into TSDoc, which is W2. The two T2 write-backs this work implies are both W2's or later: (1) the rulebook's chromatic-meanings table gains StatusDot as a second owner of ok/warn and its first ink-mute row — recorded as a PROPOSAL in status-dot.html because the rulebook is frozen input for a run and grows at distillation per DEC-14, and the epic's distillation plan already reserves the row; (2) the decision record on why the app's one text input and one state dot are registry entries rather than screen-local, which the epic plan assigns to its own distillation. No T2 doc states anything this WU contradicts today. One T1 inconsistency was OBSERVED and deliberately not fixed here: docs/component-design.html's file skeleton still prescribes the pre-bundle tw-config.js loading shape, which DEC-26 superseded — out of scope for a WU whose non-goal is 'no change to the flow spec, rulebook or gate', and recorded as an epic follow-up rather than an undeclared T1 edit."
