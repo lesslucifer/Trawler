@@ -397,6 +397,14 @@ impl Verdict {
             | Self::Checked { failures, .. } => failures,
         }
     }
+
+    fn failures_mut(&mut self) -> &mut Vec<Failure> {
+        match self {
+            Self::Ungoverned { failures }
+            | Self::Exempt { failures, .. }
+            | Self::Checked { failures, .. } => failures,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -2552,11 +2560,6 @@ fn edit_distance(a: &str, b: &str) -> usize {
     row[b_chars.len()]
 }
 
-// A link is a property of the file, not of what the file declares itself to be.
-// Both dead-link classes this predicate exists to kill shipped inside docs with
-// no `data-artifact` at all (DEC-13; c5f474b), where every checklist predicate is
-// unreachable by construction - so this is asked beside the artifact read, never
-// behind it.
 // Any URI scheme, not a list of the ones seen so far: `https:`, `mailto:`,
 // `tel:`, `data:` are all targets the tree cannot answer for. A colon alone does
 // not make one - a scheme is letters, digits, `+-.` before it, and never a `/`,
@@ -2569,6 +2572,9 @@ fn has_scheme(target: &str) -> bool {
     })
 }
 
+// Asked of every doc, beside the artifact read rather than behind it: a doc with
+// no `data-artifact` never reaches a checklist predicate, and its links still
+// have to resolve.
 fn link_targets(html: &str) -> Vec<String> {
     attrs(html, "href")
         .into_iter()
@@ -2617,20 +2623,9 @@ fn with_links(verdict: Verdict, html: &str, doc: &Path) -> Verdict {
     }
     let mut found = Vec::new();
     check_links(&mut found, html, doc);
-    match verdict {
-        Verdict::Ungoverned { mut failures } => {
-            failures.extend(found);
-            Verdict::Ungoverned { failures }
-        }
-        Verdict::Exempt { status, mut failures } => {
-            failures.extend(found);
-            Verdict::Exempt { status, failures }
-        }
-        Verdict::Checked { artifacts, mut failures, summary } => {
-            failures.extend(found);
-            Verdict::Checked { artifacts, failures, summary }
-        }
-    }
+    let mut verdict = verdict;
+    verdict.failures_mut().extend(found);
+    verdict
 }
 
 pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {

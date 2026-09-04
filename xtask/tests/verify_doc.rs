@@ -346,10 +346,8 @@ fn ungoverned(body: &str) -> String {
     )
 }
 
-// The defect this predicate exists for: DEC-13 shipped a permanent record pointing
-// at a source file no commit ever held, and verify-doc was green on it because a
-// decision record declares no data-artifact and every checklist predicate is
-// therefore unreachable.
+// A doc with no data-artifact reaches no checklist predicate, so this is the one
+// case the whole scope decision turns on.
 #[test]
 fn an_ungoverned_doc_with_a_dead_link_is_red() {
     let dir = TempDir::new().unwrap();
