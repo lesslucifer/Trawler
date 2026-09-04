@@ -1,0 +1,22 @@
+schema: doc/v1
+epic: E-EXPORT
+wu: E-EXPORT.W1
+branch: wu/export/paging
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "New joint section 'UC-3 · UC-4 — the listing pages, opt-in' (id listing-paging), placed after both surfaces because it is one fact about the listing they share rather than two per-surface facts. Carries the three request/answer rows (unparameterised = the whole filtered capture as a bare array, unchanged by paging's arrival; ?limit=n = an envelope of n rows plus next_cursor, null at the oldest row the ring still holds; a bad limit, a bad cursor, or a cursor with no limit = 400 naming the parameter), that the cursor names a row rather than an offset, and the two consequences a reader cannot infer from the endpoint signature: a flow captured mid-walk is never served twice (it arrives on GET /stream instead), and an evicted cursor ends the walk rather than restarting at the newest row. Provenance callout names the pinning tests and records that neither surface pages today, which is why the contract had to stay additive."
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: updated
+    distills: "A UC-3 · UC-4 row pointing at web-ui.html#listing-paging so index-first reading reaches the paging amendment."
+  - path: docs/work/2026-09-04-export-w1-paging-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan, written before the code - requirement, mapping to the epic's W1 block and the UC-3/UC-4 additive amendment, the two-shape wire contract as a table, what the cursor is and the four mid-walk cases it survives, five observables, and the test plan naming the no-duplicate/no-skip proptest as the central claim with the e2e waiver reasoned to the epic's own step 2."
+  - path: docs/work/2026-09-04-export-w1-paging-result.html
+    tier: T3
+    action: added
+    distills: "The WU result - delivered against all five observables with each one's proving test named, what shipped per file, the two contract calls the plan left to the build (peek one past the page so a full final page reports no cursor; limit as a String so the refusal can name the parameter), no deviations, the evidence table with the e2e waiver, the distillation ledger, and the follow-up that nothing pages yet."
+note: "T2 synthesis is the joint UC-3/UC-4 listing-contract section plus its index row - one fact, one place, both surfaces. T1 deliberately unedited: architecture.html's store facts (the API reads and queries, never mutates; the ring is the single source of truth) stay true of a bounded read, and W4's removal is where that line gets re-checked; the epic gate re-checks it at close. No decision record - paging raised no choice the use-case contract does not state, and the cursor's mechanism stays in Store::page's doc comment rather than being copied into a doc. verify-doc green over both new T3 docs and both edited T2 docs; every relative href resolves on disk; both edited docs snapshotted before the edit."
