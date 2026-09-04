@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a70109f34851f0dfabf7f" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-EXPORT epic plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-EXPORT — a capture leaves the ring and comes back</h1>
+      <p>HAR export and import, a store that can be cleared, and a listing that pages — the first epic in which a flow outlives the process that captured it.</p>
+      <div class="meta">Draft v1 · 2026-09-04 · Trawler · T3 epic plan · <span class="badge id">E-EXPORT</span></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">
+      Every flow Trawler has ever captured dies with the process. The
+      <code>Store</code> is a byte-weighted ring
+      (<code>src/store.rs</code>) with no way out and no way in: nothing serializes a
+      capture, nothing reads one back, and nothing removes a flow except eviction under
+      memory pressure. That makes the three things a debugging session actually needs
+      impossible — <strong>hand a capture to someone else</strong>, <strong>open the
+      capture they handed you</strong>, and <strong>clear the noise before reproducing a
+      bug</strong>. This epic delivers all three over the interchange format the tools in
+      this space already speak, <strong>HAR 1.2</strong>, plus the paging a listing needs
+      once a session is long enough to be worth exporting. Now, because
+      <a href="../backlog/roadmap.html">the roadmap</a> makes E-EXPORT the independent
+      Wave-2 Function track alongside the UI work, and because every later epic that
+      produces flows (E-REPLAY, E-RULE, E-PERSIST) is easier to build and to test against
+      a store that can already be seeded and emptied.
+    </p>
+
+    <h2 id="today">What exists today</h2>
+    <table>
+      <thead><tr><th>Surface</th><th>Today</th><th>What this epic adds</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>GET /flows</code></td>
+          <td>whole filtered list, newest-first, no bound (<code>src/api/routes.rs</code>)</td>
+          <td>opt-in <code>limit</code> + <code>cursor</code>; unchanged without them</td>
+        </tr>
+        <tr>
+          <td>The ring</td>
+          <td><code>insert</code> · <code>set_response</code> · <code>get</code> · <code>list</code> — no removal, no external ingest</td>
+          <td><code>clear</code>/<code>remove</code>, an ingest path, and a paging read</td>
+        </tr>
+        <tr>
+          <td>Serialization</td>
+          <td><code>FlowView</code> / <code>FlowSummary</code> — the API's own JSON, one-way</td>
+          <td>a HAR projection and a HAR parser, both round-trippable</td>
+        </tr>
+        <tr>
+          <td>Flow provenance</td>
+          <td>every flow came from the proxy; nothing records that fact because nothing else could</td>
+          <td><code>source</code> on the flow: <code>captured</code> | <code>imported</code></td>
+        </tr>
+        <tr>
+          <td>Native app</td>
+          <td>list + filter + detail; no action that changes server state (<code>ui/src/</code>)</td>
+          <td>the first mutating controls the app has ever shipped</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  P["proxy · Recorder"] -->|"insert"| S["Store · the ring"]
+  F["a .har file"] -->|"POST /flows/import (W3)"| S
+  S -->|"GET /flows/export (W2)"| F2["a .har file"]
+  S -->|"DELETE /flows (W4)"| X["gone — announced on the bus"]
+  S -->|"GET /flows?limit&amp;cursor (W1)"| L["a page of summaries"]
+  S -.->|"unchanged"| SSE["/stream"]
+      </pre>
+      <div class="caption">Hình 1 — the ring gains three doors it never had (in, out, empty) and one new way to be read. The capture path and the event bus are untouched.</div>
+    </div>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <div data-item="use-cases">
+      <p>
+        Two new records and one amendment. The new behaviour is a user-facing capability,
+        so it lands in <a href="../use-cases/use-cases-index.html">the use-case KB</a>, not
+        only in the API surface.
+      </p>
+      <table>
+        <thead><tr><th>Record</th><th>Contract stated at this epic's close</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge id">UC-6</span> <em>new</em> — <em>take a capture out and bring one back</em></td>
+            <td>
+              A client can download the current filtered capture as a HAR 1.2 file that other
+              HTTP tools open, and can upload a HAR file to have its entries appear as flows
+              in the listing. An imported flow is marked <code>imported</code>, is filterable
+              by that mark, and is otherwise an ordinary flow — same detail endpoints, same
+              body endpoints, same ring rules. Export then import of the same capture
+              preserves method, URI, status, versions, headers, timings and captured bodies.
+            </td>
+          </tr>
+          <tr>
+            <td><span class="badge id">UC-7</span> <em>new</em> — <em>clear the capture</em></td>
+            <td>
+              A client can delete the whole capture, or only what a filter selects, and every
+              live subscriber learns of it on <code>/stream</code> rather than by polling.
+              A cleared store is empty, not restarted: the connection tally and the running
+              proxy are unaffected.
+            </td>
+          </tr>
+          <tr>
+            <td><span class="badge id">UC-3</span> · <span class="badge id">UC-4</span> <em>amended</em></td>
+            <td>
+              The listing contract gains opt-in paging: <code>GET /flows</code> with no paging
+              parameters still returns the whole filtered list (the shell and app keep working
+              untouched), and with <code>limit</code> returns a bounded page plus a cursor for
+              the next one. The native app's flow list gains the export, import and clear
+              controls (UC-4's surface is where they live).
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>Checkable by a reader who was not here:</p>
+      <table>
+        <thead><tr><th>#</th><th>Observable after</th><th>How to check</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>curl -x … http://…/ ; curl "http://127.0.0.1:7421/flows/export" &gt; c.har</code> produces a file whose <code>log.entries</code> carry the captured exchange, and which validates against the HAR 1.2 shape.</td>
+            <td>e2e: real proxied traffic → export → parse and assert entry fields. Integration test asserts the document shape against a locked snapshot.</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Posting that same file to <code>/flows/import</code> makes its entries appear in <code>GET /flows</code>, each marked <code>imported</code>; <code>GET /flows?source=imported</code> returns exactly them.</td>
+            <td>e2e round-trip: export → clear → import → the listing matches what was exported, field for field, with the mark flipped.</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Export honours the listing filters: <code>/flows/export?host=…</code> exports what <code>/flows?host=…</code> lists — the same query semantics, not a second implementation.</td>
+            <td>Integration test running both endpoints with identical filters and comparing the id sets.</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>DELETE /flows</code> empties the store and every open <code>/stream</code> subscriber receives a cleared event; <code>DELETE /flows?host=…</code> removes only matches; <code>DELETE /flows/{id}</code> removes one. The connection tally does not move.</td>
+            <td>Integration test with a subscribed receiver asserting both the store state and the event; a unit test asserting <code>connection_count()</code> is untouched.</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><code>GET /flows</code> with no paging parameters returns exactly what it returns today; with <code>limit=n</code> it returns n rows and a cursor whose follow-up returns the next n, with no row seen twice and none skipped across a concurrent insert.</td>
+            <td>Integration tests for both; a proptest over insert/page interleavings asserting the no-duplicate/no-skip invariant.</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>In the native app, a user exports the current list to a file, imports a <code>.har</code>, and clears the capture — each from a control on the flow-list surface, each reflecting the result live.</td>
+            <td>UI unit tests per control; the epic e2e drives the built app through export → clear → import via WebDriver (<code>ui/e2e/</code>).</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>A malformed or hostile <code>.har</code> (not JSON, wrong version, missing <code>log.entries</code>, an entry with no request, a body claiming a size it does not have) is refused with a status and a reason — never a panic, never a partially-populated store.</td>
+            <td>Unit tests per malformation; a proptest feeding arbitrary bytes to the parser asserting it never panics.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-item="non-goals">
+      <li><strong>Persistence.</strong> The store stays an in-memory ring; a HAR file is an artifact a user asks for, not an autosave. Named sessions surviving restart is <span class="badge id">E-PERSIST</span>, and this epic must not smuggle in a durable store behind the export path.</li>
+      <li><strong>Replaying an imported flow.</strong> Import puts a flow in the ring so it can be read; firing it at a server is <span class="badge id">E-REPLAY</span>. An imported flow is inspectable, not executable.</li>
+      <li><strong>Formats other than HAR 1.2.</strong> No <code>.saz</code>, no Charles <code>.chls</code>, no curl-script or Postman-collection export. One format, done properly.</li>
+      <li><strong>Streaming a huge export.</strong> The export is built and returned in one response, bounded by the ring's own byte cap. If a cap-sized export proves too heavy the fix is a follow-up epic, not a streaming encoder here.</li>
+      <li><strong>Editing on import.</strong> Entries land as they are read. Rewriting a header or a host on the way in is a rules concern (<span class="badge id">E-RULE</span>).</li>
+      <li><strong>Making the API writable in general.</strong> The CORS grant currently advertises <code>GET, OPTIONS</code> (<code>src/api/mod.rs</code>) because the API is read-only. This epic widens it exactly as far as the new methods require, and states that widening as a decision — it does not open the surface.</li>
+    </ul>
+
+    <h2 id="wus">Working units</h2>
+
+    <div data-item="wu-summaries">
+
+      <div data-wu="E-EXPORT.W1">
+        <h3 id="w1">E-EXPORT.W1 — the listing pages, and nothing that reads it notices</h3>
+        <p data-item="wu-summary">
+          Opt-in paging on <code>GET /flows</code>: <code>limit</code> and <code>cursor</code>
+          query parameters, a page read on the <code>Store</code> that walks the ring under
+          one lock, and a cursor that survives concurrent inserts and evictions without
+          duplicating or skipping a row. Absent both parameters the endpoint returns exactly
+          what it returns today — the shell, the native app and the existing e2e are untouched
+          by construction. Chosen first because it is the only WU that changes an existing
+          wire contract, and everything after it reads the ring the same way.
+        </p>
+        <p data-item="wu-maps-to">E-EXPORT · UC-3 / UC-4 listing contract, amended additively · the roadmap's "pagination".</p>
+        <p data-item="wu-expected">
+          Expected result 5 holds. <code>GET /flows?limit=2</code> returns two rows and a
+          cursor; following it walks the whole capture exactly once. No existing test changes.
+        </p>
+        <p data-item="wu-deps">none — first WU.</p>
+      </div>
+
+      <div data-wu="E-EXPORT.W2">
+        <h3 id="w2">E-EXPORT.W2 — a capture leaves as HAR</h3>
+        <p data-item="wu-summary">
+          The HAR 1.2 projection and <code>GET /flows/export</code>. A new
+          <code>src/api/har.rs</code> maps <code>Flow</code> → HAR entry (request, response,
+          headers, query string, cookies where present, <code>startedDateTime</code>,
+          <code>time</code>, the <code>timings</code> block, and <code>content</code> with
+          base64 for non-text bodies), and the endpoint reuses <code>FlowFilter</code> so
+          export and listing cannot drift. Bodies that were never captured (streaming,
+          too-large, read-error) are represented honestly rather than as empty — a HAR reader
+          must not be told a body was empty when it was skipped.
+        </p>
+        <p data-item="wu-maps-to">E-EXPORT · UC-6 (the export half) · the roadmap's "HAR export".</p>
+        <p data-item="wu-expected">
+          Expected results 1 and 3 hold. The document shape is snapshot-locked (<code>insta</code>),
+          so a later change to the projection surfaces as a reviewable diff.
+        </p>
+        <p data-item="wu-deps">none — independent of W1; may land in parallel.</p>
+      </div>
+
+      <div data-wu="E-EXPORT.W3">
+        <h3 id="w3">E-EXPORT.W3 — a capture comes back, marked</h3>
+        <p data-item="wu-summary">
+          <code>POST /flows/import</code> and the <code>source</code> field it forces onto the
+          domain model. <code>Flow</code> gains <code>source: FlowSource</code>
+          (<code>Captured</code> | <code>Imported</code>), surfaced in
+          <code>FlowSummary</code>/<code>FlowView</code> and filterable via
+          <code>FlowFilter</code>, because the store now holds flows the proxy never saw and a
+          user must be able to tell them apart and select them separately. The parser is the
+          inverse of W2's projection and refuses malformed input with a reason, never a panic
+          and never a half-filled store. Import respects the ring: entries insert like any
+          flow and evict like any flow.
+        </p>
+        <p data-item="wu-maps-to">E-EXPORT · UC-6 (the import half) · the roadmap's "HAR import".</p>
+        <p data-item="wu-expected">
+          Expected results 2 and 7 hold. Round-trip fidelity is proven as a property, not by
+          example: an arbitrary generated flow exported and re-imported compares equal on
+          every field the format carries.
+        </p>
+        <p data-item="wu-deps">E-EXPORT.W2 — the parser is defined against the projection.</p>
+      </div>
+
+      <div data-wu="E-EXPORT.W4">
+        <h3 id="w4">E-EXPORT.W4 — the capture can be cleared</h3>
+        <p data-item="wu-summary">
+          <code>DELETE /flows</code> (all, or only what the filter selects) and
+          <code>DELETE /flows/{id}</code>, over new <code>Store</code> removal that keeps
+          <code>total_bytes</code> honest and announces what left on the bus. A new
+          <code>FlowEvent</code> variant carries the clear, because an interface that learns
+          about removal only by refetching cannot be live. The connection tally stays outside
+          the ring and outside this — it is a monotonic "traffic reached us" tally, not
+          storage. Also the CORS widening the mutating methods require, recorded as a
+          decision alongside <a href="../decisions/dec-12-native-ui-stack.html">DEC-12</a>.
+        </p>
+        <p data-item="wu-maps-to">E-EXPORT · UC-7 · the roadmap's "DELETE /flows".</p>
+        <p data-item="wu-expected">
+          Expected result 4 holds. The ring's byte accounting after any sequence of inserts and
+          removals equals the sum of what it holds — the existing <code>ring_accounting</code>
+          proptest extended with removals rather than a new test beside it.
+        </p>
+        <p data-item="wu-deps">none — independent of W1–W3; may land in parallel.</p>
+      </div>
+
+      <div data-wu="E-EXPORT.W5">
+        <h3 id="w5">E-EXPORT.W5 — design: the capture-management controls</h3>
+        <p data-item="wu-summary">
+          A design run over the flow-list surface, following
+          <a href="../design-flow.html">the design flow</a>: where export, import and clear
+          live on a screen whose chrome is currently a filter bar and a list; what a
+          destructive action asks before it acts; how an imported flow is marked in a row
+          without adding a column; and what each control says while it is working. The run
+          resolves every element to reuse / extend / propose against the registry
+          (<code>Button</code>, <code>IconButton</code>, <code>Notice</code>,
+          <code>useConfirm</code> already exist), and must answer the lexicon problem this
+          epic creates: <a href="../design-rules/design-rules-index.html">the rulebook</a>
+          reserves <em>export</em> as a word never to use for <em>copy</em> — here it is the
+          literal, correct name for the operation, and the run states which word the UI uses
+          and why. No build.
+        </p>
+        <p data-item="wu-maps-to">E-EXPORT · UC-4's surface · the roadmap's rule that a post-viewer epic ships its own UI controls.</p>
+        <p data-item="wu-expected">
+          A closed, archived design run (Tier-1 green, receipt citing every rule slug with a
+          verdict, blocked-on list empty or escalated) that W6 cites by path and blob. Any
+          proposed component is proposed here, not invented during the build.
+        </p>
+        <p data-item="wu-deps">E-EXPORT.W2 · W3 · W4 — the run designs controls for contracts that must already exist to be designed honestly.</p>
+      </div>
+
+      <div data-wu="E-EXPORT.W6">
+        <h3 id="w6">E-EXPORT.W6 — build the controls</h3>
+        <p data-item="wu-summary">
+          The controls W5 designed, built in <code>ui/src/</code> and cited to that design
+          (<code>design.implements</code>, path + blob, per the design→build rule): the API
+          client gains <code>exportHar</code>, <code>importHar</code> and <code>clearFlows</code>;
+          the flow-list surface gains the controls; the imported mark appears in the row; the
+          clear confirmation is wired through the existing <code>useConfirm</code>. Save and
+          open dialogs go through the Tauri layer the app already uses for native calls.
+        </p>
+        <p data-item="wu-maps-to">E-EXPORT · UC-4 amended · implements W5's design.</p>
+        <p data-item="wu-expected">
+          Expected result 6 holds. Every UI-rendering file the diff touches is cited to W5's
+          design or declared undesigned with a reason; W5's design file is retired into the
+          built component's TSDoc per <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>.
+        </p>
+        <p data-item="wu-deps">E-EXPORT.W5 (the design must close first) · W2 · W3 · W4 (the endpoints it calls).</p>
+      </div>
+
+    </div>
+
+    <h2 id="e2e">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <p>
+        One new <code>tests/e2e_export.rs</code> proves the API half end-to-end through the
+        running system on ephemeral ports, and the existing WebDriver suite
+        (<code>ui/e2e/</code>) proves the app half. Neither substitutes for the other: the
+        first proves the round-trip is lossless, the second proves a user can reach it.
+      </p>
+      <table>
+        <thead><tr><th>Step</th><th>Asserts</th><th>Covers</th></tr></thead>
+        <tbody>
+          <tr><td>Boot the engine; drive real traffic (HTTP and decrypted HTTPS, one with a body, one streaming) through the proxy at a local test server.</td><td>the capture the rest of the test exports is real, not fabricated</td><td>—</td></tr>
+          <tr><td><code>GET /flows?limit=1</code>, then follow the cursor to the end.</td><td>every captured flow seen exactly once</td><td>W1</td></tr>
+          <tr><td><code>GET /flows/export</code> → parse as HAR 1.2.</td><td>entries carry method, URI, status, versions, headers, timings, bodies; the skipped body is not reported as empty</td><td>W2</td></tr>
+          <tr><td>Subscribe to <code>/stream</code>, then <code>DELETE /flows</code>.</td><td>the listing empties, the subscriber receives the clear event, the connection tally is unchanged</td><td>W4</td></tr>
+          <tr><td><code>POST /flows/import</code> with the exported bytes.</td><td>the listing returns the same flows, each <code>source=imported</code>; <code>?source=captured</code> is empty; each is readable at <code>/flows/{id}</code> and its body endpoints</td><td>W3</td></tr>
+          <tr><td>Post a truncated copy of the same file.</td><td>refused with a reason; the store still holds exactly the previous import</td><td>W3</td></tr>
+          <tr><td>WebDriver: launch the built app against that engine, use the export control, the clear control, then the import control on the exported file.</td><td>the list empties and refills; the imported rows carry the mark</td><td>W5 · W6</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Hermetic per <a href="../testing-strategy.html">the testing standard</a>: ephemeral
+        ports, a local test server, <code>tempfile</code> for the <code>.har</code> on disk,
+        no public network. <strong>No waiver intended</strong> at either level.
+      </p>
+    </div>
+
+    <h2 id="distillation">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <table>
+        <thead><tr><th>Doc</th><th>Tier</th><th>Absorbs</th></tr></thead>
+        <tbody>
+          <tr><td><code>docs/use-cases/web-ui.html</code></td><td>T2</td><td>UC-6 and UC-7 as new records; UC-3/UC-4 amended for opt-in paging and the new list controls</td></tr>
+          <tr><td><code>docs/use-cases/use-cases-index.html</code></td><td>T2</td><td>the two new ids, index-first reading</td></tr>
+          <tr><td><code>docs/decisions/dec-&lt;n&gt;-har-as-the-interchange-format.html</code> <em>(new, number confirmed at authoring)</em></td><td>T2</td><td>why HAR 1.2 and only HAR; how a body state that HAR cannot express is represented; what round-trip fidelity is guaranteed to preserve and what it is not</td></tr>
+          <tr><td><code>docs/decisions/dec-&lt;n+1&gt;-imported-flows-are-marked.html</code> <em>(new)</em></td><td>T2</td><td>why an imported flow is a first-class flow carrying a <code>source</code> rather than a separate collection, and the CORS widening the mutating methods require (extending DEC-12's read-only reasoning, not reversing it)</td></tr>
+          <tr><td><code>docs/decisions/decisions-index.html</code></td><td>T2</td><td>both new records</td></tr>
+          <tr><td><code>docs/design-rules/design-rules-index.html</code></td><td>T2</td><td>W5's lexicon answer: <em>export</em> as an operation name versus the reserved <em>copy</em> meaning — the rulebook's Lexicon row updated, or a new row, per what the run decides</td></tr>
+          <tr><td><code>docs/architecture.html</code></td><td>T1</td><td>only if the store's shape changed at the seam level — removal and ingest are new store capabilities, so the module's one-line contract there is re-checked at close and edited only if it is now false</td></tr>
+          <tr><td><code>docs/backlog/roadmap.html</code></td><td>T2</td><td>E-EXPORT struck from the Wave-2 sequence, landed-so-far updated; anything punted here added to the Deferred table</td></tr>
+          <tr><td>this plan + the six WU results + the epic result</td><td>T3</td><td>archived out of git at close per <a href="../decisions/decisions-index.html">DEC-3</a></td></tr>
+        </tbody>
+      </table>
+      <p>
+        One fact per tier: the <em>what</em> in the use-cases, the <em>why</em> in the
+        decisions, the <em>projection</em> only in <code>src/api/har.rs</code>. The HAR field
+        mapping is code and is never copied into a doc.
+      </p>
+    </div>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions">
+      <table>
+        <thead><tr><th>#</th><th>Question</th><th>Proposed default</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>What is the cursor?</td>
+            <td><strong>The id of the last row on the page</strong>, resolved against the ring's order. It survives eviction of rows before it (the walk simply starts where the ring still has content) and never re-serves a row an insert pushed past. An index would silently skip rows the moment the ring evicts. W1 decides on the merits.</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Does export page too, or always export the whole filtered set?</td>
+            <td><strong>The whole filtered set.</strong> A HAR file split across pages is not a HAR file; the filter is the way to export less. Bounded by the ring's byte cap, which is already the memory ceiling.</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Does import replace the capture or add to it?</td>
+            <td><strong>Adds.</strong> Replacing is <code>DELETE /flows</code> followed by an import — two operations the user already has, rather than a destructive mode hidden inside a POST.</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Do imported flows keep their original ids and timestamps?</td>
+            <td><strong>Fresh ids, original timestamps.</strong> The id is this store's handle and must be unique here; <code>startedDateTime</code> is the captured truth and is preserved, so an imported capture sorts by when it happened, not when it was read.</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Which word does the UI use for export, given the rulebook reserves it against <em>copy</em>?</td>
+            <td><strong>Export, for the file operation only</strong> — the reserved meaning bans it as a synonym for <em>copy</em> (putting bytes on the clipboard), which is a different operation. W5 states this in the run and the rulebook row is clarified at distillation rather than left ambiguous.</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>Does a <code>DELETE</code> with a filter that matches nothing succeed or 404?</td>
+            <td><strong>Succeeds, reporting zero removed.</strong> The request expresses an end state, and that state is already true. <code>DELETE /flows/{id}</code> on an unknown id is the one 404 — there the client named something specific that does not exist.</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>Is <code>insta</code> a new dependency, given the WU obligation to snapshot-lock a new wire contract?</td>
+            <td><strong>Yes, dev-dependency, added in W2.</strong> The testing standard names it as the tool for exactly this and nothing in the tree has needed it until a serialized document format arrived.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
