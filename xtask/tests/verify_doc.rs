@@ -337,3 +337,97 @@ fn multi_path_output_reports_only_red_docs() {
     let text = stdout(&out);
     assert!(text.contains("red.html") && !text.contains("green.html"), "{text}");
 }
+
+fn ungoverned(body: &str) -> String {
+    format!(
+        "<!DOCTYPE html><html lang=\"en\" data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>\
+         {body}<script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+         </body></html>"
+    )
+}
+
+// The defect this predicate exists for: DEC-13 shipped a permanent record pointing
+// at a source file no commit ever held, and verify-doc was green on it because a
+// decision record declares no data-artifact and every checklist predicate is
+// therefore unreachable.
+#[test]
+fn an_ungoverned_doc_with_a_dead_link_is_red() {
+    let dir = TempDir::new().unwrap();
+    let out = run_verify(&dir, &[("dec-13.html", &ungoverned("<a href=\"setup.ts\">setup</a>"))]);
+    assert_eq!(out.status.code(), Some(1), "{}", stdout(&out));
+    let text = stdout(&out);
+    assert!(text.contains("setup.ts"), "names the dead href: {text}");
+    assert!(text.contains("link"), "{text}");
+}
+
+#[test]
+fn the_same_ungoverned_doc_is_green_once_the_link_resolves() {
+    let dir = TempDir::new().unwrap();
+    std::fs::write(dir.path().join("setup.rs"), "fn main() {}").unwrap();
+    let out = run_verify(&dir, &[("dec-13.html", &ungoverned("<a href=\"setup.rs\">setup</a>"))]);
+    assert!(out.status.success(), "{}", stdout(&out));
+    assert!(stdout(&out).contains("ungoverned"), "still ungoverned: {}", stdout(&out));
+}
+
+#[test]
+fn a_governed_doc_reports_the_dead_link_beside_its_checklist_failures() {
+    let dir = TempDir::new().unwrap();
+    let body = wu_plan_body().replace("<p data-item=\"expected\">observable</p>", "")
+        + "<a href=\"gone.html\">gone</a>";
+    let out = run_verify(&dir, &[("plan.html", &doc("wu-plan", "", &body))]);
+    assert_eq!(out.status.code(), Some(1));
+    let text = stdout(&out);
+    assert!(text.contains("item·expected"), "the checklist still runs: {text}");
+    assert!(text.contains("gone.html"), "and the link too: {text}");
+}
+
+#[test]
+fn a_draft_with_a_dead_link_stays_silent() {
+    let dir = TempDir::new().unwrap();
+    let body = format!("{}<a href=\"gone.html\">gone</a>", wu_plan_body());
+    let out = run_verify(&dir, &[("draft.html", &doc("wu-plan", "draft", &body))]);
+    assert!(out.status.success(), "{}", stdout(&out));
+}
+
+#[test]
+fn archive_links_and_archived_docs_are_not_link_checked() {
+    let dir = TempDir::new().unwrap();
+    std::fs::create_dir(dir.path().join(".archive")).unwrap();
+    let out = run_verify(
+        &dir,
+        &[
+            ("live.html", &ungoverned("<a href=\".archive/retired.html\">retired</a>")),
+            (".archive/old.html", &ungoverned("<a href=\"gone.html\">gone</a>")),
+        ],
+    );
+    assert!(out.status.success(), "{}", stdout(&out));
+}
+
+#[test]
+fn external_and_fragment_hrefs_are_not_link_checked() {
+    let dir = TempDir::new().unwrap();
+    let body = "<a href=\"https://example.com/x\">x</a><a href=\"#here\">h</a>\
+                <a href=\"mailto:a@example.com\">m</a>";
+    let out = run_verify(&dir, &[("doc.html", &ungoverned(body))]);
+    assert!(out.status.success(), "{}", stdout(&out));
+}
+
+#[test]
+fn this_repo_s_own_docs_resolve_every_link_they_ship() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf();
+    let listed = Command::new("git")
+        .args(["ls-files", "docs/*.html", "docs/**/*.html"])
+        .current_dir(&root)
+        .output()
+        .unwrap();
+    let docs: Vec<String> =
+        String::from_utf8_lossy(&listed.stdout).lines().map(str::to_string).collect();
+    assert!(docs.len() > 30, "expected the corpus, found {}", docs.len());
+    let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .arg("verify-doc")
+        .args(&docs)
+        .current_dir(&root)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stdout));
+}

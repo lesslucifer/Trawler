@@ -71,6 +71,7 @@ const VOCABULARY: &str = "scripts/design-vocabulary.mjs";
 const REGISTRY: &str = "scripts/design-registry.mjs";
 const HTMLDOC_BOOTSTRAP: &str = "https://htmldoc.wfomobile.com/htmldoc.js";
 pub const COMPONENTS: &str = "docs/work/components/";
+const ARCHIVE_DIR: &str = ".archive";
 pub const COLLECTION: &str = "ui/src/components/";
 pub const SCREENS: &str = "ui/src/";
 
@@ -376,14 +377,25 @@ fn component_name(slug: &str) -> String {
 }
 
 pub enum Verdict {
-    Ungoverned,
-    Exempt(String),
+    // A doc that declares no artifact type, and one that declares itself draft or
+    // archived, are both silent on the checklists - but neither is silent on its
+    // links, so each carries the failures the link predicate found.
+    Ungoverned { failures: Vec<Failure> },
+    Exempt { status: String, failures: Vec<Failure> },
     Checked { artifacts: Vec<String>, failures: Vec<Failure>, summary: Option<String> },
 }
 
 impl Verdict {
     pub fn red(&self) -> bool {
-        matches!(self, Self::Checked { failures, .. } if !failures.is_empty())
+        !self.failures().is_empty()
+    }
+
+    fn failures(&self) -> &[Failure] {
+        match self {
+            Self::Ungoverned { failures }
+            | Self::Exempt { failures, .. }
+            | Self::Checked { failures, .. } => failures,
+        }
     }
 }
 
@@ -407,7 +419,7 @@ pub fn verify_html_against(
     roster: Option<&Roster>,
 ) -> Verdict {
     let Some(artifact) = attrs(html, "data-artifact").into_iter().next() else {
-        return Verdict::Ungoverned;
+        return Verdict::Ungoverned { failures: Vec::new() };
     };
     // Before the exempt gate: a draft and an archived run both still have to
     // render, and this is the one property whose absence no later check can see.
@@ -417,7 +429,7 @@ pub fn verify_html_against(
     check_htmldoc_layer(&mut layer, html);
     if let Some(status) = exempt_declared(html, &artifact) {
         if layer.is_empty() {
-            return Verdict::Exempt(status);
+            return Verdict::Exempt { status, failures: Vec::new() };
         }
         return Verdict::Checked {
             artifacts: vec![artifact.value],
@@ -2540,6 +2552,76 @@ fn edit_distance(a: &str, b: &str) -> usize {
     row[b_chars.len()]
 }
 
+// A link is a property of the file, not of what the file declares itself to be.
+// Both dead-link classes this predicate exists to kill shipped inside docs with
+// no `data-artifact` at all (DEC-13; c5f474b), where every checklist predicate is
+// unreachable by construction - so this is asked beside the artifact read, never
+// behind it.
+fn link_targets(html: &str) -> Vec<String> {
+    attrs(html, "href")
+        .into_iter()
+        .filter_map(|link| {
+            let target = link.value.split('#').next().unwrap_or_default().trim();
+            let unresolvable = target.is_empty()
+                || target.contains("://")
+                || target.starts_with("mailto:")
+                // Root-relative: it means nothing to a reader opening the doc
+                // over `file://`, which is the only way these docs are read.
+                || target.starts_with('/')
+                // DEC-3 keeps archives out of git, so a link into one cannot
+                // resolve in a clean checkout BY DESIGN - the deliberate pointer
+                // at an archived doc, not a link that rotted into one.
+                || target.split('/').any(|part| part == ARCHIVE_DIR);
+            (!unresolvable).then(|| target.to_string())
+        })
+        .collect()
+}
+
+fn check_links(failures: &mut Vec<Failure>, html: &str, doc: &Path) {
+    let Some(dir) = doc.parent() else { return };
+    // One dead target is one thing to fix, however many times the doc links it.
+    let targets: BTreeSet<String> = link_targets(html).into_iter().collect();
+    for target in targets {
+        if dir.join(&target).exists() {
+            continue;
+        }
+        failures.push(Failure {
+            check: "link".to_string(),
+            what: format!("href \"{target}\" resolves to no file in the tree"),
+            fix: "point at the file that exists, or - when the target was archived out of git - drop the href and mark the citation archived".to_string(),
+        });
+    }
+}
+
+// The link failures fold into whatever verdict the doc's own checks produced, so
+// an ungoverned doc still reports itself ungoverned while naming a dead link, and
+// a governed one reports its checklist problems and its links together.
+fn with_links(verdict: Verdict, html: &str, doc: &Path) -> Verdict {
+    // A draft is the one silent surface the work-planning standard promises an
+    // author, and a link to a doc not written yet is the ordinary midpoint of
+    // writing a set of docs. Docs under the archive are out of git entirely.
+    let draft = matches!(&verdict, Verdict::Exempt { status, .. } if status == "draft");
+    if draft || doc.components().any(|part| part.as_os_str() == ARCHIVE_DIR) {
+        return verdict;
+    }
+    let mut found = Vec::new();
+    check_links(&mut found, html, doc);
+    match verdict {
+        Verdict::Ungoverned { mut failures } => {
+            failures.extend(found);
+            Verdict::Ungoverned { failures }
+        }
+        Verdict::Exempt { status, mut failures } => {
+            failures.extend(found);
+            Verdict::Exempt { status, failures }
+        }
+        Verdict::Checked { artifacts, mut failures, summary } => {
+            failures.extend(found);
+            Verdict::Checked { artifacts, failures, summary }
+        }
+    }
+}
+
 pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
     let single = paths.len() == 1;
     let rules = rulebook(repo);
@@ -2568,6 +2650,7 @@ pub fn run_paths(repo: &Path, paths: &[&str]) -> Result<(i32, String), String> {
             Some(name) => verify_component(&html, &name, roster_read, vocab_read),
             None => verify_html_against(&html, rules.as_ref(), vocab_read, roster_read),
         };
+        let verdict = with_links(verdict, &html, &resolved);
         if verdict.red() {
             any_red = true;
         }
@@ -2591,13 +2674,15 @@ fn declares_a_design(is_component: bool, html: &str) -> bool {
 
 pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
     match verdict {
-        Verdict::Ungoverned => {
+        Verdict::Ungoverned { failures } if failures.is_empty() => {
             format!("verify-doc ungoverned on {path} - no data-artifact, not checked")
         }
-        Verdict::Exempt(status) if status == "archived" => {
+        Verdict::Exempt { status, failures } if failures.is_empty() && status == "archived" => {
             format!("verify-doc archived on {path} - closed under an older contract, not reopened")
         }
-        Verdict::Exempt(_) => format!("verify-doc draft on {path} - checks silent until ready"),
+        Verdict::Exempt { failures, .. } if failures.is_empty() => {
+            format!("verify-doc draft on {path} - checks silent until ready")
+        }
         Verdict::Checked { artifacts, failures, summary } if failures.is_empty() => {
             let head = format!("verify-doc green on {path} ({})", artifacts.join(" "));
             match summary {
@@ -2605,7 +2690,8 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
                 None => head,
             }
         }
-        Verdict::Checked { failures, .. } => {
+        red => {
+            let failures = red.failures();
             let mut out = String::new();
             let _ = writeln!(out, "verify-doc red on {path}");
             for f in failures {
@@ -2620,12 +2706,14 @@ pub fn format_verdict(path: &str, verdict: &Verdict) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::fmt::Write as _;
+
     use super::{
-        attrs, check_frame_density, component_designed, declares_a_design, edit_distance,
-        elements_of, format_verdict, registry_entry, rules_from_rulebook, screen_file,
-        surface_name, ui_surface, verify_component, verify_html, verify_html_against, Component,
-        Roster, Verdict, Vocabulary, CAPABILITY_STATES, FRAME_CELL_MAX, FRAME_CELL_MEAN,
-        FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
+        attrs, check_frame_density, check_links, component_designed, declares_a_design,
+        edit_distance, elements_of, format_verdict, link_targets, registry_entry,
+        rules_from_rulebook, screen_file, surface_name, ui_surface, verify_component, verify_html,
+        verify_html_against, with_links, Component, Roster, Verdict, Vocabulary, CAPABILITY_STATES,
+        FRAME_CELL_MAX, FRAME_CELL_MEAN, FRAME_EXAMPLE_MAX, FRAME_PROSE_WORDS, GIST_MAX_WORDS,
     };
 
     fn doc(artifact: &str, status: &str, body: &str) -> String {
@@ -3458,19 +3546,19 @@ chroma_floor: 40
 
     #[test]
     fn no_artifact_means_ungoverned() {
-        assert!(matches!(verify_html(&with_layer("<p>plain doc</p>")), Verdict::Ungoverned));
+        assert!(matches!(verify_html(&with_layer("<p>plain doc</p>")), Verdict::Ungoverned { .. }));
     }
 
     #[test]
     fn artifact_mentioned_as_text_does_not_govern() {
         let html = with_layer("<p>use <code>data-artifact=\"epic-plan\"</code> to opt in</p>");
-        assert!(matches!(verify_html(&html), Verdict::Ungoverned));
+        assert!(matches!(verify_html(&html), Verdict::Ungoverned { .. }));
     }
 
     #[test]
     fn draft_is_silent() {
         let v = verify_html(&doc("wu-result", "draft", ""));
-        assert!(matches!(&v, Verdict::Exempt(s) if s == "draft"));
+        assert!(matches!(&v, Verdict::Exempt { status: s, .. } if s == "draft"));
         assert!(format_verdict("d.html", &v).contains("draft"));
     }
 
@@ -3519,7 +3607,7 @@ chroma_floor: 40
         );
         let closed = doc("wu-result", "archived", body);
         assert!(
-            matches!(verify_html(&closed), Verdict::Exempt(s) if s == "archived"),
+            matches!(verify_html(&closed), Verdict::Exempt { status: s, .. } if s == "archived"),
             "a layered archive stays exempt"
         );
     }
@@ -3568,7 +3656,10 @@ chroma_floor: 40
             "data-artifact=\"design-run\" data-status=\"archived\"",
         );
         let v = verify_html(&archived);
-        assert!(matches!(&v, Verdict::Exempt(s) if s == "archived"), "archived exempts");
+        assert!(
+            matches!(&v, Verdict::Exempt { status: s, .. } if s == "archived"),
+            "archived exempts"
+        );
         let line = format_verdict("run.html", &v);
         assert!(line.contains("archived") && !line.contains("until ready"), "{line}");
     }
@@ -3656,13 +3747,13 @@ chroma_floor: 40
                 continue;
             }
             assert!(
-                matches!(verify_html(&html), Verdict::Exempt(s) if s == "archived"),
+                matches!(verify_html(&html), Verdict::Exempt { status: s, .. } if s == "archived"),
                 "{path} declares archived but is not exempt"
             );
             let reopened = html.replace(" data-status=\"archived\"", "");
             assert_ne!(reopened, html, "{path}: lifting the flag changed nothing");
             assert!(
-                !matches!(verify_html(&reopened), Verdict::Exempt(_)),
+                !matches!(verify_html(&reopened), Verdict::Exempt { .. }),
                 "{path} is silent for some other reason - the archived flag proves nothing here"
             );
         }
@@ -4741,5 +4832,131 @@ chroma_floor: 40
             "design-allow",
         );
         assert!(said.contains("grid-cols-[--tw-cols]` read as this class plus a reason"), "{said}");
+    }
+
+    // ─── link integrity ─────────────────────────────────────────────────────
+
+    fn linking(hrefs: &[&str]) -> String {
+        let body = hrefs.iter().fold(String::new(), |mut body, h| {
+            let _ = write!(body, "<a href=\"{h}\">t</a>");
+            body
+        });
+        with_layer(&body)
+    }
+
+    #[test]
+    fn only_relative_file_targets_are_link_checked() {
+        let html = linking(&[
+            "sibling.html",
+            "sibling.html#anchor",
+            "#local-only",
+            "",
+            "https://example.com/x.html",
+            "http://example.com/x.html",
+            "mailto:someone@example.com",
+            "/rooted.html",
+            "../.archive/retired.html",
+            ".archive/retired.html",
+        ]);
+        assert_eq!(link_targets(&html), vec!["sibling.html", "sibling.html"]);
+    }
+
+    #[test]
+    fn an_href_inside_a_script_or_style_body_is_data_not_a_link() {
+        let html = with_layer(
+            "<script>const a = '<a href=\"ghost.html\">';</script>\
+             <style>/* <a href=\"phantom.html\"> */</style>",
+        );
+        assert!(link_targets(&html).is_empty(), "{:?}", link_targets(&html));
+    }
+
+    #[test]
+    fn a_resolving_href_is_green_and_a_missing_one_names_itself() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::write(dir.path().join("there.html"), "x").expect("write");
+        let doc_path = dir.path().join("doc.html");
+
+        let mut green = Vec::new();
+        check_links(&mut green, &linking(&["there.html"]), &doc_path);
+        assert!(green.is_empty(), "{green:?}");
+
+        let mut red = Vec::new();
+        check_links(&mut red, &linking(&["gone.html"]), &doc_path);
+        assert_eq!(red.len(), 1);
+        assert_eq!(red[0].check, "link");
+        assert!(red[0].what.contains("href \"gone.html\""), "{}", red[0].what);
+        assert!(red[0].fix.contains("point at the file that exists"), "{}", red[0].fix);
+    }
+
+    #[test]
+    fn one_dead_target_linked_twice_is_one_failure() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let mut found = Vec::new();
+        check_links(
+            &mut found,
+            &linking(&["gone.html", "gone.html#a"]),
+            &dir.path().join("d.html"),
+        );
+        assert_eq!(found.len(), 1, "{found:?}");
+    }
+
+    #[test]
+    fn a_link_resolves_against_the_doc_s_own_directory() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::fs::create_dir(dir.path().join("decisions")).expect("mkdir");
+        std::fs::write(dir.path().join("workflow.html"), "x").expect("write");
+        let doc_path = dir.path().join("decisions/dec.html");
+
+        let mut up = Vec::new();
+        check_links(&mut up, &linking(&["../workflow.html"]), &doc_path);
+        assert!(up.is_empty(), "{up:?}");
+
+        let mut flat = Vec::new();
+        check_links(&mut flat, &linking(&["workflow.html"]), &doc_path);
+        assert_eq!(flat.len(), 1, "a sibling of the repo root is not a sibling of the doc");
+    }
+
+    #[test]
+    fn an_ungoverned_doc_with_a_dead_link_is_red_and_still_ungoverned() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let html = linking(&["gone.html"]);
+        let v = with_links(verify_html(&html), &html, &dir.path().join("dec.html"));
+        assert!(v.red());
+        assert!(matches!(&v, Verdict::Ungoverned { .. }), "identity survives the failure");
+        let said = format_verdict("dec.html", &v);
+        assert!(said.contains("verify-doc red on dec.html"), "{said}");
+        assert!(said.contains("gone.html"), "{said}");
+    }
+
+    #[test]
+    fn a_draft_is_silent_on_its_links_and_an_archived_doc_is_not() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let at = dir.path().join("d.html");
+        for (status, red) in [("draft", false), ("archived", true)] {
+            let html = doc("wu-plan", status, "<a href=\"gone.html\">t</a>");
+            let v = with_links(verify_html(&html), &html, &at);
+            assert_eq!(v.red(), red, "{status} should{} red", if red { "" } else { " not" });
+        }
+    }
+
+    #[test]
+    fn a_doc_living_under_the_archive_is_not_link_checked() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let html = linking(&["gone.html"]);
+        let at = dir.path().join(".archive/old.html");
+        assert!(!with_links(verify_html(&html), &html, &at).red());
+    }
+
+    #[test]
+    fn a_governed_doc_reports_its_checklist_and_its_links_together() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let body = "<p data-item=\"requirement\">one sentence</p>\
+                    <p data-item=\"maps-to\">E-X</p>\
+                    <p data-item=\"test-plan\">asserts</p><a href=\"gone.html\">t</a>";
+        let html = doc("wu-plan", "", body);
+        let v = with_links(verify_html(&html), &html, &dir.path().join("plan.html"));
+        let said = format_verdict("plan.html", &v);
+        assert!(said.contains("item·expected"), "the checklist still speaks: {said}");
+        assert!(said.contains("gone.html"), "and so does the link: {said}");
     }
 }
