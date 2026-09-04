@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9abbc09f34851f0dfac38f" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-EXPORT.W4 result: the capture can be cleared</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-EXPORT.W4 result — the capture can be cleared</h1>
+      <p>Delivered as planned. Eight observables hold; the CORS widening the plan owed had already landed with W3, so this WU added <code>DELETE</code> to a grant that was already reasoned about rather than making the argument twice.</p>
+      <div class="meta">v1 · 2026-09-04 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W4</span> · <a href="2026-09-04-export-w4-clear-plan.html">its plan</a> · <a href="2026-09-04-export-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Delivered.</strong> The requirement holds as written: <code>DELETE /flows</code>
+      removes what the listing filters select, <code>DELETE /flows/{id}</code> removes exactly one
+      and 404s an id the ring does not hold, both answer <code>{ "removed": n }</code>, the ring's
+      byte accounting stays equal to what it holds, the clear arrives on <code>/stream</code> as
+      one event per batch, the connection tally is untouched, and a filter that selects nothing
+      succeeds reporting zero.</p>
+      <table>
+        <thead><tr><th>#</th><th>Observable</th><th>Holds</th><th>Pinned by</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>DELETE /flows</code> answers a count and empties the listing</td><td><span class="badge ok">yes</span></td><td><code>clearing_the_capture_empties_the_listing_and_tells_the_stream</code></td></tr>
+          <tr><td>2</td><td>a filtered clear removes only matches; survivors stay readable at detail and both body endpoints</td><td><span class="badge ok">yes</span></td><td><code>a_filtered_clear_removes_only_its_matches_and_leaves_the_rest_whole</code></td></tr>
+          <tr><td>3</td><td>an empty match is <code>200</code>/zero; an unknown id <code>404</code>; a malformed id <code>400</code></td><td><span class="badge ok">yes</span></td><td><code>deleting_one_flow_and_the_three_ways_a_delete_is_refused</code></td></tr>
+          <tr><td>4</td><td>a subscriber receives <code>event: cleared</code> — one event for the batch</td><td><span class="badge ok">yes</span></td><td>the same integration test asserts <code>event:</code> appears exactly once in the frame</td></tr>
+          <tr><td>5</td><td><code>/stats</code> reports the same tally before and after any delete</td><td><span class="badge ok">yes</span></td><td><code>removal_never_touches_the_connection_tally</code> (unit) · <code>a_cleared_store_is_empty_not_restarted</code> (route) · asserted again in the clear-all integration test</td></tr>
+          <tr><td>6</td><td>byte accounting stays honest across removals, so a later eviction evicts the right rows</td><td><span class="badge ok">yes</span></td><td><code>ring_accounting</code> extended with removals · <code>remove_matching_re_weighs_so_the_next_eviction_uses_the_corrected_total</code></td></tr>
+          <tr><td>7</td><td>an unrecognised <code>?source=</code> refuses the clear rather than removing a different set</td><td><span class="badge ok">yes</span></td><td><code>an_unrecognised_source_refuses_the_clear_instead_of_guessing</code> · <code>a_clear_selects_by_provenance_like_every_other_endpoint</code></td></tr>
+          <tr><td>8</td><td>the CORS grant advertises <code>DELETE</code></td><td><span class="badge ok">yes</span></td><td><code>every_response_carries_the_cross_origin_grant</code>, its assertion widened</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="how">How removal is shaped, and the one thing that decided it</h2>
+    <div class="callout" data-c="how">
+      <p><code>evict</code> pops from the front of the order and subtracts as it pops; a filtered
+      removal takes rows from the middle. Rather than a second copy of the byte arithmetic — the
+      way <code>total_bytes</code> drifts from what the ring holds — both go through one private
+      <code>Ring::unlink</code> that removes from the map, subtracts what was actually held, and
+      rebuilds the order by retaining survivors. <code>remove_matching</code> and
+      <code>remove</code> are the two public doors onto it, and
+      <a href="2026-09-04-export-w4-clear-plan.html#decisions">the plan's five decisions</a> all
+      landed as written: one store method for the filtered case, an id addressed directly rather
+      than through a <code>FlowFilter</code> that has no id field, one batch event, a variant
+      distinct from <code>FlowEvicted</code>, and the same <code>{ "removed": n }</code> envelope
+      from both routes.</p>
+      <p>The guardrail worth restating because it is the one asymmetry with eviction:
+      <strong>removal has no last-row floor.</strong> <code>evict</code> keeps a single oversized
+      flow alive so it stays inspectable; a clear that left a row behind would not be a clear, and
+      <code>a_default_filter_clears_everything_with_no_last_row_floor</code> asserts exactly that
+      against a store the cap has already reduced to one row.</p>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table>
+        <thead><tr><th>From the plan</th><th>What happened, and why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The plan expected to <em>make</em> the CORS widening and record it as a decision.</td>
+            <td><strong>Already made.</strong> The epic plan scheduled the widening here on the
+            assumption <code>DELETE</code> would be the first mutating method; import landed
+            first, so <a href="../decisions/dec-31-imported-flows-are-marked.html">DEC-31</a>
+            already carried the argument and predicted this WU would join the list. So this WU
+            added <code>DELETE</code> to the grant and turned that prediction past tense rather
+            than writing a second record making the same argument. No new decision record —
+            <a href="2026-09-04-export-w3-har-in-result.html">W3's result</a> anticipated this.</td>
+          </tr>
+          <tr>
+            <td>Not in the plan: the debug shell.</td>
+            <td><strong>One-line addition.</strong> <code>src/api/ui.html</code> refetches on
+            <code>request</code>, <code>response</code> and <code>lagged</code>; without
+            <code>cleared</code> in that list a clear followed by silence would leave stale rows
+            on screen until the next capture. <code>cleared</code> joined the list, asserted in
+            <code>ui_shell_page_and_the_request_sequence_it_performs</code>. Not a UI-rendering
+            file under <code>ui/src/</code>, so no design citation is owed — the app's own clear
+            control is W5/W6.</td>
+          </tr>
+          <tr>
+            <td>Not in the plan: <code>architecture.html</code> was <em>predicted</em> as a
+            conditional edit.</td>
+            <td><strong>Edited.</strong> The plan said the T1 line would be re-read and touched
+            only if now false. Two statements were incomplete rather than wrong — the seam caption
+            enumerated the store's events as writes and evictions and the API's role as reading
+            and ingesting — so both were widened to include clearing. Staged for manual review as
+            a rule-bearing T1 commit.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table>
+        <thead><tr><th>Level</th><th>Added</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge id">unit</span></td>
+            <td>7 store tests (selection, re-weighing observable through a later eviction, the
+            no-floor clear, remove-by-id idempotence and order, the batch event and the silent
+            no-op, the tally) · 5 route tests (count, filter + empty match, refused
+            <code>source</code>, the id route's three answers, the tally through
+            <code>/stats</code>) · 1 router-table test (<code>DELETE</code> answers on
+            <code>/flows</code> and <code>/flows/{id}</code> and <em>not</em> on export or import)
+            · the <code>FlowsCleared</code> SSE shape · <code>ring_accounting</code> extended with
+            interleaved removals</td>
+            <td><code>src/store.rs</code> · <code>src/api/routes.rs</code> ·
+            <code>src/api/mod.rs</code> · <code>src/api/view.rs</code></td>
+          </tr>
+          <tr>
+            <td><span class="badge id">integration</span></td>
+            <td>4 tests over the real HTTP surface: clear-all + the live subscriber + the tally,
+            a filtered clear with a survivor read through all three of its endpoints, the three
+            refusals, and a clear selecting by provenance while the live capture survives</td>
+            <td><code>tests/api.rs</code></td>
+          </tr>
+          <tr>
+            <td><span class="badge id">e2e</span></td>
+            <td><strong>waived</strong> — <code>waived: "the epic's own e2e step 4 owns this
+            flow: real proxied traffic, then subscribe and DELETE. A WU-level e2e would boot the
+            same engine to assert what that step already asserts; the app half rides the WebDriver
+            suite after W6."</strong> Same reasoning W1–W3 recorded.</td>
+            <td>epic plan, <a href="2026-09-04-export-plan.html#e2e">e2e plan</a></td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Suite green:</strong> 167 lib unit · 31 <code>tests/api.rs</code> · 3
+      <code>tests/ca.rs</code> · 6 <code>tests/e2e_capture.rs</code> · 4
+      <code>tests/e2e_h2.rs</code> — 0 failures. <code>cargo fmt --check</code> and
+      <code>cargo clippy -D warnings</code> clean.</p>
+      <p><strong>Commits</strong> on <code>wu/export/clear</code>: the plan
+      (<code>d1a8982</code>), the code (<code>6a39c11</code>), the T2 distillation
+      (<code>257693a</code>), plus the staged T1 <code>architecture.html</code> commit awaiting
+      manual review.</p>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <table>
+        <thead><tr><th>Doc</th><th>Tier</th><th>Now carries</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../use-cases/web-ui.html#uc-7">UC-7</a></td><td>T2</td><td>the whole clearing contract: what a delete selects is what the listing lists, the count envelope, the three refusals, and the three consequences a signature does not imply — a cleared store is empty rather than restarted, the clear is one batch event distinct from eviction, and removing is not replacing</td></tr>
+          <tr><td><a href="../use-cases/use-cases-index.html">use-cases-index.html</a></td><td>T2</td><td>the UC-7 row</td></tr>
+          <tr><td><a href="../decisions/dec-31-imported-flows-are-marked.html">DEC-31</a></td><td>T2</td><td><code>GET, POST, DELETE, OPTIONS</code>, and its prediction that <code>DELETE</code> would join turned past tense with the list closed for this epic</td></tr>
+          <tr><td><a href="../architecture.html">architecture.html</a></td><td>T1</td><td>the store emits on every write, eviction <em>and clear</em>; the API ingests <em>and removes</em> while still never rewriting what the capture path recorded; the event-bus row names the clear as distinct from eviction</td></tr>
+        </tbody>
+      </table>
+      <p>One fact per tier held: the removal <em>mechanism</em> (the shared unlink, the batch
+      event) lives only in <code>src/store.rs</code> and <code>src/event.rs</code> and is
+      described nowhere as code; the CORS <em>argument</em> stays in DEC-31 alone rather than
+      being restated in UC-7.</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table>
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The app's export, import and clear controls — including what a destructive action
+            asks before it acts, which this WU deliberately does not answer (the API removes
+            without confirmation; the confirmation is a UI concern).</td>
+            <td><span class="badge id">E-EXPORT.W5</span> design, <span class="badge id">W6</span> build</td>
+          </tr>
+          <tr>
+            <td>The epic e2e step that consumes this WU's contract against real proxied traffic.</td>
+            <td><span class="badge id">E-EXPORT</span> close</td>
+          </tr>
+          <tr>
+            <td>No debt discovered. The <code>cleared</code> event is a new wire shape a future
+            client must handle, and it is stated in UC-7 rather than left to be found in the code.</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
