@@ -26,6 +26,22 @@ struct Ring {
 }
 
 impl Ring {
+    /// Newest-first is the listing order every read shares, so both `list` and
+    /// `page` walk through here rather than each spelling out the reversal.
+    fn newest_first(&self) -> impl Iterator<Item = &FlowId> {
+        self.order.iter().rev()
+    }
+
+    /// Resolves ids to flows and applies the filter — the second half of the
+    /// listing rule, kept beside the ordering so the two cannot drift apart.
+    fn matching<'a>(
+        &'a self,
+        ids: impl Iterator<Item = &'a FlowId> + 'a,
+        filter: &'a FlowFilter,
+    ) -> impl Iterator<Item = &'a Flow> + 'a {
+        ids.filter_map(|id| self.flows.get(id)).filter(|flow| filter.matches(flow))
+    }
+
     fn evict(&mut self) -> Vec<FlowId> {
         let mut evicted = Vec::new();
         while self.total_bytes > self.max_bytes && self.order.len() > 1 {
@@ -177,13 +193,7 @@ impl Store {
 
     pub fn list(&self, filter: &FlowFilter) -> Vec<Flow> {
         let ring = self.inner.lock().expect("store lock");
-        ring.order
-            .iter()
-            .rev()
-            .filter_map(|id| ring.flows.get(id))
-            .filter(|flow| filter.matches(flow))
-            .cloned()
-            .collect()
+        ring.matching(ring.newest_first(), filter).cloned().collect()
     }
 
     /// One bounded page of `list`, resumed at `after`. The whole walk happens
@@ -199,16 +209,17 @@ impl Store {
     /// already holds.
     pub fn page(&self, filter: &FlowFilter, limit: usize, after: Option<FlowId>) -> FlowPage {
         let ring = self.inner.lock().expect("store lock");
-        let mut walk = ring.order.iter().rev();
+        let mut walk = ring.newest_first();
 
+        // The cursor is positioned over the unfiltered order, so it stays valid
+        // when a client narrows the filter between pages.
         if let Some(cursor) = after {
             if !walk.any(|id| *id == cursor) {
                 return FlowPage::default();
             }
         }
 
-        let mut matching =
-            walk.filter_map(|id| ring.flows.get(id)).filter(|flow| filter.matches(flow));
+        let mut matching = ring.matching(walk, filter);
         let flows: Vec<Flow> = matching.by_ref().take(limit).cloned().collect();
         // Peeking one past the page is what lets a full final page report no
         // cursor, so a caller stops on `next_cursor` rather than on an empty page.
