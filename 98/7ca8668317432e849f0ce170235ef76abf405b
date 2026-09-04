@@ -1,0 +1,51 @@
+schema: doc/v1
+epic: E-GATETRUTH
+branch: epic/gate-truth
+changes:
+  - path: docs/decisions/dec-28-citation-after-retirement.html
+    tier: T2
+    action: added
+    distills: "DEC-28 - a design citation resolves at the WU tip, or at the design last state reachable from it. Supersedes the tip-resolution clause of DEC-25 and leaves DEC-16 intact; records the two rejected directions (cite the TSDoc, a design.retired variant) and the exact predicate W2 implemented."
+  - path: docs/decisions/dec-29-retired-design-judged-where-it-left.html
+    tier: T2
+    action: added
+    distills: "DEC-29 - a component design a WU retired at bytes its base never held is a design artifact of that seam, judged at its last state. Found by the W2 review: once DEC-28 resolved a citation through history, such a design could reach a green merge with no Tier-3 verdict."
+  - path: docs/decisions/dec-25-design-build-handoff.html
+    tier: T2
+    action: updated
+    distills: "Tip-resolution clause marked superseded by DEC-28, in place, pointing at its successor."
+  - path: docs/decisions/dec-16-design-file-retirement.html
+    tier: T2
+    action: updated
+    distills: "Tier-3 exclusion clause marked superseded by DEC-29; the survival-clause supersession by DEC-25 left as it stood."
+  - path: docs/decisions/dec-24-design-review-dimension.html
+    tier: T2
+    action: updated
+    distills: "Two clauses marked superseded by DEC-29 - what the design dimension must judge at a seam now includes a design the range retired."
+  - path: docs/decisions/workflow-gates.html
+    tier: T2
+    action: updated
+    distills: "The roster gap named as its own authorisation state (P3), extending DEC-10 rather than reversing it."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-28 and DEC-29 routed with their one-line whys, and the supersession state of every clause they touched."
+  - path: docs/workflow.html
+    tier: T1
+    action: updated
+    distills: "Rule-bearing, under a Reviewed-By trailer: the design-build table states where a citation resolves (DEC-28); the cr/v3 row and checks 6 and 9 state what a seam owes for a design retired at unjudged bytes (DEC-29)."
+  - path: docs/work-planning.html
+    tier: T1
+    action: updated
+    distills: "Link integrity as a stated verify-doc obligation (P2b), asked of every doc rather than only governed ones - the four dead links E-DFLOW.W12 shipped all sat in docs with no data-artifact."
+  - path: docs/documentation-system.html
+    tier: T1
+    action: updated
+    distills: "The doc/v1 schema entry a seam owes for a component design retired at bytes the endpoint diff cannot show (DEC-29)."
+  - path: docs/design-flow.html
+    tier: T1
+    action: updated
+    distills: "design-scope design-bearing definition extended to a design the WU retired at unjudged bytes (DEC-29)."
+t2_waived: "not waived - DEC-28 and DEC-29 are the epic T2 record; every code change in the range traces to one of them"
+note: "Three classes of change this endpoint diff cannot show, recorded here because a reader of the note is owed them. (1) T3: the epic plan, four WU plans, four WU results and the epic result were all created after the gate base 5d251c4 and archived within the range, so they cancel out of the diff; they live untracked in docs/.archive/ (DEC-3) and the epic report bytes are attested by the mr/v1 hash on this tip. (2) T0: CLAUDE.md gained the doc-tier rule the user asked for mid-W4 (decide the tier before creating a doc; a plan/spec/test-plan/backlog is T3, never T1), landed under a Reviewed-By trailer on W4 signed commit. (3) infra, outside doc/v1 accounting: .claude/skills/code-review/SKILL.md (the blob-pin form for a design this WU retired, DEC-28) and design-rubric.md (the design-dimension activation row for a design removed at bytes its base never held, DEC-29, and the boundary against retirement, which 6-retirement-order owns), plus .claude/hooks/verify-doc-stop.sh, where the tracked-doc layout check now runs ahead of the docs-only exemption."
+date: 2026-09-04
