@@ -73,8 +73,11 @@
             <code>order</code> under one lock, resumed by consuming the walk up to and including
             the cursor id. Peeks one row past the page so a <em>full</em> final page reports no
             cursor and a caller stops on <code>next_cursor</code> rather than on an empty page.
-            <code>list</code> is untouched: it is the unbounded read the rest of the codebase
-            uses, and W2's export needs the whole set.
+            <code>list</code> keeps its contract exactly — the unbounded read the rest of the
+            codebase uses, which W2's export needs whole — but no longer restates the listing
+            rule: the review's one confirmed finding moved the ordering into
+            <code>Ring::newest_first</code> and the id-resolution-plus-filter into
+            <code>Ring::matching</code>, which both reads compose.
           </td>
         </tr>
         <tr>
@@ -127,6 +130,14 @@
       One test was renamed during the work (<code>…is_byte_identical_to…</code> →
       <code>…keeps_its_pre_paging_shape</code>) because it asserts the summary row's field set,
       not bytes, and a test name must claim only what it proves.</p>
+      <p><strong>One change the review added.</strong> The reuse dimension found that
+      <code>list</code> and <code>page</code> each spelled out the same
+      newest-first-then-filter chain, so the listing rule had two independent definitions one
+      module apart. Fixed in <code>f707ee8</code> by extracting <code>Ring::newest_first</code>
+      (the ordering) and <code>Ring::matching</code> (id resolution plus the filter), which both
+      reads now compose. Behaviour-preserving — <code>page</code> keeps its own cursor probe,
+      which must consume the <em>unfiltered</em> order before filtering, and that invariant is
+      now stated where it is load-bearing rather than only in the plan. Suite green unchanged.</p>
       <p><strong>Deviation from the epic plan: none.</strong> W1's summary block, its dependency
       ("none — first WU") and its expected result are all as planned; question 1's settled answer
       (the cursor is the last row's id, resolved against the ring's order) is what shipped.</p>
@@ -179,9 +190,61 @@
         <code>cargo test</code> green (79 lib · 15 <code>api</code> · 3 <code>ca</code> ·
         6 <code>e2e_capture</code> · 4 <code>e2e_h2</code>); <code>cargo clippy --all-targets</code>
         clean under pedantic; <code>cargo fmt</code> clean. Commits on
-        <code>wu/export/paging</code>: the plan, the implementation, the distillation.
+        <code>wu/export/paging</code>: the plan, the implementation, the distillation, the
+        result, and the review fix (<code>f707ee8</code>).
       </p>
     </div>
+
+    <h2 id="review">The review round</h2>
+    <p>
+      Five isolated finders over the WU diff, plus adversarial verification of every candidate.
+      <strong>11 candidates, 10 refuted, 1 real</strong> — and the one real finding was a nit,
+      fixed rather than waived.
+    </p>
+    <table data-c="review-table">
+      <thead><tr><th>Dimension</th><th>Raised</th><th>Outcome</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>reuse</td>
+          <td>3</td>
+          <td><strong>1 real (nit)</strong> — the duplicated listing walk, fixed in <code>f707ee8</code>. The verifier compiled both candidate remedies and this is the one that shares the rule without routing every unbounded read through a <code>usize::MAX</code> sentinel. Two nits refuted: the proptest does not subsume the deterministic page tests (it asserts only <code>walked == listed</code>, so it is blind to page composition and to the dead-cursor quirk), and <code>flow_summary_is_lean</code> is not a field-set lock at all.</td>
+        </tr>
+        <tr>
+          <td>correctness</td>
+          <td>2</td>
+          <td>
+            both refuted on substance. An unbounded <code>limit</code> is correct "at most n"
+            paging: the unparameterised endpoint is unbounded <em>by documented design</em>, so a
+            large <code>limit</code> grants no extra read amplification, and the overflow case is
+            already a 400 rather than a wrap. Refusal precedence between two simultaneously
+            invalid parameters is taste — both outcomes name a genuinely invalid parameter.
+            <strong>The load-bearing invariant was independently stress-tested and held</strong>:
+            1920 deterministic cases, 257 genuinely truncated walks, zero skips — so the
+            no-skip branch of the proptest is non-vacuously exercised.
+          </td>
+        </tr>
+        <tr>
+          <td>simplification</td>
+          <td>3</td>
+          <td>all refuted. Deleting the handler unit tests because the router tests overlap is the substitution the testing standard forbids ("a WU test never excuses unit tests on its commits — coverage is additive"), and the two suites sit at different seams: the handler function versus the assembled router.</td>
+        </tr>
+        <tr>
+          <td>altitude</td>
+          <td>3</td>
+          <td>all refuted. Notably the T2 doc was accused of leaking <code>Store::page</code>'s mechanism; verification found the opposite — every accused phrase states a <em>client-observable</em> consequence, while the genuinely internal facts (the single lock, the reversed iterator, the peek) never left the code.</td>
+        </tr>
+        <tr>
+          <td>efficiency</td>
+          <td>0</td>
+          <td>nothing, by measurement rather than inspection: the paged walk of 200k rows at <code>limit=50</code> ran 186ms against 95ms for one unpaged <code>list</code> — under 2×, not quadratic. <code>page</code> also cuts the worst-case lock hold from ~95ms to ~105µs versus the <code>list</code> it replaces, since the clone is bounded by <code>limit</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      The design dimension did not run: <code>cargo xtask design-scope</code> reports no design
+      artifact and no rendered file in the diff, so the <code>cr/v3</code> note carries no
+      <code>design:</code> section.
+    </p>
 
     <h2 id="distillation">Distillation</h2>
     <div data-item="distillation">
