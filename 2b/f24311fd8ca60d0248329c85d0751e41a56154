@@ -1,0 +1,15 @@
+schema: test/v2
+level: epic
+epic: E-GATETRUTH
+tests:
+  e2e:
+    count: 1
+    what: "tests/e2e_gate_truth.rs (--features hook-tests) - the epic e2e, composing all four fixes at one seam over a hermetic temp repo through the real xtask binary, the real pre-merge-commit hook and real git. A WU adds a component, retires its design per DEC-16 and cites it at the bytes the build read (P1/DEC-28, judged at its last state per DEC-29); the mr commit that lands its report reports landing, not error: (P2a); the report is link-checked red then green (P2b); the merge is refused for a signer this checkout does not list, naming the signer and the roster, then accepted for a listed one (P3). Each WU deferred this step in identical words; it is paid here. Regression proof: against an xtask built at the epic base 1c8d587 it reds at exactly P1 (does not resolve at the tip), P3 (no valid mr/v1 note) and P2b (ungoverned, not checked). E-DFLOW s design-flow e2e (xtask/tests/e2e_design_flow.rs, --features design-e2e) additionally gained the retired-design citation case in W2."
+  integration:
+    count: 101
+    what: "xtask/tests/mr.rs (58) - P2a and P3: a commit that lands reports success and no error, a first commit from an unborn HEAD, a signed note whose signer this checkout lists no key for names the signer and the roster, and a genuine two-worktree test (worktree A signs, worktree B has no roster) proving the DEC-10 layout is the cause the message must name. xtask/tests/dod_gate.rs (12) - the citation predicate at the seam: green on the legal add-build-retire history, red on a fabricated path and on a blob no commit held. xtask/tests/verify_doc.rs (16) - P2b: a dead relative href reds a governed doc, an ungoverned doc and neither a draft nor an archived doc nor a docs/.archive/ link, plus a run over this repo s own docs, itself now a test. xtask/tests/doc_hooks.rs (8), gate0_cache.rs (5), ui.rs (2) - unchanged seams re-run green."
+  unit:
+    count: 411
+    what: "xtask (237) and trawler (82) unit suites plus the smaller binaries; the epic added coverage for the citation predicate widened through history, the retired-design artifact join, git_env error formatting, the authorisation enum s three states, and the href resolver s path handling."
+suite: "513 tests green across 20 suites (--features hook-tests), clippy --workspace --all-targets clean under pedantic with -D warnings"
+date: 2026-09-04
