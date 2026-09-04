@@ -1,0 +1,32 @@
+schema: cr/v3
+scope: "epic E-GATETRUTH (epic/gate-truth) -> main"
+epic: E-GATETRUTH
+branch: epic/gate-truth
+base: 5d251c4308b98177dc0477f18da7f4b152b2dcd9
+head: 987ca8668317432e849f0ce170235ef76abf405b
+diff_sha256: 84c1be78c24cd818f8c574aaf09b9fa850612bfdbd99197c33657feae94db7db
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 12, verified: 5, waived: 0 }
+rounds: 2
+history:
+  - round: 1
+    tip: 2bf24311fd8ca60d0248329c85d0751e41a56154
+    verdict: FAIL
+    verified: 4
+    what: "Five finders, no design dimension (design-scope: no artifact in the range). Zero defects in the epic code - the finders traced the DEC-28/DEC-29 citation predicate, last_state, added_under, resolve_citation, commit_verdict/head_commit landed-detection and the Authorisation enum against real behaviour and all held. Three verified findings were wrong figures in the tip own test/v2 note: dod_gate.rs stated as 12 tests when it runs 82, the trawler unit suite stated as 82 when it runs 65 (the two transposed), and an integration tier of 101 against an actual 199. Note corrected. One verified quality finding: tests/e2e_gate_truth.rs duplicated seven helpers from tests/e2e_manual_review.rs near-verbatim; two more, a duplicated retired_designs history walk in design_scope and an .eq(&false) for a negation. All three fixed in 987ca86."
+  - round: 2
+    tip: 987ca8668317432e849f0ce170235ef76abf405b
+    verdict: PASS
+    verified: 1
+    what: "Two finders over the fix commit and a re-check of the round-1 note claims. One verified finding, again in the note and again arithmetic: the tiers read 2 + 199 + 302 = 503 against a stated 513, because tests/e2e_capture.rs (6) and tests/e2e_h2.rs (4) were omitted from every tier - they are proxy e2es from earlier epics but they do run in the cited suite. The e2e tier is 12. Note corrected and reconciled mechanically: all 16 real suites now appear exactly once, no phantom entries, no count mismatches, tiers summing to 513. The three code fixes were each verified sound: the harness extraction is behaviour-preserving with both e2es green and its #![allow(dead_code)] genuinely required (each test compiles the module separately and e2e_manual_review does not call blob, report_sha or path - removing the allow was tried and reds); design_artifacts_with is the simplest fix rather than API growth, since design_scope needs the retired list for its own output independently; the negation is equivalent."
+refuted:
+  - "design_scope duplicate retired_designs graded important - the merge gate hot path already hoists retired_designs once per seam (gate.rs:136), so the redundancy was confined to design-scope, a reviewer-invoked command over the handful of paths under docs/work/components/. Real, fixed, but a nit"
+  - "T0 CLAUDE.md mr usage block can silently drift from mr.rs with no mechanised staleness check - accurate as a future risk, not a present error: --as, --report and --target all match mr.rs:1009-1027 today. The block exists to stop an agent self-authorising manual review, which earns its small drift risk; graded a nit and left"
+  - "xtask/tests/mr.rs leaf() should reuse leaf_name() instead of restating the match - the two produce deliberately different tags (unhashable vs unhashable-range, unlisted vs unlisted-signer), so reusing one inside the other would change assertion strings across ten tests. The fix is riskier than the duplication"
+  - "resolve_citation spawns git show plus git rev-parse for the same path/revision - real, bounded by citations per note (single digits per seam); the finder graded it a nit itself"
+  - "last_state can cost 3+ subprocesses when a path newest history entry is its own removal - find_map short-circuits, so the common case is 2, and it runs only for retired-design candidates (0-2 per seam)"
+  - "with_links adds one more full document re-tokenisation via attrs() - extends the file pre-existing one-reparse-per-predicate pattern by roughly one call in a dozen; the added work is filesystem exists() checks, no subprocesses"
+  - "xtask/tests/dod_gate.rs and xtask/tests/mr.rs Repo structs duplicate the new shared harness - both pre-date the base unchanged, and they are in a separate workspace crate where cross-crate reuse of tests/common/ is not possible"
+verdict: PASS
+date: 2026-09-04
+note: "Gate 0 green (cached 8ce3ef86f8). design-scope: no design artifact in 5d251c4308..987ca86683 - no design section, and no check asks for one. Process epic: no UC-* behaviour and none changed, nothing in the proxy or the UI moves. 513 tests green across 20 suites, clippy --workspace --all-targets clean under pedantic with -D warnings. Both rounds place every blocking finding in the epic own evidence records rather than in its code, which is the same pattern the W3 review found inside this epic - nine verified findings, most of them false claims in W3 own result docs. The gate records were the weak point, not the gate."
