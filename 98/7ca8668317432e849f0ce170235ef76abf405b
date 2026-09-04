@@ -1,0 +1,14 @@
+schema: test/v2
+level: commit
+epic: E-GATETRUTH
+tests:
+  e2e:
+    count: 2
+    what: "tests/e2e_gate_truth.rs and tests/e2e_manual_review.rs, both re-run green on the shared tests/common/gitrepo.rs harness - the refactor is only sound if the two stories it serves still pass unchanged, and they do."
+  integration:
+    count: 2
+    what: "xtask/tests/dod_gate.rs design_scope_reports_what_the_review_must_judge_and_the_pin_it_writes and design_scope_names_a_design_retired_at_unjudged_bytes_and_where_to_read_it - the two tests that exercise the design_artifacts_with path this commit changed, including the retired-design branch. Both green, which is what makes the de-duplication behaviour-preserving rather than merely plausible."
+  unit:
+    waived: "no new behaviour: the diff removes a duplicate history walk, extracts an existing test harness into a shared module, and replaces .eq(&false) with a negation. Every predicate involved keeps its existing unit and integration coverage, listed above; a new unit test here would assert what those already assert."
+suite: "513 tests green across 20 suites (cargo test --workspace --features hook-tests), unchanged from the pre-refactor tip; clippy --workspace --all-targets clean under pedantic with -D warnings"
+date: 2026-09-04
