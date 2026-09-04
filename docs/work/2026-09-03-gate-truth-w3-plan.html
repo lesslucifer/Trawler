@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a99612b9f34851f0dfabf25">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATETRUTH.W3 plan (the gate names the cause it actually found)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-GATETRUTH.W3 — the gate names the cause it actually found</h1>
+      <p>Two places where the verdict is right and the sentence is wrong. <code>mr commit</code> calls a landed commit a
+        failure and buries git's one useful line under the whole message body; check 8 reports a valid note signed by a
+        key this checkout never met as "no valid mr/v1 note". After this WU each message names the cause the code
+        found, and nothing about what is accepted or refused moves.</p>
+      <div class="meta">WU plan · 2026-09-03 · Trawler · T3 (docs/work/) ·
+        <code>wu/gate-truth/name-the-cause</code> off <code>epic/gate-truth</code> @ <code>917fff4</code> ·
+        <a href="2026-09-03-gate-truth-plan.html">epic plan</a> · <a href="2026-09-03-gate-truth-w2-result.html">W2 result</a> ·
+        <span class="badge id">E-GATETRUTH.W3</span></div>
+    </div>
+  </header>
+  <main data-artifact="wu-plan">
+
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement">
+      <strong><code>mr commit</code> reports success when and only when <code>HEAD</code> moved, and on failure prints
+      git's own output without the commit message body; and check 8 (<code>8·manual-review</code>) prints a distinct
+      message for each way an <code>mr/v1</code> note fails to authorise — no note, an unreadable note, a signer the
+      running checkout's <code>.mr-allowed</code> does not list a key for (naming the signer and the roster's path), and a
+      signature that does not verify over <code>base..tip</code> — while the set of tips it authorises is unchanged.</strong>
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <div data-item="maps-to">
+      <table>
+        <thead><tr><th>Serves</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td><a href="2026-09-03-gate-truth-plan.html#w3">E-GATETRUTH · W3</a> · problems <span class="badge id">P2a</span> <span class="badge id">P3</span></td>
+            <td>the summary block's promise: <code>mr_commit</code> asks whether <code>HEAD</code> moved before it calls anything a failure; <code>tip_authorised</code>'s caller says which half of the authorisation failed</td></tr>
+          <tr><td><a href="2026-09-03-gate-truth-plan.html#expected">epic expected results 3 and 5</a></td>
+            <td>3: no <code>error:</code> on a succeeding commit, git's stderr alone on a failing one · 5: a roster gap names the signer and the roster path, distinct from a signature that fails against a listed key</td></tr>
+          <tr><td><a href="2026-09-03-gate-truth-plan.html#ex-w3a">Hình 5 and 6</a> · <a href="2026-09-03-gate-truth-plan.html#ex-w3b">Hình 7 and 8</a></td>
+            <td>the worked examples are this WU's fixtures: the commit that "failed", and the three causes one sentence covered</td></tr>
+          <tr><td><a href="../decisions/workflow-gates.html#dec-10">DEC-10</a></td>
+            <td>untouched in rule — the roster stays gitignored and per-checkout; the epic walk stays boundary-only on check 8. This WU adds the diagnosis DEC-10's locality makes necessary, and the record gains that consequence at distillation</td></tr>
+          <tr><td><a href="2026-09-03-gate-truth-plan.html#e2e">epic E2E steps 2 and 5</a></td>
+            <td>this WU ships both steps' ingredients — a commit through <code>mr commit</code>, a merge judged from a worktree whose roster omits the signer; the composed run over all four fixes stays owed at the epic close</td></tr>
+          <tr><td><a href="2026-09-03-gate-truth-plan.html#open-questions">epic open question 3</a></td>
+            <td>honoured: no warning at <code>mr confirm</code> time about sibling worktrees</td></tr>
+        </tbody>
+      </table>
+      <p>A process epic: no <code>UC-*</code> is delivered or changed. No rule changes — message and control flow only; every tip and commit the gate accepts today it accepts after, and every one it refuses it still refuses.</p>
+    </div>
+
+    <h2 id="design">The change</h2>
+
+    <h3 id="p2a">P2a — <code>mr commit</code> asks git what happened, then <code>HEAD</code></h3>
+    <table data-c="p2a-verdicts">
+      <thead><tr><th><code>HEAD</code> moved</th><th>git exited</th><th>Today</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td>yes</td><td>0</td><td><span class="badge auto">signed doc commit with Reviewed-By: key vuluu</span></td><td>unchanged</td></tr>
+        <tr><td>yes</td><td>non-zero</td><td><span class="badge approval">error: git commit -S -m &lt;the whole body&gt; --cleanup=verbatim: &lt;stderr&gt;</span> — Hình 5, three debugging rounds</td><td><span class="badge auto">signed doc commit with Reviewed-By: key vuluu</span> followed by <em>git exited non-zero after the commit landed: &lt;stderr&gt;</em></td></tr>
+        <tr><td>no</td><td>non-zero</td><td><span class="badge approval">error: git commit -S -m &lt;the whole body&gt; …: &lt;stderr&gt;</span></td><td><span class="badge approval">error: git commit -S failed and HEAD did not move</span> then git's stderr, then its stdout when stderr is empty — the body is never echoed</td></tr>
+        <tr><td>no</td><td>0</td><td>reported as success</td><td><span class="badge approval">error: git commit exited 0 and HEAD did not move</span> — says exactly the contradiction it saw</td></tr>
+      </tbody>
+    </table>
+    <div class="caption">Hình 1 — the verdict is a function of two facts the code can read, not of git's exit code alone. The identity-only branch (<code>commit -m</code> without <code>-S</code>) gets the same four rows.</div>
+
+    <h3 id="p3">P3 — check 8 says which half of the authorisation failed</h3>
+    <div class="diagram" data-c="p3-flow">
+      <pre class="mermaid">
+flowchart TD
+  N{"mr note on tip?"} -- none --> R1["no note<br/>tip has no mr/v1 note — unchanged, this one was right"]
+  N -- present --> P{"parses as schema mr/v1?"}
+  P -- no --> R2["unreadable<br/>the mr/v1 note on tip does not parse / declares schema X"]
+  P -- yes --> S{"note carries base + sig?"}
+  S -- no --> L1{"signer listed<br/>in this checkout's .mr-allowed?"}
+  L1 -- no --> R3["unlisted signer<br/>tip is signed by S, whom &lt;repo&gt;/.mr-allowed does not list"]
+  L1 -- yes --> OK["authorised"]
+  S -- yes --> H{"diff over base..tip computes?"}
+  H -- no --> R5["unhashable range<br/>the note's base B is not in this repo's history"]
+  H -- yes --> L2{"a key entry for signer<br/>in this checkout's .mr-allowed?"}
+  L2 -- no --> R3
+  L2 -- yes --> V{"sig verifies over<br/>change-hash + report-hash?"}
+  V -- no --> R4["stale signature<br/>tip's mr/v1 signature by S does not verify over base..tip"]
+  V -- yes --> OK
+  style R3 fill:#1f2a3a,stroke:#5b8def
+  style R4 fill:#1f2a3a,stroke:#5b8def
+      </pre>
+      <div class="caption">Hình 2 — today every red leaf collapses to one <code>false</code> and one sentence. After W3 each leaf is a variant of one enum, and <code>check_manual_review</code> prints the leaf it reached. The blue leaves are the two Hình 8 conflated; the green path is byte-for-byte today's predicate.</div>
+    </div>
+
+    <table data-c="p3-messages">
+      <thead><tr><th>Leaf</th><th>Message after W3 (final wording is the WU's)</th><th>Fix hint</th></tr></thead>
+      <tbody>
+        <tr><td>no note</td><td>every working-unit merge requires manual review - tip ab12cd3 has no mr/v1 note</td><td><code>NOT_AUTHORISED</code>, unchanged</td></tr>
+        <tr><td>unreadable</td><td>the mr/v1 note on ab12cd3 does not parse as mr/v1 (schema: …)</td><td>re-run <code>cargo xtask mr confirm</code>; the gate never hand-repairs a note</td></tr>
+        <tr><td>unlisted signer</td><td>ab12cd3 is signed by vuluu, whom <code>/…/TRA-GATE-TRUTH/.mr-allowed</code> does not list a key for</td><td>add the signer's key line to that roster (<code>cargo xtask mr setup</code> for your own), or merge from the checkout that signed — the roster is per-checkout by DEC-10</td></tr>
+        <tr><td>stale signature</td><td>ab12cd3's mr/v1 signature by vuluu does not verify over base..tip</td><td>the diff or the attested report changed after signing — re-run <code>cargo xtask mr confirm</code> on the tip as it stands</td></tr>
+        <tr><td>unhashable range</td><td>the mr/v1 note on ab12cd3 names base f00 which this repo's history does not hold</td><td>re-confirm against the branch the merge is really made from</td></tr>
+      </tbody>
+    </table>
+    <div class="caption">Hình 3 — five sentences for five causes. Only the first existed before; the rest were all "has no valid mr/v1 note". The check id stays <code>8·manual-review</code> in every row, so receipts and the walk's filter do not move.</div>
+
+    <table data-c="touches">
+      <thead><tr><th>Where</th><th>What changes</th><th>Guardrail</th></tr></thead>
+      <tbody>
+        <tr><td><code>xtask/src/git.rs</code></td>
+          <td>one helper beside <code>git_env</code> that returns git's raw outcome — success flag, stdout, stderr — and errs only when git could not be spawned; <code>git_env</code> is re-expressed over it</td>
+          <td><code>git_env</code>'s <code>Err</code> text is byte-for-byte today's <code>git &lt;args&gt;: &lt;stderr&gt;</code> — every other caller in the crate keeps its message. The <code>GIT_*</code> environment scrub in <code>cmd</code> applies to the new helper too</td></tr>
+        <tr><td><code>xtask/src/mr.rs</code> · <code>mr_commit</code></td>
+          <td>reads <code>HEAD</code> before and after the commit (absent on an unborn branch counts as "did not exist"), runs git through the raw helper, and hands both facts to a pure verdict function that produces Hình 1's four rows; both the <code>-S</code> and the identity-only branch go through it</td>
+          <td>the pre-commit checks — empty message, unlisted identity, the touch prompt, the trailer body — are untouched; the success line on the top row is today's line</td></tr>
+        <tr><td><code>xtask/src/mr.rs</code> · authorisation</td>
+          <td>a public enum with the six leaves of Hình 2 and a function <code>authorisation(repo, tip)</code> that returns the leaf reached; <code>tip_authorised</code> becomes <code>matches!(…, Authorised)</code> over it. The unlisted-signer leaf carries the signer and the roster's absolute path under the repo the gate was run in</td>
+          <td>the green path is the current predicate line for line: <code>signature_authorised</code> over <code>signed_payload</code> when the note carries a sig, <code>match_tier</code> when it does not. A signer listed only by an identity tier while the note carries a sig is the unlisted-signer leaf — today that is <code>allowed_signers</code> returning empty, and it stays a refusal</td></tr>
+        <tr><td><code>xtask/src/gate.rs</code> · <code>check_manual_review</code></td>
+          <td>matches the leaf and pushes Hình 3's message and fix for it; <code>check_attested_report</code> runs only on the authorised leaf, as today</td>
+          <td>check id <code>8·manual-review</code> on every leaf; the walk's <code>f.check != "8·manual-review"</code> filter and the receipt's <code>checks:</code> line are unchanged. <code>check_commit_trailer</code>'s use of <code>tip_authorised</code> is untouched (non-goal below)</td></tr>
+        <tr><td><code>xtask/src/git.rs</code> · <code>xtask/src/mr.rs</code> tests · <code>xtask/tests/mr.rs</code></td>
+          <td>the raw helper's contract; the verdict function's four quadrants; one classification test per leaf beside the existing <code>tip_authorised_*</code> tests, plus the agreement of the bool with the enum</td>
+          <td>the existing <code>tip_authorised_*</code>, <code>commit_*</code> and <code>mr_commit_*</code> tests run unedited and green</td></tr>
+        <tr><td><code>xtask/tests/dod_gate.rs</code></td>
+          <td>the gate's messages on a signed fixture from a roster that lists the key, one that omits it, and a tip amended after signing; the two red messages differ and each names its cause</td>
+          <td>every existing test asserting <code>checks_of(&amp;report) == ["8·manual-review"]</code> stays unedited — the id did not move</td></tr>
+        <tr><td><code>xtask/tests/mr.rs</code> · a second worktree</td>
+          <td>the W12 shapes end to end: a commit that lands while git exits non-zero, driven by a <code>git</code> shim on the subprocess <code>PATH</code>; a WU merge through the installed hook from a worktree whose roster omits the signer, refused naming that worktree's roster, then landing once the key line is added there</td>
+          <td>see the fixture constraint below</td></tr>
+        <tr><td><code>src/</code> · <code>ui/</code> · <code>docs/</code> outside <code>docs/work/</code></td><td>nothing</td><td>the WU diff; T2 distillation (DEC-10's consequence) lands with the result, and <code>docs/decisions/</code> is not rule-bearing</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="fixture-constraint">
+      <strong>Two fixtures have to reproduce W12, not a neighbour of it.</strong>
+      <em>P2a:</em> git ignores a <code>post-commit</code> hook's exit status, so no hook can make a landed commit exit
+      non-zero. The end-to-end quadrant is driven by running the <code>xtask</code> binary with a <code>git</code> shim first
+      on its <code>PATH</code> that execs the real git and exits 1 after a <code>commit</code> — in the subprocess only, never
+      the test process. The pure verdict function carries the quadrant at unit level regardless.
+      <em>P3:</em> the test <code>Repo</code> helpers commit <code>.mr-allowed</code>; a second worktree of such a repo
+      inherits the roster and the gap never opens. The worktree fixture must gitignore the roster before either
+      checkout writes it — exactly the DEC-10 layout — or the merge lands and the test has proved nothing.
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <thead><tr><th>#</th><th>Observable after</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>mr commit</code> on a commit that lands exits 0 and prints no <code>error:</code>; the success line is today's</td><td><code>xtask/tests/mr.rs</code></td></tr>
+          <tr><td>2</td><td>a commit that lands while git exits non-zero is reported as a success, with git's stderr after it — the round-1 misread of Hình 5 cannot recur</td><td><code>xtask/tests/mr.rs</code> (shim) · <code>xtask/src/mr.rs</code> tests</td></tr>
+          <tr><td>3</td><td>a commit git refuses (a <code>commit-msg</code> hook exits 1) prints git's stderr and not one line of the message body; <code>HEAD</code> is where it was</td><td><code>xtask/tests/mr.rs</code></td></tr>
+          <tr><td>4</td><td>every other <code>git_env</code> caller's error text is unchanged</td><td><code>xtask/src/git.rs</code> tests</td></tr>
+          <tr><td>5</td><td>a valid <code>mr/v1</code> note whose signer the running checkout's roster lacks is <span class="badge approval">red</span> on <code>8·manual-review</code>, and the message names the signer and that checkout's <code>.mr-allowed</code> path — not "no valid mr/v1 note"</td><td><code>xtask/tests/dod_gate.rs</code> · <code>xtask/tests/mr.rs</code></td></tr>
+          <tr><td>6</td><td>a note whose signer is listed but whose signature fails over <code>base..tip</code> is <span class="badge approval">red</span> by a different message that says the signature did not verify; the two messages share no cause sentence</td><td><code>xtask/tests/dod_gate.rs</code></td></tr>
+          <tr><td>7</td><td>a tip with no note prints the message it prints today; an unparseable note and an unreachable base print their own</td><td><code>xtask/tests/dod_gate.rs</code> · <code>xtask/tests/mr.rs</code></td></tr>
+          <tr><td>8</td><td><code>tip_authorised</code> returns the same bool as before on every leaf; the existing <code>tip_authorised_*</code> tests are unedited and green</td><td><code>xtask/tests/mr.rs</code></td></tr>
+          <tr><td>9</td><td>a WU merge run from a second worktree whose roster omits the signer is refused by the installed hook naming that worktree's roster, and lands once the key line is added there — Hình 7 with the right sentence</td><td><code>xtask/tests/mr.rs</code></td></tr>
+          <tr><td>10</td><td>the check id, the receipt's <code>checks:</code> line and the walk's check-8 filter are unchanged</td><td><code>xtask/tests/dod_gate.rs</code></td></tr>
+          <tr><td>11</td><td>no file under <code>src/</code> or <code>ui/</code> changes, and no T1 (flat <code>docs/*.html</code>); the only doc outside <code>docs/work/</code> is the T2 distillation this WU owes, <code>docs/decisions/workflow-gates.html</code> — see the touches table. <code>cargo clippy</code> pedantic clean</td><td>the WU diff</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table>
+        <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge id">unit</span> commit</td>
+            <td><code>xtask/src/git.rs</code>: the raw helper returns the exit success, stdout and stderr of a failing and a succeeding git call on a temp repo; <code>git_env</code>'s <code>Err</code> string over the same failing call equals <code>git &lt;args&gt;: &lt;stderr&gt;</code>.
+              <code>xtask/src/mr.rs</code>: the verdict function over the four quadrants of Hình 1 — exit code, presence of the success line, presence of git's stderr, absence of a body sentinel in every row; the unlisted-signer leaf's display carries the signer and the roster path it was built from.</td></tr>
+          <tr><td><span class="badge id">integration</span> WU</td>
+            <td><code>xtask/tests/mr.rs</code>: <code>mr commit</code> with a software key lands and prints no <code>error:</code>; with a refusing <code>commit-msg</code> hook under <code>core.hooksPath</code> it exits non-zero, prints the hook's stderr, omits the body's second line, and <code>HEAD</code> is unchanged; the <code>xtask</code> binary with a <code>git</code> shim on its <code>PATH</code> lands the commit and reports success with the shim's stderr appended. One <code>authorisation</code> test per leaf on the <code>repo_with_key</code> fixture: no note · a note with <code>schema: mr/v2</code> · a signed note from a key the roster lacks (names the signer and the roster path) · a signed note from an identity-only listing · a listed key over an amended tip (stale) · a note whose base is a sha the repo does not hold · a bare note from an unlisted signer · the authorised case — and <code>tip_authorised</code> agrees with each.
+              <code>xtask/tests/dod_gate.rs</code>: <code>Level::Wu</code> over a signed, attested fixture: roster lists the key → green, receipt lists <code>8·manual-review</code>; roster omits the signer → red naming signer and path, not "no valid"; tip amended after signing → red naming the signature; the two red messages differ. Existing check-8 tests run unedited.</td></tr>
+          <tr><td><span class="badge id">e2e</span> epic</td>
+            <td><code>xtask/tests/mr.rs</code>: on a temp repo with <code>.mr-allowed</code> gitignored, worktree A runs <code>mr setup</code> and <code>mr confirm wu</code> on a WU tip carrying <code>test/v2</code>, <code>cr/v3</code>, <code>doc/v1</code> and a tracked result report; worktree B, with the merge hook installed and no roster, runs <code>git merge --no-ff</code> → refused, stderr names the signer and B's <code>.mr-allowed</code>; B writes A's key line → the merge lands. Hermetic: temp repo, temp worktrees, throwaway ed25519 key, no network. The epic-level composed run (all four fixes in one gated merge) is the epic's e2e, owed at the epic close, not waived here — this WU ships its steps 2 and 5.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-c="non-goals">
+      <li><strong>No shared roster.</strong> <code>.mr-allowed</code> stays gitignored and per-checkout (DEC-10, epic non-goal); this WU makes the gap readable, not closed.</li>
+      <li><strong>No confirm-time warning</strong> about sibling worktrees — epic open question 3, decided no.</li>
+      <li><strong>No change to what authorises.</strong> The green path of Hình 2 is today's predicate; no leaf that is red today turns green, and the reverse.</li>
+      <li><strong>No new check id, no receipt change.</strong> Every leaf is <code>8·manual-review</code>; the walk keeps filtering it at seams.</li>
+      <li><strong>Not the doc-commit trailer path.</strong> <code>check_commit_trailer</code> and the <code>commit-msg</code> hook refuse with their own one-sentence message and have the same shape when a doc commit signed in one worktree is pushed from another. Outside this WU's requirement; the result doc files it as a follow-up if the enum does not serve it for free.</li>
+      <li><strong>No T1 text.</strong> The workflow standard's check-8 row already lists the four causes as red; it does not state the old sentence, so nothing there contradicts the fix. DEC-10 gains the locality-and-diagnosis consequence at distillation (T2, unsigned by DEC-10's own rule).</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

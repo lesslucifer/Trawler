@@ -29,8 +29,27 @@ impl Repo {
         repo
     }
 
+    /// As [`Repo::new`], stopping before the initial commit: `HEAD` is unborn,
+    /// the state a first commit moves away from.
+    fn new_unborn(allowed: &str) -> Self {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().to_path_buf();
+        let repo = Self { _dir: dir, path };
+        repo.git(&["init", "-q", "-b", "main"]);
+        repo.git(&["config", "user.email", "gate@test"]);
+        repo.git(&["config", "user.name", "gate"]);
+        repo.git(&["config", "commit.gpgsign", "false"]);
+        repo.write(".mr-allowed", allowed);
+        repo
+    }
+
     fn git(&self, args: &[&str]) -> String {
         xtask::git::git(&self.path, args).unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    /// [`Repo::git`] without the panic — for asking whether a ref resolves.
+    fn git_raw(&self, args: &[&str]) -> Result<String, String> {
+        xtask::git::git(&self.path, args)
     }
 
     fn write(&self, rel: &str, content: &str) {
@@ -1015,4 +1034,419 @@ fn e2e_signed_manual_review_flow_with_a_software_key() {
         !mr::tip_authorised(repo.p(), &root),
         "an unlisted signer's bare note never authorises"
     );
+}
+
+// ---------------------------------------------------------------------------
+// E-GATETRUTH.W3 — P2a: `mr commit` reports what happened, not git's exit code.
+// ---------------------------------------------------------------------------
+
+/// Install a `commit-msg` hook that refuses every commit, so git fails and
+/// `HEAD` stays put — the only quadrant a hook can produce, because git ignores
+/// a `post-commit` hook's exit status.
+fn refusing_commit_msg_hook(repo: &Repo) {
+    let hooks = repo.p().join("hooks");
+    std::fs::create_dir_all(&hooks).unwrap();
+    let hook = hooks.join("commit-msg");
+    std::fs::write(&hook, "#!/bin/sh\necho 'the hook refused this message' >&2\nexit 1\n").unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        std::fs::set_permissions(&hook, std::fs::Permissions::from_mode(0o755)).unwrap();
+    }
+    repo.git(&["config", "core.hooksPath", hooks.to_str().unwrap()]);
+}
+
+const BODY_SECOND_LINE: &str = "the-body-line-a-reader-should-never-be-shown";
+
+#[test]
+fn commit_that_lands_reports_success_and_no_error() {
+    let repo = Repo::new("email: a@b.co\n");
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+    let before = repo.git(&["rev-parse", "HEAD"]);
+
+    let (code, out) =
+        mr::run(&["commit", "-m", "docs: change", "--as", "a@b.co"], repo.p()).unwrap();
+
+    assert_eq!(code, 0, "{out}");
+    assert!(!out.contains("error"), "a landed commit prints no error: {out}");
+    assert_ne!(repo.git(&["rev-parse", "HEAD"]), before, "HEAD moved");
+}
+
+/// The first commit in a repo: `HEAD` resolves to nothing before it and to a
+/// commit after, so "did HEAD move" has to answer over an absent state too -
+/// the one input `head_commit` returns `None` for.
+#[test]
+fn the_first_commit_in_a_repo_lands_from_an_unborn_head() {
+    let repo = Repo::new_unborn("email: a@b.co\n");
+    assert!(repo.git_raw(&["rev-parse", "HEAD"]).is_err(), "HEAD is unborn");
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+
+    let (code, out) =
+        mr::run(&["commit", "-m", "docs: the first commit", "--as", "a@b.co"], repo.p()).unwrap();
+
+    assert_eq!(code, 0, "the first commit lands like any other: {out}");
+    assert!(!out.contains("HEAD did not move"), "it moved - from nothing to a commit: {out}");
+    assert!(!repo.git(&["rev-parse", "HEAD"]).is_empty(), "HEAD now names a commit");
+}
+
+/// An unborn `HEAD` that stays unborn: git refuses, nothing landed, and the
+/// verdict must not claim a first commit that was never made.
+#[test]
+fn a_refused_first_commit_is_a_failure_not_a_phantom_landing() {
+    let repo = Repo::new_unborn("email: a@b.co\n");
+    refusing_commit_msg_hook(&repo);
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+
+    let (code, out) =
+        mr::run(&["commit", "-m", "docs: refused", "--as", "a@b.co"], repo.p()).unwrap();
+
+    assert_eq!(code, 1, "nothing landed: {out}");
+    assert!(out.contains("HEAD did not move"), "and the verdict says so: {out}");
+    assert!(repo.git_raw(&["rev-parse", "HEAD"]).is_err(), "HEAD is still unborn");
+}
+
+#[test]
+fn a_commit_git_refuses_names_gits_own_line_and_never_the_message_body() {
+    let repo = Repo::new("email: a@b.co\n");
+    refusing_commit_msg_hook(&repo);
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+    let before = repo.git(&["rev-parse", "HEAD"]);
+    let message = format!("docs: change\n\n{BODY_SECOND_LINE}");
+
+    let (code, out) = mr::run(&["commit", "-m", &message, "--as", "a@b.co"], repo.p()).unwrap();
+
+    assert_eq!(code, 1, "the commit did not land: {out}");
+    assert!(out.contains("HEAD did not move"), "the verdict names the fact it checked: {out}");
+    assert!(out.contains("the hook refused this message"), "git's own line is the cause: {out}");
+    assert!(!out.contains(BODY_SECOND_LINE), "the message body is never echoed: {out}");
+    assert!(!out.contains("--cleanup=verbatim"), "nor is the argument vector: {out}");
+    assert_eq!(repo.git(&["rev-parse", "HEAD"]), before, "HEAD is where it was");
+}
+
+/// A `git` shim first on `PATH` that execs the real git and then exits 1 after a
+/// `commit` — the only way to reach the landed-and-non-zero quadrant, since git
+/// ignores a `post-commit` hook's exit status.
+#[cfg(unix)]
+#[test]
+fn a_commit_that_lands_while_git_exits_non_zero_is_reported_as_a_success() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let repo = Repo::new("email: a@b.co\n");
+    repo.write("docs/x.html", "x");
+    repo.git(&["add", "-A"]);
+    let before = repo.git(&["rev-parse", "HEAD"]);
+
+    let shim_dir = repo.p().join("shim");
+    std::fs::create_dir_all(&shim_dir).unwrap();
+    let real_git = String::from_utf8(
+        Command::new("/usr/bin/env").args(["which", "git"]).output().unwrap().stdout,
+    )
+    .unwrap()
+    .trim()
+    .to_string();
+    let shim = shim_dir.join("git");
+    std::fs::write(
+        &shim,
+        format!(
+            "#!/bin/sh\n\"{real_git}\" \"$@\"\nstatus=$?\nfor a in \"$@\"; do\n  if [ \"$a\" = commit ]; then\n    echo 'warning: the signer complained after the commit landed' >&2\n    exit 1\n  fi\ndone\nexit $status\n"
+        ),
+    )
+    .unwrap();
+    std::fs::set_permissions(&shim, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+    let path = format!("{}:{}", shim_dir.display(), std::env::var("PATH").unwrap_or_default());
+    let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["mr", "commit", "-m", "docs: change", "--as", "a@b.co"])
+        .current_dir(repo.p())
+        .env("PATH", path)
+        .output()
+        .unwrap();
+
+    let said =
+        format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+    assert!(out.status.success(), "the commit landed, so this is a success: {said}");
+    assert!(said.contains("committed with"), "the success line comes first: {said}");
+    assert!(said.contains("after the commit landed"), "the anomaly is stated too: {said}");
+    assert_ne!(repo.git(&["rev-parse", "HEAD"]), before, "and HEAD really moved");
+}
+
+// ---------------------------------------------------------------------------
+// E-GATETRUTH.W3 — P3: each way an mr/v1 note fails to authorise says so.
+// ---------------------------------------------------------------------------
+
+/// The classification, rendered for assertions: the leaf's name plus the fields
+/// a reader needs, so a test names the cause rather than a bool.
+fn leaf(repo: &Repo, tip: &str) -> String {
+    match mr::authorisation(repo.p(), tip) {
+        mr::Authorisation::Authorised => "authorised".to_string(),
+        mr::Authorisation::NoNote => "no-note".to_string(),
+        mr::Authorisation::Unreadable(schema) => {
+            format!("unreadable:{}", schema.unwrap_or_else(|| "unparseable".to_string()))
+        }
+        mr::Authorisation::UnhashableRange { base } => format!("unhashable:{base}"),
+        mr::Authorisation::UnlistedSigner { signer, roster } => {
+            format!("unlisted:{signer}:{roster}")
+        }
+        mr::Authorisation::StaleSignature { signer } => format!("stale:{signer}"),
+    }
+}
+
+/// Every leaf agrees with the bool `tip_authorised` has always returned.
+fn assert_bool_agrees(repo: &Repo, tip: &str) {
+    let authorised = leaf(repo, tip) == "authorised";
+    assert_eq!(
+        mr::tip_authorised(repo.p(), tip),
+        authorised,
+        "the enum and the bool must never disagree"
+    );
+}
+
+#[test]
+fn a_tip_with_no_note_is_classified_as_having_none() {
+    let (repo, _base, tip, _) = repo_with_key("vu");
+    assert_eq!(leaf(&repo, &tip), "no-note");
+    assert_bool_agrees(&repo, &tip);
+}
+
+#[test]
+fn a_note_of_another_schema_is_unreadable_and_names_the_schema_it_declares() {
+    let (repo, _base, tip, _) = repo_with_key("vu");
+    let body = "schema: mr/v2\nlevel: epic\ntip: x\ntier: key\nsigner: vu\n";
+    xtask::git::write_note(repo.p(), "mr", &tip, body).unwrap();
+    assert_eq!(leaf(&repo, &tip), "unreadable:mr/v2");
+    assert_bool_agrees(&repo, &tip);
+}
+
+#[test]
+fn an_unparseable_note_is_unreadable_rather_than_absent() {
+    let (repo, _base, tip, _) = repo_with_key("vu");
+    xtask::git::write_note(repo.p(), "mr", &tip, "schema: [this is: not: a: note").unwrap();
+    assert_eq!(leaf(&repo, &tip), "unreadable:unparseable");
+    assert_bool_agrees(&repo, &tip);
+}
+
+#[test]
+fn a_signed_note_whose_signer_this_checkout_lists_no_key_for_names_the_signer_and_the_roster() {
+    let (repo, base, tip, _) = repo_with_key("vu");
+    let hash = xtask::git::diff_sha256(repo.p(), &base, &tip).unwrap();
+    let sig = repo.ssh_sign("id", mr::NOTE_NAMESPACE, hash.as_bytes());
+    write_signed_note(&repo, "working-unit", &base, &tip, "vu", &sig);
+    assert_eq!(leaf(&repo, &tip), "authorised", "the roster lists vu's key");
+
+    // The DEC-10 shape: same repo-wide note, a roster without that signer.
+    repo.write(".mr-allowed", "email: a@b.co\n");
+    let roster = repo.p().join(".mr-allowed").display().to_string();
+    assert_eq!(leaf(&repo, &tip), format!("unlisted:vu:{roster}"));
+    assert_bool_agrees(&repo, &tip);
+}
+
+#[test]
+fn a_signed_note_from_an_identity_only_listing_is_an_unlisted_signer_not_a_bad_signature() {
+    // `allowed_signers` is empty for an identity-only entry, so there is nothing
+    // to verify against - a roster gap, not a signature that failed.
+    let (repo, base, tip, _) = repo_with_key("vu");
+    let hash = xtask::git::diff_sha256(repo.p(), &base, &tip).unwrap();
+    let sig = repo.ssh_sign("id", mr::NOTE_NAMESPACE, hash.as_bytes());
+    write_signed_note(&repo, "working-unit", &base, &tip, "vu", &sig);
+    repo.write(".mr-allowed", "email: a@b.co\nusername: vu\n");
+
+    assert!(leaf(&repo, &tip).starts_with("unlisted:vu:"), "got: {}", leaf(&repo, &tip));
+    assert_bool_agrees(&repo, &tip);
+}
+
+#[test]
+fn a_listed_key_whose_signature_no_longer_covers_the_range_is_stale_not_unlisted() {
+    let (repo, base, tip, _) = repo_with_key("vu");
+    let hash = xtask::git::diff_sha256(repo.p(), &base, &tip).unwrap();
+    let sig = repo.ssh_sign("id", mr::NOTE_NAMESPACE, hash.as_bytes());
+    repo.write("src/lib.rs", "pub fn f() { let _ = 1; }\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "--amend", "--no-edit"]);
+    let amended = repo.git(&["rev-parse", "HEAD"]);
+    write_signed_note(&repo, "working-unit", &base, &amended, "vu", &sig);
+
+    assert_eq!(leaf(&repo, &amended), "stale:vu");
+    assert_bool_agrees(&repo, &amended);
+}
+
+#[test]
+fn a_note_naming_a_base_this_repo_does_not_hold_says_the_range_cannot_be_recomputed() {
+    let (repo, base, tip, _) = repo_with_key("vu");
+    let hash = xtask::git::diff_sha256(repo.p(), &base, &tip).unwrap();
+    let sig = repo.ssh_sign("id", mr::NOTE_NAMESPACE, hash.as_bytes());
+    let ghost = "0000000000000000000000000000000000000000";
+    write_signed_note(&repo, "working-unit", ghost, &tip, "vu", &sig);
+
+    assert_eq!(leaf(&repo, &tip), format!("unhashable:{ghost}"));
+    assert_bool_agrees(&repo, &tip);
+}
+
+#[test]
+fn a_bare_note_is_authorised_by_a_listing_and_unlisted_without_one() {
+    let (repo, _base, tip, _) = repo_with_key("vu");
+    let body = "schema: mr/v1\nlevel: epic\ntip: x\ntier: username\nsigner: vu\n";
+    xtask::git::write_note(repo.p(), "mr", &tip, body).unwrap();
+    assert_eq!(leaf(&repo, &tip), "authorised", "a listed signer's bare note still authorises");
+    assert_bool_agrees(&repo, &tip);
+
+    let ghost = "schema: mr/v1\nlevel: epic\ntip: x\ntier: email\nsigner: ghost@x.co\n";
+    xtask::git::write_note(repo.p(), "mr", &tip, ghost).unwrap();
+    assert!(leaf(&repo, &tip).starts_with("unlisted:ghost@x.co:"), "got: {}", leaf(&repo, &tip));
+    assert_bool_agrees(&repo, &tip);
+}
+
+/// The full WU-gate notes on `tip`: `test/v2`, `doc/v1` and a `cr/v3`-era
+/// `cr/v2` PASS bound to this range. The e2e merge below is judged by every
+/// check, not only check 8, so the stubs `settle` writes are not enough.
+fn settle_for_a_gated_merge(repo: &Repo, tip: &str) {
+    let base = repo.git(&["rev-parse", "epic/x"]);
+    let hash = xtask::git::diff_sha256(repo.p(), &base, tip).unwrap();
+    repo.git(&[
+        "notes",
+        "--ref=test",
+        "add",
+        "-f",
+        "-m",
+        "schema: test/v2\nlevel: working-unit\nepic: E-GATETRUTH\nwu: E-GATETRUTH.W3\ntests:\n  integration: { count: 1, covers: \"the roster gap a second worktree opens\" }\n",
+        tip,
+    ]);
+    repo.git(&[
+        "notes",
+        "--ref=doc",
+        "add",
+        "-f",
+        "-m",
+        "schema: doc/v1\nepic: E-GATETRUTH\nwu: E-GATETRUTH.W3\nchanges:\n  - path: docs/use-cases/api.html\n    tier: T2\n    action: updated\n    distills: \"the contract this WU moved\"\n  - path: docs/work/w-result.html\n    tier: T3\n    action: added\n    distills: \"wu result report\"\n",
+        tip,
+    ]);
+    repo.git(&[
+        "notes",
+        "--ref=cr",
+        "add",
+        "-f",
+        "-m",
+        &format!("schema: cr/v2\nepic: E-GATETRUTH\nwu: E-GATETRUTH.W3\nbase: {base}\nhead: {tip}\ndiff_sha256: {hash}\nverdict: PASS\ndate: 2026-09-03\n"),
+        tip,
+    ]);
+}
+
+/// Notes are repo-wide, the roster is per-worktree: worktree A signs, worktree
+/// B merges and must be told which of the two it is missing. `.mr-allowed` is
+/// gitignored, exactly the DEC-10 layout — a committed roster would follow the
+/// checkout and the gap would never open, so the fixture would prove nothing.
+#[cfg(unix)]
+#[test]
+fn e2e_a_merge_judged_from_a_worktree_without_the_signers_key_says_so_and_lands_once_listed() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let repo = Repo::new(".mr-allowed is gitignored, so Repo::new's write is untracked\n");
+    // Undo the harness's committed roster and gitignore it, per DEC-10.
+    std::fs::remove_file(repo.p().join(".mr-allowed")).unwrap();
+    repo.write(".gitignore", ".mr-allowed\n");
+    repo.git(&["rm", "-q", "--cached", ".mr-allowed"]);
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "gitignore the local roster (DEC-10)"]);
+    repo.git(&["branch", "epic/x"]);
+
+    // Worktree A: register a key, build a WU tip, settle it, sign it. The notes
+    // are the full shapes the WU gate demands, because this merge is judged by
+    // every check, not only check 8.
+    let pubkey = setup_with_software_key(&repo, "vuluu");
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    repo.write("src/lib.rs", "pub fn f() {}\n");
+    repo.write("docs/use-cases/api.html", "<html>the contract this WU moved</html>\n");
+    let report = "docs/work/w-result.html";
+    repo.write(report, "<html>result</html>\n");
+    repo.git(&["add", "-A"]);
+    repo.git(&["commit", "-q", "-m", "the WU change + its result report"]);
+    let tip = repo.git(&["rev-parse", "HEAD"]);
+    settle_for_a_gated_merge(&repo, &tip);
+    let (code, out) = mr::run(
+        &["confirm", "wu", &tip, "--as", "vuluu", "--target", "epic/x", "--report", report],
+        repo.p(),
+    )
+    .unwrap();
+    assert_eq!(code, 0, "{out}");
+    assert!(mr::tip_authorised(repo.p(), &tip), "worktree A, which holds the key, authorises it");
+
+    // Worktree B: same .git, its own working tree, and no roster at all.
+    let b = repo.p().join("wt-b");
+    repo.git(&["worktree", "add", "-q", "--detach", b.to_str().unwrap(), "epic/x"]);
+    assert!(
+        !b.join(".mr-allowed").exists(),
+        "B has no roster - the gitignored file did not follow"
+    );
+    assert!(
+        !mr::tip_authorised(&b, &tip),
+        "B reads a valid note and a roster with no line for its signer"
+    );
+    let leaf_in_b = match mr::authorisation(&b, &tip) {
+        mr::Authorisation::UnlistedSigner { signer, roster } => format!("{signer}|{roster}"),
+        other => panic!("B must name the roster gap, got {}", leaf_name(&other)),
+    };
+    assert!(leaf_in_b.starts_with("vuluu|"), "the signer is named: {leaf_in_b}");
+    assert!(leaf_in_b.contains("wt-b"), "and B's own roster path, not A's: {leaf_in_b}");
+
+    // The merge hook in B refuses, and its message is the roster, not the note.
+    let hooks = b.join("hooks");
+    std::fs::create_dir_all(&hooks).unwrap();
+    let hook = hooks.join("pre-merge-commit");
+    std::fs::write(
+        &hook,
+        format!("#!/bin/sh\nexec \"{}\" verify-dod hook wu\n", env!("CARGO_BIN_EXE_xtask")),
+    )
+    .unwrap();
+    std::fs::set_permissions(&hook, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let git_in_b = |args: &[&str]| {
+        let mut cmd = Command::new("git");
+        for (key, _) in std::env::vars_os() {
+            if key.to_string_lossy().starts_with("GIT_") {
+                cmd.env_remove(key);
+            }
+        }
+        cmd.arg("-C").arg(&b).args(args).output().unwrap()
+    };
+    git_in_b(&["config", "core.hooksPath", hooks.to_str().unwrap()]);
+    git_in_b(&["config", "user.email", "b@test"]);
+    git_in_b(&["config", "user.name", "b"]);
+    git_in_b(&["checkout", "-q", "-B", "epic/x"]);
+
+    let refused = git_in_b(&["merge", "--no-ff", "-m", "merge the WU", &tip]);
+    let said = format!(
+        "{}{}",
+        String::from_utf8_lossy(&refused.stdout),
+        String::from_utf8_lossy(&refused.stderr)
+    );
+    assert!(!refused.status.success(), "B has no key for the signer: {said}");
+    assert!(said.contains("signed by vuluu"), "the signer is named: {said}");
+    assert!(said.contains("wt-b"), "and B's roster is the one it read: {said}");
+    assert!(!said.contains("has no mr/v1 note"), "the note is there and valid: {said}");
+    git_in_b(&["merge", "--abort"]);
+
+    // B lists the key: the same note, the same tip, and now the merge lands.
+    std::fs::write(b.join(".mr-allowed"), format!("key: vuluu {pubkey}\n")).unwrap();
+    assert!(mr::tip_authorised(&b, &tip), "the roster was the whole difference");
+    let landed = git_in_b(&["merge", "--no-ff", "-m", "merge the WU", &tip]);
+    let said = format!(
+        "{}{}",
+        String::from_utf8_lossy(&landed.stdout),
+        String::from_utf8_lossy(&landed.stderr)
+    );
+    assert!(landed.status.success(), "the gated merge lands from B once it lists the key: {said}");
+}
+
+/// A leaf's name, for a panic message that says which one was reached.
+fn leaf_name(a: &mr::Authorisation) -> &'static str {
+    match a {
+        mr::Authorisation::Authorised => "authorised",
+        mr::Authorisation::NoNote => "no-note",
+        mr::Authorisation::Unreadable(_) => "unreadable",
+        mr::Authorisation::UnhashableRange { .. } => "unhashable-range",
+        mr::Authorisation::UnlistedSigner { .. } => "unlisted-signer",
+        mr::Authorisation::StaleSignature { .. } => "stale-signature",
+    }
 }

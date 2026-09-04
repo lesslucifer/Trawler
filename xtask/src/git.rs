@@ -19,9 +19,32 @@ pub fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
     git_env(repo, args, &[])
 }
 
-/// [`git`] with extra environment variables on the spawned process — how a
-/// sign reason reaches a `gpg.ssh.program` signer through `git commit -S`.
-pub fn git_env(repo: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<String, String> {
+/// What git actually did: its exit disposition and both streams, kept apart —
+/// for a caller whose verdict is not git's exit code, which [`git_env`]'s
+/// `Result` cannot express.
+pub struct Outcome {
+    pub success: bool,
+    pub stdout: String,
+    pub stderr: String,
+}
+
+impl Outcome {
+    /// Git's own account of what happened: its stderr, its stdout when stderr
+    /// is empty (`commit` reports "nothing to commit" on stdout), and a named
+    /// silence when git wrote to neither — never `""`, which would leave a
+    /// caller's sentence ending on a bare colon.
+    pub fn said(&self) -> &str {
+        match (self.stderr.as_str(), self.stdout.as_str()) {
+            ("", "") => "git printed nothing",
+            ("", stdout) => stdout,
+            (stderr, _) => stderr,
+        }
+    }
+}
+
+/// [`git_env`]'s spawn and capture, without the verdict. Errs only when git
+/// could not be run at all — a non-zero exit is an outcome, not an error.
+pub fn git_outcome(repo: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<Outcome, String> {
     let mut command = cmd(repo);
     for (key, value) in env {
         command.env(key, value);
@@ -30,10 +53,21 @@ pub fn git_env(repo: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<Strin
         .args(args)
         .output()
         .map_err(|e| format!("failed to spawn git {}: {e}", args.join(" ")))?;
-    if out.status.success() {
-        Ok(String::from_utf8_lossy(&out.stdout).trim_end().to_string())
+    Ok(Outcome {
+        success: out.status.success(),
+        stdout: String::from_utf8_lossy(&out.stdout).trim_end().to_string(),
+        stderr: String::from_utf8_lossy(&out.stderr).trim_end().to_string(),
+    })
+}
+
+/// [`git`] with extra environment variables on the spawned process — how a
+/// sign reason reaches a `gpg.ssh.program` signer through `git commit -S`.
+pub fn git_env(repo: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<String, String> {
+    let out = git_outcome(repo, args, env)?;
+    if out.success {
+        Ok(out.stdout)
     } else {
-        Err(format!("git {}: {}", args.join(" "), String::from_utf8_lossy(&out.stderr).trim_end()))
+        Err(format!("git {}: {}", args.join(" "), out.stderr))
     }
 }
 
@@ -315,7 +349,7 @@ pub fn sha256_hex(bytes: &[u8]) -> Result<String, String> {
 mod tests {
     use std::process::Command;
 
-    use super::{git, last_state, sha256_hex, ssh_sign, ssh_verify};
+    use super::{git, git_env, git_outcome, last_state, sha256_hex, ssh_sign, ssh_verify};
 
     #[test]
     fn ssh_sign_then_verify_roundtrips() {
@@ -483,6 +517,57 @@ mod tests {
         assert_eq!(
             sha256_hex(b"abc").expect("sha tool present"),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+    }
+
+    #[test]
+    fn an_outcome_keeps_the_exit_disposition_and_both_streams_apart() {
+        let h = History::new();
+        let ok = git_outcome(&h.repo, &["rev-parse", "HEAD"], &[]).expect("git runs");
+        assert!(ok.success);
+        assert_eq!(ok.stdout, h.git(&["rev-parse", "HEAD"]));
+        assert_eq!(ok.stderr, "", "a succeeding query says nothing on stderr");
+
+        let bad = git_outcome(&h.repo, &["rev-parse", "no-such-ref"], &[]).expect("git runs");
+        assert!(!bad.success, "a non-zero exit is an outcome, not an error");
+        assert!(bad.stderr.contains("no-such-ref"), "git's own line survives: {}", bad.stderr);
+        assert_eq!(bad.said(), bad.stderr, "stderr is what git said when it is non-empty");
+    }
+
+    #[test]
+    fn an_outcome_falls_back_to_stdout_for_what_git_said() {
+        // `git commit` with nothing staged reports on stdout, not stderr, so
+        // the one useful line is not on the stream git failed on.
+        let h = History::new();
+        let out = git_outcome(&h.repo, &["commit", "-m", "nothing staged"], &[]).expect("git runs");
+        assert!(!out.success);
+        assert!(out.stderr.is_empty(), "git said it on stdout, not stderr: {}", out.stderr);
+        assert!(out.said().contains("nothing to commit"), "got: {}", out.said());
+    }
+
+    #[test]
+    fn a_silent_git_is_reported_as_silence_not_as_an_empty_quote() {
+        let silent =
+            super::Outcome { success: false, stdout: String::new(), stderr: String::new() };
+        assert!(!silent.said().is_empty(), "a caller quoting this would trail off");
+        assert_eq!(silent.said(), "git printed nothing");
+    }
+
+    #[test]
+    fn git_env_reports_a_failure_exactly_as_it_always_has() {
+        let h = History::new();
+        let args = ["rev-parse", "no-such-ref"];
+        let err = git_env(&h.repo, &args, &[]).expect_err("a bad ref errs");
+        let raw = git_outcome(&h.repo, &args, &[]).expect("git runs");
+        assert_eq!(err, format!("git {}: {}", args.join(" "), raw.stderr));
+    }
+
+    #[test]
+    fn git_outcome_errs_only_when_git_cannot_run() {
+        let missing = std::path::Path::new("/no/such/repo/anywhere");
+        assert!(
+            git_outcome(missing, &["status"], &[]).is_ok(),
+            "git ran and refused - that is an outcome"
         );
     }
 }

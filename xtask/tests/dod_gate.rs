@@ -2041,3 +2041,172 @@ fn range_rejects_an_untrailered_claude_md_commit() {
     let (code, out) = range_run(&repo, &new, &trailered);
     assert_eq!(code, 0, "a listed trailer authorises the T0 edit: {out}");
 }
+
+// ---------------------------------------------------------------------------
+// Check 8 names the cause it found: one sentence over every cause sends a
+// reader to the causes it was not.
+// ---------------------------------------------------------------------------
+
+/// A key-backed `mr/v1` note over `epic/x..tip`, the shape `mr confirm` writes,
+/// signed by `signer` with the repo's `signer` key.
+fn signed_wu_mr_note(repo: &Repo, tip: &str, signer: &str) -> String {
+    let base = repo.sha("epic/x");
+    let hash = diff_sha256(&repo.path, &base, tip).unwrap();
+    let bytes = xtask::git::show_bytes(&repo.path, tip, WU_RESULT).unwrap();
+    let rsha = xtask::git::sha256_hex(&bytes).unwrap();
+    let payload = format!("{hash}\n{rsha}");
+    let sig = xtask::git::ssh_sign(
+        "ssh-keygen",
+        repo.path.join("signer").to_str().unwrap(),
+        xtask::mr::NOTE_NAMESPACE,
+        payload.as_bytes(),
+        None,
+    )
+    .unwrap();
+    let indented: String = sig.lines().map(|l| format!("  {l}")).collect::<Vec<_>>().join("\n");
+    format!(
+        "schema: mr/v1\nlevel: working-unit\ntip: {tip}\nbase: {base}\ntier: key\nsigner: {signer}\nreport: {WU_RESULT}\nreport_sha256: {rsha}\ndate: 2026-09-03\nsig: |\n{indented}\n"
+    )
+}
+
+/// A blessed WU whose `mr/v1` note is key-backed and whose roster lists the key.
+fn wu_signed_by_a_listed_key() -> (Repo, String) {
+    let repo = wu_with_change();
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    let pubkey = repo.keygen();
+    repo.write(".mr-allowed", &format!("email: a@b.co\nkey: vuluu {pubkey}\n"));
+    repo.note("mr", &tip, &signed_wu_mr_note(&repo, &tip, "vuluu"));
+    (repo, tip)
+}
+
+fn check_8_message(repo: &Repo) -> String {
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["8·manual-review"], "{}", format_report(&report));
+    format_report(&report)
+}
+
+#[test]
+fn a_signature_this_checkouts_roster_lists_no_key_for_names_the_signer_and_the_roster() {
+    let (repo, _tip) = wu_signed_by_a_listed_key();
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "the roster lists the key: {}", format_report(&report));
+
+    // The DEC-10 shape: a repo-wide note, a per-checkout roster without it.
+    repo.write(".mr-allowed", "email: a@b.co\n");
+    let out = check_8_message(&repo);
+
+    // The roster's own absolute path, not the bare file name: NOT_AUTHORISED
+    // already ends "must be listed in .mr-allowed", so asserting the name alone
+    // passes on that boilerplate even when the message names no path at all.
+    let roster = repo.path.join(".mr-allowed").display().to_string();
+    assert!(out.contains("is signed by vuluu"), "the signer is named: {out}");
+    assert!(out.contains(&roster), "and the roster this checkout read ({roster}): {out}");
+    assert!(!out.contains("has no mr/v1 note"), "the note exists and is valid: {out}");
+    assert!(!out.contains("does not verify"), "the signature is not the fault: {out}");
+}
+
+#[test]
+fn a_signature_that_no_longer_covers_the_range_says_so_and_not_that_the_signer_is_unlisted() {
+    let (repo, tip) = wu_signed_by_a_listed_key();
+    // The tree moved after signing: same note, a diff it no longer covers.
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\npub fn later() {}\n");
+    let moved = repo.commit("a change made after the signature");
+    repo.note("test", &moved, &repo.git(&["notes", "--ref=test", "show", &tip]));
+    repo.note("doc", &moved, &repo.git(&["notes", "--ref=doc", "show", &tip]));
+    let base = repo.sha("epic/x");
+    let sha = diff_sha256(&repo.path, &base, &moved).unwrap();
+    repo.note("cr", &moved, &cr_note("E9", Some("E9.W1"), &base, &sha, "PASS"));
+    repo.note("mr", &moved, &signed_wu_mr_note(&repo, &tip, "vuluu"));
+
+    let out = check_8_message(&repo);
+
+    assert!(out.contains("does not verify over base..tip"), "the cause is the signature: {out}");
+    assert!(out.contains("vuluu"), "the signer is still named: {out}");
+    assert!(!out.contains("does not list"), "the roster is not the fault: {out}");
+}
+
+#[test]
+fn the_three_check_8_causes_print_three_different_sentences() {
+    let (repo, tip) = wu_signed_by_a_listed_key();
+    let listed = std::fs::read_to_string(repo.path.join(".mr-allowed")).unwrap();
+    let note = repo.git(&["notes", "--ref=mr", "show", &tip]);
+
+    repo.git(&["notes", "--ref=mr", "remove", &tip]);
+    let absent = check_8_message(&repo);
+
+    repo.note("mr", &tip, &note);
+    repo.write(".mr-allowed", "email: a@b.co\n");
+    let unlisted = check_8_message(&repo);
+
+    repo.write(".mr-allowed", &listed);
+    repo.note("mr", &tip, &note.replace("report_sha256: ", "report_sha256: 0"));
+    let stale = check_8_message(&repo);
+
+    let causes = [&absent, &unlisted, &stale];
+    for (i, a) in causes.iter().enumerate() {
+        for b in causes.iter().skip(i + 1) {
+            assert_ne!(a, b, "each cause gets its own sentence");
+        }
+    }
+    assert!(absent.contains("has no mr/v1 note"), "{absent}");
+    assert!(unlisted.contains("does not list"), "{unlisted}");
+    assert!(stale.contains("does not verify"), "{stale}");
+}
+
+#[test]
+fn an_unreadable_note_says_that_rather_than_reporting_none() {
+    let (repo, tip) = wu_signed_by_a_listed_key();
+
+    repo.note("mr", &tip, "schema: mr/v2\nlevel: working-unit\ntip: x\ntier: key\nsigner: vuluu\n");
+    let other_schema = check_8_message(&repo);
+    assert!(other_schema.contains("declares schema mr/v2"), "{other_schema}");
+
+    repo.note("mr", &tip, "schema: [not: a: note");
+    let unparseable = check_8_message(&repo);
+    assert!(unparseable.contains("does not parse"), "{unparseable}");
+    assert!(!unparseable.contains("has no mr/v1 note"), "a note is present: {unparseable}");
+}
+
+#[test]
+fn a_note_whose_base_is_not_in_this_history_says_the_range_cannot_be_recomputed() {
+    let (repo, tip) = wu_signed_by_a_listed_key();
+    let ghost = "0000000000000000000000000000000000000000";
+    let note = repo.git(&["notes", "--ref=mr", "show", &tip]);
+    let base = repo.sha("epic/x");
+    repo.note("mr", &tip, &note.replace(&format!("base: {base}"), &format!("base: {ghost}")));
+
+    let out = check_8_message(&repo);
+
+    assert!(out.contains("which this repo's history does not hold"), "{out}");
+    assert!(!out.contains("does not verify"), "the signature was never reached: {out}");
+}
+
+#[test]
+fn every_check_8_cause_keeps_the_check_id_and_the_receipts_shape() {
+    // The id is what receipts record and what the epic walk filters at a seam;
+    // five new sentences must not become five new checks.
+    let (repo, tip) = wu_signed_by_a_listed_key();
+    let note = repo.git(&["notes", "--ref=mr", "show", &tip]);
+    for body in [
+        None,
+        Some("schema: mr/v2\nlevel: working-unit\ntip: x\ntier: key\nsigner: vuluu\n".to_string()),
+        Some(note.replace("report_sha256: ", "report_sha256: 0")),
+    ] {
+        if let Some(b) = body {
+            repo.note("mr", &tip, &b);
+        } else {
+            repo.git(&["notes", "--ref=mr", "remove", &tip]);
+        }
+        let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+        assert_eq!(checks_of(&report), vec!["8·manual-review"]);
+    }
+
+    repo.note("mr", &tip, &note);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+    let body = repo.gate().write_receipt(&report).unwrap();
+    assert!(body.contains("manual-review"), "the receipt still lists the check: {body}");
+    let receipt: DodReceipt = serde_yaml::from_str(&body).unwrap();
+    assert_eq!(receipt.tip, tip);
+}
