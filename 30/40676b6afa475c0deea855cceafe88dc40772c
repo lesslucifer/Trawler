@@ -1,0 +1,17 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W2 (wu/export/har-out) -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W2
+branch: wu/export/har-out
+base: c441e5cd69519370180170380473693a569e8a60
+head: 3040676b6afa475c0deea855cceafe88dc40772c
+diff_sha256: b39801cc7cbab9a6f987c424875bd8987fbf180a6ff7281919a9e4bc492d813d
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 17, verified: 10, waived: 2 }
+waivers:
+  - finding: "HarHeader, HarQueryParam and HarCookie are three structurally identical {name, value} structs"
+    reason: "Kept distinct because HAR 1.2 gives the three list-element types different optional fields - cookies carry expires/httpOnly/path/domain/secure, which har.rs's own doc comment already records as deliberately unparsed for now, so HarCookie is the one expected to grow them. Collapsing now would have to be un-collapsed then, and the three belong to one wire format that must be free to diverge from the REST view's HeaderView independently."
+  - finding: "encode_body allocates an owned String per captured body rather than writing incrementally into the output buffer"
+    reason: "Unavoidable inside serde's derive-based data model - the value must exist before serde walks the tree, and true incremental output would need a hand-written streaming Serialize. An export is a user-triggered one-shot download, not a hot path, so this falls under the rubric's exclusion of micro-optimization outside hot paths. The peak-memory consequence is separately recorded as the epic's deferred streaming-export row, now quantified at roughly 4x the ring cap."
+verdict: PASS
+date: 2026-09-04
