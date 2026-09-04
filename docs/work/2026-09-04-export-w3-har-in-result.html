@@ -503,6 +503,27 @@
         </tr>
       </tbody>
     </table>
+    <p>
+      <strong>Round 2</strong> re-verified all three fixes as sound — including an independent
+      attempt to construct a test that would distinguish the lock change, which reached the same
+      conclusion recorded below — and found <strong>one more real finding</strong>, against a claim
+      this very report made. <code>near_miss_document</code>'s docstring, and the test note,
+      both said the generator builds documents whose every member may be wrong-typed, out of range
+      or missing. It did not: the inner members of <code>request</code> and <code>response</code>
+      were never varied, and the four top-level keys drew opaque scalars that fail
+      <code>InRequest</code>/<code>InResponse</code> deserialization outright, so the document died
+      at the outer JSON gate. Measured on the old generator: of 252 cases,
+      <strong>213 stopped at <code>NotJson</code> and only 4 reached entry-level validation</strong>,
+      none of them with a malformed inner member — so the deep paths the property claimed to fuzz
+      (an out-of-range status, a non-array header list, bad base64 nested in a body) were reachable
+      only by the named-example table beside it. Each member now draws from values its own type can
+      hold as well as ones it cannot, and the version is weighted toward the supported one, because
+      a document rejected at an outer gate never reaches an inner one: entry-level validation is now
+      reached <strong>55 times per run rather than 4</strong>, timestamp rejection among it, and 61
+      documents parse fully. Held over 20,000 cases. The lesson is the one the reviews keep
+      teaching — a property that cannot reach the code it names is a coverage claim, not coverage.
+    </p>
+
     <div class="callout warn">
       <p><strong>The lock fix ships without a regression test, deliberately.</strong> The testing
       standard wants a named regression test first for a confirmed finding, and three attempts
