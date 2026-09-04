@@ -268,3 +268,111 @@ async fn cross_origin_grant_rides_every_response() {
     assert_eq!(res.status(), StatusCode::NO_CONTENT);
     assert_eq!(res.headers()["access-control-allow-origin"], "*");
 }
+
+// The WU contract at the router: paging is a re-slicing of the listing, and the
+// unparameterised listing is untouched by its arrival.
+#[tokio::test]
+async fn the_unparameterised_listing_keeps_its_pre_paging_shape() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    store.insert(FlowBuilder::new().method("GET").uri("http://a.example/one").status(200).build());
+    store.insert(FlowBuilder::new().method("POST").uri("http://b.example/two").status(201).build());
+    let r = router_with(store);
+
+    let (status, v) = json(&r, "/flows").await;
+    assert_eq!(status, StatusCode::OK);
+    let rows = v.as_array().expect("a bare array, never an envelope");
+    assert_eq!(rows.len(), 2);
+    let mut fields: Vec<&str> = rows[0].as_object().unwrap().keys().map(String::as_str).collect();
+    fields.sort_unstable();
+    assert_eq!(
+        fields,
+        [
+            "duration_ms",
+            "id",
+            "method",
+            "request_body_state",
+            "response_body_state",
+            "started_at",
+            "status",
+            "uri",
+        ],
+        "no field joined or left the summary row"
+    );
+}
+
+#[tokio::test]
+async fn walking_by_cursor_yields_exactly_the_unpaged_listing() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    for i in 0..7 {
+        let host = if i % 2 == 0 { "keep" } else { "drop" };
+        store.insert(FlowBuilder::new().uri(&format!("http://{host}.example/{i}")).build());
+    }
+    let r = router_with(store);
+
+    for filter in ["", "host=keep"] {
+        let (_, listed) = json(&r, &format!("/flows?{filter}")).await;
+        let expected: Vec<String> = listed
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|row| row["id"].as_str().unwrap().to_owned())
+            .collect();
+
+        let mut walked: Vec<String> = Vec::new();
+        let mut cursor: Option<String> = None;
+        loop {
+            let query = match &cursor {
+                Some(c) => format!("/flows?{filter}&limit=2&cursor={c}"),
+                None => format!("/flows?{filter}&limit=2"),
+            };
+            let (status, page) = json(&r, &query).await;
+            assert_eq!(status, StatusCode::OK);
+            let rows = page["flows"].as_array().expect("flows");
+            assert!(rows.len() <= 2, "a page never exceeds its limit");
+            walked.extend(rows.iter().map(|row| row["id"].as_str().unwrap().to_owned()));
+            match page["next_cursor"].as_str() {
+                Some(next) => cursor = Some(next.to_owned()),
+                None => break,
+            }
+        }
+
+        assert_eq!(walked, expected, "paging must re-slice `{filter}`, not redefine it");
+    }
+}
+
+#[tokio::test]
+async fn the_router_refuses_malformed_paging_by_name() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    store.insert(FlowBuilder::new().uri("http://a.example/one").build());
+    let r = router_with(store);
+
+    for (query, named) in [
+        ("/flows?limit=0", "limit"),
+        ("/flows?limit=lots", "limit"),
+        ("/flows?limit=2&cursor=nope", "cursor"),
+        ("/flows?cursor=00000000-0000-0000-0000-000000000000", "cursor"),
+    ] {
+        let (status, _headers, body) = get(&r, query).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{query}");
+        let reason = String::from_utf8(body).unwrap();
+        assert!(reason.contains(named), "refusal for {query} must name {named}, got {reason}");
+    }
+}
+
+#[tokio::test]
+async fn a_cursor_the_ring_evicted_ends_the_walk_rather_than_restarting_it() {
+    let store = Arc::new(Store::new(10, 64));
+    store.insert(
+        FlowBuilder::new().uri("http://a.example/one").req_body(captured(&[0u8; 8])).build(),
+    );
+    let evicted = store.list(&trawler::store::FlowFilter::default())[0].id.to_string();
+    store.insert(
+        FlowBuilder::new().uri("http://b.example/two").req_body(captured(&[0u8; 8])).build(),
+    );
+    let r = router_with(store);
+
+    let (status, page) = json(&r, &format!("/flows?limit=2&cursor={evicted}")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(page["flows"].as_array().unwrap().is_empty());
+    assert!(page["next_cursor"].is_null());
+}

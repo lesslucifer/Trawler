@@ -9,6 +9,7 @@ use time::OffsetDateTime;
 
 use crate::event::FlowEvent;
 use crate::flow::{BodyRec, Flow, Header, NotCapturedReason};
+use crate::store::FlowPage;
 
 fn rfc3339(t: SystemTime) -> String {
     OffsetDateTime::from(t).format(&Rfc3339).unwrap_or_default()
@@ -126,6 +127,24 @@ impl From<&Flow> for FlowSummary {
             status: flow.response.as_ref().map(|r| r.status),
             request_body_state: flow.request.body.state(),
             response_body_state: flow.response.as_ref().map(|r| r.body.state()),
+        }
+    }
+}
+
+/// The envelope returned by `GET /flows` when paging was asked for. The
+/// unparameterised listing stays a bare array — a shape that cannot carry a
+/// cursor, and one every existing client already reads.
+#[derive(Serialize)]
+pub struct FlowPageView {
+    pub flows: Vec<FlowSummary>,
+    pub next_cursor: Option<String>,
+}
+
+impl From<&FlowPage> for FlowPageView {
+    fn from(page: &FlowPage) -> Self {
+        Self {
+            flows: page.flows.iter().map(FlowSummary::from).collect(),
+            next_cursor: page.next_cursor.map(|id| id.to_string()),
         }
     }
 }

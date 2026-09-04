@@ -79,6 +79,49 @@
       same API.</p>
     </div>
 
+    <h2 id="listing-paging">UC-3 · UC-4 — the listing pages, opt-in</h2>
+    <div data-c="listing-paging-contract">
+      <p>Both surfaces read one listing contract, and it is bounded only when a client asks:</p>
+      <table>
+        <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>GET /flows</code>, with or without filters</td>
+            <td>the whole filtered capture, newest-first, as a bare JSON array — unbounded, and unchanged by paging's arrival</td>
+          </tr>
+          <tr>
+            <td><code>GET /flows?limit=n</code></td>
+            <td>an envelope: at most <em>n</em> rows plus the <code>next_cursor</code> that continues the walk, <code>null</code> once the walk reaches the oldest row the ring still holds</td>
+          </tr>
+          <tr>
+            <td>a <code>limit</code> that is not a positive integer · a <code>cursor</code> that is not a flow id · a <code>cursor</code> with no <code>limit</code></td>
+            <td>refused <code>400</code> with a reason naming the parameter — never an unbounded read a client did not ask for</td>
+          </tr>
+        </tbody>
+      </table>
+      <ul>
+        <li><strong>The cursor names a row, not an offset</strong> — the id of the page's last
+        row, resolved against the ring's order. So a flow captured mid-walk lands newer than
+        the cursor and is never served twice (a client watching live gets it on
+        <code>GET /stream</code>; a paged read is a read of the past), and eviction of rows the
+        walk has not reached yet simply shortens it. Paging composes with every filter and
+        re-slices the same listing rather than defining a second one.</li>
+        <li><strong>A cursor the ring has evicted ends the walk</strong> — an empty, final page,
+        because the capture no longer reaches back that far. It never restarts at the newest
+        row, which would re-serve every row the client already holds.</li>
+      </ul>
+    </div>
+
+    <div class="callout" data-c="listing-paging-provenance">
+      <p>Delivered by <span class="badge id">E-EXPORT.W1</span>. Pinned by the paging tests in
+      <code>tests/api.rs</code> (the unparameterised summary row's field set is locked; a cursor
+      walk yields exactly the unpaged listing, filtered and unfiltered; each refusal) and by
+      <code>Store::page</code>'s unit and property tests in <code>src/store.rs</code> — the
+      no-duplicate/no-skip invariant is proven over interleaved inserts, evictions and page
+      reads, not by example. Neither surface pages today: both read the unparameterised listing,
+      which is why the contract had to stay additive.</p>
+    </div>
+
     <h2 id="uc-5">UC-5 — Inspect a captured flow in the native app</h2>
     <div data-c="uc-5-contract">
       <p>Clicking a flow row in the native app (<span class="badge id">E-UIINSPECT</span>) opens the
