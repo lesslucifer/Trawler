@@ -154,9 +154,9 @@
         </tr>
         <tr>
           <td><code>src/flow.rs</code></td>
-          <td><code>FlowSource</code> (<code>Captured</code> | <code>Imported</code>) with its
-            wire spelling and its parse, <code>Flow.source</code>, and
-            <code>Flow::imported()</code>. <code>Flow::new</code> still yields
+          <td><code>FlowSource</code> (<code>Captured</code> | <code>Imported</code>),
+            <code>Flow.source</code>, and <code>Flow::imported()</code> — the enum only; its wire
+            tokens live at the API boundary, per the review. <code>Flow::new</code> still yields
             <code>Captured</code>, so the capture path and the recorder never learn a new field
             exists — asserted by a test, because a silent regression there would mismark every
             live flow.</td>
@@ -183,7 +183,11 @@
           <td><code>src/api/view.rs</code></td>
           <td><code>source</code> on both <code>FlowView</code> and <code>FlowSummary</code> — an
             added field on each, so the bare array and the paging envelope keep their shapes and
-            W1's contract stays valid.</td>
+            W1's contract stays valid — plus <code>source_token</code> and
+            <code>parse_source</code>, the provenance vocabulary's one home, beside the
+            <code>rfc3339</code> W2's review put here for the same reason. The domain enum stays
+            wire-agnostic: nothing below this boundary needs the string form, because the store
+            filters on the enum itself.</td>
         </tr>
         <tr>
           <td><code>src/api/mod.rs</code></td>
@@ -316,7 +320,7 @@
       <tbody>
         <tr>
           <td>unit</td>
-          <td>44 (28 + 3 proptests in <code>har.rs</code>; 7 store; 5 handler; 1 view)</td>
+          <td>44 (28 + 3 proptests in <code>har.rs</code>; 7 store; 5 handler; 2 view; 1 router)</td>
           <td>
             <code>src/api/har.rs</code>: the entry→flow mapping · the instant preserved and the id
             fresh · oldest-first insertion · an unmeasured duration from <code>-1</code>, a
@@ -335,7 +339,10 @@
             the collapse cannot silently widen; and the two never-panics properties. The
             round-trip property was <strong>mutation-checked</strong>: removing the entry reversal
             and removing the too-large size restoration each turn it red.
-            <code>src/flow.rs</code>: the default mark and the token round trip.
+            <code>src/flow.rs</code>: the default mark. <code>src/api/view.rs</code>: the
+            provenance mark on both projections, and the token round trip — the filter parses back
+            exactly what the projections render, so a token cannot be spelled one way out and
+            another way in (moved here with the vocabulary by the review).
             <code>src/store.rs</code>: batch order · the count and the byte weight · eviction
             under the cap · one event per flow with the response event only where there was a
             response · the source filter alone and composed · the cap accessor; plus
@@ -395,6 +402,119 @@
       (<code>bd5f519</code>), DEC-30's amendment (<code>15c0403</code>), the T1 edit
       (<code>75845ab</code>), and this result.
     </p>
+
+    <h2 id="review">The review round</h2>
+    <p>
+      Five isolated finders over the WU diff, plus adversarial verification of every
+      candidate. <strong>Ten candidates, seven refuted, three real</strong> — one important, two
+      nits — and all three were fixed rather than waived. The design dimension did not run:
+      <code>cargo xtask design-scope</code> reports no design artifact and no rendered file in the
+      diff, so the <code>cr/v3</code> note carries no <code>design:</code> section.
+    </p>
+    <table data-c="review-round">
+      <thead><tr><th>Dimension</th><th>Raised</th><th>Outcome</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>altitude</td>
+          <td>5</td>
+          <td><strong>1 real, fixed — the round's most consequential finding.</strong>
+            <code>FlowSource::as_str</code>/<code>parse</code> put the wire tokens on the domain
+            enum, and the verifier found the fact that settles it: <em>nothing below the API
+            boundary needs the string form</em>, because <code>FlowFilter</code> holds the enum
+            and <code>store.rs</code> compares enum values. Both functions' only non-test callers
+            were in <code>src/api/</code>. W2's review had refuted the mirror-image proposal —
+            moving the body reason tokens down onto <code>NotCapturedReason</code> — on exactly
+            these grounds, and <code>architecture.html</code> states the API package keeps "the
+            wire shape, the transport, and the transforms each" in one home. Fixed the way W2's
+            review established for <code>rfc3339</code>: both directions now live in
+            <code>view.rs</code> as <code>source_token</code>/<code>parse_source</code>, one home
+            for the vocabulary, with the round-trip test moved beside them.
+            <strong>Four refuted</strong>: the claim that the plan had specified
+            <code>view.rs</code> and the placement was an unrecorded deviation (the plan never
+            mentions the conversion's location at all — shipping it on the enum resolved an open
+            question rather than deviating, and the result's "what shipped" table recorded it);
+            <code>FlowFilter</code> holding a domain enum (consistent with
+            <code>matches</code> already reading domain fields); the parser mutating
+            <code>Flow</code>'s public fields after <code>Flow::new</code> (a pre-existing in-tree
+            pattern — <code>test_support.rs</code> does the same, and <code>host</code> is never
+            stale because the request is complete before construction); and the
+            <code>architecture.html</code> edit's accuracy, which the verifier confirmed.</td>
+        </tr>
+        <tr>
+          <td>efficiency</td>
+          <td>2</td>
+          <td><strong>1 real, fixed.</strong> <code>Store::import</code> cloned each flow's
+            request and response <em>inside</em> the ring mutex, while <code>insert</code> and
+            <code>set_response</code> both clone before taking it — and the proxy's capture path
+            contends on that same lock, so P2 ("critical sections stay minimal") applies to who is
+            stalled, not who holds. Now cloned before the lock.
+            <strong>The measurement corrected the finding's own framing</strong>: a verifier's
+            synthetic benchmark reported a ~17× reduction in total hold, but measuring what a real
+            capture actually waits gives ~44 ms versus ~49 ms on a 2048-flow batch — about 5 ms,
+            because a contending capture queues behind the flows still ahead of it rather than the
+            whole batch. Real, worth fixing, and smaller than first claimed.
+            <strong>One refuted</strong>: <code>decode_body</code>'s
+            <code>as_bytes().to_vec()</code> where <code>into_bytes()</code> would move — true and
+            compiles, but squarely the rubric's excluded "micro-optimization outside hot paths" on
+            a one-shot import whose document is already buffered several times over.</td>
+        </tr>
+        <tr>
+          <td>correctness</td>
+          <td>3</td>
+          <td><strong>0 real — all three refuted</strong>, and the finder independently confirmed
+            the WU's load-bearing claims: the parse-before-store invariant is structurally
+            enforced, the oldest-first reversal is genuinely exercised rather than tautologically
+            validated, bytes do outrank a declared size, and no parsing path can panic.
+            Refuted: <code>import</code> returning the accepted count rather than the
+            post-eviction survivor count (UC-6 commits explicitly to "how many entries it took",
+            DEC-31 accepts eviction as a designed cost, and a survivor count would be stale the
+            moment a concurrent capture lands — differently arbitrary, not more truthful); a
+            <code>SystemTime::from</code> panic path the fuzz generator cannot reach (empirically
+            unreachable — <code>time</code> 0.3 without <code>large-dates</code> caps years at
+            ±9999, and the extremes were run without a panic); and a <code>params</code>-only
+            <code>postData</code> reading as not-captured (exactly what DEC-30's
+            sentinel-not-invention rule requires — reconstructing wire bytes from parsed params
+            would fabricate bytes never on the wire).</td>
+        </tr>
+        <tr>
+          <td>simplification</td>
+          <td>1</td>
+          <td><strong>1 real, fixed (nit).</strong> <code>response_body</code>'s fallthrough was
+            two sequential decisions sharing a <code>reason</code> variable, the first with no
+            <code>else</code>; it is now one <code>match</code> over
+            <code>(marker, size)</code> with an arm per outcome. The verifier proved the single
+            match compiles clippy-clean under this repo's pedantic settings, refuting the concern
+            that it would reintroduce the <code>match_same_arms</code> warning an earlier
+            iteration hit.</td>
+        </tr>
+        <tr>
+          <td>reuse</td>
+          <td>2</td>
+          <td><strong>0 real</strong>, and the finder confirmed each load-bearing sharing claim:
+            <code>reason_token</code> reads back exactly what <code>not_captured_comment</code>
+            writes, <code>HAR_VERSION</code> and the timestamp format have one definition each,
+            and <code>Store::import</code> shares <code>Ring::evict</code> and
+            <code>announce_evictions</code> with <code>insert</code>. Refuted:
+            <code>seeded_store</code> duplicating W2's <code>har_fixture_store</code> (extending
+            that helper would churn the <code>insta</code> snapshot it feeds, and the two fixtures
+            differ in methods, statuses and body directions, not just cosmetics); and extracting
+            a shared <code>Ring::push</code> (the rubric's explicit "not its job: inventing new
+            abstractions to force sharing" — three trivial statements carrying no invariant).</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout warn">
+      <p><strong>The lock fix ships without a regression test, deliberately.</strong> The testing
+      standard wants a named regression test first for a confirmed finding, and three attempts
+      were made: a lock-held-from-another-thread timing assertion, a concurrent-capture contention
+      test, and a direct hold measurement. <em>All three passed against the unfixed code</em> —
+      at any batch size a unit test can afford, a contending capture waits for the handful of
+      flows ahead of it rather than the whole batch, so the two shapes are indistinguishable.
+      A test that cannot fail is worse than no test, because it falsely implies the property is
+      guarded; the fix is kept on structural grounds (it matches what <code>insert</code> and
+      <code>set_response</code> already do) and the absence of a guard is recorded here instead of
+      being papered over with a green assertion.</p>
+    </div>
 
     <h2 id="distillation">Distillation</h2>
     <table data-item="distillation" data-c="distillation">
