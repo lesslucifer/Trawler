@@ -217,8 +217,15 @@ export default {
       none: "none",
       decimal: "decimal",
     },
+    // Disclosure's twist is the only transform in the app: one glyph at two
+    // angles, so the rotation itself carries the open/closed state.
+    rotate: {
+      0: "0deg",
+      90: "90deg",
+    },
     transitionProperty: {
       colors: "color, background-color, border-color, text-decoration-color, fill, stroke",
+      transform: "transform",
     },
     extend: {},
   },

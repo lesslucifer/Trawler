@@ -22,7 +22,9 @@ const SPECIMENS: Record<string, ReactElement> = {
   CopyButton: <collection.CopyButton value="v" label="copy" />,
   CopyText: <collection.CopyText value="v" label="uri" />,
   CutMarker: <collection.CutMarker shown={10} total={99} />,
+  Disclosure: <collection.Disclosure summary="set it up manually">steps</collection.Disclosure>,
   DurationText: <collection.DurationText value={12} />,
+  Field: <collection.Field value="" onChange={() => {}} aria-label="host" />,
   FormRenderer: <collection.FormRenderer text="a=1" />,
   HexRenderer: <collection.HexRenderer bytes={new Uint8Array([1])} />,
   IconButton: <collection.IconButton glyph="close" onClick={() => {}} />,
@@ -49,6 +51,7 @@ const SPECIMENS: Record<string, ReactElement> = {
     />
   ),
   SourceSurface: <collection.SourceSurface text='{"a":1}' language={json()} testId="surface" />,
+  StatusDot: <collection.StatusDot status="connected" onClick={() => {}} />,
   StatusLine: (
     <collection.StatusLine status={{ glyph: "✓", tone: "ok", message: "trusted" }} name="CA" />
   ),
@@ -125,7 +128,7 @@ describe("@madeof composes — the parts are reused, never re-drawn", () => {
     expect(screen.getByRole("button", { name: /copy role/i })).toHaveTextContent("admin");
   });
 
-  it("CopyButton and IconButton are one <button> with Button's shell, not three elements", () => {
+  it("CopyButton, IconButton and StatusDot are one <button> with Button's shell, not four elements", () => {
     const shell = (el: HTMLElement) => el.className.replace(/\s+/g, " ");
 
     render(
@@ -133,11 +136,12 @@ describe("@madeof composes — the parts are reused, never re-drawn", () => {
         <collection.Button onClick={() => {}}>send</collection.Button>
         <collection.CopyButton value="v" label="copy curl" />
         <collection.IconButton glyph="close" onClick={() => {}} />
+        <collection.StatusDot status="broken" onClick={() => {}} />
       </>,
     );
 
     const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(3);
+    expect(buttons).toHaveLength(4);
     for (const button of buttons) {
       expect(button.tagName).toBe("BUTTON");
       expect(button.querySelector("button")).toBeNull();
@@ -181,5 +185,22 @@ describe("@avoid alternatives are reachable — every redirect resolves to an ex
     expect(REGISTRY.Notice.avoid).toContain("CopyButton");
     expect(REGISTRY.Notice.redirects).toContain("CopyButton");
     expect(REGISTRY.Notice.redirects).not.toContain("Button");
+  });
+});
+
+describe("the barrel is what the app reaches — the registry, not the legacy kit", () => {
+  // "./components" is ambiguous whenever a components.tsx sits beside the
+  // components/ directory: bundlers resolve the file over the directory's index,
+  // so a screen importing the bare form silently gets the other one. The kit that
+  // made it ambiguous is deleted, and this keeps the spelling from coming back.
+  const screens = import.meta.glob("../*.tsx", { query: "?raw", import: "default", eager: true });
+
+  it("no screen imports through the ambiguous bare specifier", () => {
+    const offenders = Object.entries(screens)
+      .filter(([path]) => !path.includes(".test."))
+      .filter(([, source]) => /from "\.\/components"/.test(source as string))
+      .map(([path]) => path);
+
+    expect(offenders).toEqual([]);
   });
 });

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a8e629f34851f0dfac12e">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-30: the three gap components are registry entries</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-30 — the app's one text input, one state dot and one collapse primitive live in the registry, not in the screens that need them</h1>
+      <p>Three components the vocabulary lacked while two of its own docstrings redirected to them by name. Each was hand-rolled where it was needed; each is now one entry, and the reasoning that put it there is the part the TSDoc cannot hold.</p>
+      <div class="meta">DEC-30 · 2026-09-04 · Trawler · E-REDESIGN.W2 · distilled from Field F1–F4 · StatusDot S1–S4 · Disclosure D1–D4 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>The registry had 24 entries and <strong>no text input, no status dot and no disclosure primitive</strong> — while two of its own docstrings pointed at two of them as though they existed: <code>KeyValueRow</code>'s <em>"editable forms (that is Field)"</em> and <code>StatusPill</code>'s <em>"proxy connection health — StatusDot"</em>. A third redirect, <code>Section</code>'s <em>"a Section that needs to collapse (put the disclosure inside the slot instead)"</em>, named the thing in lowercase and so pointed at nothing a check could follow.</p>
+    <div class="callout warn" data-c="phantom">
+      <strong>A redirect with no destination is worse than no redirect.</strong> It reads as guidance and resolves to <em>"hand-roll it"</em>. All three did: four raw <code>&lt;input&gt;</code>s behind one legacy helper, a tinted <code>&lt;button&gt;</code> in the header, and three raw <code>&lt;details&gt;</code> in one file. Nothing compared them, because there was nothing to compare them <em>to</em>.
+    </div>
+    <p>W1 designed the three; W2 built them and retired the design files under <a href="dec-16-design-file-retirement.html">DEC-16</a>. What follows is step ① of that order — the forks whose reasoning still constrains future work. The contracts themselves live in the components' TSDoc and are not repeated here.</p>
+
+    <h2 id="the-shared-argument">The shared argument — why all three are registry entries</h2>
+    <p>Each of the three reached the same fork independently (Field F1, StatusDot S2b, Disclosure D4), and each settled the same way for the same reason. It is one argument, recorded once:</p>
+    <table data-c="tbl-shared">
+      <thead><tr><th>The do-nothing answer</th><th>Why it loses, in each case</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>A raw <code>&lt;input&gt;</code> per call site.</strong> It is what shipped.</td>
+          <td>The class string is twelve utilities long and was copied four times. A fifth input matches nothing, and <em>no check can see the divergence</em> — which is exactly how three copies of the tone map got into the tree.</td>
+        </tr>
+        <tr>
+          <td><strong>A hand-rolled tinted button in the header.</strong> One tenant, so why a component?</td>
+          <td>One tenant, but an unusual one: it is the only control in the app that is <em>simultaneously a status readout and a navigation affordance</em>. Left hand-rolled, that pairing stays undocumented and the next person to touch the header re-derives why a status is clickable.</td>
+        </tr>
+        <tr>
+          <td><strong>Three raw <code>&lt;details&gt;</code> in one file.</strong> The platform already collapses.</td>
+          <td>Each inherits <strong>a disclosure triangle the app never chose</strong> — chrome from outside the closed vocabulary (<a href="dec-17-closed-vocabulary.html">DEC-17</a>), invisible to every check <em>because it is a UA default, not a class</em>. The cheapest possible drift and the hardest to detect.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="rule">
+      The through-line: <strong>a thing copied is a thing that drifts, and a default nobody picked is a thing no lint can read.</strong> Both are invisible failures, which is why "it is only a few lines" is not the test. The test is whether a second occurrence would be forced to match.
+    </div>
+
+    <h2 id="one-box">Field's box is Select's box — the second confirmation of DEC-18</h2>
+    <p>Field F2 asked whether the app's one input gets input-specific chrome. It does not.</p>
+    <table data-c="tbl-f2">
+      <thead><tr><th>Settled</th><th>Rejected, and why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Select's box, class for class</strong> — <code>px-control-x py-control-y</code>, <code>rounded-button</code>, <code>border-hairline</code>, <code>text-control</code>, <code>min-h-control</code>. The same five decisions <code>Button</code> and <code>Select</code> already made.</td>
+          <td><strong>"An input should look inset, a button should look raised."</strong> A real convention, and it produces two controls in one row disagreeing about radius, fill, padding and type size. <a href="dec-18-one-control-box.html">DEC-18</a> was minted after exactly this drifted three token values while both files claimed identity.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>The shipped input was already off by 3px and 1px</strong> — <code>px-3 py-chrome-y</code> against the trigger's <code>px-control-x py-control-y</code>. Both are legal tokens; they are simply not the same box. Invisible in isolation, obvious once a Field sits beside a Select. DEC-18 said the app has one small-control box; this is the case that shows the rule needs a test and not just a sentence, and W2's unit test is that test.</p>
+
+    <h2 id="tri-state">DotStatus is not StatusTone — and the tell is authority</h2>
+    <p>The most contested claim of the three (StatusDot S2/S2b). Both types have three members and both map onto the same three colours today, which is exactly why a reader should suspect they are one type wearing two names.</p>
+    <table data-c="tbl-tri">
+      <thead><tr><th></th><th><code>DotStatus</code></th><th><code>StatusTone</code></th></tr></thead>
+      <tbody>
+        <tr><td>the axis</td><td><strong>lifecycle</strong> — where a connection has got to</td><td><strong>severity</strong> — how good an outcome is</td></tr>
+        <tr><td>ordering</td><td>temporal: <code>checking</code> always precedes the other two</td><td>none — <code>ok</code> and <code>warn</code> are alternatives</td></tr>
+        <tr><td>the middle member</td><td><code>checking</code> — one named cause, carrying its own phrase</td><td><code>muted</code> — a catch-all; <code>StatusPill</code> must add "…" to say <em>which</em> muted this is</td></tr>
+        <tr><td><strong>can a caller pick one?</strong></td><td><strong>no</strong> — derived by <code>dotStatus()</code> and nothing else</td><td><strong>yes</strong> — that is <code>TonedText</code>'s entire API</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="authority">
+      <strong>The tell is authority, not transience.</strong> The tempting distinction — transient versus terminal — is false: <a href="dec-19-chromatic-accent-closed.html">DEC-19</a> reads <code>muted</code> as "informational / non-terminal" and <code>StatusPill</code> files <code>null/pending</code> under it, so <code>StatusTone</code> already carries a not-yet-resolved case. What separates them is that <strong><code>StatusTone</code> is a value a caller passes.</strong> If <code>DotStatus</code> collapsed into it, <code>connected</code> would become caller-suppliable and a call site could render green while the app is still checking. Keeping them separate is what makes <code>dotStatus()</code> the single authority — the same reasoning <a href="dec-20-logic-lives-with-its-inputs.html">DEC-20</a> uses to let <code>StatusPill</code> absorb status→display while <code>StatusLine</code> refuses raw inputs.
+    </div>
+    <p><strong>Consequence for the rulebook.</strong> The <code>chromatic meanings</code> table maps each token to a fixed meaning and an owning component. <code>ok</code> and <code>warn</code> now have a second owner (StatusDot, connection lifecycle) alongside <code>StatusPill</code>/<code>MethodLabel</code>, and <code>ink-mute</code> gains its first entry as the <strong>not-yet-known</strong> channel. A fourth lifecycle member (<code>reconnecting</code>, <code>paused</code>) is plausible as the protocol grows; a fourth <em>tone</em> stays closed by DEC-19.</p>
+
+    <h2 id="one-element">One element carrying two jobs, and the hit target that follows</h2>
+    <p>StatusDot S1 asked whether status and navigation should be two elements. They are one.</p>
+    <table data-c="tbl-s1">
+      <thead><tr><th>Settled</th><th>Rejected, and why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>One element, both jobs.</strong> The thing that tells you setup is broken <em>is</em> the thing you press to fix it.</td>
+          <td><strong>A dot plus a settings gear.</strong> Two elements for one concern, and the gear is dead weight in the <code>connected</code> state that is 99% of the app's life. It separates the alarm from its remedy.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Two further refusals follow from the pairing, and both were <strong>real defects in the shipped component</strong> rather than open questions:</p>
+    <ul>
+      <li><strong>The disc is not the button (S3).</strong> The shipped hit target was the 10px disc, where the app's own floor is 24px — failing WCAG 2.5.8 by 14px on the one control that must never be hard to hit. The disc stays 10px because it must read as a state light; the button grows around it with transparent padding, the way <code>IconButton</code> already solved the identical problem.</li>
+      <li><strong><code>title</code> is not an accessible name (S4).</strong> An empty button whose only content is a coloured div announces as <em>"button"</em>. A 10px disc with no text is <code>colour-plus-text</code>'s plainest breach — satisfied for sighted users and broken for everyone else. The phrase now reaches both channels from one source.</li>
+      <li><strong>It is never disabled (B3).</strong> It is the only route back to setup, so a state that disables it is a state with no way back — which is why <code>connected</code>'s phrase reads "capturing — click to run setup again" rather than "capturing".</li>
+    </ul>
+
+    <h2 id="platform">Native <code>&lt;details&gt;</code> — replacing correct platform semantics is a regression in a refactor's clothes</h2>
+    <p>Disclosure D1 weighed the native element against a <code>div</code> + <code>useState</code>.</p>
+    <table data-c="tbl-d1">
+      <thead><tr><th>Settled</th><th>Rejected, and why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Native <code>&lt;details&gt;/&lt;summary&gt;</code>.</strong> Focus, <code>Enter</code>/<code>Space</code>, <code>aria-expanded</code> and <strong>find-in-page expansion</strong> come free and cannot regress. Focus never moves on toggle, so <code>focus-returns-to-origin</code> holds by construction.</td>
+          <td><strong>A div with hand-written keyboard and ARIA.</strong> It buys one thing — a controlled <code>open</code> prop — at the cost of re-implementing four behaviours the platform already has, and no tenant wants that prop. The three shipped call sites are all native today and all correct.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Two smaller forks close the same way. <strong>One glyph rotated, not two swapped (D2)</strong>: two glyphs have different advance widths and vertical centres, so the label nudges and the baseline shifts on every toggle, and a swap cannot transition. <strong>The UA marker is suppressed and redrawn (D3)</strong>: its size, colour, gap and shape are decided outside the closed vocabulary and differ per engine.</p>
+
+    <h2 id="host-branches">What a primitive refuses to decide</h2>
+    <p>Three forks across two components drew the same line, and it is the T1 contract's operative content:</p>
+    <table data-c="tbl-refusals">
+      <thead><tr><th>Fork</th><th>The refusal</th><th>Why it belongs to the host</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Field F3 — validity</td>
+          <td><strong>No validation, no error state, no <code>aria-invalid</code>, ever.</strong></td>
+          <td>A filter has no invalid input — a value matching nothing produces an empty list, explained by <code>Notice</code> <em>at the list, where the eye already is</em>. Tinting the box <code>warn</code> claims a failure the app cannot substantiate, and fires while typing: <code>4</code> → <code>40</code> → <code>404</code> flashes an error twice on the way to being right.</td>
+        </tr>
+        <tr>
+          <td>Field B1 — timing</td>
+          <td><strong>No debounce, no commit-on-Enter, no internal value state.</strong></td>
+          <td>When a filter is applied is the consumer's business. <em>A primitive that delays its own reporting has silently taken a product decision every tenant then has to fight.</em></td>
+        </tr>
+        <tr>
+          <td>Disclosure D4 — <code>collapsed</code></td>
+          <td><strong>A Disclosure always discloses; the host branches.</strong></td>
+          <td>"Collapsed or not at all" encodes domain knowledge — <em>when we cannot automate this step, the manual steps are primary, not a fallback</em>. A component that in one of its two modes is not a disclosure at all — no summary, no twist, no toggle — makes every reader of the registry learn that "Disclosure" sometimes means "nothing".</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="not-a-tenant">Reuse that produces a worse screen is a propose in disguise</h2>
+    <p>Field F4 asked whether <code>Select</code>'s in-popup filter box should become a Field. It should not, and the reasoning generalises past this case.</p>
+    <p>The filter box <em>looks</em> exactly like a Field and is deliberately not one: it is borderless and draws its frame from the popup's own chrome. Wrapping it in a Field would put <strong>a bordered box 2px inside a bordered popup</strong>, and would move the accessible name out of <code>Select</code>'s hands — the filter's <code>aria-label</code> is fixed by the component, where Field's contract requires the caller to supply one. Two frames for one control, and a name whose owner changed, in exchange for sharing a class string.</p>
+    <div class="callout" data-c="not-a-tenant">
+      Recorded so a later reuse-or-propose pass reads it as <strong>a decision, not an oversight</strong>: visual similarity is not tenancy. The question is whether the two share a <em>contract</em>, and here they differ on both the frame and who names the control.
+    </div>
+
+    <h2 id="dead-ends">Recorded as dead ends</h2>
+    <p>Per DEC-16, a fork that was purely local is recorded as spent rather than preserved. These constrain nothing further and are named here only so a reader knows they were considered and closed: Disclosure's <strong>tier</strong> (T1 — the epic plan's open question, answered by the fact that it holds no business logic and never inspects its slot) and StatusDot's <strong>@madeof</strong> (S2 — not <code>TonedText</code>, which renders text in a <code>text-*</code> tone; this renders a shape whose colour is a background, so composing it would mean passing an empty string and overriding the one property it exists to set).</p>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

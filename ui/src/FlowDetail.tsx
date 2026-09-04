@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { FlowView, HeaderView, TrawlerApi } from "./api";
-import { statusTone, toCurl } from "./flow";
-import { StatusPill } from "./components";
+import { toCurl } from "./flow";
+import { StatusPill } from "./components/index";
 import { BodyViewer } from "./BodyViewer";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -65,9 +65,7 @@ export function FlowDetail({
     <div data-testid="detail" className="flex h-full flex-col font-ui text-ink">
       <header className="flex items-center gap-2 border-b border-hairline px-4 py-2">
         <span className="font-mono text-ink-body">{flow.method}</span>
-        <StatusPill tone={statusTone(flow.status)}>
-          {flow.status == null ? "…" : flow.status}
-        </StatusPill>
+        <StatusPill status={flow.status} />
         <span className="ml-auto whitespace-nowrap text-body text-ink-mute">
           {flow.duration_ms == null ? "" : `${flow.duration_ms} ms`}
         </span>

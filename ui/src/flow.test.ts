@@ -21,20 +21,18 @@ const flow: FlowSummary = {
   response_body_state: "captured",
 };
 
-test("toRow splits host/path and formats status + duration", () => {
+test("toRow splits host/path and carries the raw status for StatusPill to resolve", () => {
   const row = toRow(flow);
   expect(row.host).toBe("example.com");
   expect(row.path).toBe("/a/b?x=1");
   expect(row.method).toBe("GET");
-  expect(row.status).toBe("200");
-  expect(row.tone).toBe("ok");
+  expect(row.status).toBe(200);
   expect(row.duration).toBe("42 ms");
 });
 
-test("toRow shows placeholders for a pending flow", () => {
+test("toRow leaves a pending flow's status null and blanks its duration", () => {
   const row = toRow({ ...flow, status: null, duration_ms: null });
-  expect(row.status).toBe("…");
-  expect(row.tone).toBe("muted");
+  expect(row.status).toBeNull();
   expect(row.duration).toBe("");
 });
 

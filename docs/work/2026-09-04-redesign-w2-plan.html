@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a8c499f34851f0dfac11c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W2 plan (build the gap components)</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);}
+    .build-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px;}
+    .build-card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper);}
+    .build-card h4{margin:0 0 6px;font-size:14px;}
+    .build-card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .build-card p{margin:6px 0;font-size:12.5px;line-height:1.55;}
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}
+    .fix{color:var(--warn);font-weight:600;}
+  </style>
+</head>
+<body data-artifact="wu-plan" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W2 — build the three gap components into the registry</h1>
+      <p>W1's three contracts become code: <strong>Field</strong>, <strong>StatusDot</strong> and <strong>Disclosure</strong> land under <code>ui/src/components/</code>, the two phantom redirects resolve, and the three design files retire in DEC-16's order. The repo's first <code>design.implements</code> citation is owed here.</p>
+      <div class="meta">WU plan · 2026-09-04 · Trawler · T3 (docs/work/) · <code>wu/redesign/gap-components-build</code> → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · designs: <code>components/field.html</code> · <code>components/status-dot.html</code> · <code>components/disclosure.html</code> — <em>retired by this WU under DEC-16; read them at <code>52f0ec3^</code></em></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement" data-c="requirement">
+      <strong>Build — from W1's designs, not from the legacy kit —</strong> the three components under <code>ui/src/components/</code>, each carrying its design's TSDoc block verbatim as its contract, each exported from <code>index.ts</code>, and each with an adjacent unit test asserting the states and refusals its design declares; then <strong>retire the three design files in DEC-16's order</strong> — so that <strong>the registry is 27 entries, <code>KeyValueRow</code>'s and <code>StatusPill</code>'s @avoid redirects resolve to exports the collection test can reach, and the four screen runs that follow can record <code>reuse</code> against a vocabulary that actually holds a text input, a state dot and a collapse primitive.</strong>
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to" data-c="maps-to">
+      <tr><td><strong>Epic</strong></td><td><a href="2026-09-04-redesign-plan.html">E-REDESIGN</a> — apply the design flow to every shipped screen. This is <strong>W2</strong>, and it is the gate on the rest: <em>"W2 unblocks all four screen runs"</em> (W3, W5, W7, W9 each depend on it).</td></tr>
+      <tr><td><strong>Consumes</strong></td><td><a href="2026-09-04-redesign-w1-plan.html">W1</a>'s three closed designs, through the <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a> handoff. Each component is a <em>new surface</em>, so each may only be <strong>cited</strong> to its design — <code>design.undesigned</code> with a reason is not accepted for an added <code>@tier</code> component.</td></tr>
+      <tr><td><strong>Use cases</strong></td><td>No UC contract changes shape — nothing rendered by a screen moves in this WU. Prerequisite for <strong>UC-4</strong> (App's filter bar is four <code>Field</code>s, its header a <code>StatusDot</code> — built in W4) and <strong>UC-ONBOARD</strong> (Onboarding's <code>ManualPanel</code> is a <code>Disclosure</code> — built in W10).</td></tr>
+      <tr><td><strong>Closes</strong></td><td>The two phantom redirects, for real this time: <code>KeyValueRow.tsx:8</code> and <code>StatusPill.tsx:10</code> name components the barrel now exports, so <code>collection.test.tsx</code>'s redirect assertion covers them instead of skipping them. Also the tri-state <strong>rulebook proposal</strong> W1 recorded and the <strong>vocabulary gap</strong> it handed forward.</td></tr>
+      <tr><td><strong>Retires</strong></td><td><code>docs/work/components/{field,status-dot,disclosure}.html</code> under <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>. The moment the <code>.tsx</code> lands, <code>components·unretired</code> reds on each — the registry and the design files are disjoint by construction.</td></tr>
+    </table>
+
+    <h2 id="what-lands">What lands — three components, and what each one fixes</h2>
+    <p>Two of the three ship today in the legacy kit, and <strong>neither ships correctly</strong>. W1 found three defects in shipped code; this WU is where they stop being true. A build that copies <code>components.tsx</code>'s class string reproduces all three.</p>
+
+    <div class="build-grid" data-c="what-lands">
+      <div class="build-card">
+        <div class="who">T1 · <code>ui/src/components/Field.tsx</code></div>
+        <h4>Field — the app's one text input</h4>
+        <p>Controlled box, required <code>aria-label</code>, no validation, no debounce, no width of its own.</p>
+        <p><span class="fix">Fixes:</span> the legacy box is <code>px-3 py-chrome-y</code> where <code>Select</code>'s trigger is <code>px-control-x py-control-y</code> — a 3px/1px divergence, invisible alone and obvious once a Field sits beside a Select. <a href="../decisions/dec-18-one-control-box.html">DEC-18</a> says the app has <em>one</em> small-control box; this takes Select's.</p>
+      </div>
+      <div class="build-card">
+        <div class="who">T2 · <code>ui/src/components/StatusDot.tsx</code></div>
+        <h4>StatusDot — capture health, and the way back to setup</h4>
+        <p>A 10px disc inside a 24px bare-square <code>Button</code> shell; owns the <code>DotStatus</code>→fill and <code>DotStatus</code>→phrase maps.</p>
+        <p><span class="fix">Fixes two:</span> the shipped hit target <em>is</em> the 10px disc, failing WCAG 2.5.8 by 14px on the one control that must never be hard to hit; and its <code>title</code> alone leaves the button nameless, so it announces as <em>"button"</em>. Both are real defects W1 found by designing shipped code.</p>
+      </div>
+      <div class="build-card">
+        <div class="who">T1 · <code>ui/src/components/Disclosure.tsx</code></div>
+        <h4>Disclosure — the collapse primitive</h4>
+        <p>Native <code>&lt;details&gt;/&lt;summary&gt;</code>, UA marker suppressed, a <code>›</code> that rotates 90°, a slot that adds a gap and nothing else.</p>
+        <p><span class="fix">Fixes:</span> three raw <code>&lt;details&gt;</code> in <code>Onboarding.tsx</code> each inherit a browser triangle the app never chose — chrome from outside the closed vocabulary that <em>no lint can see, because there is no class to read</em>. Its three call sites are W10's to migrate; the component is this WU's.</p>
+      </div>
+    </div>
+
+    <h2 id="vocabulary-gap">The one vocabulary gap — a config change, not a literal</h2>
+    <div class="callout" data-c="vocabulary-gap">
+      <p>Disclosure's twist needs <code>rotate-90</code> and <code>transition-transform</code>. <code>ui/tailwind.config.js</code> declares <code>transitionProperty</code> with <strong>only <code>colors</code></strong>, and declares no <code>rotate</code> scale at all — and under <a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a> an undeclared scale means the class resolves to nothing, silently. So both classes are <strong>illegal today</strong>, and W1 handed the fix forward as an explicit <code>blocked-on</code>:</p>
+      <table>
+        <tr><th>Scale</th><th>Add</th><th>Why exactly these members</th></tr>
+        <tr><td><code>rotate</code></td><td><code>{ 0: "0deg", 90: "90deg" }</code></td><td>The twist's two positions and no others. A scale left open inherits Tailwind's full ladder and the lint rule cannot see into it.</td></tr>
+        <tr><td><code>transitionProperty</code></td><td><code>transform</code> alongside <code>colors</code></td><td>The rotation is the state change (<code>motion-informs</code>); nothing else in the app transitions a transform.</td></tr>
+      </table>
+      <p>DEC-17's rule is the shape of this: <em>"a value that has no utility needs a named token in the config, not a literal here"</em>. Nothing else in the three files needs a token that does not exist.</p>
+    </div>
+
+    <h2 id="retirement">Retirement — DEC-16's order, and it is gated on step ①</h2>
+    <div class="diagram" data-c="retirement">
+      <pre class="mermaid">
+flowchart LR
+  B["build the three
+.tsx + index.ts"] --> R{"components·unretired
+reds on all three"}
+  R --> D1["① distil the forks
+→ docs/decisions/
+the WHY code cannot hold"]
+  D1 --> D2["② verify each TSDoc
+carries the whole contract"]
+  D2 --> D3["③ delete the three
+design files"]
+  D1 -.->|"skipped"| X["❌ silent data loss
+9 lines survive of ~600"]
+      </pre>
+      <div class="caption">The order is the decision — step ③ is gated on step ①, because ① is the only step that can lose data.</div>
+    </div>
+    <p>A design file is ~600 lines; the TSDoc block it compiles to is nine. The difference is the <strong>forks and the frame drivers</strong> — exactly the part nobody re-reads, which is why the file looks redundant once the code exists. Eleven fork cards across the three files (F1–F4, S1–S4 incl. S2b, D1–D4) get read for what still constrains future work; a fork that was purely local is recorded as a dead end, not preserved.</p>
+    <p>The epic's distillation plan <strong>already reserves the home</strong>: <em>"a new decision record — why the app's one text input and one state dot are registry entries rather than screen-local"</em>. That record is where the surviving forks land, together with StatusDot's tri-state argument (the <code>DotStatus</code>-is-not-<code>StatusTone</code> claim) which W1 recorded as a rulebook <em>proposal</em> and this WU is the first point that can act on.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>#</th><th>What exists after this WU</th><th>How it is checked</th></tr>
+      <tr><td>1</td><td>Three components under <code>ui/src/components/</code>, each with the <strong>full six-tag TSDoc</strong> from its design carried verbatim — the contract's only home once the file is gone.</td><td><code>node scripts/design-registry.mjs</code> emits <strong>27 entries</strong>; a <code>@tier</code> block missing any tag throws by construction</td></tr>
+      <tr><td>2</td><td>All three <strong>exported from <code>index.ts</code></strong> and mounting standalone, with a specimen in the collection test.</td><td><code>collection.test.tsx</code> — "the barrel exports exactly what the TSDoc declares" and "every name in the vocabulary has a specimen here"</td></tr>
+      <tr><td>3</td><td>The <strong>phantom redirects resolve</strong>: <code>KeyValueRow</code>'s "that is Field" and <code>StatusPill</code>'s "— StatusDot" are now roster names, so the redirect assertion covers them instead of silently skipping them.</td><td><code>collection.test.tsx</code>'s <code>REDIRECTS</code> is derived from the roster — the two pairs appear in it only once the names exist</td></tr>
+      <tr><td>4</td><td><strong>The three W1 defects are gone in the built components</strong>: Field takes Select's box, StatusDot has a 24px target and a real accessible name.</td><td>unit tests, one per defect, each asserting the corrected value rather than the shipped one</td></tr>
+      <tr><td>5</td><td><code>rotate</code> and <code>transition-transform</code> are <strong>legal vocabulary</strong>, declared as two named members.</td><td><code>pnpm exec eslint src</code> (design/vocabulary) silent on <code>Disclosure.tsx</code></td></tr>
+      <tr><td>6</td><td>The <strong>three design files are gone</strong>, their surviving forks distilled to a new decision record reachable from the decisions index.</td><td><code>cargo xtask verify-doc</code> finds no unretired component design; the index carries the new row</td></tr>
+      <tr><td>7</td><td>A <strong><code>design.implements</code> citation</strong> — <code>{path, blob, built}</code> — on this WU's <code>cr/v3</code> note, for each of the three. <strong>The first in the repo's history.</strong></td><td><code>cargo xtask verify-dod wu &lt;tip&gt; --target epic/redesign</code> — gate check <code>9·design</code></td></tr>
+      <tr><td>8</td><td><strong>Zero change to any screen.</strong> No <code>App.tsx</code>, no <code>Onboarding.tsx</code>, no <code>components.tsx</code> deletion — the legacy kit's three exports stay until W4 and W10 migrate their call sites.</td><td><code>git diff --stat epic/redesign HEAD -- ui/src/*.tsx</code> empty</td></tr>
+    </table>
+    <div class="callout warn">
+      <strong>Deliberately not in scope.</strong> Deleting <code>ui/src/components.tsx</code> or its legacy <code>Field</code>/<code>StatusPill</code>/<code>StatusDot</code> — the epic assigns the legacy <code>StatusPill</code> and <code>TONE_CLASS</code> removal to <strong>W4</strong> (it changes prop shape at two call sites) and the kit's deletion to <strong>W11</strong>. Two <code>StatusDot</code>s and two <code>Field</code>s coexist for the length of the epic; only the registry pair is importable from <code>components/</code>, and the screens that still read the legacy pair are untouched by this WU.
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p>This WU adds code, so the pyramid binds — no waiver is claimed at the unit or integration level.</p>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Verdict</th><th>What it asserts</th></tr>
+      <tr>
+        <td><strong>Unit</strong></td><td>required</td>
+        <td>One test file per component, adjacent, in the collection's own idiom (<code>Notice.test.tsx</code> is the pattern). Each asserts <em>the states its design declares and the refusals it makes explicit</em> — not just that it renders.
+          <ul>
+            <li><code>Field.test.tsx</code> — every keystroke reports undebounced (B1) · no validity is ever expressed, whatever the value (B2) · width comes from the caller and the component sets none (B4) · <strong>the box is Select's box</strong>, <code>px-control-x py-control-y</code> and not <code>px-3</code> (F2, the shipped delta)</li>
+            <li><code>StatusDot.test.tsx</code> — the three fills map from status alone (B1) · <strong>every state has an accessible name carrying its phrase</strong>, so the button never announces as bare "button" (B2/S4, the shipped defect) · <strong>the hit target is the 24px button, not the 10px disc</strong> (S3, the shipped defect) · the disc is <code>aria-hidden</code>, so the verdict announces once · clickable in every state including <code>connected</code> (B3)</li>
+            <li><code>Disclosure.test.tsx</code> — it is a native <code>&lt;details&gt;</code>, so <code>Enter</code> toggles and focus stays on the summary (B2/D1) · <code>defaultOpen</code> seeds and does not bind (B1) · the UA marker is suppressed and one glyph rotates rather than two swapping (D2/D3) · the slot adds a gap and no border, padding or cap (anatomy ③)</li>
+          </ul>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Integration</strong></td><td>required</td>
+        <td>The bounded contract here is <strong>the collection as a vocabulary</strong>, and it already has a test that is exactly that: <code>collection.test.tsx</code> asserts the barrel matches the TSDoc roster, every name has a mounting specimen, every <code>@madeof</code> edge really composes, and every <code>@avoid</code> redirect resolves to an export. This WU extends it with three specimens and, through the roster, two newly-live redirects — plus a <code>@madeof</code> assertion that <strong>StatusDot is one <code>&lt;button&gt;</code> with Button's shell</strong>, the way its two siblings already are.</td>
+      </tr>
+      <tr>
+        <td><strong>E2E</strong></td><td><s><code>waived</code></s> → <strong>run</strong></td>
+        <td><s><em>No user-visible surface moves.</em> Every screen renders exactly what it rendered before — the components exist but have no call site until W4 and W10.</s>
+          <p><strong>The waiver was voided by the review.</strong> It found the components unreachable from the app bundle (the <code>./components</code> collision), and the fix migrated three screens — so surfaces did move and the suite ran: <strong>10/10 specs pass</strong>, UC-4, UC-5 and UC-ONBOARD all holding. See the <a href="2026-09-04-redesign-w2-result.html#review">result's review section</a>.</p></td>
+      </tr>
+    </table>
+
+    <h3 id="gate">The merge gate</h3>
+    <table data-c="gate">
+      <tr><th>Check</th><th>Command</th><th>Asserts</th></tr>
+      <tr><td>Unit + vocabulary</td><td><code>cd ui &amp;&amp; pnpm test &amp;&amp; pnpm exec eslint src</code></td><td>the three new suites, the extended collection test, and the closed-vocabulary lint over the two new scale members</td></tr>
+      <tr><td>Registry</td><td><code>node scripts/design-registry.mjs</code></td><td>27 entries; each new block carries all six tags or the oracle throws</td></tr>
+      <tr><td>Type + build</td><td><code>cd ui &amp;&amp; pnpm build</code></td><td><code>tsc -b</code> over the new props and the barrel's re-exports</td></tr>
+      <tr><td>Doc contract</td><td><code>cargo xtask verify-doc docs/work/2026-09-04-redesign-w2-plan.html</code></td><td>this doc's four <code>wu-plan</code> items, and every relative link resolves. After retirement, no component design file survives to red</td></tr>
+      <tr><td>Core suite</td><td><code>cargo test</code></td><td>unchanged — this WU touches no Rust; run because the gate re-walks it</td></tr>
+      <tr><td>Design scope</td><td><code>cargo xtask design-scope epic/redesign HEAD</code></td><td>what the gate will demand of the citation — <strong>run before writing the note</strong>, per the epic plan's probe guidance</td></tr>
+      <tr><td>Review</td><td>code-review skill → <code>cr/v3</code> PASS</td><td>diff-bound, on this exact tip. The diff carries no design artifact once the three files are deleted — but it carries their <em>retirement</em>, which the design dimension reads at the range's last state (<a href="../decisions/dec-29-retired-design-judged-where-it-left.html">DEC-29</a>)</td></tr>
+      <tr><td>DoD</td><td><code>cargo xtask verify-dod wu &lt;tip&gt; --target epic/redesign</code></td><td><code>test/v2</code> with the e2e waiver, <code>doc/v1</code>, and gate check <code>9·design</code> against the <code>design.implements</code> citation</td></tr>
+    </table>
+
+    <h2 id="risks">What could go wrong</h2>
+    <table data-c="risks">
+      <tr><th>Risk</th><th>Handling</th></tr>
+      <tr>
+        <td><strong>The first <code>design.implements</code> citation does not pass.</strong> The epic plan flags the path as untested — <em>"no <code>design.implements</code> citation exists on any note, ever"</em> — and names W4 as the probe. But <strong>W2 builds a component, so W2 is where the citation is first owed</strong>, and therefore where the sharp edges surface first.</td>
+        <td>Run <code>design-scope</code> before writing the note and read what the gate demands. If it refuses something the flow spec claims is legal, <strong>that is a finding for the gate — captured, not worked around</strong>. The extra wrinkle here: the citation names a design file this same WU <em>deletes</em>, so the <code>{path, blob}</code> pair must resolve at the range's last state (DEC-28/DEC-29) rather than at the tip. If it does not, the finding is real and belongs in the result.</td>
+      </tr>
+      <tr>
+        <td><strong>The build copies the legacy class string</strong> and silently reproduces all three shipped defects. Both design files warn about this in their own words — <em>"W2 must apply this delta, not copy the legacy string"</em>, <em>"W2 must not copy the shipped class string"</em>.</td>
+        <td>Each defect gets a unit test that asserts the <em>corrected</em> value, so a copy fails rather than passes. The three are enumerated in the test plan above by design-fork id (F2, S3, S4) — a reviewer can check each one lands.</td>
+      </tr>
+      <tr>
+        <td><strong>Retirement loses the forks.</strong> Step ③ is cheap and step ① is not, so the pressure is to delete and move on — which is exactly the failure DEC-16's order exists to prevent.</td>
+        <td>The deletion and the decision record land <strong>in one commit</strong>, so a diff that removes ~1,400 lines of design without adding the record is visibly incomplete. The epic's distillation plan already names the record, so its scope is not a judgment call made under deletion pressure.</td>
+      </tr>
+      <tr>
+        <td><strong>Two <code>StatusDot</code>s and two <code>Field</code>s in the tree at once</strong>, one legacy and one registry, for the length of the epic — the ambiguity the epic exists to remove, temporarily doubled.</td>
+        <td>Accepted and bounded: the legacy kit is not importable from <code>components/</code>, no screen changes in this WU, and the epic assigns each removal to the WU that migrates its call sites (legacy <code>StatusPill</code> → W4, the kit itself → W11). Deleting them here would mean rewriting <code>App.tsx</code> against an undesigned layout — which is W3's design and W4's build.</td>
+      </tr>
+      <tr>
+        <td><strong>The tri-state proposal has nowhere to land.</strong> W1 recorded <code>DotStatus</code>-is-not-<code>StatusTone</code> as a rulebook proposal, and this epic's non-goals freeze the rulebook.</td>
+        <td>The freeze is on the <em>flow spec, rulebook and gate as inputs to a run</em>; the distillation plan explicitly expects this row (<em>"Expected for StatusDot's tri-state"</em>). It lands as part of the retirement's decision record and the rulebook row at distillation, per DEC-14 — not as a mid-run rewrite.</td>
+      </tr>
+    </table>
+
+    <h2 id="sequence">Sequence</h2>
+    <div class="diagram" data-c="sequence">
+      <pre class="mermaid">
+flowchart LR
+  T["tailwind.config.js
+rotate + transform
+(DEC-17 blocked-on)"] --> DI["Disclosure.tsx
++ test"]
+  F["Field.tsx
++ test"] --> IX["index.ts
+3 exports"]
+  S["StatusDot.tsx
++ test"] --> IX
+  DI --> IX
+  IX --> C["collection.test.tsx
+3 specimens
+2 redirects go live"]
+  C --> RET["retire ×3
+① distil → decisions
+② verify TSDoc
+③ delete"]
+  RET --> G["registry: 27
+verify-doc · eslint
+pnpm test · cargo test"]
+  G --> CR["design-scope
+→ code-review
+→ cr/v3 PASS"]
+  CR --> M["merge → epic/redesign
+--no-ff"]
+  M --> NEXT["W3 · W5 · W7 · W9
+four screen runs, unblocked"]
+      </pre>
+      <div class="caption">The config change gates Disclosure alone; the three components are otherwise independent. Retirement follows the build in the same WU because <code>components·unretired</code> reds the moment the code lands.</div>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

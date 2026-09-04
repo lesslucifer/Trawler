@@ -25,8 +25,7 @@ export interface FlowRow {
   method: string;
   host: string;
   path: string;
-  status: string;
-  tone: StatusTone;
+  status: number | null;
   duration: string;
 }
 
@@ -45,8 +44,7 @@ export function toRow(flow: FlowSummary): FlowRow {
     method: flow.method,
     host,
     path,
-    status: flow.status == null ? "…" : String(flow.status),
-    tone: statusTone(flow.status),
+    status: flow.status,
     duration: flow.duration_ms == null ? "" : `${flow.duration_ms} ms`,
   };
 }

@@ -164,7 +164,8 @@ flowchart LR
 
       <div data-wu="E-REDESIGN.W2">
         <h3>W2 · Build them into the registry</h3>
-        <p data-item="wu-summary">Build the three components under <code>ui/src/components/</code>, export them from <code>index.ts</code>, and repair the two docstrings that redirect to them. Each is a new surface, so each may only be <em>cited</em> to its W1 design — a reason is not accepted.</p>
+        <p data-item="wu-summary">Build the three components under <code>ui/src/components/</code>, export them from <code>index.ts</code>, and repair the two docstrings that redirect to them. Each is a new surface, so each may only be <em>cited</em> to its W1 design — a reason is not accepted. <strong>Also retires the three design files</strong> under DEC-16, since <code>components·unretired</code> reds the moment their code lands.
+          <br><strong>Grew at review:</strong> the barrel additions collided with the legacy kit and the app kept resolving to it, so W2 also migrated the three screens and deleted the kit — taking part of W4's and W11's rows without W3's design run. <a href="2026-09-04-redesign-w2-result.html#review">The account is in W2's result.</a></p>
         <p data-item="wu-maps-to">W1's designs, through the DEC-25 handoff.</p>
         <p data-item="wu-expected">A 27-entry registry emitted by <code>scripts/design-registry.mjs</code>; the four screen runs can now resolve every element to <code>reuse</code> or a genuine <code>propose</code>.</p>
         <p data-item="wu-deps">W1</p>
@@ -180,7 +181,8 @@ flowchart LR
 
       <div data-wu="E-REDESIGN.W4">
         <h3>W4 · Build the flow list + shell</h3>
-        <p data-item="wu-summary">Rewire the six row cells to <code>TimestampText</code>/<code>MethodLabel</code>/<code>DurationText</code>/<code>StatusPill</code>, the empty state to <code>Notice</code>, and the filter bar to <code>Field</code>. <strong>Delete legacy <code>StatusPill</code> and <code>TONE_CLASS</code></strong>, migrate both call sites off the resolved-<code>tone</code> prop shape, and drop the dead <code>FlowRow.tone</code>/<code>status</code> fields from <code>flow.ts</code>. Adds <code>FlowList.test.tsx</code>.</p>
+        <p data-item="wu-summary"><strong>Partly spent by W2.</strong> Fixing a review finding — the registry components were unreachable from the app bundle — W2 migrated <code>StatusPill</code> at both call sites off the resolved-<code>tone</code> prop shape, dropped <code>FlowRow.tone</code>/<code>status</code> from <code>flow.ts</code>, deleted the legacy kit (<code>TONE_CLASS</code> with it), and wired the filter bar to <code>Field</code> and the header to <code>StatusDot</code>. See <a href="2026-09-04-redesign-w2-result.html#review">W2's review section</a> for the scope cost, including that this happened <em>before</em> W3's design run.
+          <br><strong>What remains:</strong> rewire the row cells to <code>TimestampText</code>/<code>MethodLabel</code>/<code>DurationText</code>, the empty state to <code>Notice</code>, add <code>FlowList.test.tsx</code>, and state UC-4's observable gains in <code>web-ui.html</code> (the reason phrase, the dot's 24px target and its accessible name are already true — W2 deliberately left the wording to this WU so one UC row is not split across two).</p>
         <p data-item="wu-maps-to">W3's design; UC-4.</p>
         <p data-item="wu-expected">The list renders from registry components; statuses carry their reason phrase; the first <code>design.implements</code> citation in the repo passes gate check <code>9·design</code>.</p>
         <p data-item="wu-deps">W3</p>
@@ -236,7 +238,7 @@ flowchart LR
 
       <div data-wu="E-REDESIGN.W11">
         <h3>W11 · Epic close</h3>
-        <p data-item="wu-summary">Delete <code>Gallery.tsx</code> and its <code>main.tsx</code> guard, delete <code>ui/src/components.tsx</code>, and account for <code>Layout.tsx</code>/<code>main.tsx</code>. Run the epic e2e, distil to T2, archive the plan and reports.</p>
+        <p data-item="wu-summary">Delete <code>Gallery.tsx</code> and its <code>main.tsx</code> guard, <s>delete <code>ui/src/components.tsx</code></s> (<strong>already deleted by W2</strong>, fixing the review finding above), and account for <code>Layout.tsx</code>/<code>main.tsx</code>. Run the epic e2e, distil to T2, archive the plan and reports.</p>
         <p data-item="wu-maps-to">The epic's expected result; DoD-E.</p>
         <p data-item="wu-expected">No throwaway and no legacy kit in the tree; <code>design-scope</code> reports zero unaccounted surfaces against <code>main</code>; every component design the epic added has a roster entry.</p>
         <p data-item="wu-deps">W4, W6, W8, W10</p>
