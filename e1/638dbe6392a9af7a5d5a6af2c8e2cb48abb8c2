@@ -6,8 +6,7 @@ tests:
     count: 1
     what: "tests/e2e_gate_truth.rs (--features hook-tests), the epic e2e each of W1-W4 deferred in identical words: the four fixes composed at one seam over a hermetic temp repo, through the real xtask binary, the real pre-merge-commit hook and real git. One WU adds a component, retires its design per DEC-16 and cites it at the bytes the build read (P1/DEC-28, judged at its last state per DEC-29); the mr commit that lands its report reports landing rather than error: (P2a); the report is link-checked red then green (P2b); and the merge is refused for an unlisted signer naming the signer and the roster, then accepted for a listed one (P3). Negative cases first at every step: a blob the design never held, and a signer this checkout does not list."
   unit:
-    count: 0
-    waived: "the diff adds no unit-testable surface - it is a test file plus its Cargo.toml [[test]] entry; every predicate it drives is already unit- and integration-covered by W1-W4, and what this commit adds is the composition, which only an e2e can exercise"
+    waived: "the diff adds no unit-testable surface - it is one test file plus its Cargo.toml [[test]] entry, and every predicate it drives is already unit- and integration-covered by W1-W4. What this commit adds is the composition, which only an e2e can exercise."
 regression_proof:
   binary: "the epic base 1c8d587, built to an isolated target dir"
   reds_at: "P1 - design.implements names docs/work/components/flow-badge.html, which does not resolve at the tip; P3 - no valid mr/v1 note for a signer .mr-allowed does not list; P2b - verify-doc ungoverned, the dead href not checked"
