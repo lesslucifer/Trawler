@@ -11,6 +11,11 @@ tests:
 verified:
   - "cargo xtask verify-doc — 40 docs checked, none red (the three new designs green as component-design, the WU plan green as wu-plan)."
   - "cargo xtask ui specimens --check — all three design files render over file:// in headless Chrome with zero console errors; every spec-* mount fills (field 3 buttons, status-dot 13, disclosure 1 mount)."
-  - "cargo test — 107 passed, 0 failed (unchanged by this WU; run because the tw-config.js commit touches a repo asset)."
-  - "cargo clippy --all-targets — clean, and gate0 ran fmt + clippy -D warnings on both commits."
-note: "Carries one standalone code commit (e71987c, tw-config.js's stale import). It is a build-asset path fix with no product surface and no test level of its own — the evidence that it works is the render gate above, which could not have passed with the import unresolved."
+  - "cargo xtask gate0 — fmt + clippy -D warnings + all tests green (107 passed)."
+standalone_commit:
+  sha: e71987c
+  what: "doc-assets/components/tw-config.js — a stale ../../../ import that has resolved outside the repo since the E-DFLOW.W5 asset move."
+  level: commit
+  waived: "A build-asset path fix with no product surface and no runtime reachable from a test: the file is loaded only by a browser opening a design doc over file://, where the failure mode is a silently unthemed page rather than an error any suite can observe."
+  evidence: "Direct resolution check, before and after — `node --input-type=module -e \"import('./doc-assets/components/tw-config.js')\"` failed with `Cannot find module '/Users/.../proj/misc/ui/tailwind.config.js'` (note the path escaping the repo root) and after the fix resolves, reaching the expected `tailwind is not defined` (that global exists only in a browser with the Play CDN loaded). Path arithmetic confirmed independently: doc-assets/components/ → ui/ is two levels, not three."
+note: "The three design files in this WU do NOT exercise this fix — they load specimens.bundle.js, which inlines its own theme block with its own correct path, so the render gate above passes either way. An earlier draft of this note claimed the gate covered it; that was wrong and is corrected here. The files that still load tw-config.js are docs/design-flow.html, docs/component-design.html and docs/decisions/dec-26-the-mockup-mounts.html, all outside this diff — which is precisely why the bug survived: nothing that runs in CI opens them."
