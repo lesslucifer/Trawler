@@ -160,6 +160,38 @@ pub async fn import_flows(State(state): State<AppState>, body: Bytes) -> Respons
     }
 }
 
+/// The third door: what the listing selects, removed. An absent filter clears
+/// the whole capture, and a filter that matches nothing succeeds reporting zero
+/// — the request expresses an end state, and that state is already true.
+pub async fn clear_flows(
+    Query(query): Query<FilterQuery>,
+    State(state): State<AppState>,
+) -> Response {
+    match query.into_filter() {
+        Ok(filter) => removed_response(state.store.remove_matching(&filter).len()),
+        Err(reason) => bad_request(reason),
+    }
+}
+
+/// One flow by id — the one delete that 404s, because here the client named
+/// something specific that does not exist.
+pub async fn delete_flow(Path(id): Path<String>, State(state): State<AppState>) -> Response {
+    let Some(flow_id) = parse_flow_id(&id) else {
+        return bad_id();
+    };
+    if state.store.remove(flow_id) {
+        removed_response(1)
+    } else {
+        StatusCode::NOT_FOUND.into_response()
+    }
+}
+
+/// The same envelope shape the import answers with, so both mutating endpoints
+/// report what they did rather than leaving a caller to re-read the listing.
+fn removed_response(removed: usize) -> Response {
+    Json(json!({ "removed": removed })).into_response()
+}
+
 /// A filename-safe UTC stamp, so successive exports do not overwrite each other
 /// in a downloads folder.
 fn export_timestamp() -> String {
@@ -291,7 +323,7 @@ mod tests {
     use std::sync::Arc;
 
     use axum::body::{to_bytes, Bytes};
-    use axum::extract::{Query, State};
+    use axum::extract::{Path, Query, State};
     use axum::http::StatusCode;
     use serde_json::Value;
 
@@ -353,6 +385,95 @@ mod tests {
                  "response":{{"status":200,"httpVersion":"HTTP/1.1","headers":[],
                               "content":{{"size":0,"mimeType":"text/plain"}}}}}}"#
         )
+    }
+
+    async fn clear(state: &AppState, query: &str) -> (StatusCode, Value) {
+        let uri = format!("http://x/flows?{query}").parse::<axum::http::Uri>().expect("uri");
+        let filter = Query::try_from_uri(&uri).expect("filter");
+        let response = super::clear_flows(filter, State(state.clone())).await;
+        let status = response.status();
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.expect("body");
+        let value = serde_json::from_slice(&bytes)
+            .unwrap_or(Value::String(String::from_utf8_lossy(&bytes).into_owned()));
+        (status, value)
+    }
+
+    async fn delete_one(state: &AppState, id: &str) -> (StatusCode, Value) {
+        let response = super::delete_flow(Path(id.to_owned()), State(state.clone())).await;
+        let status = response.status();
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.expect("body");
+        let value = serde_json::from_slice(&bytes)
+            .unwrap_or(Value::String(String::from_utf8_lossy(&bytes).into_owned()));
+        (status, value)
+    }
+
+    #[tokio::test]
+    async fn clearing_reports_what_left_and_empties_the_listing() {
+        let state = state_with(&["http://a.test/", "http://b.test/"]);
+        let (status, value) = clear(&state, "").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(value, serde_json::json!({ "removed": 2 }));
+
+        let (_, listed) = list(&state, "").await;
+        assert_eq!(listed.as_array().expect("rows").len(), 0);
+    }
+
+    #[tokio::test]
+    async fn the_clear_filter_reaches_the_store_and_an_empty_match_succeeds() {
+        let state = state_with(&["http://keep.test/", "http://drop.test/"]);
+
+        let (status, value) = clear(&state, "host=nothing.test").await;
+        assert_eq!(status, StatusCode::OK, "the end state it asked for is already true");
+        assert_eq!(value, serde_json::json!({ "removed": 0 }));
+
+        let (_, value) = clear(&state, "host=drop.test").await;
+        assert_eq!(value, serde_json::json!({ "removed": 1 }));
+        let (_, listed) = list(&state, "").await;
+        assert_eq!(listed.as_array().expect("rows").len(), 1);
+        assert_eq!(listed[0]["uri"], "http://keep.test/");
+    }
+
+    // A clear that silently removed a different set than the caller named is the
+    // one failure mode a destructive filter must never have.
+    #[tokio::test]
+    async fn an_unrecognised_source_refuses_the_clear_instead_of_guessing() {
+        let state = state_with(&["http://a.test/"]);
+        let (status, value) = clear(&state, "source=nonsense").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(value, "source must be captured or imported");
+
+        let (_, listed) = list(&state, "").await;
+        assert_eq!(listed.as_array().expect("rows").len(), 1, "a refused clear removes nothing");
+    }
+
+    #[tokio::test]
+    async fn deleting_one_flow_answers_the_same_envelope_and_404s_an_unknown_id() {
+        let state = state_with(&[]);
+        let flow = FlowBuilder::new().uri("http://a.test/").build();
+        let id = flow.id.to_string();
+        state.store.insert(flow);
+
+        let (status, value) = delete_one(&state, &id).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(value, serde_json::json!({ "removed": 1 }));
+
+        let (status, _) = delete_one(&state, &id).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "the client named something that is not there");
+
+        let (status, value) = delete_one(&state, "not-a-uuid").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(value, "invalid flow id");
+    }
+
+    #[tokio::test]
+    async fn a_cleared_store_is_empty_not_restarted() {
+        let state = state_with(&["http://a.test/"]);
+        state.store.note_connection("a.test:443".into());
+
+        clear(&state, "").await;
+
+        let tally = super::stats(State(state.clone())).await;
+        assert_eq!(tally.0["connections"], 1, "the tally is traffic, not storage");
     }
 
     #[tokio::test]

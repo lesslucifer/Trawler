@@ -1,4 +1,4 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
@@ -40,6 +40,26 @@ impl Ring {
         filter: &'a FlowFilter,
     ) -> impl Iterator<Item = &'a Flow> + 'a {
         ids.filter_map(|id| self.flows.get(id)).filter(|flow| filter.matches(flow))
+    }
+
+    /// Drops `doomed` from both the order and the map, re-weighing by what was
+    /// actually held. Eviction pops from the front and so could subtract as it
+    /// popped; a removal takes rows from the middle, so the order is rebuilt by
+    /// retaining survivors — one helper either way, because two copies of the
+    /// byte arithmetic is how `total_bytes` drifts from what the ring holds.
+    fn unlink(&mut self, doomed: &HashSet<FlowId>) -> Vec<FlowId> {
+        let mut removed = Vec::new();
+        for id in doomed {
+            if let Some(flow) = self.flows.remove(id) {
+                self.total_bytes = self.total_bytes.saturating_sub(flow.retained_bytes());
+                removed.push(*id);
+            }
+        }
+        if !removed.is_empty() {
+            let flows = &self.flows;
+            self.order.retain(|id| flows.contains_key(id));
+        }
+        removed
     }
 
     fn evict(&mut self) -> Vec<FlowId> {
@@ -231,6 +251,40 @@ impl Store {
         self.inner.lock().expect("store lock").flows.get(&id).cloned()
     }
 
+    /// Removes every flow the filter selects — the whole capture when the filter
+    /// is default — and announces the batch as one event. Unlike `evict` there is
+    /// no last-row floor: a clear that leaves a row behind is not a clear.
+    ///
+    /// Returns what actually left, so a caller can report a count without a
+    /// second read, and announces nothing when the selection is empty: a no-op
+    /// is not news a subscriber needs to redraw for.
+    pub fn remove_matching(&self, filter: &FlowFilter) -> Vec<FlowId> {
+        let removed = {
+            let mut ring = self.inner.lock().expect("store lock");
+            let doomed: HashSet<FlowId> = {
+                let ring = &*ring;
+                ring.matching(ring.newest_first(), filter).map(|flow| flow.id).collect()
+            };
+            ring.unlink(&doomed)
+        };
+        self.announce_clear(removed.clone());
+        removed
+    }
+
+    /// Removes one flow by id, reporting whether it was there. An id is not a
+    /// listing predicate, so it addresses the ring directly rather than through
+    /// `FlowFilter` — but over the same unlinking helper, so the byte accounting
+    /// cannot differ between the two doors.
+    pub fn remove(&self, id: FlowId) -> bool {
+        let removed = {
+            let mut ring = self.inner.lock().expect("store lock");
+            ring.unlink(&HashSet::from([id]))
+        };
+        let found = !removed.is_empty();
+        self.announce_clear(removed);
+        found
+    }
+
     #[cfg(test)]
     fn total_bytes(&self) -> usize {
         self.inner.lock().expect("store lock").total_bytes
@@ -275,6 +329,12 @@ impl Store {
         // cursor, so a caller stops on `next_cursor` rather than on an empty page.
         let next_cursor = matching.next().and(flows.last()).map(|flow| flow.id);
         FlowPage { flows, next_cursor }
+    }
+
+    fn announce_clear(&self, flow_ids: Vec<FlowId>) {
+        if !flow_ids.is_empty() {
+            let _ = self.tx.send(FlowEvent::FlowsCleared { flow_ids });
+        }
     }
 
     fn announce_evictions(&self, evicted: Vec<FlowId>) {
@@ -408,6 +468,133 @@ mod tests {
             ..FlowFilter::default()
         });
         assert_eq!(uris(&composed), vec!["http://file/post"]);
+    }
+
+    #[test]
+    fn remove_matching_takes_only_the_selection_and_leaves_the_rest_readable() {
+        let s = store();
+        s.insert(FlowBuilder::new().uri("http://keep.test/a").build());
+        let doomed = FlowBuilder::new().uri("http://drop.test/b").build();
+        let doomed_id = doomed.id;
+        s.insert(doomed);
+        let survivor = FlowBuilder::new().uri("http://keep.test/c").build();
+        let survivor_id = survivor.id;
+        s.insert(survivor);
+
+        let removed = s.remove_matching(&FlowFilter {
+            host: Some("drop.test".into()),
+            ..FlowFilter::default()
+        });
+
+        assert_eq!(removed, vec![doomed_id]);
+        assert!(s.get(doomed_id).is_none());
+        assert!(s.get(survivor_id).is_some());
+        assert_eq!(
+            uris(&s.list(&FlowFilter::default())),
+            vec!["http://keep.test/c", "http://keep.test/a"]
+        );
+    }
+
+    #[test]
+    fn remove_matching_re_weighs_so_the_next_eviction_uses_the_corrected_total() {
+        let s = Store::new(12, 64);
+        let heavy = FlowBuilder::new().uri("http://heavy/").req_body(captured(&[0u8; 10])).build();
+        let heavy_id = heavy.id;
+        s.insert(heavy);
+        s.insert(FlowBuilder::new().uri("http://light/").req_body(captured(b"ab")).build());
+        assert_eq!(s.total_bytes(), 12);
+
+        s.remove_matching(&FlowFilter { host: Some("heavy".into()), ..FlowFilter::default() });
+        assert_eq!(s.total_bytes(), 2);
+        assert!(s.get(heavy_id).is_none());
+
+        // Against a stale total of 12 this insert would evict; against the
+        // corrected 2 it fits, which is what makes the re-weighing observable.
+        s.insert(FlowBuilder::new().uri("http://after/").req_body(captured(b"cdefg")).build());
+        assert_eq!(s.total_bytes(), 7);
+        assert_eq!(uris(&s.list(&FlowFilter::default())), vec!["http://after/", "http://light/"]);
+    }
+
+    #[test]
+    fn a_default_filter_clears_everything_with_no_last_row_floor() {
+        let s = Store::new(4, 64);
+        for _ in 0..3 {
+            s.insert(FlowBuilder::new().req_body(captured(&[0u8; 8])).build());
+        }
+        assert_eq!(s.len(), 1, "the cap keeps one oversized row alive");
+
+        assert_eq!(s.remove_matching(&FlowFilter::default()).len(), 1);
+        assert_eq!(s.len(), 0, "a clear that leaves a row behind is not a clear");
+        assert_eq!(s.total_bytes(), 0);
+    }
+
+    #[test]
+    fn remove_by_id_reports_whether_it_was_there_and_keeps_the_order() {
+        let s = store();
+        s.insert(FlowBuilder::new().uri("http://a/").build());
+        let middle = FlowBuilder::new().uri("http://b/").build();
+        let middle_id = middle.id;
+        s.insert(middle);
+        s.insert(FlowBuilder::new().uri("http://c/").build());
+
+        assert!(s.remove(middle_id));
+        assert!(!s.remove(middle_id), "a second removal has nothing to take");
+        assert!(!s.remove(FlowId::new()));
+        assert_eq!(uris(&s.list(&FlowFilter::default())), vec!["http://c/", "http://a/"]);
+    }
+
+    #[test]
+    fn a_clear_announces_the_batch_once_and_an_empty_selection_announces_nothing() {
+        let s = store();
+        let first = FlowBuilder::new().uri("http://a/").build();
+        let second = FlowBuilder::new().uri("http://b/").build();
+        let (first_id, second_id) = (first.id, second.id);
+        s.insert(first);
+        s.insert(second);
+        let mut rx = s.subscribe();
+
+        s.remove_matching(&FlowFilter { host: Some("nothing".into()), ..FlowFilter::default() });
+        assert!(rx.try_recv().is_err(), "a no-op is not news");
+
+        s.remove_matching(&FlowFilter::default());
+        let cleared = match rx.try_recv() {
+            Ok(FlowEvent::FlowsCleared { flow_ids }) => flow_ids,
+            other => panic!("expected one batch event, got {other:?}"),
+        };
+        assert_eq!(cleared.len(), 2);
+        assert!(cleared.contains(&first_id) && cleared.contains(&second_id));
+        assert!(rx.try_recv().is_err(), "one event for the batch, not one per flow");
+    }
+
+    #[test]
+    fn removing_one_flow_announces_it_as_a_batch_of_one() {
+        let s = store();
+        let flow = FlowBuilder::new().build();
+        let id = flow.id;
+        s.insert(flow);
+        let mut rx = s.subscribe();
+
+        assert!(s.remove(id));
+        assert!(
+            matches!(rx.try_recv(), Ok(FlowEvent::FlowsCleared { flow_ids }) if flow_ids == vec![id])
+        );
+
+        assert!(!s.remove(id));
+        assert!(rx.try_recv().is_err(), "a missing id announces nothing");
+    }
+
+    #[test]
+    fn removal_never_touches_the_connection_tally() {
+        let s = store();
+        s.note_connection("example.com:443".into());
+        s.note_connection("other:443".into());
+        let flow = FlowBuilder::new().build();
+        let id = flow.id;
+        s.insert(flow);
+
+        s.remove(id);
+        s.remove_matching(&FlowFilter::default());
+        assert_eq!(s.connection_count(), 2, "a cleared store is empty, not restarted");
     }
 
     #[test]
@@ -654,24 +841,54 @@ mod tests {
             // Imports enter the ring by their own path, so the byte invariant
             // covers that path here rather than in a second test beside it.
             batches in proptest::collection::vec(proptest::collection::vec(0usize..40, 0..4), 0..6),
+            // Removals take rows from the middle of the order, which eviction
+            // never does — so they belong in this sequence rather than in a
+            // second proptest asserting the same invariant.
+            removals in proptest::collection::vec(0usize..4, 0..30),
         ) {
             let s = Store::new(max, 256);
             let body_of = |sz: usize| if sz == 0 { BodyRec::Empty } else { captured(&vec![0u8; sz]) };
+            let host_of = |i: usize| format!("http://h{}.test/{i}", i % 3);
             let mut batches = batches.into_iter();
-            for sz in &sizes {
-                s.insert(FlowBuilder::new().req_body(body_of(*sz)).build());
+            let mut removals = removals.into_iter();
+            for (i, sz) in sizes.iter().enumerate() {
+                s.insert(FlowBuilder::new().uri(&host_of(i)).req_body(body_of(*sz)).build());
                 if let Some(batch) = batches.next() {
                     s.import(
                         batch
                             .into_iter()
-                            .map(|sz| FlowBuilder::new().req_body(body_of(sz)).build().imported())
+                            .enumerate()
+                            .map(|(j, sz)| {
+                                FlowBuilder::new()
+                                    .uri(&host_of(i + j))
+                                    .req_body(body_of(sz))
+                                    .build()
+                                    .imported()
+                            })
                             .collect(),
                     );
+                }
+                match removals.next() {
+                    Some(0) => {
+                        let host = format!("h{}.test", i % 3);
+                        s.remove_matching(&FlowFilter { host: Some(host), ..FlowFilter::default() });
+                    }
+                    Some(1) => {
+                        let oldest = s.list(&FlowFilter::default()).last().map(|flow| flow.id);
+                        if let Some(id) = oldest {
+                            s.remove(id);
+                        }
+                    }
+                    Some(2) => {
+                        s.remove(FlowId::new());
+                    }
+                    _ => {}
                 }
             }
             let held: usize = s.list(&FlowFilter::default()).iter().map(super::super::flow::Flow::retained_bytes).sum();
             proptest::prop_assert_eq!(held, s.total_bytes());
             proptest::prop_assert!(s.total_bytes() <= max || s.len() == 1);
+            proptest::prop_assert_eq!(s.list(&FlowFilter::default()).len(), s.len());
         }
 
         #[test]

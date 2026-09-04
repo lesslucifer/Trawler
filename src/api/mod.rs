@@ -22,7 +22,7 @@ pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {
     let state = AppState { store, ca_cert_pem };
     Router::new()
         .route("/", get(routes::ui_page))
-        .route("/flows", get(routes::list_flows))
+        .route("/flows", get(routes::list_flows).delete(routes::clear_flows))
         .route("/flows/export", get(routes::export_har))
         .route(
             "/flows/import",
@@ -31,7 +31,7 @@ pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {
             post(routes::import_flows).layer(DefaultBodyLimit::max(state.store.max_bytes())),
         )
         .route("/stats", get(routes::stats))
-        .route("/flows/{id}", get(routes::get_flow))
+        .route("/flows/{id}", get(routes::get_flow).delete(routes::delete_flow))
         .route("/flows/{id}/request/body", get(routes::request_body))
         .route("/flows/{id}/response/body", get(routes::response_body))
         .route("/stream", get(routes::stream))
@@ -42,11 +42,11 @@ pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {
 
 /// The native app is a cross-origin client (its webview origin is not the API's),
 /// so every response carries an open CORS grant and preflights short-circuit.
-/// `POST` joined the grant with HAR import — the first method that changes
-/// capture state — and the reasoning behind `*` is unchanged: the surface is
-/// loopback-only, and everything it now accepts is equally reachable with
-/// `curl`, so the grant adds no exposure the bind address does not already
-/// imply.
+/// `POST` joined the grant with HAR import and `DELETE` with clearing — the
+/// methods that change capture state — and the reasoning behind `*` is
+/// unchanged: the surface is loopback-only, and everything it now accepts is
+/// equally reachable with `curl`, so the grant adds no exposure the bind
+/// address does not already imply.
 async fn allow_cross_origin(request: axum::extract::Request, next: middleware::Next) -> Response {
     let mut response = if request.method() == Method::OPTIONS {
         StatusCode::NO_CONTENT.into_response()
@@ -57,7 +57,7 @@ async fn allow_cross_origin(request: axum::extract::Request, next: middleware::N
     headers.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, HeaderValue::from_static("*"));
     headers.insert(
         header::ACCESS_CONTROL_ALLOW_METHODS,
-        HeaderValue::from_static("GET, POST, OPTIONS"),
+        HeaderValue::from_static("GET, POST, DELETE, OPTIONS"),
     );
     headers.insert(header::ACCESS_CONTROL_ALLOW_HEADERS, HeaderValue::from_static("*"));
     response
@@ -127,6 +127,26 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
     }
 
+    // `DELETE` joins two routes that already answered `GET`, and must not have
+    // joined the export or the import — a method landing on the wrong path would
+    // regress silently, since axum answers 405 either way.
+    #[tokio::test]
+    async fn delete_answers_only_where_removal_lives() {
+        let router = super::router(Arc::new(Store::new(1024, 8)), Arc::new("PEM".into()));
+        for (path, expected) in [
+            ("/flows", StatusCode::OK),
+            ("/flows/00000000-0000-0000-0000-000000000000", StatusCode::NOT_FOUND),
+            ("/flows/not-a-uuid", StatusCode::BAD_REQUEST),
+            ("/flows/export", StatusCode::METHOD_NOT_ALLOWED),
+            ("/flows/import", StatusCode::METHOD_NOT_ALLOWED),
+        ] {
+            let request =
+                Request::builder().method("DELETE").uri(path).body(Body::empty()).expect("request");
+            let response = router.clone().oneshot(request).await.expect("response");
+            assert_eq!(response.status(), expected, "DELETE {path}");
+        }
+    }
+
     // The native app is a cross-origin client, so every response carries an open
     // CORS grant and a preflight OPTIONS short-circuits with the same headers.
     #[tokio::test]
@@ -146,8 +166,8 @@ mod tests {
         assert_eq!(response.headers()["access-control-allow-origin"], "*");
         assert_eq!(
             response.headers()["access-control-allow-methods"],
-            "GET, POST, OPTIONS",
-            "the webview cannot POST an import without the method in the grant"
+            "GET, POST, DELETE, OPTIONS",
+            "the webview cannot POST an import or DELETE a capture without the methods in the grant"
         );
     }
 }
