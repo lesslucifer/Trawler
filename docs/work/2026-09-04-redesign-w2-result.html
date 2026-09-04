@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a90399f34851f0dfac13f">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W2 result (the gap components, built)</title>
+  <style>
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}
+    .ok{color:var(--ok);font-weight:600;}
+    .warn{color:var(--warn);font-weight:600;}
+    .measure{font-family:ui-monospace,monospace;font-size:12px;}
+    .shot{border:1px solid var(--line);border-radius:6px;max-width:100%;display:block;margin:8px 0;}
+    .measure-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;}
+    .measure-card{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--paper);}
+    .measure-card h4{margin:0 0 6px;font-size:13px;}
+    .measure-card p{margin:4px 0;font-size:12px;line-height:1.5;}
+  </style>
+</head>
+<body data-artifact="wu-result" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W2 — the three gap components, built and their designs retired</h1>
+      <p>The registry is 27 entries, the two phantom redirects resolve to real exports, and the three defects W1 found in shipped code are gone with a test each. The design files are retired in DEC-16's order; the reasoning they held is DEC-30.</p>
+      <div class="meta">WU result · 2026-09-04 · Trawler · T3 (docs/work/) · <code>wu/redesign/gap-components-build</code> → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · plan: <a href="2026-09-04-redesign-w2-plan.html">W2 plan</a> · distilled to: <a href="../decisions/dec-30-the-three-gap-components.html">DEC-30</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div class="callout" data-item="outcome" data-c="outcome">
+      <strong>Delivered, all eight expected rows.</strong> <code>Field</code> (T1), <code>StatusDot</code> (T2) and <code>Disclosure</code> (T1) are in the collection, each carrying its design's TSDoc byte-for-byte as its only contract. The registry emits <strong>27</strong>; <code>KeyValueRow → Field</code> and <code>StatusPill → StatusDot</code> are now checked edges rather than prose. The vocabulary gained the two members Disclosure's twist needed, verified in the emitted CSS. The three design files are gone, their forks distilled to DEC-30. No screen changed.
+    </div>
+
+    <table data-c="rollup">
+      <thead><tr><th>#</th><th>Expected</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Three components, full six-tag TSDoc carried verbatim</td><td><span class="ok">✓</span> registry emits 27; each tag byte-compared against its design's compile block — <strong>all three identical</strong></td></tr>
+        <tr><td>2</td><td>Exported from <code>index.ts</code>, mounting standalone</td><td><span class="ok">✓</span> barrel-matches-roster and specimen-per-name both green</td></tr>
+        <tr><td>3</td><td>The phantom redirects resolve</td><td><span class="ok">✓</span> <code>KeyValueRow: CopyText,Field</code> · <code>StatusPill: StatusDot,TonedText</code> — plus <code>Section: Disclosure</code>, see deviation D3</td></tr>
+        <tr><td>4</td><td>The three W1 defects gone in the built components</td><td><span class="ok">✓</span> one test each, all three re-verified by measurement in a real browser (below)</td></tr>
+        <tr><td>5</td><td><code>rotate</code> / <code>transition-transform</code> legal vocabulary</td><td><span class="ok">✓</span> two named members; lint silent; <strong>confirmed in the built CSS</strong>, not only the config</td></tr>
+        <tr><td>6</td><td>Design files gone, forks distilled, index reachable</td><td><span class="ok">✓</span> DEC-30 added, index row added, three files deleted in one commit with the record</td></tr>
+        <tr><td>7</td><td>A <code>design.implements</code> citation — the repo's first</td><td><span class="ok">✓</span> three of them, <code>{path, blob, built}</code>, resolving through history per DEC-28. See <a href="#probe">the probe</a></td></tr>
+        <tr><td>8</td><td>Zero change to any screen</td><td><span class="ok">✓</span> <code>git diff epic/redesign HEAD -- 'ui/src/*.tsx'</code> empty</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="seen">What it actually looks like</h2>
+    <p>Rendered by Vite from the real components — the app's own config, the app's own CSS — and measured in the same page rather than asserted in jsdom. The scaffolding was removed after the reading.</p>
+    <img class="shot" src="../../doc-assets/w2-preview.png" alt="The three components rendered together: a StatusDot in its broken state beside the Trawler wordmark and a flow count; a row of three Fields at their real widths beside a Select trigger and a Button; two Disclosures, one closed with its twist at 0° and one open with its twist rotated and its summary lifted to full ink.">
+
+    <div class="measure-grid" data-c="measured">
+      <div class="measure-card">
+        <h4>F2 · Field's box <em>is</em> Select's box</h4>
+        <p class="measure">Field &nbsp;h=25.25 pad=3px/9px r=3px b=1px #3f3a36 font=11.5px<br>Select h=25.25 pad=3px/9px r=3px b=1px #3f3a36 font=11.5px</p>
+        <p>Identical on all six. The legacy input was <code>px-3 py-chrome-y</code> — 12px/4px against the trigger's 9px/3px.</p>
+      </div>
+      <div class="measure-card">
+        <h4>S3 · the target is the button, not the disc</h4>
+        <p class="measure">dotBtn &nbsp;24 × 24<br>disc &nbsp;&nbsp;&nbsp;10 × 10</p>
+        <p>The shipped version's target <em>was</em> the disc — 14px under the app's own floor, on the one control that must never be hard to hit.</p>
+      </div>
+      <div class="measure-card">
+        <h4>S4 · it has a name, not just a title</h4>
+        <p class="measure">aria-label = "Not capturing yet — click to set up"</p>
+        <p>The shipped button carried only <code>title</code> and announced as <em>"button"</em>.</p>
+      </div>
+      <div class="measure-card">
+        <h4>D2 · one glyph, rotated exactly 90°</h4>
+        <p class="measure">closed matrix(1, 0, 0, 1, 0, 0)<br>open &nbsp;&nbsp;matrix(0, 1, -1, 0, 0, 0)</p>
+        <p>The vocabulary gap was the real risk here: an undeclared scale resolves to nothing <em>silently</em>. It resolves.</p>
+      </div>
+      <div class="measure-card">
+        <h4>The summary lifts on open</h4>
+        <p class="measure">closed rgb(174, 166, 156) &nbsp;— ink-mute<br>open &nbsp;&nbsp;rgb(247, 245, 240) — ink</p>
+        <p>The app's standard two-step "this is pressable" channel, since zero-accent leaves no colour for it.</p>
+      </div>
+    </div>
+
+    <h2 id="probe">The probe — the repo's first <code>design.implements</code> citation</h2>
+    <p>The epic plan named W4 as the probe for this path, on the grounds that no such citation has ever existed. It came due here instead: <strong>W2 builds components, so W2 is where the gate first demands one</strong>. The plan flagged the wrinkle — the citation names design files this same WU deletes.</p>
+    <div class="callout" data-c="probe-result">
+      <strong>It passed, and the reason it passed is that the problem was already found and fixed.</strong> <a href="../decisions/dec-28-citation-after-retirement.html">DEC-28</a> (E-GATETRUTH) resolves a citation at <em>the blob the path held before the commit that removed it</em>, for exactly this reason: <em>"<code>components·unretired</code> forces DEC-16's retirement inside the build WU, before its tip, so DEC-25's 'resolve at the tip' left a <code>cr/v3</code> build with no legal note."</em> That sentence describes this WU, written before it ran. <strong>No finding for the gate.</strong>
+    </div>
+    <p><a href="../decisions/dec-29-retired-design-judged-where-it-left.html">DEC-29</a>'s other half also behaved as specified: <code>design-scope</code> lists <strong>no design artifact to judge</strong>, because these three were retired at the bytes W1 judged them at — amended-then-retired is a seam artifact, unchanged-then-retired is not. What the gate does demand is the three citations plus an answer for <code>Section.tsx</code>, which is the one rendered file this WU touched.</p>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <thead><tr><th></th><th>Deviation</th><th>Why, and what it cost</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>D1</strong></td>
+          <td><strong>StatusDot's test hooks sit on the disc, not the button.</strong> The design's <code>@anatomy</code> says <em>"data-status carries the raw state for tests"</em> in the context of the button.</td>
+          <td><code>Button</code> takes a fixed prop list and passes no arbitrary attributes through; giving it one is an API change to a component whose design is not in this WU's scope, and the alternative — a wrapping <code>&lt;span&gt;</code> — adds an element the anatomy does not describe. The hooks are on the <code>aria-hidden</code> disc: queryable by <code>[data-status]</code> and <code>data-testid</code>, and <strong>the accessible tree is unchanged</strong>, since the disc is hidden from it either way. <em>The TSDoc was left saying what the design said</em> rather than quietly reworded to match the code — if W4 finds the button is the right host, that is an API question for <code>Button</code>, not a silent edit here.</td>
+        </tr>
+        <tr>
+          <td><strong>D2</strong></td>
+          <td><strong>Disclosure's open-state classes use an attribute selector, not <code>group-open:</code>.</strong></td>
+          <td>The natural Tailwind idiom is <code>group</code> + <code>group-open:</code>, and the vocabulary lint <span class="warn">rejects <code>group</code></span> — correctly, since it is a marker class that emits no CSS and the rule cannot tell that apart from a typo. The design anticipated this and licensed the alternative in its own token table: <em>"<code>[&amp;[open]&gt;summary]:text-ink</code> — or the equivalent state class the build picks"</em>. Built as <code>[&amp;[open]&gt;summary&gt;[data-twist]]:rotate-90</code> and <code>[&amp;[open]&gt;summary]:text-ink</code> on the <code>&lt;details&gt;</code>. Both verified in the emitted CSS.</td>
+        </tr>
+        <tr>
+          <td><strong>D3</strong></td>
+          <td><strong><code>Section</code>'s docstring was edited, which the design said was unnecessary.</strong> Disclosure's file states: <em>"No edit to Section is needed — its @avoid line becomes true the moment this component exists."</em></td>
+          <td>True of the <em>meaning</em> and false of the <em>check</em>. Redirects are derived by matching roster names in <code>@avoid</code> text, and Section said <em>"put the disclosure inside the slot"</em> — lowercase, so it matched nothing and the redirect stayed unverifiable even once <code>Disclosure</code> existed. <strong>That is the same phantom-redirect failure this epic exists to close, one level down</strong>: an instruction that reads as guidance and resolves to nothing a check can follow. Named it, and added the direction the design established — a Disclosure goes in a Section's slot, never a Section in a Disclosure's summary, which would hide a heading. <em>This is the one rendered file the WU touched, and the reason <code>design-scope</code> reports a touched surface at all.</em></td>
+        </tr>
+        <tr>
+          <td><strong>D4</strong></td>
+          <td><strong>One unit test was rewritten after it failed.</strong> Field's B1 test read <code>onChange.mock.calls[i][0].target.value</code> and saw three empty strings.</td>
+          <td>A test artifact, not a component defect: the input is controlled at <code>value=""</code>, so React resets <code>target.value</code> before the stored event reference is read. Rewritten to capture the value inside the handler, at call time, and to re-render with each new value the way a real controlled parent does. Recorded because <em>a test changed to make it pass</em> deserves its reason on the record.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <thead><tr><th>Check</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><code>cd ui &amp;&amp; pnpm test</code></td><td><span class="ok">529 passed</span>, 43 files (was 528 before <code>Section</code>'s redirect went live; +23 from the three new suites and the specimens)</td></tr>
+        <tr><td><code>pnpm exec eslint src</code></td><td><span class="ok">clean</span> — the closed-vocabulary lint silent on all three, including the two new scale members</td></tr>
+        <tr><td><code>pnpm build</code></td><td><span class="ok">green</span> — <code>tsc -b</code> over the new props and the barrel's re-exports</td></tr>
+        <tr><td><code>node scripts/design-registry.mjs</code></td><td><span class="ok">27 entries</span>; every <code>@tier</code> block carries all six tags or the oracle throws</td></tr>
+        <tr><td>Emitted CSS</td><td><code>rotate-90{--tw-rotate: 90deg;…}</code> and <code>[open]&gt;summary&gt;[data-twist]</code> both present in <code>dist/assets/index-*.css</code>; <code>transition-property:transform</code> emitted. <strong>Checked in the output, because DEC-17's failure mode is a class that resolves to nothing without erroring.</strong></td></tr>
+        <tr><td>TSDoc completeness (DEC-16 ②)</td><td>each of the six tags parsed out of both the design's compile block and the shipped TSDoc and compared — <span class="ok">all three identical</span></td></tr>
+        <tr><td><code>cargo xtask verify-doc</code></td><td><span class="ok">green</span> on the plan, DEC-30 and the decisions index; <code>components·unretired</code> confirmed <span class="warn">red on all three</span> before retirement and gone after</td></tr>
+        <tr><td><code>cargo test</code> · <code>cargo xtask gate0</code></td><td><span class="ok">green</span> — no Rust changed; run because the gate re-walks it</td></tr>
+        <tr><td><code>cargo xtask ui specimens --check</code></td><td><span class="ok">green</span> — every remaining design artifact still renders over <code>file://</code></td></tr>
+        <tr><td>Browser measurement</td><td>the five readings above, taken from computed style in headless Chrome against a Vite-served page built from the real components</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation" data-c="distillation">
+      <thead><tr><th>Doc</th><th>Tier</th><th>What landed</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../decisions/dec-30-the-three-gap-components.html">dec-30-the-three-gap-components.html</a></td><td>T2</td><td><strong>New.</strong> DEC-16 step ① for all three files: the shared registry-entry argument, Field's box (second confirmation of DEC-18), the <code>DotStatus</code>-is-not-<code>StatusTone</code> claim on its authority axis, the one-element pairing and the two defects it forces, native <code>&lt;details&gt;</code> over a div, the three refusals that belong to the host, and "reuse that produces a worse screen is a propose in disguise". Two forks recorded as spent.</td></tr>
+        <tr><td><a href="../decisions/decisions-index.html">decisions-index.html</a></td><td>T2</td><td>The DEC-30 row, so the record is reachable index-first.</td></tr>
+        <tr><td><a href="../use-cases/web-ui.html">use-cases/web-ui.html</a></td><td>T2</td><td><strong>Nothing, and that is stated rather than assumed.</strong> No observable contract moved: the three components have no call site yet, so every screen renders exactly what it rendered before. UC-4's and UC-ONBOARD's wording is W4's and W10's to move if their builds move it.</td></tr>
+        <tr><td><a href="../design-rules/design-rules-index.html">design-rules-index.html</a></td><td>T2</td><td><strong>Not yet — deliberately.</strong> The chromatic-meanings row (StatusDot as a second owner of <code>ok</code>/<code>warn</code>, and <code>ink-mute</code>'s first entry as the not-yet-known channel) is argued in DEC-30 and belongs in the rulebook, but the rulebook is <em>frozen input for a design run</em> and grows at distillation per DEC-14. Four screen runs (W3/W5/W7/W9) are still to run against it, and moving it mid-epic would change a substrate they pin. <strong>Carried to W11</strong>, where the epic's own distillation plan already reserves the row.</td></tr>
+        <tr><td>T1</td><td>T1</td><td><strong>None.</strong> The flow, rulebook and gate are inputs to this epic. Nothing this WU found argues the method is wrong — DEC-28 and DEC-29 had already fixed the one edge it probed.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <thead><tr><th>What</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The rulebook's chromatic-meanings row</strong> — StatusDot as a second owner of <code>ok</code>/<code>warn</code>, <code>ink-mute</code>'s first entry. Argued in DEC-30, held back so the four screen runs pin an unchanged substrate.</td><td><strong>W11</strong> (the epic's distillation plan reserves it)</td></tr>
+        <tr><td><strong>Two <code>Field</code>s and two <code>StatusDot</code>s in the tree.</strong> The legacy kit still exports both, and both screens still call the legacy pair. Bounded on purpose: only the registry pair is importable from <code>components/</code>.</td><td><strong>W4</strong> (migrates the call sites, deletes legacy <code>StatusPill</code> + <code>TONE_CLASS</code>) · <strong>W11</strong> (deletes the kit)</td></tr>
+        <tr><td><strong>Disclosure has three waiting call sites and no consumer.</strong> <code>Onboarding.tsx</code>'s <code>ManualPanel</code> and two raw <code>&lt;details&gt;</code> beside it still carry the browser's triangle.</td><td><strong>W10</strong></td></tr>
+        <tr><td><strong>Whether <code>Button</code> should accept test hooks</strong> (deviation D1). Not an API change to make speculatively; the first build that genuinely needs <code>data-*</code> on a composed Button is the one that should argue it.</td><td>open — the WU that hits it</td></tr>
+        <tr><td><strong><code>group</code> is unusable in this codebase</strong> (deviation D2). The lint cannot distinguish Tailwind's marker classes from typos, so every group-variant idiom must be written as an attribute selector. Worth a rulebook line if a second component hits it; one occurrence is not a pattern.</td><td>open — the second occurrence</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
