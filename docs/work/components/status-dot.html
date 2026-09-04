@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a7b2a9f34851f0dfabfdf">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — StatusDot component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- No import map and no module scripts: a design file must open by double-click,
+       and a file:// page may not run module scripts. specimens.bundle.js is a plain
+       classic script carrying the app theme, the shared specimen behaviours and the
+       real collection, in that order — one tag that cannot be misordered. Generated
+       and git-ignored: regenerate with `cargo xtask ui specimens`. -->
+  <script src="../../../doc-assets/components/specimens.bundle.js"></script>
+  <style>
+    /* Doc scaffolding only — never a component rule. Component styling is
+       Tailwind utilities read from ui/tailwind.config.js via specimens.bundle.js. */
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:var(--a-ui);}
+    .tsdoc{font-family:var(--a-mono);font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;white-space:pre-wrap;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;}
+    .swatch{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:8px;}
+    .swatch .cap strong{color:var(--ink);}
+    .fork-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;}
+    .fork-card{border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-width:220px;flex:1;background:var(--paper);}
+    .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);}
+    .fork-card.win{border-color:var(--ok);}
+    .fork-card.win .fc-lbl{color:var(--ok);}
+    .fork-card.lose .fc-lbl{color:var(--warn);}
+    .fork-card .fc-note{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:8px;}
+    .cmp td,.cmp th{vertical-align:top;font-size:12.5px;}
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
+    table{font-size:13px;}
+    .demo-shell{border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--paper);}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>StatusDot <span class="tier t2">T2</span></h1>
+      <p>Capture health as one glyph — and the always-available way back into setup. One element, two jobs, and a three-state vocabulary that is not <code>StatusTone</code>.</p>
+      <div class="meta">Component design · <strong>draft — awaiting confirmation</strong> · 2026-09-04 · <a href="../2026-09-04-redesign-w1-plan.html">E-REDESIGN.W1</a> · T3 (docs/work/components/) · format: <a href="../../component-design.html">component design</a> · ships today unregistered at <code>ui/src/components.tsx:38</code></div>
+    </div>
+  </header>
+  <main>
+    <div class="callout warn" data-c="w2-obligation">
+      <strong>W2 retires this file.</strong> The moment <a href="../2026-09-04-redesign-plan.html">W2</a> lands <code>ui/src/components/StatusDot.tsx</code>, this contract becomes that file's TSDoc and <code>components·unretired</code> reds until this file is removed in <a href="../../decisions/dec-16-design-file-retirement.html">DEC-16</a>'s order: distil the forks to <code>docs/decisions/</code>, verify the TSDoc carries the whole contract, then delete.
+    </div>
+    <div class="callout" data-c="citation-convention">
+      <strong>How the registry is cited here.</strong> Every component named in <code>code</code> — <code>StatusPill</code>, <code>TonedText</code>, <code>StatusLine</code>, <code>Notice</code>, <code>IconButton</code> — is a live registry entry whose contract is its TSDoc in <code>ui/src/components/</code>. Their design files were retired under <a href="../../decisions/dec-16-design-file-retirement.html">DEC-16</a> and archived out of git, so they are cited by name rather than linked: read them with <code>node scripts/design-registry.mjs</code>.
+    </div>
+
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> <code>StatusPill</code>'s <code>@avoid</code> redirects to it by name — <em>"proxy connection health — <strong>StatusDot</strong>"</em> — and there is no such component. The do-nothing answer is to let the header keep a hand-rolled tinted <code>&lt;button&gt;</code> (<code>components.tsx:38</code>), and it fails on the thing that makes this element unusual: <strong>it is the only control in the app that is simultaneously a status readout and a navigation affordance</strong>. Nothing in the registry covers that pairing, and the two halves have contradictory instincts — a status is display (<code>StatusPill</code> is explicitly non-interactive), a nav control is a button. Left hand-rolled, the pairing stays undocumented, and the next person to touch the header has to re-derive why a status is clickable.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t2">T2 Widget</span> — it owns the <code>DotStatus</code>→tone map <em>and</em> the <code>DotStatus</code>→title-text map, exactly as <code>StatusPill</code> owns status→tone and its reason phrase. Business logic in, full display out → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td><strong>App's header, in both phases</strong> — the only tenant, and it is on screen 100% of the time the app is open (<code>App.tsx:110</code> onboarding, <code>App.tsx:139</code> proven). One tenant, but an unavoidable one</td></tr>
+      <tr><td><strong>Exists today</strong></td><td><code>ui/src/components.tsx:38</code> — a <code>&lt;button&gt;</code> with a <code>DOT_CLASS</code> record and a <code>title</code> from <code>COPY.dotTitle</code> (<code>onboardingMachine.ts:87</code>). The tri-state semantics, the tone map and the titles are all shipped and all correct; what this design adds is the accessible name, the hit target, and the contract that says why it is clickable</td></tr>
+      <tr><td><strong>Made of</strong></td><td><code>TonedText</code> is <em>not</em> its base (fork S2) — this renders no text. It is a <code>&lt;button&gt;</code> wrapping a tinted disc; the button chrome is <code>Button</code>'s <code>frame="bare" shape="square"</code> shell, the way <code>IconButton</code> composes it</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① it answers "is Trawler working?" at a glance, always</td><td>it sits first in the header, before the wordmark, in both phases. A 10px disc is the smallest thing that reads as a state light; it is deliberately <em>not</em> a word, because the answer must be readable in peripheral vision without being read</td></tr>
+        <tr><td>② it is also the only way back into setup</td><td>it is a real <code>&lt;button&gt;</code> with a hit target far larger than the disc (driver ⑦), not a tinted <code>&lt;span&gt;</code>. This is the pairing the registry has no other case of, and the reason it cannot be <code>StatusPill</code> or <code>TonedText</code> (both non-interactive by contract)</td></tr>
+        <tr><td>③ three states, and the middle one is not a tone</td><td><code>broken</code> and <code>connected</code> land on <code>warn</code>/<code>ok</code>. <strong><code>checking</code> is not "neutral" — it is "we do not know yet"</strong>, and <a href="../../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a> grants it no token, so it reads <code>ink-mute</code>. That is the tri-state claim: the state set is <em>connection lifecycle</em>, not <em>severity</em> (see the boundary below)</td></tr>
+        <tr><td>④ colour cannot be the only channel (<code>colour-plus-text</code>)</td><td>a 10px disc with no text is <em>colour alone</em> — the rule's plainest violation. So the second channel is mandatory and carried by the accessible name + <code>title</code>, which state the verdict in words: <em>"not capturing yet — click to set up"</em>. <code>data-status</code> carries it a third time for tests. <strong>This is the component's load-bearing a11y decision</strong></td></tr>
+        <tr><td>⑤ zero chromatic accent (<a href="../../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a>)</td><td>the three fills are <code>bg-warn</code>, <code>bg-ink-mute</code>, <code>bg-ok</code> — closed-set tokens carrying their fixed meanings. No fourth state, no pulse, no glow</td></tr>
+        <tr><td>⑥ its meaning must not drift between the two phases</td><td>the same dot, same map, same component in onboarding and in the proven app. The <em>phase</em> resolves the status (<code>dotStatus()</code>, <code>onboardingMachine.ts:62</code>) and the component renders it — the component never reads app state</td></tr>
+        <tr><td>⑦ touch target (WCAG 2.5.8)</td><td>the disc is 10px (<code>spinner</code>); the <em>button</em> is <code>min-h-control min-w-control</code> — 24px square, the floor <code>Button</code>, <code>IconButton</code>, <code>Select</code> and <code>Field</code> all cite. <strong>The shipped version has no such padding — its hit target is the 10px disc</strong> (fork S3)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="tri-state">The tri-state claim — why <code>DotStatus</code> is not <code>StatusTone</code></h2>
+    <p style="color:var(--muted);">The epic plan predicted this is where a rulebook line gets forced, so the claim is argued rather than asserted. Both types have three members and both currently map onto the same three colours — which is exactly why a reviewer should suspect they are the same type wearing two names.</p>
+    <table data-c="tri-state" class="cmp">
+      <thead><tr><th></th><th><code>DotStatus</code> <em>(this)</em></th><th><code>StatusTone</code></th></tr></thead>
+      <tbody>
+        <tr><td><strong>members</strong></td><td><code>broken</code> · <code>checking</code> · <code>connected</code></td><td><code>ok</code> · <code>warn</code> · <code>muted</code></td></tr>
+        <tr><td><strong>the axis is</strong></td><td><strong>lifecycle</strong> — where a connection has got to</td><td><strong>severity</strong> — how good an outcome is</td></tr>
+        <tr><td><strong>ordering</strong></td><td>temporal: <code>checking</code> precedes the other two, always. You cannot be <code>connected</code> before you have checked</td><td>none — <code>ok</code> and <code>warn</code> are alternatives, not a sequence</td></tr>
+        <tr><td><strong>the middle member means</strong></td><td>"not known yet, ask again" — one specific cause, and the component names it</td><td>"informational / non-terminal" (<a href="../../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a>) — a catch-all: 3xx, 1xx, unknown and pending all land here</td></tr>
+        <tr><td><strong>who names the cause</strong></td><td>the state itself — <code>checking</code> is a cause, and it carries its own phrase</td><td>nobody — <code>muted</code> is the absence of a verdict, so <code>StatusPill</code> must add "…" beside it to say <em>which</em> muted this is</td></tr>
+        <tr><td><strong>can a caller pick one?</strong></td><td><span class="no">no</span> — it is derived from the phase by <code>dotStatus()</code></td><td><span class="yes">yes</span> — <code>TonedText</code>'s whole API is the caller passing a tone</td></tr>
+        <tr><td><strong>if a fourth arrives</strong></td><td>plausible: <code>reconnecting</code>, <code>paused</code> — lifecycle sets grow with the protocol</td><td>closed by <a href="../../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a> — a fourth tone is deliberately left for the first tenant to reopen</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="tri-state-verdict">
+      <strong>Verdict: distinct types that happen to share a palette today.</strong> The distinction is <em>not</em> transient-vs-terminal — <a href="../../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a> reads <code>muted</code> as "informational / non-terminal", and <code>StatusPill</code>'s own <code>@states</code> files <code>null/pending → "…"</code> under it, so <code>StatusTone</code> already carries a not-yet-resolved case. <strong>The tell is authority.</strong> <code>StatusTone</code> is a value a caller passes — <code>TonedText</code>'s entire API — so if <code>DotStatus</code> collapsed into it, <code>connected</code> would become caller-suppliable and a call site could render green while the app is still checking. <code>DotStatus</code> has no such API: it is derived by <code>dotStatus()</code> and nothing else may produce one. A second difference follows from the first: <code>muted</code> is a catch-all that says nothing about <em>why</em> (which is why <code>StatusPill</code> must add "…" beside it), where <code>checking</code> is one named cause carrying its own phrase. <strong>Keeping them separate is what makes <code>dotStatus()</code> the single authority</strong> — the same reasoning <a href="../../decisions/dec-20-logic-lives-with-its-inputs.html">DEC-20</a> uses to let <code>StatusPill</code> absorb status→display while <code>StatusLine</code> refuses raw inputs.
+    </div>
+    <div class="callout warn" data-c="proposal">
+      <strong>Proposal — for the rulebook, not for this file to land.</strong> The <em>chromatic meanings</em> table maps each token to a fixed meaning and an owning component. If this design is confirmed, <code>ok</code> and <code>warn</code> gain a second owner (<code>StatusDot</code> connection lifecycle) alongside <code>StatusPill</code>/<code>MethodLabel</code>, and <code>ink-mute</code> gains its first entry as the <em>not-yet-known</em> channel. <strong>Recorded here as a proposal</strong> — the rulebook is frozen input for a run and grows at distillation (<a href="../../decisions/dec-14-design-rules-kb.html">DEC-14</a>). The epic's distillation plan already reserves the row.
+    </div>
+
+    <h2 id="vs-neighbours">Boundary — StatusDot vs the three components it is confusable with</h2>
+    <table data-c="vs-neighbours" class="cmp">
+      <thead><tr><th></th><th>StatusDot <em>(this)</em></th><th><code>StatusPill</code></th><th><code>StatusLine</code></th><th><code>TonedText</code></th></tr></thead>
+      <tbody>
+        <tr><td><strong>renders</strong></td><td>a disc, no text</td><td>an HTTP status number</td><td>glyph + name + message</td><td>a short toned string</td></tr>
+        <tr><td><strong>subject</strong></td><td>the app's own capture health</td><td>one flow's outcome</td><td>one precondition's verdict</td><td>anything short</td></tr>
+        <tr><td><strong>interactive</strong></td><td><span class="yes">yes</span> — it navigates</td><td><span class="no">no</span> — "pure display"</td><td><span class="no">no</span></td><td><span class="no">no</span> — its @avoid forbids it</td></tr>
+        <tr><td><strong>how many on screen</strong></td><td>exactly one, always</td><td>one per flow row</td><td>one per precondition</td><td>any</td></tr>
+        <tr><td><strong>text channel</strong></td><td><code>title</code> + accessible name (driver ④)</td><td>the number itself + reason phrase</td><td>the name and message</td><td>the caller's</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-hero">
+      <div class="demo-shell">
+        <div class="flex items-center gap-2 rounded-panel bg-canvas px-3 py-2">
+          <button type="button" title="Capturing — click to run setup again" aria-label="capturing — click to run setup again" data-status="connected" class="inline-flex min-h-control min-w-control shrink-0 cursor-pointer items-center justify-center rounded-button transition-colors hover:bg-wash-hover">
+            <span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ok"></span>
+          </button>
+          <h1 class="font-serif text-title italic text-ink">Trawler</h1>
+          <span class="ml-2 whitespace-nowrap font-ui text-body text-ink-mute">128 flows</span>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">The real header (<code>App.tsx:139</code>), connected. <span class="anno">1</span> the hit target · <span class="anno">2</span> the disc</div>
+      </div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex items-center gap-2 bg-canvas p-2">
+              <button type="button" aria-label="a" class="inline-flex min-h-control min-w-control shrink-0 items-center justify-center rounded-button bg-wash-hover">
+                <span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ok"></span>
+              </button>
+              <span class="font-ui text-chrome text-ink-mute">24px button · 10px disc</span>
+            </div>
+          </div>
+          <div class="cap">Hover wash shows the true target — 2.4× the disc's width</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> the hit target</strong>
+          <div class="spec">
+            <div class="k">spec</div><div><code>&lt;button type="button"&gt;</code> · <code>min-h-control min-w-control</code> (24×24) · <code>rounded-button</code> · <code>hover:bg-wash-hover</code> · <code>shrink-0</code> · always focusable</div>
+            <div class="k">why</div><div>drivers ② and ⑦. The action is "go to setup", and a 10px target fails WCAG 2.5.8 outright. <code>IconButton</code> solved the identical problem by composing <code>Button</code>'s bare square shell — this reuses that decision rather than re-deciding it (fork S3)</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex items-center gap-3 bg-canvas p-2">
+              <span class="inline-block h-spinner w-spinner rounded-full bg-warn"></span>
+              <span class="inline-block h-spinner w-spinner rounded-full bg-ink-mute"></span>
+              <span class="inline-block h-spinner w-spinner rounded-full bg-ok"></span>
+            </div>
+          </div>
+          <div class="cap"><code>broken</code> · <code>checking</code> · <code>connected</code> — the whole vocabulary</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> the disc</strong>
+          <div class="spec">
+            <div class="k">spec</div><div><code>h-spinner w-spinner</code> (10px) · <code>rounded-full</code> · fill from the map: <code>bg-warn</code> / <code>bg-ink-mute</code> / <code>bg-ok</code> · <code>aria-hidden</code> — it carries no accessible content of its own</div>
+            <div class="k">why</div><div>drivers ① and ⑤. 10px is the <code>spinner</code> token, already the app's "small round status thing" size. The disc is decorative <em>to a screen reader</em> precisely because the button's name carries the whole verdict in words (driver ④) — marking it <code>aria-hidden</code> is what prevents a doubled announcement</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — what the parts do</h2>
+    <p style="color:var(--muted);"><strong>Anatomy is what you see; behavior is what it does.</strong> Two of the three rules below are about what the component refuses to know.</p>
+    <div class="app parts" data-c="behavior-rules">
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2 font-mono text-chrome text-ink-mute">
+              <div>phase "checking" → <span class="text-ink">checking</span></div>
+              <div>phase "onboarding" → <span class="text-ink">broken</span></div>
+              <div>phase "proven" → <span class="text-ink">connected</span></div>
+              <div class="text-ink-mute">↑ dotStatus(), onboardingMachine.ts:62</div>
+            </div>
+          </div>
+          <div class="cap">The caller resolves; the component renders</div>
+        </div>
+        <div>
+          <strong>B1 · it takes a resolved status and never derives one</strong>
+          <div class="spec">
+            <div class="k">spec</div><div>props are <code>status: DotStatus</code> and <code>onClick</code>. It reads no phase, no flow list, no connection count</div>
+            <div class="k">why</div><div>driver ⑥ and <a href="../../decisions/dec-20-logic-lives-with-its-inputs.html">DEC-20</a>: the map from app phase to lifecycle state is a function of app state the domain already resolves, so it stays in <code>dotStatus()</code> — the same line <code>StatusLine</code> draws when it refuses raw inputs. What the component <em>does</em> own is the two maps that are pure functions of <code>DotStatus</code>: the fill and the words</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2">
+              <div class="flex items-center gap-2">
+                <span class="inline-block h-spinner w-spinner rounded-full bg-warn"></span>
+                <span class="font-ui text-chrome text-ink">"not capturing yet — click to set up"</span>
+              </div>
+              <div class="font-mono text-chrome text-ink-mute">title · aria-label · data-status="broken"</div>
+            </div>
+          </div>
+          <div class="cap">Three channels for one verdict — only one of them is colour</div>
+        </div>
+        <div>
+          <strong>B2 · the verdict is always in words</strong>
+          <div class="spec">
+            <div class="k">spec</div><div>every state supplies a phrase, rendered as both <code>title</code> (hover) and <code>aria-label</code> (assistive tech), from <code>COPY.dotTitle</code>. <code>data-status</code> carries the raw state for tests. There is no state without a phrase</div>
+            <div class="k">why</div><div>driver ④ — <code>colour-plus-text</code> binds both surfaces, and a bare tinted disc is the rule's clearest breach. The phrases are already written and already correct (<code>onboardingMachine.ts:87</code>); this design's addition is <strong><code>aria-label</code></strong>, which the shipped version lacks — <code>title</code> alone leaves the button nameless to a screen reader, so today it announces as "button"</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2">
+              <div class="flex items-center gap-2">
+                <span class="inline-block h-spinner w-spinner rounded-full bg-ok"></span>
+                <span class="font-ui text-chrome text-ink-mute">"capturing — click to run setup again"</span>
+              </div>
+              <div class="font-ui text-chrome text-ink-mute">→ clicking a green dot still opens setup</div>
+            </div>
+          </div>
+          <div class="cap">Clickable in every state, including the good one</div>
+        </div>
+        <div>
+          <strong>B3 · it is never disabled</strong>
+          <div class="spec">
+            <div class="k">spec</div><div>all three states are clickable and dispatch the same event (<code>re-invoke</code>). No disabled state, no state in which the action is unavailable</div>
+            <div class="k">why</div><div>driver ②: it is the <em>only</em> route back to setup, so a state that disables it is a state with no way back. The <code>connected</code> phrase says so explicitly — <em>"click to run setup again"</em>, not "capturing" alone — because <code>labels-add-context</code> wants the label to carry the fact the context does not state, and "this green thing is still a button" is exactly that fact</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="flex items-center gap-2">
+          <button type="button" aria-label="not capturing yet — click to set up" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-warn"></span></button>
+          <span class="font-ui text-chrome text-ink-mute">not capturing yet — click to set up</span>
+        </div>
+        <div class="cap"><strong>broken</strong> — <code>bg-warn</code>. Setup incomplete, or capture has never been proven</div>
+      </div>
+      <div class="swatch">
+        <div class="flex items-center gap-2">
+          <button type="button" aria-label="checking…" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ink-mute"></span></button>
+          <span class="font-ui text-chrome text-ink-mute">checking…</span>
+        </div>
+        <div class="cap"><strong>checking</strong> — <code>bg-ink-mute</code>. Transient: the launch self-test is still resolving. Not a tone (see the claim above)</div>
+      </div>
+      <div class="swatch">
+        <div class="flex items-center gap-2">
+          <button type="button" aria-label="capturing — click to run setup again" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ok"></span></button>
+          <span class="font-ui text-chrome text-ink-mute">capturing — click to run setup again</span>
+        </div>
+        <div class="cap"><strong>connected</strong> — <code>bg-ok</code>. A decrypted HTTPS flow has been seen</div>
+      </div>
+      <div class="swatch">
+        <div class="flex items-center gap-2">
+          <button type="button" aria-label="hover example" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button bg-wash-hover"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ok"></span></button>
+          <span class="font-ui text-chrome text-ink-mute">hover</span>
+        </div>
+        <div class="cap"><strong>hover</strong> — <code>bg-wash-hover</code> behind the disc. The disc's own fill never changes on hover</div>
+      </div>
+      <div class="swatch">
+        <div class="flex items-center gap-2">
+          <button type="button" aria-label="focus example" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button outline outline-focus outline-offset-focus outline-ink-mute"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ok"></span></button>
+          <span class="font-ui text-chrome text-ink-mute">focus</span>
+        </div>
+        <div class="cap"><strong>focus</strong> — the shared 1px <code>ink-mute</code> outline at 2px offset, inherited from <code>Button</code>'s shell</div>
+      </div>
+    </div>
+    <div class="callout" data-c="non-states">
+      <strong>Deliberate non-states.</strong>
+      <ul>
+        <li><strong>No disabled.</strong> B3 — the only exit from a broken setup must never be closed.</li>
+        <li><strong>No pulse or blink on <code>checking</code>.</strong> <code>motion-informs</code>: the animation would carry no information the muted fill does not, and the state typically lasts one request. A spinner here would also read as a fourth thing, next to <code>StatusLine</code>'s real in-flight spinner.</li>
+        <li><strong>No loading or error state of its own.</strong> It renders a status; failing to <em>determine</em> the status is what <code>checking</code> already is.</li>
+        <li><strong>No fourth state.</strong> <code>reconnecting</code>/<code>paused</code> are plausible futures (see the tri-state table) but have no tenant, and <a href="../../decisions/dec-21-props-need-a-truthful-source.html">DEC-21</a> is explicit that a mode with no tenant is deferred, not built.</li>
+        <li><strong>No count, no badge.</strong> The flow count lives beside it as its own text (<code>App.tsx:178</code>); attaching it here would give one element three jobs.</li>
+      </ul>
+    </div>
+
+    <h2 id="forks">Forks — the contested decisions</h2>
+
+    <h3 id="fork-s1">S1 · One element for status and navigation, or two?</h3>
+    <div class="fork-row" data-c="fork-s1">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — one element, both jobs</div>
+        <div class="app">
+          <div class="flex items-center gap-2 bg-canvas p-2">
+            <button type="button" aria-label="w1" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button hover:bg-wash-hover"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-warn"></span></button>
+            <span class="font-serif text-title italic text-ink">Trawler</span>
+          </div>
+        </div>
+        <div class="fc-note">The thing that tells you setup is broken <em>is</em> the thing you press to fix it. One target, zero extra chrome, and the affordance is discoverable exactly when it is needed.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — a dot plus a settings button</div>
+        <div class="app">
+          <div class="flex items-center gap-2 bg-canvas p-2">
+            <span class="inline-block h-spinner w-spinner rounded-full bg-warn"></span>
+            <span class="font-serif text-title italic text-ink">Trawler</span>
+            <button type="button" aria-label="l1" class="ml-2 inline-flex min-h-control min-w-control items-center justify-center rounded-button text-glyph-lg text-ink-mute hover:bg-wash-hover">⚙</button>
+          </div>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> two elements for one concern, and the gear is dead weight in the <code>connected</code> state that is 99% of the app's life. It also separates the alarm from its remedy — <code>data-ink-first</code>: strip the gear and nothing is lost, because the dot can carry the press.</div>
+      </div>
+    </div>
+
+    <h3 id="fork-s2">S2 · Is it made of <code>TonedText</code>?</h3>
+    <div class="fork-row" data-c="fork-s2">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — no; a bare button + a tinted disc</div>
+        <div class="app">
+          <button type="button" aria-label="w2" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button hover:bg-wash-hover"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ok"></span></button>
+        </div>
+        <div class="fc-note"><code>TonedText</code> renders <em>text</em> in a tone — "tone in, text in, span out". This renders no text at all, and its colour is a <code>background</code>, not a <code>color</code>. Composing it would mean passing an empty string and overriding the one property it exists to set.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — TonedText, like its two siblings</div>
+        <div class="app">
+          <span class="font-mono text-body text-ok">●</span>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> <code>StatusPill</code> and <code>StatusLine</code> are both <code>@madeof TonedText</code>, so the symmetry is tempting. But rendering the disc as a <code>●</code> glyph makes its size a function of the font, its vertical alignment a per-browser accident, and its shape a typeface's opinion. The disc is a <em>shape</em>, and <code>TonedText</code>'s tone maps to <code>text-*</code> — a channel this component does not use.</div>
+      </div>
+    </div>
+
+    <h3 id="fork-s2b">S2b · Why not a variable-fill <code>IconButton</code>?</h3>
+    <div class="fork-row" data-c="fork-s2b">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — its own T2 entry</div>
+        <div class="app">
+          <div class="flex items-center gap-2 bg-canvas p-2">
+            <button type="button" aria-label="w2b" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button hover:bg-wash-hover"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ok"></span></button>
+            <span class="font-ui text-chrome text-ink-mute">status → fill + phrase, owned here</span>
+          </div>
+        </div>
+        <div class="fc-note">The two are structurally close and that is the point: this composes the same <code>Button</code> shell <code>IconButton</code> does. What it adds is the pair of <em>maps</em> — <code>DotStatus</code>→fill and <code>DotStatus</code>→phrase — which is business logic, and <code>IconButton</code> is a T1 whose contract is "no business logic". A T2 that owns a domain mapping is the same shape <code>StatusPill</code> and <code>MethodLabel</code> already have.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — extend IconButton with a fill slot</div>
+        <div class="app">
+          <div class="flex items-center gap-2 bg-canvas p-2">
+            <button type="button" aria-label="l2b" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button text-glyph-lg text-ok">●</button>
+            <span class="font-ui text-chrome text-ink-mute">caller resolves tone + title</span>
+          </div>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> <code>IconButton</code>'s job is a <em>glyph</em> — its <code>@use</code> is "icon-only triggers unambiguous in place", and its accessible name is the caller's. Passing a resolved fill and a resolved phrase in from the call site is exactly the pre-resolving that <code>StatusPill</code>'s <code>@avoid</code> forbids, and it puts the tone map back at the one call site — where <a href="../../decisions/dec-20-logic-lives-with-its-inputs.html">DEC-20</a> says it must not live. The shell is shared; the mapping is not extendable into a T1.</div>
+      </div>
+    </div>
+
+    <h3 id="fork-s3">S3 · Keep the shipped 10px hit target?</h3>
+    <div class="fork-row" data-c="fork-s3">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — 24px button around a 10px disc</div>
+        <div class="app">
+          <div class="flex items-center gap-2 bg-canvas p-2">
+            <button type="button" aria-label="w3" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button bg-wash-hover"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ok"></span></button>
+            <span class="font-ui text-chrome text-ink-mute">24 × 24</span>
+          </div>
+        </div>
+        <div class="fc-note">The disc stays 10px — driver ① wants it small. The <em>button</em> grows to the app's 24px floor with transparent padding, exactly as <code>IconButton</code> does. <code>generous-targets</code>: the target could be bigger for free, so it is.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — the disc is the button (ships today)</div>
+        <div class="app">
+          <div class="flex items-center gap-2 bg-canvas p-2">
+            <button type="button" aria-label="l3" class="inline-block h-spinner w-spinner shrink-0 rounded-full bg-ok"></button>
+            <span class="font-ui text-chrome text-ink-mute">10 × 10</span>
+          </div>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> this is <code>components.tsx:38</code> verbatim — a 10px target where the app's own floor is 24px, failing WCAG 2.5.8 by 14px on the one control that must never be hard to hit. <em>W2 must not copy the shipped class string.</em></div>
+      </div>
+    </div>
+
+    <h3 id="fork-s4">S4 · <code>title</code> only, or an accessible name too?</h3>
+    <div class="fork-row" data-c="fork-s4">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — both, same phrase</div>
+        <div class="app">
+          <div class="flex flex-col gap-1 bg-canvas p-2 font-mono text-chrome">
+            <span class="text-ink-mute">title="Not capturing yet — click to set up"</span>
+            <span class="text-ok">aria-label="not capturing yet — click to set up"</span>
+          </div>
+        </div>
+        <div class="fc-note">Sighted hover and assistive tech get the same verdict from the same source. Driver ④'s second channel only counts if it reaches everyone.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — title alone (ships today)</div>
+        <div class="app">
+          <div class="flex flex-col gap-1 bg-canvas p-2 font-mono text-chrome">
+            <span class="text-ink-mute">title="Not capturing yet — click to set up"</span>
+            <span class="text-warn">announced as: "button"</span>
+          </div>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> <code>title</code> is not reliably an accessible name and is unreachable by touch and keyboard. An empty button whose only content is a coloured div announces as "button" — <code>colour-plus-text</code> satisfied for sighted users and breached for everyone else. This is a <strong>real defect in the shipped component</strong>, found by this design.</div>
+      </div>
+    </div>
+
+    <h2 id="api">API + TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Earns its row because…</th></tr></thead>
+      <tbody>
+        <tr><td><code>status</code></td><td><code>DotStatus</code></td><td>the resolved lifecycle state — the component's whole input (B1). Required</td></tr>
+        <tr><td><code>onClick</code></td><td><code>() =&gt; void</code></td><td>driver ② — the navigation half. Required, because a StatusDot that does nothing is a <code>&lt;span&gt;</code> and should be written as one</td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--muted);font-size:12.5px;"><strong>Not props, on purpose:</strong> <code>title</code>/<code>label</code> (the phrase is the component's, per state — a caller-supplied one is how three copies of a tone map happen) · <code>tone</code> (that would make it <code>TonedText</code> and let a caller show green while broken) · <code>size</code> (one tenant, one size; <code>spinner</code> is the token) · <code>disabled</code> (B3) · <code>className</code> (nothing to vary — it has one position in one header).</p>
+    <pre class="tsdoc" data-c="tsdoc">/**
+ * StatusDot — capture health as one disc, and the app's only way back into setup.
+ *
+ * @tier T2 — owns the DotStatus→fill map (broken=warn, checking=ink-mute, connected=ok) and the DotStatus→phrase map that gives every state its words; status in, full display out. The phrases come from COPY.dotTitle, the status from dotStatus() — it derives neither
+ * @anatomy a 24×24 bare-square button (Button's frame="bare" shape="square" shell — the app's hit floor, WCAG 2.5.8) wrapping a 10px rounded-full disc (spinner token) whose background carries the state · the disc is aria-hidden; the button's aria-label and title both carry the verdict in words · data-status carries the raw state for tests
+ * @use the app header's capture indicator — the single tenant, on screen in both the onboarding and proven phases. Pass a resolved DotStatus and the handler that re-invokes setup
+ * @avoid an HTTP status (use StatusPill) · a precondition's verdict with a name and message (use StatusLine) · a toned value that is text (use TonedText — this renders a shape, and its colour is a background, not a color) · deriving the status from app phase inside the component (dotStatus() owns that, DEC-20) · a caller-supplied phrase, tone or size — each is the component's, per state · disabling it in any state: it is the only route back to setup, so a disabled dot is a dead end · rendering it as a bare span or a ● glyph, which loses the hit target, the accessible name, or both
+ * @states broken (bg-warn — setup incomplete or capture never proven) · checking (bg-ink-mute — the launch self-test is still resolving; a lifecycle transient, NOT StatusTone's terminal muted) · connected (bg-ok — a decrypted HTTPS flow has been seen) · hover (wash behind the disc; the fill never changes) · focus (the shared 1px ink-mute outline). No disabled, loading, error or fourth state, and no pulse on checking — motion would carry nothing the fill does not
+ * @madeof Button (T1) with frame="bare" shape="square" — element, focus ring, radius, hit floor and keyboard come from the shell, the way IconButton composes it. NOT TonedText, unlike its two status siblings: there is no text to tone
+ */</pre>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="fork-row" data-c="fit">
+      <div class="fork-card win">
+        <div class="fc-lbl">✓ reach for StatusDot when…</div>
+        <ul style="font-size:12.5px;line-height:1.6;margin:0;padding-left:18px;">
+          <li>you are rendering the app header's capture indicator — the one tenant</li>
+          <li>you have a resolved <code>DotStatus</code> and the handler that re-opens setup</li>
+        </ul>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">✗ reach for something else when…</div>
+        <ul style="font-size:12.5px;line-height:1.6;margin:0;padding-left:18px;">
+          <li>it is a flow's HTTP outcome → <code>StatusPill</code></li>
+          <li>it is a precondition with a name and a reason → <code>StatusLine</code></li>
+          <li>it is a short toned <em>value</em> → <code>TonedText</code></li>
+          <li>a zone has nothing to show and must say which nothing → <code>Notice</code></li>
+          <li>you want a second dot somewhere else → there is exactly one; a second means the state set has a new axis, which is a propose, not a reuse</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 id="tokens">Tokens — mockup → build</h2>
+    <table data-c="tokens">
+      <thead><tr><th>Part</th><th>Tailwind classes (verbatim — this is the component's <code>className</code>)</th></tr></thead>
+      <tbody>
+        <tr><td><strong>the button</strong></td><td><code>inline-flex min-h-control min-w-control shrink-0 cursor-pointer items-center justify-center rounded-button transition-colors hover:bg-wash-hover</code></td></tr>
+        <tr><td><strong>focus</strong></td><td><code>focus-visible:outline focus-visible:outline-focus focus-visible:outline-ink-mute focus-visible:outline-offset-focus</code> — inherited from <code>Button</code>'s shell, not re-declared</td></tr>
+        <tr><td><strong>the disc</strong> (base)</td><td><code>inline-block h-spinner w-spinner rounded-full</code></td></tr>
+        <tr><td><strong>disc fill</strong> — <code>broken</code></td><td><code>bg-warn</code></td></tr>
+        <tr><td><strong>disc fill</strong> — <code>checking</code></td><td><code>bg-ink-mute</code></td></tr>
+        <tr><td><strong>disc fill</strong> — <code>connected</code></td><td><code>bg-ok</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="token-delta">
+      <strong>Two changes from the shipped class string</strong> (<code>components.tsx:38</code>, which is <code>inline-block h-spinner w-spinner shrink-0 rounded-full bg-*</code> on the <code>&lt;button&gt;</code> itself): the disc moves into an inner <code>&lt;span&gt;</code> so the button can take the 24px floor (fork S3), and the button gains the hover wash and focus ring it has never had. <strong>The three fills and the three phrases are kept exactly</strong> — they are correct, and <code>COPY.dotTitle</code> stays their source. No new token is needed and none is proposed; the rulebook proposal above is about a <em>meaning</em> table row, not a value.
+    </div>
+
+    <h2 id="specimen">Live specimen</h2>
+    <p style="color:var(--muted);">Fully live — the component is a button and a map. Click the dot to cycle <code>broken</code> → <code>checking</code> → <code>connected</code>; the phrase below is the button's own <code>aria-label</code>, read straight off the element, so what a screen reader would announce is what you see (B2, fork S4).</p>
+    <div class="app demo-shell" data-c="specimen">
+      <div id="spec-live"></div>
+    </div>
+    <script>
+      const STATES = [
+        { status: 'broken',    fill: 'bg-warn',     phrase: 'not capturing yet — click to set up' },
+        { status: 'checking',  fill: 'bg-ink-mute', phrase: 'checking…' },
+        { status: 'connected', fill: 'bg-ok',       phrase: 'capturing — click to run setup again' },
+      ];
+      const root = document.getElementById('spec-live');
+      root.innerHTML = `
+        <div class="flex flex-col gap-3 rounded-panel bg-canvas p-3">
+          <div class="flex items-center gap-2">
+            <button id="sp-dot" type="button"
+                    class="inline-flex min-h-control min-w-control shrink-0 cursor-pointer items-center justify-center rounded-button transition-colors hover:bg-wash-hover focus-visible:outline focus-visible:outline-focus focus-visible:outline-ink-mute focus-visible:outline-offset-focus">
+              <span id="sp-disc" aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full"></span>
+            </button>
+            <span class="font-serif text-title italic text-ink">Trawler</span>
+          </div>
+          <div class="font-mono text-chrome text-ink-mute">data-status=<span id="sp-status" class="text-ink"></span></div>
+          <div class="font-mono text-chrome text-ink-mute">aria-label=<span id="sp-phrase" class="text-ink"></span></div>
+        </div>`;
+      const btn = root.querySelector('#sp-dot');
+      const disc = root.querySelector('#sp-disc');
+      let i = 0;
+      const render = () => {
+        const s = STATES[i];
+        disc.className = `inline-block h-spinner w-spinner rounded-full ${s.fill}`;
+        btn.setAttribute('aria-label', s.phrase);
+        btn.setAttribute('title', s.phrase);
+        btn.setAttribute('data-status', s.status);
+        root.querySelector('#sp-status').textContent = JSON.stringify(s.status);
+        root.querySelector('#sp-phrase').textContent = JSON.stringify(btn.getAttribute('aria-label'));
+      };
+      btn.addEventListener('click', () => { i = (i + 1) % STATES.length; render(); });
+      render();
+    </script>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

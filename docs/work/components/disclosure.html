@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a7b2b9f34851f0dfabfe1">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Disclosure component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- No import map and no module scripts: a design file must open by double-click,
+       and a file:// page may not run module scripts. specimens.bundle.js is a plain
+       classic script carrying the app theme, the shared specimen behaviours and the
+       real collection, in that order — one tag that cannot be misordered. Generated
+       and git-ignored: regenerate with `cargo xtask ui specimens`. -->
+  <script src="../../../doc-assets/components/specimens.bundle.js"></script>
+  <style>
+    /* Doc scaffolding only — never a component rule. Component styling is
+       Tailwind utilities read from ui/tailwind.config.js via specimens.bundle.js. */
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:var(--a-ui);}
+    .tsdoc{font-family:var(--a-mono);font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;white-space:pre-wrap;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;}
+    .swatch{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:8px;}
+    .swatch .cap strong{color:var(--ink);}
+    .fork-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;}
+    .fork-card{border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-width:220px;flex:1;background:var(--paper);}
+    .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);}
+    .fork-card.win{border-color:var(--ok);}
+    .fork-card.win .fc-lbl{color:var(--ok);}
+    .fork-card.lose .fc-lbl{color:var(--warn);}
+    .fork-card .fc-note{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:8px;}
+    .kbd{display:inline-block;border:1px solid var(--line);border-radius:3px;padding:0 4px;font-family:var(--a-mono);font-size:11px;color:var(--ink);background:var(--paper);}
+    .cmp td,.cmp th{vertical-align:top;font-size:12.5px;}
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
+    table{font-size:13px;}
+    .demo-shell{border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--paper);}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Disclosure <span class="tier t1">T1</span></h1>
+      <p>The collapse primitive — a summary line that reveals a slot. It owns the twist, the target and the keyboard; it decides nothing about what it hides.</p>
+      <div class="meta">Component design · <strong>draft — awaiting confirmation</strong> · 2026-09-04 · <a href="../2026-09-04-redesign-w1-plan.html">E-REDESIGN.W1</a> · T3 (docs/work/components/) · format: <a href="../../component-design.html">component design</a> · hand-rolled today at <code>ui/src/Onboarding.tsx:123</code> and twice more in the same file</div>
+    </div>
+  </header>
+  <main>
+    <div class="callout warn" data-c="w2-obligation">
+      <strong>W2 retires this file.</strong> The moment <a href="../2026-09-04-redesign-plan.html">W2</a> lands <code>ui/src/components/Disclosure.tsx</code>, this contract becomes that file's TSDoc and <code>components·unretired</code> reds until this file is removed in <a href="../../decisions/dec-16-design-file-retirement.html">DEC-16</a>'s order: distil the forks to <code>docs/decisions/</code>, verify the TSDoc carries the whole contract, then delete.
+    </div>
+    <div class="callout" data-c="citation-convention">
+      <strong>How the registry is cited here.</strong> Every component named in <code>code</code> — <code>Section</code>, <code>StepList</code>, <code>Notice</code>, <code>SegmentedControl</code>, <code>Button</code> — is a live registry entry whose contract is its TSDoc in <code>ui/src/components/</code>. Their design files were retired under <a href="../../decisions/dec-16-design-file-retirement.html">DEC-16</a> and archived out of git, so they are cited by name rather than linked: read them with <code>node scripts/design-registry.mjs</code>.
+    </div>
+
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> <code>Section</code>'s <code>@avoid</code> already routes here — <em>"a Section that needs to collapse (put the disclosure inside the slot instead)"</em> — and names a thing that does not exist, so the instruction currently resolves to "hand-roll it". Which is what happened: <strong>three raw <code>&lt;details&gt;</code> in one file</strong> (<code>Onboarding.tsx:134</code>, <code>:188</code>, <code>:276</code>), each repeating the same <code>cursor-pointer text-ink-mute</code> summary and each getting the browser's default triangle. The do-nothing answer keeps them, and it fails twice over: the summary styling is copy-pasted three times with nothing keeping it in step, and every one of them inherits a disclosure triangle the app never chose — <strong>a piece of chrome from outside the closed vocabulary, invisible to every check because it is a UA default, not a class</strong>.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — summary line, twist, target, keyboard, and a slot. No business logic, and it never inspects what it hides. <strong>This answers the epic plan's open question</strong>: T1, slot-based, the host owns what is inside and whether it starts open</td></tr>
+      <tr><td><strong>Tenants</strong></td><td><strong>Onboarding's <code>ManualPanel</code></strong> — the manual-setup fallback, opened automatically when an action fails (<code>Onboarding.tsx:123-139</code>) · <strong>"Remove the certificate later"</strong> (<code>:188</code>) · <strong>"Turn the proxy off later"</strong> (<code>:276</code>). Three tenants in one file today, which is what makes it a component rather than a one-off</td></tr>
+      <tr><td><strong>Exists today</strong></td><td>as three raw <code>&lt;details&gt;/&lt;summary&gt;</code> pairs, no shared component. <code>ManualPanel</code> (<code>:123</code>) is the closest thing to one, and it is a screen-local wrapper whose real job is the <em>conditional</em> — collapsed or not at all</td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (the leaf). Native <code>&lt;details&gt;/&lt;summary&gt;</code> is the element (fork D1); the twist glyph and the summary chrome are this component's</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① what it hides is secondary, never absent</td><td>the summary is always visible and always reads as pressable. <code>progressive-disclosure</code>: the default view is the scan level, depth is one explicit act away — so the closed state must make clear that there <em>is</em> depth, which is what the twist glyph is for</td></tr>
+        <tr><td>② its host decides the initial state, and sometimes forces it open</td><td><code>defaultOpen</code> is a prop, because <code>ManualPanel</code> opens itself when an action fails (<code>open={state === "failed"}</code>, <code>Onboarding.tsx:167</code>) — the app's one case of a disclosure that reacts to state. The component never derives this</td></tr>
+        <tr><td>③ the app must own its own chrome (<a href="../../decisions/dec-17-closed-vocabulary.html">DEC-17</a>)</td><td>the UA triangle is suppressed and replaced with a <code>›</code> that rotates — a glyph the vocabulary chose. A default nobody picked is the one kind of drift the closed-vocabulary lint cannot see, because there is no class to read</td></tr>
+        <tr><td>④ zero chromatic accent (<a href="../../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a>)</td><td>the summary is <code>ink-mute</code> at rest and <code>ink</code> on hover — the same two-step ink lift <code>Button</code> and <code>Field</code> use. No colour, no underline, no link styling</td></tr>
+        <tr><td>⑤ it sits inside a step the user is reading</td><td>opening pushes content down rather than overlaying — the opposite of <code>Select</code>'s popup (whose driver ⑥ says the reverse), because here the revealed content <em>is</em> the next thing to read, not a choice to make and dismiss</td></tr>
+        <tr><td>⑥ keyboard-complete (<code>keyboard-parity</code>)</td><td><span class="kbd">Enter</span>/<span class="kbd">Space</span> toggles — the rulebook's "activate the focused element" binding, inherited free from native <code>&lt;summary&gt;</code> (fork D1). Focus stays on the summary through the toggle, so a keyboard user is never dropped into revealed content or out to <code>&lt;body&gt;</code></td></tr>
+        <tr><td>⑦ touch target (WCAG 2.5.8)</td><td>the whole summary row is the target, full width, at <code>min-h-control</code> — not the glyph, and not just the words. <code>generous-targets</code>: the target could be bigger for free, so it is</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="vs-section">Boundary — Disclosure vs <code>Section</code></h2>
+    <p style="color:var(--muted);">These are the two "a label above some content" components, and <code>Section</code>'s <code>@avoid</code> is the reason this one exists. The line has to be crisp, because reaching for the wrong one produces a screen that looks right and drifts on the next edit.</p>
+    <table data-c="vs-section" class="cmp">
+      <thead><tr><th></th><th>Disclosure <em>(this)</em></th><th><code>Section</code></th></tr></thead>
+      <tbody>
+        <tr><td><strong>content is</strong></td><td>hidden until asked for</td><td>always visible</td></tr>
+        <tr><td><strong>the label is</strong></td><td>a control — pressable, focusable</td><td>a heading — <code>h2</code>/<code>h3</code>, inert</td></tr>
+        <tr><td><strong>in the document outline</strong></td><td><span class="no">no</span> — a summary is not a heading</td><td><span class="yes">yes</span> — that is half its job</td></tr>
+        <tr><td><strong>separator</strong></td><td>none — it is inline in its host's flow</td><td>hairline bottom border between siblings</td></tr>
+        <tr><td><strong>nesting</strong></td><td>allowed but unused; no depth cap of its own</td><td>capped at two levels (<code>variant="band"</code>, never nested)</td></tr>
+        <tr><td><strong>archetype</strong></td><td>"set it up manually" · "remove the certificate later"</td><td>request · response · headers</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="composition-note">
+      <strong>They compose, and the direction is fixed.</strong> <code>Section</code>'s <code>@avoid</code> says a Section that needs to collapse puts <em>the disclosure inside the slot</em> — so a Disclosure may live in a Section's content, and a Section must never live in a Disclosure's summary. That keeps the heading outline stable whatever is open: a collapsed Disclosure hides content, never a heading. <strong>No edit to <code>Section</code> is needed</strong> — its <code>@avoid</code> line becomes true the moment this component exists, which is the whole point of the phantom-redirect class of bug this epic closes.
+    </div>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-hero">
+      <div class="demo-shell">
+        <div class="rounded-panel bg-canvas p-3">
+          <div class="font-ui text-body text-ink-body">Trawler can install the certificate for you.</div>
+          <div class="mt-2">
+            <div class="flex min-h-control cursor-pointer select-none items-center gap-chrome-gap font-ui text-body text-ink-mute">
+              <span aria-hidden="true" class="inline-block w-glyph text-glyph leading-none">›</span>
+              <span>Set it up manually</span>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">Closed — the real <code>ManualPanel</code> summary (<code>Onboarding.tsx:135</code>). <span class="anno">1</span> the twist · <span class="anno">2</span> the summary · <span class="anno">3</span> the slot (hidden here)</div>
+      </div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2">
+              <div class="flex items-center gap-chrome-gap font-ui text-body text-ink-mute"><span aria-hidden="true" class="inline-block w-glyph text-glyph leading-none">›</span><span>closed</span></div>
+              <div class="flex items-center gap-chrome-gap font-ui text-body text-ink"><span aria-hidden="true" class="inline-block w-glyph rotate-90 text-glyph leading-none">›</span><span>open</span></div>
+            </div>
+          </div>
+          <div class="cap">The same glyph, rotated 90° — never two glyphs</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> the twist</strong>
+          <div class="spec">
+            <div class="k">spec</div><div><code>›</code> in a fixed <code>w-glyph</code> slot · <code>text-glyph</code> · <code>rotate-90</code> when open · <code>transition-transform</code> · <code>aria-hidden</code> — the <code>&lt;summary&gt;</code> element already carries the expanded state for assistive tech</div>
+            <div class="k">why</div><div>driver ③ — this replaces the UA triangle, which is unstyleable across browsers and comes from outside the vocabulary. One rotating glyph rather than <code>›</code>/<code>⌄</code> keeps the shape constant so only the <em>angle</em> reads as the state change, and the fixed-width slot stops the label shifting on toggle. <code>motion-informs</code>: the rotation is the state change, which is the only thing it says</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2">
+              <div class="flex min-h-control items-center gap-chrome-gap rounded-button font-ui text-body text-ink-mute"><span aria-hidden="true" class="inline-block w-glyph text-glyph leading-none">›</span><span>Remove the certificate later</span></div>
+              <div class="flex min-h-control items-center gap-chrome-gap rounded-button bg-wash-hover font-ui text-body text-ink"><span aria-hidden="true" class="inline-block w-glyph text-glyph leading-none">›</span><span>Remove the certificate later</span></div>
+            </div>
+          </div>
+          <div class="cap">Rest and hover — the row is the target, edge to edge</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> the summary</strong>
+          <div class="spec">
+            <div class="k">spec</div><div><code>&lt;summary&gt;</code> · full-width row · <code>min-h-control</code> · <code>font-ui text-body</code> · <code>text-ink-mute</code> → <code>hover:text-ink</code> · <code>cursor-pointer select-none</code> · the UA marker removed via <code>list-none</code> + <code>[&amp;::-webkit-details-marker]:hidden</code></div>
+            <div class="k">why</div><div>drivers ④ and ⑦. The two-step ink lift is the app's standard "this is pressable" channel, since <code>zero-accent</code> leaves no colour for it. Full-width because the label length varies from two words to five and the target should not vary with it. <code>select-none</code> keeps a double-click from selecting the label instead of toggling</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="bg-canvas p-2">
+              <div class="flex min-h-control items-center gap-chrome-gap font-ui text-body text-ink"><span aria-hidden="true" class="inline-block w-glyph rotate-90 text-glyph leading-none">›</span><span>Set it up manually</span></div>
+              <div class="mt-chrome-y font-ui text-body text-ink-body">Steps for macOS…</div>
+            </div>
+          </div>
+          <div class="cap">Open — the slot renders whatever the host passed</div>
+        </div>
+        <div>
+          <strong><span class="anno">3</span> the slot</strong>
+          <div class="spec">
+            <div class="k">spec</div><div><code>mt-chrome-y</code> below the summary and nothing else — no padding, no border, no background, no indent, no max-height, no scroll</div>
+            <div class="k">why</div><div>the T1 claim in one line: the component adds a gap and gets out of the way. Its three tenants pass a <code>Select</code>, a <code>StepList</code> and a nested block respectively, each with its own spacing — an indent or a border here would fight all three. <strong>No <code>overflow-declared</code> cap either</strong>: unbounded content is the host's zone to cap, and a <code>max-height</code> here would clip a <code>StepList</code> mid-step</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — what the parts do</h2>
+    <p style="color:var(--muted);"><strong>Anatomy is what you see; behavior is what it does.</strong> The rules below are mostly about the line between the component's state and its host's.</p>
+    <div class="app parts" data-c="behavior-rules">
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2 font-mono text-chrome text-ink-mute">
+              <div>&lt;Disclosure summary="…" defaultOpen&gt;</div>
+              <div class="text-ink">↑ the host's opinion, once</div>
+              <div>then: the user's clicks own it</div>
+            </div>
+          </div>
+          <div class="cap">Uncontrolled — <code>defaultOpen</code> seeds, it does not bind</div>
+        </div>
+        <div>
+          <strong>B1 · the open state is the component's, seeded by the host</strong>
+          <div class="spec">
+            <div class="k">spec</div><div><code>defaultOpen</code> sets the initial state. After that the user owns it; there is no <code>open</code>/<code>onToggle</code> controlled pair</div>
+            <div class="k">why</div><div>driver ② — and it is deliberately the <em>weaker</em> of the two APIs. Native <code>&lt;details&gt;</code> already holds this state correctly; a controlled version would mean re-implementing it to gain a capability no tenant has asked for. <code>ManualPanel</code>'s <code>open={state === "failed"}</code> is a seed, not a binding: once a user closes it, a re-render should not yank it open again. <a href="../../decisions/dec-21-props-need-a-truthful-source.html">DEC-21</a> — a mode with no tenant is deferred</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2">
+              <div class="flex min-h-control items-center gap-chrome-gap rounded-button font-ui text-body text-ink outline outline-focus outline-offset-focus outline-ink-mute"><span aria-hidden="true" class="inline-block w-glyph text-glyph leading-none">›</span><span>Set it up manually</span></div>
+              <div class="font-mono text-chrome text-ink-mute"><span class="text-ink">Enter</span> / <span class="text-ink">Space</span> toggles · focus stays here</div>
+            </div>
+          </div>
+          <div class="cap">Focused, closed — the summary is a real focus stop</div>
+        </div>
+        <div>
+          <strong>B2 · keyboard and semantics come from the element, not from code</strong>
+          <div class="spec">
+            <div class="k">spec</div><div>native <code>&lt;summary&gt;</code>: focusable, <span class="kbd">Enter</span>/<span class="kbd">Space</span> toggles, exposes <code>aria-expanded</code> and the disclosure role, focus never moves on toggle. No <code>role</code>, no <code>tabIndex</code>, no key handler is written</div>
+            <div class="k">why</div><div>drivers ⑥ and fork D1. Every one of those is a thing a <code>&lt;div&gt;</code> re-implementation gets subtly wrong, and <code>focus-returns-to-origin</code> is satisfied by construction because focus never leaves. <strong>The shipped <code>&lt;details&gt;</code> already gets this right</strong> — this design keeps it and adds only the chrome</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2 font-mono text-chrome text-ink-mute">
+              <div class="text-warn">✗ collapsed ? &lt;Disclosure&gt; : children</div>
+              <div class="text-ok">✓ the host branches; Disclosure only collapses</div>
+            </div>
+          </div>
+          <div class="cap"><code>ManualPanel</code>'s conditional stays in the screen</div>
+        </div>
+        <div>
+          <strong>B3 · "collapsed or not at all" is not this component's decision</strong>
+          <div class="spec">
+            <div class="k">spec</div><div>there is no <code>collapsed</code> prop. A Disclosure always discloses; a host that sometimes wants no disclosure renders the content bare instead</div>
+            <div class="k">why</div><div>this is exactly what <code>ManualPanel</code> does today (<code>Onboarding.tsx:132</code> — <code>if (!collapsed) return &lt;div&gt;{children}&lt;/div&gt;</code>), and that branch is <em>screen</em> logic: it means "when we cannot automate this step, the manual steps are the primary content, not a fallback". A T1 that took a <code>collapsed</code> prop would be a component that renders as not-itself — the T1 contract's plainest breach</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="bg-canvas p-2">
+              <div class="flex min-h-control items-center gap-chrome-gap font-ui text-body text-ink"><span aria-hidden="true" class="inline-block w-glyph rotate-90 text-glyph leading-none">›</span><span>Set it up manually</span></div>
+              <div class="mt-chrome-y font-ui text-body text-ink-body">…content pushes the page down…</div>
+            </div>
+          </div>
+          <div class="cap">Opening reflows; nothing overlays</div>
+        </div>
+        <div>
+          <strong>B4 · it reflows, and it does not animate height</strong>
+          <div class="spec">
+            <div class="k">spec</div><div>open/close is instant — content appears in flow and pushes siblings down. Only the twist transitions. No height animation, no fade</div>
+            <div class="k">why</div><div>driver ⑤ and <code>motion-informs</code>. The revealed content is the next thing to read, so a 200ms height animation delays reading and, in a <code>StepList</code> of unknown length, animates to a height nothing can predict. The twist's rotation already carries "this changed"</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <div class="flex min-h-control items-center gap-chrome-gap font-ui text-body text-ink-mute"><span aria-hidden="true" class="inline-block w-glyph text-glyph leading-none">›</span><span>Set it up manually</span></div>
+        <div class="cap"><strong>closed</strong> — <code>ink-mute</code>, twist at 0°. The default</div>
+      </div>
+      <div class="swatch">
+        <div class="flex min-h-control items-center gap-chrome-gap font-ui text-body text-ink"><span aria-hidden="true" class="inline-block w-glyph rotate-90 text-glyph leading-none">›</span><span>Set it up manually</span></div>
+        <div class="mt-chrome-y font-ui text-body text-ink-body">the slot's content</div>
+        <div class="cap"><strong>open</strong> — summary lifts to <code>ink</code>, twist at 90°, slot in flow</div>
+      </div>
+      <div class="swatch">
+        <div class="flex min-h-control items-center gap-chrome-gap rounded-button bg-wash-hover font-ui text-body text-ink"><span aria-hidden="true" class="inline-block w-glyph text-glyph leading-none">›</span><span>Set it up manually</span></div>
+        <div class="cap"><strong>hover</strong> — <code>wash-hover</code> across the whole row, ink lifts</div>
+      </div>
+      <div class="swatch">
+        <div class="flex min-h-control items-center gap-chrome-gap rounded-button font-ui text-body text-ink outline outline-focus outline-offset-focus outline-ink-mute"><span aria-hidden="true" class="inline-block w-glyph text-glyph leading-none">›</span><span>Set it up manually</span></div>
+        <div class="cap"><strong>focus</strong> — the shared 1px <code>ink-mute</code> outline at 2px offset</div>
+      </div>
+    </div>
+    <div class="callout" data-c="non-states">
+      <strong>Deliberate non-states.</strong>
+      <ul>
+        <li><strong>No disabled.</strong> No tenant, and a disclosure that cannot open is content that should not have been rendered. Adding it later is additive; guessing it now is <a href="../../decisions/dec-21-props-need-a-truthful-source.html">DEC-21</a>'s "a mode with no tenant".</li>
+        <li><strong>No empty state.</strong> A Disclosure with nothing in its slot is a caller bug, not a state — the host renders no Disclosure at all, exactly as <code>StepList</code> declares for its own empty case.</li>
+        <li><strong>No loading.</strong> Its content is passed, never fetched; a host awaiting content renders a <code>Notice</code> in the slot.</li>
+        <li><strong>No overflow cap.</strong> Unbounded content is the host zone's to cap (see anatomy <span class="anno">3</span>) — clipping a step list mid-step would be worse than a long page.</li>
+        <li><strong>No transition on the content.</strong> B4 — only the twist moves.</li>
+      </ul>
+    </div>
+
+    <h2 id="forks">Forks — the contested decisions</h2>
+
+    <h3 id="fork-d1">D1 · Native <code>&lt;details&gt;</code>, or a div + state?</h3>
+    <div class="fork-row" data-c="fork-d1">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — native &lt;details&gt;/&lt;summary&gt;</div>
+        <div class="app">
+          <div class="flex flex-col gap-1 bg-canvas p-2 font-mono text-chrome">
+            <span class="text-ink-mute">&lt;details&gt;&lt;summary&gt;…&lt;/summary&gt;</span>
+            <span class="text-ok">free: focus · Enter/Space · aria-expanded · find-in-page</span>
+          </div>
+        </div>
+        <div class="fc-note">Every a11y behaviour driver ⑥ needs, correct by construction and impossible to regress. Browsers also expand <code>&lt;details&gt;</code> for find-in-page, so a user searching for a step in the manual panel finds it — a capability a div version silently loses.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — div + useState</div>
+        <div class="app">
+          <div class="flex flex-col gap-1 bg-canvas p-2 font-mono text-chrome">
+            <span class="text-ink-mute">&lt;div role="button" tabIndex={0} …&gt;</span>
+            <span class="text-warn">hand-written: keydown · aria-expanded · aria-controls</span>
+          </div>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> it buys one thing — a controlled <code>open</code> prop — at the cost of re-implementing four behaviours the platform already has, and B1 shows no tenant wants that prop. The three shipped call sites are all native today and all correct; replacing correct platform semantics with hand-written ones is a regression wearing a refactor's clothes.</div>
+      </div>
+    </div>
+
+    <h3 id="fork-d2">D2 · One rotating glyph, or two glyphs?</h3>
+    <div class="fork-row" data-c="fork-d2">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — one glyph, rotated</div>
+        <div class="app">
+          <div class="flex flex-col gap-2 bg-canvas p-2">
+            <div class="flex items-center gap-chrome-gap font-ui text-body text-ink-mute"><span class="inline-block w-glyph text-glyph leading-none">›</span><span>closed</span></div>
+            <div class="flex items-center gap-chrome-gap font-ui text-body text-ink"><span class="inline-block w-glyph rotate-90 text-glyph leading-none">›</span><span>open</span></div>
+          </div>
+        </div>
+        <div class="fc-note">The shape is constant, so only the angle carries the state — and the label never shifts, because the glyph's box is a fixed <code>w-glyph</code> either way. One character to render, one transform to animate.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — ▸ / ▾ swap</div>
+        <div class="app">
+          <div class="flex flex-col gap-2 bg-canvas p-2">
+            <div class="flex items-center gap-chrome-gap font-ui text-body text-ink-mute"><span class="text-glyph">▸</span><span>closed</span></div>
+            <div class="flex items-center gap-chrome-gap font-ui text-body text-ink"><span class="text-glyph">▾</span><span>open</span></div>
+          </div>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> two glyphs with different advance widths and different vertical centres, so the label nudges sideways and the row's baseline shifts on every toggle. It also cannot transition — the swap is a jump — and it re-introduces the filled triangle that fork D3's whole point is to get rid of.</div>
+      </div>
+    </div>
+
+    <h3 id="fork-d3">D3 · Suppress the UA marker, or live with it?</h3>
+    <div class="fork-row" data-c="fork-d3">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — suppress it, draw our own</div>
+        <div class="app">
+          <div class="flex items-center gap-chrome-gap bg-canvas p-2 font-ui text-body text-ink-mute"><span class="inline-block w-glyph text-glyph leading-none">›</span><span>Set it up manually</span></div>
+        </div>
+        <div class="fc-note"><code>list-none</code> plus <code>[&amp;::-webkit-details-marker]:hidden</code>. The glyph is then the app's: its size is <code>text-glyph</code>, its colour is <code>ink-mute</code>, its gap is <code>chrome-gap</code> — all vocabulary members a check can read.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — the browser's triangle (ships today)</div>
+        <div class="app">
+          <div class="bg-canvas p-2">
+            <details class="font-ui text-body text-ink-mute"><summary class="cursor-pointer">Set it up manually</summary></details>
+          </div>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> this is the live rendering of <code>Onboarding.tsx:135</code> — the marker above is your browser's, not the app's. Its size, colour, gap and shape are decided outside the closed vocabulary (<a href="../../decisions/dec-17-closed-vocabulary.html">DEC-17</a>) and differ per engine, and <strong>no lint can see it, because there is no class to read</strong>. It is the cheapest possible drift and the hardest to detect.</div>
+      </div>
+    </div>
+
+    <h3 id="fork-d4">D4 · Does it take a <code>collapsed</code> prop, absorbing <code>ManualPanel</code> whole?</h3>
+    <div class="fork-row" data-c="fork-d4">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — no; the host branches</div>
+        <div class="app">
+          <div class="flex flex-col gap-1 bg-canvas p-2 font-mono text-chrome">
+            <span class="text-ink-mute">if (!collapsed) return &lt;div&gt;{children}&lt;/div&gt;</span>
+            <span class="text-ok">return &lt;Disclosure&gt;{children}&lt;/Disclosure&gt;</span>
+            <span class="text-ink-mute">↑ stays in Onboarding.tsx</span>
+          </div>
+        </div>
+        <div class="fc-note">Disclosure always discloses. The screen keeps the one line that encodes <em>its</em> rule — "when we cannot automate the step, the manual steps are primary" — which is domain knowledge, not chrome.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — &lt;Disclosure collapsed={…}&gt;</div>
+        <div class="app">
+          <div class="flex flex-col gap-1 bg-canvas p-2 font-mono text-chrome">
+            <span class="text-warn">&lt;Disclosure collapsed={false}&gt; → renders a bare div</span>
+          </div>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> it deletes three lines from one screen and buys a component that, in one of its two modes, is not a disclosure at all — no summary, no twist, no toggle. Every reader of the registry then has to learn that "Disclosure" sometimes means "nothing". <em>The right shape for that conditional is an if in the screen</em>, and it is already written.</div>
+      </div>
+    </div>
+
+    <h2 id="api">API + TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Earns its row because…</th></tr></thead>
+      <tbody>
+        <tr><td><code>summary</code></td><td><code>string</code></td><td>the always-visible label — the one thing every tenant differs on. Required; there is no unlabelled disclosure</td></tr>
+        <tr><td><code>children</code></td><td><code>ReactNode</code></td><td>the slot. Required — an empty Disclosure is a caller bug</td></tr>
+        <tr><td><code>defaultOpen</code></td><td><code>boolean?</code></td><td>driver ② — <code>ManualPanel</code> seeds it open when an action failed. Seeds only, never binds (B1)</td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--muted);font-size:12.5px;"><strong>Not props, on purpose:</strong> <code>open</code>/<code>onToggle</code> (B1, fork D1 — no tenant, and it would cost the native element) · <code>collapsed</code> (fork D4) · <code>icon</code> (one twist, app-wide — a caller-chosen glyph is how a vocabulary stops being one) · <code>variant</code>/<code>className</code> (three tenants, one look; a second look means a second component or a real driver) · <code>maxHeight</code> (the host zone caps, not this).</p>
+    <pre class="tsdoc" data-c="tsdoc">/**
+ * Disclosure — a summary line that reveals a slot; the app's one collapse primitive.
+ *
+ * @tier T1 — summary chrome, the twist, the hit target and the slot. No business logic, and it never inspects what it hides
+ * @anatomy native &lt;details&gt;/&lt;summary&gt; (fork D1 — focus, Enter/Space, aria-expanded and find-in-page come free) · the UA marker suppressed (list-none + ::-webkit-details-marker) and replaced by a › in a fixed w-glyph slot that rotates 90° when open · full-width summary row at min-h-control, ink-mute lifting to ink, wash-hover across the row · the slot adds mt-chrome-y and nothing else — no padding, border, indent or height cap
+ * @use any secondary content a screen offers but does not lead with: manual setup steps, a "remove it later" remedy, an advanced block. Pass the label and the content; pass defaultOpen when the host has a reason to start it open
+ * @avoid a labelled zone whose content is always visible (that is Section — and a Section that needs to collapse puts one of these inside its slot, never the reverse) · a mutually exclusive view switch (that is SegmentedControl) · a "collapsed or not at all" conditional — Disclosure always discloses; the host branches (fork D4) · a controlled open/onToggle pair: the native element owns the state and no tenant needs to override it (DEC-21) · animating the content height, capping it, or scrolling it — only the twist transitions, and unbounded content is the host zone's to cap · a caller-supplied glyph or variant
+ * @states closed (ink-mute, twist 0°) · open (ink, twist 90°, slot in flow — it reflows, never overlays) · hover (wash-hover across the whole row) · focus (the shared 1px ink-mute outline; focus never moves on toggle). No disabled, empty or loading state — an empty slot is a caller bug, and a host awaiting content renders a Notice in the slot
+ * @madeof — (the leaf: native &lt;details&gt;/&lt;summary&gt; is the element, the chrome is this component's)
+ */</pre>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="fork-row" data-c="fit">
+      <div class="fork-card win">
+        <div class="fc-lbl">✓ reach for Disclosure when…</div>
+        <ul style="font-size:12.5px;line-height:1.6;margin:0;padding-left:18px;">
+          <li>content is secondary — offered, not led with (manual steps, a later remedy)</li>
+          <li>you have a short label and a block, and the block should start hidden</li>
+          <li>a <code>Section</code> needs to collapse — put one of these in its slot</li>
+        </ul>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">✗ reach for something else when…</div>
+        <ul style="font-size:12.5px;line-height:1.6;margin:0;padding-left:18px;">
+          <li>the content is always visible → <code>Section</code></li>
+          <li>it is a switch between two views of the same thing → <code>SegmentedControl</code></li>
+          <li>the zone has nothing to show and must say which nothing → <code>Notice</code></li>
+          <li>you want it to sometimes not collapse at all → branch in the screen (D4)</li>
+          <li>you want it to overlay rather than push → that is <code>Select</code>'s popup, a different component and a different driver</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 id="tokens">Tokens — mockup → build</h2>
+    <table data-c="tokens">
+      <thead><tr><th>Part</th><th>Tailwind classes (verbatim — this is the component's <code>className</code>)</th></tr></thead>
+      <tbody>
+        <tr><td><strong>the summary</strong></td><td><code>flex min-h-control cursor-pointer select-none items-center gap-chrome-gap rounded-button font-ui text-body text-ink-mute transition-colors list-none hover:bg-wash-hover hover:text-ink [&amp;::-webkit-details-marker]:hidden</code></td></tr>
+        <tr><td><strong>focus</strong></td><td><code>focus-visible:outline focus-visible:outline-focus focus-visible:outline-ink-mute focus-visible:outline-offset-focus</code></td></tr>
+        <tr><td><strong>the twist</strong></td><td><code>inline-block w-glyph text-glyph leading-none transition-transform</code> · open adds <code>rotate-90</code></td></tr>
+        <tr><td><strong>open summary</strong></td><td><code>[&amp;[open]&gt;summary]:text-ink</code> — or the equivalent state class the build picks</td></tr>
+        <tr><td><strong>the slot</strong></td><td><code>mt-chrome-y</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="token-gap">
+      <strong>One vocabulary gap, and it is W2's to close.</strong> The twist needs <code>rotate-90</code> and <code>transition-transform</code>; <code>ui/tailwind.config.js</code> declares <code>transitionProperty</code> with <strong>only <code>colors</code></strong>, and declares no <code>rotate</code> scale at all — and under <a href="../../decisions/dec-17-closed-vocabulary.html">DEC-17</a> an undeclared scale means the class resolves to nothing. So <code>rotate-90</code> and <code>transition-transform</code> are <strong>not legal today</strong> and neither is a literal an escape can excuse. <strong>Blocked-on: W2 adds <code>rotate: { 0: "0deg", 90: "90deg" }</code> and <code>transform</code> to <code>transitionProperty</code></strong> — two named members, exactly the tenants this component needs, per DEC-17's "a value that has no utility needs a named token in the config". Nothing else in this file needs a token that does not exist.
+    </div>
+
+    <h2 id="specimen">Live specimen</h2>
+    <p style="color:var(--muted);">Fully live, and it is the real element — a native <code>&lt;details&gt;</code> with the app's chrome. Toggle it by click, or focus the summary and press <span class="kbd">Enter</span>: focus stays put (B2). The second one is seeded <code>defaultOpen</code>, the way <code>ManualPanel</code> seeds itself after a failed action (B1). The twist is inline-styled here because its two utilities are the gap noted above; every other class is a live vocabulary member.</p>
+    <div class="app demo-shell" data-c="specimen">
+      <div id="spec-live"></div>
+    </div>
+    <script>
+      const root = document.getElementById('spec-live');
+      const SUMMARY = 'flex min-h-control cursor-pointer select-none items-center gap-chrome-gap rounded-button font-ui text-body text-ink-mute transition-colors hover:bg-wash-hover hover:text-ink';
+      const item = (label, body, open) => `
+        <details ${open ? 'open' : ''} class="group">
+          <summary class="${SUMMARY}" style="list-style:none;">
+            <span aria-hidden="true" class="inline-block w-glyph text-glyph leading-none"
+                  style="transition:transform .15s;">›</span>
+            <span>${label}</span>
+          </summary>
+          <div class="mt-chrome-y font-ui text-body text-ink-body">${body}</div>
+        </details>`;
+      root.innerHTML = `
+        <div class="flex flex-col gap-3 rounded-panel bg-canvas p-3">
+          ${item('Set it up manually', 'Steps for macOS — the slot renders whatever the host passed.', false)}
+          ${item('Remove the certificate later', 'Open on arrival, because the host seeded defaultOpen.', true)}
+        </div>
+        <style>#spec-live summary::-webkit-details-marker{display:none;}</style>`;
+      root.querySelectorAll('details').forEach((d) => {
+        const twist = d.querySelector('span[aria-hidden]');
+        const sync = () => {
+          twist.style.transform = d.open ? 'rotate(90deg)' : 'rotate(0deg)';
+          d.querySelector('summary').classList.toggle('text-ink', d.open);
+        };
+        d.addEventListener('toggle', sync);
+        sync();
+      });
+    </script>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
