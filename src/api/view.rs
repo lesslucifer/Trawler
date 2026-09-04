@@ -1,19 +1,12 @@
-use std::time::SystemTime;
-
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use serde::Serialize;
 use serde_json::{json, Value};
-use time::format_description::well_known::Rfc3339;
-use time::OffsetDateTime;
 
+use super::rfc3339;
 use crate::event::FlowEvent;
 use crate::flow::{BodyRec, Flow, Header, NotCapturedReason};
 use crate::store::FlowPage;
-
-fn rfc3339(t: SystemTime) -> String {
-    OffsetDateTime::from(t).format(&Rfc3339).unwrap_or_default()
-}
 
 #[derive(Serialize)]
 pub struct HeaderView {

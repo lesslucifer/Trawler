@@ -3,14 +3,11 @@
 //! hold is HAR's own sentinel (`-1`, `""`, `{}`) rather than a fabricated value,
 //! because a reader cannot tell an invented number from a measured one.
 
-use std::time::SystemTime;
-
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use serde::Serialize;
-use time::format_description::well_known::Rfc3339;
-use time::OffsetDateTime;
 
+use super::rfc3339;
 use crate::flow::{
     header_value, BodyRec, Flow, Header, NotCapturedReason, RequestRec, ResponseRec,
 };
@@ -138,9 +135,10 @@ pub struct HarPostData {
     pub encoding: Option<&'static str>,
 }
 
-/// The reason token a non-captured body carries into the file. Reused from
-/// `BodyRec::state`'s vocabulary so the two never drift into two spellings of the
-/// same four states, and read back by the importer to restore the variant.
+/// The reason token a non-captured body carries into the file. Spelled as the
+/// REST body view already spells it (`BodyView::NotCaptured`'s `reason`), so the
+/// two surfaces name a state the same way, and read back by the importer to
+/// restore the variant.
 pub fn not_captured_comment(body: &BodyRec) -> Option<String> {
     let reason = match body {
         BodyRec::Streaming { .. } => "streaming",
@@ -172,8 +170,15 @@ fn har_entry(flow: &Flow) -> Option<HarEntry> {
         request: har_request(&flow.request),
         response: har_response(response),
         cache: HarCache {},
-        timings: HarTimings { send: 0, wait: time, receive: 0 },
+        timings: har_timings(time),
     })
+}
+
+/// `time` may be HAR's `-1`, but `timings`' three phases may not: the spec
+/// sanctions a negative only for the optional phases Trawler never reports. So
+/// an unknown span is zeroed here rather than propagated as a negative `wait`.
+fn har_timings(time: i64) -> HarTimings {
+    HarTimings { send: 0, wait: time.max(0), receive: 0 }
 }
 
 fn har_request(request: &RequestRec) -> HarRequest {
@@ -325,10 +330,6 @@ fn cookie_pair(pair: &str) -> Option<HarCookie> {
     Some(HarCookie { name: name.to_owned(), value: value.trim().to_owned() })
 }
 
-fn rfc3339(t: SystemTime) -> String {
-    OffsetDateTime::from(t).format(&Rfc3339).unwrap_or_default()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -414,7 +415,18 @@ mod tests {
         flow.duration_ms = None;
         let e = entry(flow);
         assert_eq!(e["time"], -1);
-        assert_eq!(e["timings"]["wait"], -1);
+    }
+
+    // HAR sanctions -1 for `time`, but requires the three phases of `timings` to
+    // be non-negative — so an unmeasured duration is unknown at the entry and
+    // zero across the phases, never a negative phase no reader accepts. An
+    // imported entry carrying `time: -1` reaches exactly this state (W3).
+    #[test]
+    fn an_unmeasured_duration_never_puts_a_negative_number_in_timings() {
+        let mut flow = full_flow();
+        flow.duration_ms = None;
+        let e = entry(flow);
+        assert_eq!(e["timings"], json!({"send": 0, "wait": 0, "receive": 0}));
     }
 
     #[test]
@@ -741,7 +753,12 @@ mod tests {
                     let time = e["time"].as_i64().expect("time");
                     let t = &e["timings"];
                     for phase in ["send", "wait", "receive"] {
-                        prop_assert!(t.get(phase).is_some(), "timings missing {}", phase);
+                        let value = t[phase].as_i64();
+                        prop_assert!(value.is_some(), "timings missing {}", phase);
+                        prop_assert!(
+                            value.expect("phase") >= 0,
+                            "HAR requires a non-negative {}: {}", phase, t
+                        );
                     }
                     if time >= 0 {
                         let sum: i64 = ["send", "wait", "receive"]

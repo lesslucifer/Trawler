@@ -13,6 +13,13 @@ use axum::{middleware, Router};
 use crate::store::Store;
 use routes::AppState;
 
+/// The timestamp format every projection puts on the wire, defined once so the
+/// REST views and the HAR export cannot come to render an instant differently.
+pub(crate) fn rfc3339(t: std::time::SystemTime) -> String {
+    use time::format_description::well_known::Rfc3339;
+    time::OffsetDateTime::from(t).format(&Rfc3339).unwrap_or_default()
+}
+
 /// Build the inspect-only control API: the embedded UI shell, filtered
 /// listing, a HAR 1.2 export of it, a connection tally (`/stats`), full-flow
 /// detail, raw or decoded bodies, a live SSE stream, and the CA download.

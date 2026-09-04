@@ -226,7 +226,7 @@
         <tbody>
           <tr>
             <td><strong>unit</strong></td>
-            <td>23 + 1 proptest, 3 handler, 1 router</td>
+            <td>24 + 1 proptest, 3 handler, 1 router</td>
             <td><code>src/api/har.rs</code>: the document envelope and entry order · the full
             field mapping · a response-less flow omitted (alone and mixed) · an unmeasured
             duration · header order and duplicates · header/body sizes · query-string parsing
@@ -234,9 +234,9 @@
             <code>Cookie</code> and from multiple <code>Set-Cookie</code> headers ·
             <code>redirectURL</code> both ways · <code>statusText</code> canonical and unknown ·
             all six body cases · <code>postData</code> present and omitted · the octet-stream
-            fallback · the reason-token helper. Proptest:
+            fallback · the reason-token helper; and <code>an_unmeasured_duration_never_puts_a_negative_number_in_timings</code>, the named regression test for the review's one confirmed correctness finding. Proptest:
             <code>every_entry_carries_the_har_1_2_required_fields</code> — the WU's central claim,
-            that whatever the ring holds the file is valid HAR (a captured regression seed from a
+            that whatever the ring holds the file is valid HAR, strengthened by the review to assert the timing phases are non-negative rather than merely present (a captured regression seed from a
             genuine failure during the work is committed in
             <code>proptest-regressions/api/har.txt</code>).
             <code>src/api/routes.rs</code>: the attachment headers, an empty capture, the filter
@@ -269,12 +269,93 @@
           </tr>
         </tbody>
       </table>
-      <p><code>cargo test</code> green (107 lib · 20 <code>api</code> · 3 <code>ca</code> ·
+      <p><code>cargo test</code> green (108 lib · 20 <code>api</code> · 3 <code>ca</code> ·
       6 <code>e2e_capture</code> · 4 <code>e2e_h2</code>);
       <code>cargo clippy --all-targets --all-features</code> clean under pedantic;
       <code>cargo fmt --check</code> clean. Commits on <code>wu/export/har-out</code>: the plan
       (<code>4506f07</code>), the implementation (<code>ca40935</code>), the distillation
-      (<code>0c1b5dd</code>), and this result.</p>
+      (<code>0c1b5dd</code>), this result, and the review fixes.</p>
+    </div>
+
+    <h2 id="review">The review round</h2>
+    <div data-c="review">
+      <p>Five isolated finders over the WU diff, plus adversarial verification of every candidate.
+      <strong>11 candidates, 6 refuted, 5 real — all nits, and the three that were worth fixing
+      were fixed rather than waived.</strong> The design dimension did not run:
+      <code>cargo xtask design-scope</code> reports no design artifact and no rendered file in the
+      diff, so the <code>cr/v3</code> note carries no <code>design:</code> section.</p>
+      <table data-c="review-rounds">
+        <thead><tr><th>Dimension</th><th>Raised</th><th>Outcome</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>correctness</td>
+            <td>3</td>
+            <td><strong>1 real, fixed.</strong> HAR sanctions <code>-1</code> for
+            <code>entry.time</code> but requires <code>timings</code>' three phases to be
+            non-negative, and an unmeasured duration propagated <code>-1</code> into
+            <code>wait</code>. Unreachable from the capture path — <code>store.rs</code> assigns
+            <code>response</code> and <code>duration_ms</code> atomically under one lock from a
+            single call site — but <code>Flow::duration_ms</code> is a public field, so
+            <strong>W3's importer reading an entry with <code>time: -1</code> would construct
+            exactly this state and export it back as invalid HAR</strong>. Fixed with a named
+            regression test first (proved to fail without the fix), and the validity proptest
+            strengthened to assert phase non-negativity — the gap that let it through was that
+            the property checked the phases were <em>present</em>, never that they were legal.
+            Two refuted: a literal <code>+</code> in a query decoding as a space is real
+            behaviour but not a defect (the wire-exact URI is preserved in
+            <code>request.url</code>, <code>queryString</code> is a derived convenience DEC-30
+            excludes from round-trip fidelity, and W3 reads <code>url</code>); an untested
+            malformed filter on the export is byte-identical pre-existing axum extractor
+            behaviour, verified by running both endpoints.</td>
+          </tr>
+          <tr>
+            <td>altitude</td>
+            <td>1</td>
+            <td><strong>refuted on the architecture, 1 real nit fixed.</strong> Moving the
+            body-reason token mapping onto <code>NotCapturedReason</code> would push wire
+            vocabulary down into the domain model, against the separation
+            <code>FlowView</code>'s own doc comment states. But the code comment claimed the
+            tokens were reused from <code>BodyRec::state</code>, which structurally cannot
+            produce <code>too_large</code>/<code>read_error</code> — it returns the coarse
+            <code>not_captured</code>. The comment now names the real source
+            (<code>BodyView</code>'s <code>reason</code>), which is what DEC-30 said all along.</td>
+          </tr>
+          <tr>
+            <td>efficiency</td>
+            <td>4</td>
+            <td><strong>1 real (already-deferred), 3 refuted</strong>, all by measurement at the
+            shipped 256&nbsp;MB default cap rather than by inspection. The export's ~200&nbsp;ms
+            of synchronous projection and serialization is the same execution-context pattern
+            <code>list_flows</code> and <code>get_flow</code> already use, on a work-stealing
+            multi-threaded runtime — not a new class of problem. The absence of a rate limit is
+            pre-existing on a loopback-only surface where <code>GET /flows</code> is already
+            documented as deliberately unbounded. The real one is the peak-memory multiple, which
+            the epic plan already defers — and the review's measurement corrected this report's
+            own claim that the ring cap is the ceiling: it is roughly 4× the cap, and the
+            <a href="#follow-ups">follow-up row</a> now says so.</td>
+          </tr>
+          <tr>
+            <td>reuse · simplification</td>
+            <td>1 · 3</td>
+            <td><strong>1 real, fixed</strong> (both dimensions found it independently):
+            <code>rfc3339</code> was defined byte-identically in <code>har.rs</code> and
+            <code>view.rs</code>, so the wire timestamp format had two definitions. Now one,
+            <code>api::rfc3339</code>, shared by both projections. Refuted: collapsing the three
+            <code>{name, value}</code> HAR structs (<code>HarCookie</code> is forward-looking —
+            HAR's optional cookie attributes are exactly what it will grow) and collapsing
+            <code>FilterQuery</code> into <code>FlowFilter</code> (which would force serde into
+            the store layer). The verifier also <strong>independently confirmed the WU's
+            load-bearing claim</strong>: both handlers take the same <code>Query&lt;FilterQuery&gt;</code>
+            and convert through the same <code>From</code>, so the export and the listing cannot
+            select different sets.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Two nits were accepted rather than fixed, and are recorded as waivers on the
+      <code>cr/v3</code> note: the three structurally identical HAR list-element structs (kept
+      distinct because the spec gives them different optional fields), and the per-body owned
+      <code>String</code> in <code>encode_body</code> (unavoidable inside serde's data model
+      without a hand-written streaming <code>Serialize</code>, and an export is not a hot path).</p>
     </div>
 
     <h2 id="distillation">Distillation</h2>
@@ -356,10 +437,16 @@
             real reader is found that needs them.</td>
           </tr>
           <tr>
-            <td>A large capture is serialized into one in-memory response.</td>
+            <td>A large capture is serialized into one in-memory response, and its peak memory
+            is a <em>multiple</em> of the ring's byte cap rather than bounded at it.</td>
             <td>Already the epic plan's deferred row (streaming a cap-sized export, deferred at
             plan review — revisit when a real capture proves the one-shot response too heavy).
-            Bounded today by the ring's byte cap, which is the memory ceiling either way.</td>
+            <strong>Quantified by the review</strong>: at the shipped 256&nbsp;MB default cap, an
+            export of binary bodies peaked at roughly 4× the cap, because the cloned flows, the
+            base64-expanded document and the serialized JSON are all live at once. The deferred
+            row covers it — response streaming is the fix that also caps the memory — but the
+            ceiling is that multiple, not the cap, and this row says so rather than implying the
+            cap bounds it.</td>
           </tr>
         </tbody>
       </table>
