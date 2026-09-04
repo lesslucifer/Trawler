@@ -1,0 +1,8 @@
+schema: dod/v1
+level: epic
+epic: E-GATETRUTH
+base: 5d251c4308b98177dc0477f18da7f4b152b2dcd9
+tip: 987ca8668317432e849f0ce170235ef76abf405b
+diff_sha256: 84c1be78c24cd818f8c574aaf09b9fa850612bfdbd99197c33657feae94db7db
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]
+date: 2026-09-04
