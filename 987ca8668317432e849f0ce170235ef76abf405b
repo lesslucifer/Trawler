@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 987ca8668317432e849f0ce170235ef76abf405b
+base: 5d251c4308b98177dc0477f18da7f4b152b2dcd9
+tier: key
+signer: vuluu
+report: docs/.archive/2026-09-04-gate-truth-epic-result.html
+report_sha256: d308fc5caf8c3d2246f74782b5c82d56dc0506004894845c0f54807368529f15
+date: 2026-09-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEB3jfqfJwkNZuMOn2JKqGhfw2dQe7twS5nGYFToFoC2L/6KzR4fWkCa4j
+  F9YKTJLCN2q/344IjeS/U0Yq1voisL
+  -----END SSH SIGNATURE-----
