@@ -1,4 +1,5 @@
 schema: doc/v1
+epic: E-REDESIGN
 wu: E-REDESIGN.W1
 changes:
   - path: docs/work/2026-09-04-redesign-w1-plan.html
