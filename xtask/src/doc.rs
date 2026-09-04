@@ -2557,14 +2557,25 @@ fn edit_distance(a: &str, b: &str) -> usize {
 // no `data-artifact` at all (DEC-13; c5f474b), where every checklist predicate is
 // unreachable by construction - so this is asked beside the artifact read, never
 // behind it.
+// Any URI scheme, not a list of the ones seen so far: `https:`, `mailto:`,
+// `tel:`, `data:` are all targets the tree cannot answer for. A colon alone does
+// not make one - a scheme is letters, digits, `+-.` before it, and never a `/`,
+// which keeps `notes/2026:1.html` a path.
+fn has_scheme(target: &str) -> bool {
+    target.split_once(':').is_some_and(|(scheme, _)| {
+        !scheme.is_empty()
+            && scheme.starts_with(|c: char| c.is_ascii_alphabetic())
+            && scheme.chars().all(|c| c.is_ascii_alphanumeric() || "+-.".contains(c))
+    })
+}
+
 fn link_targets(html: &str) -> Vec<String> {
     attrs(html, "href")
         .into_iter()
         .filter_map(|link| {
             let target = link.value.split('#').next().unwrap_or_default().trim();
             let unresolvable = target.is_empty()
-                || target.contains("://")
-                || target.starts_with("mailto:")
+                || has_scheme(target)
                 // Root-relative: it means nothing to a reader opening the doc
                 // over `file://`, which is the only way these docs are read.
                 || target.starts_with('/')
@@ -4859,6 +4870,19 @@ chroma_floor: 40
             ".archive/retired.html",
         ]);
         assert_eq!(link_targets(&html), vec!["sibling.html", "sibling.html"]);
+    }
+
+    #[test]
+    fn any_uri_scheme_is_skipped_but_a_colon_in_a_path_is_not() {
+        let html = linking(&[
+            "https://example.com/x",
+            "mailto:a@example.com",
+            "tel:+15550100",
+            "data:text/html,x",
+            "javascript:void(0)",
+            "notes/2026:1.html",
+        ]);
+        assert_eq!(link_targets(&html), vec!["notes/2026:1.html"]);
     }
 
     #[test]

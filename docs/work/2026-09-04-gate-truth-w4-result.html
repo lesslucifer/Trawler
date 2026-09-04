@@ -24,8 +24,10 @@
     <div class="callout" data-item="outcome">
       <strong>Delivered.</strong> <code>verify-doc</code> reds any doc carrying a relative <code>href</code> that
       resolves to no file in the tree, governed or not, draft excepted. All six expected results hold; the requirement
-      sentence is met without amendment. 414 workspace tests green, <code>clippy -D warnings</code> clean, and a run
-      over the repo's own docs is green and is itself now a test.
+      sentence is met without amendment. 415 workspace tests green, <code>clippy -D warnings</code> clean, and a run
+      over the repo's own docs is green and is itself now a test. Two stated non-goals were crossed and are recorded as
+      deviations 3 and 5 below — a hook file the change falsified, and a T0 rule the user asked for mid-WU that rode
+      this WU's signed commit rather than its own.
     </div>
 
     <table data-c="expected-rows">
@@ -88,7 +90,33 @@ EXIT=1</pre>
             <td>the T1 edit named <code>work-planning.html</code> only</td>
             <td>also <code>.claude/hooks/verify-doc-stop.sh</code></td>
             <td>the hook's own stderr line said "A ready governed doc is red", which the change falsifies. Infra, not a
-              doc, but it is a message a reader acts on — the same class of defect W3 fixed twice.</td></tr>
+              doc, but it is a message a reader acts on — the same class of defect W3 fixed twice. The plan's
+              "No hook change" non-goal meant the hooks need no wiring to pick the predicate up, which holds: exit-code
+              behaviour is untouched and only the sentence moved. The non-goal was still worded too broadly.</td></tr>
+          <tr><td>5</td>
+            <td>the plan's touches were <code>doc.rs</code> + tests and the one T1 doc</td>
+            <td><code>CLAUDE.md</code> (T0) gained the <code>mr</code> signing rule, inside this WU's signed commit
+              <code>ca4b74d</code></td>
+            <td>the user asked for it explicitly mid-WU, which is the one condition T0 allows an edit under — but it
+              answers no part of P2b, and CLAUDE.md's own rule gives an out-of-WU change its own commit. It should have
+              been one. Found by the review; recorded rather than repaired, because <code>ca4b74d</code> is signed and
+              gated and amending it would orphan the notes bound to it.</td></tr>
+          <tr><td>6</td>
+            <td>—</td>
+            <td>the new T1 text cited DEC-3 and linked to the file defining DEC-4</td>
+            <td>found by the review's correctness finder. DEC-3 lives in
+              <code>decisions/workflow-gates.html</code>; the neighbouring DEC-4 links point at
+              <code>decisions/work-planning.html</code> and the pattern was copied without checking the target. The
+              link <em>resolved</em>, so this WU's own predicate was green on it — a link can point at a real file and
+              still be wrong, which is the boundary of what the check claims. Now
+              <code>workflow-gates.html#dec-3</code>.</td></tr>
+          <tr><td>7</td>
+            <td><code>link_targets</code> skipped <code>://</code> and <code>mailto:</code></td>
+            <td>it skips any URI scheme</td>
+            <td>found by the review. <code>tel:</code>, <code>data:</code> and <code>javascript:</code> fell through an
+              ad-hoc list and would have been reported as dead relative paths. The rule is now "a scheme" rather than a
+              list of the ones seen so far, with a guard keeping a colon inside a path (<code>notes/2026:1.html</code>)
+              a path. One test, which reds against the old list.</td></tr>
           <tr><td>4</td>
             <td>—</td>
             <td>repeated links to one dead target report once</td>
@@ -104,11 +132,11 @@ EXIT=1</pre>
         <thead><tr><th>Level</th><th>What ran</th><th>Result</th></tr></thead>
         <tbody>
           <tr><td><span class="badge id">unit</span></td>
-            <td>9 tests in <code>xtask/src/doc.rs</code>: target extraction over every href shape · hrefs inside
+            <td>10 tests in <code>xtask/src/doc.rs</code>: target extraction over every href shape · hrefs inside
               <code>&lt;script&gt;</code>/<code>&lt;style&gt;</code> bodies · resolution against the doc's own directory ·
               deduplication · the draft/archived split · a doc under the archive · verdict identity survives a link
               failure · checklist and link failures reported together</td>
-            <td>236 lib tests pass (was 227)</td></tr>
+            <td>237 lib tests pass (was 227)</td></tr>
           <tr><td><span class="badge id">integration</span></td>
             <td>7 tests in <code>xtask/tests/verify_doc.rs</code> driving the <code>xtask</code> binary over temp trees,
               including the epic e2e's <strong>step 3</strong> — one deliberately dead link, red naming the href, green
@@ -171,6 +199,11 @@ EXIT=1</pre>
           <tr><td>The epic's composed e2e — all four fixes in one gated merge on a synthetic repo</td>
             <td>owed at the epic close, not at this WU. W1–W3 each deferred their steps the same way; this WU shipped
               its step 3.</td></tr>
+          <tr><td><code>run_paths</code> resolves a CLI path against the process's CWD when a same-named file
+            happens to exist there, only falling back to the repo root otherwise — so a doc can be read, and its links
+            resolved, from the wrong base</td>
+            <td>pre-existing since E-PLAN.W2 and untouched by this diff; the review graded it a nit on that basis. The
+              link check inherits the ambiguity rather than introducing it.</td></tr>
           <tr><td>The pre-commit hook sources <code>$HOME/.cargo/env</code>, which a Homebrew rustup install does not
             create — every hook failed with <code>cargo: command not found</code> until one was written by hand, and it
             pins a Cellar version path that a <code>brew upgrade</code> will break</td>
