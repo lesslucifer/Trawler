@@ -1,0 +1,66 @@
+schema: doc/v1
+epic: E-EXPORT
+wu: E-EXPORT.W2
+branch: wu/export/har-out
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "New section 'UC-6 - Take the capture out as a HAR file' (id uc-6), the export half of the epic's new use-case record. Carries the three request/answer rows (the whole capture as HAR 1.2 log.entries; the filtered set, selecting exactly what the listing with those parameters lists in the same order; an empty capture or a filter matching nothing as a valid empty HAR rather than a 404), and the two consequences a reader cannot infer from the endpoint signature: a body Trawler never captured is marked as such rather than exported empty (with the too-large case reporting the size it had, and every other unheld fact as HAR's own unavailable sentinel), and a flow still awaiting its response is omitted so an export taken mid-exchange can hold one entry fewer than the listing shows. Also states that the exported bytes are the wire's bytes with their Content-Encoding intact (the decode surface stays on the body endpoints) and that the export is never paged. Provenance callout names the snapshot lock and the by-construction filter sharing, and points at DEC-30. Doc header updated to v5 and the UC-6 attribution added. The import half of UC-6 lands with W3."
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: updated
+    distills: "A UC-6 row pointing at web-ui.html#uc-6 so index-first reading reaches the new record."
+  - path: docs/decisions/dec-30-har-as-the-interchange-format.html
+    tier: T2
+    action: added
+    distills: "The epic's first planned decision, written in the WU where the format choice became real. Records why HAR 1.2 and only HAR (with the three rejected alternatives - Trawler's own JSON, which nothing else can open; HAR plus a native format, which doubles the parser and round-trip surface; multiple capture formats, each a permanent compatibility obligation); the sentinel-not-invention rule for the required fields a proxy cannot fill, as a three-way fork diagram showing why an invented number and an omitted field are both worse than HAR's own -1; the body-state representation, including why an absent text carries the fact structurally for readers that ignore comments and why the reason tokens reuse the API's existing body-state vocabulary; and round-trip fidelity stated in both directions - what is preserved, and the five facts that are not (header-block sizes, the wire reason phrase, the timing phase breakdown, cookie attributes, the flow id) each with why that is a fact rather than a defect. The field mapping itself is code and is never copied here."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "The DEC-30 row, after DEC-29."
+  - path: docs/work/2026-09-04-export-w2-har-out-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan, written before the code - requirement, mapping to the epic's W2 block and UC-6's export half, a diagram of where the projection lives, the full HAR field mapping as a table (pinned because W3 must invert it), the honest-body problem as the WU's one real design call with a per-variant table and the reason tokens named as a wire contract, the HTTP response shape, six observables, the test plan naming the validity proptest and the snapshot lock with the e2e waiver reasoned to the epic's own step 3, the distillation this WU owes, and four contract calls made in the plan so the build would not have to invent them."
+  - path: docs/work/2026-09-04-export-w2-har-out-result.html
+    tier: T3
+    action: added
+    distills: "The WU result - delivered against all six observables with each one's proving tests named, the live hand-run against the running binary, what shipped per file, four contract calls the plan left to the build (the two query extractions and why flatten cannot work; redirectURL's explicit rename; postData omitted for an uncaptured request body; the snapshot's normalised nondeterministic fields), the two mechanism deviations from what the plan assumed with none at contract level, the evidence table with the e2e waiver, the distillation ledger including architecture.html deliberately unedited, and four follow-ups (no consumer until W5/W6; the reason tokens are now W3's contract; cookie attributes as a stated non-preservation rather than debt; the deferred streaming export already on the epic's roadmap row)."
+  - path: Cargo.toml
+    tier: T4
+    action: updated
+    distills: "insta as a dev-dependency (the epic plan's question 7 - the tool the testing standard names for snapshot-locking a wire contract, and the first serialized document format in the tree to need it) and form_urlencoded as a dependency, already present transitively via axum's own serde_urlencoded, for parsing HAR's queryString."
+  - path: Cargo.lock
+    tier: T4
+    action: updated
+    distills: "Lockfile for the two dependency additions above."
+  - path: src/api/har.rs
+    tier: T4
+    action: added
+    distills: "The HAR 1.2 projection - the truth the docs point at and never copy."
+  - path: src/api/mod.rs
+    tier: T4
+    action: updated
+    distills: "The /flows/export route and the module's contract line."
+  - path: src/api/routes.rs
+    tier: T4
+    action: updated
+    distills: "The export handler and the shared FilterQuery / PagingQuery split."
+  - path: src/api/view.rs
+    tier: T4
+    action: updated
+    distills: "Owns rfc3339 as pub(super) - the one definition of the wire timestamp format, beside the projections that use it, after the review found it defined twice and the re-review found api/mod.rs (router composition plus the CORS layer) the wrong home for it."
+  - path: tests/api.rs
+    tier: T4
+    action: updated
+    distills: "Five integration tests over the real router, including the snapshot lock."
+  - path: tests/snapshots/api__the_har_document_shape_is_locked.snap
+    tier: T4
+    action: added
+    distills: "The locked HAR document shape over a four-flow fixture."
+  - path: proptest-regressions/api/har.txt
+    tier: T4
+    action: added
+    distills: "A regression seed captured from a genuine proptest failure during the work, re-run before novel cases per proptest's own convention."
+note: "The result report additionally records the review round and the three findings it confirmed, and the review's measurement corrected one claim in that report: the follow-up row previously said export memory is bounded by the ring's byte cap, where measurement at the shipped 256MB default showed a peak of roughly 4x the cap, so the row now states the multiple instead of implying the cap bounds it. The re-review then found that clamping the timing phases to zero had made a standing claim false in two of these T2 docs as well: UC-6's sentinel sentence listed the timing phase breakdown among the facts reported with HAR's unavailable sentinel, and DEC-30's round-trip row said the phases sum to the total. Both now state the one exception - HAR permits -1 for the total but requires the three phases to be non-negative, so an unmeasured duration carries an unknown total beside zeroed phases - so neither doc asserts an invariant the code deliberately cannot honour. T2 synthesis is UC-6's export half plus its index row (the what) and DEC-30 plus its index row (the why) - one fact per tier, with the field mapping staying in src/api/har.rs and never copied into either. T1 deliberately unedited: architecture.html's store/API line (the control API is purely a subscriber and reader, it never mutates capture state) is still true of an export, which adds a read and no store capability; W4's removal is where that line actually moves, and the epic gate re-checks it at close. verify-doc green over both new T3 docs, the new T2 decision record and all three edited T2 docs; every relative href resolves on disk; all three edited T2 docs snapshotted before the edit and both new docs snapshotted at creation."
