@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-GATETRUTH
 wu: E-GATETRUTH.W4
-branch: 6f89004
 base: 8d11ff148c1ba2cb1720d6e3f3a6c3fde7fc3215
 tip: 6f89004993687067888b41ddc0f93c9861b94ac6
 diff_sha256: 78d6f892d3b1825c9b3e072ac7d61bac3e36b9397c5ef9ad5126796832053723
