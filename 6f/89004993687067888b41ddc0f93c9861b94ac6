@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W4
+branch: wu/gate-truth/link-integrity
+changes:
+  - path: docs/work-planning.html
+    tier: T1
+    action: updated
+    distills: "Link integrity becomes a stated verify-doc obligation, and the hook table's silence promise is narrowed to match what the code now does. The checks list gains the one check that does not read data-artifact - every relative href resolves against the tree - with its scope stated in the same paragraph: absolute URLs and mailto are out (the tree cannot answer for the network), fragments are checked for their file only, root-relative paths are out, and both archive cases are green because DEC-3 keeps archives out of git, so a link into one is unresolvable by design rather than rotted. It records why the check ignores data-artifact - all four dead links W12 found by hand sat in ungoverned docs, one a permanent T2 record - so a later reader does not narrow it back. The PostToolUse row now says a draft stays silent and an ungoverned doc stays silent on the checklists but not on its links; the Stop row, its flow node and the usage line follow. Rule-bearing, so the commit carries Reviewed-By: key vuluu (ca4b74d)."
+  - path: docs/work/2026-09-04-gate-truth-w4-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan: requirement, mapping, why nothing caught the four (verify_html_against returns Ungoverned before any predicate runs), the predicate as a row per href shape, the scope decision and the two archive wrinkles, six expected results, test plan and non-goals. Records that the scope question - how wide the check runs - was put to the owner and decided all docs but drafts, because governed-only would have caught none of the four."
+  - path: docs/work/2026-09-04-gate-truth-w4-result.html
+    tier: T3
+    action: added
+    distills: "The WU result: all six expected results held, the DEC-13 defect reproduced by hand against the shipped code and shown red, four deviations (no dead links left to fix - the audit found zero, not four; Verdict gained failure lists, unplanned; the Stop hook's own message needed the same fix; repeated links to one target deduplicated), the evidence table with the 2-of-16 regression proof, the distillation ledger and three follow-ups."
+t2_waived: "Two non-docs/ files in this diff carry rule or message text and so are recorded here rather than as doc/v1 entries, which cover docs/** only: CLAUDE.md (T0) gained the mr signing rule on the user's explicit request mid-WU - the request is in the session transcript, not the diff, and the result doc records as deviation 5 that it should have been its own commit rather than riding this WU's signed one; and .claude/hooks/verify-doc-stop.sh, whose stderr said 'A ready governed doc is red', which this WU falsifies. Both landed under Reviewed-By: key vuluu in ca4b74d. No T2 record is owed. The epic's distillation plan assigned P2b no decision record: the rule is a verify-doc obligation, which is T1 process text, and the why is one clause long enough to live in the same paragraph as the rule - copying it into docs/decisions/ would put one fact in two tiers. No existing T2 clause is contradicted or superseded; DEC-3 (archives out of git) and DEC-4 (no content heuristics) both stand unchanged and are cited by the new T1 text rather than restated."
