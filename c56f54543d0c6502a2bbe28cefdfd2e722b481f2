@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: c56f54543d0c6502a2bbe28cefdfd2e722b481f2
+base: 6c920d55204cb323ea6acd8b739a4ce99a68678e
+tier: key
+signer: vuluu
+report: docs/work/2026-09-04-export-w3-har-in-result.html
+report_sha256: 3accd3bd46d87d0980fad0651e43ca2a07da824e035141337a3c96b9bbc826bb
+date: 2026-09-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBwEPPb2pOlKlklFMdhxSZSqHaWiTbI+TdGKDUSShsreNCNtcG8jyq5V4
+  2BaMHnKmtQ8moI4DIk/iMhWw2hCYYM
+  -----END SSH SIGNATURE-----
