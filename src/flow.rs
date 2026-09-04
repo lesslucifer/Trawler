@@ -33,23 +33,6 @@ pub enum FlowSource {
     Imported,
 }
 
-impl FlowSource {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            FlowSource::Captured => "captured",
-            FlowSource::Imported => "imported",
-        }
-    }
-
-    pub fn parse(value: &str) -> Option<Self> {
-        match value {
-            "captured" => Some(FlowSource::Captured),
-            "imported" => Some(FlowSource::Imported),
-            _ => None,
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct Header {
     pub name: String,
@@ -235,16 +218,6 @@ mod tests {
     fn a_captured_flow_is_the_default_and_import_is_the_only_other_mark() {
         assert_eq!(FlowBuilder::new().build().source, FlowSource::Captured);
         assert_eq!(FlowBuilder::new().build().imported().source, FlowSource::Imported);
-    }
-
-    #[test]
-    fn source_tokens_round_trip_through_their_wire_spelling() {
-        for source in [FlowSource::Captured, FlowSource::Imported] {
-            assert_eq!(FlowSource::parse(source.as_str()), Some(source));
-        }
-        assert_eq!(FlowSource::parse("Captured"), None);
-        assert_eq!(FlowSource::parse("proxied"), None);
-        assert_eq!(FlowSource::parse(""), None);
     }
 
     #[test]

@@ -195,17 +195,18 @@ impl Store {
     /// flows stay a contiguous slice of the ring, which is what makes an
     /// imported capture's order the order the file had.
     pub fn import(&self, flows: Vec<Flow>) -> usize {
-        let mut announce = Vec::with_capacity(flows.len());
         let count = flows.len();
+        // Cloned before the lock, as `insert` does: the proxy's capture path
+        // contends on this same mutex, so a batch's worth of header and body
+        // allocation inside the critical section would stall live capture for
+        // as long as the copying takes.
+        let announce: Vec<_> = flows
+            .iter()
+            .map(|flow| (flow.id, flow.request.clone(), flow.response.clone(), flow.duration_ms))
+            .collect();
         let evicted = {
             let mut ring = self.inner.lock().expect("store lock");
             for flow in flows {
-                announce.push((
-                    flow.id,
-                    flow.request.clone(),
-                    flow.response.clone(),
-                    flow.duration_ms,
-                ));
                 ring.total_bytes += flow.retained_bytes();
                 ring.order.push_back(flow.id);
                 ring.flows.insert(flow.id, flow);

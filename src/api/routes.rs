@@ -18,7 +18,7 @@ use uuid::Uuid;
 
 use super::view::{self, FlowPageView, FlowSummary, FlowView};
 use super::{decode, har};
-use crate::flow::{header_value, BodyRec, FlowId, FlowSource, Header};
+use crate::flow::{header_value, BodyRec, FlowId, Header};
 use crate::store::{FlowFilter, Store};
 
 #[derive(Clone)]
@@ -49,7 +49,7 @@ impl FilterQuery {
         let source = match self.source.as_deref() {
             None => None,
             Some(value) => {
-                Some(FlowSource::parse(value).ok_or("source must be captured or imported")?)
+                Some(view::parse_source(value).ok_or("source must be captured or imported")?)
             }
         };
         Ok(FlowFilter {

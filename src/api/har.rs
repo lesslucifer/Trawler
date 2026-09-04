@@ -559,27 +559,21 @@ fn response_body(content: Option<InContent>) -> Result<BodyRec, String> {
     if let Some(text) = content.text {
         return decode_body(&text, content.encoding.as_deref(), "response.content");
     }
-    let reason = reason_token(content.comment.as_deref());
-    if reason == Some("streaming") {
-        return Ok(BodyRec::Streaming {
+    // With no bytes, the marker decides — and where it is absent, only a
+    // measured zero is genuinely empty. A foreign writer's unkept body, or a
+    // size claiming a body existed, is "the bytes are not in this file", never
+    // `Empty`; and a `too_large` marker that lost its size keeps only that
+    // coarser truth, since the size is what distinguished the two.
+    let size = content.size.and_then(|size| usize::try_from(size).ok());
+    Ok(match (reason_token(content.comment.as_deref()), size) {
+        (Some("streaming"), _) => BodyRec::Streaming {
             content_type: content.mime_type.unwrap_or_else(|| "application/octet-stream".into()),
-        });
-    }
-    // The size is what distinguishes too-large from a read error, so a
-    // `too_large` marker that lost it keeps only the coarser truth.
-    if reason == Some("too_large") {
-        if let Some(actual) = content.size.and_then(|s| usize::try_from(s).ok()) {
-            return Ok(BodyRec::NotCaptured { reason: NotCapturedReason::TooLarge { actual } });
+        },
+        (Some("too_large"), Some(actual)) => {
+            BodyRec::NotCaptured { reason: NotCapturedReason::TooLarge { actual } }
         }
-    }
-    // With no marker left to read, a measured zero is the one state that is
-    // genuinely empty. Anything else with no text — a foreign writer's unkept
-    // body, or a size claiming a body existed — is "the bytes are not in this
-    // file", never `Empty`.
-    Ok(if reason.is_none() && content.size == Some(0) {
-        BodyRec::Empty
-    } else {
-        BodyRec::NotCaptured { reason: NotCapturedReason::ReadError }
+        (None, Some(0)) => BodyRec::Empty,
+        _ => BodyRec::NotCaptured { reason: NotCapturedReason::ReadError },
     })
 }
 
