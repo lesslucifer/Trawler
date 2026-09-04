@@ -1,0 +1,22 @@
+schema: test/v2
+level: working-unit
+epic: E-REDESIGN
+wu: E-REDESIGN.W1
+tests:
+  e2e:
+    waived: "Design WU — it touches no product code and no screen (git diff epic/redesign..HEAD -- ui/src/ is empty). The E-DFLOW.W9 precedent the epic plan cites for exactly this case. No user-visible surface moves, so there is nothing for a UC spec to exercise; the epic's e2e (UC-4 / UC-5 / UC-ONBOARD) runs against the built screens from W4 onward."
+  integration:
+    waived: "Same precedent. There is no bounded contract in code to exercise — the contract IS the design file, and its shape is judged mechanically by verify-doc (component-design artifact: htmldoc layer, escaped markup, components·redrawn, components·unretired) plus the render gate below."
+  unit:
+    waived: "Same precedent. Three HTML contracts have no unit under them. Each component's real unit tests land in W2 beside its .tsx and will assert the states these designs declare."
+verified:
+  - "cargo xtask verify-doc — 40 docs checked, none red (the three new designs green as component-design, the WU plan green as wu-plan)."
+  - "cargo xtask ui specimens --check — all three design files render over file:// in headless Chrome with zero console errors; every spec-* mount fills (field 3 buttons, status-dot 13, disclosure 1 mount)."
+  - "cargo xtask gate0 — fmt + clippy -D warnings + all tests green (107 passed)."
+standalone_commit:
+  sha: e71987c
+  what: "doc-assets/components/tw-config.js — a stale ../../../ import that has resolved outside the repo since the E-DFLOW.W5 asset move."
+  level: commit
+  waived: "A build-asset path fix with no product surface and no runtime reachable from a test: the file is loaded only by a browser opening a design doc over file://, where the failure mode is a silently unthemed page rather than an error any suite can observe."
+  evidence: "Direct resolution check, before and after — `node --input-type=module -e \"import('./doc-assets/components/tw-config.js')\"` failed with `Cannot find module '/Users/.../proj/misc/ui/tailwind.config.js'` (note the path escaping the repo root) and after the fix resolves, reaching the expected `tailwind is not defined` (that global exists only in a browser with the Play CDN loaded). Path arithmetic confirmed independently: doc-assets/components/ → ui/ is two levels, not three."
+note: "The three design files in this WU do NOT exercise this fix — they load specimens.bundle.js, which inlines its own theme block with its own correct path, so the render gate above passes either way. An earlier draft of this note claimed the gate covered it; that was wrong and is corrected here. The files that still load tw-config.js through a live script tag are exactly two, both outside this diff: docs/design-flow.html:8 and docs/component-design.html:8 (docs/decisions/dec-26-the-mockup-mounts.html names the file in prose only, and an earlier draft of this note wrongly counted it as a loader) — which is precisely why the bug survived: nothing that runs in CI opens them."
