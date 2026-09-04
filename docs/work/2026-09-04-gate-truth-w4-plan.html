@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a3b139f34851f0dfabf56">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATETRUTH.W4 plan (verify-doc resolves the links it ships)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-GATETRUTH.W4 — verify-doc resolves the links it ships</h1>
+      <p>Nothing checks whether a doc's links point at anything. Four shipped dead in W12 alone, and all four sat in
+        docs <code>verify-doc</code> refuses to open — it reads <code>data-artifact</code>, and a decision record
+        declares none. This WU makes a relative href a checked property of the file rather than of its artifact type,
+        so the class becomes mechanically impossible.</p>
+      <div class="meta">WU plan · 2026-09-04 · Trawler · T3 (docs/work/) ·
+        <code>wu/gate-truth/link-integrity</code> off <code>epic/gate-truth</code> @ <code>8d11ff1</code> ·
+        <a href="2026-09-03-gate-truth-plan.html">epic plan</a> · <a href="2026-09-03-gate-truth-w3-result.html">W3 result</a> ·
+        <span class="badge id">E-GATETRUTH.W4</span></div>
+    </div>
+  </header>
+  <main data-artifact="wu-plan">
+
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement">
+      <strong><code>verify-doc</code> reds a doc carrying a relative <code>href</code> that resolves to nothing in the
+      working tree, naming the href and the doc, and it asks this of every <code>.html</code> file it is handed —
+      governed or not — except one whose <code>data-status</code> is <code>draft</code>. A link into
+      <code>docs/.archive/</code>, an absolute URL, a bare <code>#anchor</code> and a <code>mailto:</code> are not
+      link-checked; no other <code>verify-doc</code> verdict changes.</strong>
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <div data-item="maps-to">
+      <table>
+        <thead><tr><th>Serves</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td><a href="2026-09-03-gate-truth-plan.html#w4">E-GATETRUTH · W4</a> · problem <span class="badge id">P2b</span></td>
+            <td>the summary block's promise: a <code>verify-doc</code> predicate resolving every relative href against
+              the tree, with the two archive wrinkles handled</td></tr>
+          <tr><td><a href="2026-09-03-gate-truth-plan.html#expected">epic expected result 4</a></td>
+            <td><code>verify-doc</code> reds a doc whose relative href resolves nowhere, and stays green on
+              archived-doc and <code>docs/.archive/</code> links; a run over today's <code>docs/</code> is green</td></tr>
+          <tr><td><a href="../work-planning.html">work-planning</a> <span class="badge id">T1</span></td>
+            <td>link integrity joins the stated <code>verify-doc</code> obligations, and the hook table's silence
+              promise narrows from "drafts and ungoverned docs" to drafts alone — rule-bearing, so
+              <code>Reviewed-By</code></td></tr>
+          <tr><td><a href="2026-09-03-gate-truth-plan.html#open-questions">epic open question 4</a></td>
+            <td>decided authoring time, inside <code>verify-doc</code> — the same trigger as every other doc check, so
+              this WU adds no gate check id and no hook</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="problem">Why nothing caught the four</h2>
+    <p><code>verify_html_against</code> reads the doc's <code>data-artifact</code> and returns
+      <code>Verdict::Ungoverned</code> the moment there is none — before any predicate runs. A decision record declares
+      no artifact type, and neither does a plan doc's prose body. Both dead-link classes the epic cites lived in exactly
+      those docs, which is why a hand audit found them and 35 green <code>verify-doc</code> runs did not.</p>
+
+    <div class="diagram" data-c="fig-1">
+      <pre class="mermaid">
+flowchart TD
+  D["a doc with a dead href"] --> A{"data-artifact declared?"}
+  A -- no --> U["Verdict::Ungoverned — 'not checked', exit 0"]
+  A -- yes --> S{"data-status draft or archived?"}
+  S -- yes --> E["Verdict::Exempt — silent"]
+  S -- no --> C["checklist predicates: items, structure, unknown tags"]
+  C --> G["green — no predicate ever looked at an href"]
+  U --> SHIP["the dead link ships"]
+  E --> SHIP
+  G --> SHIP
+      </pre>
+      <div class="caption">Hình 1 — today, every road ends at green. The two the four dead links took are the
+        <code>Ungoverned</code> road; the third would have missed them too, because no predicate reads an href.</div>
+    </div>
+
+    <table data-c="the-four">
+      <thead><tr><th>Doc</th><th>Why <code>verify-doc</code> was silent</th><th>Class</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge id">T2</span> DEC-13</td>
+          <td><code>Ungoverned</code> — a decision record declares no <code>data-artifact</code></td>
+          <td>target never existed (<code>setup.ts</code>; the file is <code>setup.rs</code>)</td></tr>
+        <tr><td><span class="badge id">T3</span> W12 plan × 3</td>
+          <td><code>Ungoverned</code> — the fixing commit <code>c5f474b</code> says so outright: "the plan doc is ungoverned (no <code>data-artifact</code>), so it would have shipped silently"</td>
+          <td>target retired — archived by the same WU that wrote the link</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="predicate">The predicate</h2>
+    <p>One question per <code>href</code>, asked of the file the doc sits in. The doc's own directory is the base;
+      the answer is whether <code>&lt;dir&gt;/&lt;href minus its fragment&gt;</code> exists.</p>
+
+    <table data-c="predicate-rows">
+      <thead><tr><th>href</th><th>Checked?</th><th>Verdict</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>dec-16-design-file-retirement.html</code></td><td>yes</td><td>green</td>
+          <td>resolves in the tree</td></tr>
+        <tr><td><code>../../ui/src-tauri/src/setup.ts</code></td><td>yes</td><td><strong>red</strong></td>
+          <td>the DEC-13 class — no such file, at any commit</td></tr>
+        <tr><td><code>2026-07-16-design-flow-plan.html</code></td><td>yes</td><td><strong>red</strong></td>
+          <td>the W12-plan class — archived out of git; rewrite as plain text marked <span class="badge id">archived</span>,
+            as <code>c5f474b</code> did</td></tr>
+        <tr><td><code>../.archive/2026-07-16-design-flow-plan.html</code></td><td>no</td><td>green</td>
+          <td>gitignored by DEC-3 — unresolvable from a clean checkout <em>by design</em>, so resolving it is not the
+            question</td></tr>
+        <tr><td>any href, in a doc under <code>docs/.archive/</code></td><td>no</td><td>green</td>
+          <td>archived siblings resolve together; the directory is out of git and out of scope</td></tr>
+        <tr><td><code>https://…</code>, <code>mailto:…</code></td><td>no</td><td>green</td>
+          <td>epic non-goal — the tree cannot answer for the network</td></tr>
+        <tr><td><code>#local-os</code></td><td>no</td><td>green</td>
+          <td>a bare fragment names this doc; an anchor <em>into another</em> doc is checked for its file only, never
+            its fragment — epic non-goal</td></tr>
+      </tbody>
+    </table>
+    <p>Rows 4 and 5 are the epic plan's two archive wrinkles. Row 3 is the one that makes them wrinkles at all: an
+      archived doc is red when named by its <em>old live path</em> and green when named by its
+      <code>.archive/</code> one, which is exactly the difference between a link that rotted and a link that was
+      deliberately pointed at the archive.</p>
+
+    <h2 id="scope">Which docs it asks</h2>
+    <p>The check is a property of the file, not of its declared type — so it runs before the
+      <code>data-artifact</code> read that ends Hình 1 early. The one exception is a draft: the standard gives an author
+      an explicitly silent surface to iterate on, and a link to a doc not written yet is the normal midpoint of writing
+      a set of docs, not a defect.</p>
+
+    <div class="diagram" data-c="fig-2">
+      <pre class="mermaid">
+flowchart TD
+  D["verify-doc &lt;path&gt;"] --> AR{"path under docs/.archive/ ?"}
+  AR -- yes --> SK["links not checked"]
+  AR -- no --> DR{"data-status='draft' ?"}
+  DR -- yes --> SK
+  DR -- no --> L["check every relative href"]
+  L --> A{"data-artifact declared?"}
+  SK --> A
+  A -- no --> U["Ungoverned — plus any link failures"]
+  A -- yes --> C["the checklist predicates, unchanged"]
+      </pre>
+      <div class="caption">Hình 2 — after W4. The link check sits ahead of the artifact read, so an ungoverned doc that
+        was <code>Verdict::Ungoverned</code> and silent can now be <code>Ungoverned</code> and red. Everything to the
+        right of <code>A</code> is untouched.</div>
+    </div>
+
+    <table data-c="scope-rows">
+      <thead><tr><th>Doc</th><th>Checklist checks</th><th>Link check</th><th>Reported as</th></tr></thead>
+      <tbody>
+        <tr><td>governed, ready — a WU plan</td><td>yes</td><td><strong>yes</strong></td><td><code>red</code> / <code>green</code></td></tr>
+        <tr><td>ungoverned — DEC-13, a T1 standard</td><td>no</td><td><strong>yes</strong></td>
+          <td><code>ungoverned</code> when its links resolve; <code>red</code> when one does not</td></tr>
+        <tr><td><code>data-status="draft"</code></td><td>no</td><td>no</td><td><code>draft</code> — silent, unchanged</td></tr>
+        <tr><td><code>data-status="archived"</code>, still in <code>docs/</code></td><td>no</td><td><strong>yes</strong></td>
+          <td>closed under an older contract, but it is still shipped and still read</td></tr>
+        <tr><td>anything under <code>docs/.archive/</code></td><td>—</td><td>no</td><td>out of git, out of scope</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="t1-edit">
+      <strong>This narrows a stated promise, so it is a rule change.</strong>
+      <a href="../work-planning.html">work-planning</a>'s hook table says "drafts and ungoverned docs stay silent". After
+      this WU that sentence is true of the checklist checks and of drafts, and false of ungoverned docs — a dead link is
+      a dead link whatever the doc declares. The T1 edit says so in those terms and carries a
+      <code>Reviewed-By</code> trailer per DoD-C.
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <thead><tr><th>#</th><th>Observable after</th><th>How to check</th></tr></thead>
+        <tbody>
+          <tr><td>1</td>
+            <td><code>verify-doc</code> on a doc whose relative href resolves nowhere exits 1 and names the href and the
+              doc.</td>
+            <td>Unit test per Hình 1's rows; an integration run of the binary over a temp tree with one dead link,
+              asserting exit 1 and the href in stdout.</td></tr>
+          <tr><td>2</td>
+            <td>An <em>ungoverned</em> doc with a dead href is red — the DEC-13 case, which is green today.</td>
+            <td>Integration test on a doc with no <code>data-artifact</code>: red, and the verdict still says
+              <code>ungoverned</code> rather than claiming a checklist ran. Reds against today's code.</td></tr>
+          <tr><td>3</td>
+            <td>A draft stays fully silent; an archived-but-shipped doc does not.</td>
+            <td>Unit tests on both, asserting exit 0 for the draft with a dead href and exit 1 for the archived one.</td></tr>
+          <tr><td>4</td>
+            <td>Links into <code>docs/.archive/</code> are green, and docs living under <code>docs/.archive/</code> are
+              not link-checked at all.</td>
+            <td>Unit test per wrinkle — the epic's two green rows.</td></tr>
+          <tr><td>5</td>
+            <td><code>cargo xtask verify-doc</code> over every doc in today's <code>docs/</code> is green.</td>
+            <td>Run it. A hand audit of all 42 docs found zero dead links today, so this WU fixes none and must break
+              none; a red here means the predicate is wrong, not the tree.</td></tr>
+          <tr><td>6</td>
+            <td>No other verdict moves: every doc green today on its checklist is green after.</td>
+            <td>The existing <code>doc.rs</code> and <code>xtask/tests</code> suites run unedited.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table>
+        <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge id">unit</span> commit</td>
+            <td><code>xtask/src/doc.rs</code>: the href extractor over a doc carrying every shape of Hình 1's table —
+              relative file · relative file + fragment · bare fragment · <code>https</code> · <code>mailto</code> ·
+              <code>.archive/</code> — returning only the resolvable-relative ones, each with the fragment stripped;
+              an <code>href</code> inside a <code>&lt;script&gt;</code> or <code>&lt;style&gt;</code> body is data, not a
+              link (the raw-text rule the tokeniser already owns), and an empty <code>href=""</code> is not a link.
+              The predicate itself against a tempdir tree: a resolving href → no failure; a missing one → one
+              <code>Failure</code> whose <code>what</code> carries the href verbatim and whose <code>fix</code> names both
+              repairs (point at the file that exists, or drop the href). Scope: draft skipped, archived checked,
+              ungoverned checked, a doc under <code>docs/.archive/</code> skipped.</td></tr>
+          <tr><td><span class="badge id">integration</span> WU</td>
+            <td><code>xtask/tests/verify_doc.rs</code>: the <code>xtask</code> binary over a temp <code>docs/</code>
+              tree — an ungoverned doc with a dead href exits 1 and prints the href (expected result 2, red against
+              today's code); the same doc with the href repaired exits 0 and prints <code>ungoverned</code>; a governed
+              ready doc with a dead href exits 1 and reports <em>both</em> the link failure and its checklist failures,
+              proving the predicate composes rather than short-circuits; a draft with the same dead href exits 0; a
+              multi-path run reports only the red docs and the "none red" line when all resolve.
+              A run over the repo's own <code>docs/</code> exits 0 (expected result 5).</td></tr>
+          <tr><td><span class="badge id">e2e</span> epic</td>
+            <td>Owed at the epic close, not here: the epic's e2e is one gated WU merge on a synthetic repo proving the
+              four fixes compose. This WU ships its <strong>step 3</strong> — "run <code>verify-doc</code> over that
+              repo's docs, one link deliberately dead; red, naming the dead href; green once fixed" — as the integration
+              row above, on the same hermetic temp-repo shape the epic step will reuse. Not waived; the composed run is
+              the epic's, and W1–W3 each deferred their steps the same way.</td></tr>
+        </tbody>
+      </table>
+      <p>Hermetic per the testing standard: tempdirs and generated trees, no network, no dependence on this repo's
+        <code>docs/</code> except the one deliberate expected-result-5 run.</p>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-c="non-goals">
+      <li><strong>No external link checking.</strong> <code>https(s)</code> targets stay unchecked — epic non-goal; the
+        tree cannot answer for the network and a test that asks would not be hermetic.</li>
+      <li><strong>No fragment resolution.</strong> <code>foo.html#bar</code> is checked for <code>foo.html</code> only.
+        Whether <code>#bar</code> exists inside it is a second predicate with its own failure modes; epic non-goal.</li>
+      <li><strong>No <code>src</code>, no images.</strong> The predicate reads <code>href</code>. Asset integrity is a
+        separate question and the epic excludes it.</li>
+      <li><strong>No history resolution.</strong> Unlike W2's citation predicate, a link is asked of the working tree
+        only — the reader who clicks it has a checkout, not a rev-list. An archived target is repaired by rewriting the
+        link as text, not by resolving it at an older commit.</li>
+      <li><strong>No new gate check.</strong> Authoring time, per epic open question 4; the DoD gate gains no check id
+        and the receipt is unchanged.</li>
+      <li><strong>No hook change.</strong> Both hooks already run <code>verify-doc</code> and already act on exit 1 —
+        the PostToolUse hook on every <code>.html</code> write, the Stop hook over every doc under <code>docs/</code>.
+        They pick the predicate up for free, which is why the T1 edit is to the standard's text and not to
+        <code>.claude/</code>.</li>
+      <li><strong>No fixes to today's tree.</strong> The epic plan allowed for repairing dead links found here; a hand
+        audit of all 42 docs found none — the four were fixed by hand in W12 and E-GATETRUTH.W1–W3. The result doc
+        records the audit so the claim is checkable.</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
