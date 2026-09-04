@@ -10,7 +10,7 @@ changes:
   - path: CLAUDE.md
     tier: T0
     action: updated
-    distills: "Added on the user's explicit request, after this session hit the friction three times: mr is manual review, so the agent stages and prints the full command and the human signs it. Carries the two params whose absence makes confirm prompt and hang a piped run (--as, --report), where the identity comes from (.mr-allowed in THIS worktree), and the epic report path that resolve_report looks for in docs/.archive/, not docs/work/. Compacted to four lines of shell at the user's direction - directives only, no rationale, which lives in docs/workflow.html and DEC-10."
+    distills: "Added on the user's explicit request mid-WU (the one condition T0 allows an edit under; the request is in the session transcript, not in the diff - a reader auditing from the artifacts alone cannot confirm it, and the result doc records that as deviation 5 along with the fact that it should have been its own commit rather than riding this WU's signed one). mr is manual review, so the agent stages and prints the full command and the human signs it. Carries the two params whose absence makes confirm prompt and hang a piped run (--as, --report), where the identity comes from (.mr-allowed in THIS worktree), and the epic report path that resolve_report looks for in docs/.archive/, not docs/work/. Compacted to four lines of shell at the user's direction - directives only, no rationale, which lives in docs/workflow.html and DEC-10."
   - path: .claude/hooks/verify-doc-stop.sh
     tier: infra
     action: updated
