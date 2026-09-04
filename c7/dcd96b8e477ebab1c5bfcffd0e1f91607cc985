@@ -1,5 +1,6 @@
 schema: test/v2
 level: working-unit
+epic: E-REDESIGN
 wu: E-REDESIGN.W1
 tests:
   e2e:
