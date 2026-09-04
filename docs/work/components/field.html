@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a7b299f34851f0dfabfdd">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Field component design</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- No import map and no module scripts: a design file must open by double-click,
+       and a file:// page may not run module scripts. specimens.bundle.js is a plain
+       classic script carrying the app theme, the shared specimen behaviours and the
+       real collection, in that order — one tag that cannot be misordered. Generated
+       and git-ignored: regenerate with `cargo xtask ui specimens`. -->
+  <script src="../../../doc-assets/components/specimens.bundle.js"></script>
+  <style>
+    /* Doc scaffolding only — never a component rule. Component styling is
+       Tailwind utilities read from ui/tailwind.config.js via specimens.bundle.js. */
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);}
+    .anno{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:2px;margin-left:2px;font-family:var(--a-ui);}
+    .tsdoc{font-family:var(--a-mono);font-size:12px;line-height:1.55;background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;white-space:pre-wrap;}
+    .parts{display:flex;flex-direction:column;gap:10px;}
+    .part{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .part .cap{font-size:11px;color:var(--muted);margin-top:5px;}
+    .part .spec{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13px;margin-top:6px;}
+    .part .spec .k{color:var(--muted);text-transform:uppercase;font-size:10px;letter-spacing:.05em;white-space:nowrap;padding-top:2px;}
+    .swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;}
+    .swatch{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .swatch .cap{font-size:12px;color:var(--muted);margin-top:8px;}
+    .swatch .cap strong{color:var(--ink);}
+    .fork-row{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;}
+    .fork-card{border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-width:220px;flex:1;background:var(--paper);}
+    .fork-card .fc-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);}
+    .fork-card.win{border-color:var(--ok);}
+    .fork-card.win .fc-lbl{color:var(--ok);}
+    .fork-card.lose .fc-lbl{color:var(--warn);}
+    .fork-card .fc-note{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:8px;}
+    .kbd{display:inline-block;border:1px solid var(--line);border-radius:3px;padding:0 4px;font-family:var(--a-mono);font-size:11px;color:var(--ink);background:var(--paper);}
+    .cmp td,.cmp th{vertical-align:top;font-size:12.5px;}
+    .yes{color:var(--ok);font-weight:600;} .no{color:var(--warn);font-weight:600;}
+    table{font-size:13px;}
+    .demo-shell{border:1px solid var(--line);border-radius:8px;padding:14px;background:var(--paper);}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Field <span class="tier t1">T1</span></h1>
+      <p>The app's one text input — a labelled single-line box that reads the same as every other small control, and decides nothing about what is typed into it.</p>
+      <div class="meta">Component design · <strong>draft — awaiting confirmation</strong> · 2026-09-04 · <a href="../2026-09-04-redesign-w1-plan.html">E-REDESIGN.W1</a> · T3 (docs/work/components/) · format: <a href="../../component-design.html">component design</a> · ships today unregistered at <code>ui/src/components.tsx:9</code></div>
+    </div>
+  </header>
+  <main>
+    <div class="callout warn" data-c="w2-obligation">
+      <strong>W2 retires this file.</strong> The registry and the design files are disjoint by construction — the moment <a href="../2026-09-04-redesign-plan.html">W2</a> lands <code>ui/src/components/Field.tsx</code>, this file's contract becomes that file's TSDoc and <code>components·unretired</code> reds until it is removed in <a href="../../decisions/dec-16-design-file-retirement.html">DEC-16</a>'s order: distil the forks to <code>docs/decisions/</code>, verify the TSDoc carries the whole contract, then delete.
+    </div>
+
+    <div class="callout" data-c="citation-convention">
+      <strong>How the registry is cited here.</strong> Every component named in <code>code</code> — <code>Select</code>, <code>Button</code>, <code>Notice</code>, <code>KeyValueRow</code> — is a live registry entry whose contract is its TSDoc in <code>ui/src/components/</code>. Their design files were retired under <a href="../../decisions/dec-16-design-file-retirement.html">DEC-16</a> and archived out of git, so they are cited by name rather than linked: read them with <code>node scripts/design-registry.mjs</code>.
+    </div>
+
+    <h2 id="identity">Identity &amp; frame</h2>
+    <div class="callout" data-c="frame-claim">
+      <strong>Why it exists:</strong> the registry has <em>no text input at all</em> — 24 entries, not one of which accepts typing. <code>KeyValueRow</code>'s <code>@avoid</code> already redirects to it by name — <em>"editable forms (that is <strong>Field</strong>)"</em> — naming a component nobody can open. That is the phantom this file closes. The do-nothing answer is a raw <code>&lt;input&gt;</code> per call site, and it fails at the thing the collection exists to prevent: <strong>the app's four filter inputs and <code>Select</code>'s filter box would each own their own chrome, and the first one edited would drift</strong> — precisely how three copies of the tone map got into the tree.
+    </div>
+    <table data-c="identity">
+      <tr><td><strong>Tier</strong></td><td><span class="tier t1">T1 Primitive</span> — a labelled box that renders what it is handed and reports what is typed. It never validates, never debounces, never formats, never decides what a value means → <strong>in the collection</strong></td></tr>
+      <tr><td><strong>Tenants</strong></td><td><strong>App's filter bar</strong> — four fields today (free text, host, method, status — <code>App.tsx:145-176</code>), each passing <code>aria-label</code>, <code>placeholder</code> and a width class · <strong>every future input</strong>: a saved-view name, a search box, a port override. <code>Select</code>'s in-popup filter is <em>not</em> a tenant — see the boundary below</td></tr>
+      <tr><td><strong>Exists today</strong></td><td><code>ui/src/components.tsx:9</code> — the legacy kit's only input, and one of the three things that kit still holds. It is a real precedent, and this design keeps its box, its focus behaviour and its placeholder tone; what it adds is stated in <a href="#forks">forks</a></td></tr>
+      <tr><td><strong>Made of</strong></td><td>— (the leaf). Its box is <code>Select</code>'s trigger box, which is <code>Button</code>'s — one small-control chrome across the app (<a href="../../decisions/dec-18-one-control-box.html">DEC-18</a>), a shared vocabulary rather than a composition</td></tr>
+    </table>
+    <table data-c="frame-drivers">
+      <thead><tr><th>Driver</th><th>Design consequence</th></tr></thead>
+      <tbody>
+        <tr><td>① it must not read as a fourth control style</td><td>the box is <code>Select</code>'s trigger, class for class — same border, radius, padding, family, size, hover and focus. In a row with a <code>Button</code> and a Select, only the caret and the caret's absence separate them (<a href="../../decisions/dec-18-one-control-box.html">DEC-18</a>)</td></tr>
+        <tr><td>② four of them sit in one dense header row</td><td>width is the caller's, from the <code>field-sm</code>/<code>field</code>/<code>field-lg</code> tokens — the component sets no width of its own and never grows to fit content, because a filter that resizes as you type moves the three fields beside it</td></tr>
+        <tr><td>③ every field is unlabelled on screen</td><td>the header has no room for four visible labels, so <code>placeholder</code> carries the hint and <strong><code>aria-label</code> is required, not optional</strong> — a placeholder is not an accessible name, and it disappears exactly when the user needs it. This is the one prop the component refuses to default</td></tr>
+        <tr><td>④ zero chromatic accent (<a href="../../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a>, <code>zero-accent</code>)</td><td>focus is a border shift to <code>ink-mute</code>, never a coloured ring. There is no valid/invalid tinting — <strong>the component owns no validity state at all</strong> (fork F3)</td></tr>
+        <tr><td>⑤ it holds wire values — a host, a method, a status</td><td>the <em>filter</em> is chrome, not payload: <code>font-ui</code>, per <code>mono-for-wire-data</code>'s <code>data-wire="none"</code>. A field that ever holds a verbatim payload passes <code>mono</code> through <code>className</code> — the slot is open, no tenant needs it today</td></tr>
+        <tr><td>⑥ typing is the interaction; there is no submit</td><td>every keystroke reports up (<code>onChange</code>), and the component debounces nothing — <code>useFlows</code> owns when a filter is applied (<code>App.tsx:148</code>). A primitive that delays its own reporting is a primitive with a policy</td></tr>
+        <tr><td>⑦ touch target (WCAG 2.5.8)</td><td><code>min-h-control</code> — 24px, the same floor <code>Button</code>, <code>IconButton</code> and <code>Select</code> cite</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="vs-select">Field vs <code>Select</code> — the boundary</h2>
+    <p style="color:var(--muted);">Both are small boxes you interact with, both use the same chrome, and <code>Select</code> contains something that looks exactly like a Field. The line has to be drawn in this file because a build reaching for the wrong one produces a working screen with the wrong contract.</p>
+    <table data-c="vs-select" class="cmp">
+      <thead><tr><th></th><th>Field <em>(this)</em></th><th><code>Select</code></th></tr></thead>
+      <tbody>
+        <tr><td><strong>the value is</strong></td><td>anything the user types — unbounded</td><td>one of a known set</td></tr>
+        <tr><td><strong>answers</strong></td><td>"what are you looking for?"</td><td>"which one?"</td></tr>
+        <tr><td><strong>free text</strong></td><td><span class="yes">yes</span> — that is the whole component</td><td><span class="no">never</span> — its @avoid: <em>"free-text entry (that is a combobox, not this)"</em></td></tr>
+        <tr><td><strong>popup</strong></td><td><span class="no">none</span></td><td>yes — a listbox</td></tr>
+        <tr><td><strong>archetype</strong></td><td>host · method · status · free text</td><td>trust target · proxy target</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="select-filter-note">
+      <strong>Select's filter box is not a Field, and must not become one.</strong> It looks like one (<code>Select.tsx:184</code>) and it is deliberately <em>not</em> the same element: it is borderless, sits inside the popup's own chrome, and carries no <code>aria-label</code> of its own because the listbox above it is already named. Wrapping it in a Field would give it a second border inside a bordered popup and a second accessible name on one control. <strong>Recorded here so a later reuse-or-propose pass reads it as a decision, not an oversight.</strong>
+    </div>
+
+    <h2 id="anatomy">Anatomy — the parts you see</h2>
+    <div class="app" data-c="anatomy-hero">
+      <div class="demo-shell">
+        <div class="flex items-center gap-2 rounded-panel bg-canvas p-3">
+          <input aria-label="filter" placeholder="filter — free text" class="min-h-control w-field flex-1 rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none transition-colors placeholder:text-ink-mute hover:border-ink-mute focus:border-ink-mute">
+          <input aria-label="host" placeholder="host" class="min-h-control w-field-lg rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none transition-colors placeholder:text-ink-mute hover:border-ink-mute focus:border-ink-mute">
+          <input aria-label="method" placeholder="method" class="min-h-control w-field-sm rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none transition-colors placeholder:text-ink-mute hover:border-ink-mute focus:border-ink-mute">
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--a-mute);font-family:var(--a-ui);">Three of App's four real filter fields (<code>App.tsx:145-176</code>), at their real widths — <code>flex-1</code>, <code>w-field-lg</code>, <code>w-field-sm</code>. <span class="anno">1</span> the box · <span class="anno">2</span> the placeholder · <span class="anno">3</span> the value</div>
+      </div>
+    </div>
+    <div class="app parts" data-c="anatomy-parts">
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex items-center gap-2 bg-canvas p-2">
+              <input aria-label="a" placeholder="host" class="min-h-control w-field rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none placeholder:text-ink-mute">
+              <button type="button" class="inline-flex min-h-control min-w-control-min cursor-default select-none items-center justify-between gap-2 rounded-button border border-hairline bg-transparent px-control-x py-control-y font-ui text-control text-ink-body"><span>macOS</span><span class="shrink-0 text-glyph leading-none text-ink-mute">▾</span></button>
+            </div>
+          </div>
+          <div class="cap">Field beside a Select trigger — one box, one caret of difference</div>
+        </div>
+        <div>
+          <strong><span class="anno">1</span> the box</strong>
+          <div class="spec">
+            <div class="k">spec</div><div><code>min-h-control</code> (24px floor) · <code>rounded-button</code> · <code>border border-hairline</code> · <code>px-control-x py-control-y</code> · <code>bg-canvas</code> · <code>font-ui text-control</code>. Width is never set here — the caller passes it</div>
+            <div class="k">why</div><div>driver ① — this is <code>Select</code>'s trigger box class-for-class (<code>Select.tsx:156</code>), which is <code>Button</code>'s. <a href="../../decisions/dec-18-one-control-box.html">DEC-18</a>: the app has one small-control chrome and controls compose it rather than clone it</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2">
+              <input aria-label="b" placeholder="filter — free text" class="min-h-control w-field rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none placeholder:text-ink-mute">
+              <input aria-label="c" value="api.stripe.com" readonly class="min-h-control w-field rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none">
+            </div>
+          </div>
+          <div class="cap">Empty (placeholder, <code>ink-mute</code>) above filled (value, <code>ink</code>)</div>
+        </div>
+        <div>
+          <strong><span class="anno">2</span> the placeholder <span class="anno">3</span> the value</strong>
+          <div class="spec">
+            <div class="k">spec</div><div>placeholder <code>placeholder:text-ink-mute</code>, lowercase, terse — <code>"host"</code>, <code>"method"</code>, <code>"filter — free text"</code>. Value <code>text-ink</code>, the full ink channel</div>
+            <div class="k">why</div><div>the two-step ink drop is the only channel separating "nothing here" from "a value" — driver ④ leaves no colour for it. <code>calm-microcopy</code>: lowercase, no trailing period, no "Search…". The placeholder is a <em>hint</em>, never the accessible name (driver ③)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="behavior">Behavior — what the parts do</h2>
+    <p style="color:var(--muted);"><strong>Anatomy is what you see; behavior is what it does.</strong> Field's behaviour is deliberately thin — the interesting rules are the ones about what it refuses to do.</p>
+    <div class="app parts" data-c="behavior-rules">
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2">
+              <input aria-label="d" value="api." class="min-h-control w-field rounded-button border border-ink-mute bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none">
+              <div class="font-ui text-chrome text-ink-mute">→ onChange("api.") fires now</div>
+            </div>
+          </div>
+          <div class="cap">Focused: border lifts to <code>ink-mute</code>. No ring, no colour</div>
+        </div>
+        <div>
+          <strong>B1 · every keystroke reports; nothing is delayed</strong>
+          <div class="spec">
+            <div class="k">spec</div><div><code>onChange</code> fires per keystroke with the raw event. No debounce, no throttle, no commit-on-Enter, no internal value state — the component is fully controlled</div>
+            <div class="k">why</div><div>driver ⑥. The filter's timing is <code>useFlows</code>'s business (<code>App.tsx:148</code> — <code>update("q", …)</code>), and a primitive that debounces has silently taken a product decision every tenant then has to fight. A T1 that holds state is a T1 with a policy</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2">
+              <input aria-label="e" value="404" inputmode="numeric" class="min-h-control w-field-sm rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none">
+              <input aria-label="f" value="4o4" class="min-h-control w-field-sm rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none">
+            </div>
+          </div>
+          <div class="cap">The status field accepts <code>4o4</code> — and says nothing about it</div>
+        </div>
+        <div>
+          <strong>B2 · it never judges the value</strong>
+          <div class="spec">
+            <div class="k">spec</div><div>no validation, no error state, no <code>aria-invalid</code>, no format enforcement. <code>inputMode</code> passes through (the status field sends <code>numeric</code> for the soft keyboard) but does <em>not</em> restrict typing</div>
+            <div class="k">why</div><div>fork F3. A filter has no invalid input — a value that matches nothing produces an empty list, and <code>Notice</code>'s <code>empty-states-orient</code> sentence is where that gets explained. Tinting the box <code>warn</code> would claim an error the app cannot substantiate, and <code>zero-accent</code> has no token spare for it</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2">
+              <input aria-label="filter" placeholder="filter — free text" class="min-h-control w-field rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none placeholder:text-ink-mute">
+              <div class="font-mono text-chrome text-ink-mute">aria-label="filter" ← required</div>
+            </div>
+          </div>
+          <div class="cap">The accessible name is a prop, not the placeholder</div>
+        </div>
+        <div>
+          <strong>B3 · it cannot be built nameless</strong>
+          <div class="spec">
+            <div class="k">spec</div><div>the type demands one of <code>aria-label</code> or <code>id</code>+external <code>&lt;label&gt;</code>. There is no unlabelled Field</div>
+            <div class="k">why</div><div>driver ③ — all four tenants are visually unlabelled, so the default path <em>must</em> be the accessible one or every call site is a WCAG 4.1.2 failure by omission. This mirrors <code>IconButton</code>'s accessible-name guarantee, which exists for the same reason: a control whose meaning is carried by something a screen reader cannot see</div>
+          </div>
+        </div>
+      </div>
+      <div class="part">
+        <div>
+          <div class="demo-shell">
+            <div class="flex flex-col gap-2 bg-canvas p-2">
+              <input aria-label="g" value="a-very-long-host-name.example.internal" class="min-h-control w-field rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none">
+              <div class="font-ui text-chrome text-ink-mute">scrolls inside the box · the row does not move</div>
+            </div>
+          </div>
+          <div class="cap">Overlong value: native horizontal scroll, fixed width</div>
+        </div>
+        <div>
+          <strong>B4 · it never resizes</strong>
+          <div class="spec">
+            <div class="k">spec</div><div>width is the caller's class and is fixed. A value longer than the box scrolls natively; the box does not grow, wrap or truncate the element</div>
+            <div class="k">why</div><div>driver ② — four fields share one header row, and a field that grows as you type shoves its neighbours. <code>wrap-not-truncate</code> binds payload elements; this is chrome holding a query, and the native scroll keeps the whole value reachable and selectable, which is what that rule protects</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 id="states">States</h2>
+    <div class="app swatches" data-c="states">
+      <div class="swatch">
+        <input aria-label="s1" placeholder="host" class="min-h-control w-full rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none placeholder:text-ink-mute">
+        <div class="cap"><strong>rest · empty</strong> — hairline border, placeholder in <code>ink-mute</code></div>
+      </div>
+      <div class="swatch">
+        <input aria-label="s2" value="api.stripe.com" readonly class="min-h-control w-full rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none">
+        <div class="cap"><strong>rest · filled</strong> — value in full <code>ink</code></div>
+      </div>
+      <div class="swatch">
+        <input aria-label="s3" placeholder="host" class="min-h-control w-full rounded-button border border-ink-mute bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none placeholder:text-ink-mute">
+        <div class="cap"><strong>hover</strong> — border lifts to <code>ink-mute</code>; same as focus by design (driver ④ leaves one channel)</div>
+      </div>
+      <div class="swatch">
+        <input aria-label="s4" value="api.st" readonly class="min-h-control w-full rounded-button border border-ink-mute bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none">
+        <div class="cap"><strong>focus</strong> — <code>ink-mute</code> border, native caret. No outline ring: the border <em>is</em> the ring</div>
+      </div>
+      <div class="swatch">
+        <input aria-label="s5" value="api.stripe.com" disabled class="min-h-control w-full rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink opacity-disabled outline-none">
+        <div class="cap"><strong>disabled</strong> — <code>opacity-disabled</code> (.38), out of tab order. No tenant today; declared because <code>state-declarations</code> requires it</div>
+      </div>
+    </div>
+    <div class="callout" data-c="non-states">
+      <strong>Deliberate non-states — each is a refusal, not an omission.</strong>
+      <ul>
+        <li><strong>No error / invalid.</strong> Fork F3 — nothing in the app can judge a filter wrong, and the empty result is explained by <code>Notice</code>, at the list, where the eye already is.</li>
+        <li><strong>No loading.</strong> A text box has nothing to wait for; <code>Select</code> has <code>isLoading</code> because its <em>options</em> arrive late, and a Field has no options.</li>
+        <li><strong>No empty state.</strong> Empty <em>is</em> the rest state — that is what the placeholder is for. This is the distinction <code>state-declarations</code> asks each component to make explicitly.</li>
+        <li><strong>No confirming.</strong> Nothing is committed, so there is nothing to confirm (<code>confirm-at-point</code> has no trigger here).</li>
+        <li><strong>No focus ring separate from hover.</strong> Both land on the same <code>ink-mute</code> border. Two distinguishable ink weights would be the alternative and the palette has no third step that reads at 1px.</li>
+      </ul>
+    </div>
+
+    <h2 id="forks">Forks — the contested decisions</h2>
+
+    <h3 id="fork-f1">F1 · Does the app get a Field at all, or four raw inputs?</h3>
+    <div class="fork-row" data-c="fork-f1">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — a registry entry</div>
+        <div class="app"><input aria-label="w1" placeholder="host" class="min-h-control w-full rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none placeholder:text-ink-mute"></div>
+        <div class="fc-note">One box, one accessible-name rule, one focus behaviour. <code>KeyValueRow</code>'s <code>@avoid</code> gets a real target. Four call sites shrink to a width class each.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — raw &lt;input&gt; per screen</div>
+        <div class="app"><input aria-label="l1" placeholder="host" style="min-height:24px;border-radius:3px;padding:3px 9px;" class="w-full border border-hairline bg-canvas font-ui text-control text-ink outline-none placeholder:text-ink-mute"></div>
+        <div class="fc-note"><strong>Why it lost:</strong> it is what ships today, and the class string above is already 12 utilities long — copied four times in <code>App.tsx</code> via <code>components.tsx:9</code>. The moment a fifth input appears anywhere, nothing makes it match, and no check can see the divergence. This is the exact failure the epic exists to close.</div>
+      </div>
+    </div>
+
+    <h3 id="fork-f2">F2 · Its own box, or Select's?</h3>
+    <div class="fork-row" data-c="fork-f2">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — Select's box, class for class</div>
+        <div class="app flex gap-2">
+          <input aria-label="w2" placeholder="host" class="min-h-control flex-1 rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none placeholder:text-ink-mute">
+          <button type="button" class="inline-flex min-h-control cursor-default items-center gap-2 rounded-button border border-hairline bg-transparent px-control-x py-control-y font-ui text-control text-ink-body"><span>macOS</span><span class="text-glyph text-ink-mute">▾</span></button>
+        </div>
+        <div class="fc-note"><code>px-control-x py-control-y</code>, <code>rounded-button</code>, <code>border-hairline</code>, <code>text-control</code>, <code>min-h-control</code> — the same five decisions <code>Button</code> and <code>Select</code> already made. <a href="../../decisions/dec-18-one-control-box.html">DEC-18</a> is explicit that a new control <em>composes</em> the one box.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — input-specific chrome</div>
+        <div class="app flex gap-2">
+          <input aria-label="l2" placeholder="host" class="min-h-control flex-1 rounded-card border border-hairline bg-canvas-soft px-2 py-chrome-y font-ui text-body text-ink outline-none placeholder:text-ink-mute">
+          <button type="button" class="inline-flex min-h-control cursor-default items-center gap-2 rounded-button border border-hairline bg-transparent px-control-x py-control-y font-ui text-control text-ink-body"><span>macOS</span><span class="text-glyph text-ink-mute">▾</span></button>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> "an input should look inset, a button should look raised" is a real convention — and it produces the pair above, where two controls in one row disagree about radius, fill, padding and type size. <a href="../../decisions/dec-18-one-control-box.html">DEC-18</a> was minted after exactly this drifted three token values while both files claimed identity. <em>Weight is expressed in tone and in which actions exist, never in a second shape.</em></div>
+      </div>
+    </div>
+
+    <h3 id="fork-f3">F3 · Does it own validity?</h3>
+    <div class="fork-row" data-c="fork-f3">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — no validity, ever</div>
+        <div class="app flex flex-col gap-2">
+          <input aria-label="w3" value="4o4" readonly class="min-h-control w-full rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none">
+          <div class="font-ui text-chrome text-ink-mute">list below: "no flows match this filter"</div>
+        </div>
+        <div class="fc-note">The box stays neutral; the <em>outcome</em> is explained where the outcome is, by <code>Notice</code>. One place to look, and it is the place already being looked at.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — warn border + message</div>
+        <div class="app flex flex-col gap-2">
+          <input aria-label="l3" value="4o4" readonly class="min-h-control w-full rounded-button border border-warn bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none">
+          <div class="font-ui text-chrome text-warn">not a number</div>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> three ways. It spends a chromatic token — <code>warn</code> means <em>failure outcome</em>, and a half-typed filter is not one (<a href="../../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a> fixes each token's meaning). It fires <em>while typing</em>, so <code>4</code>→<code>40</code>→<code>404</code> flashes an error twice on the way to being right. And it needs a rule for what "valid" means in a filter, which no tenant can supply.</div>
+      </div>
+    </div>
+
+    <h3 id="fork-f4">F4 · Is Select's popup filter this component?</h3>
+    <div class="fork-row" data-c="fork-f4">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — no, it stays Select-local</div>
+        <div class="app">
+          <div class="w-full rounded-lg border border-hairline bg-canvas-soft">
+            <div class="flex items-center gap-chrome-gap border-b border-hairline px-2 py-chrome-y"><span class="text-glyph text-ink-mute">⌕</span><input aria-label="w4" placeholder="filter…" class="min-w-0 flex-1 border-none bg-transparent font-ui text-control text-ink outline-none placeholder:text-ink-mute"></div>
+            <div class="px-control-x py-control-y font-ui text-control text-ink-body">macOS</div>
+          </div>
+        </div>
+        <div class="fc-note">Borderless, inside the popup's own border, named by the listbox it filters. It is a <em>part of</em> Select, like the caret.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — reuse Field inside Select</div>
+        <div class="app">
+          <div class="w-full rounded-lg border border-hairline bg-canvas-soft">
+            <div class="flex items-center gap-chrome-gap border-b border-hairline px-2 py-chrome-y"><input aria-label="l4" placeholder="filter…" class="min-h-control min-w-0 flex-1 rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none placeholder:text-ink-mute"></div>
+            <div class="px-control-x py-control-y font-ui text-control text-ink-body">macOS</div>
+          </div>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> a bordered box inside a bordered popup — two frames, 2px apart, for one control. It would also put a second accessible name on a listbox that already has one. <em>Reuse that produces a worse screen is a propose in disguise;</em> here it is simply "not a tenant".</div>
+      </div>
+    </div>
+
+    <h2 id="api">API + TSDoc</h2>
+    <table data-c="props">
+      <thead><tr><th>Prop</th><th>Type</th><th>Earns its row because…</th></tr></thead>
+      <tbody>
+        <tr><td><code>value</code></td><td><code>string</code></td><td>controlled — the caller owns the value (driver ⑥). Required</td></tr>
+        <tr><td><code>onChange</code></td><td><code>(e) =&gt; void</code></td><td>the whole point; raw event so the caller reads <code>.target.value</code> as it already does (<code>App.tsx:150</code>). Required</td></tr>
+        <tr><td><code>aria-label</code></td><td><code>string</code></td><td>driver ③ / B3 — required, and the one prop with no default</td></tr>
+        <tr><td><code>placeholder</code></td><td><code>string?</code></td><td>the visible hint; every tenant passes one, but a labelled field would not need it</td></tr>
+        <tr><td><code>className</code></td><td><code>string?</code></td><td>width only, from the <code>field-*</code> tokens (driver ②). The escape hatch that keeps width out of the component</td></tr>
+        <tr><td><code>inputMode</code></td><td><code>InputHTMLAttributes["inputMode"]?</code></td><td>soft-keyboard hint — the status field passes <code>numeric</code> (<code>App.tsx:171</code>). Passes through, restricts nothing (B2)</td></tr>
+        <tr><td><code>disabled</code></td><td><code>boolean?</code></td><td>declared for the states contract; no tenant today</td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--muted);font-size:12.5px;"><strong>Not props, on purpose:</strong> <code>label</code> (no tenant shows one — an <code>id</code>+external <code>&lt;label&gt;</code> covers it when one does) · <code>error</code>/<code>invalid</code> (F3) · <code>debounce</code> (B1) · <code>size</code>/<code>width</code> (driver ② — that is <code>className</code>) · <code>onEnter</code> (there is no submit; a tenant that needs one adds <code>onKeyDown</code> through the spread).</p>
+    <pre class="tsdoc" data-c="tsdoc">/**
+ * Field — the app's one text input: a labelled single-line box that reports what is typed and judges none of it.
+ *
+ * @tier T1 — a controlled box with an accessible name; no validation, no debounce, no formatting, no state of its own
+ * @anatomy the one small-control box (border-hairline, radius 3, padding 3/9, min-height 24 — Select's trigger and Button's shell, DEC-18) · placeholder in ink-mute as the visible hint · value in full ink · width is NEVER set here, the caller passes a field-sm/field/field-lg class
+ * @use any free-text entry: the filter bar's four fields (free text, host, method, status), a search box, a name, a port override. Pass value + onChange + aria-label; pass width through className
+ * @avoid a choice among known options (that is Select — this is a miss by kind: five options do not become typing) · validating, debouncing, formatting or restricting what is typed: an unmatched filter is an empty list, explained by Notice at the list (no invalid state exists, DEC-19 leaves no token for one) · rendering it without an accessible name — aria-label is required because every tenant is visually unlabelled and a placeholder is not a name · setting its own width, or letting it grow to fit content (four fields share one header row) · Select's in-popup filter box, which is borderless inside the popup's own frame and named by its listbox
+ * @states rest·empty (placeholder, ink-mute) · rest·filled (value, ink) · hover and focus (both lift the border to ink-mute — one channel, zero-accent leaves no second) · disabled (opacity .38, out of tab order). No error, loading, empty or confirming state: empty IS rest, and nothing here is committed or judged
+ * @madeof — (the leaf; its box is Select's trigger box, which is Button's — one shared small-control chrome per DEC-18, not a composition)
+ */</pre>
+
+    <h2 id="fit">Use / avoid</h2>
+    <div class="fork-row" data-c="fit">
+      <div class="fork-card win">
+        <div class="fc-lbl">✓ reach for Field when…</div>
+        <ul style="font-size:12.5px;line-height:1.6;margin:0;padding-left:18px;">
+          <li>the user types something you cannot enumerate — a host, a substring, a name</li>
+          <li>you have a value and a setter and want the app's standard box around them</li>
+          <li>the field is visually unlabelled and needs a real accessible name</li>
+        </ul>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">✗ reach for something else when…</div>
+        <ul style="font-size:12.5px;line-height:1.6;margin:0;padding-left:18px;">
+          <li>the value is one of a known set → <code>Select</code> (5+) or <code>SegmentedControl</code> (2–4)</li>
+          <li>the value is displayed, not entered → <code>CopyText</code>, or <code>KeyValueRow</code> with a name beside it</li>
+          <li>you want to tell the user their input is wrong → <code>Notice</code>, at the zone whose content is affected</li>
+          <li>you are inside <code>Select</code>'s popup → that filter box is Select's own part (F4)</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 id="tokens">Tokens — mockup → build</h2>
+    <table data-c="tokens">
+      <thead><tr><th>Part</th><th>Tailwind classes (verbatim — this is the component's <code>className</code>)</th></tr></thead>
+      <tbody>
+        <tr><td><strong>the box</strong> (base)</td><td><code>min-h-control rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none transition-colors</code></td></tr>
+        <tr><td><strong>placeholder</strong></td><td><code>placeholder:text-ink-mute</code></td></tr>
+        <tr><td><strong>hover / focus</strong></td><td><code>hover:border-ink-mute focus:border-ink-mute</code></td></tr>
+        <tr><td><strong>disabled</strong></td><td><code>disabled:opacity-disabled</code></td></tr>
+        <tr><td><strong>width</strong> (caller's)</td><td><code>w-field-sm</code> (80px) · <code>w-field</code> (128px) · <code>w-field-lg</code> (160px) · <code>min-w-field flex-1</code> — App's four fields use the last three plus <code>flex-1</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="token-delta">
+      <strong>One change from the shipped legacy class string</strong> (<code>components.tsx:9</code>): it uses <code>px-3</code> (12px) and <code>py-chrome-y</code> (4px), where <code>Select</code>'s trigger uses <code>px-control-x</code> (9px) / <code>py-control-y</code> (3px). <strong>Both are legal tokens; they are simply not the same box</strong> — a 3px horizontal and 1px vertical divergence, invisible in isolation and obvious once a Field sits beside a Select in the same row. This design takes Select's, per driver ① and <a href="../../decisions/dec-18-one-control-box.html">DEC-18</a>. <em>W2 must apply this delta, not copy the legacy string.</em> No new token is needed and none is proposed.
+    </div>
+
+    <h2 id="specimen">Live specimen</h2>
+    <p style="color:var(--muted);">Fully live — a controlled input is ~10 lines, well inside the format's "cheap to re-implement" bar. Type in it: the value echoes below, every keystroke, undebounced (B1); nothing is ever judged (B2).</p>
+    <div class="app demo-shell" data-c="specimen">
+      <div id="spec-live"></div>
+    </div>
+    <script>
+      const root = document.getElementById('spec-live');
+      root.innerHTML = `
+        <div class="flex flex-col gap-3 rounded-panel bg-canvas p-3">
+          <div class="flex items-center gap-2">
+            <input id="sp-input" aria-label="host" placeholder="host"
+                   class="min-h-control w-field rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none transition-colors placeholder:text-ink-mute hover:border-ink-mute focus:border-ink-mute">
+            <input id="sp-disabled" aria-label="disabled example" value="disabled" disabled
+                   class="min-h-control w-field-sm rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink opacity-disabled outline-none">
+          </div>
+          <div class="font-mono text-chrome text-ink-mute">onChange → <span id="sp-echo" class="text-ink">""</span></div>
+        </div>`;
+      const input = root.querySelector('#sp-input');
+      const echo = root.querySelector('#sp-echo');
+      input.addEventListener('input', (e) => { echo.textContent = JSON.stringify(e.target.value); });
+    </script>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
