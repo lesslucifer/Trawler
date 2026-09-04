@@ -22,7 +22,7 @@
     <div class="inner">
       <h1>E-REDESIGN.W2 — build the three gap components into the registry</h1>
       <p>W1's three contracts become code: <strong>Field</strong>, <strong>StatusDot</strong> and <strong>Disclosure</strong> land under <code>ui/src/components/</code>, the two phantom redirects resolve, and the three design files retire in DEC-16's order. The repo's first <code>design.implements</code> citation is owed here.</p>
-      <div class="meta">WU plan · 2026-09-04 · Trawler · T3 (docs/work/) · <code>wu/redesign/gap-components-build</code> → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · designs: <a href="components/field.html">field</a> · <a href="components/status-dot.html">status-dot</a> · <a href="components/disclosure.html">disclosure</a></div>
+      <div class="meta">WU plan · 2026-09-04 · Trawler · T3 (docs/work/) · <code>wu/redesign/gap-components-build</code> → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · designs: <code>components/field.html</code> · <code>components/status-dot.html</code> · <code>components/disclosure.html</code> — <em>retired by this WU under DEC-16; read them at <code>52f0ec3^</code></em></div>
     </div>
   </header>
   <main>
@@ -132,8 +132,9 @@ design files"]
         <td>The bounded contract here is <strong>the collection as a vocabulary</strong>, and it already has a test that is exactly that: <code>collection.test.tsx</code> asserts the barrel matches the TSDoc roster, every name has a mounting specimen, every <code>@madeof</code> edge really composes, and every <code>@avoid</code> redirect resolves to an export. This WU extends it with three specimens and, through the roster, two newly-live redirects — plus a <code>@madeof</code> assertion that <strong>StatusDot is one <code>&lt;button&gt;</code> with Button's shell</strong>, the way its two siblings already are.</td>
       </tr>
       <tr>
-        <td><strong>E2E</strong></td><td><code>waived</code></td>
-        <td><em>No user-visible surface moves.</em> Every screen renders exactly what it rendered before — the components exist but have no call site until W4 and W10, which is the epic's stated shape ("W2 unblocks all four screen runs"). The e2e that proves these components on screen is UC-4's and UC-ONBOARD's, and it runs from W4 onward. Recorded as <code>waived</code> with this reason in <code>test/v2</code>, not skipped silently.</td>
+        <td><strong>E2E</strong></td><td><s><code>waived</code></s> → <strong>run</strong></td>
+        <td><s><em>No user-visible surface moves.</em> Every screen renders exactly what it rendered before — the components exist but have no call site until W4 and W10.</s>
+          <p><strong>The waiver was voided by the review.</strong> It found the components unreachable from the app bundle (the <code>./components</code> collision), and the fix migrated three screens — so surfaces did move and the suite ran: <strong>10/10 specs pass</strong>, UC-4, UC-5 and UC-ONBOARD all holding. See the <a href="2026-09-04-redesign-w2-result.html#review">result's review section</a>.</p></td>
       </tr>
     </table>
 

@@ -28,7 +28,10 @@
   <main>
     <h2 id="outcome">Outcome</h2>
     <div class="callout" data-item="outcome" data-c="outcome">
-      <strong>Delivered, all eight expected rows.</strong> <code>Field</code> (T1), <code>StatusDot</code> (T2) and <code>Disclosure</code> (T1) are in the collection, each carrying its design's TSDoc byte-for-byte as its only contract. The registry emits <strong>27</strong>; <code>KeyValueRow → Field</code> and <code>StatusPill → StatusDot</code> are now checked edges rather than prose. The vocabulary gained the two members Disclosure's twist needed, verified in the emitted CSS. The three design files are gone, their forks distilled to DEC-30. No screen changed.
+      <strong>Delivered, all eight expected rows — plus a ninth the review forced.</strong> <code>Field</code> (T1), <code>StatusDot</code> (T2) and <code>Disclosure</code> (T1) are in the collection, each carrying its design's TSDoc byte-for-byte as its only contract. The registry emits <strong>27</strong>; <code>KeyValueRow → Field</code> and <code>StatusPill → StatusDot</code> are now checked edges rather than prose. The vocabulary gained the two members Disclosure's twist needed, verified in the emitted CSS. The three design files are gone, their forks distilled to DEC-30.
+    </div>
+    <div class="callout warn" data-c="scope-change">
+      <strong>Expected row 8 — "zero change to any screen" — no longer holds, and the reason is the review.</strong> It found that this WU had built three components <em>the app bundle did not contain</em>: adding <code>Field</code> and <code>StatusDot</code> to the barrel collided with the legacy <code>ui/src/components.tsx</code>, and every screen imports the bare <code>./components</code>, which resolves to the file rather than the directory's index. The WU's own deliverable was unreachable from the running app. The owner's call was to <strong>migrate the call sites and delete the legacy kit</strong> rather than respell one import — so three screens changed, the e2e ran instead of being waived, and work the epic had assigned to W4 and W11 landed here. <a href="#review">The full account is below.</a>
     </div>
 
     <table data-c="rollup">
@@ -41,7 +44,8 @@
         <tr><td>5</td><td><code>rotate</code> / <code>transition-transform</code> legal vocabulary</td><td><span class="ok">✓</span> two named members; lint silent; <strong>confirmed in the built CSS</strong>, not only the config</td></tr>
         <tr><td>6</td><td>Design files gone, forks distilled, index reachable</td><td><span class="ok">✓</span> DEC-30 added, index row added, three files deleted in one commit with the record</td></tr>
         <tr><td>7</td><td>A <code>design.implements</code> citation — the repo's first</td><td><span class="ok">✓</span> three of them, <code>{path, blob, built}</code>, resolving through history per DEC-28. See <a href="#probe">the probe</a></td></tr>
-        <tr><td>8</td><td>Zero change to any screen</td><td><span class="ok">✓</span> <code>git diff epic/redesign HEAD -- 'ui/src/*.tsx'</code> empty</td></tr>
+        <tr><td>8</td><td>Zero change to any screen</td><td><span class="warn">✗ superseded</span> — held until the review found the components were unreachable from the app. Three screens migrated; see <a href="#review">the review</a></td></tr>
+        <tr><td>9</td><td><em>(added by the review)</em> the components the WU built are the ones the app actually renders</td><td><span class="ok">✓</span> verified in the built bundle: the registry <code>Field</code>'s class string is present and the legacy <code>px-3 py-chrome-y</code> input is gone; 10/10 e2e specs pass on the migrated screens</td></tr>
       </tbody>
     </table>
 
@@ -84,14 +88,66 @@
     </div>
     <p><a href="../decisions/dec-29-retired-design-judged-where-it-left.html">DEC-29</a>'s other half also behaved as specified: <code>design-scope</code> lists <strong>no design artifact to judge</strong>, because these three were retired at the bytes W1 judged them at — amended-then-retired is a seam artifact, unchanged-then-retired is not. What the gate does demand is the three citations plus an answer for <code>Section.tsx</code>, which is the one rendered file this WU touched.</p>
 
+    <h2 id="review">The review — one real finding, and what it cost</h2>
+    <p>Five finders, four verifiers. Four candidate findings were refuted; one was confirmed and is the reason this WU's shape changed.</p>
+
+    <div class="callout warn" data-c="the-finding">
+      <strong>The components this WU built were not in the app bundle.</strong> Every screen imports the bare specifier <code>./components</code>, and <code>ui/src/components.tsx</code> sat beside the <code>ui/src/components/</code> directory — bundlers resolve the <em>file</em> over the directory's index. Adding <code>Field</code> and <code>StatusDot</code> to the barrel is what turned a dormant path into a name collision, and the app kept getting the legacy pair.
+      <p><strong>Not pre-existing.</strong> At BASE the barrel exported neither name, so <code>./components</code> had exactly one source for them. This diff manufactured the collision and then lost to it.</p>
+      <p><strong>Silent by construction.</strong> Both specifiers are valid, so <code>tsc</code> compiled it without a word and every one of the 529 unit tests passed — they import <code>./Field</code> and <code>./index</code> directly, which is precisely the path the app does not take.</p>
+    </div>
+
+    <table data-c="finding-evidence">
+      <thead><tr><th>Grepped in <code>dist/assets/index-*.js</code></th><th>Before the fix</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td>legacy Field's <code>px-3 py-chrome-y</code></td><td><span class="warn">present</span></td><td><span class="ok">gone</span></td></tr>
+        <tr><td>registry Field's <code>…bg-canvas px-control-x</code></td><td><span class="warn">absent</span></td><td><span class="ok">present</span></td></tr>
+        <tr><td><code>w-glyph</code> (Disclosure), <code>min-h-control</code></td><td><span class="warn">absent</span></td><td><span class="ok">present</span></td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>The regression test is the general form, not the instance</strong> — no screen may import through the ambiguous bare specifier. It listed all three offenders before the fix, and would catch the spelling coming back in any future WU.</p>
+
+    <h3 id="the-fix">The fix, and the scope it took</h3>
+    <p>Respelling the four imports would have silenced this instance and left the ambiguity for the next one. The owner chose to remove it at the root:</p>
+    <table data-c="fix">
+      <thead><tr><th>Change</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td><code>App.tsx</code> → registry <code>Field</code> + <code>StatusDot</code></td><td>Props already matched, so this is an import swap. The header <strong>gains</strong> the 24px hit target and the accessible name that W1 found missing.</td></tr>
+        <tr><td><code>FlowList</code> / <code>FlowDetail</code> → registry <code>StatusPill</code></td><td>The one real prop-shape change: the raw <code>number | null</code> instead of a tone resolved at the call site. <strong>Statuses now carry their reason phrase</strong> — <code>403</code> announces "403 Forbidden" rather than a naked number, the third defect the epic plan named.</td></tr>
+        <tr><td><code>FlowRow</code> drops <code>tone</code> and its formatted <code>status</code></td><td><code>toRow</code> carries the raw status and <code>StatusPill</code> owns the mapping — DEC-20, and exactly what the epic's W4 row describes.</td></tr>
+        <tr><td><code>ui/src/components.tsx</code> + its test deleted</td><td>The collision cannot recur, and the third copy of the tone map is gone.</td></tr>
+      </tbody>
+    </table>
+
+    <img class="shot" src="../../doc-assets/w2-migrated.png" alt="The migrated header and flow list: a green connected StatusDot beside the Trawler wordmark, the four registry Fields at their real widths, and a flow list whose status column shows 200 in green, 403 in red, 304 muted and a pending row as an ellipsis — each resolved by StatusPill from the raw status.">
+    <p>The migrated screens, rendered from the real components. The status column is the visible change: <code>StatusPill</code> derives the tone <em>and</em> the reason phrase from the raw status, where the legacy pill was handed a pre-resolved tone and had no phrase at all.</p>
+
+    <div class="callout warn" data-c="scope-cost">
+      <strong>This takes work the epic assigned elsewhere, and does it without the design that was meant to come first.</strong> W4 owned the flow-list migration and the legacy <code>StatusPill</code> removal; W11 owned deleting the kit. Both were to follow <strong>W3's design run</strong> on the flow list and shell. That ordering is now broken for these four files.
+      <p>What limits the damage: <strong>the screens' layout is untouched</strong> — same markup, same grid, same testids; only which component renders each cell changed. W3 still designs the flow list and shell against the same surface it would have, and its Elements stage now resolves those cells to entries that are already wired rather than proposing the wiring. What W3 has lost is the chance to decide these cells <em>before</em> they were decided.</p>
+      <p>Recorded as the owner's call, made against the alternative of shipping a WU whose deliverable the app could not reach.</p>
+    </div>
+
+    <h3 id="refuted">Refuted — four candidates that did not survive verification</h3>
+    <table data-c="refuted">
+      <thead><tr><th>Claim</th><th>Why it failed</th></tr></thead>
+      <tbody>
+        <tr><td><code>Field</code> should <em>compose</em> <code>Button</code>, per DEC-18, rather than repeat its class string</td><td>DEC-18's own canonical example is <code>Select</code>'s trigger, which shares the box by matching class string — and <code>Field</code> renders an <code>&lt;input&gt;</code> where <code>Button</code> renders a <code>&lt;button&gt;</code>, so composition is not mechanically available. The design's F2 fork stages and settles exactly this.</td></tr>
+        <tr><td>Enforcing the box parity by a <em>test</em> repeats DEC-18's "prose is not a comparison" failure</td><td>Backwards: a machine-checked comparison is the antidote DEC-18 asks for. Prose was the disease.</td></tr>
+        <tr><td><code>Disclosure</code> should use Tailwind's <code>group</code> / <code>group-open:</code> instead of attribute selectors</td><td>Tested empirically: <code>group</code> is a hard <code>design/vocabulary</code> <strong>error</strong> under the closed-vocabulary lint, because a marker class emitting no CSS is indistinguishable from a typo. The proposed alternative fails CI. (Recorded as deviation D2 before the review raised it.)</td></tr>
+        <tr><td>Two <code>Field</code>s and two <code>StatusDot</code>s ship in one bundle</td><td>True when raised and <strong>resolved by the fix above</strong> — the legacy kit is deleted.</td></tr>
+      </tbody>
+    </table>
+
     <h2 id="deviations">Deviations</h2>
     <table data-item="deviations" data-c="deviations">
       <thead><tr><th></th><th>Deviation</th><th>Why, and what it cost</th></tr></thead>
       <tbody>
         <tr>
           <td><strong>D1</strong></td>
-          <td><strong>StatusDot's test hooks sit on the disc, not the button.</strong> The design's <code>@anatomy</code> says <em>"data-status carries the raw state for tests"</em> in the context of the button.</td>
-          <td><code>Button</code> takes a fixed prop list and passes no arbitrary attributes through; giving it one is an API change to a component whose design is not in this WU's scope, and the alternative — a wrapping <code>&lt;span&gt;</code> — adds an element the anatomy does not describe. The hooks are on the <code>aria-hidden</code> disc: queryable by <code>[data-status]</code> and <code>data-testid</code>, and <strong>the accessible tree is unchanged</strong>, since the disc is hidden from it either way. <em>The TSDoc was left saying what the design said</em> rather than quietly reworded to match the code — if W4 finds the button is the right host, that is an API question for <code>Button</code>, not a silent edit here.</td>
+          <td><strong>StatusDot's test hooks sit on the disc, not the button.</strong></td>
+          <td><em>Re-read as not a deviation, and kept here because the first draft of this report called it one.</em> The design's <code>@anatomy</code> reads "<code>data-status</code> carries the raw state for tests" as a standalone clause — unlike the clause before it, which says "<strong>the button's</strong> aria-label and title". The design does not say which element hosts the hook, so the build chose: the <code>aria-hidden</code> disc, because <code>Button</code> takes a fixed prop list and passes no arbitrary attributes through, and widening its API is not this WU's to do. Queryable by <code>[data-status]</code>, and the accessible tree is unchanged either way.</td>
         </tr>
         <tr>
           <td><strong>D2</strong></td>
@@ -108,6 +164,11 @@
           <td><strong>One unit test was rewritten after it failed.</strong> Field's B1 test read <code>onChange.mock.calls[i][0].target.value</code> and saw three empty strings.</td>
           <td>A test artifact, not a component defect: the input is controlled at <code>value=""</code>, so React resets <code>target.value</code> before the stored event reference is read. Rewritten to capture the value inside the handler, at call time, and to re-render with each new value the way a real controlled parent does. Recorded because <em>a test changed to make it pass</em> deserves its reason on the record.</td>
         </tr>
+        <tr>
+          <td><strong>D5</strong></td>
+          <td><strong>Disclosure's <code>defaultOpen</code> seeds per <em>value</em>, not per <em>mount</em>, and one test's name overstates what it checks.</strong> Raised by the review and confirmed empirically.</td>
+          <td>React re-applies <code>open</code> whenever the <code>defaultOpen</code> value <em>changes</em> between renders — so a parent computing it from changing state can reopen a panel the user closed. The shipped test <em>"seeds without binding — a re-render does not yank a closed panel back open"</em> only exercises the <em>unchanged</em>-value case. Verified as a <strong>nit, not a defect</strong>: the design's driver ② explicitly <em>wants</em> <code>ManualPanel</code>'s <code>open={state === "failed"}</code> to force the panel open when an action newly fails, which is the changing-value case working as intended; and <code>Disclosure</code> has no call site until W10, so no tenant can hit it. Left as-is rather than tightened, because <strong>W10 is the WU that acquires the tenant</strong> and is where the intended semantics get decided against a real screen — noted as a follow-up rather than guessed at now.</td>
+        </tr>
       </tbody>
     </table>
 
@@ -115,7 +176,9 @@
     <table data-item="evidence" data-c="evidence">
       <thead><tr><th>Check</th><th>Result</th></tr></thead>
       <tbody>
-        <tr><td><code>cd ui &amp;&amp; pnpm test</code></td><td><span class="ok">529 passed</span>, 43 files (was 528 before <code>Section</code>'s redirect went live; +23 from the three new suites and the specimens)</td></tr>
+        <tr><td><code>cd ui &amp;&amp; pnpm test</code></td><td><span class="ok">527 passed</span>, 42 files. It rose to 529 with the three new suites, then settled at 527 when the legacy kit's three tests went with the kit and the review's regression test arrived.</td></tr>
+        <tr><td><code>cargo xtask ui e2e</code></td><td><span class="ok">10/10 specs pass</span> — <strong>run, not waived</strong>, because the fix changed three screens. UC-4's live row and filter, UC-5's detail/JSON/raw/curl/brotli/image, and UC-ONBOARD's fresh launch through first decrypted flow all hold on the migrated screens.</td></tr>
+        <tr><td>The built bundle, before and after the fix</td><td>the finding's whole evidence: legacy <code>px-3 py-chrome-y</code> present → gone; registry <code>px-control-x</code>/<code>min-h-control</code>/<code>w-glyph</code> absent → present. <strong>Only the bundle could show this</strong> — unit tests import the components directly and never take the app's resolution path.</td></tr>
         <tr><td><code>pnpm exec eslint src</code></td><td><span class="ok">clean</span> — the closed-vocabulary lint silent on all three, including the two new scale members</td></tr>
         <tr><td><code>pnpm build</code></td><td><span class="ok">green</span> — <code>tsc -b</code> over the new props and the barrel's re-exports</td></tr>
         <tr><td><code>node scripts/design-registry.mjs</code></td><td><span class="ok">27 entries</span>; every <code>@tier</code> block carries all six tags or the oracle throws</td></tr>
@@ -145,7 +208,10 @@
       <thead><tr><th>What</th><th>Owner</th></tr></thead>
       <tbody>
         <tr><td><strong>The rulebook's chromatic-meanings row</strong> — StatusDot as a second owner of <code>ok</code>/<code>warn</code>, <code>ink-mute</code>'s first entry. Argued in DEC-30, held back so the four screen runs pin an unchanged substrate.</td><td><strong>W11</strong> (the epic's distillation plan reserves it)</td></tr>
-        <tr><td><strong>Two <code>Field</code>s and two <code>StatusDot</code>s in the tree.</strong> The legacy kit still exports both, and both screens still call the legacy pair. Bounded on purpose: only the registry pair is importable from <code>components/</code>.</td><td><strong>W4</strong> (migrates the call sites, deletes legacy <code>StatusPill</code> + <code>TONE_CLASS</code>) · <strong>W11</strong> (deletes the kit)</td></tr>
+        <tr><td><strong>W3 designs a flow list whose cells are already wired.</strong> The fix migrated <code>FlowList</code>/<code>FlowDetail</code>/<code>App</code> ahead of W3's design run, so its Elements stage meets six row cells and four filter fields that resolve to registry entries <em>in the code</em>, not just in the roster. The layout is untouched, so the design surface is unchanged — but W3 should treat the existing wiring as a fact to judge, not a decision to inherit, and say so if it would have chosen differently.</td><td><strong>W3</strong></td></tr>
+        <tr><td><strong>W4's row is now partly spent.</strong> The registry <code>StatusPill</code> swap, the <code>FlowRow.tone</code>/<code>status</code> removal and the legacy-kit deletion all landed here. What remains for W4: <code>TimestampText</code>, <code>MethodLabel</code>, <code>DurationText</code>, <code>Notice</code> for the empty state, and <code>FlowList.test.tsx</code>.</td><td><strong>W4</strong></td></tr>
+        <tr><td><strong>W11 no longer deletes the legacy kit</strong> — it is already gone. <code>Gallery.tsx</code> and its <code>main.tsx</code> guard remain W11's.</td><td><strong>W11</strong></td></tr>
+        <tr><td><strong><code>Disclosure</code>'s <code>defaultOpen</code> semantics need deciding against a real tenant</strong> (deviation D5): seeding is per-value, not per-mount, and the test name is broader than the test. W10 is where <code>ManualPanel</code> arrives and the intended behaviour on a retry-then-refail becomes answerable.</td><td><strong>W10</strong></td></tr>
         <tr><td><strong>Disclosure has three waiting call sites and no consumer.</strong> <code>Onboarding.tsx</code>'s <code>ManualPanel</code> and two raw <code>&lt;details&gt;</code> beside it still carry the browser's triangle.</td><td><strong>W10</strong></td></tr>
         <tr><td><strong>Whether <code>Button</code> should accept test hooks</strong> (deviation D1). Not an API change to make speculatively; the first build that genuinely needs <code>data-*</code> on a composed Button is the one that should argue it.</td><td>open — the WU that hits it</td></tr>
         <tr><td><strong><code>group</code> is unusable in this codebase</strong> (deviation D2). The lint cannot distinguish Tailwind's marker classes from typos, so every group-variant idiom must be written as an attribute selector. Worth a rulebook line if a second component hits it; one occurrence is not a pattern.</td><td>open — the second occurrence</td></tr>
