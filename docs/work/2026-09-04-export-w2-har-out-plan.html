@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a8aa79f34851f0dfac0ff" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-EXPORT.W2 plan: a capture leaves as HAR</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-EXPORT.W2 — a capture leaves as HAR</h1>
+      <p>A HAR 1.2 projection of the ring and the <code>GET /flows/export</code> that serves it — the first time a Trawler capture exists outside the process that recorded it.</p>
+      <div class="meta">v1 · 2026-09-04 · Trawler · T3 WU plan · <span class="badge id">E-EXPORT.W2</span> · <a href="2026-09-04-export-plan.html">epic plan</a> · <a href="2026-09-04-export-w1-paging-result.html">W1 result</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      <strong><code>GET /flows/export</code> returns the currently filtered capture as a single
+      HAR 1.2 document — one <code>log.entries</code> element per flow, newest-first, carrying
+      method, URI, HTTP versions, headers, query string, cookies, status, the
+      <code>startedDateTime</code> the flow was captured at, its <code>time</code> and a
+      <code>timings</code> block, and each body either as its captured bytes (base64 when not
+      text) or as an explicit statement that the body was never captured — never as an empty
+      one. It accepts the same filter parameters as <code>GET /flows</code> and exports exactly
+      the set that listing lists.</strong>
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">
+      <span class="badge id">E-EXPORT</span> · the epic plan's
+      <a href="2026-09-04-export-plan.html#wus">W2 summary block</a> · <strong>UC-6</strong>, the
+      export half ("a client can download the current filtered capture as a HAR 1.2 file that
+      other HTTP tools open") · the roadmap's
+      <a href="../backlog/roadmap.html">"HAR export"</a> line. Independent of W1 — it reads the
+      whole filtered set via <code>Store::list</code>, never a page, because
+      <a href="2026-09-04-export-plan.html#questions">question 2</a> settled that a HAR file is
+      never split across pages. W3's parser is defined against this projection, so the mapping
+      this WU pins is the contract that WU inverts.
+    </p>
+
+    <h2 id="shape">Where the projection lives</h2>
+    <div class="diagram" data-c="module-shape">
+      <pre class="mermaid">
+flowchart LR
+  Q["GET /flows/export?host=…"] --> H["routes::export_har"]
+  H -->|"FlowFilter — the same struct list_flows builds"| S["Store::list"]
+  S -->|"Vec&lt;Flow&gt;, newest-first"| P["api::har::har_document"]
+  P --> D["{ log: { version:1.2, creator, entries:[…] } }"]
+  D -->|"application/json + Content-Disposition"| F["trawler-<em>ts</em>.har on disk"]
+      </pre>
+      <div class="caption">Hình 1 — one new module and one new route. The filter is built by the
+      same code path the listing uses, so export and listing cannot select different sets.</div>
+    </div>
+    <div class="callout">
+      <strong>The filter is shared, not re-implemented.</strong> Expected result 3 is that
+      <code>/flows/export?host=x</code> exports what <code>/flows?host=x</code> lists. The only
+      way to guarantee that rather than test for it is for both handlers to construct the same
+      <code>FlowFilter</code> from the same query type — so <code>ListQuery</code>'s filter
+      fields are extracted into one conversion both routes call, and paging's
+      <code>limit</code>/<code>cursor</code> stay out of the export's query type entirely
+      (an export cannot be paged, so accepting the parameters would be a lie).
+    </div>
+
+    <h2 id="mapping-table">The field mapping</h2>
+    <p>Pinned here because W3 must invert it and because a reader comparing Trawler's output to
+      another tool's needs to know which HAR fields are populated and which are deliberately
+      absent. The mapping itself lives in <code>src/api/har.rs</code> and is never copied into a
+      T1/T2 doc.</p>
+    <table data-c="mapping">
+      <thead><tr><th>HAR field</th><th>From</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td><code>log.version</code></td><td>literal <code>"1.2"</code></td><td>the only version this epic speaks</td></tr>
+        <tr><td><code>log.creator</code></td><td><code>{ name: "Trawler", version: <em>crate version</em> }</code></td><td><code>env!("CARGO_PKG_VERSION")</code> — the file says what wrote it</td></tr>
+        <tr><td><code>log.entries[]</code></td><td>one per <code>Flow</code>, in <code>Store::list</code> order</td><td>newest-first, matching the listing; HAR imposes no order</td></tr>
+        <tr><td><code>entry.startedDateTime</code></td><td><code>flow.started_at</code>, RFC3339</td><td>the captured truth, preserved on import (question 4)</td></tr>
+        <tr><td><code>entry.time</code></td><td><code>flow.duration_ms</code>, else <code>-1</code></td><td>HAR's own "unknown" sentinel; a request with no reply yet has no duration</td></tr>
+        <tr><td><code>entry.timings</code></td><td><code>{ send: 0, wait: <em>time</em>, receive: 0 }</code></td><td>Trawler measures one span, not a phase breakdown. <code>send</code>/<code>receive</code> are <code>0</code> rather than <code>-1</code> so the block sums to <code>time</code> as HAR requires</td></tr>
+        <tr><td><code>entry.request.method</code> · <code>.url</code> · <code>.httpVersion</code></td><td><code>flow.request</code></td><td>direct</td></tr>
+        <tr><td><code>entry.request.queryString</code></td><td>parsed from the URI's query</td><td><code>[{name, value}]</code>, percent-decoded; empty array when there is no query</td></tr>
+        <tr><td><code>entry.request.cookies</code> · <code>.response.cookies</code></td><td><code>Cookie</code> / <code>Set-Cookie</code> headers</td><td>name+value only — HAR's optional cookie attributes are not in the header we captured for requests, and are not parsed out of <code>Set-Cookie</code> in this WU</td></tr>
+        <tr><td><code>entry.request.headers</code> · <code>.response.headers</code></td><td>the header vectors, order preserved</td><td>duplicates preserved: HAR's list shape allows them and the wire had them</td></tr>
+        <tr><td><code>entry.request.postData</code></td><td>request <code>BodyRec</code></td><td>absent when there is no body at all; see <a href="#bodies">bodies</a></td></tr>
+        <tr><td><code>entry.response.status</code> · <code>.statusText</code> · <code>.httpVersion</code></td><td><code>flow.response</code></td><td><code>statusText</code> is the canonical reason phrase for the code (Trawler does not retain the wire phrase)</td></tr>
+        <tr><td><code>entry.response.content</code></td><td>response <code>BodyRec</code></td><td>always present — HAR requires it; see <a href="#bodies">bodies</a></td></tr>
+        <tr><td><code>entry.request.headersSize</code> · <code>bodySize</code> · response ditto</td><td><code>-1</code>, except body sizes we know</td><td><code>-1</code> is HAR's "not available"; Trawler never retained the raw header block, and claiming a number would be a fabrication</td></tr>
+        <tr><td><code>entry.response.redirectURL</code></td><td><code>Location</code> header, else <code>""</code></td><td>required field, empty string is HAR's "none"</td></tr>
+        <tr><td><code>entry.cache</code></td><td><code>{}</code></td><td>required field; Trawler observes no cache</td></tr>
+        <tr><td>a flow with no response yet</td><td>entry omitted</td><td>HAR's <code>response</code> is required and there is nothing honest to put in it; W3's curl import produces the same request-only shape and the same omission. Stated as an <a href="#expected">observable</a> so a caller is never surprised by a count mismatch against the listing</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="bodies">The honest-body problem — the one real design call</h2>
+    <div class="callout warn">
+      <strong>A HAR reader must never be told a body was empty when it was skipped.</strong>
+      <code>BodyRec</code> distinguishes four states and HAR's <code>content</code> object has
+      no vocabulary for three of them. Reporting <code>{ size: 0, text: "" }</code> for a
+      streamed body would make a 4 MB event stream indistinguishable from a 204 — the exact
+      loss the domain model was built to prevent (<code>BodyRec</code>'s own doc comment).
+    </div>
+    <table data-c="body-mapping">
+      <thead><tr><th><code>BodyRec</code></th><th>HAR <code>content</code> / <code>postData</code></th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>Captured</code>, text-ish content type</td>
+          <td><code>{ size, mimeType, text }</code></td>
+          <td>the bytes as UTF-8. A text content type whose bytes are not valid UTF-8 falls through to the base64 branch — the encoding claim has to be true</td>
+        </tr>
+        <tr>
+          <td><code>Captured</code>, anything else</td>
+          <td><code>{ size, mimeType, text, encoding: "base64" }</code></td>
+          <td>HAR 1.2's own binary convention: <code>encoding</code> names how <code>text</code> is wrapped</td>
+        </tr>
+        <tr>
+          <td><code>Empty</code></td>
+          <td><code>{ size: 0, mimeType }</code>, no <code>text</code></td>
+          <td>the one state where "nothing" is the truth</td>
+        </tr>
+        <tr>
+          <td><code>Streaming</code></td>
+          <td><code>{ size: -1, mimeType, comment: "trawler: body not captured (streaming)" }</code></td>
+          <td><code>size: -1</code> is HAR's "unavailable" and the absence of <code>text</code> says the same thing structurally; <code>comment</code> is a HAR-standard field, so the reason survives into any reader that shows comments — and W3 reads it back to restore the variant</td>
+        </tr>
+        <tr>
+          <td><code>NotCaptured { TooLarge { actual } }</code></td>
+          <td><code>{ size: <em>actual</em>, mimeType, comment: "trawler: body not captured (too_large)" }</code></td>
+          <td>the size <em>is</em> known — that is why the body was dropped — so it is reported; the missing <code>text</code> plus the comment carry "we know how big, we do not have it"</td>
+        </tr>
+        <tr>
+          <td><code>NotCaptured { ReadError }</code></td>
+          <td><code>{ size: -1, mimeType, comment: "trawler: body not captured (read_error)" }</code></td>
+          <td>neither the bytes nor the size were obtained</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <strong>The comment strings are a wire contract, not prose.</strong> W3 restores the
+      <code>BodyRec</code> variant by reading them, so the four reason tokens
+      (<code>streaming</code>, <code>too_large</code>, <code>read_error</code>) are pinned by
+      the snapshot test in this WU and reused — not re-spelled — in W3. They deliberately reuse
+      <code>BodyRec::state()</code>'s existing token vocabulary rather than inventing a second
+      spelling of the same four states.
+    </div>
+
+    <h2 id="response-shape">The HTTP response</h2>
+    <table data-c="wire">
+      <thead><tr><th>Request</th><th>Status</th><th>Response</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>GET /flows/export</code></td>
+          <td>200</td>
+          <td><code>application/json</code> · <code>Content-Disposition: attachment; filename="trawler-&lt;utc-timestamp&gt;.har"</code> · the whole document</td>
+        </tr>
+        <tr>
+          <td><code>GET /flows/export?host=x&amp;method=post</code></td>
+          <td>200</td>
+          <td>the same, over the filtered set — identical filter semantics to <code>GET /flows</code></td>
+        </tr>
+        <tr>
+          <td>an empty capture, or a filter matching nothing</td>
+          <td>200</td>
+          <td><code>log.entries: []</code> — a valid, empty HAR file, not a 404: the request asked what is captured and the answer is "nothing"</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><code>application/json</code> rather than the unregistered
+      <code>application/har+json</code>: a HAR file <em>is</em> JSON, every reader accepts it,
+      and the <code>.har</code> filename in <code>Content-Disposition</code> is what tells a
+      browser and the native app what to save it as. The CORS grant is untouched — this is a
+      <code>GET</code>, so DEC-12's read-only reasoning still holds and the widening the epic
+      plan schedules belongs to W4's mutating methods.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>Observable after this WU, checkable by a reader who was not here:</p>
+      <table data-c="observables">
+        <thead><tr><th>#</th><th>Observable</th><th>How to check</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Capture traffic, then <code>curl "http://127.0.0.1:7421/flows/export"</code> → a
+              document whose <code>log.version</code> is <code>"1.2"</code>, whose
+              <code>log.creator.name</code> is <code>Trawler</code>, and whose
+              <code>log.entries</code> carry the captured exchanges — method, URL, both HTTP
+              versions, headers, status, <code>startedDateTime</code>, <code>time</code>,
+              <code>timings</code> and bodies.</td>
+            <td>integration test over the real router asserting each field on a seeded flow; a
+              snapshot (<code>insta</code>) locking the whole document for a fixed fixture</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>/flows/export?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…</code>
+              exports exactly the ids <code>/flows</code> with the same parameters lists, in the
+              same order.</td>
+            <td>integration test running both endpoints with identical filters and comparing the
+              id sequences — the epic's expected result 3</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>A streamed, a too-large and a read-error body appear in the file as bodies that
+              were <em>not captured</em>, each naming its reason, and are distinguishable from a
+              genuinely empty body.</td>
+            <td>unit tests per <code>BodyRec</code> variant asserting <code>size</code>,
+              the absence of <code>text</code>, and the reason token; one asserting
+              <code>Empty</code> is <code>size: 0</code> with no reason</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>A binary body round-trips: its <code>text</code> is base64 of the captured bytes
+              and <code>encoding</code> says so; a UTF-8 text body appears as text with no
+              <code>encoding</code> field.</td>
+            <td>unit tests both ways, plus one for a text content type carrying invalid UTF-8
+              (falls back to base64 rather than lying or lossily replacing bytes)</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Every entry validates against the HAR 1.2 shape: every required field present,
+              every "unknown" expressed as HAR's own sentinel rather than a fabricated value.</td>
+            <td>a unit-level structural assertion over generated flows (proptest): required keys
+              present on every entry, <code>timings</code> summing to <code>time</code> when
+              <code>time</code> is known, no <code>text</code> without a <code>size</code></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>An empty capture exports a valid HAR with zero entries; a flow still awaiting its
+              response is omitted from the file rather than exported half-formed.</td>
+            <td>integration test for the empty document; unit test for the response-less flow</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>The epic's <strong>expected results 1 and 3</strong> hold at the API level after this
+        WU. Their e2e half — real proxied HTTP and HTTPS traffic exported and parsed — lands with
+        the epic per its <a href="2026-09-04-export-plan.html#e2e">e2e plan</a>, which is why
+        e2e is waived here.</p>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="tests">
+        <thead><tr><th>Level</th><th>Where</th><th>What asserts what</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>unit</strong></td>
+            <td><code>src/api/har.rs</code> inline</td>
+            <td>
+              the entry mapping for a full request/response flow (every field in the
+              <a href="#mapping-table">mapping table</a>) · a response-less flow is omitted ·
+              each of the six <a href="#bodies">body cases</a> · query-string parsing (absent,
+              single, repeated key, percent-encoded, empty value) · cookie extraction from
+              <code>Cookie</code> and multiple <code>Set-Cookie</code> headers ·
+              <code>redirectURL</code> present and absent · <code>statusText</code> for a known
+              and an unknown status code · <code>time: -1</code> when there is no duration ·
+              duplicate headers preserved in order · the document envelope
+              (<code>version</code>, <code>creator</code>, entry count and order)
+            </td>
+          </tr>
+          <tr>
+            <td><strong>unit · proptest</strong></td>
+            <td><code>src/api/har.rs</code> inline</td>
+            <td>
+              <code>every_entry_carries_the_har_1_2_required_fields</code> — over generated
+              flows (varying methods, URIs with and without queries, header sets, all four body
+              variants, present/absent responses), every produced entry has every required key,
+              <code>timings</code> sums to <code>time</code> where <code>time ≥ 0</code>, and no
+              body object carries <code>text</code> without a truthful <code>size</code>. The
+              invariant is "the document is always valid HAR", which is an all-inputs claim and
+              so a property, not three examples
+            </td>
+          </tr>
+          <tr>
+            <td><strong>unit</strong></td>
+            <td><code>src/api/routes.rs</code> inline</td>
+            <td>the handler serves the document with the JSON content type and the
+              <code>.har</code> <code>Content-Disposition</code>; an empty store yields an empty
+              entry list; the filter reaches the store (a filtered export excludes a
+              non-matching flow)</td>
+          </tr>
+          <tr>
+            <td><strong>integration</strong></td>
+            <td><code>tests/api.rs</code> (the WU's bounded contract, over the real router)</td>
+            <td>
+              <code>export_serves_a_har_1_2_document_of_the_capture</code> — every asserted field
+              on a seeded flow, over <code>trawler::api::router</code> ·
+              <code>export_and_listing_select_the_same_flows</code> — five filter shapes, id
+              sequences compared endpoint-to-endpoint (expected result 2) ·
+              <code>export_of_an_empty_capture_is_a_valid_empty_har</code> ·
+              <code>export_marks_uncaptured_bodies_rather_than_reporting_them_empty</code> — the
+              honest-body contract as a client sees it
+            </td>
+          </tr>
+          <tr>
+            <td><strong>integration · snapshot</strong></td>
+            <td><code>tests/api.rs</code> + <code>tests/snapshots/</code></td>
+            <td>
+              <code>the_har_document_shape_is_locked</code> — <code>insta</code> over a fixed
+              multi-flow fixture (a GET with a text response, a POST with a binary body, a
+              streamed response, a too-large body), with the two nondeterministic fields
+              (<code>startedDateTime</code>, the creator's version) normalised before the
+              assertion so the snapshot is deterministic per
+              <a href="../testing-strategy.html">the testing contract</a>. This is the WU
+              obligation "any new wire contract is snapshot-locked", and it is what makes a later
+              change to the projection a reviewable diff. <code>insta</code> joins as a
+              dev-dependency here, per the epic plan's
+              <a href="2026-09-04-export-plan.html#questions">question 7</a>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>e2e</strong></td>
+            <td><em>waived</em></td>
+            <td>
+              <code>waived: "the export's e2e is the epic's own tests/e2e_export.rs step 3 —
+              real proxied traffic through the running proxy, exported and parsed as HAR — which
+              lands with the epic per its e2e plan; a second e2e here would drive the same seam
+              through the same transport."</code> The existing <code>e2e_capture</code> and
+              <code>e2e_h2</code> suites run unchanged as the regression evidence that the
+              capture path this WU only reads is untouched
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Hermetic and deterministic</strong> per the testing contract: no test touches
+        the network, timestamps are asserted for presence or normalised before snapshotting, and
+        no test asserts an exact duration.</p>
+    </div>
+
+    <h2 id="distillation">Distillation this WU owes</h2>
+    <table data-c="distill">
+      <thead><tr><th>Doc</th><th>Tier</th><th>What it absorbs</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>docs/use-cases/web-ui.html</code></td>
+          <td>T2</td>
+          <td><strong>UC-6, the export half</strong>: that a client can take the filtered capture
+            out as a HAR 1.2 file, that the file selects what the listing selects, and the one
+            consequence a reader cannot infer from the endpoint signature — a body Trawler never
+            captured is marked as such in the file rather than exported as empty. The half UC-6
+            still owes (import) lands with W3.</td>
+        </tr>
+        <tr>
+          <td><code>docs/use-cases/use-cases-index.html</code></td>
+          <td>T2</td>
+          <td>the new <span class="badge id">UC-6</span> row, so index-first reading reaches it</td>
+        </tr>
+        <tr>
+          <td><code>docs/decisions/dec-30-har-as-the-interchange-format.html</code></td>
+          <td>T2</td>
+          <td>the epic plan's first planned decision, written here because this WU is where the
+            format choice becomes real: why HAR 1.2 and only HAR, how a body state HAR cannot
+            express is represented (the four reason tokens), and what round-trip fidelity is
+            guaranteed to preserve versus what it is not (header block sizes, the wire reason
+            phrase, cookie attributes, timing phase breakdown — each a <code>-1</code> or an
+            omission rather than a fabrication)</td>
+        </tr>
+        <tr>
+          <td><code>docs/decisions/decisions-index.html</code></td>
+          <td>T2</td>
+          <td>the DEC-30 row</td>
+        </tr>
+        <tr>
+          <td><code>docs/architecture.html</code></td>
+          <td>T1</td>
+          <td><strong>expected: unedited.</strong> This WU adds a read, not a store capability —
+            the module's "the API reads and queries, never mutates" line stays true. Re-checked
+            at authoring; W4's removal is where that line actually moves.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>The field mapping is code (<code>src/api/har.rs</code>) and is never copied into a doc —
+      the table in <a href="#mapping-table">this plan</a> is a T3 planning artifact that gets
+      archived with the epic, not a permanent record.</p>
+
+    <h2 id="risks">Calls this plan makes, so the build does not have to invent them</h2>
+    <table data-c="calls">
+      <thead><tr><th>Question</th><th>Call</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Does <code>/flows/export</code> accept <code>limit</code>/<code>cursor</code>?</td>
+          <td><strong>No</strong> — and it does not silently ignore them either: the export query
+            type simply has no such fields, so an unknown parameter is ignored exactly as
+            <code>GET /flows</code> ignores unknown parameters today. A paged HAR file is not a
+            HAR file (question 2), and accepting a parameter that cannot be honoured is worse
+            than not offering it.</td>
+        </tr>
+        <tr>
+          <td>Where does the route live in the router?</td>
+          <td><code>/flows/export</code>, registered before <code>/flows/{id}</code>. axum 0.8's
+            router prefers the static segment, so <code>export</code> is never captured as an id
+            — asserted by a test, not assumed, because it is exactly the kind of routing
+            precedence that silently regresses.</td>
+        </tr>
+        <tr>
+          <td>Is a flow with no response exported?</td>
+          <td><strong>Omitted.</strong> HAR requires <code>entry.response</code> and Trawler has
+            nothing truthful to put there. Recorded as observable 6 so the count difference
+            against the listing is a documented contract rather than a surprise.</td>
+        </tr>
+        <tr>
+          <td>Does the projection decode compressed bodies?</td>
+          <td><strong>No</strong> — the bytes exported are the bytes captured, with the
+            <code>Content-Encoding</code> header that describes them still attached, so the file
+            stays a faithful record of the wire. <code>/flows/{id}/response/body?decode=1</code>
+            remains the decoding surface, and a decoded export would contradict its own headers.
+            Stated in DEC-30 as part of what round-trip preserves.</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
