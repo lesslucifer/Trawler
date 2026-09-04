@@ -351,6 +351,19 @@
           </tr>
         </tbody>
       </table>
+      <p><strong>Round 2</strong> re-reviewed the fixed tip and found five more nits, four of
+      them one real miss: the timings fix <em>introduced an exception</em> to an invariant three
+      places still asserted — <code>HarTimings</code>' own doc comment, UC-6's sentinel sentence
+      and DEC-30's round-trip row all said the phases sum to the total, which stops being true
+      when the total is <code>-1</code> and the phases are zeroed. All three now state the
+      exception and why HAR forces it. The fifth: the replacement comment on
+      <code>not_captured_comment</code> over-generalized, attributing all three tokens to
+      <code>BodyView::NotCaptured</code>'s <code>reason</code> when <code>streaming</code> is
+      that enum's variant tag rather than a <code>reason</code> value — reworded to claim only
+      what is true. Round 2 also moved <code>rfc3339</code> from <code>api/mod.rs</code> (which
+      otherwise holds only router composition and the CORS layer) into <code>view.rs</code>,
+      beside the projections that use it. Round 2 independently re-verified all three round-1
+      fixes, including that the new regression test fails without its fix.</p>
       <p>Two nits were accepted rather than fixed, and are recorded as waivers on the
       <code>cr/v3</code> note: the three structurally identical HAR list-element structs (kept
       distinct because the spec gives them different optional fields), and the per-body owned

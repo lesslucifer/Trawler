@@ -146,7 +146,12 @@ and says 'unknown' where it means it"]
           <li><strong>the wire reason phrase</strong> — not retained; the file carries the
           canonical phrase for the status code</li>
           <li><strong>the timing phase breakdown</strong> — Trawler measures one span, so it is
-          reported as one span that still sums to the total HAR requires</li>
+          reported as one span that sums to the total HAR requires. This is also the one place
+          the sentinel rule above does <em>not</em> apply: HAR permits <code>-1</code> for the
+          total but requires the three phases Trawler reports to be non-negative, so an
+          exchange whose duration was never measured carries an unknown total beside zeroed
+          phases — the sum is unhonourable there, and zeroed phases claim less than a negative
+          phase no reader would accept</li>
           <li><strong>a cookie's optional attributes</strong> — the header they came from is
           preserved verbatim, so nothing is lost from the file; only the parsed-out convenience
           fields are absent</li>

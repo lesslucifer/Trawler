@@ -268,8 +268,10 @@ flowchart TD
         too-large body additionally reports the size it had, because that size is known and is
         exactly why the bytes were dropped. Only a genuinely empty body is a measured zero.
         Every other fact Trawler does not hold — the raw header-block sizes, the wire reason
-        phrase, the timing phase breakdown, a cookie's optional attributes — is HAR's own
-        "unavailable" sentinel rather than an invented value.</li>
+        phrase, a cookie's optional attributes — is HAR's own "unavailable" sentinel rather
+        than an invented value. The timings are the one place HAR forbids that sentinel: an
+        exchange whose duration was never measured reports an unknown total with its phases
+        zeroed, because a negative phase is a value no reader accepts.</li>
         <li><strong>A flow still awaiting its response is omitted</strong> from the file, because
         HAR requires a response on every entry and there is nothing truthful to put there. So an
         export taken mid-exchange can hold one entry fewer than the listing shows.</li>

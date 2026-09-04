@@ -7,7 +7,7 @@ use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use serde::Serialize;
 
-use super::rfc3339;
+use super::view::rfc3339;
 use crate::flow::{
     header_value, BodyRec, Flow, Header, NotCapturedReason, RequestRec, ResponseRec,
 };
@@ -53,7 +53,11 @@ pub struct HarCache {}
 
 /// Trawler measures one span — request sent to response complete — not the phase
 /// breakdown HAR anticipates. `wait` carries the whole span and the two phases it
-/// cannot separate are `0`, so the block still sums to `time` as HAR requires.
+/// cannot separate are `0`, so the block sums to `time` as HAR requires whenever
+/// the span was measured. When it was not, `time` is HAR's `-1` and the phases
+/// are all `0`: the phases may not be negative, so the sum cannot be honoured
+/// there, and zeroed phases beside an explicitly unknown `time` claim less than
+/// a negative phase no reader accepts.
 #[derive(Serialize)]
 pub struct HarTimings {
     pub send: i64,
@@ -135,10 +139,9 @@ pub struct HarPostData {
     pub encoding: Option<&'static str>,
 }
 
-/// The reason token a non-captured body carries into the file. Spelled as the
-/// REST body view already spells it (`BodyView::NotCaptured`'s `reason`), so the
-/// two surfaces name a state the same way, and read back by the importer to
-/// restore the variant.
+/// The reason token a non-captured body carries into the file, spelled as the
+/// REST body view already spells the same state — so the two surfaces never name
+/// one state two ways — and read back by the importer to restore the variant.
 pub fn not_captured_comment(body: &BodyRec) -> Option<String> {
     let reason = match body {
         BodyRec::Streaming { .. } => "streaming",
