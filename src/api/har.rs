@@ -1769,32 +1769,148 @@ mod tests {
             }
         }
 
-        /// A HAR-shaped document whose every member may be the wrong type, out of
-        /// range, or missing — the shapes a hostile or merely broken writer emits.
-        fn near_miss_document() -> impl Strategy<Value = serde_json::Value> {
-            let scalar = prop_oneof![
+        /// A HAR-shaped document whose every member may be missing, out of
+        /// range, or the wrong type — including the *inner* members of an
+        /// otherwise well-formed request or response, which is where the
+        /// field-by-field validation lives. Each member draws from values its
+        /// own type can hold as well as ones it cannot, because a member that
+        /// always fails to deserialize is rejected at the outer JSON gate and
+        /// the validation past it is never reached.
+        /// The value pools each HAR member draws from, kept beside the shapes
+        /// they belong to rather than inline in the document generator.
+        struct Pools {
+            junk: BoxedStrategy<serde_json::Value>,
+            text: BoxedStrategy<serde_json::Value>,
+            instant: BoxedStrategy<serde_json::Value>,
+            number: BoxedStrategy<serde_json::Value>,
+            headers: BoxedStrategy<serde_json::Value>,
+            body: BoxedStrategy<serde_json::Value>,
+        }
+
+        fn pools() -> Pools {
+            let junk = prop_oneof![
                 Just(serde_json::Value::Null),
                 Just(serde_json::json!(-1)),
-                Just(serde_json::json!(0)),
                 Just(serde_json::json!(i64::MIN)),
-                Just(serde_json::json!(f64::MAX)),
-                Just(serde_json::json!("")),
-                Just(serde_json::json!("1.2")),
                 Just(serde_json::json!([])),
                 Just(serde_json::json!({})),
-                Just(serde_json::json!("!!not base64!!")),
             ];
-            let entry = proptest::collection::hash_map(
-                prop_oneof![
-                    Just("startedDateTime"),
-                    Just("time"),
-                    Just("request"),
-                    Just("response"),
-                ],
-                scalar.clone(),
-                0..4,
-            );
-            (scalar, proptest::collection::vec(entry, 0..4)).prop_map(|(version, entries)| {
+            let text = prop_oneof![
+                Just(serde_json::json!("")),
+                Just(serde_json::json!("GET")),
+                Just(serde_json::json!("http://x/y?a=1")),
+                Just(serde_json::json!("HTTP/1.1")),
+                Just(serde_json::json!("not a uri")),
+                Just(serde_json::Value::Null),
+            ];
+            let instant = prop_oneof![
+                Just(serde_json::json!("2026-09-04T10:00:00Z")),
+                Just(serde_json::json!("9999-12-31T23:59:59.999999999+23:59")),
+                Just(serde_json::json!("yesterday")),
+                Just(serde_json::json!("")),
+                Just(serde_json::Value::Null),
+            ];
+            let number = prop_oneof![
+                Just(serde_json::json!(0)),
+                Just(serde_json::json!(-1)),
+                Just(serde_json::json!(12.6)),
+                Just(serde_json::json!(99)),
+                Just(serde_json::json!(600)),
+                Just(serde_json::json!(i64::MIN)),
+                Just(serde_json::json!(f64::MAX)),
+                Just(serde_json::Value::Null),
+            ];
+            let headers = prop_oneof![
+                Just(serde_json::json!([])),
+                Just(serde_json::json!([{ "name": "A", "value": "b" }])),
+                Just(serde_json::json!([{ "value": "unnamed" }])),
+                Just(serde_json::json!([{ "name": "A" }])),
+                Just(serde_json::Value::Null),
+            ];
+            let body = prop_oneof![
+                Just(serde_json::json!({ "size": 0, "mimeType": "text/plain" })),
+                Just(serde_json::json!({ "size": -1, "text": "hi" })),
+                Just(serde_json::json!({ "text": "!!not base64!!", "encoding": "base64" })),
+                Just(
+                    serde_json::json!({ "size": i64::MIN, "comment": "trawler: body not captured (too_large)" })
+                ),
+                Just(serde_json::json!({ "comment": "trawler: body not captured (streaming)" })),
+                Just(serde_json::json!({})),
+                Just(serde_json::Value::Null),
+            ];
+
+            Pools {
+                junk: junk.boxed(),
+                text: text.boxed(),
+                instant: instant.boxed(),
+                number: number.boxed(),
+                headers: headers.boxed(),
+                body: body.boxed(),
+            }
+        }
+
+        fn near_miss_document() -> impl Strategy<Value = serde_json::Value> {
+            let Pools { junk, text, instant, number, headers, body } = pools();
+            let member = move |value: BoxedStrategy<serde_json::Value>| {
+                prop_oneof![9 => value, 1 => junk.clone()].boxed()
+            };
+            let request = (
+                member(text.clone()),
+                member(text.clone()),
+                member(text.clone()),
+                member(headers.clone()),
+                member(body.clone()),
+                member(number.clone()),
+            )
+                .prop_map(|(method, url, version, headers, post_data, body_size)| {
+                    serde_json::json!({
+                        "method": method, "url": url, "httpVersion": version,
+                        "headers": headers, "postData": post_data, "bodySize": body_size,
+                    })
+                });
+            let response = (
+                member(number.clone()),
+                member(text.clone()),
+                member(headers.clone()),
+                member(body.clone()),
+                member(number.clone()),
+            )
+                .prop_map(|(status, version, headers, content, body_size)| {
+                    serde_json::json!({
+                        "status": status, "httpVersion": version, "headers": headers,
+                        "content": content, "bodySize": body_size,
+                    })
+                });
+
+            let entry = (
+                proptest::option::of(instant),
+                proptest::option::of(number.clone()),
+                proptest::option::of(request),
+                proptest::option::of(response),
+            )
+                .prop_map(|(started, time, request, response)| {
+                    let mut entry = serde_json::Map::new();
+                    for (key, value) in [
+                        ("startedDateTime", started),
+                        ("time", time),
+                        ("request", request),
+                        ("response", response),
+                    ] {
+                        if let Some(value) = value {
+                            entry.insert(key.to_owned(), value);
+                        }
+                    }
+                    serde_json::Value::Object(entry)
+                });
+
+            // The version is usually the supported one: a document that fails
+            // the version check never reaches an entry, so a uniformly random
+            // version would spend the whole property at the outer gate.
+            let version = prop_oneof![
+                12 => Just(serde_json::json!("1.2")),
+                1 => number.clone(),
+            ];
+            (version, proptest::collection::vec(entry, 0..4)).prop_map(|(version, entries)| {
                 serde_json::json!({ "log": { "version": version, "entries": entries } })
             })
         }
