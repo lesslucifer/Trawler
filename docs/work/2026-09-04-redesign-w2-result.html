@@ -116,7 +116,7 @@
         <tr><td><code>App.tsx</code> → registry <code>Field</code> + <code>StatusDot</code></td><td>Props already matched, so this is an import swap. The header <strong>gains</strong> the 24px hit target and the accessible name that W1 found missing.</td></tr>
         <tr><td><code>FlowList</code> / <code>FlowDetail</code> → registry <code>StatusPill</code></td><td>The one real prop-shape change: the raw <code>number | null</code> instead of a tone resolved at the call site. <strong>Statuses now carry their reason phrase</strong> — <code>403</code> announces "403 Forbidden" rather than a naked number, the third defect the epic plan named.</td></tr>
         <tr><td><code>FlowRow</code> drops <code>tone</code> and its formatted <code>status</code></td><td><code>toRow</code> carries the raw status and <code>StatusPill</code> owns the mapping — DEC-20, and exactly what the epic's W4 row describes.</td></tr>
-        <tr><td><code>ui/src/components.tsx</code> + its test deleted</td><td>The collision cannot recur, and the third copy of the tone map is gone.</td></tr>
+        <tr><td><code>ui/src/components.tsx</code> + its test deleted</td><td>The collision cannot recur, and <strong>one of the three tone maps</strong> is gone — <code>TONE_CLASS</code>. Two remain: <code>TonedText</code>'s, which is the registry's one legitimate owner, and the inline literal at <code>Onboarding.tsx:360</code>, which the epic plan calls "the third copy" and assigns to <strong>W10</strong>.</td></tr>
       </tbody>
     </table>
 
