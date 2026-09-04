@@ -404,8 +404,19 @@ impl Gate<'_> {
     /// Every design artifact a Working Unit seam must have judged - what
     /// `design-scope` prints and what `9·design` demands, from one function.
     pub fn design_artifacts(&self, base: &str, tip: &str, names: &[String]) -> Vec<String> {
+        self.design_artifacts_with(tip, names, &self.retired_designs(base, tip, names))
+    }
+
+    /// [`Gate::design_artifacts`] for a caller that already holds the retired
+    /// designs - the history walk behind them is not worth repeating.
+    pub fn design_artifacts_with(
+        &self,
+        tip: &str,
+        names: &[String],
+        retired: &[RetiredDesign],
+    ) -> Vec<String> {
         let mut docs = self.doc_blobs(tip, names);
-        docs.extend(self.retired_designs(base, tip, names).into_iter().map(|d| (d.path, d.html)));
+        docs.extend(retired.iter().map(|d| (d.path.clone(), d.html.clone())));
         design_artifacts_of(&docs)
     }
 

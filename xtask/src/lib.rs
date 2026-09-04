@@ -90,7 +90,8 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
     let merge_base = git(repo, &["merge-base", base, &tip])?;
     let names = git::diff_names(repo, &merge_base, &tip)?;
     let gate = Gate { repo };
-    let artifacts = gate.design_artifacts(&merge_base, &tip, &names);
+    let retired = gate.retired_designs(&merge_base, &tip, &names);
+    let artifacts = gate.design_artifacts_with(&tip, &names, &retired);
     let (added, owed) = gate.surfaces(&tip, &merge_base);
     if artifacts.is_empty() && owed.is_empty() {
         return Ok((
@@ -114,7 +115,6 @@ fn design_scope(repo: &Path, base: &str, head: &str) -> Result<(i32, String), St
             artifacts.len(),
             artifacts.join("\n")
         );
-        let retired = gate.retired_designs(&merge_base, &tip, &names);
         if !retired.is_empty() {
             let _ = writeln!(
                 out,
