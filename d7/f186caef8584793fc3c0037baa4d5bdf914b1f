@@ -18,28 +18,27 @@ changes:
     tier: T3
     action: removed
     distills: "retired under DEC-16 — its contract is now ui/src/components/Field.tsx's TSDoc (byte-compared), its forks are DEC-30. Blob dc8c47b1f45caf027087a23ba77108a0e3f646a4, cited by this WU's design.implements and resolvable at HEAD~2 per DEC-28."
+    distilled_to: [docs/decisions/dec-30-the-three-gap-components.html]
   - path: docs/work/components/status-dot.html
     tier: T3
     action: removed
     distills: "retired under DEC-16 — contract now StatusDot.tsx's TSDoc, forks in DEC-30, including the rulebook proposal on ok/warn's second owner and ink-mute's first entry, which is held for W11. Blob 62d5aa163c9b39a25a6189a0034192d4c2248f0c."
+    distilled_to: [docs/decisions/dec-30-the-three-gap-components.html]
   - path: docs/work/components/disclosure.html
     tier: T3
     action: removed
     distills: "retired under DEC-16 — contract now Disclosure.tsx's TSDoc, forks in DEC-30. Its blocked-on (rotate + transitionProperty:transform) was consumed by this WU's tailwind.config.js change. Blob 46e9879bc6ea68b6aa2b2698856a9961ad3ca037."
+    distilled_to: [docs/decisions/dec-30-the-three-gap-components.html]
   - path: docs/work/2026-09-04-redesign-w2-result.html
     tier: T3
     action: added
     distills: "the WU result — the expected rows including the one the review superseded and the one it added, the probe's finding-free outcome and why, the review section (the finding, the bundle evidence before and after, the fix and its scope cost, four refuted candidates), five deviations, the browser measurements behind every design claim, and the follow-ups W3/W4/W10/W11 inherit"
+  - path: docs/work/2026-09-04-redesign-plan.html
+    tier: T3
+    action: updated
+    distills: "the epic's W2, W4 and W11 rows, corrected to what actually landed. W2's records that it grew at review; W4's states what remains after this WU spent part of it (TimestampText, MethodLabel, DurationText, Notice, FlowList.test.tsx and UC-4's wording) and links the scope-cost account; W11's kit deletion is struck through as already done. Raised by the round-2 altitude finder without being filed — a plan that still promises work already done is how a follow-up gets lost."
   - path: docs/work/2026-09-04-redesign-w1-result.html
     tier: T3
     action: updated
     distills: "a link this WU's retirement orphaned — W1's result linked the three design files W2 deleted. Found by running verify-doc over the whole tree (33 docs) rather than only the files this WU touched; the citation is now marked archived with the commit to read them at, per the check's own fix hint."
-  - path: doc-assets/w2-migrated.png
-    tier: T3
-    action: added
-    distills: "the migrated header and flow list — the visible result of the review fix: the registry StatusDot and four Fields, and a status column where StatusPill resolves 200/403/304/pending from the raw status and carries the reason phrase the legacy pill never had"
-  - path: doc-assets/w2-preview.png
-    tier: T3
-    action: added
-    distills: "the three components rendered together from the real collection at 2x — the evidence a jsdom assertion cannot carry"
 note: "SCOPE CHANGED AFTER THE REVIEW. The finding (three components unreachable from the app bundle) was fixed by migrating App.tsx, FlowList.tsx and FlowDetail.tsx to the registry and deleting ui/src/components.tsx — work the epic had assigned to W4 and W11, and which was to follow W3's design run on the flow list and shell. The screens' LAYOUT is untouched (same markup, grid and testids; only which component renders each cell), so W3 designs the same surface — what it lost is the chance to decide those cells before they were decided. This is recorded in the result report as the owner's call, made against the alternative of shipping a WU whose deliverable the app could not reach, and it is why docs/use-cases/web-ui.html is re-examined below rather than dismissed. USE-CASE CHECK, REDONE: three UC-5/UC-4 observable gains DID land as a side effect of the fix — statuses now carry their reason phrase (403 announces \"403 Forbidden\"), the header dot has a 24px target, and it has an accessible name. The epic's distillation plan assigns UC wording to the WUs that move it, and these were W4's rows; they are now true early. NOT written into web-ui.html here, deliberately: UC-4's row is W4's to state once the rest of its migration lands (TimestampText, MethodLabel, DurationText, Notice), and splitting one UC row across two WUs is how a use-case doc becomes a changelog. Carried as a W4 follow-up in the result report. Two T2 write-backs were considered; one landed and one is deliberately held. LANDED: DEC-30, which the epic's own distillation plan reserved ('a new decision record — why the app's one text input and one state dot are registry entries rather than screen-local'), plus its index row. HELD: the rulebook's chromatic-meanings row (StatusDot as a second owner of ok/warn, and ink-mute's first entry as the not-yet-known channel). It is argued in full in DEC-30 and it belongs in docs/design-rules/, but the rulebook is FROZEN INPUT for a design run and grows at distillation per DEC-14 — and four screen runs (W3/W5/W7/W9) are still to pin it. Moving it mid-epic would change a substrate they read. Carried to W11, where the epic's distillation plan already reserves the row. NOT MOVED, and stated rather than assumed: docs/use-cases/web-ui.html. No observable contract moved — the three components have no call site, so every screen renders exactly what it rendered before; UC-4's and UC-ONBOARD's wording is W4's and W10's to move if their builds move it. No T1 edit: the flow, rulebook and gate are inputs to this epic, and nothing this WU found argues the method is wrong — DEC-28 and DEC-29 had already fixed the one edge it probed, before it ran."
