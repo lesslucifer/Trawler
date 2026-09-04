@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a98fc7a9f34851f0dfabed3">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-28: a citation resolves at the tip, or at the design's last state</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-28 — a design citation resolves at the WU tip, or at the design's last state reachable from it</h1>
+      <p>A build cites the bytes it read. Once the design file has been retired inside the same Working Unit,
+        those bytes are no longer at the tip but they are still in the tip's history — and the gate reads them
+        there, pinned to the last state the file had before it went.</p>
+      <div class="meta">DEC-28 · 2026-09-03 · Trawler · E-GATETRUTH.W1 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>Two rules that are each right on their own, and a third check that sets their timing:</p>
+    <table data-c="rules">
+      <thead><tr><th>Rule</th><th>Says</th><th>Enforced by</th></tr></thead>
+      <tbody>
+        <tr><td><a href="dec-25-design-build-handoff.html">DEC-25</a>, added half</td>
+          <td>a WU that adds a surface writes <code>design.implements: [{path, blob, built}]</code>; the path
+            must <em>resolve at the tip</em> and the blob must be the bytes the tip ships. A reason never excuses
+            an added surface</td>
+          <td><code>check_citation</code>, <code>xtask/src/gate.rs</code>, at the WU merge and again at every
+            seam the epic walk re-verifies — always against that WU's own tip</td></tr>
+        <tr><td><a href="dec-16-design-file-retirement.html">DEC-16</a></td>
+          <td>a design file whose component is built is retired: distil, verify the TSDoc, remove</td>
+          <td><code>6·retirement-order</code> at the seam that deletes it</td></tr>
+        <tr><td><code>components·unretired</code></td>
+          <td>a design file whose component has a roster entry is red until removed</td>
+          <td><code>verify-doc</code>, <code>xtask/src/doc.rs</code> — reads the <strong>working tree</strong>
+            and runs from the harness Stop hook, so a red refuses every turn</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">The third row sets the timing. The turn after a build WU writes
+      <code>ui/src/components/X.tsx</code>, the roster carries X, the design file is red, and no turn may end
+      until it is removed. Retirement is therefore forced <strong>inside the build WU, before its tip</strong>.
+      DEC-25 assumed the opposite — its own rejected option "gate the citation at the epic level too" reads
+      "the WU seam is the only place the path can resolve" — and the two rules meet at that tip:</p>
+
+    <table data-c="two-histories">
+      <thead><tr><th>Event</th><th>Tree at the gated tip</th><th>Check 9, citation half</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4"><strong>History A — what DEC-25 assumed:</strong> design WU · build WU · a later WU retires</td></tr>
+        <tr><td>build WU merge</td><td>component added, design file present</td><td><code>git show &lt;tip&gt;:&lt;design&gt;</code> → the pinned blob</td><td><span class="badge auto">green</span></td></tr>
+        <tr><td>cleanup WU merge</td><td>design file deleted</td><td>no surface added — not asked</td><td><span class="badge auto">green</span></td></tr>
+        <tr><td>epic walk</td><td>re-reads each WU at <em>its own</em> tip, unchanged</td><td>same lookup at the build tip, same blob</td><td><span class="badge auto">green</span></td></tr>
+        <tr><td colspan="4"><strong>History B — the only one an agent can produce:</strong> <code>components·unretired</code> forces the retirement into the build WU</td></tr>
+        <tr><td>build WU, commit 1</td><td>component added, design present</td><td>verify-doc reds the design file; the turn is refused</td><td>forced onward</td></tr>
+        <tr><td>build WU, commit 2 = tip</td><td>design file deleted</td><td>—</td><td>—</td></tr>
+        <tr><td><strong>build WU merge</strong></td><td>design file gone</td><td><code>git show &lt;tip&gt;:&lt;design&gt;</code> → nothing</td><td><span class="badge approval">refused</span> "does not resolve at the tip"</td></tr>
+        <tr><td>the other note shape</td><td>—</td><td><code>design.undesigned</code> for an added surface</td><td><span class="badge approval">refused</span> "only a design answers for a new surface"</td></tr>
+      </tbody>
+    </table>
+    <div class="caption">History A has no defect anywhere. History B has no legal note. The epic gate plays no
+      part in either: the walk re-verifies each seam against that WU's tip, never the epic's tree.</div>
+
+    <table data-c="why-unseen">
+      <thead><tr><th>Why nobody hit it</th><th>Fact</th></tr></thead>
+      <tbody>
+        <tr><td>E-DFLOW's 24 registry components</td><td>landed at one seam (W5, tip <code>21f8192</code>) under a <code>cr/v2</code> note. On a <code>cr/v2</code> note the citation half reports under <code>9·design-schema</code>, the class the walk drops at a seam. The question was never asked; the first <code>cr/v3</code> build asks it</td></tr>
+        <tr><td>E-DFLOW.W11's screen</td><td>cited a design <em>run</em>. The retirement roster reads the collection only, so a run stays in <code>docs/work/</code> until the epic's cleanup and resolves at the build tip</td></tr>
+        <tr><td>the hand-over e2e</td><td><code>xtask/tests/e2e_design_flow.rs</code> builds <code>StatusPill</code> from its design and never retires the file — the fixture cannot produce History B</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="choice">Choice</h2>
+    <div class="callout" data-c="choice">
+      <strong>A citation resolves at the WU tip. When the tip does not ship the path, it resolves at the
+      path's last state reachable from the tip — the blob the path held immediately before the commit that
+      removed it — and the pin must match that state.</strong> The note shape is unchanged: <code>path</code>,
+      <code>blob</code>, <code>built</code>. Everything checked over the resolved bytes — that they decode, name
+      a design artifact, and if a run, an archived one — is checked exactly as before, over the bytes history
+      returns.
+    </div>
+
+    <div class="diagram" data-c="predicate">
+      <pre class="mermaid">
+flowchart TD
+  C["design.implements: path + blob"] --> T{"git show tip:path"}
+  T -- "ships it" --> B1{"blob matches the pin?"}
+  B1 -- yes --> D["resolved bytes = the tip's"]
+  B1 -- no --> R1["REFUSED — the design moved after the note was written; re-pin (unchanged)"]
+  T -- "absent" --> H["git log --full-history tip -- path<br/>first commit at which the path exists = last state L"]
+  H -- "no such commit" --> R2["REFUSED — no commit reachable from the tip ever shipped path"]
+  H -- "L" --> B2{"L matches the pin?"}
+  B2 -- no --> R3["REFUSED — path was retired at L, the build cites pin; re-read and re-pin"]
+  B2 -- yes --> D2["resolved bytes = L's"]
+  D --> A{"UTF-8 · design artifact · archived if a run"}
+  D2 --> A
+  A -- yes --> OK["citation resolved"]
+  A -- no --> R4["REFUSED (unchanged)"]
+      </pre>
+      <div class="caption">The predicate W2 implements. The left branch is today's code untouched. The right
+        branch is new, and every refusal on it names which half failed: the path (nothing ever shipped it) or
+        the blob (shipped, never at those bytes).</div>
+    </div>
+
+    <table data-c="cases">
+      <thead><tr><th>Case</th><th>Truth</th><th>Verdict</th><th>Message names</th></tr></thead>
+      <tbody>
+        <tr><td>tip ships the path, pin matches</td><td>the ordinary build</td><td><span class="badge auto">green</span></td><td>—</td></tr>
+        <tr><td>tip ships the path, pin differs</td><td>the design was amended after the note</td><td><span class="badge approval">red</span></td><td>the tip's blob to re-pin (unchanged)</td></tr>
+        <tr><td>tip lacks the path, last state matches the pin</td><td>History B, done right</td><td><span class="badge auto">green</span></td><td>—</td></tr>
+        <tr><td>tip lacks the path, no commit reachable from the tip ever held it</td><td>a fabricated or mistyped path</td><td><span class="badge approval">red</span></td><td>the path half</td></tr>
+        <tr><td>tip lacks the path, last state differs from the pin</td><td>amended then retired in one WU, the build read the old bytes — or a blob the path never carried</td><td><span class="badge approval">red</span></td><td>the blob half: the last state L, and the pin</td></tr>
+        <tr><td>pin shorter than <code>PIN_MIN</code></td><td>names no blob</td><td><span class="badge approval">red</span></td><td>unchanged</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="last-state">Why the last state, not any state</h3>
+    <p>DEC-25's blob pin exists to make an amendment countable: different bytes red the stale citation and force
+      the build to re-read. Matching <em>any</em> historical blob would let a build cite a superseded revision of
+      a design amended and retired in the same WU. Matching the <strong>last</strong> state keeps the rule
+      whole: the build must have read the design as it was when it left the tree. For a design retired
+      unchanged — the ordinary case — the last state is the only state, and the two readings coincide.</p>
+
+    <h3 id="reach">Why reachable from the tip</h3>
+    <p><code>git log &lt;tip&gt; -- &lt;path&gt;</code> is the reach: history the tip stands on, nothing else. A
+      commit not reachable from the tip is not this WU's history and cannot have been what the build read.
+      <code>--full-history</code> is required, for the reason DEC-25 learned on <code>added_under</code>: default
+      history simplification skips a path added and removed inside one branch — the very shape this record
+      legalises. The reach is not narrowed to the WU's own range (<code>base..tip</code>): a later WU that
+      builds a second surface from a design an earlier WU retired cites the same bytes by the same rule, and
+      nothing about the citation's meaning depends on who deleted the file.</p>
+
+    <h2 id="options">Options rejected</h2>
+    <table data-c="options">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Cite the built <code>.tsx</code></strong> — after DEC-16 the TSDoc <em>is</em> the contract</td>
+          <td>the citation is not about where the contract lives now; it is about what the build read and whether
+            anyone judged it. A <code>.tsx</code> was written by the builder and judged by nobody before the build,
+            so <em>every</em> new component could cite itself: a never-designed surface and a designed-then-retired
+            one become indistinguishable, and DEC-25's added-surface rule — the M1 failure it was written against
+            — is vacuous. The blob pin would pin code, so an amended design could no longer red. And
+            <code>check_citation</code> refuses a path that is not a design artifact, so this needs the same code
+            change in the wrong direction</td></tr>
+        <tr><td><strong>A <code>design.retired</code> field</strong> carrying the last blob and the retiring commit</td>
+          <td>a second note shape for facts git already holds — <code>git log</code> answers both fields. Every
+            reader (the gate, <code>design-scope</code>, the review skill, the walk) would learn a second form and
+            keep it in step with <code>implements</code> forever</td></tr>
+        <tr><td><strong>Relax <code>components·unretired</code></strong> so retirement waits for a later WU, making History A possible again</td>
+          <td>it would fix P1 without touching the gate — and re-open what DEC-16's W7 predicate closed: two
+            contracts for one component standing side by side across Working Units, with nothing comparing
+            them. E-DFLOW lived that gap from W5 to W7, and the check was written because of it. The authoring-time
+            timing is deliberate; this record changes what the gate accepts, not when the file must go</td></tr>
+        <tr><td><strong>Drop check 9 from the epic walk</strong>, re-verify the verdict only</td>
+          <td>it does not touch P1 — History B is refused at the build WU's own merge, before any walk. And the
+            walk's re-run is the bypass-honesty guarantee: <code>--no-verify</code> skips the merge hook and a
+            fast-forward skips <code>pre-merge-commit</code>, so a seam that was never gated is caught only by the
+            walk. What the walk deliberately drops is what depends on mutable local state (check 8, the
+            <code>cr/v2</code> class); check 9 reads immutable history and returns the same answer it did at the
+            WU merge</td></tr>
+        <tr><td><strong>Reverse DEC-16</strong> — keep design files standing once built</td>
+          <td>two homes for one contract: the drift DEC-16 exists to prevent, reintroduced to make a citation
+            resolve. An epic plan non-goal</td></tr>
+        <tr><td><strong>Match any historical blob</strong>, not the last state</td>
+          <td>above — a stale reading of an amended design would pass. The pin stops counting amendments</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul data-c="consequences">
+      <li><strong><a href="dec-25-design-build-handoff.html">DEC-25</a>'s tip-resolution clause is superseded</strong>
+        — "the path must resolve at the tip" and "the comparison is made against the tip". Its three halves, the
+        blob pin, the no-conformance rule and the epic as coupling unit all stand. Its rejected option "gate the
+        citation at the epic level too" keeps its conclusion (the WU seam is where the citation is judged) and
+        loses its premise (that the path resolves there): it is the seam's <em>history</em> that answers.</li>
+      <li><strong><a href="dec-16-design-file-retirement.html">DEC-16</a> is untouched</strong> — the order, both
+        predicates, and the authoring-time timing of <code>components·unretired</code>. A build WU still retires
+        the design it built from, in the same WU, distil first.</li>
+      <li><strong>E-GATETRUTH.W2 owes</strong>: the right-hand branch of the predicate in <code>check_citation</code>;
+        refusals naming the failed half; the <code>check_handoff</code> fix hint, which today reads
+        <code>blob: &lt;git rev-parse &lt;tip&gt;:&lt;the design&gt;&gt;</code> and must also say where to read the blob
+        for a retired path; the hand-over e2e gaining a leg that retires the design inside the build WU; the
+        negative fixtures for the path half and the blob half.</li>
+      <li><strong>A citation's meaning is unchanged</strong>: the design bytes the build read, judged by Tier-3 at
+        the merge that landed them. Only <em>where the gate looks for them</em> widened, from the tip to the tip's
+        history.</li>
+      <li><strong>The truth is the code.</strong> <code>xtask/src/gate.rs</code> owns the predicate once W2 lands
+        it; this record owns why. Where they disagree, the code wins.</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

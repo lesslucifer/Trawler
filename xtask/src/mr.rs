@@ -347,6 +347,33 @@ fn pick_identity(allowed: &[Allowed], input: &mut dyn std::io::BufRead) -> Resul
     }
 }
 
+/// What `mr commit` reports, from the two facts it can read: whether `HEAD`
+/// moved, and what git said. Git's exit code alone is not the verdict — a
+/// commit that lands and then exits non-zero (a `post-commit` hook, a signer
+/// that warns) is a success. What git said is quoted; the commit message body
+/// never is.
+fn commit_verdict(landed: bool, outcome: &crate::git::Outcome, success: &str) -> (i32, String) {
+    match (landed, outcome.success) {
+        (true, true) => (0, success.to_string()),
+        (true, false) => (
+            0,
+            format!("{success}\ngit exited non-zero after the commit landed: {}", outcome.said()),
+        ),
+        (false, false) => {
+            (1, format!("git commit failed and HEAD did not move: {}", outcome.said()))
+        }
+        (false, true) => {
+            (1, format!("git commit exited 0 and HEAD did not move: {}", outcome.said()))
+        }
+    }
+}
+
+/// The commit `HEAD` names, or `None` on an unborn branch — where a repo's
+/// first commit starts, and a state `HEAD` genuinely moves away from.
+fn head_commit(repo: &Path) -> Option<String> {
+    git(repo, &["rev-parse", "HEAD"]).ok()
+}
+
 fn mr_commit(
     repo: &Path,
     message: Option<String>,
@@ -371,22 +398,26 @@ fn mr_commit(
         return Ok((1, format!("{identity} is not listed in .mr-allowed\n{NOT_AUTHORISED}")));
     };
     let body = format!("{}\n\n{TRAILER_KEY}: {tier} {identity}\n", message.trim_end());
+    let before = head_commit(repo);
     // A `key` identity signs the commit natively (`gpgsig` header, verified at
     // pre-push); the trailer still rides along for the commit-msg hook,
     // which fires *before* git signs and so can only presence-check the message.
-    if has_key_entry(&allowed, identity) {
+    let (outcome, success) = if has_key_entry(&allowed, identity) {
         let reason = commit_reason(message, &current_branch(repo), identity);
         prompt_touch(identity, &reason);
-        crate::git::git_env(
+        let outcome = crate::git::git_outcome(
             repo,
             &["commit", "-S", "-m", &body, "--cleanup=verbatim"],
             &[("TRAWLER_SIGN_REASON", &reason)],
         )?;
-        Ok((0, format!("signed doc commit with {TRAILER_KEY}: {tier} {identity}")))
+        (outcome, format!("signed doc commit with {TRAILER_KEY}: {tier} {identity}"))
     } else {
-        git(repo, &["commit", "-m", &body, "--cleanup=verbatim"])?;
-        Ok((0, format!("committed with {TRAILER_KEY}: {tier} {identity}")))
-    }
+        let outcome =
+            crate::git::git_outcome(repo, &["commit", "-m", &body, "--cleanup=verbatim"], &[])?;
+        (outcome, format!("committed with {TRAILER_KEY}: {tier} {identity}"))
+    };
+    let landed = head_commit(repo) != before;
+    Ok(commit_verdict(landed, &outcome, &success))
 }
 
 fn mr_confirm(
@@ -472,25 +503,81 @@ fn mr_confirm(
     ))
 }
 
-/// Is there a valid `mr/v1` note on `tip` authorising it? A `key`-backed signer
-/// authorises only when the note's `sig` verifies over the recomputed
-/// `base..tip` change-hash; an identity-only signer authorises by being listed.
-pub fn tip_authorised(repo: &Path, tip: &str) -> bool {
-    let Some(raw) = note(repo, "mr", tip) else { return false };
-    let Ok(mr) = serde_yaml::from_str::<crate::notes::MrNote>(&raw) else { return false };
+/// Why a tip is, or is not, authorised for manual review — one variant per way
+/// the answer is reached. `tip_authorised` collapses this to a bool; the gate
+/// reports the variant it reached.
+pub enum Authorisation {
+    Authorised,
+    NoNote,
+    /// A note that is not a readable `mr/v1`: unparseable, or another schema.
+    Unreadable(Option<String>),
+    /// A signed note whose `base` this repo's history does not hold, so the
+    /// range the signature covers cannot be recomputed here.
+    UnhashableRange {
+        base: String,
+    },
+    /// The signer is not listed by this checkout's roster — for a signed note,
+    /// not listed with a `key` entry. `.mr-allowed` is gitignored and
+    /// per-checkout (DEC-10), so this is the worktree-local cause, and the
+    /// roster path is part of the answer.
+    UnlistedSigner {
+        signer: String,
+        roster: String,
+    },
+    /// The signer is listed with a key, and the signature does not verify over
+    /// this repo's `base..tip` (plus the attested report hash).
+    StaleSignature {
+        signer: String,
+    },
+}
+
+/// The roster this checkout reads, named as a reader can act on it.
+fn roster_path(repo: &Path) -> String {
+    repo.join(".mr-allowed").display().to_string()
+}
+
+/// Why `tip` is or is not authorised: a `key`-backed signer authorises only
+/// when the note's `sig` verifies over the recomputed `base..tip` change-hash
+/// (plus the report hash when the note names one); an identity-only signer
+/// authorises by being listed.
+pub fn authorisation(repo: &Path, tip: &str) -> Authorisation {
+    let Some(raw) = note(repo, "mr", tip) else { return Authorisation::NoNote };
+    let Ok(mr) = serde_yaml::from_str::<crate::notes::MrNote>(&raw) else {
+        return Authorisation::Unreadable(None);
+    };
     if mr.schema != "mr/v1" {
-        return false;
+        return Authorisation::Unreadable(Some(mr.schema));
     }
     let allowed = read_allowed(repo);
     if let (Some(base), Some(sig)) = (&mr.base, &mr.sig) {
-        let Ok(hash) = diff_sha256(repo, base, tip) else { return false };
+        let Ok(hash) = diff_sha256(repo, base, tip) else {
+            return Authorisation::UnhashableRange { base: base.clone() };
+        };
         let payload = match &mr.report_sha256 {
             Some(rsha) => signed_payload(&hash, rsha),
             None => hash,
         };
-        return signature_authorised(&allowed, &mr.signer, NOTE_NAMESPACE, payload.as_bytes(), sig);
+        // An identity listed without a key cannot answer for a signed note:
+        // `allowed_signers` is empty, so there is nothing to verify against.
+        if !has_key_entry(&allowed, &mr.signer) {
+            return Authorisation::UnlistedSigner { signer: mr.signer, roster: roster_path(repo) };
+        }
+        if signature_authorised(&allowed, &mr.signer, NOTE_NAMESPACE, payload.as_bytes(), sig) {
+            return Authorisation::Authorised;
+        }
+        return Authorisation::StaleSignature { signer: mr.signer };
     }
-    match_tier(&allowed, &mr.signer).is_some()
+    if match_tier(&allowed, &mr.signer).is_some() {
+        Authorisation::Authorised
+    } else {
+        Authorisation::UnlistedSigner { signer: mr.signer, roster: roster_path(repo) }
+    }
+}
+
+/// Is there a valid `mr/v1` note on `tip` authorising it? [`authorisation`]
+/// collapsed to the bool the gates have always asked for.
+pub fn tip_authorised(repo: &Path, tip: &str) -> bool {
+    matches!(authorisation(repo, tip), Authorisation::Authorised)
 }
 
 /// Does `message` carry a `Reviewed-By` trailer naming a currently-listed
@@ -952,9 +1039,9 @@ mod tests {
     use std::process::{Command, Stdio};
 
     use super::{
-        allowed_signers, append_key_line, has_key_entry, is_se_key, key_line, match_tier,
-        pub_path_for, short, signature_authorised, signed_note_body, signer_program, touch_hint,
-        trailer_of, Allowed, NOTE_NAMESPACE, SE_KEY_HEADER,
+        allowed_signers, append_key_line, commit_verdict, has_key_entry, is_se_key, key_line,
+        match_tier, pub_path_for, short, signature_authorised, signed_note_body, signer_program,
+        touch_hint, trailer_of, Allowed, NOTE_NAMESPACE, SE_KEY_HEADER,
     };
 
     fn allowed() -> Vec<Allowed> {
@@ -1262,5 +1349,78 @@ mod tests {
         assert_eq!(trailer_of("no trailer here"), None);
         let two = "m\n\nReviewed-By: email old@x.co\nReviewed-By: username vu\n";
         assert_eq!(trailer_of(two), Some(("username".into(), "vu".into())));
+    }
+
+    fn outcome(success: bool, stdout: &str, stderr: &str) -> crate::git::Outcome {
+        crate::git::Outcome { success, stdout: stdout.to_string(), stderr: stderr.to_string() }
+    }
+
+    const BODY_LINE: &str = "The decision record. Three directions weighed, one chosen ...";
+    const SUCCESS: &str = "signed doc commit with Reviewed-By: key vu";
+
+    #[test]
+    fn a_commit_that_landed_is_a_success_whatever_git_exited() {
+        let (code, out) = commit_verdict(true, &outcome(true, "", ""), SUCCESS);
+        assert_eq!((code, out.as_str()), (0, SUCCESS));
+
+        // The commit is in the log and git exited non-zero anyway.
+        let (code, out) =
+            commit_verdict(true, &outcome(false, "", "warning: gpg said something"), SUCCESS);
+        assert_eq!(code, 0, "HEAD moved, so the commit landed: {out}");
+        assert!(out.starts_with(SUCCESS), "the success is stated first: {out}");
+        assert!(out.contains("after the commit landed"), "and the anomaly after it: {out}");
+        assert!(out.contains("warning: gpg said something"), "git's own line survives: {out}");
+    }
+
+    #[test]
+    fn a_commit_that_did_not_land_is_a_failure_naming_what_git_said() {
+        let (code, out) =
+            commit_verdict(false, &outcome(false, "", "hook refused the message"), SUCCESS);
+        assert_eq!(code, 1);
+        assert!(out.contains("HEAD did not move"), "got: {out}");
+        assert!(out.contains("hook refused the message"), "git's own line is the cause: {out}");
+        assert!(!out.contains(SUCCESS), "no success line on a failure: {out}");
+    }
+
+    #[test]
+    fn a_zero_exit_that_moved_nothing_says_that_contradiction() {
+        let (code, out) = commit_verdict(false, &outcome(true, "nothing to commit", ""), SUCCESS);
+        assert_eq!(code, 1, "reporting this as success is how a no-op passed for a commit");
+        assert!(out.contains("exited 0 and HEAD did not move"), "got: {out}");
+        assert!(out.contains("nothing to commit"), "stdout is what git said: {out}");
+    }
+
+    #[test]
+    fn a_verdict_never_ends_on_a_bare_colon_when_git_said_nothing() {
+        for landed in [true, false] {
+            for success in [true, false] {
+                let (_, out) = commit_verdict(landed, &outcome(success, "", ""), SUCCESS);
+                assert!(!out.trim_end().ends_with(':'), "no cause after the colon: {out}");
+                if !(landed && success) {
+                    assert!(out.contains("git printed nothing"), "silence is named: {out}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn no_verdict_echoes_the_commit_message_body() {
+        // The body reaches a verdict only if the code puts it there, so no
+        // quadrant's git output may mention it - otherwise the assertion passes
+        // on the echo it exists to refuse.
+        let said = "nothing staged";
+        for landed in [true, false] {
+            for success in [true, false] {
+                let (_, out) =
+                    commit_verdict(landed, &outcome(success, said, "fatal: no"), SUCCESS);
+                assert!(!out.contains(BODY_LINE), "the verdict must not add the body: {out}");
+                assert!(!out.contains("--cleanup=verbatim"), "nor the argument vector: {out}");
+            }
+        }
+        // The clean-success quadrant quotes nothing at all, so absence of the
+        // body holds there however the arm is written: pin it by equality, or
+        // an arm that started echoing git's output would still pass above.
+        let (_, out) = commit_verdict(true, &outcome(true, said, "fatal: no"), SUCCESS);
+        assert_eq!(out, SUCCESS, "a clean success is the success line and nothing else");
     }
 }

@@ -908,6 +908,276 @@ fn a_build_that_adds_a_component_must_cite_the_design_the_tip_ships() {
     );
 }
 
+const PILL_WITH_CARRIERS: &str =
+    "/**\n * StatusPill states one verdict.\n * @tier T1 — primitive\n\
+ * @use one verdict inside a row\n * @avoid a sentence\n * @states rest · hover\n\
+ * @madeof nothing\n */\nexport const StatusPill = () => null;\n";
+
+// History B (DEC-28): the design landed on the epic, and the Working Unit that
+// builds its component also retires the file - verify-doc's components·unretired
+// refuses every turn while the two coexist, so the tip never ships the design the
+// build read. With `amended`, the WU also edits the design before retiring it, so
+// the last state is not the state the epic handed over.
+fn wu_building_a_component_and_retiring_its_design(amended: bool) -> (Repo, String, String) {
+    let repo = Repo::new();
+    repo.git(&["checkout", "-q", "-b", "epic/x"]);
+    repo.write(COMPONENT_DESIGN, "<html><body>the StatusPill contract</body></html>\n");
+    let handed = repo.commit("the design WU landed the contract");
+    let handed_blob = repo.git(&["rev-parse", &format!("{handed}:{COMPONENT_DESIGN}")]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    let mut last_blob = handed_blob.clone();
+    if amended {
+        repo.write(
+            COMPONENT_DESIGN,
+            "<html><body>the contract, amended before the build</body></html>\n",
+        );
+        let amend = repo.commit("amend the contract");
+        last_blob = repo.git(&["rev-parse", &format!("{amend}:{COMPONENT_DESIGN}")]);
+    }
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\n");
+    repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
+    repo.write("ui/src/components/StatusPill.tsx", PILL_WITH_CARRIERS);
+    std::fs::remove_file(repo.path.join(COMPONENT_DESIGN)).unwrap();
+    let tip = repo.commit("build the pill and retire its design");
+    bless_wu(&repo, &tip);
+    let changes = format!(
+        "{WU_CHANGES}  - path: {COMPONENT_DESIGN}\n    tier: T3\n    action: archived\n    distilled_to: \"the contract is carried verbatim by @states and @use\"\n"
+    );
+    repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &changes, None));
+    (repo, handed_blob, last_blob)
+}
+
+fn v3_note_with(repo: &Repo, design: &str) -> String {
+    let base = repo.sha("epic/x");
+    let tip = repo.sha("wu/x/one");
+    let sha = diff_sha256(&repo.path, &base, &tip).unwrap();
+    cr_note_v3(&base, &sha, design)
+}
+
+fn implements(path: &str, pin: &str) -> String {
+    format!("  implements:\n    - path: {path}\n      blob: {pin}\n      built: [ui/src/components/StatusPill.tsx]\n")
+}
+
+fn cites_the_design(repo: &Repo, path: &str, pin: &str) -> String {
+    v3_note_with(repo, &format!("design:\n{}", implements(path, pin)))
+}
+
+/// The note a build writes when it also amended (or authored) the design it
+/// retired: Tier-3's judgment of the design's last state, and the citation.
+fn judges_and_cites_the_design(repo: &Repo, pin: &str) -> String {
+    let tip = repo.sha("wu/x/one");
+    v3_note_with(
+        repo,
+        &format!(
+            "{}{}",
+            design_section(&[COMPONENT_DESIGN], &pin_of(repo, &tip), "PASS"),
+            implements(COMPONENT_DESIGN, pin)
+        ),
+    )
+}
+
+#[test]
+fn a_build_that_retires_the_design_it_cites_lands_and_the_epic_walk_agrees() {
+    let (repo, handed, _) = wu_building_a_component_and_retiring_its_design(false);
+    let tip = repo.sha("wu/x/one");
+    assert!(
+        xtask::git::show_bytes(&repo.path, &tip, COMPONENT_DESIGN).is_err(),
+        "the fixture is History B only if the tip does not ship the design"
+    );
+
+    repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, &handed[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        report.green(),
+        "the citation resolves at the design's last state (DEC-28): {}",
+        format_report(&report)
+    );
+
+    repo.git(&["checkout", "-q", "epic/x"]);
+    repo.git(&["merge", "--no-ff", "-q", "-m", "merge wu/x/one", "wu/x/one"]);
+    std::fs::remove_file(repo.path.join(WU_RESULT)).unwrap();
+    repo.commit("archive the wu result out of git");
+    bless_epic(&repo, T2_ENTRY);
+    let report = repo.gate().verify(Level::Epic, "epic/x", "main").unwrap();
+    assert!(
+        report.green(),
+        "the walk re-asks the citation at the seam and history answers it: {}",
+        format_report(&report)
+    );
+}
+
+#[test]
+fn a_citation_of_a_path_no_reachable_commit_ever_shipped_is_still_refused() {
+    let (repo, handed, _) = wu_building_a_component_and_retiring_its_design(false);
+    let tip = repo.sha("wu/x/one");
+    let typo = "docs/work/components/staus-pill.html";
+    repo.note("cr", &tip, &cites_the_design(&repo, typo, &handed[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    let said = format_report(&report);
+    assert!(
+        said.contains(&format!("{typo}, which no commit reachable from the tip ever shipped")),
+        "the red names the path half, not the tip: {said}"
+    );
+}
+
+#[test]
+fn a_citation_of_bytes_a_retired_design_never_carried_names_its_last_state() {
+    let (repo, handed, _) = wu_building_a_component_and_retiring_its_design(false);
+    let tip = repo.sha("wu/x/one");
+    repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, "0000000"));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["9·design"], "{}", format_report(&report));
+    let said = format_report(&report);
+    assert!(
+        said.contains(&format!("was last shipped at {} (", &handed[..7])),
+        "the red names the blob half - the last state to re-pin: {said}"
+    );
+    assert!(
+        !said.contains("this tip ships"),
+        "the tip ships nothing, and the red does not say it does: {said}"
+    );
+}
+
+#[test]
+fn a_design_amended_then_retired_in_one_wu_is_cited_at_its_last_state_not_its_first() {
+    let (repo, handed, last) = wu_building_a_component_and_retiring_its_design(true);
+    let tip = repo.sha("wu/x/one");
+    assert_ne!(handed, last, "the amendment moved the bytes");
+
+    repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, &handed[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        checks_of(&report).contains(&"9·design"),
+        "the build cites the bytes it was handed, not the bytes it left: {}",
+        format_report(&report)
+    );
+    assert!(format_report(&report).contains(&format!("was last shipped at {}", &last[..7])));
+
+    // Re-pinned, the citation resolves - and the amendment itself is still a design
+    // artifact this WU carried, which nobody judged: DEC-25 D1a re-enters Tier-3 on
+    // the merge that lands an amendment, whether or not the file also left the tree.
+    repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, &last[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(checks_of(&report).iter().all(|c| *c == "9·design"), "{}", format_report(&report));
+    assert!(
+        format_report(&report).contains(&format!(
+            "{COMPONENT_DESIGN} is a design artifact the design section does not name"
+        )),
+        "an amended-then-retired design is judged at its last state: {}",
+        format_report(&report)
+    );
+
+    repo.note("cr", &tip, &judges_and_cites_the_design(&repo, &last[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        report.green(),
+        "judged and re-pinned to the last state, it lands: {}",
+        format_report(&report)
+    );
+}
+
+// The one-WU design: authored, built and retired between the same base and tip,
+// so the endpoint diff never shows the file at all. Nobody judged it before this
+// merge, and this merge is the only one that can.
+#[test]
+fn a_design_authored_built_and_retired_in_one_wu_is_judged_by_that_wu() {
+    let repo = Repo::new();
+    repo.git(&["branch", "epic/x"]);
+    repo.git(&["checkout", "-q", "-b", "wu/x/one", "epic/x"]);
+    repo.write(
+        COMPONENT_DESIGN,
+        "<html><body>the StatusPill contract, designed here</body></html>\n",
+    );
+    let designed = repo.commit("design the pill");
+    let blob = repo.git(&["rev-parse", &format!("{designed}:{COMPONENT_DESIGN}")]);
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\n");
+    repo.write("docs/use-cases/api.html", "<html>v2</html>\n");
+    repo.write(WU_RESULT, "<html>wu result</html>\n");
+    repo.write("ui/src/components/StatusPill.tsx", PILL_WITH_CARRIERS);
+    std::fs::remove_file(repo.path.join(COMPONENT_DESIGN)).unwrap();
+    let tip = repo.commit("build the pill and retire its design");
+    bless_wu(&repo, &tip);
+    assert!(
+        !xtask::git::diff_names(&repo.path, &repo.sha("epic/x"), &tip)
+            .unwrap()
+            .contains(&COMPONENT_DESIGN.to_string()),
+        "the endpoint diff nets the design out - only the range knows it existed"
+    );
+
+    // Judged and cited - and still refused: the design left the tree in this WU,
+    // so DEC-16's retirement order is owed here too, and the default doc note
+    // carries no archived entry for a file the endpoint diff never shows.
+    repo.note("cr", &tip, &judges_and_cites_the_design(&repo, &blob[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["6·doc-note"], "{}", format_report(&report));
+    assert!(
+        format_report(&report)
+            .contains(&format!("{COMPONENT_DESIGN} changed in the diff but has no entry")),
+        "the retirement is owed an entry: {}",
+        format_report(&report)
+    );
+
+    let changes = format!(
+        "{WU_CHANGES}  - path: {COMPONENT_DESIGN}\n    tier: T3\n    action: archived\n    distilled_to: \"the contract is carried verbatim by @states and @use\"\n"
+    );
+    repo.note("doc", &tip, &doc_note("E9", Some("E9.W1"), &changes, None));
+    repo.note("cr", &tip, &cites_the_design(&repo, COMPONENT_DESIGN, &blob[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(checks_of(&report).iter().all(|c| *c == "9·design"), "{}", format_report(&report));
+    assert!(
+        format_report(&report).contains("is a design artifact the design section does not name"),
+        "a design nobody judged is refused even though the citation resolves: {}",
+        format_report(&report)
+    );
+
+    repo.note("cr", &tip, &judges_and_cites_the_design(&repo, &blob[..7]));
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(
+        report.green(),
+        "retired in order, judged at its last state and cited, it lands: {}",
+        format_report(&report)
+    );
+}
+
+// The reviewer's half of the same rule: design-scope names the retired design
+// beside the ones the tip ships and says where its bytes are read - and only a
+// design artifact counts, not every file that ever sat under the components dir.
+#[test]
+fn design_scope_names_a_design_retired_at_unjudged_bytes_and_where_to_read_it() {
+    let (repo, _, last) = wu_building_a_component_and_retiring_its_design(true);
+    repo.git(&["checkout", "-q", "wu/x/one"]);
+    repo.write("docs/work/components/NOTES.md", "not a design\n");
+    repo.write("docs/work/components/sub/draft.html", "<html>not a component design</html>\n");
+    repo.commit("stray files under the components dir");
+    std::fs::remove_file(repo.path.join("docs/work/components/NOTES.md")).unwrap();
+    std::fs::remove_file(repo.path.join("docs/work/components/sub/draft.html")).unwrap();
+    let tip = repo.commit("and gone again");
+    let amend = repo.sha(&format!("{tip}~3"))[..10].to_string();
+
+    let args: Vec<String> =
+        ["design-scope", "epic/x", "wu/x/one"].iter().map(|s| (*s).to_string()).collect();
+    let (code, out) = xtask::run(&args, &repo.path).unwrap();
+    assert_eq!(code, 0, "{out}");
+    assert!(out.contains("1 design artifact(s) to judge"), "{out}");
+    assert!(out.contains(COMPONENT_DESIGN), "{out}");
+    assert!(
+        out.contains("1 of them left the tree in this range"),
+        "the count is of artifacts: {out}"
+    );
+    assert!(
+        out.contains(&format!("git show {amend}:{COMPONENT_DESIGN}")),
+        "the reviewer is told where the last state is read: {out}"
+    );
+    assert!(!out.contains("NOTES.md") && !out.contains("draft.html"), "not artifacts: {out}");
+    assert_eq!(
+        repo.git(&["rev-parse", &format!("{amend}:{COMPONENT_DESIGN}")])[..7],
+        last[..7],
+        "and that is the amended state the pin must match"
+    );
+}
+
 // The case an added-only trigger can never see: a Working Unit that re-shapes a
 // surface that already exists, which is where most UI work lives once the screens
 // are built. No design is demanded of it - a gate that answered every edit with
@@ -1770,4 +2040,173 @@ fn range_rejects_an_untrailered_claude_md_commit() {
     let trailered = repo.commit_reviewed("t0 edit");
     let (code, out) = range_run(&repo, &new, &trailered);
     assert_eq!(code, 0, "a listed trailer authorises the T0 edit: {out}");
+}
+
+// ---------------------------------------------------------------------------
+// Check 8 names the cause it found: one sentence over every cause sends a
+// reader to the causes it was not.
+// ---------------------------------------------------------------------------
+
+/// A key-backed `mr/v1` note over `epic/x..tip`, the shape `mr confirm` writes,
+/// signed by `signer` with the repo's `signer` key.
+fn signed_wu_mr_note(repo: &Repo, tip: &str, signer: &str) -> String {
+    let base = repo.sha("epic/x");
+    let hash = diff_sha256(&repo.path, &base, tip).unwrap();
+    let bytes = xtask::git::show_bytes(&repo.path, tip, WU_RESULT).unwrap();
+    let rsha = xtask::git::sha256_hex(&bytes).unwrap();
+    let payload = format!("{hash}\n{rsha}");
+    let sig = xtask::git::ssh_sign(
+        "ssh-keygen",
+        repo.path.join("signer").to_str().unwrap(),
+        xtask::mr::NOTE_NAMESPACE,
+        payload.as_bytes(),
+        None,
+    )
+    .unwrap();
+    let indented: String = sig.lines().map(|l| format!("  {l}")).collect::<Vec<_>>().join("\n");
+    format!(
+        "schema: mr/v1\nlevel: working-unit\ntip: {tip}\nbase: {base}\ntier: key\nsigner: {signer}\nreport: {WU_RESULT}\nreport_sha256: {rsha}\ndate: 2026-09-03\nsig: |\n{indented}\n"
+    )
+}
+
+/// A blessed WU whose `mr/v1` note is key-backed and whose roster lists the key.
+fn wu_signed_by_a_listed_key() -> (Repo, String) {
+    let repo = wu_with_change();
+    let tip = repo.sha("wu/x/one");
+    bless_wu(&repo, &tip);
+    let pubkey = repo.keygen();
+    repo.write(".mr-allowed", &format!("email: a@b.co\nkey: vuluu {pubkey}\n"));
+    repo.note("mr", &tip, &signed_wu_mr_note(&repo, &tip, "vuluu"));
+    (repo, tip)
+}
+
+fn check_8_message(repo: &Repo) -> String {
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert_eq!(checks_of(&report), vec!["8·manual-review"], "{}", format_report(&report));
+    format_report(&report)
+}
+
+#[test]
+fn a_signature_this_checkouts_roster_lists_no_key_for_names_the_signer_and_the_roster() {
+    let (repo, _tip) = wu_signed_by_a_listed_key();
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "the roster lists the key: {}", format_report(&report));
+
+    // The DEC-10 shape: a repo-wide note, a per-checkout roster without it.
+    repo.write(".mr-allowed", "email: a@b.co\n");
+    let out = check_8_message(&repo);
+
+    // The roster's own absolute path, not the bare file name: NOT_AUTHORISED
+    // already ends "must be listed in .mr-allowed", so asserting the name alone
+    // passes on that boilerplate even when the message names no path at all.
+    let roster = repo.path.join(".mr-allowed").display().to_string();
+    assert!(out.contains("is signed by vuluu"), "the signer is named: {out}");
+    assert!(out.contains(&roster), "and the roster this checkout read ({roster}): {out}");
+    assert!(!out.contains("has no mr/v1 note"), "the note exists and is valid: {out}");
+    assert!(!out.contains("does not verify"), "the signature is not the fault: {out}");
+}
+
+#[test]
+fn a_signature_that_no_longer_covers_the_range_says_so_and_not_that_the_signer_is_unlisted() {
+    let (repo, tip) = wu_signed_by_a_listed_key();
+    // The tree moved after signing: same note, a diff it no longer covers.
+    repo.write("src/lib.rs", "pub fn base() {}\npub fn added() {}\npub fn later() {}\n");
+    let moved = repo.commit("a change made after the signature");
+    repo.note("test", &moved, &repo.git(&["notes", "--ref=test", "show", &tip]));
+    repo.note("doc", &moved, &repo.git(&["notes", "--ref=doc", "show", &tip]));
+    let base = repo.sha("epic/x");
+    let sha = diff_sha256(&repo.path, &base, &moved).unwrap();
+    repo.note("cr", &moved, &cr_note("E9", Some("E9.W1"), &base, &sha, "PASS"));
+    repo.note("mr", &moved, &signed_wu_mr_note(&repo, &tip, "vuluu"));
+
+    let out = check_8_message(&repo);
+
+    assert!(out.contains("does not verify over base..tip"), "the cause is the signature: {out}");
+    assert!(out.contains("vuluu"), "the signer is still named: {out}");
+    assert!(!out.contains("does not list"), "the roster is not the fault: {out}");
+}
+
+#[test]
+fn the_three_check_8_causes_print_three_different_sentences() {
+    let (repo, tip) = wu_signed_by_a_listed_key();
+    let listed = std::fs::read_to_string(repo.path.join(".mr-allowed")).unwrap();
+    let note = repo.git(&["notes", "--ref=mr", "show", &tip]);
+
+    repo.git(&["notes", "--ref=mr", "remove", &tip]);
+    let absent = check_8_message(&repo);
+
+    repo.note("mr", &tip, &note);
+    repo.write(".mr-allowed", "email: a@b.co\n");
+    let unlisted = check_8_message(&repo);
+
+    repo.write(".mr-allowed", &listed);
+    repo.note("mr", &tip, &note.replace("report_sha256: ", "report_sha256: 0"));
+    let stale = check_8_message(&repo);
+
+    let causes = [&absent, &unlisted, &stale];
+    for (i, a) in causes.iter().enumerate() {
+        for b in causes.iter().skip(i + 1) {
+            assert_ne!(a, b, "each cause gets its own sentence");
+        }
+    }
+    assert!(absent.contains("has no mr/v1 note"), "{absent}");
+    assert!(unlisted.contains("does not list"), "{unlisted}");
+    assert!(stale.contains("does not verify"), "{stale}");
+}
+
+#[test]
+fn an_unreadable_note_says_that_rather_than_reporting_none() {
+    let (repo, tip) = wu_signed_by_a_listed_key();
+
+    repo.note("mr", &tip, "schema: mr/v2\nlevel: working-unit\ntip: x\ntier: key\nsigner: vuluu\n");
+    let other_schema = check_8_message(&repo);
+    assert!(other_schema.contains("declares schema mr/v2"), "{other_schema}");
+
+    repo.note("mr", &tip, "schema: [not: a: note");
+    let unparseable = check_8_message(&repo);
+    assert!(unparseable.contains("does not parse"), "{unparseable}");
+    assert!(!unparseable.contains("has no mr/v1 note"), "a note is present: {unparseable}");
+}
+
+#[test]
+fn a_note_whose_base_is_not_in_this_history_says_the_range_cannot_be_recomputed() {
+    let (repo, tip) = wu_signed_by_a_listed_key();
+    let ghost = "0000000000000000000000000000000000000000";
+    let note = repo.git(&["notes", "--ref=mr", "show", &tip]);
+    let base = repo.sha("epic/x");
+    repo.note("mr", &tip, &note.replace(&format!("base: {base}"), &format!("base: {ghost}")));
+
+    let out = check_8_message(&repo);
+
+    assert!(out.contains("which this repo's history does not hold"), "{out}");
+    assert!(!out.contains("does not verify"), "the signature was never reached: {out}");
+}
+
+#[test]
+fn every_check_8_cause_keeps_the_check_id_and_the_receipts_shape() {
+    // The id is what receipts record and what the epic walk filters at a seam;
+    // five new sentences must not become five new checks.
+    let (repo, tip) = wu_signed_by_a_listed_key();
+    let note = repo.git(&["notes", "--ref=mr", "show", &tip]);
+    for body in [
+        None,
+        Some("schema: mr/v2\nlevel: working-unit\ntip: x\ntier: key\nsigner: vuluu\n".to_string()),
+        Some(note.replace("report_sha256: ", "report_sha256: 0")),
+    ] {
+        if let Some(b) = body {
+            repo.note("mr", &tip, &b);
+        } else {
+            repo.git(&["notes", "--ref=mr", "remove", &tip]);
+        }
+        let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+        assert_eq!(checks_of(&report), vec!["8·manual-review"]);
+    }
+
+    repo.note("mr", &tip, &note);
+    let report = repo.gate().verify(Level::Wu, "wu/x/one", "epic/x").unwrap();
+    assert!(report.green(), "{}", format_report(&report));
+    let body = repo.gate().write_receipt(&report).unwrap();
+    assert!(body.contains("manual-review"), "the receipt still lists the check: {body}");
+    let receipt: DodReceipt = serde_yaml::from_str(&body).unwrap();
+    assert_eq!(receipt.tip, tip);
 }
