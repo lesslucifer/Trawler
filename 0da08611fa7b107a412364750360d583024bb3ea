@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-REDESIGN
 wu: E-REDESIGN.W1
-branch: HEAD
 base: 0794cb9fe6ae7a8ca6e780c6c7ab8404a6a42b91
 tip: 0da08611fa7b107a412364750360d583024bb3ea
 diff_sha256: 4a151a41479dd29d75623b1ada2625733ea2c90b8b87892fdfabd472d4f3b7ea
