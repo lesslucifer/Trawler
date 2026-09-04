@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a84029f34851f0dfac07f">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W1 result (gap components)</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);}
+    .ok{color:var(--ok);font-weight:600;} .warn{color:var(--warn);font-weight:600;}
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}
+    .round{border-left:3px solid var(--line);padding-left:14px;margin:10px 0 10px 2px;}
+    .round h4{margin:0 0 6px;font-size:13.5px;}
+    .round p{margin:4px 0;font-size:12.5px;line-height:1.55;}
+  </style>
+</head>
+<body data-artifact="wu-result" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W1 — result</h1>
+      <p>The three components the registry redirected to but did not have are designed. The review changed two of the arguments, and one of the notes.</p>
+      <div class="meta">WU result · 2026-09-04 · Trawler · T3 (docs/work/) · tip <code>c7dcd96</code> → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · plan: <a href="2026-09-04-redesign-w1-plan.html">W1 plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div class="callout" data-item="outcome" data-c="outcome">
+      <strong>Delivered, against the requirement as written.</strong> <code>Field</code> <span class="tier t1">T1</span>, <code>StatusDot</code> <span class="tier t2">T2</span> and <code>Disclosure</code> <span class="tier t1">T1</span> each landed as a component design file carrying the full nine-section contract and a complete TSDoc block, with zero change under <code>ui/src/</code>. All six expected-result rows hold; the epic plan's open question on Disclosure's tier is answered in the file (T1, slot-based). Two items travelled with the WU that were not in its plan: a stale asset import fixed on its own commit, and a deferred-backlog row for a T1 inconsistency this WU deliberately did not fix.
+    </div>
+    <table data-c="expected-check">
+      <thead><tr><th>#</th><th>Expected (from the plan)</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Three files, all nine sections each</td><td><span class="ok">met</span> — <code>verify-doc</code> green on all three as <code>component-design</code></td></tr>
+        <tr><td>2</td><td>Specimens in the app's own Tailwind, no hand-written rule</td><td><span class="ok">met</span> — <code>components·redrawn</code> silent; each file carries a part → classes table. <em>Mechanism differs from the plan's wording</em> (see deviations)</td></tr>
+        <tr><td>3</td><td>A complete TSDoc block W2 can paste</td><td><span class="ok">met</span> — all six tags present in each</td></tr>
+        <tr><td>4</td><td>The phantom redirects resolve</td><td><span class="ok">met</span> — <code>KeyValueRow</code>'s and <code>StatusPill</code>'s <code>@avoid</code> targets now exist as openable contracts; the docstring edits remain W2's</td></tr>
+        <tr><td>5</td><td>Each design states its boundary against its nearest neighbour</td><td><span class="ok">met, and extended</span> — Field vs Select, StatusDot vs three siblings, Disclosure vs Section; the review forced a fourth (StatusDot vs IconButton, fork S2b)</td></tr>
+        <tr><td>6</td><td>Zero change under <code>ui/src/</code></td><td><span class="ok">met</span> — <code>git diff epic/redesign..HEAD -- ui/src/</code> is empty</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations" data-c="deviations">
+      <table>
+        <thead><tr><th>What differed</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>A standalone code commit the plan did not anticipate</strong> — <code>e71987c</code>, <code>doc-assets/components/tw-config.js</code></td>
+            <td>The asset's own import had pointed outside the repo since the E-DFLOW.W5 move (<code>../../../ui/…</code> where the file sits two levels down, resolving to <code>../ui/</code>). Found while setting up this WU's specimens, which is the path that reads it. Fixed on its own commit rather than folded into the design commit, since it is product-adjacent work in a design WU. Carried in <code>test/v2</code> at <code>level: commit</code> with its own evidence.</td>
+          </tr>
+          <tr>
+            <td><strong>The design files load <code>specimens.bundle.js</code>, not <code>tw-config.js</code></strong> as the plan's row 2 said</td>
+            <td>The render gate (<code>cargo xtask ui specimens --check</code>) requires a design artifact to mount from the bundle — <a href="../decisions/dec-26-the-mockup-mounts.html">DEC-26</a>'s rule that a design mounts components rather than drawing them. Both paths read <code>ui/tailwind.config.js</code>, so the substantive claim was unchanged; the plan's wording was corrected. <strong>Consequence:</strong> nothing in this diff exercises the <code>tw-config.js</code> fix, which the <code>test/v2</code> note now states explicitly rather than claiming gate coverage it does not have.</td>
+          </tr>
+          <tr>
+            <td><strong>A T2 edit in a WU whose plan expected none</strong> — a row in <a href="../backlog/roadmap.html">the living backlog</a></td>
+            <td>The review surfaced that <code>component-design.html</code>'s file skeleton still prescribes the pre-DEC-26 loading shape, so the T1 spec and the artifacts built to it disagree. E-REDESIGN's non-goals freeze the flow spec, so fixing it here was out of scope — but leaving it only in a git note would lose it. Recorded as deferred work with its seam named. The edit records a <em>deferral</em>, not a contract.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="review">What the review changed</h2>
+    <p style="color:var(--muted);font-size:12.5px;">Six finders, then a re-review of the corrections by fresh design and correctness finders. Eight candidates, six verified, none waived. Two were load-bearing arguments that reached a defensible conclusion by a route that was not true — the failure mode the design rubric names as <em>a contract that is complete, fluent and false</em>.</p>
+    <div class="round" data-c="round-1">
+      <h4>Round 1 — on tip <code>9a28f12</code>, fixed in <code>08101f7</code></h4>
+      <p><strong>1 · Field's F4 argued from a false premise.</strong> It said Select's in-popup filter "carries no <code>aria-label</code> of its own because the listbox above it is already named". <code>Select.tsx:176</code> has <code>aria-label="filter options"</code>, distinct from the listbox's at <code>:201</code>. Found independently by the reuse and design finders. The conclusion survived on the double-frame grounds also given; the reasoning was rebuilt on what is true — Select <em>fixes</em> that name where Field's B3 requires the caller to supply one. Corrected in all four places, including the TSDoc <code>@avoid</code>.</p>
+      <p><strong>2 · StatusDot's central claim was contradicted by its own cited authority.</strong> The tri-state argument turned on "<code>checking</code> is transient, <code>muted</code> is terminal". <a href="../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a> reads <code>muted</code> as "informational / non-terminal", and <code>StatusPill</code>'s shipped <code>@states</code> files <code>null/pending → "…"</code> under it — so <code>StatusTone</code> already carries a not-yet-resolved case. Rebuilt on the axis that is real: <strong>authority</strong>. <code>TonedText</code>'s whole API is a caller-passed tone, so collapsing <code>DotStatus</code> into it would make <code>connected</code> caller-suppliable and let a call site render green while the app is still checking; <code>DotStatus</code> has no caller-facing constructor, only <code>dotStatus()</code>.</p>
+      <p><strong>3 · The warrant skipped its nearest sibling.</strong> <code>IconButton</code> is cited four times as precedent but never run through a reuse-or-propose fork. Added as <strong>S2b</strong>: the <code>Button</code> shell is genuinely shared, but <code>IconButton</code> is a T1 contracted to hold no business logic, and extending it would return the tone map to the call site — which <code>StatusPill</code>'s <code>@avoid</code> and <a href="../decisions/dec-20-logic-lives-with-its-inputs.html">DEC-20</a> both forbid.</p>
+      <p><strong>4 · The plan and the test note named the wrong mechanism</strong> (see deviations).</p>
+    </div>
+    <div class="round" data-c="round-2">
+      <h4>Round 2 — re-review on tip <code>08101f7</code></h4>
+      <p>Both re-reviewers independently confirmed all four corrections hold against shipped code. The design finder checked the rebuilt argument adversarially — verifying <code>TonedText</code>'s caller-passed <code>tone</code> prop and the absence of any caller-facing <code>DotStatus</code> constructor — and judged it a genuine improvement rather than a second rationalisation.</p>
+      <p>One further nit, again in a note rather than the work: the <code>test/v2</code> note listed <code>dec-26-the-mockup-mounts.html</code> among the files still loading <code>tw-config.js</code>, but that file names it in prose only. Exactly two carry a live script tag. Corrected on the tip.</p>
+    </div>
+    <div class="callout" data-c="review-observation">
+      <strong>Worth carrying forward:</strong> four of the six verified findings were in <em>claims about shipped code</em>, and two of those were in the git notes rather than the designs. A component design's factual assertions — <code>file:line</code> citations, quoted <code>@avoid</code> lines, token values — are cheap to write and cheap to check, and they were where the errors concentrated. The screen runs W3/W5/W7/W9 will make many more of them.
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence" data-c="evidence">
+      <table>
+        <thead><tr><th>What</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Commits</strong></td><td><code>e71987c</code> tw-config import · <code>9a28f12</code> the three designs + plan · <code>08101f7</code> the review's corrections · <code>c7dcd96</code> the backlog deferral</td></tr>
+          <tr><td><strong>Designs</strong></td><td><a href="components/field.html">field.html</a> · <a href="components/status-dot.html">status-dot.html</a> · <a href="components/disclosure.html">disclosure.html</a></td></tr>
+          <tr><td><strong>Doc gate</strong></td><td><code>cargo xtask verify-doc</code> — 40 docs, none red</td></tr>
+          <tr><td><strong>Render gate</strong></td><td><code>cargo xtask ui specimens --check</code> — all three render over <code>file://</code> in headless Chrome, zero console errors</td></tr>
+          <tr><td><strong>Gate 0</strong></td><td><code>cargo xtask gate0</code> green — fmt, clippy <code>-D warnings</code>, 107 tests</td></tr>
+          <tr><td><strong>Design scope</strong></td><td><code>cargo xtask design-scope</code> — 3 artifacts against rulebook <code>aeff5b0</code>; no new surface, no rendered file touched</td></tr>
+          <tr><td><strong>Notes on the tip</strong></td><td><code>test/v2</code> (three waivers + the standalone commit at <code>level: commit</code>) · <code>doc/v1</code> · <code>cr/v3</code> <strong>PASS</strong>, both rounds recorded, design verdict PASS</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation" data-c="distillation">
+      <p><strong>The three component contracts distil nowhere, and that is the design.</strong> A component design file is transient by <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a> — it holds the contract only until the build retires it into TSDoc, which is W2's job in DEC-16's order (distil the forks to <code>docs/decisions/</code>, verify the TSDoc is complete, then delete).</p>
+      <table>
+        <thead><tr><th>Doc</th><th>Tier</th><th>What landed</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../backlog/roadmap.html">backlog/roadmap.html</a></td><td>T2</td><td><span class="ok">landed</span> — a deferred row for <code>component-design.html</code>'s stale file skeleton, with its seam named</td></tr>
+          <tr><td>design-rules-index.html</td><td>T2</td><td><span class="warn">deferred to distillation</span> — StatusDot's chromatic-meanings rows (a second owner for <code>ok</code>/<code>warn</code>, the first <code>ink-mute</code> entry) are recorded as a <em>proposal</em> in the design, because the rulebook is frozen input for a run and grows afterwards per <a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a></td></tr>
+          <tr><td>a new decision record</td><td>T2</td><td><span class="warn">epic's</span> — why the app's one text input and one state dot are registry entries rather than screen-local; the epic plan assigns this to its own distillation</td></tr>
+          <tr><td>T1</td><td>T1</td><td><span class="ok">none, deliberately</span> — the flow spec, rulebook and gate are frozen inputs for this epic</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups" data-c="follow-ups">
+      <table>
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td><strong>The vocabulary gap Disclosure needs.</strong> <code>rotate-90</code> and <code>transition-transform</code> are not legal today — <code>ui/tailwind.config.js</code> declares no <code>rotate</code> scale and only <code>colors</code> under <code>transitionProperty</code>, and under <a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a> an undeclared scale resolves to nothing. Two named members must be added, not a literal.</td><td><strong>W2</strong> — blocked-on, recorded in the design</td></tr>
+          <tr><td><strong>Two real defects in the shipped StatusDot</strong>, found by designing it: a 10px hit target where the app's floor is 24px (WCAG 2.5.8), and a <code>title</code> with no accessible name, so the one control reporting capture health announces as "button".</td><td><strong>W2</strong> — forks S3 and S4</td></tr>
+          <tr><td><strong>Field's box delta.</strong> The legacy input is <code>px-3 py-chrome-y</code>; Select's trigger is <code>px-control-x py-control-y</code>. W2 must apply the delta rather than copy the legacy string.</td><td><strong>W2</strong> — the tokens table says so explicitly</td></tr>
+          <tr><td><strong>Retire these three files</strong> in DEC-16's order the moment the components have code, or <code>components·unretired</code> reds.</td><td><strong>W2</strong> — flagged in each file's hero</td></tr>
+          <tr><td><strong>The stale T1 file skeleton</strong> — deferred to the backlog, seam named.</td><td>whichever epic next revises the design-flow specs</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
