@@ -12,11 +12,12 @@
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
       surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4 watch ·
       UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD)
-      and the HAR round trip — taking a capture out and bringing one back (UC-6).</p>
-      <div class="meta">v6 · 2026-09-04 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      the HAR round trip — taking a capture out and bringing one back (UC-6) — and clearing the
+      capture (UC-7).</p>
+      <div class="meta">v7 · 2026-09-04 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
       UC-ONBOARD by <span class="badge id">E-UISETUP</span> ·
-      UC-3/UC-4 paging + provenance + UC-6 by <span class="badge id">E-EXPORT</span></div>
+      UC-3/UC-4 paging + provenance + UC-6 + UC-7 by <span class="badge id">E-EXPORT</span></div>
     </div>
   </header>
   <main>
@@ -359,6 +360,73 @@ flowchart TD
       <a href="../decisions/dec-30-har-as-the-interchange-format.html">DEC-30</a>; why an imported
       flow is a first-class flow carrying a mark, and the CORS widening its <code>POST</code>
       required: <a href="../decisions/dec-31-imported-flows-are-marked.html">DEC-31</a>.</p>
+    </div>
+
+
+    <h2 id="uc-7">UC-7 — Clear the capture</h2>
+    <div data-c="uc-7-contract">
+      <p>A debugging session accumulates noise, and reproducing a bug against a clean listing is
+      the reason the ring needed a third door. <code>DELETE /flows</code> removes what the
+      listing filters select and <code>DELETE /flows/{id}</code> removes exactly one — and every
+      live subscriber learns of it on <code>/stream</code>, so an interface never discovers a
+      clear by refetching.</p>
+      <table>
+        <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>DELETE /flows</code></td>
+            <td><code>200</code> with <code>{ "removed": n }</code> — the whole capture is gone,
+            with <strong>no row kept back</strong>. The count is the same envelope the import
+            answers with, so both mutating endpoints report what they did</td>
+          </tr>
+          <tr>
+            <td><code>DELETE /flows?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…&amp;source=…</code></td>
+            <td>only the matching rows leave: <strong>a delete selects exactly what the listing
+            with those parameters lists</strong> — the same filter as the listing and the export,
+            not a third implementation. Every survivor stays whole: still listed, still readable
+            at <code>GET /flows/{id}</code> and at both body endpoints</td>
+          </tr>
+          <tr>
+            <td>a filter matching nothing</td>
+            <td><code>200</code> with <code>{ "removed": 0 }</code> — the request expresses an end
+            state and that state is already true. An unrecognised <code>source=</code> is the
+            exception: <code>400</code> with a reason, because a destructive request must never
+            act on a set the caller did not name</td>
+          </tr>
+          <tr>
+            <td><code>DELETE /flows/{id}</code></td>
+            <td><code>200</code> with <code>{ "removed": 1 }</code>; <code>404</code> when that id
+            is not in the ring — the one delete that 404s, because here the client named something
+            specific that does not exist — and <code>400</code> when the id is not a flow id</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Three consequences a reader cannot infer from the endpoint signature:</p>
+      <ul>
+        <li><strong>A cleared store is empty, not restarted.</strong> The connection tally
+        <code>GET /stats</code> reports is untouched by any delete, and the proxy keeps running:
+        the tally is a monotonic "traffic reached us" measure, not storage. Clearing the capture
+        is not a way to reset the session.</li>
+        <li><strong>The clear arrives as one event for the whole batch</strong> —
+        <code>event: cleared</code> carrying every id that left — not one event per flow, so
+        emptying a full ring cannot lag a subscriber past the stream's buffer and drop it into the
+        <code>lagged</code> gap. It is a <em>distinct</em> event from the ring's own
+        <code>evicted</code>: an interface that conflated them would announce "capture cleared"
+        every time memory pressure dropped a row.</li>
+        <li><strong>Removing is not replacing.</strong> Loading someone else's capture over your
+        own is a delete followed by an import — two operations the client already has — rather
+        than a destructive mode hidden inside the <code>POST</code>.</li>
+      </ul>
+    </div>
+
+    <div class="callout" data-c="uc-7-provenance">
+      <p>Delivered by <span class="badge id">E-EXPORT.W4</span>; the app's own clear control
+      follows in the same epic. The API half is the whole contract above: both routes converge on
+      one <code>Store</code> removal, which shares its unlinking with eviction so the ring's byte
+      accounting cannot differ between the two — the invariant is asserted as a property over
+      arbitrary sequences of inserts, imports, evictions and removals. Why the mutating methods
+      widened the CORS grant without reversing the read-only reasoning behind it:
+      <a href="../decisions/dec-31-imported-flows-are-marked.html">DEC-31</a>.</p>
     </div>
 
   </main>

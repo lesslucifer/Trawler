@@ -62,6 +62,12 @@
           <td>The HAR 1.2 round trip: out over <code>GET /flows/export</code> — the export selects what the listing lists — and back in over <code>POST /flows/import</code>, whose entries become ordinary flows marked <code>imported</code> and selectable by that mark. A body Trawler never captured is marked as such in both directions, never treated as empty; a malformed document is refused whole, changing nothing</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="web-ui.html#uc-7"><code>web-ui.html</code></a></td>
+          <td><span class="badge id">UC-7</span></td>
+          <td>Clearing the capture: <code>DELETE /flows</code> removes what the listing filters select — the same filter, no third implementation — and <code>DELETE /flows/{id}</code> removes one, 404 when it is not there. Every live subscriber learns of it as one <code>cleared</code> event for the batch, distinct from the ring's own eviction. A cleared store is empty, not restarted: the connection tally and the running proxy are untouched</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">
