@@ -207,6 +207,14 @@
         <code>#[serde(flatten)]</code> member — the plan's phrasing implied the latter, which
         <code>serde_urlencoded</code> cannot do. The plan's actual requirement (one definition, so
         the two endpoints cannot drift) is met.</li>
+        <li>the <code>timings</code> block is <code>{ send: 0, wait: time.max(0), receive: 0 }</code>,
+        not the plan's unconditional <code>wait: time</code>. The plan's
+        <a href="2026-09-04-export-w2-har-out-plan.html#mapping-table">mapping table</a> still
+        reads as written, because a plan records what was intended; the correction is here. HAR
+        permits <code>-1</code> for <code>entry.time</code> but requires the three phases to be
+        non-negative, so an unmeasured span reports an unknown total beside zeroed phases and the
+        plan's "the block sums to <code>time</code>" holds only when the span was measured.
+        <strong>W3 reads this row, not the plan's</strong>, when inverting the projection.</li>
         <li>an uncaptured <strong>request</strong> body omits <code>postData</code> rather than
         carrying a reason comment. The plan's body table specified the four-state vocabulary
         against <code>content</code>/<code>postData</code> jointly; HAR's <code>postData</code>
