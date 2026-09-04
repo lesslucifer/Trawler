@@ -11,10 +11,12 @@
       <h1>Use Cases — UI surfaces</h1>
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
       surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4 watch ·
-      UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD).</p>
-      <div class="meta">v4 · 2026-07-15 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD)
+      and taking a capture out as a HAR file (UC-6).</p>
+      <div class="meta">v5 · 2026-09-04 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
-      UC-ONBOARD by <span class="badge id">E-UISETUP</span></div>
+      UC-ONBOARD by <span class="badge id">E-UISETUP</span> ·
+      UC-3/UC-4 paging + UC-6 by <span class="badge id">E-EXPORT</span></div>
     </div>
   </header>
   <main>
@@ -225,6 +227,71 @@ flowchart TD
       handshake bumps <code>/stats</code> + emits <code>connection</code>, records no flow), the status
       derivation + probe-parser unit tests, and the UC-ONBOARD e2e spine. Why these reversals were approved:
       <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>.</p>
+    </div>
+
+    <h2 id="uc-6">UC-6 — Take the capture out as a HAR file</h2>
+    <div data-c="uc-6-export-contract">
+      <p><code>GET /flows/export</code> answers with the currently filtered capture as a single
+      <strong>HAR 1.2</strong> document — the interchange format the tools in this space already
+      read — served as <code>application/json</code> with a
+      <code>Content-Disposition</code> naming a <code>.har</code> file, so a browser or the
+      native app saves it under a timestamped name.</p>
+      <table>
+        <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>GET /flows/export</code></td>
+            <td>every captured exchange as a <code>log.entries</code> element — method, URL, both
+            HTTP versions, headers (order and duplicates preserved), query string, cookies,
+            status and reason, the time it was captured, its duration and a
+            <code>timings</code> block, and its bodies</td>
+          </tr>
+          <tr>
+            <td><code>GET /flows/export?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…</code></td>
+            <td>the same document over the filtered set: <strong>the export selects exactly what
+            the listing with those parameters lists</strong>, in the same order — the same filter,
+            not a second implementation of it</td>
+          </tr>
+          <tr>
+            <td>an empty capture, or a filter matching nothing</td>
+            <td><code>200</code> with <code>log.entries: []</code> — a valid, empty HAR file, not
+            a <code>404</code>: the client asked what is captured and the answer is "nothing"</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Two consequences a reader cannot infer from the endpoint signature:</p>
+      <ul>
+        <li><strong>A body Trawler never captured is marked as such, never exported as
+        empty.</strong> A streamed body, one skipped for being too large, and one lost to a read
+        error each appear as a body with <em>no text</em> and a comment naming the reason —
+        so a 4&nbsp;MB event stream is never indistinguishable from a <code>204</code>. A
+        too-large body additionally reports the size it had, because that size is known and is
+        exactly why the bytes were dropped. Only a genuinely empty body is a measured zero.
+        Every other fact Trawler does not hold — the raw header-block sizes, the wire reason
+        phrase, a cookie's optional attributes — is HAR's own "unavailable" sentinel rather
+        than an invented value. The timings are the one place HAR forbids that sentinel: an
+        exchange whose duration was never measured reports an unknown total with its phases
+        zeroed, because a negative phase is a value no reader accepts.</li>
+        <li><strong>A flow still awaiting its response is omitted</strong> from the file, because
+        HAR requires a response on every entry and there is nothing truthful to put there. So an
+        export taken mid-exchange can hold one entry fewer than the listing shows.</li>
+      </ul>
+      <p>The exported bytes are the bytes captured, with the <code>Content-Encoding</code> that
+      describes them still attached — the file stays a faithful record of the wire, and
+      <code>GET /flows/{id}/{leg}/body?decode=1</code> remains the decoding surface. The export
+      is never paged: a HAR file split across pages is not a HAR file, so the filter is the way
+      to export less.</p>
+    </div>
+
+    <div class="callout" data-c="uc-6-export-provenance">
+      <p>Export delivered by <span class="badge id">E-EXPORT.W2</span>; the import half of UC-6
+      and the app's own controls follow in the same epic. The projection lives in
+      <code>src/api/har.rs</code> and its document shape is snapshot-locked in
+      <code>tests/api.rs</code>, so a change to it surfaces as a reviewable diff; the
+      export-selects-what-the-listing-lists guarantee holds by construction (both endpoints build
+      the same filter) and is asserted endpoint-to-endpoint. Why HAR and only HAR, and what a
+      round-trip does and does not preserve:
+      <a href="../decisions/dec-30-har-as-the-interchange-format.html">DEC-30</a>.</p>
     </div>
 
   </main>

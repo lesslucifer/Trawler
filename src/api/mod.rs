@@ -1,4 +1,5 @@
 mod decode;
+pub mod har;
 pub mod routes;
 pub mod view;
 
@@ -13,13 +14,14 @@ use crate::store::Store;
 use routes::AppState;
 
 /// Build the inspect-only control API: the embedded UI shell, filtered
-/// listing, a connection tally (`/stats`), full-flow detail, raw or decoded
-/// bodies, a live SSE stream, and the CA download.
+/// listing, a HAR 1.2 export of it, a connection tally (`/stats`), full-flow
+/// detail, raw or decoded bodies, a live SSE stream, and the CA download.
 pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {
     let state = AppState { store, ca_cert_pem };
     Router::new()
         .route("/", get(routes::ui_page))
         .route("/flows", get(routes::list_flows))
+        .route("/flows/export", get(routes::export_har))
         .route("/stats", get(routes::stats))
         .route("/flows/{id}", get(routes::get_flow))
         .route("/flows/{id}/request/body", get(routes::request_body))
@@ -64,6 +66,7 @@ mod tests {
         for (path, expected) in [
             ("/", StatusCode::OK),
             ("/flows", StatusCode::OK),
+            ("/flows/export", StatusCode::OK),
             ("/stats", StatusCode::OK),
             ("/flows/not-a-uuid", StatusCode::BAD_REQUEST),
             ("/flows/not-a-uuid/request/body", StatusCode::BAD_REQUEST),
@@ -75,6 +78,18 @@ mod tests {
             let response = router.clone().oneshot(request).await.expect("response");
             assert_eq!(response.status(), expected, "route {path}");
         }
+    }
+
+    // `export` is a static segment sharing a prefix with `/flows/{id}`; axum
+    // prefers the static route, and that precedence is asserted rather than
+    // assumed because it would regress silently.
+    #[tokio::test]
+    async fn export_is_a_route_of_its_own_not_a_flow_id() {
+        let router = super::router(Arc::new(Store::new(1024, 8)), Arc::new("PEM".into()));
+        let request = Request::builder().uri("/flows/export").body(Body::empty()).expect("request");
+        let response = router.oneshot(request).await.expect("response");
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()["content-type"], "application/json");
     }
 
     // The native app is a cross-origin client, so every response carries an open

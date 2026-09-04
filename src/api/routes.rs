@@ -8,13 +8,15 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Deserialize;
 use serde_json::{json, Value};
+use time::macros::format_description;
+use time::OffsetDateTime;
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
-use super::decode;
 use super::view::{self, FlowPageView, FlowSummary, FlowView};
+use super::{decode, har};
 use crate::flow::{header_value, BodyRec, FlowId, Header};
 use crate::store::{FlowFilter, Store};
 
@@ -24,13 +26,38 @@ pub struct AppState {
     pub ca_cert_pem: Arc<String>,
 }
 
+/// The filter half of a listing request. Every endpoint that selects flows
+/// deserializes into this and converts, so the listing and the export cannot
+/// come to select different sets. It is a field list rather than a nested
+/// `#[serde(flatten)]` member because `serde_urlencoded`, which axum's `Query`
+/// uses, cannot deserialize a flattened struct from a query string.
 #[derive(Deserialize)]
-pub struct ListQuery {
+pub struct FilterQuery {
     host: Option<String>,
     method: Option<String>,
     status: Option<u16>,
     content_type: Option<String>,
     q: Option<String>,
+}
+
+impl From<FilterQuery> for FlowFilter {
+    fn from(query: FilterQuery) -> Self {
+        Self {
+            host: query.host,
+            method: query.method,
+            status: query.status,
+            content_type: query.content_type,
+            q: query.q,
+        }
+    }
+}
+
+/// The paging half, extracted alongside `FilterQuery` rather than nesting it:
+/// `serde_urlencoded` ignores unknown keys, so two extractions over the same
+/// query string each see their own parameters and the filter keeps one
+/// definition. Only the listing accepts these — an export is never paged.
+#[derive(Deserialize)]
+pub struct PagingQuery {
     limit: Option<String>,
     cursor: Option<String>,
 }
@@ -50,22 +77,20 @@ enum Leg {
 /// whole filtered list as a bare array — the contract every existing client
 /// already reads — and with it an envelope, because an array cannot carry the
 /// cursor that continues the walk.
-pub async fn list_flows(Query(query): Query<ListQuery>, State(state): State<AppState>) -> Response {
-    let filter = FlowFilter {
-        host: query.host,
-        method: query.method,
-        status: query.status,
-        content_type: query.content_type,
-        q: query.q,
-    };
+pub async fn list_flows(
+    Query(filter): Query<FilterQuery>,
+    Query(paging): Query<PagingQuery>,
+    State(state): State<AppState>,
+) -> Response {
+    let filter = FlowFilter::from(filter);
 
-    let cursor = match query.cursor.as_deref().map(parse_cursor) {
+    let cursor = match paging.cursor.as_deref().map(parse_cursor) {
         Some(Ok(id)) => Some(id),
         Some(Err(reason)) => return bad_request(reason),
         None => None,
     };
 
-    let Some(limit) = query.limit.as_deref() else {
+    let Some(limit) = paging.limit.as_deref() else {
         // A cursor without a limit is a client that believes it is paging, so it
         // is refused rather than silently served the whole unbounded listing.
         if cursor.is_some() {
@@ -83,6 +108,34 @@ pub async fn list_flows(Query(query): Query<ListQuery>, State(state): State<AppS
 
     let page = state.store.page(&filter, limit, cursor);
     Json(FlowPageView::from(&page)).into_response()
+}
+
+/// The whole filtered capture as one HAR 1.2 document — never a page, because a
+/// HAR file split across pages is not a HAR file. Served as `application/json`
+/// (a HAR file is JSON, and every reader accepts it) with the `.har` filename in
+/// `Content-Disposition`, which is what tells a browser or the app what to save.
+pub async fn export_har(
+    Query(query): Query<FilterQuery>,
+    State(state): State<AppState>,
+) -> Response {
+    let flows = state.store.list(&FlowFilter::from(query));
+    let filename = format!("trawler-{}.har", export_timestamp());
+    (
+        [
+            (header::CONTENT_TYPE, "application/json".to_owned()),
+            (header::CONTENT_DISPOSITION, format!("attachment; filename=\"{filename}\"")),
+        ],
+        Json(har::har_document(&flows)).into_response().into_body(),
+    )
+        .into_response()
+}
+
+/// A filename-safe UTC stamp, so successive exports do not overwrite each other
+/// in a downloads folder.
+fn export_timestamp() -> String {
+    OffsetDateTime::now_utc()
+        .format(&format_description!("[year][month][day]-[hour][minute][second]"))
+        .unwrap_or_else(|_| "export".to_owned())
 }
 
 /// One-shot counterpart to the `connection` SSE event: "has any traffic reached
@@ -219,15 +272,26 @@ mod tests {
     fn state_with(uris: &[&str]) -> AppState {
         let store = Arc::new(Store::new(1_000_000, 64));
         for uri in uris {
-            store.insert(FlowBuilder::new().uri(uri).build());
+            store.insert(FlowBuilder::new().uri(uri).status(200).build());
         }
         AppState { store, ca_cert_pem: Arc::new("PEM".into()) }
     }
 
+    async fn export(state: &AppState, query: &str) -> (StatusCode, axum::http::HeaderMap, Value) {
+        let uri = format!("http://x/flows/export?{query}").parse::<axum::http::Uri>().expect("uri");
+        let query = Query::try_from_uri(&uri).expect("query");
+        let response = super::export_har(query, State(state.clone())).await;
+        let status = response.status();
+        let headers = response.headers().clone();
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.expect("body");
+        (status, headers, serde_json::from_slice(&bytes).expect("json"))
+    }
+
     async fn list(state: &AppState, query: &str) -> (StatusCode, Value) {
         let uri = format!("http://x/flows?{query}").parse::<axum::http::Uri>().expect("uri");
-        let query = Query::try_from_uri(&uri).expect("query");
-        let response = super::list_flows(query, State(state.clone())).await;
+        let filter = Query::try_from_uri(&uri).expect("filter");
+        let paging = Query::try_from_uri(&uri).expect("paging");
+        let response = super::list_flows(filter, paging, State(state.clone())).await;
         let status = response.status();
         let bytes = to_bytes(response.into_body(), usize::MAX).await.expect("body");
         let value = serde_json::from_slice(&bytes)
@@ -282,6 +346,34 @@ mod tests {
                 "refusal for {query} must name {named}, got {value}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn the_export_is_served_as_a_har_file_attachment() {
+        let state = state_with(&["http://a/"]);
+        let (status, headers, value) = export(&state, "").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(headers["content-type"], "application/json");
+        let disposition = headers["content-disposition"].to_str().expect("ascii");
+        assert!(disposition.starts_with("attachment; filename=\"trawler-"), "{disposition}");
+        assert!(disposition.ends_with(".har\""), "{disposition}");
+        assert_eq!(value["log"]["version"], "1.2");
+    }
+
+    #[tokio::test]
+    async fn an_empty_capture_exports_a_valid_har_with_no_entries() {
+        let (_, _, value) = export(&state_with(&[]), "").await;
+        assert_eq!(value["log"]["version"], "1.2");
+        assert_eq!(value["log"]["entries"].as_array().expect("entries").len(), 0);
+    }
+
+    #[tokio::test]
+    async fn the_export_filter_reaches_the_store() {
+        let state = state_with(&["http://keep/1", "http://drop/1"]);
+        let (_, _, value) = export(&state, "host=keep").await;
+        let entries = value["log"]["entries"].as_array().expect("entries");
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0]["request"]["url"], "http://keep/1");
     }
 
     #[tokio::test]

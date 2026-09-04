@@ -11,7 +11,9 @@ use crate::event::FlowEvent;
 use crate::flow::{BodyRec, Flow, Header, NotCapturedReason};
 use crate::store::FlowPage;
 
-fn rfc3339(t: SystemTime) -> String {
+/// The timestamp format every projection puts on the wire, defined once so the
+/// REST views and the HAR export cannot come to render an instant differently.
+pub(super) fn rfc3339(t: SystemTime) -> String {
     OffsetDateTime::from(t).format(&Rfc3339).unwrap_or_default()
 }
 

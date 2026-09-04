@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a8e199f34851f0dfac12c" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-EXPORT.W2 result: a capture leaves as HAR</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-EXPORT.W2 result — a capture leaves as HAR</h1>
+      <p><code>GET /flows/export</code> serves the filtered capture as HAR 1.2, delivered as planned: the export selects what the listing lists by construction, and every body Trawler never captured says so in the file.</p>
+      <div class="meta">v1 · 2026-09-04 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W2</span> · <a href="2026-09-04-export-w2-har-out-plan.html">WU plan</a> · <a href="2026-09-04-export-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Delivered</strong>, against the requirement as written. A new
+      <code>src/api/har.rs</code> projects a <code>Flow</code> onto a HAR 1.2 entry and
+      <code>GET /flows/export</code> serves the whole filtered capture as one document. All six of
+      the WU plan's observables hold:</p>
+      <table data-c="observables">
+        <thead><tr><th>#</th><th>Observable</th><th>Where it is proven</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>the exported document is HAR 1.2, names its writer, and carries the captured
+            exchanges field for field</td>
+            <td><code>export_serves_a_har_1_2_document_of_the_capture</code> (integration, over the
+            real router — every asserted field) · <code>document_envelope_names_the_format_and_its_writer</code> ·
+            <code>request_and_response_fields_map_across</code> · <code>the_har_document_shape_is_locked</code>
+            (the snapshot)</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>the export selects exactly what the listing with the same filters lists, in the
+            same order</td>
+            <td><code>export_and_listing_select_the_same_flows</code> — six filter shapes, id
+            sequences compared endpoint-to-endpoint. <strong>Holds by construction</strong>: both
+            handlers deserialize the same <code>FilterQuery</code> and convert it the one way</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>a streamed, a too-large and a read-error body are marked as not captured, each
+            naming its reason, and are distinguishable from an empty body</td>
+            <td><code>a_streaming_body_is_reported_unavailable_and_names_its_reason</code> ·
+            <code>a_too_large_body_reports_the_size_it_had_without_the_bytes</code> ·
+            <code>a_read_error_body_reports_neither_bytes_nor_size</code> ·
+            <code>an_empty_body_is_a_measured_zero_with_no_reason</code> ·
+            <code>export_marks_uncaptured_bodies_rather_than_reporting_them_empty</code>
+            (integration — the same contract as a client sees it)</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>a binary body is base64 under HAR's <code>encoding</code>; a UTF-8 text body is
+            text with no <code>encoding</code></td>
+            <td><code>a_binary_body_is_base64_under_hars_encoding_field</code> ·
+            <code>a_textual_body_stays_readable_text</code> ·
+            <code>a_text_typed_body_that_is_not_utf8_falls_back_to_base64</code> ·
+            <code>post_data_carries_a_captured_request_body_and_nothing_else</code></td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>every entry validates against the HAR 1.2 shape, with each unknown expressed as
+            HAR's own sentinel</td>
+            <td><code>every_entry_carries_the_har_1_2_required_fields</code> (proptest — every
+            required key on every entry, <code>timings</code> summing to <code>time</code>, and no
+            body claiming bytes it does not carry) · <code>header_and_body_sizes_are_unknown_unless_measured</code> ·
+            <code>an_unmeasured_duration_is_hars_unknown_not_a_zero</code></td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>an empty capture exports a valid HAR with zero entries; a flow awaiting its
+            response is omitted rather than exported half-formed</td>
+            <td><code>export_of_an_empty_capture_is_a_valid_empty_har</code> ·
+            <code>an_empty_capture_exports_a_valid_har_with_no_entries</code> ·
+            <code>a_flow_still_awaiting_its_response_is_omitted</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>The epic's <strong>expected results 1 and 3</strong> therefore hold at the API level.
+      Their e2e half lands with the epic per its
+      <a href="2026-09-04-export-plan.html#e2e">e2e plan</a>, which is why e2e is waived here —
+      but the seam was <em>hand-verified against the running binary</em> anyway: real proxied
+      traffic through <code>:7420</code>, then <code>GET /flows/export</code> on
+      <code>:7421</code> returned <code>content-type: application/json</code> with
+      <code>content-disposition: attachment; filename="trawler-20260904-091931.har"</code>, one
+      entry, <code>log.version 1.2</code>, <code>statusText "OK"</code>,
+      <code>time 170</code> with <code>timings.wait 170</code>, and the captured HTML body as
+      readable text; <code>?host=example</code> exported exactly what
+      <code>/flows?host=example</code> listed, and <code>?host=nope</code> exported an empty
+      entry list.</p>
+    </div>
+
+    <h2 id="shipped">What shipped</h2>
+    <table data-c="shipped">
+      <thead><tr><th>File</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>src/api/har.rs</code> <em>(new)</em></td>
+          <td>the HAR 1.2 projection: the serialized types and the mapping from
+          <code>Flow</code>. Every fact Trawler does not hold is HAR's sentinel
+          (<code>headersSize: -1</code>, <code>redirectURL: ""</code>, <code>cache: {}</code>,
+          <code>time: -1</code> when unmeasured) rather than an invented value.
+          <code>not_captured_comment</code> is public because W3 reads the reason tokens back to
+          restore the <code>BodyRec</code> variant — the projection and the parser share one
+          vocabulary rather than two spellings of it.</td>
+        </tr>
+        <tr>
+          <td><code>src/api/routes.rs</code></td>
+          <td><code>export_har</code> — <code>Store::list</code> (never <code>page</code>: a HAR
+          file is not split across pages) through the projection, served as
+          <code>application/json</code> with a timestamped <code>.har</code>
+          <code>Content-Disposition</code>. The filter fields moved out of <code>ListQuery</code>
+          into <code>FilterQuery</code> + one <code>From</code> impl, and paging's two parameters
+          into <code>PagingQuery</code>, so the listing rule the two endpoints share has one
+          definition.</td>
+        </tr>
+        <tr>
+          <td><code>src/api/mod.rs</code></td>
+          <td>the <code>/flows/export</code> route, registered as a static segment beside
+          <code>/flows/{id}</code>, and the module's contract line updated.</td>
+        </tr>
+        <tr>
+          <td><code>tests/api.rs</code> · <code>tests/snapshots/</code></td>
+          <td>five integration tests over the real router, one of them the <code>insta</code>
+          snapshot locking the document shape over a four-flow fixture (text response, binary
+          request body, streamed response, too-large body).</td>
+        </tr>
+        <tr>
+          <td><code>Cargo.toml</code></td>
+          <td><code>insta</code> as a dev-dependency (the epic plan's question 7) and
+          <code>form_urlencoded</code> as a dependency — already in the tree via axum's own
+          <code>serde_urlencoded</code>, and the standard for the query parsing HAR's
+          <code>queryString</code> describes.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>Untouched:</strong> the capture path, the store, the event bus, the domain model,
+    <code>src/api/ui.html</code>, all of <code>ui/src/</code>, and every pre-existing test
+    assertion. <strong>No UI-rendering file is in this diff</strong>, so the design→build
+    accounting has nothing to answer for here.</p>
+
+    <h2 id="calls">Contract calls the plan left to the build</h2>
+    <table data-c="calls">
+      <thead><tr><th>Call</th><th>Made</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>how the filter is shared between the two endpoints</td>
+          <td>two <code>Query</code> extractions over the same query string — <code>FilterQuery</code>
+          and <code>PagingQuery</code> — rather than a <code>FilterQuery</code> nested in
+          <code>ListQuery</code> under <code>#[serde(flatten)]</code></td>
+          <td>the plan asked for one shared filter definition and <code>flatten</code> was the
+          obvious shape, but <code>serde_urlencoded</code> — which axum's <code>Query</code> uses —
+          <strong>cannot deserialize a flattened struct from a query string</strong>: it made every
+          unparameterised <code>GET /flows</code> a query rejection, caught immediately by the
+          pre-existing <code>list_flows_orders_and_filters</code>. Two extractions get the same
+          single definition, because <code>serde_urlencoded</code> ignores keys a struct does not
+          declare. The constraint is recorded in <code>FilterQuery</code>'s doc comment so the next
+          endpoint does not rediscover it.</td>
+        </tr>
+        <tr>
+          <td><code>redirectURL</code>'s wire spelling</td>
+          <td>an explicit <code>#[serde(rename)]</code> beside the struct's
+          <code>rename_all = "camelCase"</code></td>
+          <td>HAR spells it <code>redirectURL</code>; camelCase alone produces
+          <code>redirectUrl</code>, which no HAR reader looks for. Found by the field-mapping unit
+          test, which is exactly the kind of silent wire-shape error the WU's snapshot obligation
+          exists to catch.</td>
+        </tr>
+        <tr>
+          <td>an uncaptured <em>request</em> body</td>
+          <td><code>postData</code> omitted entirely, with <code>bodySize: -1</code> carrying the
+          fact</td>
+          <td>HAR's <code>postData</code> has no shape for "a body existed but was not captured" —
+          it has no <code>size</code> field of its own and its <code>text</code> is required. An
+          empty <code>text</code> would claim the request had no body. So the honest reading of
+          what HAR can express is an absent <code>postData</code> plus the unavailable body size.
+          The response side keeps the full four-state vocabulary, because <code>content</code>
+          does have a <code>size</code> and an optional <code>text</code>.</td>
+        </tr>
+        <tr>
+          <td>the snapshot's nondeterministic fields</td>
+          <td><code>startedDateTime</code> and the creator's version normalised before the
+          assertion</td>
+          <td>the testing contract forbids asserting exact timestamps, and pinning the crate
+          version would redden the snapshot on every release. Both are asserted for
+          <em>presence and shape</em> in their own tests instead.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <p><strong>None from the WU plan's contract.</strong> Every row in its
+      <a href="2026-09-04-export-w2-har-out-plan.html#mapping-table">field mapping</a> and
+      <a href="2026-09-04-export-w2-har-out-plan.html#bodies">body mapping</a> shipped as written,
+      and all four of its stated calls (no <code>limit</code>/<code>cursor</code> on the export;
+      <code>/flows/export</code> before <code>/flows/{id}</code>; a response-less flow omitted; no
+      body decoding) hold.</p>
+      <p><strong>Two mechanism choices differ from what the plan assumed</strong>, both recorded in
+      the <a href="#calls">calls table</a> above and neither a change of contract:</p>
+      <ul>
+        <li>the shared filter is <strong>two query extractions</strong>, not a
+        <code>#[serde(flatten)]</code> member — the plan's phrasing implied the latter, which
+        <code>serde_urlencoded</code> cannot do. The plan's actual requirement (one definition, so
+        the two endpoints cannot drift) is met.</li>
+        <li>the <code>timings</code> block is <code>{ send: 0, wait: time.max(0), receive: 0 }</code>,
+        not the plan's unconditional <code>wait: time</code>. The plan's
+        <a href="2026-09-04-export-w2-har-out-plan.html#mapping-table">mapping table</a> still
+        reads as written, because a plan records what was intended; the correction is here. HAR
+        permits <code>-1</code> for <code>entry.time</code> but requires the three phases to be
+        non-negative, so an unmeasured span reports an unknown total beside zeroed phases and the
+        plan's "the block sums to <code>time</code>" holds only when the span was measured.
+        <strong>W3 reads this row, not the plan's</strong>, when inverting the projection.</li>
+        <li>an uncaptured <strong>request</strong> body omits <code>postData</code> rather than
+        carrying a reason comment. The plan's body table specified the four-state vocabulary
+        against <code>content</code>/<code>postData</code> jointly; HAR's <code>postData</code>
+        cannot express it, and this is the narrowest honest representation. The response body —
+        where every capture-path skip actually occurs — is unaffected.</li>
+      </ul>
+      <p><strong>Deviation from the epic plan: none.</strong> W2's summary block, its dependency
+      ("none — independent of W1") and its expected result are as planned; questions 2 (the export
+      is never paged) and 7 (<code>insta</code> joins here) shipped as settled. One dependency the
+      plan did not name — <code>form_urlencoded</code> — was added and is justified above.</p>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Level</th><th>Count</th><th>What</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>unit</strong></td>
+            <td>24 + 1 proptest, 3 handler, 1 router</td>
+            <td><code>src/api/har.rs</code>: the document envelope and entry order · the full
+            field mapping · a response-less flow omitted (alone and mixed) · an unmeasured
+            duration · header order and duplicates · header/body sizes · query-string parsing
+            (absent, single, repeated, percent-encoded, empty value) · cookies from
+            <code>Cookie</code> and from multiple <code>Set-Cookie</code> headers ·
+            <code>redirectURL</code> both ways · <code>statusText</code> canonical and unknown ·
+            all six body cases · <code>postData</code> present and omitted · the octet-stream
+            fallback · the reason-token helper; and <code>an_unmeasured_duration_never_puts_a_negative_number_in_timings</code>, the named regression test for the review's one confirmed correctness finding. Proptest:
+            <code>every_entry_carries_the_har_1_2_required_fields</code> — the WU's central claim,
+            that whatever the ring holds the file is valid HAR, strengthened by the review to assert the timing phases are non-negative rather than merely present (a captured regression seed from a
+            genuine failure during the work is committed in
+            <code>proptest-regressions/api/har.txt</code>).
+            <code>src/api/routes.rs</code>: the attachment headers, an empty capture, the filter
+            reaching the store. <code>src/api/mod.rs</code>:
+            <code>export_is_a_route_of_its_own_not_a_flow_id</code> — the static-segment
+            precedence over <code>/flows/{id}</code>, asserted rather than assumed because it
+            would regress silently.</td>
+          </tr>
+          <tr>
+            <td><strong>integration</strong></td>
+            <td>5</td>
+            <td><code>tests/api.rs</code> over <code>trawler::api::router</code>:
+            <code>export_serves_a_har_1_2_document_of_the_capture</code> ·
+            <code>export_and_listing_select_the_same_flows</code> (the epic's expected result 3) ·
+            <code>export_of_an_empty_capture_is_a_valid_empty_har</code> ·
+            <code>export_marks_uncaptured_bodies_rather_than_reporting_them_empty</code> ·
+            <code>the_har_document_shape_is_locked</code> — the <code>insta</code> snapshot that
+            discharges the WU obligation "any new wire contract is snapshot-locked".</td>
+          </tr>
+          <tr>
+            <td><strong>e2e</strong></td>
+            <td><em>waived</em></td>
+            <td><code>waived: "the export's e2e is the epic's own tests/e2e_export.rs step 3 —
+            real proxied traffic exported and parsed as HAR — which lands with the epic per its
+            e2e plan; a second e2e here would drive the same seam through the same transport."</code>
+            The existing <code>e2e_capture</code> (6) and <code>e2e_h2</code> (4) suites run green
+            unchanged, which is the regression evidence that the capture path this WU only reads is
+            untouched. The seam was additionally hand-run against the live binary — see
+            <a href="#outcome">Outcome</a>.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><code>cargo test</code> green (108 lib · 20 <code>api</code> · 3 <code>ca</code> ·
+      6 <code>e2e_capture</code> · 4 <code>e2e_h2</code>);
+      <code>cargo clippy --all-targets --all-features</code> clean under pedantic;
+      <code>cargo fmt --check</code> clean. Commits on <code>wu/export/har-out</code>: the plan
+      (<code>4506f07</code>), the implementation (<code>ca40935</code>), the distillation
+      (<code>0c1b5dd</code>), this result, and the review fixes.</p>
+    </div>
+
+    <h2 id="review">The review round</h2>
+    <div data-c="review">
+      <p>Five isolated finders over the WU diff, plus adversarial verification of every candidate.
+      <strong>11 candidates, 6 refuted, 5 real — all nits, and the three that were worth fixing
+      were fixed rather than waived.</strong> The design dimension did not run:
+      <code>cargo xtask design-scope</code> reports no design artifact and no rendered file in the
+      diff, so the <code>cr/v3</code> note carries no <code>design:</code> section.</p>
+      <table data-c="review-rounds">
+        <thead><tr><th>Dimension</th><th>Raised</th><th>Outcome</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>correctness</td>
+            <td>3</td>
+            <td><strong>1 real, fixed.</strong> HAR sanctions <code>-1</code> for
+            <code>entry.time</code> but requires <code>timings</code>' three phases to be
+            non-negative, and an unmeasured duration propagated <code>-1</code> into
+            <code>wait</code>. Unreachable from the capture path — <code>store.rs</code> assigns
+            <code>response</code> and <code>duration_ms</code> atomically under one lock from a
+            single call site — but <code>Flow::duration_ms</code> is a public field, so
+            <strong>W3's importer reading an entry with <code>time: -1</code> would construct
+            exactly this state and export it back as invalid HAR</strong>. Fixed with a named
+            regression test first (proved to fail without the fix), and the validity proptest
+            strengthened to assert phase non-negativity — the gap that let it through was that
+            the property checked the phases were <em>present</em>, never that they were legal.
+            Two refuted: a literal <code>+</code> in a query decoding as a space is real
+            behaviour but not a defect (the wire-exact URI is preserved in
+            <code>request.url</code>, <code>queryString</code> is a derived convenience DEC-30
+            excludes from round-trip fidelity, and W3 reads <code>url</code>); an untested
+            malformed filter on the export is byte-identical pre-existing axum extractor
+            behaviour, verified by running both endpoints.</td>
+          </tr>
+          <tr>
+            <td>altitude</td>
+            <td>1</td>
+            <td><strong>refuted on the architecture, 1 real nit fixed.</strong> Moving the
+            body-reason token mapping onto <code>NotCapturedReason</code> would push wire
+            vocabulary down into the domain model, against the separation
+            <code>FlowView</code>'s own doc comment states. But the code comment claimed the
+            tokens were reused from <code>BodyRec::state</code>, which structurally cannot
+            produce <code>too_large</code>/<code>read_error</code> — it returns the coarse
+            <code>not_captured</code>. The comment now names the real source
+            (<code>BodyView</code>'s <code>reason</code>), which is what DEC-30 said all along.</td>
+          </tr>
+          <tr>
+            <td>efficiency</td>
+            <td>4</td>
+            <td><strong>1 real (already-deferred), 3 refuted</strong>, all by measurement at the
+            shipped 256&nbsp;MB default cap rather than by inspection. The export's ~200&nbsp;ms
+            of synchronous projection and serialization is the same execution-context pattern
+            <code>list_flows</code> and <code>get_flow</code> already use, on a work-stealing
+            multi-threaded runtime — not a new class of problem. The absence of a rate limit is
+            pre-existing on a loopback-only surface where <code>GET /flows</code> is already
+            documented as deliberately unbounded. The real one is the peak-memory multiple, which
+            the epic plan already defers — and the review's measurement corrected this report's
+            own claim that the ring cap is the ceiling: it is roughly 4× the cap, and the
+            <a href="#follow-ups">follow-up row</a> now says so.</td>
+          </tr>
+          <tr>
+            <td>reuse · simplification</td>
+            <td>1 · 3</td>
+            <td><strong>1 real, fixed</strong> (both dimensions found it independently):
+            <code>rfc3339</code> was defined byte-identically in <code>har.rs</code> and
+            <code>view.rs</code>, so the wire timestamp format had two definitions. Now one,
+            <code>api::rfc3339</code>, shared by both projections. Refuted: collapsing the three
+            <code>{name, value}</code> HAR structs (<code>HarCookie</code> is forward-looking —
+            HAR's optional cookie attributes are exactly what it will grow) and collapsing
+            <code>FilterQuery</code> into <code>FlowFilter</code> (which would force serde into
+            the store layer). The verifier also <strong>independently confirmed the WU's
+            load-bearing claim</strong>: both handlers take the same <code>Query&lt;FilterQuery&gt;</code>
+            and convert through the same <code>From</code>, so the export and the listing cannot
+            select different sets.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Round 2</strong> re-reviewed the fixed tip and found five more nits, four of
+      them one real miss: the timings fix <em>introduced an exception</em> to an invariant three
+      places still asserted — <code>HarTimings</code>' own doc comment, UC-6's sentinel sentence
+      and DEC-30's round-trip row all said the phases sum to the total, which stops being true
+      when the total is <code>-1</code> and the phases are zeroed. All three now state the
+      exception and why HAR forces it. The fifth: the replacement comment on
+      <code>not_captured_comment</code> over-generalized, attributing all three tokens to
+      <code>BodyView::NotCaptured</code>'s <code>reason</code> when <code>streaming</code> is
+      that enum's variant tag rather than a <code>reason</code> value — reworded to claim only
+      what is true. Round 2 also moved <code>rfc3339</code> from <code>api/mod.rs</code> (which
+      otherwise holds only router composition and the CORS layer) into <code>view.rs</code>,
+      beside the projections that use it. Round 2 independently re-verified all three round-1
+      fixes, including that the new regression test fails without its fix.</p>
+      <p>Two nits were accepted rather than fixed, and are recorded as waivers on the
+      <code>cr/v3</code> note: the three structurally identical HAR list-element structs (kept
+      distinct because the spec gives them different optional fields), and the per-body owned
+      <code>String</code> in <code>encode_body</code> (unavoidable inside serde's data model
+      without a hand-written streaming <code>Serialize</code>, and an export is not a hot path).</p>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <table data-c="distillation">
+        <thead><tr><th>Doc</th><th>Tier</th><th>What it now carries</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>use-cases/web-ui.html</code></td>
+            <td>T2</td>
+            <td>a new <strong>UC-6</strong> section, the export half: the three request/answer rows
+            (whole capture · filtered · empty), that the export selects what the listing lists, and
+            the two consequences a reader cannot infer from the endpoint signature — an uncaptured
+            body is marked rather than exported empty, and a flow awaiting its response is omitted
+            so an export can hold one entry fewer than the listing shows. Also that the exported
+            bytes are the wire's bytes and the export is never paged. The import half of UC-6
+            lands with W3.</td>
+          </tr>
+          <tr>
+            <td><code>use-cases/use-cases-index.html</code></td>
+            <td>T2</td>
+            <td>the <span class="badge id">UC-6</span> row, so index-first reading reaches it</td>
+          </tr>
+          <tr>
+            <td><code>decisions/dec-30-har-as-the-interchange-format.html</code></td>
+            <td>T2 <em>(new)</em></td>
+            <td>the epic's first planned decision: why HAR 1.2 and only HAR (with the three
+            rejected alternatives), the sentinel-not-invention rule for required fields Trawler
+            cannot fill, the body-state representation and its reason tokens, and round-trip
+            fidelity stated in <em>both</em> directions — the five facts a round-trip does not
+            preserve, each with why that is a fact rather than a defect.</td>
+          </tr>
+          <tr>
+            <td><code>decisions/decisions-index.html</code></td>
+            <td>T2</td>
+            <td>the DEC-30 row</td>
+          </tr>
+          <tr>
+            <td><code>architecture.html</code></td>
+            <td>T1</td>
+            <td><strong>deliberately unedited</strong>, as the plan predicted. Its store/API line —
+            "the control API is purely a subscriber and reader — it never mutates capture state" —
+            is still true of an export, which adds a read and no store capability. W4's removal is
+            where that line actually moves, and the epic gate re-checks it at close.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>The field mapping stays code, in <code>src/api/har.rs</code>. The plan's mapping table is
+      a T3 planning artifact archived with the epic, not a permanent record — nothing copied it
+      into a T1/T2 doc.</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>Where it belongs</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Nothing consumes the export yet — no UI control, and no client but
+            <code>curl</code>.</td>
+            <td>Not this WU: <span class="badge id">E-EXPORT.W5</span> designs the
+            capture-management controls and <span class="badge id">W6</span> builds them, including
+            the save dialog through the Tauri layer.</td>
+          </tr>
+          <tr>
+            <td><code>not_captured_comment</code>'s three reason tokens are now a wire contract
+            that W3's parser must read rather than re-spell.</td>
+            <td><span class="badge id">E-EXPORT.W3</span>, whose parser is defined against this
+            projection. Pinned here by the snapshot and by the per-variant unit tests, so a
+            re-spelling turns red.</td>
+          </tr>
+          <tr>
+            <td>Cookie attributes (<code>expires</code>, <code>httpOnly</code>, <code>path</code>,
+            …) are not parsed out of <code>Set-Cookie</code> into HAR's optional cookie fields —
+            the header itself is preserved verbatim, so nothing is lost from the file.</td>
+            <td>Recorded in <a href="../decisions/dec-30-har-as-the-interchange-format.html">DEC-30</a>
+            as a stated non-preservation, not debt: HAR's cookie attributes are optional, and
+            omitting an optional field is honest where guessing it would not be. New work only if a
+            real reader is found that needs them.</td>
+          </tr>
+          <tr>
+            <td>A large capture is serialized into one in-memory response, and its peak memory
+            is a <em>multiple</em> of the ring's byte cap rather than bounded at it.</td>
+            <td>Already the epic plan's deferred row (streaming a cap-sized export, deferred at
+            plan review — revisit when a real capture proves the one-shot response too heavy).
+            <strong>Quantified by the review</strong>: at the shipped 256&nbsp;MB default cap, an
+            export of binary bodies peaked at roughly 4× the cap, because the cloned flows, the
+            base64-expanded document and the serialized JSON are all live at once. The deferred
+            row covers it — response streaming is the fix that also caps the memory — but the
+            ceiling is that multiple, not the cap, and this row says so rather than implying the
+            cap bounds it.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>No debt discovered. No test layer skipped beyond the recorded e2e waiver.</p>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

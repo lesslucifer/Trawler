@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a8d9a9f34851f0dfac12a">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-30: HAR 1.2 as the interchange format</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-30 — HAR 1.2 is the one interchange format, and a fact Trawler does not hold is never invented to fill it</h1>
+      <p>One format, chosen because the tools a user already has can open it. The hard part was not the choice — it was what to write where HAR has a required field and Trawler has no truthful value for it.</p>
+      <div class="meta">DEC-30 · 2026-09-04 · Trawler · E-EXPORT.W2 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>Until <span class="badge id">E-EXPORT</span> every flow died with the process: the store had
+    no way out and no way in. Handing a capture to someone else, and opening the one they handed
+    you, both need a serialized form — and that form is a compatibility decision, not an
+    implementation detail, because whatever Trawler writes must be readable by something the
+    recipient already runs.</p>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>HAR 1.2, and only HAR 1.2.</strong> Trawler exports
+      (<code>GET /flows/export</code>) and imports one capture format — the W3C/HTTP-Archive JSON
+      format that Chrome, Firefox, Safari, Charles, Proxyman, Insomnia and Postman all read or
+      write. No <code>.saz</code>, no Charles <code>.chls</code>, no Postman collection: one
+      format done properly beats four done partially, and every additional format is a parser
+      with its own malformed-input surface.</p>
+    </div>
+    <table data-c="alternatives">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Trawler's own JSON (the existing <code>FlowView</code> shape)</td>
+          <td>It already exists and would need no projection — but nothing else on the machine can
+          open it. An export whose only reader is Trawler does not solve "hand a capture to
+          someone else"</td>
+        </tr>
+        <tr>
+          <td>HAR <em>plus</em> a native format for full fidelity</td>
+          <td>Two formats means two parsers, two round-trip contracts, and a user decision at every
+          export. The fidelity gap HAR leaves (below) is narrow and is honestly representable
+          inside HAR itself</td>
+        </tr>
+        <tr>
+          <td>Several capture formats</td>
+          <td>Each is an untrusted-input parser and a permanent compatibility obligation. HAR is the
+          one every tool in this space already speaks</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="honest-gaps">The real problem: HAR requires fields Trawler cannot truthfully fill</h2>
+    <p>HAR was designed by browsers, which know things a proxy does not — the raw header-block
+    size, the phase breakdown of a request's timing, the reason phrase the server actually sent.
+    Several of those fields are <em>required</em>. So every required field forced a choice between
+    two ways to be wrong and one way to be right:</p>
+    <div class="diagram" data-c="the-fork">
+      <pre class="mermaid">
+flowchart TD
+  Q["a required HAR field
+Trawler has no value for"] --> A["invent a plausible number
+(0, a guessed size)"]
+  Q --> B["omit the field
+→ the file is not valid HAR"]
+  Q --> C["HAR's own sentinel
+-1 · &quot;&quot; · {}"]
+  A --> AX["a reader cannot tell
+an invented number from a measured one"]
+  B --> BX["readers reject the file"]
+  C --> CX["chosen — the file is valid
+and says 'unknown' where it means it"]
+      </pre>
+      <div class="caption">Hình 1 — HAR anticipated the gap: <code>-1</code> means "not
+      available", not "zero". Using it is how a valid file stays honest.</div>
+    </div>
+
+    <h2 id="bodies">The body states — the case where the sentinel was not enough</h2>
+    <div class="callout warn" data-c="body-problem">
+      <p>Trawler's capture path distinguishes four body outcomes — <strong>captured</strong>,
+      genuinely <strong>empty</strong>, <strong>streamed</strong> (never buffered, by design), and
+      <strong>not captured</strong> (too large, or a read error). HAR's body object has vocabulary
+      for exactly one of the three non-captured cases. Reporting the other two as an empty body
+      would make a 4&nbsp;MB event stream indistinguishable from a <code>204</code> — erasing the
+      exact distinction Trawler's domain model exists to preserve.</p>
+    </div>
+    <table data-c="body-decision">
+      <thead><tr><th>State</th><th>How the file says it</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>captured</td>
+          <td>the bytes, as text when the content type says text <em>and</em> the bytes really are
+          UTF-8, otherwise base64 under HAR's own <code>encoding</code> convention — a text content
+          type is a claim about the bytes, not a guarantee, and base64 is what keeps them
+          recoverable when the claim is false</td>
+        </tr>
+        <tr>
+          <td>empty</td>
+          <td>a measured size of <code>0</code> and no text — the one state where "nothing" is the
+          truth</td>
+        </tr>
+        <tr>
+          <td>streamed · too large · read error</td>
+          <td><strong>no text at all</strong>, plus a <code>comment</code> naming which one. The
+          absent text carries the fact structurally (a reader that ignores comments still cannot
+          mistake it for an empty body); the comment carries the reason for one that shows it.
+          <code>comment</code> is a standard HAR field, so this costs no validity</td>
+        </tr>
+        <tr>
+          <td>too large, specifically</td>
+          <td>reports the <em>size it had</em> alongside the missing bytes — that size is known,
+          and is exactly why the body was dropped. Only the two states where the size was never
+          obtained report <code>-1</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <p>The reason tokens reuse the vocabulary the API's own body view already publishes
+    (<code>streaming</code> · <code>too_large</code> · <code>read_error</code>) rather than
+    inventing a second spelling of the same four states — and the importer reads them back to
+    restore the variant, which is what makes the round-trip below lossless for body
+    <em>state</em> even where it cannot be lossless for body <em>bytes</em>.</p>
+
+    <h2 id="round-trip">What a round-trip preserves, and what it does not</h2>
+    <p>The guarantee is stated in both directions, because "lossless" without a boundary is a
+    claim no format can keep:</p>
+    <div class="cards" data-c="round-trip">
+      <div class="card">
+        <h3>Preserved</h3>
+        <ul>
+          <li>method, URL, both HTTP versions, status</li>
+          <li>every header, in order, duplicates included</li>
+          <li>the time the exchange was captured, and its duration</li>
+          <li>captured body bytes, exactly — base64 wherever text would be lossy</li>
+          <li>which of the four states each body was in</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Not preserved — and why that is a fact, not a defect</h3>
+        <ul>
+          <li><strong>the raw header-block size</strong> — never retained; a proxy sees parsed
+          headers</li>
+          <li><strong>the wire reason phrase</strong> — not retained; the file carries the
+          canonical phrase for the status code</li>
+          <li><strong>the timing phase breakdown</strong> — Trawler measures one span, so it is
+          reported as one span that sums to the total HAR requires. This is also the one place
+          the sentinel rule above does <em>not</em> apply: HAR permits <code>-1</code> for the
+          total but requires the three phases Trawler reports to be non-negative, so an
+          exchange whose duration was never measured carries an unknown total beside zeroed
+          phases — the sum is unhonourable there, and zeroed phases claim less than a negative
+          phase no reader would accept</li>
+          <li><strong>a cookie's optional attributes</strong> — the header they came from is
+          preserved verbatim, so nothing is lost from the file; only the parsed-out convenience
+          fields are absent</li>
+          <li><strong>the flow's id</strong> — an id is a handle in <em>this</em> store, so an
+          imported flow gets a fresh one while keeping its original timestamp</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout" data-c="no-decode">
+      <p><strong>The export does not decode compressed bodies.</strong> The bytes written are the
+      bytes captured, with the <code>Content-Encoding</code> that describes them still attached —
+      so the file stays a faithful record of the wire and never contradicts its own headers. The
+      decoding surface stays where it was, on the body endpoints' <code>?decode=1</code>.</p>
+    </div>
+
+    <h2 id="consequences">Consequences</h2>
+    <table data-c="consequences">
+      <thead><tr><th>Consequence</th><th>Where it binds</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>The projection has exactly one definition, and its document shape is snapshot-locked,
+          so a change to it cannot land as an invisible diff</td>
+          <td><code>src/api/har.rs</code> · the snapshot test in <code>tests/api.rs</code></td>
+        </tr>
+        <tr>
+          <td>The importer is defined <em>against</em> this projection rather than against the HAR
+          spec independently, so the two cannot drift into a format Trawler writes but cannot read</td>
+          <td><span class="badge id">E-EXPORT.W3</span></td>
+        </tr>
+        <tr>
+          <td>An export is never paged — the filter is the way to export less</td>
+          <td><a href="../use-cases/web-ui.html#uc-6">UC-6</a></td>
+        </tr>
+        <tr>
+          <td>A future format request re-opens this record rather than being added beside it</td>
+          <td>this decision</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>The field-by-field mapping is code and lives only in <code>src/api/har.rs</code>. This
+    record states <em>why</em> the mapping is shaped this way; it never copies the mapping.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
