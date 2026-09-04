@@ -94,7 +94,7 @@
       </tbody>
     </table>
     <div class="callout" data-c="select-filter-note">
-      <strong>Select's filter box is not a Field, and must not become one.</strong> It looks like one (<code>Select.tsx:184</code>) and it is deliberately <em>not</em> the same element: it is borderless, sits inside the popup's own chrome, and carries no <code>aria-label</code> of its own because the listbox above it is already named. Wrapping it in a Field would give it a second border inside a bordered popup and a second accessible name on one control. <strong>Recorded here so a later reuse-or-propose pass reads it as a decision, not an oversight.</strong>
+      <strong>Select's filter box is not a Field, and must not become one.</strong> It looks like one (<code>Select.tsx:173-186</code>) and it is deliberately <em>not</em> the same element: it is borderless and sits inside the popup's own chrome, drawing its frame from the popup rather than carrying one. Wrapping it in a Field would give it a second border 2px inside a bordered popup, and would hand a caller control over a name the component has already fixed (<code>aria-label="filter options"</code>, <code>Select.tsx:176</code>) — one of the several things <code>Select</code> deliberately does not let a call site reach. <strong>Recorded here so a later reuse-or-propose pass reads it as a decision, not an oversight.</strong>
     </div>
 
     <h2 id="anatomy">Anatomy — the parts you see</h2>
@@ -324,7 +324,7 @@
             <div class="px-control-x py-control-y font-ui text-control text-ink-body">macOS</div>
           </div>
         </div>
-        <div class="fc-note">Borderless, inside the popup's own border, named by the listbox it filters. It is a <em>part of</em> Select, like the caret.</div>
+        <div class="fc-note">Borderless, inside the popup's own border, and named by <code>Select</code> itself (<code>aria-label="filter options"</code>) rather than by whoever mounts it. It is a <em>part of</em> Select, like the caret.</div>
       </div>
       <div class="fork-card lose">
         <div class="fc-lbl">rejected — reuse Field inside Select</div>
@@ -334,7 +334,7 @@
             <div class="px-control-x py-control-y font-ui text-control text-ink-body">macOS</div>
           </div>
         </div>
-        <div class="fc-note"><strong>Why it lost:</strong> a bordered box inside a bordered popup — two frames, 2px apart, for one control. It would also put a second accessible name on a listbox that already has one. <em>Reuse that produces a worse screen is a propose in disguise;</em> here it is simply "not a tenant".</div>
+        <div class="fc-note"><strong>Why it lost:</strong> a bordered box inside a bordered popup — two frames, 2px apart, for one control. It would also move the name out of <code>Select</code>'s hands: the filter's <code>aria-label</code> is fixed at <code>Select.tsx:176</code>, and Field's contract (B3) requires the caller to supply one. <em>Reuse that produces a worse screen is a propose in disguise;</em> here it is simply "not a tenant".</div>
       </div>
     </div>
 
@@ -358,7 +358,7 @@
  * @tier T1 — a controlled box with an accessible name; no validation, no debounce, no formatting, no state of its own
  * @anatomy the one small-control box (border-hairline, radius 3, padding 3/9, min-height 24 — Select's trigger and Button's shell, DEC-18) · placeholder in ink-mute as the visible hint · value in full ink · width is NEVER set here, the caller passes a field-sm/field/field-lg class
  * @use any free-text entry: the filter bar's four fields (free text, host, method, status), a search box, a name, a port override. Pass value + onChange + aria-label; pass width through className
- * @avoid a choice among known options (that is Select — this is a miss by kind: five options do not become typing) · validating, debouncing, formatting or restricting what is typed: an unmatched filter is an empty list, explained by Notice at the list (no invalid state exists, DEC-19 leaves no token for one) · rendering it without an accessible name — aria-label is required because every tenant is visually unlabelled and a placeholder is not a name · setting its own width, or letting it grow to fit content (four fields share one header row) · Select's in-popup filter box, which is borderless inside the popup's own frame and named by its listbox
+ * @avoid a choice among known options (that is Select — this is a miss by kind: five options do not become typing) · validating, debouncing, formatting or restricting what is typed: an unmatched filter is an empty list, explained by Notice at the list (no invalid state exists, DEC-19 leaves no token for one) · rendering it without an accessible name — aria-label is required because every tenant is visually unlabelled and a placeholder is not a name · setting its own width, or letting it grow to fit content (four fields share one header row) · Select's in-popup filter box, which is borderless inside the popup's own frame and carries a name Select fixes rather than a caller supplies
  * @states rest·empty (placeholder, ink-mute) · rest·filled (value, ink) · hover and focus (both lift the border to ink-mute — one channel, zero-accent leaves no second) · disabled (opacity .38, out of tab order). No error, loading, empty or confirming state: empty IS rest, and nothing here is committed or judged
  * @madeof — (the leaf; its box is Select's trigger box, which is Button's — one shared small-control chrome per DEC-18, not a composition)
  */</pre>

@@ -87,13 +87,14 @@
         <tr><td><strong>members</strong></td><td><code>broken</code> · <code>checking</code> · <code>connected</code></td><td><code>ok</code> · <code>warn</code> · <code>muted</code></td></tr>
         <tr><td><strong>the axis is</strong></td><td><strong>lifecycle</strong> — where a connection has got to</td><td><strong>severity</strong> — how good an outcome is</td></tr>
         <tr><td><strong>ordering</strong></td><td>temporal: <code>checking</code> precedes the other two, always. You cannot be <code>connected</code> before you have checked</td><td>none — <code>ok</code> and <code>warn</code> are alternatives, not a sequence</td></tr>
-        <tr><td><strong>the middle member means</strong></td><td>"not known yet" — a <em>transient</em> that resolves on its own</td><td>"nothing to say" — a <em>terminal</em> state (a 3xx is muted forever)</td></tr>
+        <tr><td><strong>the middle member means</strong></td><td>"not known yet, ask again" — one specific cause, and the component names it</td><td>"informational / non-terminal" (<a href="../../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a>) — a catch-all: 3xx, 1xx, unknown and pending all land here</td></tr>
+        <tr><td><strong>who names the cause</strong></td><td>the state itself — <code>checking</code> is a cause, and it carries its own phrase</td><td>nobody — <code>muted</code> is the absence of a verdict, so <code>StatusPill</code> must add "…" beside it to say <em>which</em> muted this is</td></tr>
         <tr><td><strong>can a caller pick one?</strong></td><td><span class="no">no</span> — it is derived from the phase by <code>dotStatus()</code></td><td><span class="yes">yes</span> — <code>TonedText</code>'s whole API is the caller passing a tone</td></tr>
         <tr><td><strong>if a fourth arrives</strong></td><td>plausible: <code>reconnecting</code>, <code>paused</code> — lifecycle sets grow with the protocol</td><td>closed by <a href="../../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a> — a fourth tone is deliberately left for the first tenant to reopen</td></tr>
       </tbody>
     </table>
     <div class="callout" data-c="tri-state-verdict">
-      <strong>Verdict: distinct types that happen to share a palette today.</strong> The tell is the middle member. <code>checking</code>→<code>ink-mute</code> and <code>muted</code>→<code>ink-mute</code> render identically and mean different things: one says <em>"ask me again in a moment"</em>, the other says <em>"this will never be interesting"</em>. Collapsing them would make <code>checking</code> a caller-suppliable value, and a caller could then render <code>connected</code> while the app is still checking. <strong>Keeping them separate is what makes <code>dotStatus()</code> the single authority</strong> — the same reasoning <a href="../../decisions/dec-20-logic-lives-with-its-inputs.html">DEC-20</a> uses to let <code>StatusPill</code> absorb status→display while <code>StatusLine</code> refuses raw inputs.
+      <strong>Verdict: distinct types that happen to share a palette today.</strong> The distinction is <em>not</em> transient-vs-terminal — <a href="../../decisions/dec-19-chromatic-accent-closed.html">DEC-19</a> reads <code>muted</code> as "informational / non-terminal", and <code>StatusPill</code>'s own <code>@states</code> files <code>null/pending → "…"</code> under it, so <code>StatusTone</code> already carries a not-yet-resolved case. <strong>The tell is authority.</strong> <code>StatusTone</code> is a value a caller passes — <code>TonedText</code>'s entire API — so if <code>DotStatus</code> collapsed into it, <code>connected</code> would become caller-suppliable and a call site could render green while the app is still checking. <code>DotStatus</code> has no such API: it is derived by <code>dotStatus()</code> and nothing else may produce one. A second difference follows from the first: <code>muted</code> is a catch-all that says nothing about <em>why</em> (which is why <code>StatusPill</code> must add "…" beside it), where <code>checking</code> is one named cause carrying its own phrase. <strong>Keeping them separate is what makes <code>dotStatus()</code> the single authority</strong> — the same reasoning <a href="../../decisions/dec-20-logic-lives-with-its-inputs.html">DEC-20</a> uses to let <code>StatusPill</code> absorb status→display while <code>StatusLine</code> refuses raw inputs.
     </div>
     <div class="callout warn" data-c="proposal">
       <strong>Proposal — for the rulebook, not for this file to land.</strong> The <em>chromatic meanings</em> table maps each token to a fixed meaning and an owning component. If this design is confirmed, <code>ok</code> and <code>warn</code> gain a second owner (<code>StatusDot</code> connection lifecycle) alongside <code>StatusPill</code>/<code>MethodLabel</code>, and <code>ink-mute</code> gains its first entry as the <em>not-yet-known</em> channel. <strong>Recorded here as a proposal</strong> — the rulebook is frozen input for a run and grows at distillation (<a href="../../decisions/dec-14-design-rules-kb.html">DEC-14</a>). The epic's distillation plan already reserves the row.
@@ -324,6 +325,30 @@
           <span class="font-mono text-body text-ok">●</span>
         </div>
         <div class="fc-note"><strong>Why it lost:</strong> <code>StatusPill</code> and <code>StatusLine</code> are both <code>@madeof TonedText</code>, so the symmetry is tempting. But rendering the disc as a <code>●</code> glyph makes its size a function of the font, its vertical alignment a per-browser accident, and its shape a typeface's opinion. The disc is a <em>shape</em>, and <code>TonedText</code>'s tone maps to <code>text-*</code> — a channel this component does not use.</div>
+      </div>
+    </div>
+
+    <h3 id="fork-s2b">S2b · Why not a variable-fill <code>IconButton</code>?</h3>
+    <div class="fork-row" data-c="fork-s2b">
+      <div class="fork-card win">
+        <div class="fc-lbl">settled — its own T2 entry</div>
+        <div class="app">
+          <div class="flex items-center gap-2 bg-canvas p-2">
+            <button type="button" aria-label="w2b" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button hover:bg-wash-hover"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ok"></span></button>
+            <span class="font-ui text-chrome text-ink-mute">status → fill + phrase, owned here</span>
+          </div>
+        </div>
+        <div class="fc-note">The two are structurally close and that is the point: this composes the same <code>Button</code> shell <code>IconButton</code> does. What it adds is the pair of <em>maps</em> — <code>DotStatus</code>→fill and <code>DotStatus</code>→phrase — which is business logic, and <code>IconButton</code> is a T1 whose contract is "no business logic". A T2 that owns a domain mapping is the same shape <code>StatusPill</code> and <code>MethodLabel</code> already have.</div>
+      </div>
+      <div class="fork-card lose">
+        <div class="fc-lbl">rejected — extend IconButton with a fill slot</div>
+        <div class="app">
+          <div class="flex items-center gap-2 bg-canvas p-2">
+            <button type="button" aria-label="l2b" class="inline-flex min-h-control min-w-control items-center justify-center rounded-button text-glyph-lg text-ok">●</button>
+            <span class="font-ui text-chrome text-ink-mute">caller resolves tone + title</span>
+          </div>
+        </div>
+        <div class="fc-note"><strong>Why it lost:</strong> <code>IconButton</code>'s job is a <em>glyph</em> — its <code>@use</code> is "icon-only triggers unambiguous in place", and its accessible name is the caller's. Passing a resolved fill and a resolved phrase in from the call site is exactly the pre-resolving that <code>StatusPill</code>'s <code>@avoid</code> forbids, and it puts the tone map back at the one call site — where <a href="../../decisions/dec-20-logic-lives-with-its-inputs.html">DEC-20</a> says it must not live. The shell is shared; the mapping is not extendable into a T1.</div>
       </div>
     </div>
 

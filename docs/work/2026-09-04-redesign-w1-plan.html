@@ -74,7 +74,7 @@
           </tr>
           <tr>
             <td>2</td>
-            <td>Every specimen is marked up in <strong>the app's own Tailwind utilities</strong>, loaded from <code>tw-config.js</code> — no hand-written component rule, no colour literal, no off-scale value. A specimen's class string is copyable verbatim into the build.</td>
+            <td>Every specimen is marked up in <strong>the app's own Tailwind utilities</strong>, from <code>specimens.bundle.js</code> — which <code>scripts/build-specimens.mjs</code> compiles against <code>ui/tailwind.config.js</code> itself, so the doc and the app read one config. No hand-written component rule, no colour literal, no off-scale value; a specimen's class string is copyable verbatim into the build.</td>
             <td><code>components·redrawn</code> silent; the token table in each file maps part → classes</td>
           </tr>
           <tr>
