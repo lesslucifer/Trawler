@@ -12,11 +12,11 @@
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
       surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4 watch ·
       UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD)
-      and taking a capture out as a HAR file (UC-6).</p>
-      <div class="meta">v5 · 2026-09-04 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      and the HAR round trip — taking a capture out and bringing one back (UC-6).</p>
+      <div class="meta">v6 · 2026-09-04 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
       UC-ONBOARD by <span class="badge id">E-UISETUP</span> ·
-      UC-3/UC-4 paging + UC-6 by <span class="badge id">E-EXPORT</span></div>
+      UC-3/UC-4 paging + provenance + UC-6 by <span class="badge id">E-EXPORT</span></div>
     </div>
   </header>
   <main>
@@ -96,8 +96,14 @@
             <td>an envelope: at most <em>n</em> rows plus the <code>next_cursor</code> that continues the walk, <code>null</code> once the walk reaches the oldest row the ring still holds</td>
           </tr>
           <tr>
-            <td>a <code>limit</code> that is not a positive integer · a <code>cursor</code> that is not a flow id · a <code>cursor</code> with no <code>limit</code></td>
-            <td>refused <code>400</code> with a reason naming the parameter — never an unbounded read a client did not ask for</td>
+            <td><code>GET /flows?source=captured</code> · <code>?source=imported</code></td>
+            <td>only that provenance. Every row carries its <code>source</code>, because the ring
+            now holds flows the proxy never saw (<a href="#uc-6">UC-6</a>) and a listing that
+            mixes a live capture with a colleague's file has to say which is which</td>
+          </tr>
+          <tr>
+            <td>a <code>limit</code> that is not a positive integer · a <code>cursor</code> that is not a flow id · a <code>cursor</code> with no <code>limit</code> · a <code>source</code> that is neither</td>
+            <td>refused <code>400</code> with a reason naming the parameter — never an unbounded read a client did not ask for, and never a silently empty listing that reads like "nothing matched"</td>
           </tr>
         </tbody>
       </table>
@@ -229,7 +235,7 @@ flowchart TD
       <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>.</p>
     </div>
 
-    <h2 id="uc-6">UC-6 — Take the capture out as a HAR file</h2>
+    <h2 id="uc-6">UC-6 — Take the capture out as a HAR file, and bring one back</h2>
     <div data-c="uc-6-export-contract">
       <p><code>GET /flows/export</code> answers with the currently filtered capture as a single
       <strong>HAR 1.2</strong> document — the interchange format the tools in this space already
@@ -283,15 +289,76 @@ flowchart TD
       to export less.</p>
     </div>
 
+    <div data-c="uc-6-import-contract">
+      <h3 id="uc-6-import">Bringing one back</h3>
+      <p><code>POST /flows/import</code> takes a HAR 1.2 document — Trawler's own export, or one
+      any conforming tool wrote — and its entries become flows in the listing, each marked
+      <strong><code>source: "imported"</code></strong>. An imported flow is otherwise an
+      <em>ordinary</em> flow: the same <code>GET /flows/{id}</code>, the same body endpoints and
+      their <code>?decode=1</code>, the same <code>/stream</code> announcement as it lands, and
+      the same ring rules — it evicts by retained bytes like anything else, so a large import can
+      push a live capture out.</p>
+      <table>
+        <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>POST /flows/import</code> + a HAR 1.2 document</td>
+            <td><code>200</code> with <code>{ "imported": n }</code> — the count, because a client
+            that posted a 900-entry file needs to know whether all 900 landed. The entries
+            <strong>add</strong> to the capture; replacing it is a clear followed by an import,
+            not a mode hidden inside a <code>POST</code></td>
+          </tr>
+          <tr>
+            <td>a malformed or hostile document — not JSON, a version other than 1.2, no
+            <code>log.entries</code>, an entry with no request, an unparseable timestamp, an
+            impossible status, a body whose base64 is not base64</td>
+            <td><code>400</code> with a reason, and an entry-level fault <strong>names its
+            index</strong>. All-or-nothing: the whole document parses before the store is
+            touched, so a refused import changes nothing at all — never a partially-populated
+            capture</td>
+          </tr>
+          <tr>
+            <td><code>log.entries: []</code></td>
+            <td><code>200</code> with <code>{ "imported": 0 }</code> — a valid document saying
+            nothing was captured, which is not an error; the same reading an empty export has</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Three consequences a reader cannot infer from the endpoint signature:</p>
+      <ul>
+        <li><strong>Fresh ids, original timestamps.</strong> An id is this store's handle and must
+        be unique here, so an imported flow takes a new one; the instant the exchange happened is
+        the captured truth and is preserved, so an imported capture sorts by when it
+        <em>happened</em>, not when it was read. Import the same file twice and you get two
+        independent sets of flows carrying the same instants.</li>
+        <li><strong>A body the file does not carry comes back as an explicit not-captured, never
+        as empty.</strong> Trawler's own markers restore the exact state (streamed, too-large with
+        the size it had, read error). A <em>foreign</em> writer's body with no text but a size
+        claiming one existed becomes a not-captured too — calling it empty would assert a
+        4&nbsp;MB response was a <code>204</code>. Only a measured zero is empty.</li>
+        <li><strong>What the format cannot carry is dropped, not invented.</strong> The derived
+        and unretained fields — the query string, the parsed-out cookies, the timing phases, the
+        reason phrase, the header-block sizes — are read past in silence, because each was either
+        derived from a header the flow still carries or was never Trawler's to hold. A body's
+        bytes outrank a <code>size</code> that disagrees with them: the ring weighs what it
+        actually holds.</li>
+      </ul>
+    </div>
+
     <div class="callout" data-c="uc-6-export-provenance">
-      <p>Export delivered by <span class="badge id">E-EXPORT.W2</span>; the import half of UC-6
-      and the app's own controls follow in the same epic. The projection lives in
-      <code>src/api/har.rs</code> and its document shape is snapshot-locked in
-      <code>tests/api.rs</code>, so a change to it surfaces as a reviewable diff; the
+      <p>Export delivered by <span class="badge id">E-EXPORT.W2</span>, import and the
+      <code>source</code> mark by <span class="badge id">E-EXPORT.W3</span>; the app's own
+      controls follow in the same epic. Both directions live in <code>src/api/har.rs</code> — the
+      parser is defined against the projection it inverts, so the two cannot drift into a format
+      Trawler writes but cannot read — and the exported document's shape is snapshot-locked in
+      <code>tests/api.rs</code>. Round-trip fidelity is proven as a <em>property</em> over
+      generated flows, not by example, and the parser's never-panics claim the same way. The
       export-selects-what-the-listing-lists guarantee holds by construction (both endpoints build
       the same filter) and is asserted endpoint-to-endpoint. Why HAR and only HAR, and what a
       round-trip does and does not preserve:
-      <a href="../decisions/dec-30-har-as-the-interchange-format.html">DEC-30</a>.</p>
+      <a href="../decisions/dec-30-har-as-the-interchange-format.html">DEC-30</a>; why an imported
+      flow is a first-class flow carrying a mark, and the CORS widening its <code>POST</code>
+      required: <a href="../decisions/dec-31-imported-flows-are-marked.html">DEC-31</a>.</p>
     </div>
 
   </main>

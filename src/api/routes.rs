@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 use std::sync::Arc;
 
+use axum::body::Bytes;
 use axum::extract::{Path, Query, State};
 use axum::http::{header, StatusCode};
 use axum::response::sse::{Event, KeepAlive, Sse};
@@ -38,17 +39,27 @@ pub struct FilterQuery {
     status: Option<u16>,
     content_type: Option<String>,
     q: Option<String>,
+    source: Option<String>,
 }
 
-impl From<FilterQuery> for FlowFilter {
-    fn from(query: FilterQuery) -> Self {
-        Self {
-            host: query.host,
-            method: query.method,
-            status: query.status,
-            content_type: query.content_type,
-            q: query.q,
-        }
+impl FilterQuery {
+    /// Fails rather than ignoring an unrecognised `source`: an empty listing
+    /// reads to a caller exactly like "nothing matched".
+    fn into_filter(self) -> Result<FlowFilter, &'static str> {
+        let source = match self.source.as_deref() {
+            None => None,
+            Some(value) => {
+                Some(view::parse_source(value).ok_or("source must be captured or imported")?)
+            }
+        };
+        Ok(FlowFilter {
+            host: self.host,
+            method: self.method,
+            status: self.status,
+            content_type: self.content_type,
+            q: self.q,
+            source,
+        })
     }
 }
 
@@ -82,7 +93,10 @@ pub async fn list_flows(
     Query(paging): Query<PagingQuery>,
     State(state): State<AppState>,
 ) -> Response {
-    let filter = FlowFilter::from(filter);
+    let filter = match filter.into_filter() {
+        Ok(filter) => filter,
+        Err(reason) => return bad_request(reason),
+    };
 
     let cursor = match paging.cursor.as_deref().map(parse_cursor) {
         Some(Ok(id)) => Some(id),
@@ -118,7 +132,10 @@ pub async fn export_har(
     Query(query): Query<FilterQuery>,
     State(state): State<AppState>,
 ) -> Response {
-    let flows = state.store.list(&FlowFilter::from(query));
+    let flows = match query.into_filter() {
+        Ok(filter) => state.store.list(&filter),
+        Err(reason) => return bad_request(reason),
+    };
     let filename = format!("trawler-{}.har", export_timestamp());
     (
         [
@@ -128,6 +145,19 @@ pub async fn export_har(
         Json(har::har_document(&flows)).into_response().into_body(),
     )
         .into_response()
+}
+
+/// The inverse door: a HAR 1.2 document becomes flows in the ring, marked as
+/// imported. The whole document parses before the store is touched, so a
+/// refused import leaves the capture exactly as it was.
+pub async fn import_flows(State(state): State<AppState>, body: Bytes) -> Response {
+    match har::flows_from_har(&body) {
+        Ok(flows) => {
+            let imported = state.store.import(flows);
+            Json(json!({ "imported": imported })).into_response()
+        }
+        Err(reason) => (StatusCode::BAD_REQUEST, reason.to_string()).into_response(),
+    }
 }
 
 /// A filename-safe UTC stamp, so successive exports do not overwrite each other
@@ -260,7 +290,7 @@ fn wants_decode(query: &BodyQuery) -> bool {
 mod tests {
     use std::sync::Arc;
 
-    use axum::body::to_bytes;
+    use axum::body::{to_bytes, Bytes};
     use axum::extract::{Query, State};
     use axum::http::StatusCode;
     use serde_json::Value;
@@ -284,7 +314,9 @@ mod tests {
         let status = response.status();
         let headers = response.headers().clone();
         let bytes = to_bytes(response.into_body(), usize::MAX).await.expect("body");
-        (status, headers, serde_json::from_slice(&bytes).expect("json"))
+        let value = serde_json::from_slice(&bytes)
+            .unwrap_or(Value::String(String::from_utf8_lossy(&bytes).into_owned()));
+        (status, headers, value)
     }
 
     async fn list(state: &AppState, query: &str) -> (StatusCode, Value) {
@@ -297,6 +329,95 @@ mod tests {
         let value = serde_json::from_slice(&bytes)
             .unwrap_or(Value::String(String::from_utf8_lossy(&bytes).into_owned()));
         (status, value)
+    }
+
+    async fn import(state: &AppState, document: &[u8]) -> (StatusCode, Value) {
+        let response =
+            super::import_flows(State(state.clone()), Bytes::copy_from_slice(document)).await;
+        let status = response.status();
+        let bytes = to_bytes(response.into_body(), usize::MAX).await.expect("body");
+        let value = serde_json::from_slice(&bytes)
+            .unwrap_or(Value::String(String::from_utf8_lossy(&bytes).into_owned()));
+        (status, value)
+    }
+
+    fn document(entries: &str) -> Vec<u8> {
+        format!(r#"{{"log":{{"version":"1.2","entries":[{entries}]}}}}"#).into_bytes()
+    }
+
+    fn entry(url: &str) -> String {
+        format!(
+            r#"{{"startedDateTime":"2026-09-04T10:00:00Z","time":5,
+                 "request":{{"method":"GET","url":"{url}","httpVersion":"HTTP/1.1",
+                             "headers":[],"bodySize":0}},
+                 "response":{{"status":200,"httpVersion":"HTTP/1.1","headers":[],
+                              "content":{{"size":0,"mimeType":"text/plain"}}}}}}"#
+        )
+    }
+
+    #[tokio::test]
+    async fn import_reports_the_count_it_took() {
+        let state = state_with(&[]);
+        let (status, value) =
+            import(&state, &document(&format!("{},{}", entry("http://a/"), entry("http://b/"))))
+                .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(value, serde_json::json!({ "imported": 2 }));
+
+        let (_, listed) = list(&state, "source=imported").await;
+        assert_eq!(listed.as_array().expect("rows").len(), 2);
+    }
+
+    #[tokio::test]
+    async fn a_refused_import_says_why_and_stores_nothing() {
+        let state = state_with(&["http://already/"]);
+        for (document, expected) in [
+            (b"not json".to_vec(), "not a JSON document"),
+            (br#"{"log":{"version":"1.3","entries":[]}}"#.to_vec(), "1.3"),
+            (document(r#"{"startedDateTime":"2026-09-04T10:00:00Z"}"#), "missing request"),
+        ] {
+            let (status, value) = import(&state, &document).await;
+            assert_eq!(status, StatusCode::BAD_REQUEST);
+            let reason = value.as_str().expect("a plain-text reason");
+            assert!(reason.contains(expected), "expected {expected:?} in {reason:?}");
+        }
+        let (_, listed) = list(&state, "").await;
+        assert_eq!(listed.as_array().expect("rows").len(), 1, "the capture is unchanged");
+    }
+
+    #[tokio::test]
+    async fn the_source_filter_reaches_the_store_on_both_reading_endpoints() {
+        let state = state_with(&["http://live/"]);
+        import(&state, &document(&entry("http://file/"))).await;
+
+        let (_, imported) = list(&state, "source=imported").await;
+        assert_eq!(imported[0]["uri"], "http://file/");
+        assert_eq!(imported.as_array().expect("rows").len(), 1);
+
+        let (_, captured) = list(&state, "source=captured").await;
+        assert_eq!(captured[0]["uri"], "http://live/");
+        assert_eq!(captured.as_array().expect("rows").len(), 1);
+
+        let (_, _, exported) = export(&state, "source=imported").await;
+        let urls: Vec<&str> = exported["log"]["entries"]
+            .as_array()
+            .expect("entries")
+            .iter()
+            .map(|e| e["request"]["url"].as_str().expect("url"))
+            .collect();
+        assert_eq!(urls, ["http://file/"], "the export inherits the filter unchanged");
+    }
+
+    // A silently empty listing reads to a caller exactly like "nothing matched".
+    #[tokio::test]
+    async fn an_unrecognised_source_is_refused_by_name_on_both_endpoints() {
+        let state = state_with(&["http://a/"]);
+        let (status, value) = list(&state, "source=proxied").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert!(value.as_str().expect("reason").contains("source"), "{value}");
+
+        let (status, _, _) = export(&state, "source=proxied").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]

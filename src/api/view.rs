@@ -8,13 +8,33 @@ use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
 use crate::event::FlowEvent;
-use crate::flow::{BodyRec, Flow, Header, NotCapturedReason};
+use crate::flow::{BodyRec, Flow, FlowSource, Header, NotCapturedReason};
 use crate::store::FlowPage;
 
 /// The timestamp format every projection puts on the wire, defined once so the
 /// REST views and the HAR export cannot come to render an instant differently.
 pub(super) fn rfc3339(t: SystemTime) -> String {
     OffsetDateTime::from(t).format(&Rfc3339).unwrap_or_default()
+}
+
+/// The provenance vocabulary the wire uses, both directions in one place: the
+/// projections below render it and the listing's filter parses it back, so a
+/// token can never be spelled one way out and another way in. It lives here
+/// rather than on `FlowSource` because nothing below this boundary needs the
+/// string form — the store filters on the enum itself.
+pub(super) fn source_token(source: FlowSource) -> &'static str {
+    match source {
+        FlowSource::Captured => "captured",
+        FlowSource::Imported => "imported",
+    }
+}
+
+pub(super) fn parse_source(value: &str) -> Option<FlowSource> {
+    match value {
+        "captured" => Some(FlowSource::Captured),
+        "imported" => Some(FlowSource::Imported),
+        _ => None,
+    }
 }
 
 #[derive(Serialize)]
@@ -68,6 +88,7 @@ impl From<&BodyRec> for BodyView {
 #[derive(Serialize)]
 pub struct FlowView {
     pub id: String,
+    pub source: &'static str,
     pub started_at: String,
     pub duration_ms: Option<u64>,
     pub method: String,
@@ -85,6 +106,7 @@ impl From<&Flow> for FlowView {
     fn from(flow: &Flow) -> Self {
         Self {
             id: flow.id.to_string(),
+            source: source_token(flow.source),
             started_at: rfc3339(flow.started_at),
             duration_ms: flow.duration_ms,
             method: flow.request.method.clone(),
@@ -109,6 +131,7 @@ impl From<&Flow> for FlowView {
 #[derive(Serialize)]
 pub struct FlowSummary {
     pub id: String,
+    pub source: &'static str,
     pub started_at: String,
     pub duration_ms: Option<u64>,
     pub method: String,
@@ -122,6 +145,7 @@ impl From<&Flow> for FlowSummary {
     fn from(flow: &Flow) -> Self {
         Self {
             id: flow.id.to_string(),
+            source: source_token(flow.source),
             started_at: rfc3339(flow.started_at),
             duration_ms: flow.duration_ms,
             method: flow.request.method.clone(),
@@ -192,7 +216,7 @@ pub fn sse_lagged(skipped: u64) -> (&'static str, Value) {
 mod tests {
     use super::{sse_event, BodyView, FlowSummary, FlowView};
     use crate::event::FlowEvent;
-    use crate::flow::{BodyRec, NotCapturedReason, ResponseRec};
+    use crate::flow::{BodyRec, FlowSource, NotCapturedReason, ResponseRec};
     use crate::test_support::{captured, FlowBuilder};
     use serde_json::json;
 
@@ -253,6 +277,30 @@ mod tests {
         assert_eq!(v["response_http_version"], serde_json::Value::Null);
         assert_eq!(v["response_body"], serde_json::Value::Null);
         assert_eq!(v["response_headers"], json!([]));
+    }
+
+    // The listing filter parses back exactly what the projections render, so a
+    // token cannot be spelled one way out and another way in.
+    #[test]
+    fn source_tokens_round_trip_through_their_wire_spelling() {
+        for source in [FlowSource::Captured, FlowSource::Imported] {
+            assert_eq!(super::parse_source(super::source_token(source)), Some(source));
+        }
+        assert_eq!(super::parse_source("Captured"), None);
+        assert_eq!(super::parse_source("proxied"), None);
+        assert_eq!(super::parse_source(""), None);
+    }
+
+    // A client that filters on a field it cannot see in the rows it gets back
+    // has to re-fetch to confirm, so the mark is on both projections.
+    #[test]
+    fn both_projections_carry_the_provenance_mark() {
+        let captured_flow = FlowBuilder::new().status(200).build();
+        let imported = FlowBuilder::new().status(200).build().imported();
+        for (flow, expected) in [(&captured_flow, "captured"), (&imported, "imported")] {
+            assert_eq!(serde_json::to_value(FlowView::from(flow)).unwrap()["source"], expected);
+            assert_eq!(serde_json::to_value(FlowSummary::from(flow)).unwrap()["source"], expected);
+        }
     }
 
     #[test]

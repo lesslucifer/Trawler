@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v14 · 2026-09-03 · Trawler</div>
+      <div class="meta">v15 · 2026-09-04 · Trawler</div>
     </div>
   </header>
   <main>
@@ -230,6 +230,21 @@
             skipped body is never indistinguishable from an empty one; a too-large body reports the size it had,
             because that size is known. Round-trip fidelity is stated in both directions — what is preserved, and
             the five facts that are not. The export never decodes bodies: the file records the wire</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-31-imported-flows-are-marked.html"><code>dec-31-imported-flows-are-marked.html</code></a></td>
+          <td><span class="badge id">DEC-31</span></td>
+          <td><strong>An imported flow is a first-class flow carrying a closed-enum
+            <code>source</code> mark</strong> (<code>captured</code> | <code>imported</code>), in the same
+            byte-weighted ring and under the same read paths — a second store beside the ring and a free-text
+            provenance both rejected. The costs are stated rather than hidden: an import can evict a live capture,
+            and a re-imported file yields fresh ids over its original instants. A bad <code>?source=</code> is
+            refused, never served as a silently empty listing. <strong>All-or-nothing import</strong>: the document
+            parses whole before the store is touched, so "never a partially-populated store" is structural, and the
+            body's bytes outrank a <code>size</code> that disagrees — the ring must weigh what it holds. The CORS
+            grant gains <code>POST</code> for the first mutating method, <strong>extending DEC-12 rather than
+            reversing it</strong>: still loopback-bound, still nothing a local <code>curl</code> cannot reach</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

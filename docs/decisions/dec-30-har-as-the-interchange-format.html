@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>DEC-30 — HAR 1.2 is the one interchange format, and a fact Trawler does not hold is never invented to fill it</h1>
       <p>One format, chosen because the tools a user already has can open it. The hard part was not the choice — it was what to write where HAR has a required field and Trawler has no truthful value for it.</p>
-      <div class="meta">DEC-30 · 2026-09-04 · Trawler · E-EXPORT.W2 · status: active</div>
+      <div class="meta">DEC-30 · 2026-09-04 · Trawler · E-EXPORT.W2, amended by E-EXPORT.W3 · status: active</div>
     </div>
   </header>
   <main>
@@ -157,9 +157,29 @@ and says 'unknown' where it means it"]
           fields are absent</li>
           <li><strong>the flow's id</strong> — an id is a handle in <em>this</em> store, so an
           imported flow gets a fresh one while keeping its original timestamp</li>
+          <li><strong>a foreign writer's body it did not keep</strong> — a body with no text but
+          a size claiming one existed comes back as an explicit <em>not captured</em>, because
+          the alternative (reading it as empty) would assert a 4&nbsp;MB response was a
+          <code>204</code>. Trawler's own four states round-trip exactly; a foreign tool's
+          "there was a body, I don't have it" collapses to the one state that says exactly
+          that</li>
+          <li><strong>a request body Trawler never captured</strong> — HAR's
+          <code>postData</code> has no shape for it, so the export omits <code>postData</code>
+          and carries the fact in <code>bodySize</code> alone; on the way back in, every
+          uncaptured state on the <em>request</em> leg therefore collapses to the coarsest
+          honest one. The response leg, where every capture-path skip actually occurs, keeps the
+          full vocabulary</li>
         </ul>
       </div>
     </div>
+    <div class="callout" data-c="size-vs-bytes">
+      <p><strong>On the way back in, a body's bytes outrank a <code>size</code> that disagrees
+      with them.</strong> Real tools emit files whose declared size and carried text do not
+      match, so such a file is accepted rather than refused — but the ring is weighted by
+      retained bytes, and letting a client's arithmetic set that weight would put eviction under
+      the file's control. What Trawler holds is what Trawler counts.</p>
+    </div>
+
     <div class="callout" data-c="no-decode">
       <p><strong>The export does not decode compressed bodies.</strong> The bytes written are the
       bytes captured, with the <code>Content-Encoding</code> that describes them still attached —
@@ -178,8 +198,10 @@ and says 'unknown' where it means it"]
         </tr>
         <tr>
           <td>The importer is defined <em>against</em> this projection rather than against the HAR
-          spec independently, so the two cannot drift into a format Trawler writes but cannot read</td>
-          <td><span class="badge id">E-EXPORT.W3</span></td>
+          spec independently, so the two cannot drift into a format Trawler writes but cannot read
+          — and it lives in the same module, reading the reason tokens above rather than
+          re-spelling them</td>
+          <td><code>src/api/har.rs</code> · <span class="badge id">E-EXPORT.W3</span></td>
         </tr>
         <tr>
           <td>An export is never paged — the filter is the way to export less</td>

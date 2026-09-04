@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a9d289f34851f0dfac19d">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-31: imported flows are marked, not separated</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-31 — An imported flow is a first-class flow carrying a provenance mark, not a second collection beside the ring</h1>
+      <p>The ring now holds flows the proxy never saw. One closed-enum field on the domain model says so — and the first mutating method it enables is what widened the CORS grant.</p>
+      <div class="meta">DEC-31 · 2026-09-04 · Trawler · E-EXPORT.W3 · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>Until <a href="dec-30-har-as-the-interchange-format.html">DEC-30</a>'s import half landed,
+    every flow in the store came from the proxy — so nothing recorded that fact, because nothing
+    else could produce a flow. <code>POST /flows/import</code> breaks that assumption: a listing
+    can now mix a live capture with a colleague's file, and a user who cannot tell them apart
+    cannot trust either. Two questions had to be answered together, because the answer to the
+    first decides whether the second even arises: <strong>where does an imported flow live</strong>,
+    and <strong>how does a client select one kind without the other</strong>.</p>
+
+    <h2 id="decision">The decision</h2>
+    <p><strong>One ring, one field.</strong> An imported flow is inserted into the same
+    byte-weighted ring as a captured one and carries <code>source: Captured | Imported</code> — a
+    closed enum on <code>Flow</code>, surfaced as a <code>source</code> string on both API
+    projections and selectable as <code>?source=</code> on every endpoint that selects flows.</p>
+    <div class="diagram" data-c="one-ring">
+      <pre class="mermaid">
+flowchart LR
+  P["proxy · Recorder"] -->|"Flow::new
+source = Captured"| R["the ring
+one store, one order"]
+  F["a .har file"] -->|"flows_from_har
+source = Imported"| R
+  R --> D["GET /flows/{id}
+the body endpoints
+/stream"]
+  R --> L["GET /flows?source=…
+GET /flows/export?source=…"]
+  R --> E["eviction
+by retained bytes, either kind"]
+      </pre>
+      <div class="caption">Hình 1 — provenance is a property of a flow, not a place it is stored. Every read path and the ring's own rules apply to both kinds unchanged.</div>
+    </div>
+    <table>
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>A second store for imported flows</td>
+          <td>Every read path in the API would double — the listing, paging, the detail endpoint,
+            both body endpoints, the export, the event bus — and each would need a rule for
+            "which store, or both". That is a large, permanent cost for a distinction one field
+            expresses, and it would make "an imported flow is otherwise an ordinary flow" a
+            claim the code contradicts rather than one it enforces</td>
+        </tr>
+        <tr>
+          <td>No mark at all — an imported flow is simply a flow</td>
+          <td>Cheapest, and wrong: a user reproducing a bug against a live capture cannot see
+            which rows are theirs, and cannot clear the file's rows without clearing their own.
+            The provenance is information the user needs, so the model has to hold it</td>
+        </tr>
+        <tr>
+          <td>A free-text <code>source</code> (a filename, a tool name)</td>
+          <td>It looks more informative and is less useful: a filter over free text is a
+            substring match with no closed set to validate against, so a typo silently returns
+            nothing. The two values are exhaustive today, and a third — a replayed flow, say —
+            is a deliberate extension of a closed enum rather than an accident of what someone
+            typed</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences-of-one-ring">What one ring costs, stated plainly</h2>
+    <ul>
+      <li><strong>An import can evict a live capture.</strong> Imported flows weigh their retained
+      bodies like anything else, so importing a large file pushes the oldest rows out — possibly
+      rows the user was about to look at. That is the honest consequence of the ring being the one
+      store, and the alternative (an import that cannot be evicted) would mean a file could
+      permanently consume the memory the live capture needs.</li>
+      <li><strong>An imported flow gets a fresh id and keeps its original instant.</strong> An id
+      is this store's handle and must be unique here; the instant is the captured truth, so an
+      imported capture sorts by when it <em>happened</em>. Importing the same file twice therefore
+      yields two independent sets of flows carrying identical timestamps — which is correct: they
+      are two copies in the ring, not one row seen twice.</li>
+      <li><strong>The mark is on the summary row, not just the detail view.</strong> A client that
+      can filter on a field it cannot see in the rows it gets back has to re-fetch to confirm what
+      it asked for.</li>
+      <li><strong>An unrecognised <code>?source=</code> is refused, not ignored.</strong> A
+      silently empty listing reads to a caller exactly like "nothing matched" — the one failure
+      mode a filter must never have.</li>
+    </ul>
+
+    <h2 id="cors">The CORS widening, and why it extends DEC-12 rather than reversing it</h2>
+    <p><a href="dec-12-native-ui-stack.html">DEC-12</a> granted the API an open CORS
+    <code>*</code> because the native app's webview is a cross-origin client, and justified it on
+    two grounds: the surface is <strong>loopback-bound</strong>, and everything it exposes is
+    <strong>equally reachable with <code>curl</code></strong>. The grant advertised
+    <code>GET, OPTIONS</code> because the API was read-only. Import is the first method that
+    changes capture state, so the grant now advertises <code>GET, POST, OPTIONS</code>.</p>
+    <div class="callout">
+      <p><strong>Both of DEC-12's grounds still hold, which is the whole argument.</strong> The
+      bind address is unchanged, and <code>POST /flows/import</code> is as reachable with
+      <code>curl</code> as <code>GET /flows</code> always was — so the widening grants a webview
+      exactly the access an already-local caller has, and nothing more. What would reverse DEC-12
+      is binding beyond loopback or exposing something <code>curl</code> cannot reach; neither is
+      on the table. Without the widening the app's import control would be dead on arrival: a
+      webview's <code>fetch</code> cannot <code>POST</code> to an origin whose grant omits the
+      method.</p>
+    </div>
+    <p>The epic's own plan scheduled this widening with the
+    <code>DELETE</code> work, assuming that would be the first mutating method. Import landed
+    first, so the widening landed with it and <code>DELETE</code> joins the same list — a change
+    of placement, not of reasoning.</p>
+
+    <h2 id="refusal">All-or-nothing, and why the store is never the thing that cleans up</h2>
+    <p>Import is the first endpoint taking untrusted <em>structured</em> input from a client, so
+    the refusal contract is part of this decision rather than an implementation detail. The whole
+    document parses into flows <strong>before the store is touched at all</strong>; the handler
+    holds either a complete <code>Vec&lt;Flow&gt;</code> or an error.</p>
+    <table>
+      <thead><tr><th>Property</th><th>Why it follows from the shape, not from care</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>A refused import changes nothing</td>
+          <td>There is no partial state to roll back, because nothing was inserted. "Never a
+            partially-populated store" is structural — a cleanup path could be forgotten, a type
+            signature cannot</td>
+        </tr>
+        <tr>
+          <td>One bad entry refuses the document, naming its index</td>
+          <td>A caller who cannot tell which of 900 entries landed cannot recover. Refusing with
+            the index is actionable; a partial success is not</td>
+        </tr>
+        <tr>
+          <td>The parser never panics</td>
+          <td>Asserted as a property over arbitrary bytes and over HAR-shaped documents whose
+            every member may be the wrong type or out of range — an all-inputs claim no list of
+            named malformations can cover</td>
+        </tr>
+        <tr>
+          <td>The body's bytes outrank a <code>size</code> that disagrees with them</td>
+          <td>Accepted rather than refused, because real tools emit it — but the ring must weigh
+            what it actually holds, or eviction goes wrong. Trusting the declared size would put
+            a client's arithmetic in charge of Trawler's memory accounting</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <table>
+      <thead><tr><th>Consequence</th><th>Where it binds</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Every future producer of flows declares its provenance by adding an enum variant,
+            and every reader that cares gets it for free from the existing filter</td>
+          <td><code>src/flow.rs</code> · <code>src/store.rs</code></td>
+        </tr>
+        <tr>
+          <td>The export inherits <code>?source=</code> with no export change, because both
+            endpoints build the same filter — the guarantee DEC-30 already relies on</td>
+          <td><a href="../use-cases/web-ui.html#uc-6">UC-6</a></td>
+        </tr>
+        <tr>
+          <td>An imported flow is inspectable, never executable — firing one at a server is a
+            different capability with its own decision</td>
+          <td>E-REPLAY</td>
+        </tr>
+        <tr>
+          <td>A curl paste is a second <em>format</em> behind the same import endpoint and the
+            same mark, not a third provenance</td>
+          <td>E-EXPORT.W7</td>
+        </tr>
+        <tr>
+          <td>The API's contract line is no longer "reader only" — it reads, subscribes and
+            ingests, while still never rewriting what the capture path recorded</td>
+          <td><a href="../architecture.html">architecture.html</a></td>
+        </tr>
+      </tbody>
+    </table>
+    <p>The field-by-field mapping in both directions is code and lives only in
+    <code>src/api/har.rs</code>. This record states why provenance is shaped this way; it never
+    copies the mapping.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
