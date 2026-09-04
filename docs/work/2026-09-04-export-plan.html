@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-EXPORT — a capture leaves the ring and comes back</h1>
       <p>HAR export and import, a pasted curl command as a flow, a store that can be cleared, and a listing that pages — the first epic in which a flow outlives the process that captured it.</p>
-      <div class="meta">Draft v2 · 2026-09-04 · Trawler · T3 epic plan · <span class="badge id">E-EXPORT</span></div>
+      <div class="meta">v3 · final · 2026-09-04 · Trawler · T3 epic plan · <span class="badge id">E-EXPORT</span></div>
     </div>
   </header>
   <main>
@@ -172,7 +172,7 @@ flowchart LR
           <tr>
             <td>8</td>
             <td>A <code>curl</code> command copied out of a browser's network panel and pasted into Trawler appears as a flow — method, URL, headers and body intact, marked <code>imported</code>, with no response. A command using a flag the parser does not support is refused naming that flag.</td>
-            <td>Unit tests over real browser-emitted commands (Chrome, Firefox, Safari shapes, incl. multi-line continuations); a proptest asserting <code>toCurl</code> → parse round-trips to the same request; the e2e pastes one through the app.</td>
+            <td>Unit tests over real browser-emitted commands (Chrome, Firefox, Safari shapes, incl. multi-line continuations); one per expanded flag, asserting <code>-u</code> becomes <code>Authorization: Basic</code> and <code>--compressed</code> becomes <code>Accept-Encoding</code>; one asserting a transfer-only flag is ignored rather than refused; a proptest asserting <code>toCurl</code> → parse round-trips to the same request; the e2e pastes one through the app.</td>
           </tr>
         </tbody>
       </table>
@@ -328,12 +328,12 @@ flowchart LR
           (<code>toCurl</code>, <code>ui/src/flow.ts:67</code>): a parser that turns a pasted
           <code>curl</code> command line into a flow, reached as
           <code>POST /flows/import?format=curl</code> and, in the app, as a paste target on
-          the same import control W5 designs. It handles what the ecosystem actually pastes —
-          the flags browsers' "Copy as cURL" emits (<code>-X</code>, <code>-H</code>,
-          <code>--data</code>/<code>--data-raw</code>/<code>--data-binary</code>,
-          <code>-d</code>, <code>--url</code>, <code>-b</code>, shell quoting, and
-          line-continuation backslashes across multiple lines) and refuses everything else
-          with a reason naming the flag it did not understand. A parsed command yields a
+          the same import control W5 designs. It accepts exactly the set settled in question 8
+          — what a browser's "Copy as cURL" and Trawler's own <code>toCurl</code> emit, with
+          <code>-u</code> and <code>--compressed</code> expanded into the headers they imply,
+          shell quoting and backslash line-continuations handled, and transfer-only flags
+          consumed silently — and refuses everything else with a reason naming the flag it did
+          not understand. A parsed command yields a
           request-only flow, marked <code>imported</code> exactly as a HAR entry is: it has no
           response, because nothing has been sent — the same shape a captured flow has
           between request and reply, which the store, the API and the UI already handle.
@@ -408,13 +408,14 @@ flowchart LR
       </p>
     </div>
 
-    <h2 id="open-questions">Open questions</h2>
+    <h2 id="open-questions">Open questions — all settled</h2>
     <div data-item="open-questions">
-      <p>
-        Questions 1&ndash;7 were <strong>settled at the plan review</strong> — every proposed
-        default confirmed as written. They stay on the record as the decisions they are, not as
-        open items; question 8 is new, raised by W7.
-      </p>
+      <div class="callout">
+        <strong>None are open — all eight were settled at the plan review</strong>, every
+        proposed default confirmed as written. They stay on the record as the decisions they
+        are, and the work starts against them. A question reopens only if the work proves a
+        default wrong, and that reopening is a deviation the WU result must record.
+      </div>
       <table>
         <thead><tr><th>#</th><th>Question</th><th>Answer</th></tr></thead>
         <tbody>
@@ -456,7 +457,32 @@ flowchart LR
           <tr>
             <td>8</td>
             <td>How much of <code>curl</code> does W7's parser accept? The tool has hundreds of flags and a full shell grammar sits behind any pasted command.</td>
-            <td><strong>The flags browsers emit, and a refusal for the rest.</strong> The parser's job is to accept what a developer actually pastes — a browser's "Copy as cURL" and Trawler's own <code>toCurl</code> — not to reimplement curl. Anything outside that set is refused <em>naming the flag</em>, which is honest and actionable, where silently ignoring a flag would produce a flow subtly unlike the request the user pasted. W7 fixes the exact accepted set; flags that change the request's meaning if dropped (<code>--compressed</code>, <code>-u</code>) are the ones to decide deliberately.</td>
+            <td>
+              <strong>The flags browsers emit, and a refusal for the rest</strong> — settled at
+              review, and fixed here rather than left to W7 so the contract is testable before
+              a line is written. The parser's job is to accept what a developer actually pastes
+              — a browser's "Copy as cURL" and Trawler's own <code>toCurl</code> — not to
+              reimplement curl. Anything outside the set below is refused <em>naming the
+              flag</em>: honest and actionable, where silently ignoring one would produce a flow
+              subtly unlike the request the user pasted.
+              <table>
+                <thead><tr><th>Accepted</th><th>Becomes</th></tr></thead>
+                <tbody>
+                  <tr><td><code>-X</code> / <code>--request</code></td><td>the method (absent ⇒ <code>GET</code>, or <code>POST</code> when a body flag is present, matching curl)</td></tr>
+                  <tr><td>the bare URL argument · <code>--url</code></td><td>the URI</td></tr>
+                  <tr><td><code>-H</code> / <code>--header</code></td><td>a request header</td></tr>
+                  <tr><td><code>-d</code> / <code>--data</code> / <code>--data-raw</code> / <code>--data-binary</code> / <code>--data-ascii</code></td><td>the request body</td></tr>
+                  <tr><td><code>-b</code> / <code>--cookie</code></td><td>a <code>Cookie</code> header</td></tr>
+                  <tr><td><code>-u</code> / <code>--user</code></td><td>an <code>Authorization: Basic</code> header — expanded, because dropping it changes what the request <em>is</em></td></tr>
+                  <tr><td><code>--compressed</code></td><td>an <code>Accept-Encoding</code> header — same reason</td></tr>
+                  <tr><td>shell quoting · <code>\</code> line continuations · <code>-s</code>/<code>-k</code>/<code>-i</code>/<code>-v</code> and other transfer-only flags</td><td>consumed and ignored — they shape curl's own behaviour, never the request on the wire</td></tr>
+                </tbody>
+              </table>
+              Everything else — <code>-F</code>, <code>-T</code>, <code>--form-string</code>, a
+              second URL, anything unrecognized — is a refusal naming it. The ignore list is
+              deliberately the only silent case, and it is safe precisely because those flags
+              leave no trace in the request.
+            </td>
           </tr>
         </tbody>
       </table>
