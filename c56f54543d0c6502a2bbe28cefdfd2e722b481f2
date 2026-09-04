@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-EXPORT
 wu: E-EXPORT.W3
-branch: HEAD
 base: 6c920d55204cb323ea6acd8b739a4ce99a68678e
 tip: c56f54543d0c6502a2bbe28cefdfd2e722b481f2
 diff_sha256: f690bef64a1185fbd05f31afb1c5a60740aa7681b2c5a1d382cf44198f9888a1
