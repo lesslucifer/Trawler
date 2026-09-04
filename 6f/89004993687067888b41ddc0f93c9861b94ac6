@@ -1,0 +1,12 @@
+schema: cr/v3
+scope: "WU E-GATETRUTH.W4 link-integrity -> epic/gate-truth"
+epic: E-GATETRUTH
+wu: E-GATETRUTH.W4
+branch: wu/gate-truth/link-integrity
+base: 8d11ff148c1ba2cb1720d6e3f3a6c3fde7fc3215
+head: 6f89004993687067888b41ddc0f93c9861b94ac6
+diff_sha256: 78d6f892d3b1825c9b3e072ac7d61bac3e36b9397c5ef9ad5126796832053723
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 16, verified: 8, waived: 0 }
+verdict: PASS
+date: 2026-09-04
