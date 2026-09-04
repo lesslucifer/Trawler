@@ -4,6 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — E-REDESIGN.W1 result (gap components)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Classic script: this doc opens by double-click, and a file:// page may not run
+       module scripts. specimens.bundle.js carries the app theme so the showcases below
+       render in the real vocabulary. Regenerate with `cargo xtask ui specimens`. -->
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .t1{color:var(--accent);} .t2{color:var(--ok);}
@@ -13,6 +18,22 @@
     .round{border-left:3px solid var(--line);padding-left:14px;margin:10px 0 10px 2px;}
     .round h4{margin:0 0 6px;font-size:13.5px;}
     .round p{margin:4px 0;font-size:12.5px;line-height:1.55;}
+    .shows{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:10px 0;}
+    .show{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .show .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;font-family:var(--a-ui);}
+    .show .cap{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5;}
+    .show .cap strong{color:var(--ink);}
+    .ba{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0;}
+    .ba .col{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--paper);}
+    .ba .col.before{border-color:var(--warn);}
+    .ba .col.after{border-color:var(--ok);}
+    .ba .col .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;font-family:var(--a-ui);}
+    .ba .col.before .lbl{color:var(--warn);}
+    .ba .col.after .lbl{color:var(--ok);}
+    .ba .col .cap{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5;}
+    .hit{position:relative;display:inline-flex;align-items:center;justify-content:center;}
+    .hit::after{content:"";position:absolute;inset:0;border:1px dashed var(--warn);border-radius:3px;}
+    .hit.ok::after{border-color:var(--ok);}
   </style>
 </head>
 <body data-artifact="wu-result" data-status="ready">
@@ -39,6 +60,150 @@
         <tr><td>6</td><td>Zero change under <code>ui/src/</code></td><td><span class="ok">met</span> — <code>git diff epic/redesign..HEAD -- ui/src/</code> is empty</td></tr>
       </tbody>
     </table>
+
+    <h2 id="showcase">The three components</h2>
+    <p style="color:var(--muted);font-size:12.5px;">Rendered here in the app's own vocabulary, from the same bundle the design files use — so what is below is what W2 builds, not a picture of it. Each design file carries the full contract; these are the shapes it settles.</p>
+
+    <div class="app shows" data-c="showcase-three">
+      <div class="show">
+        <div class="lbl">Field <span class="tier t1">T1</span> — the app's one text input</div>
+        <div class="flex flex-col gap-2 rounded-panel bg-canvas p-3">
+          <input aria-label="filter" placeholder="filter — free text" class="min-h-control rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none transition-colors placeholder:text-ink-mute hover:border-ink-mute focus:border-ink-mute">
+          <input aria-label="host" value="api.stripe.com" readonly class="min-h-control rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none transition-colors placeholder:text-ink-mute hover:border-ink-mute focus:border-ink-mute">
+          <div class="flex gap-2">
+            <input aria-label="method" placeholder="method" class="w-field-sm min-h-control rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none transition-colors placeholder:text-ink-mute hover:border-ink-mute focus:border-ink-mute">
+            <input aria-label="status" placeholder="status" inputmode="numeric" class="w-field-sm min-h-control rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none transition-colors placeholder:text-ink-mute hover:border-ink-mute focus:border-ink-mute">
+          </div>
+        </div>
+        <div class="cap"><strong>App's four filter fields.</strong> Empty reads <code>ink-mute</code>, filled reads <code>ink</code> — the only channel separating them, since <code>zero-accent</code> leaves no colour. Width is the caller's; the box never grows.</div>
+      </div>
+
+      <div class="show">
+        <div class="lbl">StatusDot <span class="tier t2">T2</span> — capture health, and the way back</div>
+        <div class="flex flex-col gap-3 rounded-panel bg-canvas p-3">
+          <div class="flex items-center gap-2">
+            <button type="button" aria-label="not capturing yet — click to set up" class="inline-flex min-h-control min-w-control shrink-0 items-center justify-center rounded-button hover:bg-wash-hover"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-warn"></span></button>
+            <span class="font-ui text-chrome text-ink-mute">not capturing yet — click to set up</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" aria-label="checking…" class="inline-flex min-h-control min-w-control shrink-0 items-center justify-center rounded-button hover:bg-wash-hover"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ink-mute"></span></button>
+            <span class="font-ui text-chrome text-ink-mute">checking…</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" aria-label="capturing — click to run setup again" class="inline-flex min-h-control min-w-control shrink-0 items-center justify-center rounded-button hover:bg-wash-hover"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ok"></span></button>
+            <span class="font-ui text-chrome text-ink-mute">capturing — click to run setup again</span>
+          </div>
+        </div>
+        <div class="cap"><strong>Three lifecycle states, each with its phrase.</strong> The phrase is the second channel <code>colour-plus-text</code> requires — a 10px disc is colour alone without it. Clickable in every state, including the good one.</div>
+      </div>
+
+      <div class="show">
+        <div class="lbl">Disclosure <span class="tier t1">T1</span> — the collapse primitive</div>
+        <div class="flex flex-col gap-2 rounded-panel bg-canvas p-3">
+          <details><summary class="flex min-h-control cursor-pointer select-none items-center gap-chrome-gap rounded-button font-ui text-body text-ink-mute transition-colors hover:bg-wash-hover hover:text-ink" style="list-style:none;"><span aria-hidden="true" class="inline-block w-glyph text-glyph leading-none">›</span><span>Set it up manually</span></summary><div class="mt-chrome-y font-ui text-body text-ink-body">Steps for macOS — the slot renders what the host passed.</div></details>
+          <details open><summary class="flex min-h-control cursor-pointer select-none items-center gap-chrome-gap rounded-button font-ui text-body text-ink-mute transition-colors hover:bg-wash-hover hover:text-ink" style="list-style:none;"><span aria-hidden="true" class="inline-block w-glyph text-glyph leading-none" style="transform:rotate(90deg);">›</span><span>Remove the certificate later</span></summary><div class="mt-chrome-y font-ui text-body text-ink-body">Open on arrival — the host seeded <code>defaultOpen</code>.</div></details>
+        </div>
+        <div class="cap"><strong>Closed (twist at 0°) above open (twist at 90°).</strong> One glyph rotated, never two glyphs — the shape stays constant so only the angle carries the state, and the fixed <code>w-glyph</code> slot stops the label shifting. The UA triangle is suppressed and replaced by a <code>›</code> the vocabulary chose. Click either summary — they are real <code>&lt;details&gt;</code>, so <span style="font-family:var(--a-mono);">Enter</span> works and focus stays put.</div>
+      </div>
+    </div>
+
+    <h3 id="in-context">Beside the registry they join</h3>
+    <p style="color:var(--muted);font-size:12.5px;">The three designs above are drawn markup — they have no code yet, which is W2's job. The row below is <strong>mounted from the live collection</strong> (<code>window.Trawler</code>, the same bundle the app builds from), so it shows what the new entries must sit beside without drifting from it.</p>
+    <div class="app show" data-c="in-context">
+      <div class="lbl">mounted — real components from ui/src/components/</div>
+      <div id="spec-registry" class="rounded-panel bg-canvas p-3"></div>
+      <div class="cap"><strong>Left to right:</strong> <code>StatusPill</code> (owns status→tone and the reason phrase), <code>TonedText</code> (the tone channel with the meaning removed), <code>Notice</code> (a sentence naming an absence). <code>StatusDot</code>'s design argues it is none of these — it renders a shape, not text, and it is the only one of the four that navigates.</div>
+    </div>
+    <script>
+      (function () {
+        var T = window.Trawler;
+        if (!T) return;
+        var e = T.React.createElement;
+        T.createRoot(document.getElementById('spec-registry')).render(
+          e('div', { className: 'flex flex-col gap-3' },
+            e('div', { className: 'flex items-center gap-4' },
+              e(T.StatusPill, { status: 200 }),
+              e(T.StatusPill, { status: 404 }),
+              e(T.StatusPill, { status: 301 }),
+              e(T.StatusPill, { status: null }),
+              e(T.TonedText, { tone: 'ok' }, 'capturing'),
+              e(T.TonedText, { tone: 'muted' }, 'idle')
+            ),
+            e(T.Notice, { tone: 'mute' }, 'no flows match this filter')
+          )
+        );
+      })();
+    </script>
+
+    <h2 id="defects">The two defects, before and after</h2>
+    <p style="color:var(--muted);font-size:12.5px;">Both were found by designing a component that already ships, and both are <a href="#follow-ups">W2's to fix</a>. The left column is the live rendering of <code>ui/src/components.tsx:38</code>.</p>
+
+    <div class="app ba" data-c="defect-hit-target">
+      <div class="col before">
+        <div class="lbl">✗ ships today — the disc is the button</div>
+        <div class="flex items-center gap-3 rounded-panel bg-canvas p-3">
+          <span class="hit"><button type="button" aria-label="shipped" class="inline-block h-spinner w-spinner shrink-0 rounded-full bg-ok"></button></span>
+          <span class="font-serif text-title italic text-ink">Trawler</span>
+        </div>
+        <div class="mt-2 flex items-end gap-2">
+          <span style="display:block;width:10px;height:10px;border:1px dashed var(--warn);"></span>
+          <span class="font-mono text-chrome text-warn">10px — the whole target</span>
+        </div>
+        <div class="cap"><strong>10 × 10.</strong> The dashed outline is the whole hit target. The app's own floor — cited by <code>Button</code>, <code>IconButton</code>, <code>Select</code> and <code>Field</code> — is 24px, so this misses WCAG 2.5.8 by 14px on the one control that must never be hard to hit.</div>
+      </div>
+      <div class="col after">
+        <div class="lbl">✓ designed — a bare-square shell around it</div>
+        <div class="flex items-center gap-3 rounded-panel bg-canvas p-3">
+          <span class="hit ok"><button type="button" aria-label="designed" class="inline-flex min-h-control min-w-control shrink-0 items-center justify-center rounded-button hover:bg-wash-hover"><span aria-hidden="true" class="inline-block h-spinner w-spinner rounded-full bg-ok"></span></button></span>
+          <span class="font-serif text-title italic text-ink">Trawler</span>
+        </div>
+        <div class="mt-2 flex items-end gap-2">
+          <span style="display:block;width:24px;height:24px;border:1px dashed var(--ok);"></span>
+          <span class="font-mono text-chrome text-ok">24px — the app's floor</span>
+        </div>
+        <div class="cap"><strong>24 × 24, disc unchanged.</strong> The dot stays 10px because it must read as a state light; the <em>button</em> grows with transparent padding, exactly as <code>IconButton</code> already solves it. Fork S3.</div>
+      </div>
+    </div>
+
+    <div class="app ba" data-c="defect-accessible-name">
+      <div class="col before">
+        <div class="lbl">✗ ships today — title only</div>
+        <div class="flex flex-col gap-2 rounded-panel bg-canvas p-3 font-mono text-chrome">
+          <span class="text-ink-mute">title="Not capturing yet — click to set up"</span>
+          <span class="text-ink-mute">aria-label=<span class="text-warn">— absent —</span></span>
+          <span class="mt-chrome-y text-warn">screen reader announces: "button"</span>
+        </div>
+        <div class="cap"><strong>Nameless.</strong> <code>title</code> is not reliably an accessible name and is unreachable by touch and keyboard. An empty button whose only content is a coloured div has nothing else to announce — so <code>colour-plus-text</code> is satisfied for sighted users and breached for everyone else.</div>
+      </div>
+      <div class="col after">
+        <div class="lbl">✓ designed — both, from one source</div>
+        <div class="flex flex-col gap-2 rounded-panel bg-canvas p-3 font-mono text-chrome">
+          <span class="text-ink-mute">title="Not capturing yet — click to set up"</span>
+          <span class="text-ok">aria-label="not capturing yet — click to set up"</span>
+          <span class="mt-chrome-y text-ok">announces: "not capturing yet — click to set up, button"</span>
+        </div>
+        <div class="cap"><strong>The verdict in words, for everyone.</strong> Both come from <code>COPY.dotTitle</code>, so they cannot drift apart. Fork S4.</div>
+      </div>
+    </div>
+
+    <div class="app ba" data-c="defect-box">
+      <div class="col before">
+        <div class="lbl">✗ ships today — a second box</div>
+        <div class="flex items-center gap-2 rounded-panel bg-canvas p-3">
+          <input aria-label="legacy" value="api.stripe.com" readonly class="min-h-control w-field rounded-button border border-hairline bg-canvas px-3 py-chrome-y font-ui text-control text-ink outline-none">
+          <button type="button" class="inline-flex min-h-control cursor-default items-center gap-2 rounded-button border border-hairline bg-transparent px-control-x py-control-y font-ui text-control text-ink-body"><span>macOS</span><span class="text-glyph text-ink-mute">▾</span></button>
+        </div>
+        <div class="cap"><strong><code>px-3 py-chrome-y</code> beside <code>px-control-x py-control-y</code>.</strong> Both are legal tokens; they are simply not the same box — 3px horizontal and 1px vertical apart. Invisible alone, visible in a row. This is the drift <a href="../decisions/dec-18-one-control-box.html">DEC-18</a> exists to prevent.</div>
+      </div>
+      <div class="col after">
+        <div class="lbl">✓ designed — one control box</div>
+        <div class="flex items-center gap-2 rounded-panel bg-canvas p-3">
+          <input aria-label="designed" value="api.stripe.com" readonly class="min-h-control w-field rounded-button border border-hairline bg-canvas px-control-x py-control-y font-ui text-control text-ink outline-none">
+          <button type="button" class="inline-flex min-h-control cursor-default items-center gap-2 rounded-button border border-hairline bg-transparent px-control-x py-control-y font-ui text-control text-ink-body"><span>macOS</span><span class="text-glyph text-ink-mute">▾</span></button>
+        </div>
+        <div class="cap"><strong>Only the caret differs.</strong> Field takes <code>Select</code>'s trigger box class for class. W2 must apply this delta rather than copy the legacy string. Fork F2.</div>
+      </div>
+    </div>
 
     <h2 id="deviations">Deviations</h2>
     <div data-item="deviations" data-c="deviations">
