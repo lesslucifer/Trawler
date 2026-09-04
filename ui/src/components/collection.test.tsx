@@ -187,3 +187,20 @@ describe("@avoid alternatives are reachable — every redirect resolves to an ex
     expect(REGISTRY.Notice.redirects).not.toContain("Button");
   });
 });
+
+describe("the barrel is what the app reaches — the registry, not the legacy kit", () => {
+  // "./components" is ambiguous whenever a components.tsx sits beside the
+  // components/ directory: bundlers resolve the file over the directory's index,
+  // so a screen importing the bare form silently gets the other one. The kit that
+  // made it ambiguous is deleted, and this keeps the spelling from coming back.
+  const screens = import.meta.glob("../*.tsx", { query: "?raw", import: "default", eager: true });
+
+  it("no screen imports through the ambiguous bare specifier", () => {
+    const offenders = Object.entries(screens)
+      .filter(([path]) => !path.includes(".test."))
+      .filter(([, source]) => /from "\.\/components"/.test(source as string))
+      .map(([path]) => path);
+
+    expect(offenders).toEqual([]);
+  });
+});

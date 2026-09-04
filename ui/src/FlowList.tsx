@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { FlowSummary } from "./api";
 import { toRow } from "./flow";
-import { StatusPill } from "./components";
+import { StatusPill } from "./components/index";
 
 const ROW_HEIGHT = 30;
 
@@ -81,7 +81,7 @@ export function FlowList({
                 <span className="truncate">{row.host}</span>
                 <span className="truncate" title={row.path}>{row.path}</span>
                 <span className="text-right">
-                  <StatusPill tone={row.tone}>{row.status}</StatusPill>
+                  <StatusPill status={row.status} />
                 </span>
                 <span className="text-right tabular-nums text-ink-mute">{row.duration}</span>
               </div>

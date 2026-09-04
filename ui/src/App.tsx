@@ -10,7 +10,7 @@ import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
 import { Onboarding } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
-import { Field, StatusDot } from "./components";
+import { Field, StatusDot } from "./components/index";
 import { dotStatus, initial, reduce, type OnbState } from "./onboardingMachine";
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
