@@ -65,6 +65,16 @@ Never amend/rebase a gated branch — it orphans the notes. Skipping a test
 layer = `waived: "<why>"` in the note; docs/infra-only diffs are exempt.
 Standalone code commits outside a WU carry `test/v2` with `level: commit`.
 
+**`mr` is manual review — never run it yourself.** Stage, print the full
+command, stop. Always pass `--as` (`cut -d' ' -f2 .mr-allowed`, this worktree)
+and `--report`, else it prompts and a piped run hangs.
+
+```sh
+cargo xtask mr commit -m "<subject>\n\n<body>" --as <id>        # rule-bearing doc
+cargo xtask mr confirm wu|epic <tip|HEAD> --as <id> \
+  --target epic/<slug>|main --report docs/work/<wu>|.archive/<epic>-result.html
+```
+
 ## Documentation rules
 
 - **All project docs are interactive HTML in `docs/`, never markdown** (CLAUDE.md
