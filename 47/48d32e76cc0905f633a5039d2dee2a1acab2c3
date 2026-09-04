@@ -1,0 +1,37 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W2
+changes:
+  - path: docs/work/2026-09-04-redesign-w2-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan — requirement, mapping, expected result, the test plan with the e2e waiver and its reason, the vocabulary gap as a config change, and the retirement order as in-scope rather than deferrable"
+  - path: docs/decisions/dec-30-the-three-gap-components.html
+    tier: T2
+    action: added
+    distills: "DEC-16 step ① for all three retired design files: the shared registry-entry argument (a thing copied drifts invisibly, a default nobody picked is unreadable to every lint); Field's box as the second confirmation of DEC-18; the DotStatus-is-not-StatusTone claim argued on authority rather than transience; status and navigation as one element and the two shipped defects that forces; native <details> over a div; the three refusals that belong to the host (validity, timing, collapsed-or-not-at-all); and reuse that produces a worse screen being a propose in disguise. Two forks recorded as spent rather than preserved, per DEC-16."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "the DEC-30 row, so the record is reachable index-first"
+  - path: docs/work/components/field.html
+    tier: T3
+    action: removed
+    distills: "retired under DEC-16 — its contract is now ui/src/components/Field.tsx's TSDoc (byte-compared), its forks are DEC-30. Blob dc8c47b1f45caf027087a23ba77108a0e3f646a4, cited by this WU's design.implements and resolvable at HEAD~2 per DEC-28."
+  - path: docs/work/components/status-dot.html
+    tier: T3
+    action: removed
+    distills: "retired under DEC-16 — contract now StatusDot.tsx's TSDoc, forks in DEC-30, including the rulebook proposal on ok/warn's second owner and ink-mute's first entry, which is held for W11. Blob 62d5aa163c9b39a25a6189a0034192d4c2248f0c."
+  - path: docs/work/components/disclosure.html
+    tier: T3
+    action: removed
+    distills: "retired under DEC-16 — contract now Disclosure.tsx's TSDoc, forks in DEC-30. Its blocked-on (rotate + transitionProperty:transform) was consumed by this WU's tailwind.config.js change. Blob 46e9879bc6ea68b6aa2b2698856a9961ad3ca037."
+  - path: docs/work/2026-09-04-redesign-w2-result.html
+    tier: T3
+    action: added
+    distills: "the WU result — the eight expected rows, the probe's finding-free outcome and why, four deviations, the browser measurements behind every design claim, and the five follow-ups W4/W10/W11 inherit"
+  - path: doc-assets/w2-preview.png
+    tier: T3
+    action: added
+    distills: "the three components rendered together from the real collection at 2x — the evidence a jsdom assertion cannot carry"
+note: "Two T2 write-backs were considered; one landed and one is deliberately held. LANDED: DEC-30, which the epic's own distillation plan reserved ('a new decision record — why the app's one text input and one state dot are registry entries rather than screen-local'), plus its index row. HELD: the rulebook's chromatic-meanings row (StatusDot as a second owner of ok/warn, and ink-mute's first entry as the not-yet-known channel). It is argued in full in DEC-30 and it belongs in docs/design-rules/, but the rulebook is FROZEN INPUT for a design run and grows at distillation per DEC-14 — and four screen runs (W3/W5/W7/W9) are still to pin it. Moving it mid-epic would change a substrate they read. Carried to W11, where the epic's distillation plan already reserves the row. NOT MOVED, and stated rather than assumed: docs/use-cases/web-ui.html. No observable contract moved — the three components have no call site, so every screen renders exactly what it rendered before; UC-4's and UC-ONBOARD's wording is W4's and W10's to move if their builds move it. No T1 edit: the flow, rulebook and gate are inputs to this epic, and nothing this WU found argues the method is wrong — DEC-28 and DEC-29 had already fixed the one edge it probed, before it ran."
