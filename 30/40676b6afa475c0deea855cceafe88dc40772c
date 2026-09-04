@@ -27,40 +27,4 @@ changes:
     tier: T3
     action: added
     distills: "The WU result - delivered against all six observables with each one's proving tests named, the live hand-run against the running binary, what shipped per file, four contract calls the plan left to the build (the two query extractions and why flatten cannot work; redirectURL's explicit rename; postData omitted for an uncaptured request body; the snapshot's normalised nondeterministic fields), the two mechanism deviations from what the plan assumed with none at contract level, the evidence table with the e2e waiver, the distillation ledger including architecture.html deliberately unedited, and four follow-ups (no consumer until W5/W6; the reason tokens are now W3's contract; cookie attributes as a stated non-preservation rather than debt; the deferred streaming export already on the epic's roadmap row)."
-  - path: Cargo.toml
-    tier: T4
-    action: updated
-    distills: "insta as a dev-dependency (the epic plan's question 7 - the tool the testing standard names for snapshot-locking a wire contract, and the first serialized document format in the tree to need it) and form_urlencoded as a dependency, already present transitively via axum's own serde_urlencoded, for parsing HAR's queryString."
-  - path: Cargo.lock
-    tier: T4
-    action: updated
-    distills: "Lockfile for the two dependency additions above."
-  - path: src/api/har.rs
-    tier: T4
-    action: added
-    distills: "The HAR 1.2 projection - the truth the docs point at and never copy."
-  - path: src/api/mod.rs
-    tier: T4
-    action: updated
-    distills: "The /flows/export route and the module's contract line."
-  - path: src/api/routes.rs
-    tier: T4
-    action: updated
-    distills: "The export handler and the shared FilterQuery / PagingQuery split."
-  - path: src/api/view.rs
-    tier: T4
-    action: updated
-    distills: "Owns rfc3339 as pub(super) - the one definition of the wire timestamp format, beside the projections that use it, after the review found it defined twice and the re-review found api/mod.rs (router composition plus the CORS layer) the wrong home for it."
-  - path: tests/api.rs
-    tier: T4
-    action: updated
-    distills: "Five integration tests over the real router, including the snapshot lock."
-  - path: tests/snapshots/api__the_har_document_shape_is_locked.snap
-    tier: T4
-    action: added
-    distills: "The locked HAR document shape over a four-flow fixture."
-  - path: proptest-regressions/api/har.txt
-    tier: T4
-    action: added
-    distills: "A regression seed captured from a genuine proptest failure during the work, re-run before novel cases per proptest's own convention."
-note: "The result report additionally records the review round and the three findings it confirmed, and the review's measurement corrected one claim in that report: the follow-up row previously said export memory is bounded by the ring's byte cap, where measurement at the shipped 256MB default showed a peak of roughly 4x the cap, so the row now states the multiple instead of implying the cap bounds it. The re-review then found that clamping the timing phases to zero had made a standing claim false in two of these T2 docs as well: UC-6's sentinel sentence listed the timing phase breakdown among the facts reported with HAR's unavailable sentinel, and DEC-30's round-trip row said the phases sum to the total. Both now state the one exception - HAR permits -1 for the total but requires the three phases to be non-negative, so an unmeasured duration carries an unknown total beside zeroed phases - so neither doc asserts an invariant the code deliberately cannot honour. T2 synthesis is UC-6's export half plus its index row (the what) and DEC-30 plus its index row (the why) - one fact per tier, with the field mapping staying in src/api/har.rs and never copied into either. T1 deliberately unedited: architecture.html's store/API line (the control API is purely a subscriber and reader, it never mutates capture state) is still true of an export, which adds a read and no store capability; W4's removal is where that line actually moves, and the epic gate re-checks it at close. verify-doc green over both new T3 docs, the new T2 decision record and all three edited T2 docs; every relative href resolves on disk; all three edited T2 docs snapshotted before the edit and both new docs snapshotted at creation."
+note: "Code and test files in this diff (src/api/har.rs new, src/api/mod.rs, src/api/routes.rs, src/api/view.rs, tests/api.rs, the insta snapshot, proptest-regressions/api/har.txt, Cargo.toml/lock) carry no doc/v1 entry - they are T4, the truth the docs point at, and this note accounts for documentation changes. The result report additionally records the review round and the three findings it confirmed, and the review's measurement corrected one claim in that report: the follow-up row previously said export memory is bounded by the ring's byte cap, where measurement at the shipped 256MB default showed a peak of roughly 4x the cap, so the row now states the multiple instead of implying the cap bounds it. The re-review then found that clamping the timing phases to zero had made a standing claim false in two of these T2 docs as well: UC-6's sentinel sentence listed the timing phase breakdown among the facts reported with HAR's unavailable sentinel, and DEC-30's round-trip row said the phases sum to the total. Both now state the one exception - HAR permits -1 for the total but requires the three phases to be non-negative, so an unmeasured duration carries an unknown total beside zeroed phases - so neither doc asserts an invariant the code deliberately cannot honour. T2 synthesis is UC-6's export half plus its index row (the what) and DEC-30 plus its index row (the why) - one fact per tier, with the field mapping staying in src/api/har.rs and never copied into either. T1 deliberately unedited: architecture.html's store/API line (the control API is purely a subscriber and reader, it never mutates capture state) is still true of an export, which adds a read and no store capability; W4's removal is where that line actually moves, and the epic gate re-checks it at close. verify-doc green over both new T3 docs, the new T2 decision record and all three edited T2 docs; every relative href resolves on disk; all three edited T2 docs snapshotted before the edit and both new docs snapshotted at creation."
