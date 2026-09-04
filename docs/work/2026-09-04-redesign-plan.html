@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9a71a89f34851f0dfabf8a" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN Epic Plan (apply the design flow to every shipped screen)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN — every shipped screen, designed</h1>
+      <p>Epic plan. E-DFLOW built the design flow and deliberately shipped no UI with it. This epic runs it on all five shipped screens and executes the design&nbsp;→&nbsp;build handoff for the first time.</p>
+      <div class="meta">Epic plan · 2026-09-04 · Trawler · T3 (docs/work/) · epic/redesign · flow spec: <a href="../design-flow.html">design-flow.html</a> · rulebook: <a href="../design-rules/design-rules-index.html">design-rules-index.html</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">E-DFLOW built the design flow — a staged method, a 30-rule rulebook, a 24-component registry with <code>@use</code>/<code>@avoid</code> contracts, and a three-tier gate — and closed with an explicit non-goal: <em>"No Trawler UI re-design — a later epic uses this flow to design/ship UI."</em> <strong>This is that epic.</strong> Every screen in <code>ui/src/</code> was built by E-UIFOUND, E-UIINSPECT and E-UISETUP <em>before</em> the flow existed, so not one has a design behind it. The consequence is measurable, not theoretical: <code>Gallery.tsx</code> — a self-described throwaway — is the <strong>only</strong> file that imports the registry, so 23 of 24 components have exactly one consumer and it is the scratch screen. Meanwhile the real screens hand-roll what those components own, and because nothing forced a reuse-or-propose verdict, the duplication was invisible. This epic puts all five shipped screens through the flow and cites each build to its design, so the registry becomes the app's actual vocabulary.</p>
+
+    <div class="callout warn">
+      <strong>This epic is the first design&nbsp;→&nbsp;build handoff in the repo's history.</strong>
+      No <code>design.implements</code> citation exists on any note, ever. E-DFLOW.W9 deferred its
+      build to W11; W11's result recorded the build as <em>"Out of scope — owner's call"</em> and named
+      <em>"the build WU"</em> as still owed. Both WUs touched <strong>zero</strong> files under
+      <code>ui/src/</code> (verified: empty diffs). So gate check <code>9·design</code> and the
+      <code>{path, blob, built}</code> citation path are <strong>untested in practice</strong> — the
+      first build WU here should expect to discover their sharp edges.
+    </div>
+
+    <h2 id="evidence">What the drift actually looks like</h2>
+    <p>The token lint <strong>passes clean on every screen</strong>, so this is not a token-hygiene epic. The drift sits upstream of tokens — no Frame, no declared zoning, no per-element registry verdict.</p>
+
+    <table data-c="drift-table">
+      <thead><tr><th>Screen</th><th>Hand-rolls</th><th>Registry entry that owns it</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>BodyViewer.tsx</code></td>
+          <td><code>JsonNode</code>/<code>JsonTree</code>, <code>TextBody</code>, <code>FormBody</code>, <code>ImageBody</code>, <code>Rendered</code>, <code>ModeButton</code></td>
+          <td><code>JsonRenderer</code>+<code>SourceSurface</code>, <code>TextRenderer</code>, <code>FormRenderer</code>, <code>ImageRenderer</code>, <code>HexRenderer</code>, <code>XmlRenderer</code>, <code>CutMarker</code>, <code>SegmentedControl</code></td>
+        </tr>
+        <tr>
+          <td><code>Onboarding.tsx</code></td>
+          <td><code>ActionButton</code>, <code>ProveIt</code>, 4× raw <code>&lt;ol&gt;</code>, 2× raw <code>&lt;select&gt;</code>, 8× raw <code>&lt;button&gt;</code>, an inline StatusLine</td>
+          <td><code>Button</code>, <code>CopyText</code>, <code>StepList</code>, <code>Select</code>, <code>StatusLine</code>, <code>Notice</code></td>
+        </tr>
+        <tr>
+          <td><code>FlowDetail.tsx</code></td>
+          <td>local <code>Section</code>, <code>HeaderTable</code> (raw <code>&lt;dl&gt;</code>), close <code>×</code>, curl <code>&lt;pre&gt;</code>+copy</td>
+          <td><code>Section</code>, <code>KeyValueRow</code>, <code>IconButton</code>, <code>TextRenderer</code>, <code>CopyButton</code></td>
+        </tr>
+        <tr>
+          <td><code>FlowList.tsx</code></td>
+          <td>raw time / method / duration cells</td>
+          <td><code>TimestampText</code>, <code>MethodLabel</code>, <code>DurationText</code></td>
+        </tr>
+        <tr>
+          <td><code>ProxyCloseDialog.tsx</code></td>
+          <td>3 buttons, <code>✕</code>, raw <code>&lt;ol&gt;</code></td>
+          <td><code>Button</code>, <code>IconButton</code>, <code>StepList</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 id="defects">Three real defects the redesign fixes as a side effect</h3>
+    <div class="cards" data-c="defects">
+      <div class="card">
+        <h4>Unbounded body render</h4>
+        <p><code>BodyViewer</code> enforces only <code>TREE_MAX</code> — there is no <code>TEXT_MAX</code>, no <code>HEX_MAX</code> and no <code>CutMarker</code> anywhere in it. A capture-capped 10&nbsp;MiB text body goes straight to the DOM. Every registry renderer enforces its cap.</p>
+      </div>
+      <div class="card">
+        <h4>Two <code>StatusPill</code>s, conflicting contracts</h4>
+        <p>The registry's takes <code>status: number | null</code> and owns the tone map; its <code>@avoid</code> forbids <em>"pre-resolving tone at the call site"</em>. The legacy one <em>is</em> that violation, and is the one both screens call. It is really a copy of <code>TonedText</code> — whose own <code>@anatomy</code> cites <code>components.tsx:25</code> as its ancestor — while squatting <code>StatusPill</code>'s name. <strong>The swap changes prop shape, so it is not a rename.</strong></p>
+      </div>
+      <div class="card">
+        <h4>Statuses have no reason phrase</h4>
+        <p><code>403</code> renders as a bare <code>403</code>, never <code>"403 Forbidden"</code> in <code>title</code>/<code>aria-label</code>. A screen-reader user gets a naked number. Registry <code>StatusPill</code> supplies the phrase.</p>
+      </div>
+    </div>
+
+    <h3 id="debt">Pre-existing debt this epic closes</h3>
+    <p>Each is already scoped by a marker in the code that names this work:</p>
+    <ul data-c="debt-list">
+      <li><code>BodyViewer.tsx:112</code> — <em>"keeps its inline renderers until a later WU rewires it to the collection (E-DFLOW.W5 Q2)"</em>. <strong>This epic is that WU.</strong> It is also why <code>xml</code> currently renders as plain text and <code>XmlRenderer</code> is unreachable.</li>
+      <li><code>setup.ts:187</code> <code>TODO [UI_DEFER]</code> — the resolvers return full sentences, so <code>StatusLine</code>'s short-message contract cannot be met; <code>StepStatusView</code> needs a <code>short</code> field. The marker self-assigns: <em>"it lands with the screen that consumes StatusLine."</em></li>
+      <li><code>Gallery.tsx</code> and its <code>main.tsx</code> guard — throwaway by its own header comment, deleted once the real screens consume the registry.</li>
+    </ul>
+
+    <h3 id="gaps">Three registry gaps that block screens</h3>
+    <p>The registry has <strong>no text input, no status dot and no disclosure primitive</strong> — yet its own docstrings redirect to two of them as though they exist: <code>KeyValueRow.tsx:8</code> says <em>"editable forms (that is Field)"</em>, and <code>StatusPill.tsx:10</code> says <em>"proxy connection health — StatusDot"</em>. These block App's filter bar, App's header, and Onboarding's <code>ManualPanel</code>. W1/W2 close them before any screen run reads the registry.</p>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <div data-item="use-cases">
+      <p><strong>No UC contract changes shape.</strong> This epic re-designs and re-builds the surfaces behind three existing contracts; a user's observable capability is preserved, not extended:</p>
+      <ul>
+        <li><span class="badge id">UC-4</span> Watch live traffic in the native app — the flow list and app shell (W3/W4).</li>
+        <li><span class="badge id">UC-5</span> Inspect a captured flow — the detail panel and body viewers (W5–W8). Two contract-level <em>gains</em> land here: bodies gain the truncation statement they lack today, and <code>xml</code> becomes a real dispatch instead of falling through to text.</li>
+        <li><span class="badge id">UC-ONBOARD</span> Guided onboarding — the setup screen and quit dialog (W9/W10).</li>
+      </ul>
+      <p><span class="badge id">UC-3</span> is <strong>explicitly out of scope</strong>: the browser shell is served from the Rust binary, not <code>ui/src/</code>, and <code>web-ui.html</code> already rules that <em>"the shell's minimal chrome is deliberate; the native app (UC-4) is the designed surface."</em></p>
+      <p>At distillation, <code>docs/use-cases/web-ui.html</code> absorbs the two UC-5 gains and any wording a run changes; if no observable contract moves, that is stated rather than assumed.</p>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>After the epic, a reader who wasn't here can observe all of:</p>
+      <ul>
+        <li><strong>Five closed, archived design runs</strong> under <code>docs/work/</code>, one per screen, each <code>verify-doc</code> green with all eleven items, a rulebook pin matching the tip, and all 17 soft slugs receipted.</li>
+        <li><strong>A <code>design.implements</code> citation on every build WU's <code>cr/v3</code> note</strong> — <code>{path, blob, built}</code> — so <code>cargo xtask design-scope origin/epic/redesign HEAD</code> reports zero unaccounted surfaces. This is the first time the repo has one.</li>
+        <li><strong>Every <code>.tsx</code> under <code>ui/src/</code> accounted for</strong>: cited to a design, or declared <code>undesigned</code> with a reason (<code>main.tsx</code> is bootstrap, not a rendered surface).</li>
+        <li><strong>The registry is the app's vocabulary.</strong> Every screen imports from <code>ui/src/components/</code>; <code>ui/src/components.tsx</code> is <strong>deleted</strong>; <code>Gallery.tsx</code> and its <code>main.tsx</code> guard are <strong>deleted</strong>. No component is hand-rolled where a registry entry owns it.</li>
+        <li><strong>Three new registry entries</strong> — <code>Field</code>, <code>StatusDot</code>, <code>Disclosure</code> — each with the full tag set, and the two docstrings that pointed at phantoms now resolve.</li>
+        <li><strong>The three defects are gone</strong>: bodies state their truncation, <code>403</code> carries "Forbidden", and exactly one <code>StatusPill</code> exists.</li>
+        <li><strong><code>FlowList.test.tsx</code> exists</strong> — today it is the only screen in <code>ui/src/</code> with no adjacent test file.</li>
+        <li><strong>The e2e suite still proves UC-4, UC-5 and UC-ONBOARD</strong> on the rebuilt screens, with <code>onboarding.spec.ts</code> rewritten to the new selectors keeping its spine.</li>
+      </ul>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-item="non-goals">
+      <li><strong>No new user-facing feature.</strong> Every UC keeps its shape; this epic changes how screens are built and justified, not what the app can do.</li>
+      <li><strong>No redesign of UC-3's browser shell</strong> — it is served from Rust and its minimal chrome is a standing decision.</li>
+      <li><strong>No change to the flow spec, rulebook or gate.</strong> The substrate is an <em>input</em>, frozen per run. If a run's <code>propose</code> forces a rulebook entry that is distilled, but rewriting the method is out of scope.</li>
+      <li><strong>No reading of the archived runs.</strong> Runs #4/#6/#8 designed this same setup screen; W9 runs blind to all three, as #8 ran blind to #4 and #6.</li>
+      <li><strong>No hi-fi visual design</strong> — the draft mockup that mounts real components is the finish line.</li>
+      <li><strong>No dialog shell or checkbox component.</strong> <code>ProxyCloseDialog</code>'s modal and its "don't show again" box stay screen-local, warranted at W9's Elements stage (see <a href="#open-questions">open questions</a>).</li>
+      <li><strong>No verification that the build honoured its design.</strong> The gate answers <em>is there a design, and is it this one</em> — never whether the code obeyed it (a standing limitation of the flow, not of this epic).</li>
+    </ul>
+
+    <h2 id="shape">Shape — design WU, then build WU, per screen</h2>
+    <p>The workflow standard requires a design and its build to share one epic: the design lands closed and Tier-3-judged, then the build cites it by blob. Pairing them per screen keeps each merge's design scope to exactly one artifact.</p>
+
+    <div class="diagram" data-c="shape-diagram">
+      <pre class="mermaid">
+flowchart LR
+  W1["W1 · design<br/>3 gap components"] --> W2["W2 · build<br/>into the registry"]
+  W2 --> W3["W3 · design<br/>flow list + shell"]
+  W2 --> W5["W5 · design<br/>flow detail"]
+  W2 --> W7["W7 · design<br/>body viewer"]
+  W2 --> W9["W9 · design<br/>setup + quit dialog"]
+  W3 --> W4["W4 · build"]
+  W5 --> W6["W6 · build"]
+  W7 --> W8["W8 · build"]
+  W9 --> W10["W10 · build"]
+  W4 --> W11["W11 · epic close<br/>delete the leftovers<br/>e2e · distil"]
+  W6 --> W11
+  W8 --> W11
+  W10 --> W11
+      </pre>
+      <div class="caption">W2 unblocks all four screen runs, which then proceed independently. Design WUs commit nothing under <code>ui/src/</code>; build WUs commit no design run.</div>
+    </div>
+
+    <h2 id="wu-summaries">WU summaries</h2>
+    <p>Full WU plans live in each WU's own plan doc. Order: close the vocabulary gaps first so every screen run records clean <code>reuse</code> verdicts, then the screens cheapest-risk-first, with the body viewer and setup screen — the two largest — last.</p>
+    <div data-item="wu-summaries">
+
+      <div data-wu="E-REDESIGN.W1">
+        <h3>W1 · Design the three gap components</h3>
+        <p data-item="wu-summary">Design <code>Field</code> (the app's one text input), <code>StatusDot</code> (tri-state connection indicator that doubles as the setup entry) and <code>Disclosure</code> (collapse primitive) as component design files, each carrying <code>@tier</code>, <code>@use</code>, <code>@avoid</code>, <code>@states</code>, <code>@madeof</code>. <code>StatusDot</code>'s <code>broken</code>/<code>checking</code>/<code>connected</code> semantics are its own — they do not reduce to <code>StatusTone</code>.</p>
+        <p data-item="wu-maps-to">Prerequisite for UC-4 (App's filter bar and header) and UC-ONBOARD (Onboarding's <code>ManualPanel</code>); closes the phantom redirects in <code>KeyValueRow</code> and <code>StatusPill</code>.</p>
+        <p data-item="wu-expected">Three closed component designs, Tier-3 judged. No <code>ui/src/</code> change.</p>
+        <p data-item="wu-deps">none</p>
+      </div>
+
+      <div data-wu="E-REDESIGN.W2">
+        <h3>W2 · Build them into the registry</h3>
+        <p data-item="wu-summary">Build the three components under <code>ui/src/components/</code>, export them from <code>index.ts</code>, and repair the two docstrings that redirect to them. Each is a new surface, so each may only be <em>cited</em> to its W1 design — a reason is not accepted.</p>
+        <p data-item="wu-maps-to">W1's designs, through the DEC-25 handoff.</p>
+        <p data-item="wu-expected">A 27-entry registry emitted by <code>scripts/design-registry.mjs</code>; the four screen runs can now resolve every element to <code>reuse</code> or a genuine <code>propose</code>.</p>
+        <p data-item="wu-deps">W1</p>
+      </div>
+
+      <div data-wu="E-REDESIGN.W3">
+        <h3>W3 · Design run — flow list + app shell</h3>
+        <p data-item="wu-summary">One run covering <code>FlowList</code>, the <code>App</code> header/filter bar and <code>Layout</code> — they are one screen to a user and share the shell's zoning. The Frame must state what the list is for (log correlation, live watching) since that is what decides absolute time and column priority.</p>
+        <p data-item="wu-maps-to">UC-4.</p>
+        <p data-item="wu-expected">A closed, archived run whose Elements stage resolves all six row cells and the four filter fields to registry entries.</p>
+        <p data-item="wu-deps">W2</p>
+      </div>
+
+      <div data-wu="E-REDESIGN.W4">
+        <h3>W4 · Build the flow list + shell</h3>
+        <p data-item="wu-summary">Rewire the six row cells to <code>TimestampText</code>/<code>MethodLabel</code>/<code>DurationText</code>/<code>StatusPill</code>, the empty state to <code>Notice</code>, and the filter bar to <code>Field</code>. <strong>Delete legacy <code>StatusPill</code> and <code>TONE_CLASS</code></strong>, migrate both call sites off the resolved-<code>tone</code> prop shape, and drop the dead <code>FlowRow.tone</code>/<code>status</code> fields from <code>flow.ts</code>. Adds <code>FlowList.test.tsx</code>.</p>
+        <p data-item="wu-maps-to">W3's design; UC-4.</p>
+        <p data-item="wu-expected">The list renders from registry components; statuses carry their reason phrase; the first <code>design.implements</code> citation in the repo passes gate check <code>9·design</code>.</p>
+        <p data-item="wu-deps">W3</p>
+      </div>
+
+      <div data-wu="E-REDESIGN.W5">
+        <h3>W5 · Design run — flow detail / inspector</h3>
+        <p data-item="wu-summary">Run the flow on <code>FlowDetail</code>: the identity bar, the request/response legs, the header tables and the copy-as-curl affordance. The body pane is W7's screen — this run declares the seam, it does not design through it.</p>
+        <p data-item="wu-maps-to">UC-5 (headers, timing, versions, copy-as-curl).</p>
+        <p data-item="wu-expected">A closed run; the local <code>Section</code> and <code>HeaderTable</code> resolve to <code>reuse</code>, and the per-header click-to-copy affordance the raw <code>&lt;dl&gt;</code> loses today is stated as a decision either way.</p>
+        <p data-item="wu-deps">W2</p>
+      </div>
+
+      <div data-wu="E-REDESIGN.W6">
+        <h3>W6 · Build the flow detail</h3>
+        <p data-item="wu-summary">Replace the local <code>Section</code>/<code>HeaderTable</code> with registry <code>Section</code>/<code>KeyValueRow</code>, the close glyph with <code>IconButton</code>, the curl block with <code>TextRenderer</code>+<code>CopyButton</code>, the "none"/"loading…" sentences with <code>Notice</code>, and the raw verb with <code>MethodLabel</code>. Removes the second inline copy of the duration formatting.</p>
+        <p data-item="wu-maps-to">W5's design; UC-5.</p>
+        <p data-item="wu-expected">The detail panel renders from registry components; the sticky "copied" bug (it never reverts today) is gone with <code>CopyButton</code>'s timed confirm.</p>
+        <p data-item="wu-deps">W5</p>
+      </div>
+
+      <div data-wu="E-REDESIGN.W7">
+        <h3>W7 · Design run — body viewer</h3>
+        <p data-item="wu-summary">The largest run: nine registry members, six body kinds, a raw/decoded toggle and a leg switch. The Frame must state that a body is <em>wire evidence</em> — which is what forces copy-exactness and a stated truncation rather than a silent cap.</p>
+        <p data-item="wu-maps-to">UC-5 (type-dispatched body viewers, raw/decoded toggle, copy/save body).</p>
+        <p data-item="wu-expected">A closed run resolving all six kinds to the family members, the mode switches to <code>SegmentedControl</code>, and the truncation statement to <code>CutMarker</code>.</p>
+        <p data-item="wu-deps">W2</p>
+      </div>
+
+      <div data-wu="E-REDESIGN.W8">
+        <h3>W8 · Build the body viewer</h3>
+        <p data-item="wu-summary">Wire all nine body-family members, making <code>XmlRenderer</code> reachable for the first time and replacing the hand-built JSON tree with <code>JsonRenderer</code> (its <code>@avoid</code> names the current lossy form as the rejected design, DEC-01). Restore <code>TEXT_MAX</code>/<code>HEX_MAX</code> with <code>CutMarker</code>, and swap <code>ModeButton</code> for <code>SegmentedControl</code> plus <code>CopyButton</code>/<code>IconButton</code>. Closes the <code>E-DFLOW.W5 Q2</code> marker.</p>
+        <p data-item="wu-maps-to">W7's design; UC-5.</p>
+        <p data-item="wu-expected">Bodies render through the family, state their truncation, and copy exactly; <code>xml</code> gets a real surface.</p>
+        <p data-item="wu-deps">W7</p>
+      </div>
+
+      <div data-wu="E-REDESIGN.W9">
+        <h3>W9 · Design run — setup + quit dialog</h3>
+        <p data-item="wu-summary">Run the flow on <code>Onboarding</code> and <code>ProxyCloseDialog</code>, <strong>blind</strong> — to runs #4/#6/#8 and to W11's coverage map alike. The Frame's <em>Not given</em> line is load-bearing here: the app cannot observe per-step completion, which is what forbids a tick and forces a probed verdict.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD.</p>
+        <p data-item="wu-expected">A closed run resolving the four <code>&lt;ol&gt;</code>s to <code>StepList</code>, both <code>&lt;select&gt;</code>s to <code>Select</code>, the status line to <code>StatusLine</code>, and <code>ManualPanel</code> to <code>Disclosure</code>; the dialog's modal shell and checkbox carry a stated build-local warrant.</p>
+        <p data-item="wu-deps">W2</p>
+      </div>
+
+      <div data-wu="E-REDESIGN.W10">
+        <h3>W10 · Build the setup screen + quit dialog</h3>
+        <p data-item="wu-summary">Adopt <code>StepList</code>/<code>Select</code>/<code>StatusLine</code>/<code>Button</code>/<code>Notice</code>/<code>CopyText</code>, delete the third copy of the tone map, and give the two unguarded <code>navigator.clipboard</code> calls a real confirm and error state. <strong>Adds <code>StepStatusView.short</code></strong> in <code>setup.ts</code>, closing the <code>[UI_DEFER]</code> marker that assigned itself to this WU. Rewrites <code>onboarding.spec.ts</code> to the new selectors, keeping its spine.</p>
+        <p data-item="wu-maps-to">W9's design; UC-ONBOARD.</p>
+        <p data-item="wu-expected">The setup screen renders from registry components — the third design of this screen and the first one built.</p>
+        <p data-item="wu-deps">W9</p>
+      </div>
+
+      <div data-wu="E-REDESIGN.W11">
+        <h3>W11 · Epic close</h3>
+        <p data-item="wu-summary">Delete <code>Gallery.tsx</code> and its <code>main.tsx</code> guard, delete <code>ui/src/components.tsx</code>, and account for <code>Layout.tsx</code>/<code>main.tsx</code>. Run the epic e2e, distil to T2, archive the plan and reports.</p>
+        <p data-item="wu-maps-to">The epic's expected result; DoD-E.</p>
+        <p data-item="wu-expected">No throwaway and no legacy kit in the tree; <code>design-scope</code> reports zero unaccounted surfaces against <code>main</code>; every component design the epic added has a roster entry.</p>
+        <p data-item="wu-deps">W4, W6, W8, W10</p>
+      </div>
+
+    </div>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <p>The existing specs assert on <code>data-testid</code> hooks rather than styling, so a redesign that preserves the testids keeps them green — which is exactly why they cannot be the epic's proof on their own. The epic e2e proves the <em>rebuilt</em> screens still satisfy their contracts:</p>
+      <table data-c="e2e-table">
+        <thead><tr><th>Flow</th><th>Asserts</th><th>Spec</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>UC-4 — watch</td>
+            <td>Proxy a request; the row appears live with time, toned method, host, path, status pill carrying its reason phrase, and duration; a filter narrows the list.</td>
+            <td><code>ui/e2e/specs/flows.spec.ts</code> (extended)</td>
+          </tr>
+          <tr>
+            <td>UC-5 — inspect</td>
+            <td>Open a row; headers render as key/value rows; copy-as-curl confirms <em>and reverts</em>; a JSON body renders copy-exact; a brotli body decodes; an image dispatches; <strong>an XML body renders as XML</strong> and <strong>an over-cap body states its truncation</strong> — the two new contracts.</td>
+            <td><code>ui/e2e/specs/flows.spec.ts</code> (extended)</td>
+          </tr>
+          <tr>
+            <td>UC-ONBOARD — first capture</td>
+            <td>Fresh launch shows setup; per-step probed verdicts render through <code>StatusLine</code>; manual steps open where an action failed; the first decrypted flow reveals the list.</td>
+            <td><code>ui/e2e/specs/onboarding.spec.ts</code> (rewritten to new selectors in W10, spine kept)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Waiver intent — design WUs (W1, W3, W5, W7, W9).</strong> Integration and e2e are waived on the W9 precedent's wording: the WU <em>"touches no product code or screens"</em>. Their real checks are <code>verify-doc</code> green at close, <code>design-scope</code> reporting the artifact, and a Tier-3 PASS. Build WUs carry integration tests for the screen contract, and every commit carries unit tests. Clipboard remains unreliable under WebDriver, so curl/copy payloads stay asserted as DOM text — the standing recorded waiver.</p>
+    </div>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <table data-c="distil-table">
+        <thead><tr><th>Doc</th><th>Tier</th><th>What it absorbs</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>docs/use-cases/web-ui.html</code></td>
+            <td>T2</td>
+            <td>UC-5's two gains — bodies state their truncation, <code>xml</code> is a real dispatch. UC-4/UC-ONBOARD wording only if a run moves an observable contract; if nothing moves, that is stated.</td>
+          </tr>
+          <tr>
+            <td><code>docs/design-rules/design-rules-index.html</code></td>
+            <td>T2</td>
+            <td>Only if a run's <code>propose</code> forces a new rule or vocabulary member. Expected for <code>StatusDot</code>'s tri-state, which is not a <code>StatusTone</code>.</td>
+          </tr>
+          <tr>
+            <td>a new decision record</td>
+            <td>T2</td>
+            <td>Why the app's one text input and one state dot are <em>registry</em> entries rather than screen-local — the reasoning that closes the phantom-redirect class of bug. Also the natural home for what the first real <code>design.implements</code> citation taught.</td>
+          </tr>
+          <tr>
+            <td><code>docs/decisions/decisions-index.html</code></td>
+            <td>T2</td>
+            <td>The row for any record added, so it is reachable index-first.</td>
+          </tr>
+          <tr>
+            <td>T1</td>
+            <td>T1</td>
+            <td><strong>Not expected.</strong> The flow, rulebook and gate are inputs here. If a screen run proves the <em>method</em> wrong that is a finding for a later epic, not a T1 edit inside this one.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Five design runs, eleven WU plans and eleven result reports are T3: distilled, then archived out of git per DEC-3 with lineage.</p>
+    </div>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions">
+      <table data-c="oq-table">
+        <thead><tr><th>Question</th><th>Proposed default</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong><code>Disclosure</code>'s tier.</strong> <code>Section</code>'s <code>@avoid</code> says "a Section that needs to collapse (put the disclosure inside the slot instead)", implying a sibling primitive rather than a variant.</td>
+            <td>T1, slot-based, no business logic — the host owns what is inside and whether it starts open.</td>
+          </tr>
+          <tr>
+            <td><strong>The dialog shell and checkbox.</strong> <code>ProxyCloseDialog</code> hand-rolls a modal, a backdrop and a "don't show again" box; none has a registry owner.</td>
+            <td>Leave both screen-local as T4 composition with a stated warrant at W9's Elements stage. One dialog does not establish a vocabulary; widening W1 on a sample of one is the more expensive mistake.</td>
+          </tr>
+          <tr>
+            <td><strong>Per-header click-to-copy.</strong> Registry <code>KeyValueRow</code> makes every value a <code>CopyText</code>; today's raw <code>&lt;dl&gt;</code> has no such affordance. Adopting it silently adds a user-facing capability.</td>
+            <td>Adopt it — it is the component's contract — and record it in W5's Interaction table so the gain is a decision, not a side effect.</td>
+          </tr>
+          <tr>
+            <td><strong>W11's coverage map and the DEC-13 revert question</strong> (32 assertions classified; where proxy revert belongs).</td>
+            <td>Deferred by decision — W9 runs blind. Both are recorded as epic follow-ups at close, not consumed as inputs.</td>
+          </tr>
+          <tr>
+            <td><strong>Does the first <code>design.implements</code> citation actually pass?</strong> The path is untested; W4 is where we find out.</td>
+            <td>Treat W4 as the probe. Run <code>design-scope</code> before writing the note, and if the gate refuses something the flow spec claims is legal, that is a finding for the gate — captured, not worked around.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="verification">Verification</h2>
+    <pre data-c="verify"><code>cargo xtask verify-doc docs/work/&lt;the run&gt;.html    # green at close, before archiving
+cargo xtask design-scope origin/epic/redesign HEAD # what the gate will demand
+cargo xtask ui specimens                           # the mockup's component bundle
+cd ui &amp;&amp; pnpm test &amp;&amp; pnpm exec eslint src         # unit + the vocabulary lint
+cargo test                                         # core suite
+cargo xtask ui e2e                                 # UC-4 / UC-5 / UC-ONBOARD
+cargo xtask verify-dod wu &lt;tip&gt; --target epic/redesign</code></pre>
+    <p>Per screen, also run the app and look at it: <code>cargo xtask ui dev</code>.</p>
+    <div class="callout">
+      <strong><code>mr</code> is manual review — never run it.</strong> Stage, print the full command, stop.
+      The <code>mr/v1</code> signature is signed <strong>last</strong>, after <code>test/v2</code>,
+      <code>doc/v1</code> and a diff-bound <code>cr/v3</code> PASS are already on the tip.
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
