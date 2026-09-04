@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc e6240081104e9162ae92fea0737b83816ff985018e13e47f4ca00ca605d9c0eb # shrinks to flows = [Flow { id: FlowId(f730ba21-0837-45ea-89be-d313dea4c5e2), started_at: SystemTime { tv_sec: 1788513320, tv_nsec: 364373000 }, request: RequestRec { method: "GET", uri: "http://x/path", version: "HTTP/1.1", headers: [], body: Captured { bytes: b"", size: 0 } }, response: Some(ResponseRec { status: 100, version: "HTTP/1.1", headers: [], body: Captured { bytes: b"", size: 0 } }), duration_ms: None, host: Some("x") }]

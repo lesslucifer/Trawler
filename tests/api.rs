@@ -8,9 +8,10 @@ use std::time::Duration;
 use axum::body::{to_bytes, Body};
 use axum::http::{HeaderMap, Request, StatusCode};
 use axum::Router;
-use serde_json::Value;
+use serde_json::{json, Value};
 use tokio_stream::StreamExt;
 use tower::ServiceExt;
+use trawler::flow::{BodyRec, NotCapturedReason};
 use trawler::store::Store;
 
 use common::{brotli, captured, gzip, FlowBuilder};
@@ -375,4 +376,178 @@ async fn a_cursor_the_ring_evicted_ends_the_walk_rather_than_restarting_it() {
     assert_eq!(status, StatusCode::OK);
     assert!(page["flows"].as_array().unwrap().is_empty());
     assert!(page["next_cursor"].is_null());
+}
+
+fn har_fixture_store() -> Arc<Store> {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    store.insert(
+        FlowBuilder::new()
+            .method("GET")
+            .uri("http://api.example.com/users?page=2&sort=name")
+            .req_header("Accept", "application/json")
+            .status(200)
+            .resp_header("Content-Type", "application/json")
+            .resp_header("Set-Cookie", "sid=xyz; Path=/")
+            .resp_body(captured(br#"{"users":[]}"#))
+            .build(),
+    );
+    store.insert(
+        FlowBuilder::new()
+            .method("POST")
+            .uri("http://cdn.other.com/upload")
+            .req_header("Content-Type", "image/png")
+            .req_body(captured(&[0x89, 0x50, 0x4e, 0x47]))
+            .status(201)
+            .resp_header("Location", "http://cdn.other.com/upload/1")
+            .build(),
+    );
+    store.insert(
+        FlowBuilder::new()
+            .method("GET")
+            .uri("http://events.example.com/stream")
+            .status(200)
+            .resp_header("Content-Type", "text/event-stream")
+            .resp_body(BodyRec::Streaming { content_type: "text/event-stream".into() })
+            .build(),
+    );
+    store.insert(
+        FlowBuilder::new()
+            .method("GET")
+            .uri("http://big.example.com/blob")
+            .status(200)
+            .resp_header("Content-Type", "application/octet-stream")
+            .resp_body(BodyRec::NotCaptured {
+                reason: NotCapturedReason::TooLarge { actual: 9_000_000 },
+            })
+            .build(),
+    );
+    store
+}
+
+#[tokio::test]
+async fn export_serves_a_har_1_2_document_of_the_capture() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    store.insert(
+        FlowBuilder::new()
+            .method("POST")
+            .uri("http://api.example.com/users?page=2")
+            .req_header("Content-Type", "application/json")
+            .req_header("Cookie", "sid=abc")
+            .req_body(captured(br#"{"name":"ada"}"#))
+            .status(201)
+            .resp_header("Content-Type", "application/json")
+            .resp_body(captured(br#"{"id":1}"#))
+            .build(),
+    );
+    let r = router_with(store);
+
+    let (status, headers, body) = get(&r, "/flows/export").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(headers["content-type"], "application/json");
+    assert!(headers["content-disposition"].to_str().unwrap().contains(".har"));
+
+    let doc: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(doc["log"]["version"], "1.2");
+    assert_eq!(doc["log"]["creator"]["name"], "Trawler");
+
+    let entry = &doc["log"]["entries"][0];
+    assert!(entry["startedDateTime"].as_str().unwrap().contains('T'));
+    assert!(entry["time"].as_i64().unwrap() >= 0);
+    assert_eq!(entry["timings"]["wait"], entry["time"]);
+    assert_eq!(entry["request"]["method"], "POST");
+    assert_eq!(entry["request"]["url"], "http://api.example.com/users?page=2");
+    assert_eq!(entry["request"]["httpVersion"], "HTTP/1.1");
+    assert_eq!(entry["request"]["queryString"], json!([{"name": "page", "value": "2"}]));
+    assert_eq!(entry["request"]["cookies"], json!([{"name": "sid", "value": "abc"}]));
+    assert_eq!(entry["request"]["postData"]["text"], r#"{"name":"ada"}"#);
+    assert_eq!(entry["response"]["status"], 201);
+    assert_eq!(entry["response"]["statusText"], "Created");
+    assert_eq!(entry["response"]["httpVersion"], "HTTP/1.1");
+    assert_eq!(entry["response"]["content"]["text"], r#"{"id":1}"#);
+    assert_eq!(entry["response"]["content"]["size"], 8);
+    assert_eq!(entry["cache"], json!({}));
+}
+
+// Expected result 3: the export and the listing must select the same set, which
+// holds by construction (one shared filter) and is asserted endpoint-to-endpoint.
+#[tokio::test]
+async fn export_and_listing_select_the_same_flows() {
+    let r = router_with(har_fixture_store());
+
+    for query in ["", "host=example", "method=get", "status=201", "content_type=json", "q=upload"] {
+        let (_, listed) = json(&r, &format!("/flows?{query}")).await;
+        let listed_urls: Vec<&str> =
+            listed.as_array().unwrap().iter().map(|row| row["uri"].as_str().unwrap()).collect();
+
+        let (_, exported) = json(&r, &format!("/flows/export?{query}")).await;
+        let exported_urls: Vec<&str> = exported["log"]["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|entry| entry["request"]["url"].as_str().unwrap())
+            .collect();
+
+        assert_eq!(exported_urls, listed_urls, "export must select what `{query}` lists");
+    }
+}
+
+#[tokio::test]
+async fn export_of_an_empty_capture_is_a_valid_empty_har() {
+    let r = router_with(Arc::new(Store::new(1_000_000, 64)));
+    let (status, doc) = json(&r, "/flows/export").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(doc["log"]["version"], "1.2");
+    assert_eq!(doc["log"]["entries"].as_array().unwrap().len(), 0);
+
+    let (_, filtered) = json(&r, "/flows/export?host=nothing").await;
+    assert_eq!(filtered["log"]["entries"].as_array().unwrap().len(), 0);
+}
+
+// The contract a HAR reader depends on: a body Trawler never captured is marked
+// as such, never rendered as an empty one.
+#[tokio::test]
+async fn export_marks_uncaptured_bodies_rather_than_reporting_them_empty() {
+    let r = router_with(har_fixture_store());
+    let (_, doc) = json(&r, "/flows/export").await;
+    let content_for = |url: &str| {
+        doc["log"]["entries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|e| e["request"]["url"] == url)
+            .unwrap_or_else(|| panic!("no entry for {url}"))["response"]["content"]
+            .clone()
+    };
+
+    let streaming = content_for("http://events.example.com/stream");
+    assert_eq!(streaming["size"], -1);
+    assert!(streaming.get("text").is_none());
+    assert!(streaming["comment"].as_str().unwrap().contains("streaming"));
+
+    let too_large = content_for("http://big.example.com/blob");
+    assert_eq!(too_large["size"], 9_000_000);
+    assert!(too_large.get("text").is_none());
+    assert!(too_large["comment"].as_str().unwrap().contains("too_large"));
+
+    let empty = content_for("http://cdn.other.com/upload");
+    assert_eq!(empty["size"], 0);
+    assert!(empty.get("text").is_none());
+    assert!(empty.get("comment").is_none(), "an empty body has no reason to give");
+}
+
+// The WU obligation that a new wire contract is snapshot-locked: a later change
+// to the projection surfaces as a reviewable diff rather than passing silently.
+// The two fields that cannot be deterministic — the capture timestamp and the
+// crate version in `creator` — are normalised first, per the testing contract.
+#[tokio::test]
+async fn the_har_document_shape_is_locked() {
+    let r = router_with(har_fixture_store());
+    let (_, mut doc) = json(&r, "/flows/export").await;
+
+    doc["log"]["creator"]["version"] = Value::String("<version>".into());
+    for entry in doc["log"]["entries"].as_array_mut().unwrap() {
+        entry["startedDateTime"] = Value::String("<started>".into());
+    }
+
+    insta::assert_json_snapshot!(doc);
 }
