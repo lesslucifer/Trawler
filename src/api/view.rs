@@ -68,6 +68,7 @@ impl From<&BodyRec> for BodyView {
 #[derive(Serialize)]
 pub struct FlowView {
     pub id: String,
+    pub source: &'static str,
     pub started_at: String,
     pub duration_ms: Option<u64>,
     pub method: String,
@@ -85,6 +86,7 @@ impl From<&Flow> for FlowView {
     fn from(flow: &Flow) -> Self {
         Self {
             id: flow.id.to_string(),
+            source: flow.source.as_str(),
             started_at: rfc3339(flow.started_at),
             duration_ms: flow.duration_ms,
             method: flow.request.method.clone(),
@@ -109,6 +111,7 @@ impl From<&Flow> for FlowView {
 #[derive(Serialize)]
 pub struct FlowSummary {
     pub id: String,
+    pub source: &'static str,
     pub started_at: String,
     pub duration_ms: Option<u64>,
     pub method: String,
@@ -122,6 +125,7 @@ impl From<&Flow> for FlowSummary {
     fn from(flow: &Flow) -> Self {
         Self {
             id: flow.id.to_string(),
+            source: flow.source.as_str(),
             started_at: rfc3339(flow.started_at),
             duration_ms: flow.duration_ms,
             method: flow.request.method.clone(),
@@ -253,6 +257,18 @@ mod tests {
         assert_eq!(v["response_http_version"], serde_json::Value::Null);
         assert_eq!(v["response_body"], serde_json::Value::Null);
         assert_eq!(v["response_headers"], json!([]));
+    }
+
+    // A client that filters on a field it cannot see in the rows it gets back
+    // has to re-fetch to confirm, so the mark is on both projections.
+    #[test]
+    fn both_projections_carry_the_provenance_mark() {
+        let captured_flow = FlowBuilder::new().status(200).build();
+        let imported = FlowBuilder::new().status(200).build().imported();
+        for (flow, expected) in [(&captured_flow, "captured"), (&imported, "imported")] {
+            assert_eq!(serde_json::to_value(FlowView::from(flow)).unwrap()["source"], expected);
+            assert_eq!(serde_json::to_value(FlowSummary::from(flow)).unwrap()["source"], expected);
+        }
     }
 
     #[test]

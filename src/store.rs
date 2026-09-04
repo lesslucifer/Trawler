@@ -5,7 +5,7 @@ use std::sync::Mutex;
 use tokio::sync::broadcast;
 
 use crate::event::FlowEvent;
-use crate::flow::{Flow, FlowId, ResponseRec};
+use crate::flow::{Flow, FlowId, FlowSource, ResponseRec};
 
 /// Canonical owner of live flows. A bounded ring buffer weighted by retained
 /// body bytes, fronted by a broadcast bus so every interface can live-tail
@@ -72,6 +72,7 @@ pub struct FlowFilter {
     pub status: Option<u16>,
     pub content_type: Option<String>,
     pub q: Option<String>,
+    pub source: Option<FlowSource>,
 }
 
 impl FlowFilter {
@@ -104,6 +105,11 @@ impl FlowFilter {
                 return false;
             }
         }
+        if let Some(source) = self.source {
+            if flow.source != source {
+                return false;
+            }
+        }
         if let Some(q) = &self.q {
             if !flow.request.uri.to_ascii_lowercase().contains(&q.to_ascii_lowercase()) {
                 return false;
@@ -126,6 +132,12 @@ impl Store {
             connections: AtomicU64::new(0),
             tx,
         }
+    }
+
+    /// The ring's byte cap — the honest ceiling on how much capture the store can
+    /// hold, and so on how large a document the import route accepts.
+    pub fn max_bytes(&self) -> usize {
+        self.inner.lock().expect("store lock").max_bytes
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<FlowEvent> {
@@ -175,6 +187,43 @@ impl Store {
         let _ =
             self.tx.send(FlowEvent::ResponseCaptured { flow_id: id, res: event_res, duration_ms });
         self.announce_evictions(evicted);
+    }
+
+    /// A whole batch of flows from outside the proxy, landed as one ring
+    /// operation. Batched rather than looped over `insert` so a concurrent
+    /// capture cannot interleave into the middle of the batch — the imported
+    /// flows stay a contiguous slice of the ring, which is what makes an
+    /// imported capture's order the order the file had.
+    pub fn import(&self, flows: Vec<Flow>) -> usize {
+        let mut announce = Vec::with_capacity(flows.len());
+        let count = flows.len();
+        let evicted = {
+            let mut ring = self.inner.lock().expect("store lock");
+            for flow in flows {
+                announce.push((
+                    flow.id,
+                    flow.request.clone(),
+                    flow.response.clone(),
+                    flow.duration_ms,
+                ));
+                ring.total_bytes += flow.retained_bytes();
+                ring.order.push_back(flow.id);
+                ring.flows.insert(flow.id, flow);
+            }
+            ring.evict()
+        };
+        for (flow_id, req, res, duration_ms) in announce {
+            let _ = self.tx.send(FlowEvent::RequestCaptured { flow_id, req });
+            if let Some(res) = res {
+                // The event's duration is not optional, so an imported flow
+                // whose file carried no measurement reports the same `0` the
+                // event has always used for "nothing to say".
+                let duration_ms = duration_ms.unwrap_or(0);
+                let _ = self.tx.send(FlowEvent::ResponseCaptured { flow_id, res, duration_ms });
+            }
+        }
+        self.announce_evictions(evicted);
+        count
     }
 
     pub fn get(&self, id: FlowId) -> Option<Flow> {
@@ -238,7 +287,7 @@ impl Store {
 mod tests {
     use super::*;
     use crate::event::FlowEvent;
-    use crate::flow::{BodyRec, Flow, FlowId, ResponseRec};
+    use crate::flow::{BodyRec, Flow, FlowId, FlowSource, ResponseRec};
     use crate::test_support::{captured, FlowBuilder};
 
     fn store() -> Store {
@@ -266,6 +315,103 @@ mod tests {
         s.insert(flow);
         assert!(s.get(id).is_some());
         assert!(s.get(FlowId::new()).is_none());
+    }
+
+    #[test]
+    fn import_lands_a_batch_in_the_order_it_was_given() {
+        let s = store();
+        s.insert(FlowBuilder::new().uri("http://captured/").build());
+        s.import(
+            ["http://first/", "http://second/"]
+                .iter()
+                .map(|u| FlowBuilder::new().uri(u).build().imported())
+                .collect(),
+        );
+        assert_eq!(
+            uris(&s.list(&FlowFilter::default())),
+            vec!["http://second/", "http://first/", "http://captured/"]
+        );
+    }
+
+    #[test]
+    fn import_reports_what_it_took_and_weighs_what_it_holds() {
+        let s = store();
+        let flows: Vec<Flow> = [b"12345".as_slice(), b"abc".as_slice()]
+            .iter()
+            .map(|b| FlowBuilder::new().req_body(captured(b)).build().imported())
+            .collect();
+        assert_eq!(s.import(flows), 2);
+        assert_eq!(s.total_bytes(), 8);
+        assert_eq!(s.import(Vec::new()), 0);
+    }
+
+    #[test]
+    fn import_evicts_under_the_cap_like_any_insert() {
+        let s = Store::new(10, 64);
+        s.import(
+            (0..4)
+                .map(|_| FlowBuilder::new().req_body(captured(&[0u8; 6])).build().imported())
+                .collect(),
+        );
+        assert!(s.total_bytes() <= 10 || s.len() == 1, "held {} bytes", s.total_bytes());
+        assert!(s.len() < 4, "the cap evicted nothing");
+    }
+
+    #[test]
+    fn import_announces_each_flow_and_only_the_responses_that_exist() {
+        let s = store();
+        let mut rx = s.subscribe();
+        let with_response = FlowBuilder::new().uri("http://a/").status(204).build().imported();
+        let mut request_only = FlowBuilder::new().uri("http://b/").build().imported();
+        request_only.duration_ms = None;
+        s.import(vec![with_response, request_only]);
+
+        let mut seen = Vec::new();
+        while let Ok(event) = rx.try_recv() {
+            seen.push(match event {
+                FlowEvent::RequestCaptured { req, .. } => format!("request {}", req.uri),
+                FlowEvent::ResponseCaptured { res, duration_ms, .. } => {
+                    format!("response {} {duration_ms}", res.status)
+                }
+                other => format!("unexpected {other:?}"),
+            });
+        }
+        assert_eq!(
+            seen,
+            vec!["request http://a/", "response 204 1", "request http://b/"],
+            "a request-only flow announces no response"
+        );
+    }
+
+    #[test]
+    fn the_source_filter_selects_one_provenance_and_composes_with_the_rest() {
+        let s = store();
+        s.insert(FlowBuilder::new().uri("http://live/").method("GET").build());
+        s.import(vec![
+            FlowBuilder::new().uri("http://file/").method("GET").build().imported(),
+            FlowBuilder::new().uri("http://file/post").method("POST").build().imported(),
+        ]);
+
+        let by_source = |source| {
+            uris(&s.list(&FlowFilter { source: Some(source), ..FlowFilter::default() }))
+                .iter()
+                .map(|u| (*u).to_owned())
+                .collect::<Vec<String>>()
+        };
+        assert_eq!(by_source(FlowSource::Captured), vec!["http://live/"]);
+        assert_eq!(by_source(FlowSource::Imported), vec!["http://file/post", "http://file/"]);
+
+        let composed = s.list(&FlowFilter {
+            source: Some(FlowSource::Imported),
+            method: Some("post".into()),
+            ..FlowFilter::default()
+        });
+        assert_eq!(uris(&composed), vec!["http://file/post"]);
+    }
+
+    #[test]
+    fn max_bytes_reports_the_cap_it_was_built_with() {
+        assert_eq!(Store::new(4096, 8).max_bytes(), 4096);
     }
 
     #[test]
@@ -501,11 +647,26 @@ mod tests {
 
     proptest::proptest! {
         #[test]
-        fn ring_accounting(sizes in proptest::collection::vec(0usize..40, 0..30), max in 1usize..80) {
+        fn ring_accounting(
+            sizes in proptest::collection::vec(0usize..40, 0..30),
+            max in 1usize..80,
+            // Imports enter the ring by their own path, so the byte invariant
+            // covers that path here rather than in a second test beside it.
+            batches in proptest::collection::vec(proptest::collection::vec(0usize..40, 0..4), 0..6),
+        ) {
             let s = Store::new(max, 256);
+            let body_of = |sz: usize| if sz == 0 { BodyRec::Empty } else { captured(&vec![0u8; sz]) };
+            let mut batches = batches.into_iter();
             for sz in &sizes {
-                let body = if *sz == 0 { BodyRec::Empty } else { captured(&vec![0u8; *sz]) };
-                s.insert(FlowBuilder::new().req_body(body).build());
+                s.insert(FlowBuilder::new().req_body(body_of(*sz)).build());
+                if let Some(batch) = batches.next() {
+                    s.import(
+                        batch
+                            .into_iter()
+                            .map(|sz| FlowBuilder::new().req_body(body_of(sz)).build().imported())
+                            .collect(),
+                    );
+                }
             }
             let held: usize = s.list(&FlowFilter::default()).iter().map(super::super::flow::Flow::retained_bytes).sum();
             proptest::prop_assert_eq!(held, s.total_bytes());

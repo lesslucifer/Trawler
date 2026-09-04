@@ -24,6 +24,32 @@ impl std::fmt::Display for FlowId {
     }
 }
 
+/// Where a flow came from. Until HAR import every flow was captured by the
+/// proxy, so nothing recorded the fact; now the ring holds flows the proxy never
+/// saw and a user must be able to tell them apart and select them separately.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FlowSource {
+    Captured,
+    Imported,
+}
+
+impl FlowSource {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            FlowSource::Captured => "captured",
+            FlowSource::Imported => "imported",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "captured" => Some(FlowSource::Captured),
+            "imported" => Some(FlowSource::Imported),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Header {
     pub name: String,
@@ -101,6 +127,7 @@ pub struct Flow {
     pub request: RequestRec,
     pub response: Option<ResponseRec>,
     pub duration_ms: Option<u64>,
+    pub source: FlowSource,
     host: Option<String>,
 }
 
@@ -117,8 +144,16 @@ impl Flow {
             request,
             response: None,
             duration_ms: None,
+            source: FlowSource::Captured,
             host,
         }
+    }
+
+    /// The same flow, marked as having arrived from a file rather than the wire.
+    #[must_use]
+    pub fn imported(mut self) -> Self {
+        self.source = FlowSource::Imported;
+        self
     }
 
     pub fn retained_bytes(&self) -> usize {
@@ -194,6 +229,22 @@ mod tests {
         assert!(host("http://[::1]:8080/").unwrap().contains("::1"));
         assert_eq!(host("/only/path"), None);
         assert_eq!(host("not a uri"), None);
+    }
+
+    #[test]
+    fn a_captured_flow_is_the_default_and_import_is_the_only_other_mark() {
+        assert_eq!(FlowBuilder::new().build().source, FlowSource::Captured);
+        assert_eq!(FlowBuilder::new().build().imported().source, FlowSource::Imported);
+    }
+
+    #[test]
+    fn source_tokens_round_trip_through_their_wire_spelling() {
+        for source in [FlowSource::Captured, FlowSource::Imported] {
+            assert_eq!(FlowSource::parse(source.as_str()), Some(source));
+        }
+        assert_eq!(FlowSource::parse("Captured"), None);
+        assert_eq!(FlowSource::parse("proxied"), None);
+        assert_eq!(FlowSource::parse(""), None);
     }
 
     #[test]
