@@ -218,6 +218,20 @@
             retirement order unenforced. Supersedes two clauses of <strong>DEC-24</strong> and the Tier-3 exclusion clause of <strong>DEC-16</strong>; DEC-16's order and predicates and DEC-25 stand</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-30-har-as-the-interchange-format.html"><code>dec-30-har-as-the-interchange-format.html</code></a></td>
+          <td><span class="badge id">DEC-30</span></td>
+          <td><strong>HAR 1.2 is the one interchange format</strong>, chosen because the tools a recipient already
+            runs can open it — Trawler's own JSON, a second native format and multi-format support all rejected.
+            Where HAR requires a field Trawler has no truthful value for, the answer is <strong>HAR's own sentinel,
+            never an invented number</strong>: header-block sizes, the wire reason phrase and the timing phase
+            breakdown are reported unavailable rather than guessed. The body states HAR cannot express
+            (streamed · too large · read error) carry <strong>no text plus a comment naming the reason</strong>, so a
+            skipped body is never indistinguishable from an empty one; a too-large body reports the size it had,
+            because that size is known. Round-trip fidelity is stated in both directions — what is preserved, and
+            the five facts that are not. The export never decodes bodies: the file records the wire</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">
