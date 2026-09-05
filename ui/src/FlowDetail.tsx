@@ -1,37 +1,49 @@
-import { useState } from "react";
-import type { FlowView, HeaderView, TrawlerApi } from "./api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { FlowView, HeaderView, Leg, TrawlerApi } from "./api";
 import { toCurl } from "./flow";
-import { StatusPill } from "./components/index";
+import {
+  CopyButton,
+  CopyText,
+  DurationText,
+  IconButton,
+  KeyValueRow,
+  MethodLabel,
+  Notice,
+  Section,
+  SegmentedControl,
+  StatusPill,
+} from "./components/index";
 import { BodyViewer } from "./BodyViewer";
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="border-b border-hairline px-4 py-3">
-      <h2 className="mb-2 text-body uppercase tracking-label text-ink-mute">{title}</h2>
-      {children}
-    </section>
-  );
-}
+const LEGS = [
+  { value: "request", label: "request" },
+  { value: "response", label: "response" },
+];
 
-function HeaderTable({ headers }: { headers: HeaderView[] }) {
+function LegHeaders({ headers }: { headers: HeaderView[] }) {
   if (headers.length === 0) {
-    return <p className="text-ink-mute">none</p>;
+    return <Notice>none — this leg sent no headers</Notice>;
   }
   return (
     <dl
+      data-wire="collection"
+      data-order="wire"
       className={
         // design-allow: grid-cols-[auto_1fr] — a two-column template shape, no size in it
-        "grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-body text-ink-body"
+        "grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y"
       }
     >
       {headers.map((h, i) => (
-        <div key={i} className="contents">
-          <dt className="whitespace-nowrap text-ink-mute">{h.name}</dt>
-          <dd className="break-all">{h.value}</dd>
-        </div>
+        <KeyValueRow key={i} name={h.name} value={h.value} collapsible />
       ))}
     </dl>
   );
+}
+
+function versionsLine(flow: FlowView): string {
+  return flow.response_http_version
+    ? `${flow.request_http_version} → ${flow.response_http_version}`
+    : flow.request_http_version;
 }
 
 export function FlowDetail({
@@ -43,85 +55,80 @@ export function FlowDetail({
   flow: FlowView | null;
   onClose: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [leg, setLeg] = useState<Leg>("request");
+
+  // The list keeps focus when Enter opens the panel, so the origin is read once
+  // at mount — before anything inside the panel can take focus — and Esc is
+  // heard at the document, not on the panel's own subtree.
+  const origin = useRef<Element | null>(null);
+  useEffect(() => {
+    origin.current = document.activeElement;
+  }, []);
+
+  const close = useCallback(() => {
+    onClose();
+    const target = origin.current;
+    if (target instanceof HTMLElement && target.isConnected) target.focus();
+  }, [onClose]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented) close();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [close]);
 
   if (!flow) {
     return (
-      <div data-testid="detail-loading" className="p-4 font-ui text-ink-mute">
-        loading…
+      <div data-testid="detail-loading" className="px-4 font-ui">
+        <Notice>loading this flow…</Notice>
       </div>
     );
   }
 
-  const curl = toCurl(flow);
-  const copyCurl = () => {
-    navigator.clipboard?.writeText(curl).then(
-      () => setCopied(true),
-      () => {},
-    );
-  };
+  const headers = leg === "request" ? flow.request_headers : flow.response_headers;
 
   return (
     <div data-testid="detail" className="flex h-full flex-col font-ui text-ink">
-      <header className="flex items-center gap-2 border-b border-hairline px-4 py-2">
-        <span className="font-mono text-ink-body">{flow.method}</span>
+      <header className="flex shrink-0 items-center gap-2 border-b border-hairline px-4 py-2">
+        <MethodLabel method={flow.method} />
         <StatusPill status={flow.status} />
-        <span className="ml-auto whitespace-nowrap text-body text-ink-mute">
-          {flow.duration_ms == null ? "" : `${flow.duration_ms} ms`}
+        <SegmentedControl
+          options={LEGS}
+          value={leg}
+          onChange={(value) => setLeg(value as Leg)}
+          ariaLabel="leg"
+        />
+        <span className="ml-auto flex items-center gap-2">
+          <DurationText value={flow.duration_ms} />
+          <IconButton glyph="close" onClick={close} />
         </span>
-        <button
-          type="button"
-          aria-label="close"
-          onClick={onClose}
-          className="text-ink-mute hover:text-ink"
-        >
-          ×
-        </button>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-auto">
-        <Section title="Request">
-          <p className="break-all font-mono text-body text-ink-body">{flow.uri}</p>
-          <p className="mt-chrome-y text-body text-ink-mute">
-            {flow.request_http_version}
-            {flow.response_http_version ? ` → ${flow.response_http_version}` : ""}
-          </p>
-        </Section>
-
-        <Section title="Copy as curl">
-          <div className="flex items-start gap-2">
-            <pre
-              data-testid="curl"
-              className="min-w-0 flex-1 overflow-x-auto whitespace-pre-wrap break-all rounded-button border border-hairline bg-canvas px-2 py-chrome-y font-mono text-body text-ink-body"
-            >
-              {curl}
-            </pre>
-            <button
-              type="button"
-              onClick={copyCurl}
-              className="shrink-0 rounded-button border border-hairline px-2 py-chrome-y text-body text-ink-mute hover:text-ink"
-            >
-              {copied ? "copied" : "copy"}
-            </button>
-          </div>
-        </Section>
-
-        <Section title="Request headers">
-          <HeaderTable headers={flow.request_headers} />
-        </Section>
-
-        <Section title="Response headers">
-          <HeaderTable headers={flow.response_headers} />
-        </Section>
-
-        <Section title="Request body">
-          <BodyViewer api={api} flow={flow} leg="request" />
-        </Section>
-
-        <Section title="Response body">
-          <BodyViewer api={api} flow={flow} leg="response" />
-        </Section>
+      <div data-testid="flow-line" className="shrink-0 border-b border-hairline px-4 py-3">
+        <CopyText value={flow.uri} label="uri" />
+        <div className="mt-chrome-y flex items-center gap-2">
+          <span data-wire="protocol-version" className="font-mono text-body text-ink-mute">
+            {versionsLine(flow)}
+          </span>
+          <CopyButton className="ml-auto" label="copy as curl" getPayload={() => toCurl(flow)} />
+        </div>
       </div>
+
+      {/* The body is the zone a reader came for, so it takes whatever height the
+          headers leave: the headers zone is capped at a share of the panel and
+          scrolls inside itself, the body fills the rest and scrolls inside
+          itself, and the panel as a whole never scrolls. */}
+      <Section title={`Headers · ${headers.length}`} className="flex min-h-0 max-h-zone-cap flex-col">
+        <div data-testid="headers-scroll" className="relative min-h-0 overflow-auto">
+          <LegHeaders headers={headers} />
+        </div>
+      </Section>
+
+      <Section title="Body" className="flex min-h-0 flex-1 flex-col">
+        <BodyViewer api={api} flow={flow} leg={leg} />
+      </Section>
     </div>
   );
 }

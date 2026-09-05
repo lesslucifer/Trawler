@@ -119,14 +119,30 @@
 
     <h2 id="uc-5">UC-5 — Inspect a captured flow in the native app</h2>
     <div data-c="uc-5-contract">
-      <p>Clicking a flow row in the native app (<span class="badge id">E-UIINSPECT</span>) opens the
-      detail panel over <code>GET /flows/{id}</code> — request line, status with the 2xx/4xx/5xx
-      functional color, total duration, per-leg HTTP versions, and the full request + response
-      header tables. No new endpoint; the panel is a pure client of the existing API.</p>
+      <p>Clicking a flow row in the native app (<span class="badge id">E-UIINSPECT</span>, rebuilt by
+      <span class="badge id">E-REDESIGN</span>) opens the detail panel over <code>GET /flows/{id}</code>
+      — a pinned identity row (verb, status with the 2xx/4xx/5xx functional color and its reason phrase,
+      the leg selector, total duration, close), then the flow line (the full URI, both HTTP versions,
+      copy-as-curl), then the selected leg's <em>Headers</em> and <em>Body</em>. No new endpoint; the panel
+      is a pure client of the existing API.</p>
       <ul>
-        <li><strong>Both legs are on screen at once</strong>: the panel carries a
-        <em>Request body</em> and a <em>Response body</em> section, each rendering one body with
-        its own raw/decoded state — comparing the two is scrolling, not toggling.</li>
+        <li><strong>One leg at a time, under one selector</strong>
+        (<a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a>): the identity row's
+        <em>request | response</em> switch governs both the header table and the body pane together; the
+        URI, versions and curl are the flow's and never move. The panel always opens on
+        <em>request</em>. A leg that sent no headers says <em>none — this leg sent no headers</em> and stays
+        selectable; a flow still being fetched shows <em>loading this flow…</em> and nothing else.</li>
+        <li><strong>Every wire value is a copy target</strong>: headers render in wire order with duplicate
+        names preserved, and clicking a header value — or the URI — copies exactly that value, confirming
+        at the value for ~2 s; drag-selecting still selects.</li>
+        <li><strong>The body is the main zone and the panel never scrolls as a whole</strong>
+        (<a href="../decisions/dec-32-body-is-the-main-zone.html">DEC-32</a>): the headers take their natural
+        height up to about a third of the panel and scroll inside it, the heading naming how many there are;
+        the body takes the rest and scrolls inside itself. A header value taller than three lines — a
+        cookie, a token, a policy — is clamped with <em>more</em> / <em>less</em> under its name: lines are
+        hidden, never characters, the value still copies whole, and one act shows all of it.</li>
+        <li><strong>Esc dismisses the panel</strong>, as does ✕, and focus returns to the list that opened
+        it, so a keyboard user lands back on the row they came from.</li>
         <li><strong>Bodies render by content type</strong> over
         <code>GET /flows/{id}/{leg}/body</code>: JSON and XML/HTML as their pretty-printed source
         in a navigable, foldable surface, <code>image/*</code> as the image over a transparency
@@ -149,7 +165,8 @@
         instead of a viewer — one distinct sentence per cause, and warn tone only on the one that
         is a fault.</li>
         <li><strong>Copy-as-curl</strong> reproduces the request (method, URL, headers, body,
-        shell-quoted); <strong>copy body</strong> puts the shown body on the clipboard (the hex
+        shell-quoted) from a labelled button beside the URI; the command itself is never rendered, and the
+        button reads <em>copied</em> for ~2 s before reverting; <strong>copy body</strong> puts the shown body on the clipboard (the hex
         dump for hex-rendered bodies; hidden for images); <strong>save body</strong> writes the
         shown leg's bytes to a file via the OS save dialog, named after the <em>endpoint</em> — the URI's
         last path segment, or the host when the path names nothing — plus the leg and the extension the
@@ -163,15 +180,18 @@
     </div>
 
     <div class="callout" data-c="uc-5-provenance">
-      <p>Pinned by the inspector e2e (<code>ui/e2e/specs/flows.spec.ts</code>): row click → headers /
-      timing / versions; a JSON response renders as copy-exact source; the raw toggle shows the
-      served source as text; the curl text is asserted in the DOM (WebDriver clipboard is unreliable
-      — the real clipboard write is a recorded manual check, as is the native save dialog); a
+      <p>Pinned by the inspector e2e (<code>ui/e2e/specs/flows.spec.ts</code>): row click → the request
+      leg's headers / timing / versions; the leg selector switches headers and body together while the flow
+      line stays; under a wall of long headers the window gains no scroll, the body zone is the taller of
+      the two and stays on screen, and a clamped header value expands on <em>more</em>; a JSON response
+      renders as copy-exact source; the raw toggle shows the
+      served source as text; copy-as-curl's payload is read back from a recording clipboard stub installed
+      through WebDriver (the OS clipboard itself cannot be read there — the real write, like the native save
+      dialog, stays a recorded manual check); Esc closes the panel; a
       <em>brotli-compressed</em> JSON body still renders decoded — the decode chain proven
       through the UI; a proxied PNG renders as an image; an <em>XML</em> body renders as XML rather
       than falling through to text; a brotli body in <em>raw</em> shows its minified source rather than a
-      hex dump of its frames; a body past the render cap states its truncation; and both leg
-      sections stand on the page together. The decode chain itself is pinned at the
+      hex dump of its frames; and a body past the render cap states its truncation. The decode chain itself is pinned at the
       API seam in <code>tests/api.rs</code> and the <code>src/api/decode.rs</code> unit suite;
       viewer dispatch, states, and copy/save are covered by the Vitest unit + integration layers.
       <code>scripts/seed-proxy.mjs</code> seeds one flow per case for manual checks.</p>

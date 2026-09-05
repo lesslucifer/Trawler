@@ -260,6 +260,24 @@
             screen under the user between flows</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-32-body-is-the-main-zone.html"><code>dec-32-body-is-the-main-zone.html</code></a></td>
+          <td><span class="badge id">DEC-32</span></td>
+          <td><strong>A detail panel never scrolls as a whole; the body is its main zone and every other zone is
+            bounded.</strong> Against real traffic the built flow detail put a four-screen header table (three
+            cookies, a token, a CSP, each wrapping to thirty lines in a 380px pane) above the body, and WebKit let
+            that table's overflow leak past its scroll container into the window. Settled: identity row and flow
+            line are chrome at natural height; the headers take their natural height up to 35% of the panel
+            (<code>max-h-zone-cap</code>) and scroll inside, the heading naming the row count; the body takes the
+            rest (<code>flex-1</code>) and scrolls inside; a value past three lines is clamped with
+            <em>more</em>/<em>less</em> under its name — lines hidden, never characters, still copies whole.
+            Rejected: one scroll region (the design as written), tabs (a second switching axis beside DEC-31's),
+            ellipsis truncation (the design's own ✗), a fixed pixel cap (blind to the window), positioning the
+            scroll container alone (fixes the window, not the body). Forces <code>KeyValueRow collapsible</code>,
+            <code>Section className</code>, a body pane that fills its host, and <code>position: relative</code>
+            on every scroll container holding a <code>display:contents</code> grid</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

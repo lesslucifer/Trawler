@@ -89,7 +89,19 @@ export default {
       // collapses below its glyph.
       verb: "4.5ch",
       line: "18px",
+      // A collapsed wire value shows three lines (text-body at leading-normal)
+      // plus the room its focus ring needs inside the clipping cell.
+      "value-clamp": "60px",
     },
+    // Heights a zone may take of the panel that hosts it. Everything else
+    // derives from spacing; `zone-cap` is the one relationship the panel needs:
+    // a secondary zone (headers) never takes more than this share, so the
+    // primary one (body) keeps the rest whatever the window height.
+    maxHeight: ({ theme }) => ({
+      ...theme("spacing"),
+      full: "100%",
+      "zone-cap": "35%",
+    }),
     // Closed at one member because the UI renders one weight. Left open,
     // Tailwind's nine magnitudes all resolve and no check can say so — an open
     // scale is invisible to the lint rule by construction (E-DFLOW.W6 step 2).
