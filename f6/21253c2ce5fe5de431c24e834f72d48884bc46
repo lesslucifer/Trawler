@@ -1,0 +1,18 @@
+schema: cr/v3
+scope: "WU E-REDESIGN.W5 (wu/redesign/flow-detail) -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W5
+branch: wu/redesign/flow-detail
+base: 42875df5f19c30466d6fd6c1331df063b0a626a4
+head: f621253c2ce5fe5de431c24e834f72d48884bc46
+diff_sha256: 06082849625843fa394bc5c583eb0c1596de8ac009c439e27c9261cf8db777c7
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 22, verified: 9, waived: 0 }
+waivers: []
+design:
+  artifacts: [docs/work/2026-09-04-redesign-w5-flow-detail-run.html]
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 4, verified: 3, waived: 0 }
+  verdict: FAIL
+verdict: FAIL
+date: 2026-09-05
