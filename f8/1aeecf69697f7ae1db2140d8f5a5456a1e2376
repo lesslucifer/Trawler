@@ -1,0 +1,15 @@
+schema: doc/v1
+epic: E-EXPORT
+wu: E-EXPORT.W5
+changes:
+  - path: docs/work/2026-09-05-export-w5-controls-design-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan - requirement, the six questions the run must answer, and the three test-level waivers with their reasons"
+    distilled_to: "T3 scratch - archived out of git at epic close per DEC-3"
+  - path: docs/work/2026-09-05-export-run-10-capture-controls.html
+    tier: T3
+    action: added
+    distills: "the design run, closed and archived. W6 cites it by path + blob via design.implements (DEC-25) and retires it into the built component TSDoc (DEC-16)"
+    distilled_to: "the lexicon write-back is OWED but not carried by this diff - the rulebook grows by propose-then-confirm and its edit is rule-bearing (mr commit), so it lands as its own reviewed commit; the run proposes the export row and nothing else"
+t2_waived: "no T2 doc changes in this diff. The rulebook lexicon row the run proposes is owed but rule-bearing, so it lands separately under mr commit. No use-case write-back is owed by this WU: UC-4 amendment describes controls that EXIST, and this WU designs them and builds none. W6 owns that write-back. docs/architecture.html is unchanged because no seam moved - this WU adds no code"
