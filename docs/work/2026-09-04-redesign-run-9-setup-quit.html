@@ -100,7 +100,7 @@
             <td>an action proves only that it ran</td>
             <td>elevation reports exit, not effect</td>
             <td>action state ≠ step verdict</td>
-            <td>✓ "installed, we'll confirm at verify"<br>✗ "installed" flipping the step ok</td>
+            <td>✓ "installed, we'll confirm on first flow"<br>✗ "installed" flipping the step ok</td>
           </tr>
           <tr>
             <td>the host may not be the captured device</td>
@@ -330,7 +330,7 @@ quit dialog
         <tbody>
           <tr data-key="step-list">
             <td><strong>StepList</strong><br>T1</td>
-            <td><em>reuse</em><br>D (guided · removal · proxy · proxy-off) and G (proxy-off, via the shared manual-fallback) — <strong>4 tenants, 2 surfaces</strong></td>
+            <td><em>reuse</em><br>D (guided · removal · proxy · proxy-off, all in <code>Onboarding.tsx</code>) and G (the dialog's own <code>proxy-close-steps</code>, re-rendered through the shared manual-fallback) — <strong>5 tenants, 2 surfaces</strong></td>
             <td>
               <div class="gist">ordered by-hand instructions — its @use, exactly</div>
               <details class="why"><div><strong>@avoid cleared:</strong> not a single unordered statement (each is a real sequence) · not wire key/values · no nesting, all four are flat · <strong>no copy affordance added</strong> — the command step is a <code>CopyText</code>, which owns click-to-copy · <strong>and no per-step completion or current-step highlight</strong>, which is Frame A's "completion is unobservable" arriving as a component contract. <strong>@use landed:</strong> "a certificate install, a device setting, a remedy" — three of the four verbatim.</div></details>
@@ -353,7 +353,7 @@ quit dialog
             <td><em>extend</em> — a toned message; <strong>blocked on <code>StepStatusView.short</code></strong><br>C ×3</td>
             <td>
               <div class="gist">the verdict shape is exact; the field it needs is missing</div>
-              <details class="why"><div><strong>@use landed:</strong> "a setup precondition … pass the resolver's <code>StepStatusView</code> through unchanged" — this screen is the named tenant. <strong>@avoid that bites:</strong> "shortening a domain message at the call site". The component renders <code>status.message</code>, and its <code>@anatomy</code> caps the message at <em>~40 chars, a fragment not a sentence</em>. <strong>Measured: 4 of 16 verdicts exceed it</strong> (101, 116, 63, 63 chars) and the two <code>error</code> verdicts interpolate an unbounded message. So the reuse is real but not yet buildable — see <a href="#short-field">the short field</a> and <a href="#blocked-on">blocked-on</a>.</div></details>
+              <details class="why"><div><strong>@use landed:</strong> "a setup precondition … pass the resolver's <code>StepStatusView</code> through unchanged" — this screen is the named tenant. <strong>@avoid that bites:</strong> "shortening a domain message at the call site". The component renders <code>status.message</code>, and its <code>@anatomy</code> caps the message at <em>~40 chars, a fragment not a sentence</em>. <strong>Measured: 4 of 16 verdicts exceed it</strong> (101, 116, 63, 63 chars) and the two <code>error</code> verdicts interpolate an unbounded message. So the reuse is real but not yet buildable — see <a href="#short-field-h2">the short field</a> and <a href="#blocked-on">blocked-on</a>.</div></details>
             </td>
             <td><pre class="tb">✓  trusted on this machine
 ◐  can't check automatically
@@ -377,10 +377,10 @@ quit dialog
             <td><em>reuse</em><br>D — the three action notes, plus the two remedy sentences</td>
             <td>
               <div class="gist">one sentence for an outcome, with the action if one exists</div>
-              <details class="why"><div><strong>@use landed:</strong> "any zone whose whole content is a STANDING positive outcome (tone=ok)" — "installed, we'll confirm at verify" is standing, not an acknowledgement. <strong>@avoid respected:</strong> "transient confirmations of an action (use confirm-at-point)" — the <em>copy</em> confirms belong to <code>CopyText</code>, never to a Notice · not dismissible · not a toned value (that is <code>TonedText</code>) · <strong>not a status verdict with glyph+name+message</strong>, which is <code>StatusLine</code>'s — so the note and the verdict are two components, not one, and that split is the point.</div></details>
+              <details class="why"><div><strong>@use landed:</strong> "any zone whose whole content is a STANDING positive outcome (tone=ok)" — "installed, we'll confirm on first flow" is standing, not an acknowledgement. <strong>@avoid respected:</strong> "transient confirmations of an action (use confirm-at-point)" — the <em>copy</em> confirms belong to <code>CopyText</code>, never to a Notice · not dismissible · not a toned value (that is <code>TonedText</code>) · <strong>not a status verdict with glyph+name+message</strong>, which is <code>StatusLine</code>'s — so the note and the verdict are two components, not one, and that split is the point.</div></details>
             </td>
             <td><pre class="tb">installed. we'll confirm it's
-working at the verify step.
+working on your first flow.
 
 ⚠ automatic install failed —
   use the manual steps below.</pre>Per its TSDoc: mute · mute+detail · warn+⚠ · ok+✓ · any tone + action slot. Not interactive.</td>
@@ -452,11 +452,11 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
         </tbody>
       </table>
 
-      <p><strong>T4 break-down:</strong> <em>manual-fallback</em> → <code>Disclosure</code> (T1) · <code>Select</code> (T1) · <code>StepList</code> (T1) · <code>CopyText</code> (T1) — no local part left. <em>modal-shell</em> → screen-owned scrim + panel + focus trap · <code>IconButton</code> (T1) · <code>Button</code> (T1) ×2. <em>opt-out</em> → screen-owned input + label, no lower tier available.</p>
+      <p><strong>T4 break-down:</strong> <em>manual-fallback</em> → <code>Disclosure</code> (T1) · <code>Select</code> (T1) · <code>StepList</code> (T1) · <code>CopyText</code> (T1) — no local part left. <em>modal-shell</em> → screen-owned scrim + panel + focus trap · <code>IconButton</code> (T1) · <code>Button</code> (T1) ×2. <em>opt-out</em> → <code>Checkbox</code> (T1, proposed below) + the host's label; no local part left once it exists.</p>
 
-      <p><strong>Proposals:</strong> <em>modal-shell</em> (T4, build local) — a scrim + panel + focus trap; nothing in the registry owns modality, and one dialog is too small a sample to design a general entry from. <em>opt-out</em> (T4, build local) — a labelled checkbox; the registry has no boolean control, and this is its only instance.</p>
+      <p><strong>Proposals:</strong> <em>modal-shell</em> (T4, build local) — a scrim + panel + focus trap; nothing in the registry owns modality, and one dialog is too small a sample to design a general entry from. <em>Checkbox</em> (T1, propose → registry) — the app's one boolean control; the registry has none, and unlike modality a checkbox is a primitive whose contract generalises from a single instance.</p>
 
-      <p><strong>What the count says.</strong> Nine registry entries reused across two surfaces, two build-local compositions, zero new components proposed for the registry. Every local component in today's code resolves away: <code>ActionButton</code> → <code>Button</code> + <code>Notice</code>, <code>ManualPanel</code> → <code>Disclosure</code> + the host's branch, <code>ProveIt</code> → <code>CopyText</code>, the four <code>&lt;ol&gt;</code>s → <code>StepList</code>, both <code>&lt;select&gt;</code>s → <code>Select</code>, the verdict line → <code>StatusLine</code>, and the <code>toneClass</code> map at <code>Onboarding.tsx:360</code> → deleted, since <code>StatusLine</code> and <code>Notice</code> own tone.</p>
+      <p><strong>What the count says.</strong> Nine registry entries reused across two surfaces, one build-local composition (<em>modal-shell</em>, T4), and one new registry component proposed (<code>Checkbox</code>, T1). Every local component in today's code resolves away: <code>ActionButton</code> → <code>Button</code> + <code>Notice</code>, <code>ManualPanel</code> → <code>Disclosure</code> + the host's branch, <code>ProveIt</code> → <code>CopyText</code>, the four <code>&lt;ol&gt;</code>s → <code>StepList</code>, both <code>&lt;select&gt;</code>s → <code>Select</code>, the verdict line → <code>StatusLine</code>, and the <code>toneClass</code> map at <code>Onboarding.tsx:360</code> → deleted, since <code>StatusLine</code> and <code>Notice</code> own tone.</p>
 
     </div>
 
@@ -515,7 +515,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
           <td>presses <em>install certificate</em></td>
           <td>
             <div class="gist">button disabled, progress line beside it — both halves</div>
-            <details class="why"><div>D → the <code>Button</code> disabled for the whole in-flight window AND a mute <code>Notice</code> "installing — approve the system prompt…" (fork D4, both halves or neither) · C step 1 → <code>StatusLine</code> shows <em>⟳ installing…</em>, which outranks every other verdict · on resolve → <code>Notice</code> becomes ok "installed. we'll confirm at the verify step" and the verdict returns to the probe's answer ← the action never flips the step green; only a probe or captured traffic does</div></details>
+            <details class="why"><div>D → the <code>Button</code> disabled for the whole in-flight window AND a mute <code>Notice</code> "installing — approve the system prompt…" (fork D4, both halves or neither) · C step 1 → <code>StatusLine</code> shows <em>⟳ installing…</em>, which outranks every other verdict · on resolve → <code>Notice</code> becomes ok "installed. we'll confirm when your first flow arrives" and the verdict returns to the probe's answer ← the action never flips the step green; only a probe or captured traffic does</div></details>
           </td>
           <td>Enter / Space; focus stays on the button across the whole transition</td>
         </tr>
@@ -809,7 +809,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
         mount("m-dialog-remote", <DialogRemote />);
       </script>
     </div>
-    <p><strong>Stubbed:</strong> the elevated actions (no system prompt), the clipboard write behind <code>CopyText</code>, the probe resolvers (four fixed verdicts stand in for the sixteen), the scrim and focus trap — the mockup shows the dialog's panel inline, since modality is the build-local composition's job and not a component's. <strong>Screen-owned here:</strong> the step row, the title block, the two build-local compositions.</p>
+    <p><strong>Stubbed:</strong> the elevated actions (no system prompt), the clipboard write behind <code>CopyText</code>, the probe resolvers (four fixed verdicts stand in for the sixteen), the scrim and focus trap — the mockup shows the dialog's panel inline, since modality is the build-local composition's job and not a component's. <strong>Screen-owned here:</strong> the step row, the title block, and the one build-local composition (<em>modal-shell</em>); the opt-out is drawn as a raw checkbox standing in for the proposed <code>Checkbox</code>.</p>
 
     <h2 id="tune">6 · Tune</h2>
     <table data-item="tune">
@@ -932,7 +932,7 @@ soft:
   display-equals-payload: satisfied — both commands render verbatim through CopyText, mono, no view and nothing to name
   labels-add-context: satisfied — "install certificate" not "install the CA certificate now"; "keep it" retired as a second name for quit, and the fallback reworded to "do it manually instead" so it stops repeating the button above it
   calm-microcopy: satisfied — all 16 short forms lowercase, no terminal period, no exclamation
-  one-term-per-concept: satisfied — "copy" and "first flow" per the lexicon; "trust", "proxy", "certificate" are domain terms the lexicon does not govern
+  one-term-per-concept: satisfied — "copy" and "flow" ("back to flows") per the lexicon, and no rival term for either; "trust", "proxy", "certificate" are domain terms the lexicon does not govern
   confirm-at-point: satisfied-via-proposal — CopyText confirms at the value; today's two unguarded clipboard calls have no feedback at all, so this is earned only once StepStatusView.short lands with W10's rewrite
   absence-names-itself: satisfied — not-trusted, can't-check, no-traffic, arriving-not-decrypting and another-proxy-set are five separate verdicts, never one sentence
   focus-returns-to-origin: blocked — the dialog's focus trap and focus return belong to the build-local modal-shell, which this run proposes rather than designs; the contract is stated in its Elements row, unowned until W10
@@ -959,7 +959,7 @@ soft:
         <tr><td><code>onKeep</code></td><td>used — as the exit</td><td>zone H's bare <em>quit</em> when a local proxy is set. It is <code>keep: quit</code> in <code>closeConfirm.ts</code>, so the dialog no longer offers it as a second, separately-named choice</td></tr>
         <tr><td><code>onAcknowledge</code></td><td>used</td><td>zone H in notice mode, carrying the opt-out's value</td></tr>
         <tr><td><code>onCancel</code></td><td>used</td><td>Esc, backdrop and ✕ — three routes, one outcome</td></tr>
-        <tr><td><code>proxyOffSteps</code></td><td>used</td><td>zone G's <code>StepList</code>, the fourth tenant</td></tr>
+        <tr><td><code>proxyOffSteps</code></td><td>used</td><td>zone G's <code>StepList</code> — the dialog renders <code>proxyOffSteps</code> for its own list (<code>proxy-close-steps</code>), the fifth tenant</td></tr>
         <tr><td><code>stepStatus</code> (machine)</td><td>deliberately unused for verdicts</td><td>it decides which step is <em>open</em>, never whether one is <em>done</em> — Frame A's unobservable-completion constraint. Its <code>done</code> value renders nothing.</td></tr>
       </tbody>
     </table>
@@ -1063,6 +1063,16 @@ soft:
           <td>A button stacked over the collapsible section looks ugly — think carefully and give a better design</td>
           <td>frame · layout · elements · interaction · tune · mockup · receipt — Frame B swapped a constraint for two (ranking without a variant, one action row), zones G and H were re-zoned, both actions returned to a single row ranked by frame, the fallback reworded, and the failed state now relabels the same slot instead of stranding a retry button under the notice</td>
           <td>taste, then <code>Button</code>'s @avoid confirmed it: a bordered Button and a Disclosure summary are both <code>min-h-control</code> rows at the same x, so stacking them reads as a broken pair — and with no primary variant available, <code>frame</code> is the only ranking channel the component offers</td>
+        </tr>
+        <tr>
+          <td><strong>Tier-3 review, round 2:</strong> the mockup caption still counted "the two build-local compositions" after the Checkbox became a registry propose</td>
+          <td><code>mockup</code> — the caption now names one build-local composition (<em>modal-shell</em>) and says the raw checkbox stands in for the proposed <code>Checkbox</code></td>
+          <td>internal consistency with the <code>Checkbox</code> <code>propose → registry</code> verdict this run's earlier review round established</td>
+        </tr>
+        <tr>
+          <td><strong>Tier-3 review, round 2:</strong> "we'll confirm at the verify step" names the proven-decrypted milestone with a forbidden synonym</td>
+          <td><code>frame</code> · <code>elements</code> · <code>interaction</code> · <code>mockup</code> — four call sites now say "first flow"; the step's own title was already "make a request", so the copy had also been pointing at a label this design does not use</td>
+          <td>the rulebook's <strong>lexicon</strong>: <code>first flow</code> is "the proven-decrypted milestone", never <em>verify · test · done · working</em> — the <code>one-term-per-concept</code> slug</td>
         </tr>
       </tbody>
     </table>

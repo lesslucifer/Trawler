@@ -69,7 +69,7 @@
       <div class="card">
         <h3><code>ProxyCloseDialog.tsx</code> <span class="badge id">133 lines</span></h3>
         <p>The quit-time proxy dialog, two modes off the live proxy status: <code>remove</code> (Remove / Keep) and <code>notice</code> (info-only, with a durable "don't show again").</p>
-        <p><strong>Hand-rolled with no registry owner:</strong> the modal shell, the scrim backdrop-as-button, the ✕ dismiss, and the checkbox. Its <code>&lt;ol&gt;</code> of proxy-off steps is the fourth <code>StepList</code> tenant.</p>
+        <p><strong>Hand-rolled with no registry owner:</strong> the modal shell, the scrim backdrop-as-button, the ✕ dismiss, and the checkbox. Its own <code>&lt;ol data-testid="proxy-close-steps"&gt;</code> is the fifth <code>StepList</code> tenant — the other four are all in <code>Onboarding.tsx</code>.</p>
       </div>
     </div>
 
@@ -77,7 +77,7 @@
     <table>
       <thead><tr><th>Raw element</th><th>Where</th><th>Expected verdict</th></tr></thead>
       <tbody>
-        <tr><td>4 × <code>&lt;ol class="list-decimal"&gt;</code></td><td><code>guided-steps</code>, <code>removal-steps</code>, <code>proxy-steps</code>, <code>proxy-off-steps</code> — the fourth in the dialog</td><td><code>StepList</code> reuse ×4</td></tr>
+        <tr><td>5 × <code>&lt;ol class="list-decimal"&gt;</code></td><td><code>guided-steps</code>, <code>removal-steps</code>, <code>proxy-steps</code>, <code>proxy-off-steps</code> — all four in <code>Onboarding.tsx</code> — plus the dialog's own <code>proxy-close-steps</code></td><td><code>StepList</code> reuse ×5</td></tr>
         <tr><td>2 × <code>&lt;select&gt;</code></td><td><code>trust-target</code> (6 options), <code>proxy-target</code> (7 options)</td><td><code>Select</code> reuse — both clear the ≥5-option <code>@use</code> line</td></tr>
         <tr><td>3 × <code>&lt;details&gt;</code></td><td><code>ManualPanel</code> + "remove the certificate later" + "turn the proxy off later"</td><td><code>Disclosure</code> reuse ×3</td></tr>
         <tr><td>per-step verdict line</td><td><code>step-*-status</code> — glyph + message + <code>toneClass</code></td><td><code>StatusLine</code> reuse; forces the <code>short</code> field</td></tr>
