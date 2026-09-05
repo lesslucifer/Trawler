@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9aa10b9f34851f0dfac1ac">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W7 plan (design the body viewer)</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);}
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}
+    .fix{color:var(--warn);font-weight:600;}
+    .kind-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;}
+    .kind-card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper);}
+    .kind-card h4{margin:0 0 6px;font-size:14px;}
+    .kind-card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .kind-card p{margin:6px 0;font-size:12.5px;line-height:1.55;}
+    .waive{color:var(--muted);font-style:italic;}
+    .no{color:var(--warn);}
+    .yes{color:var(--ok);}
+  </style>
+</head>
+<body data-artifact="wu-plan" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W7 — design run: the body viewer</h1>
+      <p>The epic's largest run. <strong>Nine registry members, six body kinds, seven zone states, two mutually exclusive switches</strong> — put through the six-stage flow so W8 can wire a pane that states its truncation, dispatches xml for real, and copies exactly what it shows.</p>
+      <div class="meta">WU plan · 2026-09-04 · Trawler · T3 (docs/work/) · <code>wu/redesign/body-viewer</code> → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · flow: <a href="../design-flow.html">design-flow</a> · rulebook pinned <code>aeff5b0f</code> · registry: 27 entries</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement" data-c="requirement">
+      <strong>Design — not build —</strong> the flow's six stages over <code>BodyViewer.tsx</code>, landing as one closed run doc that resolves <strong>all six body kinds to the <code>BodyRenderer</code> family members</strong>, <strong>both switches to <code>SegmentedControl</code></strong>, <strong>the truncation statement to <code>CutMarker</code></strong> and <strong>all seven zone states to <code>Notice</code></strong> — each with a <code>reuse</code>/<code>extend</code>/<code>propose</code> verdict traced to the entry's own <code>@use</code>/<code>@avoid</code>, a receipt covering all seventeen soft slugs against rulebook <code>aeff5b0f</code>, and a mockup that <em>mounts</em> the real components from <code>specimens.bundle.js</code> — so that <strong>W8 has a Tier-3-judged design to cite by blob, and the three UC-5 defects the epic charges to this screen have a designed answer rather than an improvised one.</strong>
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to" data-c="maps-to">
+      <tr><td><strong>Epic</strong></td><td><a href="2026-09-04-redesign-plan.html">E-REDESIGN</a> — apply the design flow to every shipped screen. This is <strong>W7</strong>, the third of four screen runs and <em>"the largest run"</em> by the epic plan's own reckoning. It is independent of W3 and W5; all three were unblocked together by W2.</td></tr>
+      <tr><td><strong>Consumes</strong></td><td>The <strong>27-entry registry</strong> emitted by <code>scripts/design-registry.mjs</code> and the <strong>rulebook</strong> at blob <code>aeff5b0f</code> — both frozen for the run. W2 completed the vocabulary, so every element here should resolve without inventing a primitive.</td></tr>
+      <tr><td><strong>Use cases</strong></td><td><a href="../use-cases/web-ui.html">UC-5</a> — <em>inspect a captured flow</em>: type-dispatched body viewers, the raw/decoded toggle, copy/save body. <strong>Two contract-level gains land in W8's build</strong>, and this run is where they are designed: bodies gain the truncation statement they lack today, and <code>xml</code> becomes a real dispatch instead of falling through to text.</td></tr>
+      <tr><td><strong>Hands to</strong></td><td><strong>W8</strong>, through the <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a> handoff: <code>git rev-parse &lt;tip&gt;:&lt;the run&gt;</code> is the blob W8's <code>cr/v3</code> note cites as <code>design.implements</code>. W8 also closes the <code>BodyViewer.tsx:112</code> marker that names this work.</td></tr>
+      <tr><td><strong>Declares the seam</strong></td><td>Against <a href="2026-09-04-redesign-plan.html#shape">W5</a>'s flow-detail run — not yet planned — which <em>"declares the seam, it does not design through it"</em> — the body pane is this run's screen. This run owes the reciprocal: it designs the pane and treats the panel around it as given.</td></tr>
+    </table>
+
+    <h2 id="subject">The subject — what BodyViewer is today</h2>
+    <p><code>ui/src/BodyViewer.tsx</code>, 238 lines, <strong>six inline renderers</strong> and a local <code>ModeButton</code>. Its own marker at line 112 assigns this rewiring to a later WU; the epic plan names this pair as that WU. The domain layer is already complete — <code>body.ts</code> ships <code>TEXT_MAX</code>, <code>hexRows</code>, <code>humanBytePair</code> and <code>formPairCut</code> — so <strong>nothing here needs new policy invented</strong>; the run is a composition problem.</p>
+
+    <table data-c="today">
+      <tr><th>Today, hand-rolled</th><th>Registry member that owns it</th><th>What the swap buys</th></tr>
+      <tr><td><code>JsonNode</code> + <code>JsonTree</code></td><td class="tier t2">JsonRenderer</td><td>Its <code>@avoid</code> names today's form as the rejected design (<a href="../decisions/decisions-index.html">DEC-01</a>): <em>"key: value lines without braces, quotes and commas are not valid JSON when copied"</em>. Copy-exactness is the gain.</td></tr>
+      <tr><td><code>TextBody</code></td><td class="tier t2">TextRenderer</td><td>A <code>TEXT_MAX</code> that exists. Today a capture-capped 10 MiB body goes straight to the DOM.</td></tr>
+      <tr><td><em>nothing</em> — <code>xml</code> falls through to text</td><td class="tier t2">XmlRenderer</td><td>Its first reachable surface, ever. The server already pretty-prints with <code>quick-xml</code>.</td></tr>
+      <tr><td><code>TextBody(hexDump(…))</code></td><td class="tier t2">HexRenderer</td><td>Toned offset · hex · ascii columns, and a <code>HEX_MAX</code> marker that is not the easy-to-miss <em>"… N more bytes"</em> ellipsis.</td></tr>
+      <tr><td><code>ImageBody</code></td><td class="tier t2">ImageRenderer</td><td>Checkerboard, letterboxing and the metadata caption; the object-URL lifecycle moves behind the member.</td></tr>
+      <tr><td><code>FormBody</code> (raw <code>&lt;dl&gt;</code>)</td><td class="tier t2">FormRenderer</td><td>Per-pair click-to-copy via <code>KeyValueRow</code>, and a cut on a pair boundary rather than mid-<code>%XX</code>.</td></tr>
+      <tr><td><em>nothing</em> — silent caps</td><td class="tier t2">CutMarker</td><td>The family's never-truncate-silently rule, in warn tone with the total.</td></tr>
+      <tr><td><code>ModeButton</code> ×6</td><td class="tier t1">SegmentedControl · CopyButton · IconButton</td><td>One element carrying four jobs today splits into the three that own them; the sticky "copied" gets a timed confirm.</td></tr>
+      <tr><td>3× bare <code>&lt;p&gt;</code></td><td class="tier t1">Notice</td><td>Seven distinct absences, each with its own words and tone.</td></tr>
+    </table>
+
+    <h2 id="decided">Two shape decisions taken up front</h2>
+    <p>Both were open going in; both are recorded here so the run does not re-litigate them mid-stage, and both remain falsifiable at Elements by the <code>@avoid</code> trace.</p>
+
+    <div class="kind-grid" data-c="decided">
+      <div class="kind-card">
+        <div class="who">Layout · the control row</div>
+        <h4>Two SegmentedControls, one row</h4>
+        <p>Leg (<code>request|response</code>) and mode (<code>decoded|raw</code>) are both always-visible mutually exclusive view switches — <code>SegmentedControl</code>'s <code>@use</code> names <em>both of these two cases by name</em>. So both are literal reuse, side by side, with copy and save pushed to the row's end by <code>choose-before-act</code>.</p>
+        <p>The rejected alternative — promoting leg to a <code>Section variant="band"</code> — is plausible (<code>Section</code>'s <code>@use</code> does name <em>"a two-leg panel's leg level"</em>) but <strong>W5 owns the panel's zoning</strong>, and two runs claiming the leg seam is the conflict this decision avoids. Recorded at Elements as a considered fork, not silently dropped.</p>
+      </div>
+      <div class="kind-card">
+        <div class="who">Interaction · the empty states</div>
+        <h4>All seven zone states, tabled</h4>
+        <p><code>bodyNotice</code> already returns <strong>five</strong> distinct absences — empty · streaming · not-captured-too-large · not-captured-read-error · no-response-yet. The pane has <strong>two more</strong> the current code renders as unstyled <code>&lt;p&gt;</code>: in-flight and fetch-failure.</p>
+        <p><code>absence-names-itself</code> demands <em>"two causes never share one sentence"</em>, and <code>Notice</code>'s <code>@use</code> claims <em>"BodyViewer's five absences"</em> explicitly. Designing only five would leave the receipt's <code>satisfied</code> unearned on the two states nobody wrote words for. <strong>No retry affordance</strong> — that is a new user-facing capability, which the epic's non-goals forbid.</p>
+      </div>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <p>Observable by a reader who was not here:</p>
+    <table data-item="expected" data-c="expected">
+      <tr><th>#</th><th>What exists after this WU</th><th>How it is checked</th></tr>
+      <tr><td>1</td><td>One run doc — <code>docs/work/2026-09-04-redesign-run-9-body-viewer.html</code> — carrying <strong>all eleven items</strong>: the six stage artifacts plus receipt, capabilities, proposals, blocked-on and review, closed at <code>data-status="archived"</code>.</td><td><code>cargo xtask verify-doc &lt;the run&gt;</code> green, then archived — <em>step ③ before step ④</em></td></tr>
+      <tr><td>2</td><td>A <strong>receipt covering all seventeen soft slugs</strong> in rulebook order, each with a verdict in the enum and a clause of evidence, pinned to <code>aeff5b0f</code> — re-pinned at close in case the rulebook moved underneath.</td><td><code>receipt·rulebook-stale</code> · coverage checked against the rulebook on disk</td></tr>
+      <tr><td>3</td><td><strong>Every one of the six body kinds resolves to a family member</strong> — including <code>xml</code>, whose member has never had a reachable surface — with the verdict traced to that member's <code>@use</code>/<code>@avoid</code> in the Fit column.</td><td><code>elements·gist</code> · <code>state-declarations</code> · the tree's <code>data-map</code>/<code>data-key</code></td></tr>
+      <tr><td>4</td><td>A <strong>mockup that mounts</strong> — every <code>reuse</code> and <code>extend</code> element rendered from <code>window.Trawler</code>, never drawn — with a state toggle across the states the Interaction table named, and <strong>zero colour literals</strong> in the doc's own CSS.</td><td><code>mockup·hand-drawn</code> · <code>colour-tokens-only</code> · <a href="../decisions/dec-26-the-mockup-mounts.html">DEC-26</a></td></tr>
+      <tr><td>5</td><td>The <strong>seven zone states each carry their own sentence and tone</strong>, and the two that are bare <code>&lt;p&gt;</code>s today are named as a gain W8 delivers.</td><td><code>absence-names-itself</code> judged at Tier-3 against the Interaction table</td></tr>
+      <tr><td>6</td><td>Every <strong>Given capability is answered</strong> — used, deliberately unused, or blocked — in the capabilities list. <code>save</code>, <code>copy</code>, the decode toggle and the leg switch are all Given by <code>body.ts</code> and the API.</td><td><code>item·capabilities</code>; the flow's rule that <em>"every Given capability is answered by the end of the run"</em></td></tr>
+      <tr><td>7</td><td><strong>Zero change under <code>ui/src/</code></strong> — the epic plan's shape line: <em>"Design WUs commit nothing under ui/src/"</em>. The one exception permitted to any run: a token this design needs and the config lacks becomes a <strong>blocked-on entry handed to W8</strong>, never a literal.</td><td><code>git diff --stat epic/redesign HEAD -- ui/src/</code> empty</td></tr>
+      <tr><td>8</td><td>A <strong>Tier-3 PASS</strong> bound to this exact diff, with the design dimension activated because the diff carries a closed run.</td><td><code>cargo xtask design-scope epic/redesign HEAD</code> → code-review skill → <code>cr/v3</code></td></tr>
+    </table>
+    <p><strong>Not in scope, deliberately:</strong> no <code>.tsx</code>, no wiring, no <code>CutMarker</code> call site, no <code>ModeButton</code> deletion — every one of those is W8. This WU's output is one design artifact and nothing else.</p>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p>This WU adds no code, so the pyramid's three levels have nothing to assert against. The waivers rest on the <strong>E-DFLOW.W9 precedent</strong> the epic plan cites for exactly this case — <em>the WU "touches no product code or screens"</em> — and are named here rather than taken silently.</p>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Verdict</th><th>What actually checks this WU</th></tr>
+      <tr><td><strong>Unit</strong></td><td class="waive">waived</td><td>No product code changes. The body family's unit tests already ship beside each member from W2's registry work — <code>JsonRenderer.test.tsx</code>, <code>CutMarker.test.tsx</code> and seven more — and <strong>W8's build is where they gain the call-site assertions</strong> this design specifies.</td></tr>
+      <tr><td><strong>Integration</strong></td><td class="waive">waived</td><td>Same precedent. There is no bounded contract in code to exercise — the contract <em>is</em> the run doc, and <code>verify-doc</code> is what judges its shape. W8 carries the screen-contract integration test.</td></tr>
+      <tr><td><strong>E2E</strong></td><td class="waive">waived</td><td>Same precedent. No user-visible surface moves. The epic's UC-5 e2e — <em>"an XML body renders as XML and an over-cap body states its truncation"</em>, the two new contracts — runs against W8's built pane, not against this design.</td></tr>
+    </table>
+
+    <p>The real gate on this WU is <strong>three mechanical checks and one adversarial</strong>:</p>
+    <table data-c="real-gate">
+      <tr><th>Check</th><th>Command</th><th>Asserts</th></tr>
+      <tr><td><strong>Run contract</strong> <em>Tier-1</em></td><td><code>cargo xtask verify-doc &lt;the run&gt;</code></td><td>All eleven items present and non-empty; the Frame's six density predicates; <code>elements·gist</code> and <code>interaction·gist</code>; <code>tune·drawn</code>; <code>mockup·hand-drawn</code> and its zero-colour-literal rule; receipt coverage and freshness; the htmldoc layer. Fires automatically on <strong>PostToolUse</strong> and at <strong>turn end</strong>.</td></tr>
+      <tr><td><strong>Plan contract</strong></td><td><code>cargo xtask verify-doc &lt;this plan&gt;</code></td><td>This doc's four <code>wu-plan</code> items present and non-empty; every relative link resolves.</td></tr>
+      <tr><td><strong>Specimen render</strong></td><td><code>cargo xtask ui specimens</code></td><td>The shared bundle compiles and the mockup's mounts resolve over <code>file://</code>. <strong>Already verified in this worktree</strong> — all nine family members plus <code>SegmentedControl</code>, <code>CopyButton</code>, <code>IconButton</code> and <code>Notice</code> are present on <code>window.Trawler</code>.</td></tr>
+      <tr><td><strong>Design review</strong> <em>Tier-3</em></td><td><code>cargo xtask design-scope epic/redesign HEAD</code> → code-review skill</td><td>The one check that catches <em>a receipt that is complete, fluent and false</em>. Judged on the artifact against <code>design-rubric.md</code>: is each verdict true, does the fit hold against <code>@use</code>/<code>@avoid</code>, is a violation honest or quietly fixed, is a driver case-specific or a restated rule.</td></tr>
+    </table>
+    <p><strong>The merge gate.</strong> <code>cargo xtask verify-dod wu &lt;tip&gt; --target epic/redesign</code> — <code>test/v2</code> carrying the three waivers with their reason, <code>doc/v1</code>, and a diff-bound <code>cr/v3</code> PASS on this exact tip. <code>6·run-closed</code> refuses the merge if the run is left open. <strong><code>9·design</code> does not bind here</strong>: it demands a <code>design.implements</code> citation from a WU that builds, and this WU builds nothing — <strong>W8</strong> is where that citation is owed.</p>
+
+    <h2 id="risks">What could go wrong</h2>
+    <table data-c="risks">
+      <tr><th>Risk</th><th>Handling</th></tr>
+      <tr><td><strong>The run re-decides what a member owns.</strong> Nine members with dense contracts, and the flow's sharpest rule is <em>"never re-decide what a component owns"</em> — restating <code>HexRenderer</code>'s dump format or <code>CutMarker</code>'s size form is the natural failure mode of a run this size.</td><td>The States column is filled <strong>by reference only</strong>, citing the member. A run that re-lists a member's states has produced a fork no class check can see; Tier-3's design dimension is pointed at exactly this.</td></tr>
+      <tr><td><strong>The mockup draws instead of mounts.</strong> Nine renderers is a lot of mounting, and a plausible-looking <code>&lt;pre&gt;</code> in correct utilities passes the eye.</td><td><code>mockup·hand-drawn</code> reds any <code>reuse</code>/<code>extend</code> element that is not mounted. What legitimately stays <strong>stubbed</strong> is named in advance: a member's internals — the CodeMirror surface, the live clipboard, the renderer dispatch itself (<a href="../decisions/dec-26-the-mockup-mounts.html">DEC-26</a>).</td></tr>
+      <tr><td><strong>An <code>@avoid</code> hit gets smoothed over.</strong> The most valuable output of Elements is a member refusing the job — and the cheapest thing to do with one is to write <code>reuse</code> anyway.</td><td>An <code>@avoid</code> hit is <strong>recorded as a propose or a blocked-on entry</strong>, never argued past. The flow is explicit: <em>"forcing a component past its @avoid line is a propose, not a reuse"</em>. Two candidates are known going in — the raw-mode dispatch (<code>rawKind</code> returns only text|hex, so raw mode has no xml/json surface) and <code>ImageRenderer</code>'s no-copy rule interacting with the shared control row.</td></tr>
+      <tr><td><strong>The seam with W5 drifts.</strong> W5 designs the panel that contains this pane, and both runs are open against the same epic with no ordering between them.</td><td>This run treats the panel as <strong>given</strong> and designs inward from the pane's own zone — the reciprocal of W5's <em>"declares the seam, does not design through it"</em>. Any zoning this pane needs from the panel is a <strong>blocked-on entry naming W5</strong>, not an assumption.</td></tr>
+      <tr><td><strong>A needed token does not exist.</strong> Nine renderers, a checkerboard, three syntax roles — <a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a> leaves no room for a literal.</td><td>The three <code>syn-*</code> roles and the chromatic set already ship. A value the config genuinely lacks is a <strong>config change handed to W8 as blocked-on</strong> — <em>"a value that has no utility needs a named token in the config, not a literal here"</em>. Never a hex escape in the mockup.</td></tr>
+      <tr><td><strong>The toolchain is not on PATH.</strong> <code>verify-doc</code> is the per-write gate, and this worktree's <code>~/.cargo/bin</code> is empty — the stable toolchain lives unlinked under <code>~/.rustup/toolchains/</code>.</td><td>Verified working with <code>~/.rustup/toolchains/stable-aarch64-apple-darwin/bin</code> prepended to <code>PATH</code>; <code>ui/node_modules</code> installed and the specimens bundle built. An environment note, not a design finding — but a run whose gate never fires would be the worse failure.</td></tr>
+    </table>
+
+    <h2 id="sequence">Sequence</h2>
+    <div class="diagram" data-c="sequence">
+      <pre class="mermaid">
+flowchart LR
+  S["load substrate
+registry 27 · rulebook aeff5b0f"] --> F["Frame
+a body is wire evidence"]
+  F --> L["Layout
+control row + pane
+overflow declared"]
+  L --> E["Elements
+6 kinds · 9 members
+reuse / extend / propose"]
+  E --> I["Interaction
+copy · save · switch legs
+switch mode · 7 zone states"]
+  I --> D["Draft mockup
+mounts from
+specimens.bundle.js"]
+  D --> T["Tune
+before/after, drawn"]
+  T --> R["receipt 17 slugs
+capabilities · proposals
+blocked-on · review"]
+  R --> C["close
+re-pin · green · archive"]
+  C --> CR["design-scope
+→ cr/v3 PASS"]
+  CR --> M["merge → epic/redesign
+--no-ff"]
+  M --> W8["W8 builds it
+cites this blob"]
+  E -.->|"a member refuses the job"| L
+  T -.->|"assembled reads wrong"| L
+      </pre>
+      <div class="caption">One substrate load, six stages, five closing lists, then the close. The two loop-backs into Layout are real and expected — Elements is where a member's <code>@avoid</code> can break the zoning.</div>
+    </div>
+
+    <p><strong>The Frame's load-bearing line.</strong> The epic plan states it: <em>"a body is wire evidence — which is what forces copy-exactness and a stated truncation rather than a silent cap."</em> That is the driver both UC-5 gains descend from, and the one this run must land on a concrete ✓/✗ pair rather than restate.</p>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
