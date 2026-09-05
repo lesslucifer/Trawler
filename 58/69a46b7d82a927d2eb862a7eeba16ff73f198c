@@ -1,0 +1,36 @@
+schema: cr/v3
+scope: "WU wu/redesign/flow-list-shell -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W3
+branch: wu/redesign/flow-list-shell
+base: 42875df5f19c30466d6fd6c1331df063b0a626a4
+head: 5869a46b7d82a927d2eb862a7eeba16ff73f198c
+diff_sha256: 9ab0634ec9cb316b059e73472cdaa1a7e0d4431fe9363da5a5cc1b41b6c3a381
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 11, verified: 3, waived: 0 }
+rounds:
+  - round: 1
+    tip: 7290e30e577a1d1c7dc5e4789eed9efc530029a8
+    scope: "six finders (five dimensions + design), eight adversarial verifiers"
+    verified:
+      - "The receipt cited Tune T4 as the call that gives the row a keyboard equivalent. The previous review round had inserted the status-alignment call as T4 and renumbered the keyboard call to T5, leaving the citation pointing at the wrong row — the one defect the collapse-the-proof structure cannot absorb, since the receipt's evidence clause IS the pointer. Fixed in 5869a46."
+      - "The doc loaded mermaid@11 from a CDN and ran its initializer over a document containing zero .diagram elements — the run's only diagram had been removed during authoring and the loader left behind. Fixed in 5869a46 by deleting the block; the WU plan, which does carry a diagram, keeps its own."
+      - "The mockup's fixture called new Date() independently for each of six rows. A render straddling local midnight would resolve some rows to today and others to yesterday, splitting the list across TimestampText's S1 and S2 states within one render — the same class of defect a reviewer had already reported once, when a hardcoded date aged overnight. Fixed in 5869a46: one NOW, shared."
+    refuted:
+      - "title does not cover the host cell (blocker) — the doc names two recovery paths, not one: 'it is on the row's title, AND D shows the whole URI on selection'. FlowDetail.tsx renders flow.uri in full, and flow.ts derives host from it, so the host is recoverable exactly as stated."
+      - "The fixed row height is a preference dressed as a constraint (blocker) — true that @tanstack/react-virtual supports measureElement, but the Frame never claims the library cannot; design-flow.html defines a Frame Constraint as a screen-level commitment, and the run itself states the rule 'reads as absolute and has no clause for a fixed-height virtualized row' and escalates it rather than asserting inevitability."
+      - "A hard rule is receipted as a soft judgment (blocker) — the receipt contains exactly the 17 soft slugs and nothing else; wrap-not-truncate appears in it zero times. The receipted violated verdict is display-equals-payload, which the rulebook's own tables confirm is soft. The hard rule is discussed in a separately-labelled prose table and routed to blocked-on, which is the doctrine's path for a predicate a Frame constraint cannot satisfy."
+      - "choose-before-act's n/a is a dodge (important) — the rule binds controls sharing one object ('the selector that decides what it acts on'). StatusDot dispatches re-invoke and replaces the whole screen with onboarding; it does not act on the list the four Fields filter, so the rule never engages."
+      - "The rulebook write-back is owed now, not at W11 (important) — editing design-rules-index.html inside this WU would move the blob under this run's own pinned receipt, tripping receipt·rulebook-stale and refusing the merge; the flow's e2e asserts exactly that failure mode. DEC-14's slug-immutability guarantees already-written receipts stay valid after later growth, not that mid-epic growth is safe. W5/W7/W9 have also not yet pinned the blob."
+      - "CopyText owns the path cell and was overridden silently (important) — the Elements row names CopyText and rejects it on its own @anatomy ('wraps, never truncates'), which a fixed-height row cannot use. Its @use example is not a live call site: FlowDetail renders the URI as a bare <p>, not a CopyText."
+    also_raised:
+      - "THE PREDICATE CANNOT SEE A MOCKUP. Found by a verifier attempting to refute the hard-rule finding, not by any finder: wrap-not-truncate·payload reds a truncating payload element in static HTML, but xtask's tokenizer treats <script type=\"text/babel\"> as opaque raw text — and docs/design-flow.html REQUIRES the draft mockup to mount its components from exactly such a block. So verify-doc reports '13/13 hard rules machine-checked' over markup it never read, on this run and on every design run. Confirmed both ways: the same element pasted into the mockup's static HTML reds immediately, inside the babel block it passes. NOT fixed here — E-REDESIGN's non-goals freeze the gate ('No change to the flow spec, rulebook or gate') — and recorded instead on the run's own blocked-on list, addressed to the harness. The run never relied on the blindness: it declares the violation in prose, which is the only reason the review had anything to find."
+design:
+  artifacts:
+    - docs/work/2026-09-04-flow-list-shell.html
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 5, verified: 0, waived: 0 }
+  verdict: PASS
+note: "No design.implements and no design.undesigned: design-scope reports one artifact and no surface — this WU adds no component and touches no rendered file (git diff BASE..HEAD -- ui/src/ is empty, the boundary the epic plan sets for a design WU). The design.implements citation for this run is owed by W4, the WU that builds the screen it designs; the blob to cite is git rev-parse 5869a46:docs/work/2026-09-04-flow-list-shell.html. The design dimension found five candidates — three blockers and two importants, the highest-value set in the review — and every one was refuted under verification. That is the outcome the dimension exists to produce or to deny: the run's central argument (wrap-not-truncate violated narrowly, on two of six cells, with three alternatives rejected and the rule escalated) was attacked directly and held."
+verdict: PASS
+date: 2026-09-05
