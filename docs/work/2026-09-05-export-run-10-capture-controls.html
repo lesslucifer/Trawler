@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9bbc7c9f34851f0dfac5cf">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Design run: the capture-management controls (E-EXPORT.W5)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}
+    .gist{font-weight:600;}
+    details.why{margin-top:4px;}
+    details.why summary{cursor:pointer;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+    details.why > *{font-size:12px;line-height:1.55;}
+    .v{font-weight:600;white-space:nowrap;}
+    .v-reuse{color:var(--ok);} .v-propose{color:var(--warn);} .v-local{color:var(--accent);}
+    .use{color:var(--ok);} .avoid{color:var(--warn);}
+    pre.sk,pre.tb{font-size:12px;line-height:1.45;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:0;}
+    pre.tb{font-size:11.5px;}
+    .ex-ok,.ex-no{display:block;font-size:12px;line-height:1.5;}
+    .ex-ok .g{color:var(--ok);font-weight:600;} .ex-no .g{color:var(--warn);font-weight:600;}
+    /* mockup surface — assembly only; every component is mounted, never drawn.
+       Colours come from the bundle's .app custom properties, never literals. */
+    .app{background:var(--a-canvas);color:var(--a-ink);font-family:var(--a-ui);border:1px solid var(--line);border-radius:6px;overflow:hidden;position:relative;}
+    .a-mock{display:flex;flex-direction:column;}
+    .a-head{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--a-soft);border-bottom:1px solid var(--a-line);flex-wrap:wrap;}
+    .a-acts{display:flex;align-items:center;gap:6px;margin-left:auto;}
+    .a-sep{width:1px;height:16px;background:var(--a-line);}
+    .a-body{display:flex;min-height:0;flex:1;height:208px;}
+    .a-main{display:flex;flex-direction:column;min-width:0;flex:1;overflow:hidden;}
+    .a-hrow,.a-row{display:grid;gap:12px;align-items:center;padding:0 16px;}
+    .a-hrow{border-bottom:1px solid var(--a-line);padding-top:4px;padding-bottom:4px;
+      font-size:10px;letter-spacing:.025em;text-transform:uppercase;color:var(--a-mute);}
+    .a-row{height:28px;border-bottom:1px solid var(--a-line);cursor:pointer;}
+    .a-row.sel{background:var(--a-soft);}
+    .a-scroll{min-height:0;flex:1;overflow:auto;}
+    .a-fld{background:transparent;border:1px solid var(--a-line);border-radius:3px;
+      padding:3px 9px;font-size:11.5px;font-family:var(--a-ui);color:var(--a-body);}
+    .a-title{font-family:var(--a-serif,serif);font-style:italic;font-size:18px;}
+    .a-count{white-space:nowrap;}
+    .a-mark{color:var(--a-mute);display:inline-block;width:12px;}
+    /* the ask — screen-owned, because nothing in the collection is a dialog */
+    .a-scrim{position:absolute;inset:0;display:flex;
+      align-items:center;justify-content:center;}
+    .a-ask{width:384px;background:var(--a-soft);border:1px solid var(--a-line);
+      border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px;}
+    .a-ask-b{display:flex;gap:6px;justify-content:flex-end;}
+    /* state switching — CSS, not script */
+    .a-mock .x-only{display:none;}
+    .a-mock.clearing .a-scrim{display:flex;}
+    .a-mock:not(.clearing) .a-scrim{display:none;}
+    .a-mock.clearing .x-clear{display:block;}
+    .statebtn{margin-top:8px;margin-right:6px;font-size:12px;padding:4px 10px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--ink);cursor:pointer;}
+  </style>
+</head>
+<body data-artifact="design-run" data-status="archived">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run — the capture-management controls</h1>
+      <p>The first three controls that change server state: take the capture out, bring one back, and empty it. Designed onto the flow list, the screen whose chrome is currently a filter bar and a list.</p>
+      <div class="meta">Design run · 2026-09-05 · Trawler · T3 (docs/work/) · <a href="2026-09-05-export-w5-controls-design-plan.html">E-EXPORT.W5</a> · UC-4 · UC-6 · UC-7 · flow: <a href="../design-flow.html">design-flow</a> · rulebook pinned <code>aeff5b0</code> · registry 24 entries · builds in <strong>W6</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="frame">1 · Frame</h2>
+    <div data-item="frame" data-c="frame">
+      <p><strong>Purpose:</strong> a developer hands their capture over, opens one they were handed, or empties it before a repro.<br>
+      <strong>Given:</strong> <code>GET /flows/export</code>, filtered · <code>POST /flows/import</code> → <code>{imported:n}</code> or 400 + reason · <code>DELETE /flows</code>, filtered → <code>{removed:n}</code> · <code>DELETE /flows/{id}</code> · <code>source</code> on the flow and in <code>FlowFilter</code> · <code>FlowsCleared</code> on <code>/stream</code> · Tauri dialogs.</p>
+      <p><strong>Not given</strong> (may not be assumed to exist):
+        progress on export or import (both are one-shot, no byte counter) · an undo for a clear · <code>?format=curl</code> and its flag-naming refusal (W7, unbuilt) · a per-flow delete affordance in the list · any confirm-before-act primitive in the collection.</p>
+      <table data-c="frame-table">
+        <tr><th>Driver</th><th>why</th><th>…therefore</th><th>on this screen</th></tr>
+        <tr><td colspan="4"><em><strong>Goals</strong> — the ranking is the visual hierarchy</em></td></tr>
+        <tr>
+          <td><strong>keep watching traffic</strong></td>
+          <td>the list is the screen's whole job</td>
+          <td>controls take chrome, never rows</td>
+          <td><span class="ex-ok"><span class="g">✓</span> three controls inside the existing header line</span><span class="ex-no"><span class="g">✗</span> a second toolbar row that costs four flows</span></td>
+        </tr>
+        <tr>
+          <td><strong>hand this capture over</strong></td>
+          <td>a bug report is the file, not a screenshot</td>
+          <td>the out-door is one act from the list</td>
+          <td><span class="ex-ok"><span class="g">✓</span> one control, no format step to choose</span><span class="ex-no"><span class="g">✗</span> a format picker in front of the only format</span></td>
+        </tr>
+        <tr>
+          <td><strong>read someone else's capture</strong></td>
+          <td>the file arrives from another machine</td>
+          <td>its rows must be tellable from live ones</td>
+          <td><span class="ex-ok"><span class="g">✓</span> the mark is in the row, filterable</span><span class="ex-no"><span class="g">✗</span> imported rows indistinguishable from captured</span></td>
+        </tr>
+        <tr>
+          <td><strong>empty the noise first</strong></td>
+          <td>a clean list is the setup for a repro</td>
+          <td>clearing is fast, and says what it took</td>
+          <td><span class="ex-ok"><span class="g">✓</span> the ask names the count it will remove</span><span class="ex-no"><span class="g">✗</span> "are you sure?" with no scope and no number</span></td>
+        </tr>
+        <tr><td colspan="4"><em><strong>Constraints</strong> — hard boundaries</em></td></tr>
+        <tr>
+          <td><strong>clearing is irreversible</strong></td>
+          <td>the ring is memory; nothing persists it</td>
+          <td>it must ask, and the ask must scope</td>
+          <td><span class="ex-ok"><span class="g">✓</span> a modal ask blocking until answered</span><span class="ex-no"><span class="g">✗</span> a 2 s undo the store cannot honour</span></td>
+        </tr>
+        <tr>
+          <td><strong>the filter scopes both doors</strong></td>
+          <td>export and clear reuse <code>FlowFilter</code></td>
+          <td>each label states the scope it acts on</td>
+          <td><span class="ex-ok"><span class="g">✓</span> "clear 214 flows" — the filtered count</span><span class="ex-no"><span class="g">✗</span> "clear all" while a filter hides half</span></td>
+        </tr>
+        <tr>
+          <td><strong>the header is already full</strong></td>
+          <td>four fields, a wordmark, a dot, a count</td>
+          <td>new controls are square, not labelled</td>
+          <td><span class="ex-ok"><span class="g">✓</span> 28px glyphs pushed to the trailing edge</span><span class="ex-no"><span class="g">✗</span> three word buttons crushing the filters</span></td>
+        </tr>
+        <tr>
+          <td><strong>no progress is observable</strong></td>
+          <td>both transfers are one-shot requests</td>
+          <td>in-flight is a state, never a percentage</td>
+          <td><span class="ex-ok"><span class="g">✓</span> disabled control plus "exporting…" beside it</span><span class="ex-no"><span class="g">✗</span> a progress bar with an invented number</span></td>
+        </tr>
+        <tr>
+          <td><strong>the row cannot grow</strong></td>
+          <td>fixed 30px, virtualized, six columns</td>
+          <td>the mark fits an existing cell or nothing</td>
+          <td><span class="ex-ok"><span class="g">✓</span> a glyph in the time cell's own width</span><span class="ex-no"><span class="g">✗</span> a seventh column for a rare boolean</span></td>
+        </tr>
+        <tr><td colspan="4"><em><strong>Qualities</strong> — Tune's yardstick</em></td></tr>
+        <tr>
+          <td><strong>the list stays the subject</strong></td>
+          <td>controls serve the capture, not vice versa</td>
+          <td>chrome recedes until pointed at</td>
+          <td><span class="ex-ok"><span class="g">✓</span> bare glyphs, no borders, no fills at rest</span><span class="ex-no"><span class="g">✗</span> a filled primary button drawing the eye</span></td>
+        </tr>
+        <tr>
+          <td><strong>destructive reads as destructive</strong></td>
+          <td>one of the three cannot be taken back</td>
+          <td>only that one carries alarm, and only in its ask</td>
+          <td><span class="ex-ok"><span class="g">✓</span> warn tone inside the ask, nowhere else</span><span class="ex-no"><span class="g">✗</span> a red glyph sitting in the header all day</span></td>
+        </tr>
+      </table>
+      <p><strong>Non-goals:</strong> replaying an imported flow (E-REPLAY) · per-flow delete in the row (the endpoint exists; no goal here asks for it) · a saved-view or session concept (E-PERSIST) · paging controls (W1 is opt-in and the app does not opt in) · the detail pane's contents.</p>
+    </div>
+
+    <h2 id="layout">2 · Layout</h2>
+    <div data-item="layout" data-c="layout">
+      <pre class="sk">┌────────────────────────────────────────────────────────────┬───────────┐
+│ A  header — dot · title · 4 filter fields · count │ ⇥ │  A′ acts  │ ← pinned; A′ is A's trailing cluster
+├────────────────────────────────────────────────────────────┤           │
+│ B  column labels                                           │  D        │ ← pinned under A
+├────────────────────────────────────────────────────────────┤  detail   │
+│ C  flow rows — an imported row carries its mark in cell 1  │  pane     │ ← the only vertical scroller
+│      ⇩ 14:22:07 · GET · api.example.com · /v1/orders · 200 │  (seam)   │
+│      ·                                                     │           │
+└────────────────────────────────────────────────────────────┴───────────┘
+                     ┌──────────────────────────────┐
+   E  the ask ──────▶│  clear 214 flows?            │ ← modal, over the whole app,
+      (transient)    │  [ cancel ]      [ clear ]   │   only for the destructive door
+                     └──────────────────────────────┘
+   F  the paste ────▶ same modal frame, textarea + [ import ] ← only when curl is chosen
+
+   priority: C is the screen. A is standing chrome; A′ is its trailing edge and
+   nothing in it competes with the filters. E and F are absent until asked for.
+
+scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
+  margin-left:auto so it holds the trailing edge and is the last thing to wrap
+  (owner: this screen) · B pinned, one line, never scrolls · C the single
+  vertical scroll region, virtualized, capped by the capture ring (owner: the
+  core's ring) · D scrolls itself at 380px (owner: the flow-detail run) · E is
+  content-height, capped at dialog-max 384px, never scrolls — its one sentence
+  and two buttons cannot exceed it · F's textarea is the one unbounded input:
+  fixed height, scrolls internally, never grows the modal (owner: this screen).</pre>
+      <p>A′ is not a new zone — it is A's trailing cluster, which is what keeps the controls out of the row budget. <code>choose-before-act</code> is the reason it sits after the filter fields and not before: the filters decide <em>what</em> export and clear act on, so they must be read first.</p>
+    </div>
+
+    <h2 id="elements">3 · Elements</h2>
+    <div data-item="elements" data-map data-c="elements">
+      <pre class="sk">shell
+├─ A  header ─── StatusDot ◆ · title (inline) · Field ×4 ◆ · count (inline span)
+│   └─ A′ acts ── <span data-key="icon-button">IconButton</span> ×3 ◆ (export ⇧ · import ⇩ · clear ⌫) · <span data-key="toned-text">TonedText</span> ◆ (progress)
+├─ B  labels ─── column label row ▣
+├─ C  list ───── FlowRow ▣ ×n · <span data-key="notice">Notice</span> ◆ (absences)
+├─ E  the ask ── AskDialog ▣
+└─ F  the paste ─ AskDialog ▣ + textarea (inline) + <span data-key="notice">Notice</span> ◆ (refusal)
+
+▣ FlowRow      = import mark (inline glyph) · TimestampText · MethodLabel
+                 · host · path · <span data-key="status-pill">StatusPill</span> ◆ · DurationText
+▣ AskDialog    = scrim + panel (screen-owned) · <span data-key="notice">Notice</span> ◆ (the question)
+                 · <span data-key="button">Button</span> ◆ ×2 (cancel · the act)</pre>
+      <table data-c="elements-table">
+        <tr><th>Component</th><th>Placement · verdict</th><th>Fit</th><th>Shape · States</th></tr>
+        <tr>
+          <td><strong data-key="icon-button">IconButton</strong> ×3<br>T1</td>
+          <td>A′ · the three doors<br><span class="v v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">Its <span class="use">@use</span> is icon-only triggers; the header has no room for words.</div>
+            <details class="why"><summary>why</summary>
+              <p>Clears <span class="avoid">@avoid</span> "actions with no fitting glyph" — out, in and empty are the three most conventional glyphs in the genre (⇧ ⇩ ⌫), and <code>familiar-idioms</code> is why they read without labels. Clears <span class="avoid">@avoid</span> "primary actions (no visual weight at rest)": none of the three is primary, and the <em>list stays the subject</em> quality wants exactly the bare, unweighted rest state this component has. Lands in <span class="use">@use</span> "icon-only triggers unambiguous in place". The accessible name is the component's own guarantee, which is what stops three unlabelled glyphs being three unlabelled glyphs to a screen reader.</p>
+              <p><strong>The near-miss worth stating:</strong> <code>Button</code> with a word label was the first choice and is the better control in isolation — a word never needs a tooltip. It loses on the <em>header is already full</em> constraint, not on merit: "export · import · clear" is ~180px of the same line that holds four fields. Recorded here so the build does not re-open it as taste.</p></details>
+          </td>
+          <td><pre class="sk">⇧  ⇩  ⌫</pre>Per its TSDoc — rest (muted glyph, no bg) · hover · focus · active · disabled (35%, no tab).</td>
+        </tr>
+        <tr>
+          <td><strong data-key="toned-text">TonedText</strong><br>T1</td>
+          <td>A′ · progress line<br><span class="v v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">The second half <code>Button</code>'s fork D4 makes mandatory.</div>
+            <details class="why"><summary>why</summary>
+              <p><code>IconButton</code> composes <code>Button</code>, whose <span class="use">@states</span> is explicit: <em>no loading state of its own — for a slow action the caller MUST render both halves: the control disabled for the whole in-flight window, AND a progress line in the same zone naming what is awaited</em>. So the progress line is not a decoration this run added; it is the contract the component imposes on any caller with a slow action, and export and import are both slow. Lands in <span class="use">@use</span> "any short value whose meaning is carried by tone". Clears <span class="avoid">@avoid</span> "a toned sentence or prose with an action" — "exporting…" is a value, not a sentence, and carries no action.</p>
+              <p>Tone is <code>muted</code>: in-flight is neither success nor failure, and the chromatic set has no third meaning for it. That is also why the outcome does <em>not</em> flash green here — see <a href="#outcomes-h">the outcome table</a>.</p></details>
+          </td>
+          <td><pre class="sk">exporting…    importing…</pre>Per its TSDoc — tone:ok · warn · muted. The tone prop is the whole state machine.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="button">Button</strong> ×2<br>T1</td>
+          <td>E, F · the ask's two answers<br><span class="v v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">A word each, and deliberately no emphasis on either.</div>
+            <details class="why"><summary>why</summary>
+              <p>Lands in <span class="use">@use</span> "any action that needs a word and is not a copy". The interesting clearance is <span class="avoid">@avoid</span> "emphasis by styling: pick which actions to offer instead, a Button never carries a primary/filled variant" — so the destructive answer cannot be made red or heavy, which is the convention most confirm dialogs use. The alarm lives in the <em>question</em> instead (the <code>Notice</code> below), and the two answers are peers. Also clears <span class="avoid">@avoid</span> "warn-toning it inside a warn Notice (the message owns the alarm, the button is the way out)" — that <span class="avoid">@avoid</span> line describes this exact composition, so the design follows it rather than fighting it.</p></details>
+          </td>
+          <td><pre class="sk">[ cancel ]  [ clear ]</pre>Per its TSDoc — rest · hover · focus · active · disabled. No confirming state of its own.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="notice">Notice</strong><br>T1</td>
+          <td>E, F · the question and the refusal<br><span class="v v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">One sentence at a tone, with the action slot left empty.</div>
+            <details class="why"><summary>why</summary>
+              <p>The question ("this removes 214 flows — the capture is not saved anywhere") is <code>tone="warn"</code>: a failure-or-alarm sentence, which is the tone's fixed meaning. The refusal ("not a valid curl command — <code>--data-raw</code> is not supported") is also <code>warn</code>. Both clear <span class="avoid">@avoid</span> "transient confirmations of an action" because neither is transient — the ask stands until answered, the refusal stands until the paste changes.</p>
+              <p><strong>The action slot stays empty on purpose.</strong> <code>Notice</code> <em>can</em> hold a <code>Button</code>, which would make the whole ask one component. Rejected: the ask needs <em>two</em> answers and the slot takes one, and a cancel that is not a peer of the act is a dark pattern. The two <code>Button</code>s sit beside the notice in the screen-owned panel instead.</p></details>
+          </td>
+          <td><pre class="sk">⚠ this removes 214 flows
+  the capture is not saved anywhere</pre>Per its TSDoc — mute · warn · ok, bare or with detail, with or without the action slot.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="status-pill">StatusPill</strong><br>T2</td>
+          <td>C · cell 5<br><span class="v v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">Its null state is the shape a pasted curl command lands in.</div>
+            <details class="why"><summary>why</summary>
+              <p>Already in the row from the flow-list run; re-judged here because this run adds a way to create a flow that has <em>no response at all</em>. Its <span class="use">@states</span> covers it: <code>null</code> → tone muted, "…". So a request-only imported flow needs no new state and no new component — it renders as the in-flight shape the store already had between request and reply. Clears <span class="avoid">@avoid</span> "pre-resolving tone at the call site": the raw status goes in, including <code>null</code>.</p></details>
+          </td>
+          <td><pre class="sk">200   403   …</pre>Per its TSDoc — ok · warn · muted; null/pending → "…".</td>
+        </tr>
+        <tr>
+          <td><strong>AskDialog</strong><br>T4 → T3 here</td>
+          <td>E, F · the modal frame<br><span class="v v-propose">propose</span></td>
+          <td>
+            <div class="gist">Nothing in the collection is a dialog, and two doors now need one.</div>
+            <details class="why"><summary>why</summary>
+              <p>The registry has 24 entries and no modal, no scrim, no focus trap. <code>ProxyCloseDialog</code> exists in <code>ui/src/</code> but is a <em>screen</em>, not a collection entry — it hand-rolls its own scrim and panel. This run needs the same frame twice (the clear ask, the curl paste), and W7's paste makes a third caller likely, so the second sighting the vocabulary waits for has arrived.</p>
+              <p><strong>What the plan got wrong.</strong> The epic plan says the clear confirmation is "wired through the existing <code>useConfirm</code>". It cannot be: <code>useConfirm</code> is a ~2 s <em>after-the-fact</em> flash shared by <code>CopyText</code> and <code>CopyButton</code> — it reports that something happened, it never asks permission. Using it for a destructive act would mean clearing first and flashing afterwards. Recorded as a <a href="#blocked-on">deviation</a>, not silently corrected.</p>
+              <p>Proposed rather than built here, and deliberately <em>not</em> designed in full: a component's states, tones and internal layout are its own design file's truth. This run states the two things it needs from it and leaves the rest to the proposal's owner.</p></details>
+          </td>
+          <td><pre class="sk">┌────────────────────────┐
+│ ⚠ clear 214 flows?     │
+│                        │
+│      [cancel] [clear]  │
+└────────────────────────┘</pre><strong>Must own:</strong> the scrim, the focus trap, Esc-to-dismiss returning focus to the trigger, and the initial-focus rule. <strong>Must not own:</strong> the question's wording or tone — those come in as a <code>Notice</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>the import mark</strong><br>T0 inline</td>
+          <td>C · cell 1, leading<br><span class="v v-local">build local</span></td>
+          <td>
+            <div class="gist">A glyph inside the time cell's existing width — no column, no component.</div>
+            <details class="why"><summary>why</summary>
+              <p>Three candidates were weighed against <code>data-ink-first</code>, whose test is: strip it in imagination, is information lost? A <em>seventh column</em> fails — 110px of every row spent on a value that is <code>captured</code> for ~100% of rows in the normal session, and the <em>row cannot grow</em> constraint forbids the width anyway. A <em>tinted row</em> fails <code>colour-plus-text</code> (tone as the only channel) and would collide with the selected wash. A <em>glyph in the leading cell</em> costs nothing when absent and is the convention a devtools user already reads.</p>
+              <p>Not a component: it is one conditional character with an accessible label, in one cell of one screen. Proposing an entry on a sample of one is the more expensive mistake — the registry's own precedent. <strong>The text channel</strong> that satisfies <code>colour-plus-text</code> is the glyph's <code>title</code>/<code>aria-label</code> ("imported") plus the <code>source</code> filter, not a colour: the mark is <code>ink-mute</code>, deliberately not chromatic, because being imported is not an outcome.</p></details>
+          </td>
+          <td><pre class="sk">⇩ 14:22:07   ← imported
+  14:22:09   ← captured</pre>Two states: present (imported) · absent (captured). No hover, no interaction — it is display.</td>
+        </tr>
+        <tr>
+          <td><strong>the paste target</strong><br>T0 inline</td>
+          <td>F · inside the ask<br><span class="v v-local">build local</span></td>
+          <td>
+            <div class="gist">A bare <code>textarea</code> — the collection has no multi-line entry.</div>
+            <details class="why"><summary>why</summary>
+              <p><code>Field</code> is single-line and lives outside the collection anyway; a curl command from a browser is multi-line with backslash continuations, so a single-line input would be actively wrong. <code>Select</code> and <code>SegmentedControl</code> are choosers, not entry. Nothing in the registry accepts free text at all, and the honest read is that this screen wants a T0 <code>textarea</code> in mono — the pasted command is wire data, so <code>mono-for-wire-data</code> binds it.</p>
+              <p>Not proposed as an entry: one call site, and the shape a second caller would want is unknown. If W7's paste affordance spreads, the entry is proposed then.</p></details>
+          </td>
+          <td><pre class="sk">curl 'https://api.example.com/v1/orders' \
+  -H 'accept: application/json'</pre>rest · focus · with-refusal (a <code>Notice</code> below it) · disabled while importing.</td>
+        </tr>
+      </table>
+
+      <p><strong>T4 break-down:</strong> AskDialog (T4 composition) → scrim + panel (T0, screen-owned) · <code>Notice</code> (T1) · <code>Button</code> ×2 (T1) · focus trap (behaviour, no tier).</p>
+      <p><strong>Proposals:</strong> AskDialog (T2 widget) — see <a href="#proposals">Proposals</a>.</p>
+
+    </div>
+
+    <h2 id="outcomes-h">The four outcomes, and why only one of them is chromatic</h2>
+    <div data-c="outcomes-sec">
+      <table data-c="outcomes">
+        <tr><th>Act</th><th>What the user sees at the end</th><th>Why not something louder</th></tr>
+        <tr>
+          <td>export succeeds</td>
+          <td>The progress line clears. The native save dialog already closed — the file is on disk.</td>
+          <td>The OS dialog <em>is</em> the confirmation; a second "saved" in the header would confirm what the user just watched happen. <code>data-ink-first</code>.</td>
+        </tr>
+        <tr>
+          <td>import succeeds</td>
+          <td>The progress line clears and the list refills with marked rows; the count moves.</td>
+          <td>The list changing is the feedback, and it is impossible to miss. A toast would also violate <code>confirm-at-point</code>.</td>
+        </tr>
+        <tr>
+          <td>clear succeeds</td>
+          <td>The ask closes; the list empties to <code>Notice</code> "no flows yet — send traffic through the proxy".</td>
+          <td>An empty list after asking to empty the list needs no announcement. The existing empty state already orients.</td>
+        </tr>
+        <tr>
+          <td><strong>any of them fails</strong></td>
+          <td>A <code>warn</code> <code>Notice</code> at the point of the act — in the ask for import and clear, in A′ for export — carrying the server's reason verbatim.</td>
+          <td>This is the one case that must be loud, because nothing else on screen would change. <code>absence-names-itself</code>: a failed import and a failed clear never share a sentence.</td>
+        </tr>
+      </table>
+      <p>So three of four outcomes are silent by design: the screen already shows the result. Only failure gets a channel of its own, and the epic's <code>FlowsCleared</code> event means a clear triggered from another client reaches this list the same way — the list is the truth, not a message about the list.</p>
+    </div>
+
+    <h2 id="interaction">4 · Interaction</h2>
+    <div data-item="interaction" data-c="interaction">
+      <table data-c="interaction-table">
+        <tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th><th>Keyboard path</th></tr>
+        <tr>
+          <td>hand the capture over</td>
+          <td>hand this capture over</td>
+          <td>clicks ⇧ export</td>
+          <td><div class="gist">Native save dialog; the control is disabled until it resolves.</div><details class="why"><summary>zone → delta</summary><pre class="sk">A′ → ⇧ disabled for the whole in-flight window
+A′ → "exporting…" appears beside it ← Button fork D4: both halves
+A′ → the other two controls UNCHANGED ← only the acting door is busy
+C  → UNCHANGED ← export reads; it never touches the list
+E  → not shown ← export is not destructive and asks nothing</pre></details></td>
+          <td>Tab to ⇧, Enter / Space — <code>Button</code>'s own, inherited by <code>IconButton</code></td>
+        </tr>
+        <tr>
+          <td>open a capture from a file</td>
+          <td>read someone else's capture</td>
+          <td>clicks ⇩ import, picks a <code>.har</code></td>
+          <td><div class="gist">Rows append marked; the count moves; nothing announces it.</div><details class="why"><summary>zone → delta</summary><pre class="sk">A′ → ⇩ disabled, "importing…" beside it
+C  → n rows append, each carrying the ⇩ mark
+A  → count follows the list
+A  → the four filter fields UNCHANGED ← an import is not a filter change
+B  → UNCHANGED ← no column was added for the mark</pre></details></td>
+          <td>Tab to ⇩, Enter / Space; the OS dialog owns its own keyboard from there</td>
+        </tr>
+        <tr>
+          <td>paste a curl command</td>
+          <td>read someone else's capture</td>
+          <td>chooses paste, pastes, confirms</td>
+          <td><div class="gist">One request-only row appears, marked; the ask closes.</div><details class="why"><summary>zone → delta</summary><pre class="sk">F  → opens with focus in the textarea
+F  → [import] disabled while the textarea is empty
+C  → one row appends: method, host, path, no status
+C  → its status cell reads "…" ← StatusPill's null state, the shape
+      a captured flow already has between request and reply
+F  → closes; focus returns to ⇩</pre></details></td>
+          <td>Tab to ⇩ → the choice → Enter opens F · ⌘V pastes · Tab to [import] · Esc cancels</td>
+        </tr>
+        <tr>
+          <td>a refused paste</td>
+          <td>read someone else's capture</td>
+          <td>pastes a command with an unsupported flag</td>
+          <td><div class="gist">The ask stays open, naming the flag; nothing was imported.</div><details class="why"><summary>zone → delta</summary><pre class="sk">F  → warn Notice under the textarea, the server's reason verbatim
+F  → stays open, the text preserved ← the user edits, never retypes
+F  → the notice clears the moment the text changes
+C  → UNCHANGED ← a refusal is never a partial import</pre></details></td>
+          <td>focus stays in the textarea; Esc still cancels</td>
+        </tr>
+        <tr>
+          <td>empty the capture</td>
+          <td>empty the noise first</td>
+          <td>clicks ⌫ clear</td>
+          <td><div class="gist">The ask opens, naming the count and the scope.</div><details class="why"><summary>zone → delta</summary><pre class="sk">E  → opens over the app, focus on [cancel] ← the safe answer,
+      because Enter on an unread dialog must not destroy
+E  → the question names the filtered count, not "all"
+C  → UNCHANGED until answered ← the ask blocks, nothing has happened
+A  → the filter fields UNCHANGED and still visible behind the scrim
+      ← the user can see the scope they are about to act on</pre></details></td>
+          <td>Tab to ⌫, Enter / Space opens E</td>
+        </tr>
+        <tr>
+          <td>confirm the clear</td>
+          <td>empty the noise first</td>
+          <td>Tabs to [clear], Enter</td>
+          <td><div class="gist">The list empties to its own empty state; the ask closes.</div><details class="why"><summary>zone → delta</summary><pre class="sk">C  → empties to the Notice, or to the unmatched rows if filtered
+A  → count → 0, or the remaining count
+E  → closes; focus returns to ⌫ ← focus-returns-to-origin
+A′ → all three controls UNCHANGED ← clear is fast; no progress line
+D  → closes if the selected flow was removed</pre></details></td>
+          <td>Tab moves between the two answers; Enter takes the focused one</td>
+        </tr>
+        <tr>
+          <td>back out of the clear</td>
+          <td><em>constraint:</em> clearing is irreversible</td>
+          <td>presses Esc, or [cancel]</td>
+          <td><div class="gist">Nothing happened, and the screen is exactly as it was.</div><details class="why"><summary>zone → delta</summary><pre class="sk">E  → closes
+C  → UNCHANGED ← the whole point of the ask
+A′ → focus returns to ⌫ ← focus-returns-to-origin</pre></details></td>
+          <td>Esc, per the rulebook's "dismiss the surface" convention</td>
+        </tr>
+      </table>
+      <p><strong>The keyboard gap this stage found.</strong> Every control above reaches the keyboard through <code>Button</code>, which already owns focus and activation — so unlike the flow row, nothing here needs a new grammar. What is genuinely new is the <em>modal</em> contract: focus into the dialog on open, trapped while it stands, returned to the trigger on dismiss. That is three keyboard behaviours no shipped surface in this app implements, and it is why <a href="#proposals">AskDialog</a> is proposed as a component rather than hand-rolled twice — <code>focus-returns-to-origin</code> binds per dismissable surface, and two hand-rolled copies is two chances to get it wrong.</p>
+    </div>
+
+    <h2 id="mockup">5 · Draft mockup</h2>
+    <div data-item="mockup" data-c="mockup">
+      <p>Assembled from the real collection — every <em>reuse</em> above is mounted from <code>window.Trawler</code>, never drawn. Screen-owned: the zoning, the row grid, the filter fields (they live in <code>ui/src/components.tsx</code>, outside the collection), and the modal frame. The toggle crosses to the state <a href="#interaction">Interaction row 5</a> names.</p>
+      <div class="app">
+        <div class="a-mock" id="mock">
+          <div class="a-head" id="m-head" data-wire="none"></div>
+          <div class="a-body">
+            <div class="a-main">
+              <div class="a-hrow" id="m-labels"></div>
+              <div class="a-scroll"><div id="m-rows" data-wire="collection" data-order="wire"></div></div>
+            </div>
+          </div>
+          <div class="a-scrim bg-scrim x-only x-clear"><div class="a-ask" id="m-ask"></div></div>
+        </div>
+      </div>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="clearing"
+        data-label-off="▶ show the clear ask" data-label-on="◀ show the list">▶ show the clear ask</button>
+      <script type="text/babel">
+        const { React, createRoot, IconButton, TonedText, Button, Notice,
+                TimestampText, MethodLabel, StatusPill, DurationText } = window.Trawler;
+        const mount = (id, node) => createRoot(document.getElementById(id)).render(node);
+        const COLS = "126px 70px 180px 1fr 70px 90px";
+        const LABELS = ["Time", "Method", "Host", "Path", "Status", "Duration"];
+
+        /* Same-day by construction — a hardcoded date ages overnight into
+           TimestampText's cross-day state, which this screen rarely shows. */
+        const NOW = new Date();
+        const at = (s) => { const d = new Date(NOW); d.setHours(14, 22, s, 0); return d.toISOString(); };
+        const FLOWS = [
+          { id: "1", at: at(7),  m: "GET",    h: "api.example.com", p: "/v1/orders?id=4821", s: 200, d: 84, imported: false },
+          { id: "2", at: at(9),  m: "POST",   h: "api.example.com", p: "/v1/orders", s: 201, d: 1240, imported: false },
+          { id: "3", at: at(11), m: "GET",    h: "cdn.example.com", p: "/assets/app.a91f3c.js", s: 304, d: 12, imported: true },
+          { id: "4", at: at(14), m: "DELETE", h: "api.example.com", p: "/v1/sessions/self", s: 403, d: 96, imported: true },
+          { id: "5", at: at(16), m: "PATCH",  h: "api.example.com", p: "/v1/orders/4821?fields=status,total", s: 500, d: 2310, imported: false },
+          { id: "6", at: at(18), m: "GET",    h: "api.example.com", p: "/v1/orders/4821", s: null, d: null, imported: true },
+        ];
+
+        mount("m-head", <>
+          <span className="a-title">Trawler</span>
+          <input className="a-fld" style={{ flex: 1, minWidth: 128 }} placeholder="filter — free text" readOnly />
+          <input className="a-fld" style={{ width: 160 }} placeholder="host" readOnly />
+          <input className="a-fld" style={{ width: 80 }} placeholder="method" readOnly />
+          <input className="a-fld" style={{ width: 80 }} placeholder="status" readOnly />
+          <TonedText tone="muted" className="a-count">6 flows</TonedText>
+          <span className="a-acts">
+            <TonedText tone="muted">exporting…</TonedText>
+            <IconButton label="export as har" onClick={() => {}} disabled>⇧</IconButton>
+            <IconButton label="import a har file" onClick={() => {}}>⇩</IconButton>
+            <span className="a-sep" />
+            <IconButton label="clear the capture" onClick={() => {}}>⌫</IconButton>
+          </span>
+        </>);
+
+        document.getElementById("m-labels").style.gridTemplateColumns = COLS;
+        mount("m-labels", <>
+          {LABELS.map((l, i) => (
+            <span key={l} className={i === 4 ? "text-center" : i === 5 ? "text-right" : undefined}>{l}</span>
+          ))}
+        </>);
+
+        mount("m-rows", <>
+          {FLOWS.map((f) => (
+            <div key={f.id} className={`a-row${f.id === "4" ? " sel" : ""}`}
+                 style={{ gridTemplateColumns: COLS }} title={f.p}>
+              <span>
+                <span className="a-mark" aria-label={f.imported ? "imported" : undefined}
+                      title={f.imported ? "imported" : undefined}>{f.imported ? "⇩ " : "  "}</span>
+                <TimestampText timestamp={f.at} />
+              </span>
+              <MethodLabel method={f.m} />
+              <span data-wire="host" className="truncate font-mono text-body text-ink-body">{f.h}</span>
+              <span data-wire="path" className="truncate font-mono text-body text-ink-body">{f.p}</span>
+              <span className="text-center"><StatusPill status={f.s} /></span>
+              <span className="text-right"><DurationText value={f.d} /></span>
+            </div>
+          ))}
+        </>);
+
+        mount("m-ask", <>
+          <Notice tone="warn" detail="the capture is not saved anywhere">this removes 6 flows</Notice>
+          <span className="a-ask-b">
+            <Button onClick={() => {}}>cancel</Button>
+            <Button onClick={() => {}}>clear</Button>
+          </span>
+        </>);
+      </script>
+      <p><strong>What the assembly shows that the tables could not.</strong> The mark is the thing to look at: rows 3, 4 and 6 are imported and rows 1, 2, 5 are not, and the column still reads as one clean left edge because the absent mark holds its own width. Row 4 is <em>both</em> imported and selected and a 403 — three signals in one row, and the ink-mute mark stays clearly subordinate to the toned status, which is what the <em>destructive reads as destructive</em> quality wanted. Row 6 is an imported request-only flow: <code>StatusPill</code> renders "…" and <code>DurationText</code> holds the column, which is exactly the shape a pasted curl command produces — the same state the store already had between request and reply, demonstrated rather than asserted. In A′ the export control is disabled with "exporting…" beside it: <code>Button</code>'s fork D4, both halves, in the real components.</p>
+      <p><em>Stubbed:</em> the glyph set — <code>IconButton</code>'s registry holds only <code>close</code> and <code>save</code>, so the three faces are passed as <code>children</code> (a supported axis) rather than registry entries; the button, its hit area, focus ring and disabled treatment are the real component (see <a href="#blocked-on">blocked-on</a>) · the scrim's focus trap · the native save/open dialogs · the paste target's own state (F is the same frame as E) · live SSE, filtering and virtualization.</p>
+    </div>
+
+    <h2 id="tune">6 · Tune</h2>
+    <table data-item="tune" data-c="tune">
+      <tr><th>Call</th><th>Before</th><th>After</th><th>Slug</th></tr>
+      <tr>
+        <td><strong>T1 · the destructive door had no boundary</strong></td>
+        <td><pre class="tb">6 flows  ⇧ ⇩ ⌫</pre></td>
+        <td><pre class="tb">6 flows  ⇧ ⇩ │ ⌫</pre></td>
+        <td><code>grouping-by-relatedness</code></td>
+      </tr>
+      <tr>
+        <td><strong>T2 · the count sat inside the action cluster</strong></td>
+        <td><pre class="tb">…status│ ⇧ ⇩ │⌫ 6 flows</pre></td>
+        <td><pre class="tb">…status│ 6 flows   ⇧ ⇩ │⌫</pre></td>
+        <td><code>choose-before-act</code></td>
+      </tr>
+      <tr>
+        <td><strong>T3 · the ask counted the store, not the scope</strong></td>
+        <td><pre class="tb">⚠ clear all flows?</pre></td>
+        <td><pre class="tb">⚠ this removes 6 flows
+  the capture is not saved anywhere</pre></td>
+        <td><code>labels-add-context</code></td>
+      </tr>
+      <tr>
+        <td><strong>T4 · the mark shifted the column</strong></td>
+        <td><pre class="tb">⇩ 14:22:07
+14:22:09</pre></td>
+        <td><pre class="tb">⇩ 14:22:07
+   14:22:09</pre></td>
+        <td><code>visual-weight-follows-goals</code></td>
+      </tr>
+      <details class="why"><summary>why</summary>
+        <ul>
+          <li><strong>T1</strong> — three glyphs in a row read as one group of three peers, but one of them is irreversible and the other two are not. A hairline before ⌫ makes the boundary a real semantic one rather than a spacing accident. Loops back to Layout: <strong>no</strong> — A′ is unchanged, this is within-cluster.</li>
+          <li><strong>T2</strong> — the first sketch put the count last, at the trailing edge. Read left to right that says "act, then learn what you are acting on". The count is what scopes both export and clear, so it belongs before them. Loops back to Layout: <strong>no</strong> — same zone, order within it.</li>
+          <li><strong>T3</strong> — "clear all flows?" is wrong twice: it says <em>all</em> when a filter may scope it to a subset, and it makes the user supply the number themselves. The count comes from the same filtered listing the button acts on, so the sentence states the consequence instead of naming the command. The second line is the fact that makes the answer decidable — nothing persists the capture. Loops back to Layout: <strong>no</strong>.</li>
+          <li><strong>T4</strong> — the first mark rendered only when present, so an imported row's timestamp sat two characters left of every captured row's. In a virtualized list of mostly-captured rows, that reads as jitter rather than as information. The absent mark now holds its width, which is also why the time column grew 110px → 126px. Loops back to Layout: <strong>yes</strong> — the sketch's cell-1 width is the tuned one.</li>
+        </ul>
+      </details>
+    </table>
+
+    <h2 id="lexicon">The lexicon collision — which word the UI uses</h2>
+    <div data-c="lexicon">
+      <p>The epic plan flagged this as the run's to settle. The rulebook's Lexicon row reads: <strong>copy</strong> means "put on the clipboard, verbatim", never "grab · <em>export</em> · save". So <em>export</em> is reserved <em>against copy</em> — it is not a banned word, it is a word that must never be used to mean copy.</p>
+      <table data-c="lexicon-table">
+        <tr><th>Candidate</th><th>Verdict</th><th>Why</th></tr>
+        <tr><td><strong>export</strong></td><td><span class="v v-reuse">adopted</span></td><td>It is the literal, correct name for the operation, it is the word HAR tooling uses, and <code>familiar-idioms</code> prefers the genre's term. The reservation it seems to collide with is a rule about <em>copy</em>, and this operation is not a copy — it writes a file, and the clipboard is not involved.</td></tr>
+        <tr><td>save</td><td><span class="v v-propose">rejected</span></td><td>Also on the same forbidden list, and worse: it implies persistence, which the non-goal explicitly denies (a HAR file is an artifact, not an autosave).</td></tr>
+        <tr><td>download</td><td><span class="v v-propose">rejected</span></td><td>Wrong genre for a native app writing a local file, and it would be a second term for one concept.</td></tr>
+      </table>
+      <p><strong>The write-back this run owes the rulebook</strong> (at distillation, not mid-run — DEC-14): the Lexicon gains a row so the next design does not re-litigate it.</p>
+      <pre class="sk">| Term   | Means                                    | Never                        |
+| export | write the capture out as a HAR file      | copy · save · download       |</pre>
+      <p>And <code>copy</code>'s existing "Never" list keeps <em>export</em> — the two rows are consistent: copy is never called export, and export is never called copy. One term per concept, both directions.</p>
+    </div>
+
+    <h2 id="receipt">Receipt</h2>
+    <pre data-item="receipt" data-c="receipt">rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+soft:
+  visual-weight-follows-goals: "satisfied — the list keeps every pixel it had; the three controls are bare glyphs at the trailing edge, and Tune T4 spends 16px on the mark rather than a column"
+  grouping-by-relatedness: "satisfied — Tune T1 puts a hairline between the two reversible doors and the one that is not; the ask's question and its two answers are one panel"
+  ordering-by-priority: "satisfied — Tune T2 puts the count before the acts it scopes; within A′ the order is out, in, then destroy"
+  progressive-disclosure: "satisfied — the ask and the paste target do not exist until invited; the scan level is the list plus three glyphs"
+  data-ink-first: "satisfied — no badge, no fill, no border at rest; the import mark is one character in an existing cell, and three of four outcomes render nothing at all"
+  generous-targets: "satisfied — IconButton's 28px square is the component's own floor, not a 12px glyph; the ask's buttons are full Button hit areas"
+  motion-informs: "satisfied — nothing animates; in-flight is a disabled control plus a static word, never a spinner or a bar"
+  empty-states-orient: "satisfied — a cleared list lands on the existing 'no flows yet — send traffic through the proxy', which names what will appear and the act that causes it"
+  familiar-idioms: "satisfied — out/in/empty glyphs and a modal confirm are the devtools genre; the epic's own inverse (copy-as-curl) is why a paste target is the expected shape"
+  display-equals-payload: "satisfied — the ask's count is the filtered listing's own count, not a stored total; the paste target shows the pasted bytes verbatim in mono"
+  labels-add-context: "satisfied — Tune T3 replaced 'clear all flows?' with the consequence and its count; each IconButton's accessible name names its door and nothing else"
+  calm-microcopy: "satisfied — 'exporting…', 'importing…', 'this removes 6 flows'; lowercase, no exclamation, no acknowledgement the screen does not need"
+  one-term-per-concept: "satisfied — the lexicon collision is settled in writing (export adopted, save and download rejected) with the rulebook row the distillation owes"
+  confirm-at-point: "satisfied — every outcome lands where the act was: the progress line in A′, the refusal inside the ask that produced it. No toast, and the plan's useConfirm assumption is refuted rather than followed"
+  absence-names-itself: "satisfied — a failed import, a failed clear and a refused paste each carry the server's own reason; none shares a sentence with another"
+  focus-returns-to-origin: "blocked — designed (Esc closes, focus returns to the trigger; initial focus on cancel) but unimplementable until AskDialog exists. Escalated on blocked-on; the proposal must own it"
+  choose-before-act: "satisfied — Tune T2 is exactly this rule: the four filter fields and the count precede the three controls, so the row states its scope before it offers to act on it"
+</pre>
+    <p>Sixteen <code>satisfied</code> and one <code>blocked</code>, and the <code>blocked</code> is the honest one: <code>focus-returns-to-origin</code> binds per dismissable surface, this run adds two dismissable surfaces, and neither can honour it until the component that owns the focus trap is built. Claiming <code>satisfied</code> on a behaviour no code can perform is precisely the fluent-and-false receipt the Tier-3 review exists to catch.</p>
+
+    <h2 id="capabilities">Capabilities</h2>
+    <table data-item="capabilities" data-c="capabilities">
+      <tr><th>Given</th><th>Verdict</th><th>Where / why</th></tr>
+      <tr><td><code>GET /flows/export</code>, filter-honouring</td><td>used</td><td>The ⇧ control; the filter fields above it are what scope it, which is Tune T2's whole argument.</td></tr>
+      <tr><td><code>POST /flows/import</code> → <code>{imported:n}</code> or 400 + reason</td><td>used</td><td>The ⇩ control. The reason string is rendered verbatim in a warn <code>Notice</code> — the screen never rewrites it.</td></tr>
+      <tr><td><code>DELETE /flows</code>, filter-honouring → <code>{removed:n}</code></td><td>used</td><td>The ⌫ control and the ask. <code>{removed:n}</code> is deliberately <em>not</em> displayed — see the outcome table.</td></tr>
+      <tr><td><code>source</code> on the flow and in <code>FlowFilter</code></td><td>used</td><td>The row mark reads the field; the filter makes it selectable, which is what stops the mark being decoration.</td></tr>
+      <tr><td><code>FlowsCleared</code> on <code>/stream</code></td><td>used</td><td>Indirectly and deliberately: the app already refetches on every event, so a clear from any client empties this list with no code and no message. That is why "clear succeeds" is a silent outcome.</td></tr>
+      <tr><td>Tauri save / open dialogs</td><td>used</td><td>Both file doors. The save dialog is also why export needs no success message of its own.</td></tr>
+      <tr><td><code>DELETE /flows/{id}</code></td><td>deliberately unused</td><td>The endpoint exists (W4 built it) but no Frame goal asks to remove one flow — the goals are hand-over, read-back and empty-the-noise. A per-row delete would also put a destructive act inside the scan surface, against <em>the list stays the subject</em>. Available when a goal wants it.</td></tr>
+      <tr><td><code>limit</code> / <code>cursor</code> paging (W1)</td><td>deliberately unused</td><td>Paging is opt-in and the app does not opt in; the list is virtualized over the whole ring. Named here because export and clear both act on the <em>filtered</em> set, not on a page — a paged list would make "this removes 6 flows" ambiguous, and it currently cannot.</td></tr>
+    </table>
+
+    <h2 id="proposals">Proposals</h2>
+    <div data-item="proposals" data-c="proposals">
+      <table data-c="proposals-table">
+        <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
+        <tr>
+          <td>T2 widget</td>
+          <td><strong>AskDialog</strong> — a modal frame that takes a question (a <code>Notice</code>) and two answers (<code>Button</code>s), and owns the scrim, the focus trap, Esc-to-dismiss and focus return.</td>
+          <td>The collection has no modal of any kind. <code>Notice</code> is the sentence but has one action slot and no surface; <code>ProxyCloseDialog</code> is a screen that hand-rolls the frame and is not an entry. Two callers arrive in this run (the clear ask, the curl paste) and W7 makes a third likely — the second sighting the vocabulary waits for.</td>
+          <td><strong>W6</strong>, as its own design file before the build (DEC-16 retires it into the TSDoc).</td>
+        </tr>
+        <tr>
+          <td>glyphs</td>
+          <td><strong>Three entries in <code>IconButton</code>'s glyph registry</strong>: export (⇧), import (⇩), clear (⌫).</td>
+          <td>The component owns a closed glyph registry and has none of the three; the mockup mounts stand-ins to keep the hit area honest. Not a new component — an extension of an existing one's vocabulary.</td>
+          <td><strong>W6</strong>, in <code>IconButton</code>'s own file.</td>
+        </tr>
+        <tr>
+          <td>lexicon row</td>
+          <td><strong>export</strong> — write the capture out as a HAR file; never copy · save · download.</td>
+          <td>The rulebook reserves the word against <em>copy</em> but never states its own meaning, so every future design re-litigates it. See <a href="#lexicon">the collision</a>.</td>
+          <td><strong>This WU's distillation</strong>, into the rulebook's Lexicon.</td>
+        </tr>
+      </table>
+      <p>Two near-misses that stayed out, because "three proposals" should not read as a shopping list:</p>
+      <table data-c="near-misses">
+        <tr><th>Nearly proposed</th><th>Why it stayed out</th></tr>
+        <tr><td>a <strong>TextArea</strong> primitive for the paste target</td><td>One call site, and the second caller's shape is unknown. The collection has no free-text entry at all, so proposing the multi-line form first would fix the wrong end of the gap — a <code>Field</code> equivalent would come first, and that is not this run's want. If W7's paste spreads, it is proposed then.</td></tr>
+        <tr><td>an <strong>ImportedMark</strong> component for the row glyph</td><td>One conditional character with an accessible label, in one cell of one screen. <code>data-ink-first</code> is satisfied by it being almost nothing; a component would add an import without adding a constraint.</td></tr>
+      </table>
+    </div>
+
+    <h2 id="blocked-on">Blocked-on</h2>
+    <table data-item="blocked-on" data-c="blocked-on">
+      <tr><th>What is missing</th><th>Stage</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
+      <tr>
+        <td><strong>The epic plan's confirmation mechanism does not exist.</strong> The plan says the clear confirmation is "wired through the existing <code>useConfirm</code>". <code>useConfirm</code> is a ~2 s after-the-fact flash (<code>ui/src/components/useConfirm.ts</code>) shared by <code>CopyText</code> and <code>CopyButton</code>; it reports, it never asks. Wiring a destructive act through it would clear first and flash after.</td>
+        <td>Elements — the AskDialog row</td>
+        <td><strong>Recorded as a deviation from the epic plan</strong>, which W6's result must carry. The design's call is that the plan named the wrong primitive, not that the design should be reshaped to fit it.</td>
+        <td>Proposed AskDialog instead, with the reason stated where a reader meets the claim. The plan's own W5 row asks the run to decide "what a destructive action asks before it acts" — which presupposes an ask, so the two halves of the plan disagreed with each other and the run resolved it toward the one that is safe.</td>
+      </tr>
+      <tr>
+        <td><strong><code>focus-returns-to-origin</code> cannot be honoured by this design alone.</strong> Two dismissable surfaces are added and nothing in the collection owns a focus trap or a focus-return.</td>
+        <td>Interaction · receipt</td>
+        <td><strong>W6</strong>, via the AskDialog proposal. Not deferrable past the build: the rule binds per dismissable surface.</td>
+        <td>Receipted <code>blocked</code> rather than <code>satisfied</code>, and the required behaviours are written into the proposal as things the component <em>must own</em> — so the build cannot ship the frame without them and call the rule met.</td>
+      </tr>
+      <tr>
+        <td><strong>W7's refusal contract does not exist yet.</strong> <code>?format=curl</code> is unbuilt, so the wording, shape and status of "a command using a flag the parser does not support is refused naming that flag" are designed against the epic plan's sentence, not against a running endpoint.</td>
+        <td>Elements · Interaction — the paste rows</td>
+        <td><strong>W7</strong>. The design states the shape it needs: a 4xx whose body is a human-readable reason naming the flag, in the same form W3's HAR refusal already returns.</td>
+        <td>Designed the paste affordance against the contract W3 <em>already</em> honours (400 + reason string, rendered verbatim), so W7 has a shape to match rather than invent. If W7 returns something else, that is a W7 deviation and this design's <code>Notice</code> is what it must fill.</td>
+      </tr>
+      <tr>
+        <td><strong><code>IconButton</code>'s glyph registry has no export, import or clear glyph.</strong> The component owns a closed registry, and a screen may not add to it from outside.</td>
+        <td>Draft mockup</td>
+        <td><strong>W6</strong>, in the component's own file. Proposed above.</td>
+        <td>The mockup mounts existing glyphs as stand-ins rather than drawing three new ones — a drawn glyph in correct utilities is still a fork. The hit area, spacing, disabled state and the Tune T1 separator are all real and judgeable; only the three characters are placeholders, and the run says so at the mockup rather than letting a reader assume the glyphs are decided.</td>
+      </tr>
+      <tr>
+        <td><strong>The header's wrap behaviour is untested at this width.</strong> A′ adds ~100px to a line already holding a wordmark, four fields and a count; the Layout line says A wraps before it clips, but no built surface has wrapped yet.</td>
+        <td>Layout</td>
+        <td><strong>W6</strong>, at build, in the real window.</td>
+        <td>Put A′ on <code>margin-left:auto</code> so it holds the trailing edge and wraps last, and stated the rule in the overflow line. If the real minimum window makes the filters unusable, the fallback is the second row this run rejected — and that would be a W6 finding against the <em>keep watching traffic</em> goal, not a free choice.</td>
+      </tr>
+    </table>
+
+    <h2 id="review">Review</h2>
+    <table data-item="review" data-c="review">
+      <tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr>
+      <tr>
+        <td><em>The epic plan, at W5's row:</em> the run "must answer the lexicon problem this epic creates — the rulebook reserves <code>export</code> as a word never to use for copy; here it is the literal, correct name for the operation, and the run states which word the UI uses and why."</td>
+        <td>Added <a href="#lexicon">the lexicon section</a> as a first-class stage output rather than a receipt clause: three candidates, verdicts, and the exact rulebook row the distillation owes. The receipt's <code>one-term-per-concept</code> cites it instead of asserting a satisfaction.</td>
+        <td><code>one-term-per-concept</code> · the rulebook's Lexicon <em>copy</em> row · DEC-14 (a rulebook grows at distillation, never mid-run)</td>
+      </tr>
+      <tr>
+        <td><em>The epic plan, at W5's row:</em> the run "resolves every element to reuse / extend / propose against the registry (<code>Button</code>, <code>IconButton</code>, <code>Notice</code>, <code>useConfirm</code> already exist)."</td>
+        <td><strong>Elements</strong> — three of the four named entries resolved to <code>reuse</code> with a traced <span class="avoid">@avoid</span> clearance. The fourth, <code>useConfirm</code>, was found to be the wrong primitive entirely and is refuted in the AskDialog row and escalated on <a href="#blocked-on">blocked-on</a> as a plan deviation.</td>
+        <td><code>useConfirm</code>'s actual contract (<code>ui/src/components/useConfirm.ts</code>) · the flow's reuse-or-propose, fit-first principle</td>
+      </tr>
+      <tr>
+        <td><em>The registry, read before stage 1 (<span class="avoid">@avoid</span> first):</em> <code>Button</code>'s <span class="use">@states</span> forbids a loading state of its own and requires both halves of fork D4 from any caller with a slow action.</td>
+        <td><strong>Elements</strong> gained the <code>TonedText</code> progress row, and <strong>Interaction</strong> rows 1 and 2 spell the disabled window and the progress word as zone deltas. Without this the design would have shipped three controls that silently do nothing for two seconds.</td>
+        <td><code>Button</code>'s <span class="use">@states</span> fork D4 · <code>motion-informs</code> (the reason it is a word and not a spinner)</td>
+      </tr>
+      <tr>
+        <td><em>The assembled mockup, against its own Elements table:</em> the import mark rendered only when present, so imported and captured rows started their timestamps two characters apart.</td>
+        <td><strong>Tune T4</strong>, and the <a href="#layout">Layout</a> sketch's cell-1 width (110px → 126px). The absent mark now reserves its own width, so the time column reads as one edge whatever the mix of rows.</td>
+        <td><code>visual-weight-follows-goals</code> — a rare boolean must not out-weigh the column it sits in · the <em>row cannot grow</em> Frame constraint</td>
+      </tr>
+      <tr>
+        <td><em>The Frame's own <strong>Not given</strong> line, read back at Interaction:</em> no progress is observable and there is no undo for a clear.</td>
+        <td><strong>Interaction</strong> row 6 drops any post-clear message, and <a href="#outcomes-h">the outcome table</a> was added to say why three of four outcomes render nothing. An earlier draft had a "cleared 214 flows" confirmation, which is both a toast and a claim the design cannot take back.</td>
+        <td><code>confirm-at-point</code> — feedback lands at the interaction point, never as a message across the screen · <code>data-ink-first</code></td>
+      </tr>
+    </table>
+    <p><em>Tier-3 review — the design dimension of the code review, judged on this artifact — runs against the closed run and lands in the tip's <code>cr/v3</code> note. Its findings are not in this table; this table is what moved <em>before</em> the close.</em></p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
