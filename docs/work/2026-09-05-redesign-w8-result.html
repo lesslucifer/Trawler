@@ -196,6 +196,41 @@
       </tbody>
     </table>
 
+    <p>The owner's round was itself reviewed (round 3), and five findings survived — four of them defects
+    in the fixes above, which is the point of reviewing a fix rather than trusting it:</p>
+    <table data-c="owner-round-review">
+      <thead><tr><th>Finding</th><th>Sev</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td>A name of only separators</td><td>important</td>
+          <td><code>saveFilename("https://x.com/%", …)</code> produced <code>--response.txt</code> — a
+          leading-dash filename, hostile to a shell and reading as broken. My own degenerate-input tests had
+          not covered it. Every part is now trimmed of leading and trailing separators, and eight degenerate
+          URIs are asserted.</td></tr>
+        <tr><td>An IDN path collapsed</td><td>important</td>
+          <td>A wholly non-ASCII path (<code>https://例え.jp/道</code>) sanitised to nothing and fell through
+          to the generic <code>body-response.html</code>. It now falls back to the punycode host —
+          <code>xn--r8jz45g.jp-response.html</code> — which still names the endpoint.</td></tr>
+        <tr><td>The provenance callout contradicted its own bullet</td><td>important</td>
+          <td><a href="../use-cases/web-ui.html">web-ui.html</a>'s UC-5 provenance still read <em>"the raw
+          toggle shows the stored bytes as text"</em> three lines under the new bullet saying raw is now the
+          <em>source</em> view. A T2 doc contradicting itself is worse than one merely out of date; it now
+          reads "the served source as text".</td></tr>
+        <tr><td>A stale e2e test name</td><td>nit</td>
+          <td><em>"toggles to the raw stored bytes as text"</em> described a contract the commit had
+          replaced. Renamed to <em>"toggles to the served source as text"</em>.</td></tr>
+        <tr><td>Two untested contract edges</td><td>nit</td>
+          <td>Nothing asserted that an unrecognised <code>?decode=</code> value still serves the stored
+          bytes, nor what happens when a <code>Content-Encoding</code> header <em>lies</em>. Both now have
+          tests; the second is the one that decides whether losing the stored-bytes view from the UI costs
+          anything, and it does not — a failed decompress serves its input, so raw degrades to exactly what
+          it showed before.</td></tr>
+      </tbody>
+    </table>
+    <p>The round also confirmed what the change does <em>not</em> break: <code>decode_body</code>'s behaviour
+    is a byte-identical extraction (the zip-bomb cap and fallback-on-failure semantics are untouched),
+    <code>?decode=0</code> is still reachable for anyone who wants the stored bytes, and the layering is
+    right — the UI's <code>getBody</code> stays a boolean and <code>rawKind</code> is unchanged.</p>
+
     <h2 id="review">The Tier-3 review, and what it changed</h2>
     <p>Eight candidates from six finders; one survived verification, and the fix it prompted led to a second
     change the review itself had refuted. Recorded because a report that absorbs review findings silently is
@@ -258,10 +293,10 @@
           origin +2 routes. <strong>14 passing, 0 failing</strong> — including the epic's two new UC-5
           contracts and the owner's round's compressed-raw contract: <em>an XML body renders as XML</em> and <em>a body past the render cap states its
           truncation</em>, both against the real proxy, the real API and the real Tauri window.</td></tr>
-        <tr><td><strong>Suites</strong></td><td><code>pnpm test</code> 540 passed / 42 files (527 at the
+        <tr><td><strong>Suites</strong></td><td><code>pnpm test</code> 542 passed / 42 files (527 at the
           base — the nine body-family component tests stayed green as their first real consumer arrived) ·
           <code>pnpm exec eslint src</code> clean · <code>tsc --noEmit</code> clean ·
-          <code>cargo test</code> 7 suites green (+2 API integration tests for <code>decode=source</code>) · <code>cargo clippy</code> clean.</td></tr>
+          <code>cargo test</code> 7 suites green (+4 API integration tests for <code>decode=source</code>) · <code>cargo clippy</code> clean.</td></tr>
         <tr><td><strong>Docs</strong></td><td><code>verify-doc</code> green on the plan, this report and
           <code>web-ui.html</code>.</td></tr>
         <tr><td><strong>The marker closed</strong></td><td><code>grep</code> across <code>ui/src/</code> for

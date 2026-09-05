@@ -198,6 +198,34 @@ test("saveFilename does not stack a second extension on a segment that has one",
   );
 });
 
+// A filename that is only separators, or that leads with one, reads as broken
+// and is hostile to a shell — every degenerate URI must still land on a name.
+test("saveFilename never emits a leading separator or an empty name", () => {
+  for (const uri of [
+    "https://x.com/%",
+    "https://x.com/%zz",
+    "https://x.com/a%E0%A4%A",
+    "https://x.com/...",
+    "https://x.com/---",
+    "",
+    "/",
+    "https://x.com/.gitignore",
+  ]) {
+    const name = saveFilename(uri, "response", "text/plain");
+    expect(name).not.toMatch(/^[-._]/);
+    expect(name.endsWith("-response.txt")).toBe(true);
+    expect(name.length).toBeGreaterThan("-response.txt".length);
+  }
+});
+
+// A wholly non-ASCII path sanitizes to nothing; the punycode host still names
+// the endpoint, which beats a generic fallback.
+test("saveFilename falls back to the host for an IDN path, not to 'body'", () => {
+  expect(saveFilename("https://\u4f8b\u3048.jp/\u9053", "response", "text/html")).toBe(
+    "xn--r8jz45g.jp-response.html",
+  );
+});
+
 test("saveFilename drops the query and anything a filename cannot carry", () => {
   expect(saveFilename("https://example.com/a b/rep ort?x=1&y=2", "response", "text/csv")).toBe(
     "rep-ort-response.csv",

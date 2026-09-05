@@ -88,7 +88,7 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     expect(shown).toContain("}");
   });
 
-  it("toggles to the raw stored bytes as text", async () => {
+  it("toggles to the served source as text", async () => {
     await responseMode("raw").click();
     await inResponsePane('[data-testid="body-text"]').waitForExist({ timeout: 15_000 });
     const raw = await inResponsePane('[data-testid="body-text"]').getText();

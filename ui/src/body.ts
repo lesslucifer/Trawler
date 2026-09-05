@@ -185,21 +185,35 @@ export function bodyExtension(contentType: string | null): string {
 // keep the leg so a request and its response never collide.
 function endpointSlug(uri: string): string {
   let host = "";
-  let path = uri;
+  let path = uri.split("?")[0];
   try {
     const parsed = new URL(uri);
     host = parsed.hostname;
-    path = decodeURIComponent(parsed.pathname);
+    // A percent-escape the path cannot decode (truncated, or %zz) throws rather
+    // than returning its input — the still-encoded form is a usable name.
+    try {
+      path = decodeURIComponent(parsed.pathname);
+    } catch {
+      path = parsed.pathname;
+    }
   } catch {
-    path = uri.split("?")[0];
+    // Not a URL at all; the whole string is the best name available.
   }
+
   const segment = path.split("/").filter(Boolean).pop() ?? "";
   // A path segment that already carries an extension (…/app.js) would stack a
   // second one, and the served content type is the authority anyway. A host is
   // never trimmed — the dot in example.com is not an extension.
   const trimmed = segment.replace(/\.[A-Za-z0-9]{1,8}$/, "");
-  const name = trimmed || segment || host || "body";
-  return name.replace(/[^A-Za-z0-9._-]+/g, "-") || "body";
+  // A name that is only separators, or leads with one, reads as broken and is
+  // hostile to a shell — so a wholly non-ASCII segment (an IDN path) sanitizes
+  // to nothing and the host, which is punycode and always safe, is the better
+  // answer than a generic "body".
+  return clean(trimmed) || clean(segment) || clean(host) || "body";
+}
+
+function clean(part: string): string {
+  return part.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^[-._]+|[-._]+$/g, "");
 }
 
 export function saveFilename(uri: string, leg: Leg, contentType: string | null): string {
