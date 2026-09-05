@@ -56,7 +56,11 @@
       <ul>
         <li>A filter bar narrows the list by host, method, status and free text — the same
         <code>GET /flows</code> query-parameter semantics as UC-3, because the app delegates filtering
-        to the API rather than reimplementing it. Status color distinguishes 2xx / 4xx / 5xx at a glance.</li>
+        to the API rather than reimplementing it. Status color distinguishes 2xx / 4xx / 5xx at a glance.
+        <strong>The two keys the API matches exactly are chosen, not typed</strong>: method from the closed
+        set of verbs, host from the hosts capture has seen, each with an "any" option that clears it. Free
+        text and status stay typed — the API substring-matches the first, and the second is deferred
+        (a status <em>class</em> query is not expressible against the current API at all).</li>
         <li>The app is a pure <em>cross-origin</em> client of <code>127.0.0.1:7421</code> — it reaches no
         core internals; everything it shows is equally reachable with <code>curl</code>. Because the
         webview origin differs from the API's, every API response carries an open CORS grant
@@ -66,13 +70,47 @@
         wins over a build-time env, which wins over the <code>:7421</code> dev default — the released app
         exposes it as configuration.</li>
       </ul>
+      <p>Six capabilities the redesign (<span class="badge id">E-REDESIGN</span> W2/W4, designed at
+      <a href="../work/2026-09-04-flow-list-shell.html">the flow-list run</a>) made observable. The contract
+      keeps its shape — these are things a user can now do or perceive that they could not before:</p>
+      <table data-c="uc-4-gains">
+        <tr><th>Gain</th><th>Why it is a contract change and not a restyle</th></tr>
+        <tr><td>A status carries its <strong>reason phrase</strong></td>
+        <td><code>403</code> announces as "403 Forbidden" in its title and accessible name. A screen-reader
+        user previously got a naked number, and colour was the only channel telling outcomes apart.</td></tr>
+        <tr><td>The capture indicator is a <strong>real target with a name</strong></td>
+        <td>A 24&nbsp;px hit area and an accessible name carrying its state phrase, so the app's one route
+        back to setup is reachable and announced rather than a 10&nbsp;px unnamed disc.</td></tr>
+        <tr><td>A row is <strong>operable by keyboard</strong></td>
+        <td>The list is a listbox with one tab stop: ↑/↓ move the selection without wrapping and Enter or
+        Space opens the detail. Selecting a flow previously required a pointer — there was no keyboard path
+        at all.</td></tr>
+        <tr><td>An empty list <strong>says which nothing it is</strong></td>
+        <td>Nothing captured yet names the proxy address to send traffic to; a filter that excludes the
+        traffic says so and names the act that widens it. One sentence previously served both, telling users
+        to send traffic they had already sent.</td></tr>
+        <tr><td>An exactly-matched filter is <strong>chosen rather than typed</strong></td>
+        <td>Method and host are dropdowns. Typing <code>GE</code> into the old free-text method box
+        returned an empty list indistinguishable from no traffic, because the server matches the verb
+        whole — a query the user could write but never satisfy. What the dropdown costs is stated: a
+        partial host (<code>api.</code> matching every API host) is no longer expressible there, and the
+        free-text key covers it.</td></tr>
+        <tr><td>The verb is <strong>toned by what it does</strong> to the resource</td>
+        <td><code>GET</code>/<code>POST</code>/<code>PUT</code>/<code>PATCH</code>/<code>DELETE</code> read
+        apart at a glance in the method column, which previously carried no tone.</td></tr>
+      </table>
+      <p><strong>One rule is knowingly unmet.</strong> The host and path cells truncate rather than wrap,
+      because a virtualized fixed-height row cannot both wrap and stay one line. The full value stays
+      reachable — on the row's title and in the detail pane — and the missing rulebook clause is recorded
+      against the epic close rather than papered over.</p>
     </div>
 
     <div class="callout" data-c="uc-4-provenance">
       <p>Pinned by the epic e2e (<code>ui/e2e/specs/flows.spec.ts</code>, <code>cargo xtask ui e2e</code>):
       WebdriverIO drives the real WebKit window against an ephemeral <code>run(Config)</code> core — empty
-      layout renders, a proxied request appears live, the filter narrows and restores, a second request
-      appends without refresh. Unit + integration layers (Vitest + Testing Library) cover the status-color
+      layout renders, a proxied request appears live carrying every column, the status pill carries its
+      reason phrase, the filter narrows and restores, an unmatched filter states its own absence, the
+      keyboard alone selects a row and opens its detail, and a second request appends without refresh. Unit + integration layers (Vitest + Testing Library) cover the status-color
       mapping, the typed client, filter→params, and the layout+list against a mock API. Existing API
       contracts (<code>GET /flows</code>, <code>GET /stream</code>) are consumed unchanged; the CORS grant
       is the one API-response addition. UC-3 (web shell) stays valid — both surfaces are clients of the

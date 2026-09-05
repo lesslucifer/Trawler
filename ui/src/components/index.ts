@@ -15,7 +15,7 @@ export type { GlyphName } from "./IconButton";
 export { ImageRenderer } from "./ImageRenderer";
 export { JsonRenderer } from "./JsonRenderer";
 export { KeyValueRow } from "./KeyValueRow";
-export { MethodLabel } from "./MethodLabel";
+export { MethodLabel, HTTP_METHODS } from "./MethodLabel";
 export { Notice } from "./Notice";
 export type { NoticeTone } from "./Notice";
 export { Section } from "./Section";
