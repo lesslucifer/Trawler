@@ -319,7 +319,7 @@ quit dialog
 ├─ E title ─────── screen-owned h2 · <span data-key="icon-button">IconButton</span> ◆
 ├─ F the stake ─── screen-owned <p>
 ├─ G fallback ──── ▣ manual-fallback ◆ (the same composition as setup's)
-│                  + <span data-key="checkbox">Checkbox</span> (remote mode only)
+│                  + <span data-key="checkbox">Checkbox</span> (T1, propose → registry; remote mode only)
 └─ H actions ───── <span data-key="button">Button</span> ◆ ×2 (quit · turn it off / try again)
 
 ◆ = shared across zones or surfaces   ▣ = composition broken down below
@@ -379,8 +379,8 @@ quit dialog
               <div class="gist">one sentence for an outcome, with the action if one exists</div>
               <details class="why"><div><strong>@use landed:</strong> "any zone whose whole content is a STANDING positive outcome (tone=ok)" — "installed, we'll confirm on first flow" is standing, not an acknowledgement. <strong>@avoid respected:</strong> "transient confirmations of an action (use confirm-at-point)" — the <em>copy</em> confirms belong to <code>CopyText</code>, never to a Notice · not dismissible · not a toned value (that is <code>TonedText</code>) · <strong>not a status verdict with glyph+name+message</strong>, which is <code>StatusLine</code>'s — so the note and the verdict are two components, not one, and that split is the point.</div></details>
             </td>
-            <td><pre class="tb">installed. we'll confirm it's
-working on your first flow.
+            <td><pre class="tb">installed. we'll confirm it
+on your first flow.
 
 ⚠ automatic install failed —
   use the manual steps below.</pre>Per its TSDoc: mute · mute+detail · warn+⚠ · ok+✓ · any tone + action slot. Not interactive.</td>
@@ -456,7 +456,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
 
       <p><strong>Proposals:</strong> <em>modal-shell</em> (T4, build local) — a scrim + panel + focus trap; nothing in the registry owns modality, and one dialog is too small a sample to design a general entry from. <em>Checkbox</em> (T1, propose → registry) — the app's one boolean control; the registry has none, and unlike modality a checkbox is a primitive whose contract generalises from a single instance.</p>
 
-      <p><strong>What the count says.</strong> Nine registry entries reused across two surfaces, one build-local composition (<em>modal-shell</em>, T4), and one new registry component proposed (<code>Checkbox</code>, T1). Every local component in today's code resolves away: <code>ActionButton</code> → <code>Button</code> + <code>Notice</code>, <code>ManualPanel</code> → <code>Disclosure</code> + the host's branch, <code>ProveIt</code> → <code>CopyText</code>, the four <code>&lt;ol&gt;</code>s → <code>StepList</code>, both <code>&lt;select&gt;</code>s → <code>Select</code>, the verdict line → <code>StatusLine</code>, and the <code>toneClass</code> map at <code>Onboarding.tsx:360</code> → deleted, since <code>StatusLine</code> and <code>Notice</code> own tone.</p>
+      <p><strong>What the count says.</strong> Seven registry entries reused across two surfaces and one extended (<code>StatusLine</code>, a toned message), with <code>StatusDot</code> recorded as an explicit non-placement; one build-local composition (<em>modal-shell</em>, T4); and one new registry component proposed (<code>Checkbox</code>, T1). Every local component in today's code resolves away: <code>ActionButton</code> → <code>Button</code> + <code>Notice</code>, <code>ManualPanel</code> → <code>Disclosure</code> + the host's branch, <code>ProveIt</code> → <code>CopyText</code>, the four <code>&lt;ol&gt;</code>s → <code>StepList</code>, both <code>&lt;select&gt;</code>s → <code>Select</code>, the verdict line → <code>StatusLine</code>, and the <code>toneClass</code> map at <code>Onboarding.tsx:360</code> → deleted, since <code>StatusLine</code> and <code>Notice</code> own tone.</p>
 
     </div>
 
@@ -1073,6 +1073,16 @@ soft:
           <td><strong>Tier-3 review, round 2:</strong> "we'll confirm at the verify step" names the proven-decrypted milestone with a forbidden synonym</td>
           <td><code>frame</code> · <code>elements</code> · <code>interaction</code> · <code>mockup</code> — four call sites now say "first flow"; the step's own title was already "make a request", so the copy had also been pointing at a label this design does not use</td>
           <td>the rulebook's <strong>lexicon</strong>: <code>first flow</code> is "the proven-decrypted milestone", never <em>verify · test · done · working</em> — the <code>one-term-per-concept</code> slug</td>
+        </tr>
+        <tr>
+          <td><strong>Tier-3 review, round 3:</strong> the round-2 lexicon fix swapped the noun but kept a forbidden verb — "we'll confirm it's working on your first flow"</td>
+          <td><code>elements</code> · <code>mockup</code> — the <code>Notice</code> copy now reads "installed. we'll confirm it on your first flow", carrying neither <em>verify</em> nor <em>working</em></td>
+          <td>the rulebook's <strong>lexicon</strong>: <code>first flow</code> forbids <em>verify · test · done · working</em> alike — the <code>one-term-per-concept</code> slug</td>
+        </tr>
+        <tr>
+          <td><strong>Tier-3 review, round 3:</strong> "nine registry entries reused" conflated reuse with an extend and a non-placement</td>
+          <td><code>elements</code> — the count now reads seven reused, one extended (<code>StatusLine</code>) and <code>StatusDot</code> as an explicit non-placement; the WU plan's outcome row carries the same correction</td>
+          <td>the Elements catalog itself — 7 <code>reuse</code> + 1 <code>extend</code> + 1 <code>n/a</code> + 2 <code>propose</code>; a summary must agree with the table it summarises</td>
         </tr>
       </tbody>
     </table>
