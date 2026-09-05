@@ -23,7 +23,7 @@
   <main>
     <h2 id="outcome">Outcome</h2>
     <div class="callout" data-item="outcome" data-c="outcome">
-      <strong>Delivered, all nine expected rows.</strong> <code>FlowList</code> renders through <code>TimestampText</code>, <code>MethodLabel</code>, <code>StatusPill</code> and <code>DurationText</code>; <code>toRow</code> shed the two values those components refuse pre-formatted and shrank to the one transform none of them owns. The empty state is two <code>Notice</code>s selected by whether a filter is active. The row region is a listbox with one tab stop, arrows that do not wrap, and Enter/Space to open — <strong>the one interaction this screen could not perform at all</strong>. <code>FlowList.test.tsx</code> exists, closing the epic-plan row that named it the only screen without an adjacent test. <strong>545 unit tests, 16 e2e specs, the core suite: green.</strong>
+      <strong>Delivered, all nine expected rows.</strong> <code>FlowList</code> renders through <code>TimestampText</code>, <code>MethodLabel</code>, <code>StatusPill</code> and <code>DurationText</code>; <code>toRow</code> shed the two values those components refuse pre-formatted and shrank to the one transform none of them owns. The empty state is two <code>Notice</code>s selected by whether a filter is active. The row region is a listbox with one tab stop, arrows that do not wrap, and Enter/Space to open — <strong>the one interaction this screen could not perform at all</strong>. <code>FlowList.test.tsx</code> exists, closing the epic-plan row that named it the only screen without an adjacent test. <strong>549 unit tests, 19 e2e specs, the core suite: green.</strong> After the review, the owner settled W3's one open question: <a href="#filters">method and host became dropdowns and status stayed free text</a>.
     </div>
 
     <table data-c="rollup">
@@ -35,9 +35,10 @@
         <tr><td>4</td><td>The count is a <code>TonedText</code>; the status column is centred with its label</td><td><span class="ok">✓</span> both asserted</td></tr>
         <tr><td>5</td><td><code>Layout</code> states its zoning and overflow ownership</td><td><span class="ok">✓</span> the stale "reserved for E-UIINSPECT" comment is gone; the header also gained the <code>flex-wrap</code> the design's overflow line claims (see D1)</td></tr>
         <tr><td>6</td><td><code>FlowList.test.tsx</code> exists</td><td><span class="ok">✓</span> 15 tests</td></tr>
+        <tr><td>10</td><td><em>(added by the owner, after the review)</em> the filter keys that match exactly are chosen rather than typed</td><td><span class="ok">✓</span> <code>method</code> and <code>host</code> are <code>Select</code>s with an "any" option; <code>status</code> stays free text with its reason marked. Driven against the real window by the e2e — <a href="#filters">the account is above</a></td></tr>
         <tr><td>7</td><td>UC-4 states its observable gains</td><td><span class="ok">✓</span> five gains, plus the one rule knowingly unmet, in <code>web-ui.html</code></td></tr>
         <tr><td>8</td><td>A <code>design.implements</code> citation binding the build to W3's blob</td><td><span class="ok">✓</span> three files cited to one design; <a href="#probe">the probe found the path clean</a></td></tr>
-        <tr><td>9</td><td>No design decision of this WU's own</td><td><span class="ok">✓</span> every visible change traces to a verdict, a Tune row or an Interaction row — and where the design was silent, the smallest option, stated in D1</td></tr>
+        <tr><td>9</td><td>No design decision of this WU's own</td><td><span class="ok">✓</span> for everything the design decided — every visible change traces to a verdict, a Tune row or an Interaction row, and where it was silent, the smallest option (D1). <strong>One exception, and it is the design's own escalation rather than this WU overriding it:</strong> the filter controls, which W3 explicitly left as <em>owner's call</em>. <a href="#filters">Settled by the owner, recorded above.</a></td></tr>
       </tbody>
     </table>
 
@@ -75,6 +76,31 @@
     </table>
     <p><strong>Three candidates were refuted</strong> and are recorded because finder quality should stay visible: that <code>TimestampText</code> adds per-render cost (the pre-WU code was equally unmemoized and the component is design-mandated by name); that <code>selectedIndex</code>/<code>toRow</code> per-render work is a regression (both bounded by the virtualized window, and <code>toRow</code>'s call site predates this WU); and that <code>move(delta)</code> ignoring its sign with nothing selected is misleading (it is the design's stated <code>Select</code> convention — either arrow lands on the first row — and both directions now have a test).</p>
 
+    <h2 id="filters">The filter controls — the one open question the owner settled</h2>
+    <p>W3 escalated the method/status filters to <a href="2026-09-04-flow-list-shell.html#blocked-on">blocked-on</a> with three options and picked none, because <em>"two of the three fixes change a contract outside the screen"</em>. The owner settled it during this build, and the answer is not uniform across the three keys — which is exactly why the design refused to guess it.</p>
+    <table data-c="filters">
+      <tr><th>Key</th><th>Server match</th><th>Now</th><th>Why not the same as its neighbour</th></tr>
+      <tr>
+        <td><code>method</code></td><td><code>eq_ignore_ascii_case</code> — exact</td>
+        <td><strong><code>Select</code></strong>, nine verbs</td>
+        <td>The design's own option (a), legal today: a closed set matched whole. <code>Select</code>'s <code>@avoid</code> "two to four options" is cleared at nine. Each option renders through <code>MethodLabel</code>, so the tone in the dropdown is the tone in the column. <strong>This was the worst case</strong> — typing <code>GE</code> returned an empty list indistinguishable from no traffic.</td>
+      </tr>
+      <tr>
+        <td><code>host</code></td><td><code>contains</code>, case-insensitive</td>
+        <td><strong><code>Select</code></strong>, every host seen</td>
+        <td>Beyond what the design contemplated (it had kept host as a Field on the grounds that <em>"a partial host is the point"</em>). The owner took the trade: <strong>partial matching is no longer expressible here</strong>, and the free-text key still covers it. Options are accumulated rather than derived — see the note below.</td>
+      </tr>
+      <tr>
+        <td><code>status</code></td><td><code>== Some(u16)</code> — exact</td>
+        <td><strong><code>Field</code></strong> — unchanged, deferred</td>
+        <td>Deliberately not converted. A dropdown of seen codes is buildable, but <em>the useful query is a class</em> (<code>4xx</code>) and <code>FlowFilter.status</code> is a <code>u16</code> — so <strong>neither control expresses what a user actually wants</strong>. Deferred to a later epic to design the interaction rather than half-converted now; the reason is marked at the call site.</td>
+      </tr>
+    </table>
+    <div class="callout">
+      <strong>Host options are accumulated, not derived — and that is load-bearing.</strong> <code>flows</code> is the <em>server-filtered</em> list, so building the options from it would shrink them to the one host already chosen the moment you chose it, stranding the user with no way back. <code>useFlows</code> keeps every host capture has seen instead, which a unit test pins directly: after narrowing to one host, the other must still be offered.
+    </div>
+    <p><strong>Clearing.</strong> <code>Select</code>'s <code>@avoid</code> rules out a clear affordance — <em>"nothing returns to unselected once chosen"</em> — so a filter that must be clearable needs an answer inside that contract. An <strong>"any" option at the top</strong> is one: a real choice that happens to mean no filter, rather than a control the component forbids.</p>
+
     <h2 id="deviations">Deviations</h2>
     <table data-item="deviations" data-c="deviations">
       <tr><th>#</th><th>Deviation</th><th>Why</th></tr>
@@ -103,10 +129,10 @@
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tr><th>Check</th><th>Result</th></tr>
-      <tr><td><code>cd ui &amp;&amp; pnpm test</code></td><td><span class="ok">545 passed</span>, 43 files — 15 new in <code>FlowList.test.tsx</code>, 3 new in <code>App.test.tsx</code></td></tr>
+      <tr><td><code>cd ui &amp;&amp; pnpm test</code></td><td><span class="ok">549 passed</span>, 43 files — 15 new in <code>FlowList.test.tsx</code>, 6 new in <code>App.test.tsx</code> (3 for the build, 3 for the filter controls)</td></tr>
       <tr><td><code>pnpm exec eslint src</code> (closed-vocabulary lint)</td><td><span class="ok">silent</span> — <code>text-center</code> and <code>flex-wrap</code> are declared members</td></tr>
       <tr><td><code>npx tsc -b</code></td><td><span class="ok">clean</span> over <code>FlowRow</code>'s reduced shape and the new props</td></tr>
-      <tr><td><code>cargo xtask ui e2e</code></td><td><span class="ok">16/16</span> — the six-assertion UC-4 block is new; UC-5 and UC-ONBOARD green unchanged</td></tr>
+      <tr><td><code>cargo xtask ui e2e</code></td><td><span class="ok">19/19</span> — the UC-4 block is new (9 specs, including both dropdowns and a header-layout measurement taken in the real window); UC-5 green unchanged, UC-ONBOARD's filter spec moved to the free-text key</td></tr>
       <tr><td><code>cargo test</code> · <code>cargo xtask gate0</code></td><td><span class="ok">green</span> — no Rust changed; re-walked because the gate does</td></tr>
       <tr><td><code>cargo xtask design-scope epic/redesign HEAD</code></td><td>three rendered files, all cited</td></tr>
       <tr><td><code>cargo xtask verify-doc</code> (plan + result)</td><td><span class="ok">green</span></td></tr>
