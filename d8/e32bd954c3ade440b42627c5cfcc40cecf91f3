@@ -1,0 +1,49 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W7 (wu/export/curl-in) -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W7
+branch: wu/export/curl-in
+base: 358c7f131d1e070ef438a1e74b478f496a56a659
+head: d8e32bd954c3ade440b42627c5cfcc40cecf91f3
+diff_sha256: bab159de56ed521d51624963dfde4d42255b358f71fd7dfa7e62d18908abf388
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 11, verified: 5, waived: 0 }
+rounds:
+  - round: 1
+    found: 3
+    verified: 2
+    detail: "See the note on 28da6d3 - the surrogate escape (important) and saw_data_flag (nit), fixed in 9ed23e5."
+  - round: 2
+    found: 5
+    verified: 1
+    detail: "See the note on fb6819b - the hand-rolled accumulator (nit), fixed in a9d9f20; four candidates refuted."
+  - round: 3
+    found: 3
+    verified: 2
+    detail: >-
+      Re-review of a9d9f20. Correctness (byte-level equivalence of from_str_radix with the old
+      accumulator checked over all 256 byte values), efficiency and altitude clean. Two nits
+      confirmed: the octal arm of ansi_c_quoted still accumulates its digits by hand beside the
+      shared take_radix - the verifier noting the helper's no-digits-means-no-escape semantics
+      do not apply to octal, whose first digit the outer match had already consumed; and
+      low_byte's u8::try_from(value & 0xff).unwrap_or(u8::MAX) carries a fallback that cannot
+      fire where value.to_le_bytes()[0] says the same thing with none. Refuted: the from_utf8
+      .ok() fallback in take_radix, which is the idiomatic panic-free shape under the pinned
+      unwrap_used lint.
+verified_findings:
+  - summary: "an ANSI-C \u/\U escape naming no character drops its consumed digits instead of staying literal"
+    severity: important
+    fixed_in: 9ed23e5
+  - summary: "saw_data_flag duplicates what the data vector already says"
+    severity: nit
+    fixed_in: 9ed23e5
+  - summary: "take_radix hand-rolls the accumulation u32::from_str_radix already does over the digits it collects"
+    severity: nit
+    fixed_in: a9d9f20
+  - summary: "the octal escape arm accumulates by hand beside the shared take_radix"
+    severity: nit
+  - summary: "low_byte carries an unreachable fallback where to_le_bytes()[0] has none"
+    severity: nit
+waivers: []
+verdict: FAIL
+date: 2026-09-05
