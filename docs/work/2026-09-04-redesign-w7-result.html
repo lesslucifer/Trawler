@@ -58,8 +58,9 @@
       <tr><td>7</td><td>Zero change under <code>ui/src/</code></td>
         <td><span class="yes">met</span> — <code>git diff epic/redesign HEAD -- ui/src/</code> empty</td></tr>
       <tr><td>8</td><td>A Tier-3 PASS bound to this exact diff</td>
-        <td>pending — the review runs on this tip before the merge; <code>9·design</code> does not bind
-        (this WU builds nothing)</td></tr>
+        <td><span class="no">FAILED round 1</span>, fixed in <code>8b627a3</code>, re-reviewed on that tip
+        — see <a href="#review-rounds">the review rounds</a>. <code>9·design</code> does not bind (this WU
+        builds nothing)</td></tr>
     </table>
 
     <h2 id="deviations">Deviations</h2>
@@ -106,6 +107,51 @@
         alone.</td>
       </tr>
     </table>
+
+    <h2 id="review-rounds">The Tier-3 review, and what it changed</h2>
+    <p>Round 1 returned <strong>FAIL</strong> — four verified findings plus one, on an artifact whose whole
+    job is to be a trustworthy record. Recorded here because a result that absorbs review findings silently
+    is the failure mode the report exists to prevent.</p>
+    <table data-c="review-rounds">
+      <tr><th>Finding</th><th>Sev</th><th>What it was, and the fix</th></tr>
+      <tr>
+        <td>The too-large absence</td><td class="no">important</td>
+        <td>The run rendered it as <em>"(12.4 MiB)"</em> in four places while claiming the five states come
+        <em>straight from <code>bodyNotice</code></em> — and the other four quote <code>body.ts</code>
+        character-for-character, so this read as literal output. <strong>Fixed:</strong> quotes what ships
+        (<code>12994392 bytes</code>), and the humanised form it wanted is now a blocked-on entry for W8 —
+        a real <code>body.ts</code> change, since <code>CutMarker</code>'s @avoid forbids raw byte counts
+        three lines below and <code>humanBytes</code> already ships.</td>
+      </tr>
+      <tr>
+        <td>The review table's third row</td><td class="no">important</td>
+        <td>Still described the first draft: an Elements record of a <code>Section</code> band (the Elements
+        stage contains no such record — zero occurrences) and a leg question handed to W5 (blocked-on no
+        longer carries it). <strong>Fixed:</strong> rewritten as what it was — a pre-run author decision the
+        comment overturned, kept as superseded rather than deleted.</td>
+      </tr>
+      <tr>
+        <td>The D2b warrant</td><td>nit</td>
+        <td>Its example disproved its own premise. <strong>Fixed:</strong> the real reason is that copy takes
+        <em>what B shows</em> and save takes <em>all of it</em>, so two bare glyphs side by side would name
+        neither.</td>
+      </tr>
+      <tr>
+        <td>The plan's overturned decision</td><td>nit</td>
+        <td>Asserted unmarked, though this report claimed <em>"the same rule W2 followed"</em> — and W2 struck
+        through at both levels. <strong>Fixed:</strong> struck through with a forward link here.</td>
+      </tr>
+      <tr>
+        <td>"One comment"</td><td class="no">important</td>
+        <td>Undersold four recorded instructions spanning six items. <strong>Fixed:</strong> the evidence row
+        now separates the one external comment from the four rows the flow requires.</td>
+      </tr>
+    </table>
+    <p><strong>Three candidates were refuted</strong> and are recorded so finder quality stays visible: that
+    the two-instance design hides a double-fetch cost (the Layout sketch writes <em>"its own mode + fetch"</em>
+    and blocked-on defers eager-vs-lazy mounting to W5); that the epic plan's edit reads as shipped fact (it
+    sits under <em>"Moved at review:"</em> in a diagram labelling W7 a design WU); and that this report's hero
+    overstates completion (the same page states <em>zero change under <code>ui/src/</code></em> twice).</p>
 
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
