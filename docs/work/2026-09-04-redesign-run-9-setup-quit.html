@@ -444,7 +444,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
             <td><em>propose → registry</em><br>G — "don't show this again"</td>
             <td>
               <div class="gist">the app's one boolean control, and no entry owns booleans</div>
-              <details class="why"><div>The registry has <strong>no boolean control at all</strong>: <code>Field</code> is text-only, and <code>SegmentedControl</code>'s @avoid rules itself out — "a mutually exclusive view switch", not a durable preference, and its options are always visible where a checkbox's second state is implied. So this is a <strong>propose</strong>, not a miss against an existing entry. It lands as a <strong>T1 registry component</strong> rather than screen-local: a checkbox is a primitive with no business logic, its label/hit-target/focus contract is exactly the kind of thing that drifts when hand-rolled, and the app's <em>next</em> one (a settings toggle, a filter's "only errors") would otherwise fork it. Contrast the modal shell below, which stays local — modality is a composition shaped by <em>this</em> dialog, a checkbox is not.</div></details>
+              <details class="why"><div>The registry has <strong>no boolean control at all</strong>: <code>Field</code> is text-only, and <code>SegmentedControl</code> falls outside its own <span class="use">@use</span> — that entry is for "any always-visible mutually exclusive view/mode switch", which a durable preference is not, and its options are all visible where a checkbox's second state is implied (its @avoid never reaches this case: it bars actions, multi-select, tablists and &gt;4 options). So this is a <strong>propose</strong>, not a miss against an existing entry. It lands as a <strong>T1 registry component</strong> rather than screen-local: a checkbox is a primitive with no business logic, its label/hit-target/focus contract is exactly the kind of thing that drifts when hand-rolled, and the app's <em>next</em> one (a settings toggle, a filter's "only errors") would otherwise fork it. Contrast the modal shell below, which stays local — modality is a composition shaped by <em>this</em> dialog, a checkbox is not.</div></details>
             </td>
             <td><pre class="tb">[ ] don't show this again
 [✓] don't show this again</pre><strong>Must own:</strong> unchecked · checked · hover · focus (the shared 1px ink-mute outline) · disabled. The label is part of the hit target, per <code>generous-targets</code>. No indeterminate state — it gates nothing and validates nothing.</td>
@@ -555,7 +555,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
           <td>runs the command elsewhere</td>
           <td>
             <div class="gist">verdicts flip on evidence, and the way out appears</div>
-            <details class="why"><div>C ×3 → every verdict re-resolves from <code>observed.decrypted</code>: trust and proxy both read <em>confirmed by traffic</em>, verify reads <em>capturing traffic</em> ← one piece of evidence proves three preconditions, which is why no step self-reports · A → the exit <code>Button</code> appears, now that <code>everProven</code> is true</div></details>
+            <details class="why"><div>C ×3 → every verdict re-resolves from <code>observed.decrypted</code>: trust and proxy both read <em>confirmed by traffic</em>, and step 3 reads <em>capturing traffic</em> ← one piece of evidence proves three preconditions, which is why no step self-reports · A → the exit <code>Button</code> appears, now that <code>everProven</code> is true</div></details>
           </td>
           <td>focus is untouched — nothing steals it on a background event</td>
         </tr>
@@ -706,10 +706,10 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
 
               <StepRow n="2" title="set the proxy" open={open === "proxy"} onOpen={() => setOpen("proxy")}
                 view={V.proxyCantSee}>
-                <Notice className="mb-2">we'll confirm when traffic arrives.</Notice>
+                <Notice tone="ok" className="mb-2">proxy set. we'll confirm it on your first flow.</Notice>
               </StepRow>
 
-              <StepRow n="3" title="make a request" open={open === "verify"} onOpen={() => setOpen("verify")}
+              <StepRow n="3" title="make a request" open={open === "request"} onOpen={() => setOpen("request")}
                 view={V.verifyWaiting}>
                 <p className="mb-2 font-ui text-body text-ink-mute">run this anywhere on your machine:</p>
                 <CopyText value={PROVE_IT} label="prove-it command" />
@@ -946,7 +946,7 @@ soft:
       <tbody>
         <tr><td><code>trustProbe</code></td><td>used</td><td>step 1's verdict, via <code>trustStatus</code></td></tr>
         <tr><td><code>proxyProbe</code></td><td>used</td><td>step 2's verdict, via <code>proxyStatus</code></td></tr>
-        <tr><td><code>observed.decrypted</code></td><td>used</td><td>proves all three steps at once; the only thing that turns verify ok</td></tr>
+        <tr><td><code>observed.decrypted</code></td><td>used</td><td>proves all three steps at once; the only thing that turns step 3 ok</td></tr>
         <tr><td><code>observed.trafficSeen</code></td><td>used</td><td>the arriving-but-not-decrypting verdict, and proxy's positive</td></tr>
         <tr><td><code>onInstallCa</code></td><td>used</td><td>step 1's <code>Button</code>, with its fork-D4 progress <code>Notice</code></td></tr>
         <tr><td><code>onSetProxy</code></td><td>used</td><td>step 2's <code>Button</code>, same pair</td></tr>
@@ -1083,6 +1083,16 @@ soft:
           <td><strong>Tier-3 review, round 3:</strong> "nine registry entries reused" conflated reuse with an extend and a non-placement</td>
           <td><code>elements</code> — the count now reads seven reused, one extended (<code>StatusLine</code>) and <code>StatusDot</code> as an explicit non-placement; the WU plan's outcome row carries the same correction</td>
           <td>the Elements catalog itself — 7 <code>reuse</code> + 1 <code>extend</code> + 1 <code>n/a</code> + 2 <code>propose</code>; a summary must agree with the table it summarises</td>
+        </tr>
+        <tr>
+          <td><strong>Tier-3 review, round 4:</strong> the ok-toned <code>Notice</code> the run specifies was asserted in four stages but mounted in none</td>
+          <td><code>mockup</code> — step 2 now mounts it beside its unproven verdict, so the string reads "✓ proxy set. we'll confirm it on your first flow" next to "◐ can't check automatically"</td>
+          <td>the flow's mockup contract — a <code>reuse</code> is <strong>mounted, never drawn</strong>; and it is where Frame A's <code>action state ≠ step verdict</code> becomes visible rather than merely stated</td>
+        </tr>
+        <tr>
+          <td><strong>Tier-3 review, round 4:</strong> the <code>Checkbox</code> warrant cited <code>SegmentedControl</code>'s @avoid for a phrase that is its @use</td>
+          <td><code>elements</code> — the trace now says the entry falls outside its own <span class="use">@use</span> ("an always-visible mutually exclusive view/mode switch"), and names what its @avoid actually bars</td>
+          <td><code>SegmentedControl</code>'s <span class="use">@use</span> / <span class="avoid">@avoid</span> — the flow's "read @avoid first" only works if a citation names the right field</td>
         </tr>
       </tbody>
     </table>
