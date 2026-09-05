@@ -1,0 +1,24 @@
+schema: cr/v3
+scope: "WU E-REDESIGN.W9 setup + quit dialog design run -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W9
+branch: wu/redesign/setup-quit-dialog
+base: 42875df5f19c30466d6fd6c1331df063b0a626a4
+head: 8de6b339842e03e94f4d87499da91aaeb4ffd6f7
+diff_sha256: 45b263923fbb5ebcd0e7864a4335ccaf126946cf81dd2c6f3f95e7302becbf27
+dimensions: [correctness, reuse, simplification, efficiency, altitude, design]
+findings: { found: 1, verified: 0, waived: 1 }
+waivers:
+  - finding: "The remote mode's quit mounts without frame=\"bare\", so it renders bordered where zone H's rule states the exit is bare in every mode (run:805)"
+    reason: "Waived at the author's explicit direction as mockup fidelity rather than design substance. The written design is unambiguous and is what W10 builds from: zone H's rule, Frame B's rejection of a mode-dependent button set, and both mode rows state the exit is the same bare button in the same corner. The run's review table records it as accepted-not-fixed so W10 builds the rule, not the specimen. Verified real in the round-9 run against this same artifact; carried forward here as a waiver, not re-reported."
+prior_round:
+  head: 8b4adfb0d244731d720ce4c0d372829f3ee10333
+  verdict: FAIL
+  note: "Round 9 (six finders, five verifiers) found 5 candidates, verified 2. The wire-marker finding was fixed in 8de6b33; the frame=\"bare\" finding is the waiver above. Three simplification candidates were refuted: T3 work docs carry no quality bar (documentation-system.html:168-169), the inline Proposals line is mandated by design-flow.html:226's Elements template, and the sibling result-report precedent was the reverse of what was claimed."
+design:
+  artifacts: [docs/work/2026-09-04-redesign-run-9-setup-quit.html]
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 1, verified: 0, waived: 0 }
+  verdict: PASS
+verdict: PASS
+date: 2026-09-05
