@@ -1,0 +1,24 @@
+schema: test/v2
+level: working-unit
+epic: E-REDESIGN
+wu: E-REDESIGN.W7
+tests:
+  unit:
+    count: 0
+    waived: "The WU touches no product code or screens — the E-DFLOW.W9 precedent the epic plan cites for exactly this case, and the same waiver W1 carried. Its output is one closed design run (an HTML artifact) and two report docs; git diff --stat epic/redesign HEAD -- ui/src/ is empty. The nine BodyRenderer family members this run resolves against already carry their own unit tests beside each .tsx from W2; the call-site assertions this design specifies land in W8, which is the WU that writes the code."
+  integration:
+    count: 0
+    waived: "Same precedent. There is no bounded contract in code to exercise — the contract IS the run doc, and cargo xtask verify-doc is what judges its shape (eleven items, the Frame's six density predicates, elements·gist, interaction·gist, tune·drawn, mockup·hand-drawn, receipt coverage and freshness). W8 carries the screen-contract integration test."
+  e2e:
+    count: 0
+    waived: "Same precedent, and deliberately checked rather than assumed — W2's e2e waiver was voided at review when its components turned out to be unreachable from the app bundle, so a design WU claiming this waiver owes the same proof. Here it holds: no user-visible surface moves because no shipped file changed. The epic's UC-5 e2e — an XML body rendering as XML and an over-cap body stating its truncation, the two new contracts — runs against W8's built pane."
+verified:
+  - "cargo xtask verify-doc — green on all four docs: the run (design-run), the W7 plan (wu-plan), the W7 result (wu-result) and the epic plan (epic-plan) after its W7 block was corrected."
+  - "The run's own gate output: receipt 17/17 soft · 13 satisfied · 3 inherited · 1 n/a · hard rules 13/13 machine-checked (design) · design-allow 0 live suppression(s). Coverage is checked against the rulebook on disk, so a receipt naming only the rules the design happened to think about could not pass."
+  - "node scripts/check-render.mjs — ok (10 mounts, 9 buttons, forced rules >=0). This is the check that matters most for a mockup: it opens the doc over file:// with NO flags, exactly as a reader double-clicks it, and asserts a clean console (thrown errors, rejected promises, console.error/warn) plus every mount non-empty. A component that throws leaves an empty div that reads as 'no specimen here' rather than 'broken'."
+  - "Rulebook re-pinned at close (flow step ①): git hash-object docs/design-rules/design-rules-index.html = aeff5b0fb4dea94ab5f0b7c385b8188786666e8a, byte-identical to the receipt's rulebook: line. The rulebook did not move under the run."
+  - "Close ordering honoured (step ③ before step ④): verify-doc green FIRST, then data-status=archived. Checked the hard way — setting archived up front makes the checker skip every predicate as 'closed under an older contract, not reopened', so an archived-first run would have passed while proving nothing. Every later edit reopened the doc, re-verified, and re-archived."
+  - "git diff --stat epic/redesign HEAD -- ui/src/ — empty. The epic plan's shape line for a design WU: 'Design WUs commit nothing under ui/src/'."
+  - "Two checker findings fixed rather than worked around, both real: an unclosed <div data-map> that swallowed the rest of the document and made the Elements section read as empty; and a hand-written letter-spacing:.06em where the closed vocabulary has tracking-label (the uppercase-mute set is text-chrome uppercase tracking-label text-ink-mute). Also caught inventing a max-h-body-pane token — ui/tailwind.config.js has no maxHeight scale at all, and the real token was the existing spacing member body-max: 256px."
+  - "cargo xtask gate0 equivalents at commit: cargo fmt --check and cargo clippy -D warnings green on both commits (no Rust changed; the hooks run them regardless)."
+  - "The mockup's claims checked by rendering, not by reading: the whole/cut toggle wiring traced end to end (the button targets #mock, specimen.js toggles the .cut class on it, and .cut .a-cut-only / .cut .a-whole-only key off it as an ancestor). An intermediate screenshot appeared to show the toggle broken; the cause was a throwaway screenshot harness that stripped the doc's <head> and with it those three rules — a flaw in the harness, not the doc, and not 'fixed' as if it were a bug."
