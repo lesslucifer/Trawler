@@ -1,0 +1,21 @@
+schema: test/v2
+level: working-unit
+epic: E-REDESIGN
+wu: E-REDESIGN.W5
+branch: wu/redesign/flow-detail
+tests:
+  unit:
+    waived: "Docs-only diff. git diff --stat epic/redesign..HEAD -- src/ ui/src/ ui/e2e/ tests/ xtask/ is empty: this WU is a design run plus its decision record, and adds no executable code to test. The workflow's docs/infra-only exemption applies at all three levels."
+  integration:
+    waived: "Same reason. The bounded contract this WU produces is a design and a T2 decision record, both enforced by cargo xtask verify-doc rather than by a test binary."
+  e2e:
+    waived: "Same reason. The behaviour DEC-31 governs — leg selection at panel level — is already covered end to end by W7/W8's own e2e specs on the epic, which this tip merges rather than modifies."
+verified:
+  - "cargo xtask gate0 green on the final tip (fmt --check + clippy -D warnings + full test suite, cached 62f7090fec). Run again after every fix commit, never once and assumed."
+  - "cargo xtask verify-doc on all six touched docs: none red, at the merge tip and again after each of the two fix commits."
+  - "cargo test on the merged tree: 7 suites, 0 failed, including the 6 e2e_capture and 4 e2e_h2 tests the epic brings in."
+  - "cd ui && npx vitest run on the merged tree: 566 passed / 43 files, 0 failed. The run reports one unhandled error — CodeMirror calling getClientRects() under jsdom from an animation-frame callback after the test completes. Established as PRE-EXISTING and environmental, not a merge regression, by reproducing it on the unmerged epic tip in the TRA-REDESIGN worktree. It fails no test."
+  - "cargo clippy --all-targets clean on the merged tree."
+  - "The merge itself was verified as conflict-free in the direction that matters: git merge-tree --write-tree epic/redesign HEAD returns a bare tree hash with no CONFLICT line, so the WU -> epic merge no longer collides."
+  - "The one conflict this sync produced was in docs/work/2026-09-04-redesign-plan.html's W7 row, where both branches recorded the same event from different vantage points. Resolved to the epic's landed prose plus W5's DEC-31 citation. Note git had ALREADY auto-merged the W8 row into exactly that shape, so the resolution follows a precedent set by the merge rather than a fresh judgement."
+  - "Every pinned citation was checked to resolve, not assumed: git show ca18daa:ui/src/BodyViewer.tsx line 148 is the useState<Leg> per-flow default and 196-201 are the two leg ModeButtons — exactly what the eight citations claim."
