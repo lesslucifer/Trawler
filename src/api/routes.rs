@@ -17,7 +17,7 @@ use tokio_stream::{Stream, StreamExt};
 use uuid::Uuid;
 
 use super::view::{self, FlowPageView, FlowSummary, FlowView};
-use super::{decode, har};
+use super::{curl, decode, har};
 use crate::flow::{header_value, BodyRec, FlowId, Header};
 use crate::store::{FlowFilter, Store};
 
@@ -147,16 +147,37 @@ pub async fn export_har(
         .into_response()
 }
 
-/// The inverse door: a HAR 1.2 document becomes flows in the ring, marked as
-/// imported. The whole document parses before the store is touched, so a
-/// refused import leaves the capture exactly as it was.
-pub async fn import_flows(State(state): State<AppState>, body: Bytes) -> Response {
-    match har::flows_from_har(&body) {
+/// Which parser the import door hands the body to. Absent means HAR, the
+/// format the door opened with; an unrecognised value is refused by name rather
+/// than defaulted, because a curl command parsed as JSON would be refused for
+/// the wrong reason.
+#[derive(Deserialize)]
+pub struct ImportQuery {
+    format: Option<String>,
+}
+
+/// The inverse door: a HAR 1.2 document — or, under `?format=curl`, one pasted
+/// `curl` command — becomes flows in the ring, marked as imported. The whole
+/// body parses before the store is touched, so a refused import leaves the
+/// capture exactly as it was.
+pub async fn import_flows(
+    Query(query): Query<ImportQuery>,
+    State(state): State<AppState>,
+    body: Bytes,
+) -> Response {
+    let parsed = match query.format.as_deref() {
+        None | Some("har") => har::flows_from_har(&body).map_err(|e| e.to_string()),
+        Some("curl") => {
+            curl::flow_from_curl(&body).map(|flow| vec![flow]).map_err(|e| e.to_string())
+        }
+        Some(_) => return bad_request("format must be har or curl"),
+    };
+    match parsed {
         Ok(flows) => {
             let imported = state.store.import(flows);
             Json(json!({ "imported": imported })).into_response()
         }
-        Err(reason) => (StatusCode::BAD_REQUEST, reason.to_string()).into_response(),
+        Err(reason) => (StatusCode::BAD_REQUEST, reason).into_response(),
     }
 }
 
@@ -364,8 +385,14 @@ mod tests {
     }
 
     async fn import(state: &AppState, document: &[u8]) -> (StatusCode, Value) {
+        import_as(state, "", document).await
+    }
+
+    async fn import_as(state: &AppState, query: &str, body: &[u8]) -> (StatusCode, Value) {
+        let uri = format!("http://x/flows/import?{query}").parse::<axum::http::Uri>().expect("uri");
+        let query = Query::try_from_uri(&uri).expect("query");
         let response =
-            super::import_flows(State(state.clone()), Bytes::copy_from_slice(document)).await;
+            super::import_flows(query, State(state.clone()), Bytes::copy_from_slice(body)).await;
         let status = response.status();
         let bytes = to_bytes(response.into_body(), usize::MAX).await.expect("body");
         let value = serde_json::from_slice(&bytes)
@@ -498,6 +525,53 @@ mod tests {
             (document(r#"{"startedDateTime":"2026-09-04T10:00:00Z"}"#), "missing request"),
         ] {
             let (status, value) = import(&state, &document).await;
+            assert_eq!(status, StatusCode::BAD_REQUEST);
+            let reason = value.as_str().expect("a plain-text reason");
+            assert!(reason.contains(expected), "expected {expected:?} in {reason:?}");
+        }
+        let (_, listed) = list(&state, "").await;
+        assert_eq!(listed.as_array().expect("rows").len(), 1, "the capture is unchanged");
+    }
+
+    #[tokio::test]
+    async fn the_format_query_selects_the_parser_and_har_is_the_default() {
+        let state = state_with(&[]);
+        let (status, value) = import_as(&state, "format=har", &document(&entry("http://h/"))).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(value, serde_json::json!({ "imported": 1 }));
+
+        let (status, value) =
+            import_as(&state, "format=curl", b"curl 'http://c/x' -H 'A: 1' --data-raw 'k=v'").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(value, serde_json::json!({ "imported": 1 }));
+
+        let (_, listed) = list(&state, "source=imported").await;
+        let rows = listed.as_array().expect("rows");
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0]["uri"], "http://c/x", "the pasted request is the newest row");
+        assert_eq!(rows[0]["method"], "POST");
+        assert!(rows[0]["status"].is_null(), "nothing was sent, so nothing answered");
+    }
+
+    #[tokio::test]
+    async fn an_unrecognised_format_is_refused_by_name_and_stores_nothing() {
+        let state = state_with(&["http://already/"]);
+        let (status, value) = import_as(&state, "format=postman", b"curl http://a/").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        assert_eq!(value, "format must be har or curl");
+        let (_, listed) = list(&state, "").await;
+        assert_eq!(listed.as_array().expect("rows").len(), 1);
+    }
+
+    #[tokio::test]
+    async fn a_refused_curl_command_says_why_and_stores_nothing() {
+        let state = state_with(&["http://already/"]);
+        for (command, expected) in [
+            (b"curl http://a/ -F file=@x".to_vec(), "unsupported flag -F"),
+            (b"curl http://a/ http://b/".to_vec(), "a second URL"),
+            (b"curl $'http://\xff/'".to_vec(), "the URL is not UTF-8"),
+        ] {
+            let (status, value) = import_as(&state, "format=curl", &command).await;
             assert_eq!(status, StatusCode::BAD_REQUEST);
             let reason = value.as_str().expect("a plain-text reason");
             assert!(reason.contains(expected), "expected {expected:?} in {reason:?}");
