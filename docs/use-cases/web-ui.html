@@ -14,10 +14,10 @@
       UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD)
       the HAR round trip — taking a capture out and bringing one back (UC-6) — and clearing the
       capture (UC-7).</p>
-      <div class="meta">v7 · 2026-09-04 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      <div class="meta">v8 · 2026-09-05 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
       UC-ONBOARD by <span class="badge id">E-UISETUP</span> ·
-      UC-3/UC-4 paging + provenance + UC-6 + UC-7 by <span class="badge id">E-EXPORT</span></div>
+      UC-3/UC-4 paging + provenance + UC-6 (incl. the curl paste) + UC-7 by <span class="badge id">E-EXPORT</span></div>
     </div>
   </header>
   <main>
@@ -348,10 +348,69 @@ flowchart TD
       </ul>
     </div>
 
+    <div data-c="uc-6-curl-contract">
+      <h3 id="uc-6-curl">A single request, pasted</h3>
+      <p>The same door takes one <code>curl</code> command — the inverse of UC-5's copy-as-curl —
+      under <code>POST /flows/import?format=curl</code>, with the command as the raw text body. It
+      becomes <strong>one request-only flow</strong>: method, URL, headers and body as the command
+      states them, <code>source: "imported"</code>, no response and no duration, because nothing
+      was sent — the shape a captured flow already has between its request and its reply, so every
+      reading endpoint and the app's row already know how to show it.</p>
+      <table>
+        <thead><tr><th>Request</th><th>Answer</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>POST /flows/import?format=curl</code> + what a browser's "Copy as cURL"
+            (Chrome, Firefox, Safari — bash shape) or Trawler's own copy-as-curl emits: the URL,
+            <code>-X</code>, <code>-H</code>, the <code>-d</code> family, <code>-b</code>,
+            <code>-u</code>, <code>--compressed</code>, in single, double or <code>$'…'</code>
+            quoting with backslash line-continuations</td>
+            <td><code>200</code> with <code>{ "imported": 1 }</code>. <code>-u</code>, <code>-b</code>
+            and <code>--compressed</code> arrive as the <code>Authorization</code>, <code>Cookie</code>
+            and <code>Accept-Encoding</code> headers they stand for; several <code>-d</code> join with
+            <code>&amp;</code>; the method defaults to <code>GET</code>, or <code>POST</code> when a
+            body flag is present, as curl's own does. Nothing curl would add at run time —
+            <code>Host</code>, <code>User-Agent</code>, <code>Accept</code>, a <code>Content-Type</code>
+            for <code>-d</code> — is invented</td>
+          </tr>
+          <tr>
+            <td>the same command carrying transfer-only flags — <code>-s</code>, <code>-k</code>,
+            <code>-L</code>, <code>-o file</code>, <code>--connect-timeout 5</code> and the rest of
+            an enumerated list</td>
+            <td>the same flow: they shape curl's own behaviour and never reach the wire, so they are
+            consumed in silence — the one silent case</td>
+          </tr>
+          <tr>
+            <td>anything else — <code>-F</code>, <code>-T</code>, <code>--data-urlencode</code>, an
+            unknown flag, a second URL, no URL, a URL that is not absolute <code>http(s)</code>, a
+            value curl would read from a file (<code>-d @body</code>, <code>-b jar</code>), a
+            <code>-u</code> with no password, a header with no colon, an unterminated quote, a first
+            word that is not <code>curl</code></td>
+            <td><code>400</code> with a one-sentence reason <strong>naming the token</strong> —
+            <code>unsupported flag -F</code>, <code>a second URL: "http://other/"</code> — and the
+            capture unchanged. Refused rather than guessed, because a silently dropped flag yields
+            a flow subtly unlike the request that was pasted</td>
+          </tr>
+          <tr>
+            <td><code>?format=</code> anything but <code>har</code> or <code>curl</code></td>
+            <td><code>400 format must be har or curl</code>; absent means HAR, unchanged</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>The flow's instant is the moment it was read. Windows <code>cmd</code>'s "Copy as cURL"
+      shape (<code>^</code> continuations) is not spoken and is refused, not half-read. Why the
+      boundary sits exactly here, which headers are expanded and which are never invented, and
+      where the <code>toCurl</code> round trip stops:
+      <a href="../decisions/dec-32-curl-parser-accepts-what-a-browser-emits.html">DEC-32</a>.</p>
+    </div>
+
     <div class="callout" data-c="uc-6-export-provenance">
       <p>Export delivered by <span class="badge id">E-EXPORT.W2</span>, import and the
-      <code>source</code> mark by <span class="badge id">E-EXPORT.W3</span>; the app's own
-      controls follow in the same epic. Both directions live in <code>src/api/har.rs</code> — the
+      <code>source</code> mark by <span class="badge id">E-EXPORT.W3</span>, the curl paste by
+      <span class="badge id">E-EXPORT.W7</span> (<code>src/api/curl.rs</code>, its
+      <code>toCurl</code> inverse proven as a property against a mirror anchored to the app's own
+      pinned outputs); the app's own controls follow in the same epic. Both HAR directions live in
+      <code>src/api/har.rs</code> — the
       parser is defined against the projection it inverts, so the two cannot drift into a format
       Trawler writes but cannot read — and the exported document's shape is snapshot-locked in
       <code>tests/api.rs</code>. Round-trip fidelity is proven as a <em>property</em> over
