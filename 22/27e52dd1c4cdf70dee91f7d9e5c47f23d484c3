@@ -1,0 +1,18 @@
+schema: cr/v3
+scope: "WU E-REDESIGN.W4 flow-list-shell-build -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W4
+branch: wu/redesign/flow-list-shell-build
+base: 713d5c3efc13fc459593d1d1753feb373a5afad8
+head: 2227e52dd1c4cdf70dee91f7d9e5c47f23d484c3
+diff_sha256: 884f4e2f1bb34c2429ae33667b78fc6bb124decf152c8732196996ace2964b8b
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 9, verified: 3, waived: 0 }
+waivers: []
+design:
+  implements:
+    - path: docs/work/2026-09-04-flow-list-shell.html
+      blob: c6e7fb0aa5adace8446f25d7c33a90d029cfcbab
+      built: [ui/src/App.tsx, ui/src/FlowList.tsx, ui/src/Layout.tsx]
+verdict: PASS
+date: 2026-09-05
