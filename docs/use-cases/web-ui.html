@@ -115,9 +115,11 @@
         <code>GET /stream</code>; a paged read is a read of the past), and eviction of rows the
         walk has not reached yet simply shortens it. Paging composes with every filter and
         re-slices the same listing rather than defining a second one.</li>
-        <li><strong>A cursor the ring has evicted ends the walk</strong> — an empty, final page,
-        because the capture no longer reaches back that far. It never restarts at the newest
-        row, which would re-serve every row the client already holds.</li>
+        <li><strong>A cursor the ring no longer holds ends the walk</strong> — an empty, final
+        page, whether the row was evicted under memory pressure or deleted
+        (<a href="#uc-7">UC-7</a>): the walk cannot resume from a row that is gone, and the cause
+        does not change the answer. It never restarts at the newest row, which would re-serve
+        every row the client already holds.</li>
       </ul>
     </div>
 
@@ -416,6 +418,11 @@ flowchart TD
         <li><strong>Removing is not replacing.</strong> Loading someone else's capture over your
         own is a delete followed by an import — two operations the client already has — rather
         than a destructive mode hidden inside the <code>POST</code>.</li>
+        <li><strong>A delete can end another client's paging walk.</strong> If the removed row was
+        the <code>cursor</code> some client is paging from, that client's next page is empty and
+        final — the same answer eviction has always given, because the walk cannot resume from a
+        row that is gone and the cause does not change the answer
+        (<a href="#listing-paging">the listing contract</a>).</li>
       </ul>
     </div>
 

@@ -384,6 +384,27 @@ async fn a_cursor_the_ring_evicted_ends_the_walk_rather_than_restarting_it() {
     assert!(page["next_cursor"].is_null());
 }
 
+// A cursor row can now vanish two ways, and paging has to answer the same for
+// both - the walk ends rather than restarting at the newest row.
+#[tokio::test]
+async fn a_cursor_a_delete_removed_ends_the_walk_like_an_evicted_one() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    for uri in ["http://a.example/one", "http://b.example/two", "http://c.example/three"] {
+        store.insert(FlowBuilder::new().uri(uri).status(200).build());
+    }
+    let r = router_with(store);
+
+    let (_, first) = json(&r, "/flows?limit=1").await;
+    let cursor = first["next_cursor"].as_str().unwrap().to_owned();
+
+    assert_eq!(delete(&r, &format!("/flows/{cursor}")).await.0, StatusCode::OK);
+
+    let (status, page) = json(&r, &format!("/flows?limit=2&cursor={cursor}")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(page["flows"].as_array().unwrap().is_empty(), "the walk ends, it does not restart");
+    assert!(page["next_cursor"].is_null());
+}
+
 fn har_fixture_store() -> Arc<Store> {
     let store = Arc::new(Store::new(1_000_000, 64));
     store.insert(

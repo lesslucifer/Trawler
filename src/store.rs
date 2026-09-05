@@ -47,17 +47,35 @@ impl Ring {
     /// popped; a removal takes rows from the middle, so the order is rebuilt by
     /// retaining survivors — one helper either way, because two copies of the
     /// byte arithmetic is how `total_bytes` drifts from what the ring holds.
-    fn unlink(&mut self, doomed: &HashSet<FlowId>) -> Vec<FlowId> {
-        let mut removed = Vec::new();
-        for id in doomed {
-            if let Some(flow) = self.flows.remove(id) {
-                self.total_bytes = self.total_bytes.saturating_sub(flow.retained_bytes());
-                removed.push(*id);
+    /// Removes one flow from the map and debits what it actually held. The
+    /// order is the caller's to mend: eviction pops the row it already took
+    /// from the front, while a removal has to find it.
+    fn debit(&mut self, id: FlowId) -> Option<Flow> {
+        let flow = self.flows.remove(&id)?;
+        self.total_bytes = self.total_bytes.saturating_sub(flow.retained_bytes());
+        Some(flow)
+    }
+
+    /// Drops `doomed` from both the order and the map. A single removal mends
+    /// the order by finding its one row, because rebuilding the whole order
+    /// would cost a full scan and a hash probe per row — paid under the lock
+    /// the live capture path contends on, and the ring is bounded by retained
+    /// bytes rather than row count, so a capture of body-less exchanges grows
+    /// it without limit.
+    fn unlink(&mut self, doomed: &[FlowId]) -> Vec<FlowId> {
+        let removed: Vec<FlowId> =
+            doomed.iter().filter(|id| self.debit(**id).is_some()).copied().collect();
+        match removed.as_slice() {
+            [] => {}
+            [id] => {
+                if let Some(at) = self.order.iter().position(|row| row == id) {
+                    self.order.remove(at);
+                }
             }
-        }
-        if !removed.is_empty() {
-            let flows = &self.flows;
-            self.order.retain(|id| flows.contains_key(id));
+            _ => {
+                let gone: HashSet<FlowId> = removed.iter().copied().collect();
+                self.order.retain(|id| !gone.contains(id));
+            }
         }
         removed
     }
@@ -68,8 +86,7 @@ impl Ring {
             let Some(oldest) = self.order.pop_front() else {
                 break;
             };
-            if let Some(flow) = self.flows.remove(&oldest) {
-                self.total_bytes = self.total_bytes.saturating_sub(flow.retained_bytes());
+            if self.debit(oldest).is_some() {
                 evicted.push(oldest);
             }
         }
@@ -261,10 +278,8 @@ impl Store {
     pub fn remove_matching(&self, filter: &FlowFilter) -> Vec<FlowId> {
         let removed = {
             let mut ring = self.inner.lock().expect("store lock");
-            let doomed: HashSet<FlowId> = {
-                let ring = &*ring;
-                ring.matching(ring.newest_first(), filter).map(|flow| flow.id).collect()
-            };
+            let doomed: Vec<FlowId> =
+                ring.matching(ring.newest_first(), filter).map(|flow| flow.id).collect();
             ring.unlink(&doomed)
         };
         self.announce_clear(removed.clone());
@@ -278,7 +293,7 @@ impl Store {
     pub fn remove(&self, id: FlowId) -> bool {
         let removed = {
             let mut ring = self.inner.lock().expect("store lock");
-            ring.unlink(&HashSet::from([id]))
+            ring.unlink(&[id])
         };
         let found = !removed.is_empty();
         self.announce_clear(removed);
@@ -541,6 +556,44 @@ mod tests {
         assert!(!s.remove(middle_id), "a second removal has nothing to take");
         assert!(!s.remove(FlowId::new()));
         assert_eq!(uris(&s.list(&FlowFilter::default())), vec!["http://c/", "http://a/"]);
+    }
+
+    // The single-id path mends the order by finding its row rather than
+    // rebuilding, so it has to find the RIGHT one - a middle row, not the
+    // front or the back, which a position scan could get wrong at either end.
+    #[test]
+    fn removing_a_middle_row_leaves_the_order_intact_around_it() {
+        let s = store();
+        for uri in ["http://a/", "http://b/", "http://c/", "http://d/"] {
+            s.insert(FlowBuilder::new().uri(uri).build());
+        }
+        let middle = s.list(&FlowFilter::default())[2].id;
+
+        assert!(s.remove(middle));
+
+        assert_eq!(
+            uris(&s.list(&FlowFilter::default())),
+            vec!["http://d/", "http://c/", "http://a/"],
+            "the rows either side of the removed one keep their order"
+        );
+        assert_eq!(s.len(), 3);
+    }
+
+    // A flow is debited once even if its id is named twice, or total_bytes
+    // would fall below what the ring actually holds.
+    #[test]
+    fn a_repeated_id_is_debited_once() {
+        let s = store();
+        let flow = FlowBuilder::new().req_body(captured(b"12345")).build();
+        let id = flow.id;
+        s.insert(flow);
+        s.insert(FlowBuilder::new().req_body(captured(b"abc")).build());
+        assert_eq!(s.total_bytes(), 8);
+
+        let mut ring = s.inner.lock().expect("store lock");
+        assert_eq!(ring.unlink(&[id, id]), vec![id], "the second mention finds nothing");
+        assert_eq!(ring.total_bytes, 3);
+        assert_eq!(ring.order.len(), 1, "the order drops the row exactly once");
     }
 
     #[test]
