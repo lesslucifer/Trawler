@@ -1138,13 +1138,10 @@ soft:
             the opposite: it edited the epic plan's W4 and W11 rows inside its own WU, on the grounds
             that "a plan that still promises work already done is how a follow-up gets lost". Found at
             the Tier-3 review.</td>
-        <td>Distilled to <a href="../decisions/dec-31-leg-is-panel-scoped.html"><strong>DEC-31</strong></a>,
-            which is where the rule outlives this archived run. Designed the panel-level selector, then
-            <strong>corrected the epic plan here</strong>: W7's
-            summary strikes the leg switch and names where it went, its expected result narrows to the
-            <em>decode</em> switch, and W8's build row marks the <code>ModeButton</code> →
-            <code>SegmentedControl</code> swap as the decode pair <em>only</em> — the leg pair
-            (<code>BodyViewer.tsx:196–201</code>) is deleted, not swapped.</td>
+        <td>Designed the panel-level selector and corrected the epic plan's W7 and W8 rows here.
+            The rule and everything it forces are
+            <a href="../decisions/dec-31-leg-is-panel-scoped.html"><strong>DEC-31</strong></a>'s, which
+            is where they outlive this archived run.</td>
       </tr>
       <tr class="withdrawn">
         <td><s><code>TextRenderer</code>'s <code>@use</code> is body-scoped, but its best fit on this
@@ -1257,17 +1254,14 @@ soft:
             request / response?" — <strong>and again on the mockup (round 2):</strong> "I still think
             we need a tabs or kind of switch … showing both headers in the same view may be confusing.
             Same for the body if it requires another switch."</td>
-        <td><strong>Reversed my round-1 refusal, and the second ask was right.</strong> The decisive
-            fact was in the code, not the argument: <code>BodyViewer</code> already ships a
-            request/response toggle (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>), so the
-            panel was never showing "both legs at once" — its <em>headers</em> were, while the body
-            beneath them toggled. Round 1 weighed the switch against goal 4 and never checked whether
-            the screen already contradicted it. <strong>Goal 4 re-stated</strong> ("read one leg at a
-            time"), a <code>SegmentedControl</code> in the pinned identity row, the
-            two header zones <strong>collapsed into one</strong>, a new Interaction row with its
-            keyboard path, the default-leg decision stated, <strong>Tune 8 inverted</strong>, six
-            receipt rows re-evidenced, and the mockup rebuilt stateful so the selector really drives
-            both zones.</td>
+        <td><strong>Reversed my round-1 refusal, and the second ask was right</strong> — the reasoning
+            is <a href="#tune">Tune 8</a>'s. Moved: <strong>Frame</strong> (goal 4 re-stated "read one
+            leg at a time"), <strong>Layout</strong> (a <code>SegmentedControl</code> in the pinned
+            identity row; the two header zones collapsed into one), <strong>Elements</strong> (its
+            catalog row), <strong>Interaction</strong> (a new use-case row with its keyboard path, and
+            the default-leg decision), <strong>Tune 8 inverted</strong>, six <strong>receipt</strong>
+            rows re-evidenced, and the <strong>mockup</strong> rebuilt stateful so the selector really
+            drives both zones.</td>
         <td><code>SegmentedControl</code>'s <span class="u-use">@use</span>, which names "leg (request
             | response)" outright, and its <span class="u-avoid">@avoid</span> "tabs that own panels
             (tablist)" — so this is a segmented radiogroup, not tabs ·
