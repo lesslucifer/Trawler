@@ -222,6 +222,26 @@ test("the copy confirm reverts — the shipped label never did", async () => {
   }
 });
 
+// CopyButton's own reset key cannot fire here: switching mode nulls `fetched`,
+// which unmounts the button with the whole action group. This asserts the
+// invariant that arrangement gives us, so a later refactor that keeps the
+// button mounted across a refetch has to answer for a stale confirm.
+test("switching mode clears a standing confirm — no 'copied' left over another body", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal("navigator", { clipboard: { writeText } });
+  const api = apiWith({ bytes: text("payload"), contentType: "text/plain" });
+  render(<BodyViewer api={api} flow={flow()} leg="response" />);
+  await screen.findByTestId("body-text");
+
+  fireEvent.click(screen.getByRole("button", { name: /copy body/ }));
+  await waitFor(() => expect(screen.getByRole("button", { name: /copied/ })).toBeInTheDocument());
+
+  fireEvent.click(screen.getByRole("radio", { name: "raw" }));
+
+  await waitFor(() => expect(screen.getByRole("button", { name: /copy body/ })).toBeInTheDocument());
+  expect(screen.queryByRole("button", { name: /copied/ })).toBeNull();
+});
+
 test("an image body offers save but no copy — an image has no clipboard text form", async () => {
   vi.stubGlobal("URL", {
     ...URL,

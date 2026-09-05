@@ -110,7 +110,7 @@
           never reverts.</td>
           <td>All three are things this WU deliberately removes; each deleted assertion maps to a design line
           that removed it. A suite kept green by keeping the defect is the failure mode the plan named as a
-          risk. The replacement is 20 tests where the old file had 16.</td>
+          risk. The replacement is 21 tests where the old file had 16 — the 21st added at review.</td>
         </tr>
         <tr>
           <td><strong>Two e2e assertions in the existing spec changed wording, not intent.</strong>
@@ -146,6 +146,48 @@
       </tbody>
     </table>
 
+    <h2 id="review">The Tier-3 review, and what it changed</h2>
+    <p>Eight candidates from six finders; one survived verification, and the fix it prompted led to a second
+    change the review itself had refuted. Recorded because a report that absorbs review findings silently is
+    the failure the report exists to prevent.</p>
+    <table data-c="review">
+      <thead><tr><th>Finding</th><th>Sev</th><th>What it was, and the fix</th></tr></thead>
+      <tbody>
+        <tr><td>"Both are small"</td><td>nit</td>
+          <td>The eager-mounting follow-up justified deferring the two-fetch question by calling both fetches
+          small — an <strong>unsupported claim contradicted by this WU's own numbers</strong>: the capture cap
+          is 10 MiB per leg, <code>getBody</code> buffers the whole response, and this WU built a 200 000-byte
+          e2e fixture precisely because bodies are not small. <strong>Fixed</strong>: the entry now states what
+          is actually true (each fetch is cancelled on unmount; nothing is measured), names the unbounded size,
+          and adds the second-order cost the first draft omitted — two CodeMirror surfaces when both legs are
+          structured.</td></tr>
+        <tr><td>The eager <code>value</code> prop</td><td class="kd">refuted, then real</td>
+          <td>The efficiency finder called <code>value={"{shownText()}"}</code> beside
+          <code>getPayload</code> wasted work: <code>getPayload</code> wins at click time, so
+          <code>value</code> only seeds <code>useConfirm</code>'s reset key, yet it decoded the whole body on
+          every render. <strong>The verifier refuted it</strong> — it probed <code>CopyButton</code> in
+          isolation, found that dropping <code>value</code> leaves the reset key <code>undefined</code>, and
+          concluded the prop was load-bearing. <strong>That refutation is wrong at this call site</strong>, and
+          checking it is what settled the matter: every mode or leg change runs
+          <code>setFetched(null)</code>, which unmounts the whole action group, so the confirm can never
+          survive a payload change here with or without <code>value</code>. Proved by deleting the prop and
+          watching the suite stay green — a test that cannot fail was not evidence. <strong>Fixed</strong>:
+          the prop is gone, and the test that was written to guard it now states the invariant that actually
+          holds (unmount clears the confirm), so a refactor keeping the button mounted across a refetch has to
+          answer for a stale one.</td></tr>
+      </tbody>
+    </table>
+    <p>Six candidates were refuted and are recorded so finder quality stays visible: that the two new
+    <code>Section</code> call sites should use the registry <code>Section</code> (that swap is W6's row in the
+    epic plan, W5's design is unmerged and unreachable from this tip, and the two components' heading tokens
+    differ — <code>text-chrome</code> against <code>text-body</code> — so it is not the drop-in it appears to
+    be); that <code>shownText</code> duplicates the renderer's decode (true, and <em>pre-existing</em> — the
+    base commit's <code>copyBody</code> did the same); that the comment's zone letter <code>B</code> is
+    undefined (it is the design run's own vocabulary, which is where CLAUDE.md puts this rationale); that the
+    follow-up omitted the CodeMirror cost (folded into the fix above rather than left refuted); and two design
+    findings arguing design run #9 misread W5 — both aimed at an artifact this diff does not touch, landed by
+    a previous WU, and judged against a sibling branch that is not reachable from this tip.</p>
+
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tbody>
@@ -155,10 +197,10 @@
           at blob <code>5b3bd77d872ba6b1552106f061b67c4c2e3f9030</code> —
           <code>data-artifact="design-run"</code>, <code>data-status="archived"</code>. This is the repo's
           second <code>design.implements</code> citation and its first against a screen design run.</td></tr>
-        <tr><td><strong>Unit</strong></td><td><code>ui/src/BodyViewer.test.tsx</code> rewritten — 20 tests
+        <tr><td><strong>Unit</strong></td><td><code>ui/src/BodyViewer.test.tsx</code> rewritten — 21 tests
           (dispatch ×6, the leg prop, raw refetch, three truncation paths, copy-as-valid-JSON, copy-as-hex,
           the reverting confirm, image-has-no-copy, save-writes-all, and the seven zone states).
-          <code>ui/src/body.test.ts</code> +2 (the human size, and the null size).</td></tr>
+          <code>ui/src/body.test.ts</code> +2 (the human size, and the null size). The 21st test came from the review — see above.</td></tr>
         <tr><td><strong>Integration</strong></td><td><code>ui/src/FlowDetail.test.tsx</code> +2 — the WU's
           bounded contract: one pane per leg, each fetching its own leg; switching one pane's mode leaves
           the other's calls untouched.</td></tr>
@@ -166,7 +208,7 @@
           origin +2 routes. <strong>13 passing, 0 failing</strong> — including the epic's two new UC-5
           contracts: <em>an XML body renders as XML</em> and <em>a body past the render cap states its
           truncation</em>, both against the real proxy, the real API and the real Tauri window.</td></tr>
-        <tr><td><strong>Suites</strong></td><td><code>pnpm test</code> 535 passed / 42 files (527 at the
+        <tr><td><strong>Suites</strong></td><td><code>pnpm test</code> 536 passed / 42 files (527 at the
           base — the nine body-family component tests stayed green as their first real consumer arrived) ·
           <code>pnpm exec eslint src</code> clean · <code>tsc --noEmit</code> clean ·
           <code>cargo test</code> 7 suites green · <code>cargo clippy</code> clean.</td></tr>
@@ -218,8 +260,12 @@
         <td><strong>W5/W6</strong> — the flow-detail design owns the panel's zoning. W5's run exists on
         <code>wu/redesign/flow-detail</code> but is not merged into the epic and was not read here.</td></tr>
         <tr><td><strong>Eager vs lazy mounting.</strong> Two panes mean two body fetches whenever a flow is
-        opened, where the shipped screen made one. Both are small and cancelled on unmount, and no measurement
-        says it matters — recorded so the question is visible rather than discovered.</td>
+        opened, where the shipped screen made one — and a flow whose legs are both JSON or XML now mounts two
+        CodeMirror surfaces at once rather than one. <em>Neither fetch is bounded:</em> the capture cap is
+        10 MiB per leg and <code>getBody</code> buffers the whole response, so this is not a small cost by
+        assertion — the render caps this same WU applied exist precisely because bodies are not small. What is
+        true is narrower: each fetch is cancelled on unmount, and nothing here has been measured. Recorded so
+        the question is visible rather than discovered.</td>
         <td><strong>W6</strong>, with the panel's zoning — deferring a body's fetch until its section is
         scrolled to is a panel decision, not a pane one.</td></tr>
         <tr><td><strong>Whether raw mode should offer a decoded-JSON view of a compressed body.</strong>

@@ -103,7 +103,7 @@ export function BodyViewer({
         {loaded && (
           <span className="ml-auto flex items-center gap-chrome-gap">
             {kind !== "image" && (
-              <CopyButton label="copy body" value={shownText()} getPayload={shownText} />
+              <CopyButton label="copy body" getPayload={shownText} />
             )}
             <IconButton glyph="save" onClick={save} label="save" />
           </span>
