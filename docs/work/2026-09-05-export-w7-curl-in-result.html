@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-EXPORT.W7 result — paste a curl command, get a flow</h1>
       <p><code>POST /flows/import?format=curl</code> reads one pasted <code>curl</code> command as a request-only flow marked <code>imported</code>, delivered as planned: the settled flag set is the code's one lookup, every other token is refused by name, and the <code>toCurl</code> inverse is proven as a property — with its boundary found and recorded.</p>
-      <div class="meta">v2 · 2026-09-05 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W7</span> · <a href="2026-09-05-export-w7-curl-in-plan.html">WU plan</a> · <a href="2026-09-04-export-plan.html#w7">epic plan</a></div>
+      <div class="meta">v3 · 2026-09-05 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W7</span> · <a href="2026-09-05-export-w7-curl-in-plan.html">WU plan</a> · <a href="2026-09-04-export-plan.html#w7">epic plan</a></div>
     </div>
   </header>
   <main>
@@ -113,6 +113,33 @@
       </tbody>
     </table>
     <p>Five finders, three candidates, two confirmed. Reuse and efficiency returned clean: the tokenizer is single-pass over the body bytes, the join is one allocation, the body limit and the single store lock are the HAR path's own.</p>
+    <h3 id="review-round-2">Round 2 — the fix re-reviewed as unreviewed code</h3>
+    <table data-c="review-2">
+      <thead><tr><th>Finding</th><th>Verdict</th><th>What changed</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>the digit reader accumulated the value by hand in lockstep with collecting the same digits, where <code>u32::from_str_radix</code> over the collected buffer computes the identical value on every reachable input (reuse · nit)</td>
+          <td>confirmed</td>
+          <td>the accumulator is gone; the value is read from the digits once they are collected (<code>a9d9f20</code>)</td>
+        </tr>
+        <tr>
+          <td>the per-escape digit buffer allocates, and a body of nothing but escapes could drive millions of allocations (efficiency · important)</td>
+          <td>refuted — measured at about 30 ns per escape over a million escapes, bounded by the store cap, and the same growth pattern the tokenizer already pays for every byte</td>
+          <td>nothing</td>
+        </tr>
+        <tr>
+          <td>the tokenizer's closing sentence ("an escape bash does not know stays literal") omits the surrogate case the fix added (simplification · important)</td>
+          <td>refuted — incomplete, not false, and the fact sits on the helper that implements it</td>
+          <td>nothing</td>
+        </tr>
+        <tr>
+          <td>a tuple where a struct would read better; the <code>\x</code> arm discarding always-empty digits (simplification · two nits)</td>
+          <td>refuted — taste; every call site names the parts, and the <code>\x</code> discard is bash's own behaviour, covered by a test</td>
+          <td>nothing</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Correctness and altitude returned clean, the correctness finder having compared the fix byte-for-byte with a real bash on <code>\uD800</code>, <code>\U00110000</code> and <code>\uzz</code>.</p>
 
     <h2 id="evidence">Evidence</h2>
     <div data-item="evidence">
@@ -140,7 +167,7 @@
       6 <code>tests/e2e_capture.rs</code>, 4 <code>tests/e2e_h2.rs</code>, 0 failures;
       <code>cargo fmt --check</code> and <code>clippy -D warnings</code> clean across all targets.
       Commits: plan <code>426977c</code> · code <code>c328330</code> · distillation
-      <code>09676c2</code> · result <code>28da6d3</code> · review fixes <code>9ed23e5</code> · this amended result.</p>
+      <code>09676c2</code> · result <code>28da6d3</code> · review fixes <code>9ed23e5</code> and <code>a9d9f20</code> · this amended result.</p>
     </div>
 
     <h2 id="distillation">Distillation</h2>
