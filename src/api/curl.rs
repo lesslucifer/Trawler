@@ -395,6 +395,11 @@ fn ansi_c_quoted(bytes: &mut ByteStream<'_>, word: &mut Vec<u8>) -> Result<(), C
     while let Some(byte) = bytes.next() {
         match byte {
             b'\'' => return Ok(()),
+            b'\\' if bytes.peek().is_some_and(|b| (b'0'..=b'7').contains(b)) => {
+                if let (Some(value), _) = take_radix(bytes, 8, 3) {
+                    word.push(low_byte(value));
+                }
+            }
             b'\\' => match bytes.next() {
                 None => return Err(CurlError::UnterminatedQuote),
                 Some(b'n') => word.push(b'\n'),
@@ -412,16 +417,6 @@ fn ansi_c_quoted(bytes: &mut ByteStream<'_>, word: &mut Vec<u8>) -> Result<(), C
                 },
                 Some(b'u') => push_code_point(word, take_radix(bytes, 16, 4), b"\\u"),
                 Some(b'U') => push_code_point(word, take_radix(bytes, 16, 8), b"\\U"),
-                Some(digit @ b'0'..=b'7') => {
-                    let mut value = u32::from(digit - b'0');
-                    for _ in 0..2 {
-                        match bytes.next_if(|b| (b'0'..=b'7').contains(b)) {
-                            Some(next) => value = value * 8 + u32::from(next - b'0'),
-                            None => break,
-                        }
-                    }
-                    word.push(low_byte(value));
-                }
                 Some(other) => word.extend([b'\\', other]),
             },
             other => word.push(other),
@@ -446,7 +441,7 @@ fn take_radix(bytes: &mut ByteStream<'_>, radix: u32, max_digits: usize) -> (Opt
 
 /// bash keeps the low byte of an over-long `\NNN`, so `$'\777'` is `0xff`.
 fn low_byte(value: u32) -> u8 {
-    u8::try_from(value & 0xff).unwrap_or(u8::MAX)
+    value.to_le_bytes()[0]
 }
 
 /// A surrogate or an out-of-range `\U` names no character; bash keeps the whole
@@ -534,6 +529,12 @@ mod tests {
         fn ansi_c_quoting_carries_a_raw_byte_and_an_escape_with_no_digits_stays_literal() {
             let got = tokenize(br"$'\xff\x'").expect("tokenizes");
             assert_eq!(got[0], [0xff, b'\\', b'x']);
+        }
+
+        #[test]
+        fn an_octal_escape_reads_one_to_three_digits_and_keeps_the_low_byte() {
+            let got = tokenize(br"$'\7\101\777\0z'").expect("tokenizes");
+            assert_eq!(got[0], [0x07, b'A', 0xff, 0x00, b'z']);
         }
 
         #[test]
