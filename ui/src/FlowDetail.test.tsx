@@ -43,6 +43,29 @@ const legRadio = (leg: "request" | "response") => within(legSelector()).getByRol
 
 afterEach(() => vi.unstubAllGlobals());
 
+// jsdom lays nothing out, so a value cell's overflow is stated for it: every
+// <dd> is 60px tall with 200px of content, which is what a clamped cookie is.
+function withOverflowingValueCells(run: () => void) {
+  Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
+    configurable: true,
+    get(this: HTMLElement) {
+      return this.tagName === "DD" ? 200 : 0;
+    },
+  });
+  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
+    configurable: true,
+    get(this: HTMLElement) {
+      return this.tagName === "DD" ? 60 : 0;
+    },
+  });
+  try {
+    run();
+  } finally {
+    delete (HTMLElement.prototype as { scrollHeight?: number }).scrollHeight;
+    delete (HTMLElement.prototype as { clientHeight?: number }).clientHeight;
+  }
+}
+
 test("while the flow is still loading, one sentence stands in for the whole panel", () => {
   render(<FlowDetail api={stubApi()} flow={null} onClose={() => {}} />);
   const pending = screen.getByTestId("detail-loading");
@@ -129,7 +152,7 @@ test("a leg that sent no headers says so, keeps its zone, and stays selectable",
   fireEvent.click(legRadio("response"));
   const notice = screen.getByText("none — this leg sent no headers");
   expect(notice.closest("[data-tone]")).toHaveAttribute("data-tone", "mute");
-  expect(screen.getByRole("heading", { name: "Headers" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Headers · 0" })).toBeInTheDocument();
   expect(legRadio("response")).not.toBeDisabled();
   expect(legRadio("request")).not.toBeDisabled();
 });
@@ -237,4 +260,53 @@ test("one selector governs both leg-scoped zones; the flow line follows neither"
   await waitFor(() => expect(api.getBody).toHaveBeenCalledWith("f1", "response", true));
   expect((api.getBody as ReturnType<typeof vi.fn>).mock.calls.length).toBe(requestFetches + 1);
   expect(screen.getByTestId("flow-line").textContent).toBe(flowLineBefore);
+});
+
+// The owner's round: with real traffic the header table buried the body under
+// cookies and tokens, and the panel scrolled as one document to reach it. The
+// body is the zone a reader came for, so it takes the height the headers leave.
+test("the panel never scrolls as a whole: headers are capped and scroll inside, the body fills the rest", async () => {
+  render(
+    <FlowDetail
+      api={stubApi()}
+      flow={view({ request_body: { state: "captured", size: 5, data_base64: "" } })}
+      onClose={() => {}}
+    />,
+  );
+  const detail = screen.getByTestId("detail");
+  expect(detail.querySelector(":scope > div.overflow-auto")).toBeNull();
+
+  const headersBox = screen.getByTestId("headers-scroll");
+  expect(headersBox.className).toMatch(/overflow-auto/);
+  expect(headersBox.className).toMatch(/relative/);
+  expect(headersBox.closest("section")!.className).toMatch(/max-h-zone-cap/);
+  expect(screen.getByRole("heading", { name: "Headers · 1" })).toBeInTheDocument();
+
+  const bodySection = screen.getByRole("heading", { name: "Body" }).closest("section")!;
+  expect(bodySection.className).toMatch(/flex-1/);
+  expect(bodySection.className).toMatch(/min-h-0/);
+  const pane = await screen.findByTestId("body-pane");
+  expect(pane.className).toMatch(/flex-1/);
+  expect(pane.className).toMatch(/relative/);
+  expect(pane.className).not.toMatch(/max-h-/);
+});
+
+test("a header value taller than three lines is clamped, and one act under its name shows the rest", () => {
+  const cookie = "session=" + "x".repeat(900);
+  withOverflowingValueCells(() => {
+    render(
+      <FlowDetail
+        api={stubApi()}
+        flow={view({ request_headers: [{ name: "set-cookie", value: cookie }] })}
+        onClose={() => {}}
+      />,
+    );
+    const cell = screen.getByText(cookie).closest("dd")!;
+    expect(cell.className).toMatch(/max-h-value-clamp/);
+    expect(screen.getByRole("button", { name: "copy set-cookie" })).toHaveTextContent(cookie);
+
+    fireEvent.click(screen.getByRole("button", { name: "more of set-cookie" }));
+    expect(cell.className).not.toMatch(/max-h-value-clamp/);
+    expect(screen.getByRole("button", { name: "less of set-cookie" })).toBeInTheDocument();
+  });
 });

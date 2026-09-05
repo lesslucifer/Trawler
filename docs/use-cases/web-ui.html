@@ -135,6 +135,12 @@
         <li><strong>Every wire value is a copy target</strong>: headers render in wire order with duplicate
         names preserved, and clicking a header value — or the URI — copies exactly that value, confirming
         at the value for ~2 s; drag-selecting still selects.</li>
+        <li><strong>The body is the main zone and the panel never scrolls as a whole</strong>
+        (<a href="../decisions/dec-32-body-is-the-main-zone.html">DEC-32</a>): the headers take their natural
+        height up to about a third of the panel and scroll inside it, the heading naming how many there are;
+        the body takes the rest and scrolls inside itself. A header value taller than three lines — a
+        cookie, a token, a policy — is clamped with <em>more</em> / <em>less</em> under its name: lines are
+        hidden, never characters, the value still copies whole, and one act shows all of it.</li>
         <li><strong>Esc dismisses the panel</strong>, as does ✕, and focus returns to the list that opened
         it, so a keyboard user lands back on the row they came from.</li>
         <li><strong>Bodies render by content type</strong> over
@@ -176,7 +182,9 @@
     <div class="callout" data-c="uc-5-provenance">
       <p>Pinned by the inspector e2e (<code>ui/e2e/specs/flows.spec.ts</code>): row click → the request
       leg's headers / timing / versions; the leg selector switches headers and body together while the flow
-      line stays; a JSON response renders as copy-exact source; the raw toggle shows the
+      line stays; under a wall of long headers the window gains no scroll, the body zone is the taller of
+      the two and stays on screen, and a clamped header value expands on <em>more</em>; a JSON response
+      renders as copy-exact source; the raw toggle shows the
       served source as text; copy-as-curl's payload is read back from a recording clipboard stub installed
       through WebDriver (the OS clipboard itself cannot be read there — the real write, like the native save
       dialog, stays a recorded manual check); Esc closes the panel; a

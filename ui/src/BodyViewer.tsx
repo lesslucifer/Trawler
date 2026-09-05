@@ -92,7 +92,7 @@ export function BodyViewer({
   };
 
   return (
-    <div data-testid="body-viewer" data-leg={leg} className="flex min-h-0 flex-col gap-2">
+    <div data-testid="body-viewer" data-leg={leg} className="flex min-h-0 flex-1 flex-col gap-2">
       <div className="flex items-center gap-chrome-gap">
         <SegmentedControl
           options={MODES}
@@ -119,8 +119,11 @@ export function BodyViewer({
       ) : (
         // The cut marker rides in the member's own output, so B's scroll box is
         // what would carry it out of sight — the one line whose job is to be
-        // seen. Capping B's height keeps the marker at its foot instead.
-        <div data-testid="body-pane" className="max-h-body-max min-h-0 overflow-auto">
+        // seen. B fills the height its host gives and scrolls inside it, which
+        // keeps the marker at its foot. `relative` is load-bearing: WebKit lets
+        // a static scroll container's overflow leak into the document's
+        // scrollable area when its content is a display:contents grid.
+        <div data-testid="body-pane" className="relative min-h-0 flex-1 overflow-auto">
           <Dispatch fetched={loaded} kind={kind} />
         </div>
       )}

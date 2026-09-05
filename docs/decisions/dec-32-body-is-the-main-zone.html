@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9c0ebc9f34851f0dfac854">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-32: the body is the panel's main zone</title>
+  <style>
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}
+    pre.sk{font-family:var(--mono,monospace);font-size:12px;line-height:1.45;margin:0;
+      white-space:pre;overflow-x:auto;}
+    .primary{color:var(--ok);font-weight:600;}
+    .secondary{color:var(--accent);font-weight:600;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-32 — a detail panel never scrolls as a whole: the body is its main zone, and every other zone is bounded</h1>
+      <p>A panel is a fixed window onto unbounded capture data. When one collection is allowed to grow, the
+         zone a reader came for ends up below it — and, in WebKit, so does the window.</p>
+      <div class="meta">DEC-32 · 2026-09-05 · Trawler · E-REDESIGN.W6 · distilled from the owner's round on
+        the built flow detail · status: active · amends the flow-detail design run's Layout (its scroll
+        rule and its "no cap" on the header collection) and its "wrap always; never clip" constraint</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>W5's design gave the flow detail one scroll region for everything under the identity row — flow line,
+    headers, body — and refused to cap the header collection: <em>"read the wire truth: every header rendered,
+    nothing folded away"</em>. W6 built it. Against real traffic the owner found what the design's fixtures could
+    not show: a response with three session cookies, a bearer token and a content-security-policy renders as
+    <strong>a header table taller than four screens</strong>, in a 380px pane where a 900-character cookie wraps to
+    thirty lines. The body — the zone the reader clicked the row to see — sat below all of it. And in WebKit the
+    overflow of that table leaked past its scroll container into the document, so the <em>window</em> gained four
+    screens of empty scroll below the app.</p>
+    <div class="callout" data-c="why-a-decision">
+      <p><strong>The design was right about the data and wrong about the space.</strong> Every header must still be
+      readable in full, in wire order, with duplicates preserved, and copyable whole. What a fixed-height panel
+      cannot do is give every collection its natural height at once. Something has to be bounded, and the
+      question is what.</p>
+    </div>
+
+    <h2 id="decision">The decision</h2>
+    <table data-c="tbl-decision">
+      <thead><tr><th>Question</th><th>Settled</th></tr></thead>
+      <tbody>
+        <tr><td>Does the panel scroll?</td>
+            <td><strong>Never as a whole.</strong> Each zone is either fixed-height chrome or a scroll container
+                of its own. A reader always sees every zone's label and the start of its content.</td></tr>
+        <tr><td>Which zone is primary?</td>
+            <td>The <span class="primary">body</span>. It takes whatever height the other zones leave —
+                <code>flex-1</code> — and scrolls inside that. The cut marker at its foot stays visible for the
+                same reason W8 gave: the pane is a bounded box, whatever its height.</td></tr>
+        <tr><td>How big may a secondary zone get?</td>
+            <td>The <span class="secondary">headers</span> take their natural height up to a <strong>share of
+                the panel</strong> (<code>max-h-zone-cap</code>, 35%), then scroll inside; the heading stays
+                and names how many rows there are. Identity row and flow line are chrome at natural height.</td></tr>
+        <tr><td>What about one value that is itself a screen tall?</td>
+            <td>Clamped to <strong>three lines</strong>, with <em>more</em> / <em>less</em> under its name. The
+                clamp hides lines, never characters: the value is still the verbatim payload, still copies whole
+                on click, and one act shows all of it. That is a named, reversible view in the sense of
+                <a href="../design-rules/design-rules-index.html">display-equals-payload</a>, not a
+                truncation.</td></tr>
+        <tr><td>Where does "which zone is main" live?</td>
+            <td>In the screen. Components stay layout-neutral; a host sizes a <code>Section</code> through its
+                <code>className</code> and a pane fills what it is given.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="shape">The zoning, on the panel this was decided for</h2>
+    <pre class="sk" data-c="sketch">┌─────────────────────────────────────────────┐
+│ POST  201  [request│response]      148 ms ✕ │  chrome · natural height
+├─────────────────────────────────────────────┤
+│ https://api.example.io/v2/users?id=7        │  chrome · natural height
+│ HTTP/1.1 → HTTP/2              [copy as curl]│
+├─────────────────────────────────────────────┤
+│ HEADERS · 23                            ▲   │  secondary · ≤ 35% of the panel,
+│ set-cookie   session0=xxxxxxxxxxxxxxxxxx    │  scrolls inside; a value past
+│   more       xxxxxxxxxxxxxxxxxxxxxxxxxxx    │  three lines is clamped, with
+│              xxxxxxxxxxxxxxxxxxxxxxxxxxx    │  more/less under its name
+│ x-token      Bearer eyJhbGciOiJIUzI1NiJ9…   │
+│   more                                  ▼   │
+├─────────────────────────────────────────────┤
+│ BODY                                        │  primary · takes the rest,
+│ [decoded│raw]           [copy body] [↓]     │  scrolls inside
+│ {                                           │
+│   "greeting": "hello",                      │
+│   …                                         │
+└─────────────────────────────────────────────┘
+   the panel itself never scrolls; the window never gains height</pre>
+
+    <h2 id="alternatives">What was rejected, and why</h2>
+    <table data-c="tbl-alternatives">
+      <thead><tr><th>Alternative</th><th>Why it lost</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Keep one scroll region</strong> <span class="meta">the design as written</span></td>
+            <td>Correct for the data, wrong for the reader: the primary zone's position depends on how many
+                cookies a server set. The design's own goal ranking put "read the wire truth" above the body
+                only because the body was another screen's; on the built panel they compete for one height.</td></tr>
+        <tr><td><strong>Tabs</strong> <span class="meta">Headers | Body, one at a time</span></td>
+            <td>The devtools idiom, and it would solve the height fight — but the panel already carries one
+                selector (the leg, DEC-31), and a second axis of switching on a 380px pane hides the zone a
+                reader most often wants beside the headers. Bounded zones show both.</td></tr>
+        <tr><td><strong>Truncate long values</strong> <span class="meta">single line, ellipsis</span></td>
+            <td>The design's explicit ✗: <em>"ellipsis on a JWT"</em>. Characters would be hidden with no way
+                back but copying. The clamp hides lines and offers the rest in one act.</td></tr>
+        <tr><td><strong>A fixed pixel cap on the headers</strong></td>
+            <td>Deterministic but blind to the window: 256px is a third of a laptop panel and a sixth of a
+                desktop one. A share keeps the body the larger zone at every height.</td></tr>
+        <tr><td><strong>Fix the window scroll alone</strong> <span class="meta">position the scroll container, keep the layout</span></td>
+            <td>Necessary — the WebKit leak is real and the fix (<code>relative</code> on the scroll container)
+                ships — but it would leave the body four screens down.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">What this forces</h2>
+    <table data-c="tbl-forces">
+      <thead><tr><th>Where</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td><strong>FlowDetail</strong><br><span class="meta">W6</span></td>
+            <td>No outer scroll region. Identity row and flow line <code>shrink-0</code>; the headers
+                <code>Section</code> is <code>flex min-h-0 max-h-zone-cap flex-col</code> around a
+                <code>relative overflow-auto</code> box; the body <code>Section</code> is
+                <code>flex min-h-0 flex-1 flex-col</code>. Header rows are <code>KeyValueRow collapsible</code>.
+                <em>Done: W6.</em></td></tr>
+        <tr><td><strong>KeyValueRow</strong><br><span class="meta">registry T1</span></td>
+            <td>Gains <code>collapsible</code> (off by default): a value that overflows three lines is clamped
+                with a <em>more</em> / <em>less</em> Button under the name; click still copies the whole value and
+                the confirm tones the visible lines. Measured, not guessed — no toggle when nothing is hidden.
+                <em>Done: W6.</em></td></tr>
+        <tr><td><strong>Section</strong><br><span class="meta">registry T1</span></td>
+            <td>Accepts <code>className</code> on its element, like every sibling that a host must size. The
+                slot stays layout-neutral. <em>Done: W6.</em></td></tr>
+        <tr><td><strong>BodyViewer</strong><br><span class="meta">W8's pane</span></td>
+            <td>The pane fills the height its host gives (<code>flex-1 min-h-0</code>) instead of a fixed 256px;
+                W8's reason — a bounded box keeps the cut marker at its foot — holds at any height.
+                <em>Done: W6.</em></td></tr>
+        <tr><td><strong>Every scroll container holding a KeyValueRow grid</strong></td>
+            <td>Is <code>position: relative</code>. WebKit lets a <em>static</em> scroll container's overflow leak
+                into the document's scrollable area when its content is a <code>display:contents</code> grid;
+                bisected live in the Tauri window (document scroll height 4477 → 768 with the one property).</td></tr>
+        <tr><td><strong>Any later detail screen</strong></td>
+            <td>Name its primary zone before laying it out; give every other zone a bound. A second sighting of
+                this rule is what would lock it into <a href="../design-rules/design-rules-index.html">the
+                rulebook</a> as a slug; with DEC-31 this panel now carries two decisions that a future run
+                should read before its Layout stage.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="tokens">
+      <p><strong>Two tokens, one scale.</strong> <code>value-clamp</code> (60px: three wire lines plus the focus
+      ring's room inside the clipping cell) joins spacing; <code>maxHeight</code> is now a declared scale —
+      spacing plus <code>full</code> plus <code>zone-cap</code> (35%) — so the closed-vocabulary lint sees it.
+      Nothing else moved: no colour, no type, no new layout step.</p>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

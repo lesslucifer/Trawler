@@ -34,7 +34,7 @@ function LegHeaders({ headers }: { headers: HeaderView[] }) {
       }
     >
       {headers.map((h, i) => (
-        <KeyValueRow key={i} name={h.name} value={h.value} />
+        <KeyValueRow key={i} name={h.name} value={h.value} collapsible />
       ))}
     </dl>
   );
@@ -106,25 +106,29 @@ export function FlowDetail({
         </span>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-auto">
-        <div data-testid="flow-line" className="border-b border-hairline px-4 py-3">
-          <CopyText value={flow.uri} label="uri" />
-          <div className="mt-chrome-y flex items-center gap-2">
-            <span data-wire="protocol-version" className="font-mono text-body text-ink-mute">
-              {versionsLine(flow)}
-            </span>
-            <CopyButton className="ml-auto" label="copy as curl" getPayload={() => toCurl(flow)} />
-          </div>
+      <div data-testid="flow-line" className="shrink-0 border-b border-hairline px-4 py-3">
+        <CopyText value={flow.uri} label="uri" />
+        <div className="mt-chrome-y flex items-center gap-2">
+          <span data-wire="protocol-version" className="font-mono text-body text-ink-mute">
+            {versionsLine(flow)}
+          </span>
+          <CopyButton className="ml-auto" label="copy as curl" getPayload={() => toCurl(flow)} />
         </div>
-
-        <Section title="Headers">
-          <LegHeaders headers={headers} />
-        </Section>
-
-        <Section title="Body">
-          <BodyViewer api={api} flow={flow} leg={leg} />
-        </Section>
       </div>
+
+      {/* The body is the zone a reader came for, so it takes whatever height the
+          headers leave: the headers zone is capped at a share of the panel and
+          scrolls inside itself, the body fills the rest and scrolls inside
+          itself, and the panel as a whole never scrolls. */}
+      <Section title={`Headers · ${headers.length}`} className="flex min-h-0 max-h-zone-cap flex-col">
+        <div data-testid="headers-scroll" className="relative min-h-0 overflow-auto">
+          <LegHeaders headers={headers} />
+        </div>
+      </Section>
+
+      <Section title="Body" className="flex min-h-0 flex-1 flex-col">
+        <BodyViewer api={api} flow={flow} leg={leg} />
+      </Section>
     </div>
   );
 }

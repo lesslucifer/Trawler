@@ -353,6 +353,44 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     expect(await inResponsePane('[data-testid="body-text"]').isExisting()).toBe(false);
   });
 
+  // The owner's round against real traffic: a wall of cookies and tokens buried
+  // the body, and the panel — then the window itself — scrolled to reach it.
+  it("keeps the body on screen under a wall of headers, and the window never scrolls", async () => {
+    await openResponseOf("/headers");
+    const m = await browser.execute(() => ({
+      docScrollHeight: document.documentElement.scrollHeight,
+      innerHeight: window.innerHeight,
+      headerRows: document.querySelectorAll('[data-testid="headers-scroll"] dt').length,
+      headersHeight: document.querySelector('[data-testid="headers-scroll"]')!.getBoundingClientRect().height,
+      bodyHeight: document.querySelector('[data-testid="body-viewer"]')!.getBoundingClientRect().height,
+      bodyBottom: document.querySelector('[data-testid="body-viewer"]')!.getBoundingClientRect().bottom,
+    }));
+    expect(m.headerRows).toBeGreaterThan(15);
+    expect(m.docScrollHeight).toBe(m.innerHeight);
+    // The body is the main zone: on a wall of headers it is still the taller of the two.
+    expect(m.bodyHeight).toBeGreaterThanOrEqual(m.headersHeight);
+    expect(m.bodyBottom).toBeLessThanOrEqual(m.innerHeight);
+  });
+
+  it("clamps a long header value to three lines, and 'more' under its name shows the rest", async () => {
+    const more = $('[data-testid="headers-scroll"]').$("button=more");
+    await more.waitForExist({ timeout: 15_000 });
+    // The row that offers "more" is the one whose value overflows its three lines.
+    const clampedCell = () =>
+      browser.execute(() => {
+        const dd = document.querySelector('[data-testid="headers-scroll"] dt:has(button)')!
+          .nextElementSibling as HTMLElement;
+        return { client: dd.clientHeight, scroll: dd.scrollHeight };
+      });
+    const before = await clampedCell();
+    expect(before.scroll).toBeGreaterThan(before.client);
+    await more.click();
+    await $('[data-testid="headers-scroll"]').$("button=less").waitForExist({ timeout: 5_000 });
+    const after = await clampedCell();
+    expect(after.client).toBeGreaterThanOrEqual(after.scroll);
+    expect(after.client).toBeGreaterThan(before.client);
+  });
+
   it("states its truncation on a body past the render cap, rather than silently cutting", async () => {
     await openResponseOf("/big");
     await inResponsePane('[data-testid="body-text"]').waitForExist({ timeout: 15_000 });

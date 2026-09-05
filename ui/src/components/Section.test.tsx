@@ -74,4 +74,18 @@ describe("Section", () => {
     expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(2);
     expect(screen.queryByRole("heading", { level: 3 })).not.toBeInTheDocument();
   });
+
+  it("className joins the section element in both variants, so a host can size the zone", () => {
+    const { container } = render(
+      <>
+        <Section title="a" className="flex-1 min-h-0">x</Section>
+        <Section title="b" variant="band" className="shrink-0">y</Section>
+      </>,
+    );
+
+    const [plain, band] = [...container.querySelectorAll("section")];
+    expect(plain.className).toContain("flex-1");
+    expect(plain.className).toContain("border-b");
+    expect(band.className).toContain("shrink-0");
+  });
 });

@@ -18,7 +18,9 @@
       <h1>E-REDESIGN.W6 result — the flow detail, built</h1>
       <p>The panel now has four zones split by scope and one model of "which leg". Every element the design
       resolved to <em>reuse</em> is mounted from the registry, the two keyboard promises W5 receipted as
-      <em>blocked</em> are true, and the curl payload is asserted for real in the e2e for the first time.</p>
+      <em>blocked</em> are true, and the curl payload is asserted for real in the e2e for the first time. An
+      owner's round against real traffic then changed the panel's <em>zoning</em>: the body is the main zone,
+      the headers are bounded, and the window no longer scrolls — <a href="#owner">recorded as DEC-32</a>.</p>
       <div class="meta">WU result · 2026-09-05 · Trawler · T3 (docs/work/) · <code>wu/redesign/flow-detail-build</code>
       → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · plan:
       <a href="2026-09-05-redesign-w6-plan.html">W6 plan</a> · the design:
@@ -28,11 +30,13 @@
   </header>
   <main>
     <h2 id="outcome">Outcome</h2>
-    <p data-item="outcome" data-c="outcome-lead"><strong>Delivered.</strong> Every row of the plan's expected result is
-    met. <code>FlowDetail.tsx</code> is the same length it was (127 → 130 lines) with none of its own chrome
+    <p data-item="outcome" data-c="outcome-lead"><strong>Delivered, then re-zoned.</strong> Every row of the plan's
+    expected result is met. <code>FlowDetail.tsx</code> is 134 lines (from 127) with none of its own chrome
     left: no local <code>Section</code>, no raw <code>&lt;dl&gt;</code> rows, no <code>&lt;pre&gt;</code>, no
-    <code>copied</code> state. One test-infrastructure change the plan did not foresee and two fixes to one e2e
-    assertion are recorded under <a href="#deviations">deviations</a>; none touched the screen.</p>
+    <code>copied</code> state. The first tip was signed and merged, then the owner tested it against real
+    traffic, rejected it and had the merge undone; the <a href="#owner">owner's round</a> below is what changed.
+    One test-infrastructure change the plan did not foresee and two fixes to one e2e assertion are recorded under
+    <a href="#deviations">deviations</a>.</p>
     <table data-c="outcome">
       <thead><tr><th>#</th><th>The plan's expected result</th><th>Actual</th></tr></thead>
       <tbody>
@@ -84,16 +88,68 @@
     <pre class="tb" data-c="panel">┌─────────────────────────────────────────────┐
 │ GET  200  [request│response]        42 ms ✕ │  MethodLabel · StatusPill · SegmentedControl ·
 ├─────────────────────────────────────────────┤  DurationText · IconButton — shrink-0, never scrolls
-│ http://example.com/a?x=1                    │  CopyText
-│ HTTP/1.1 → HTTP/2.0          [copy as curl] │  versions line (T3) · CopyButton
+│ http://example.com/a?x=1                    │  CopyText · versions line (T3) · CopyButton
+│ HTTP/1.1 → HTTP/2.0          [copy as curl] │  — shrink-0, never scrolls
 ├─────────────────────────────────────────────┤
-│ HEADERS                                     │  Section ▸ LegHeaders (T3) ▸ KeyValueRow × n | Notice
-│ accept          */*                         │
+│ HEADERS · 23                            ▲   │  Section ▸ LegHeaders (T3) ▸ KeyValueRow collapsible × n
+│ set-cookie   session0=xxxxxxxxxxxxxxxxxx    │  | Notice — natural height up to 35% of the panel,
+│   more       xxxxxxxxxxxxxxxxxxxxxxxxxxx    │  then scrolls inside; a value past three lines is
+│              xxxxxxxxxxxxxxxxxxxxxxxxxxx ▼  │  clamped, more/less under its name
 ├─────────────────────────────────────────────┤
-│ BODY                                        │  Section ▸ BodyViewer leg={leg}
-│ [decoded│raw]           [copy body] [↓]     │
+│ BODY                                        │  Section ▸ BodyViewer leg={leg} — flex-1, takes the
+│ [decoded│raw]           [copy body] [↓]     │  rest, its pane scrolls inside
+│ { "greeting": "hello", …                    │
 └─────────────────────────────────────────────┘
-  the three lower zones share one overflow-auto region</pre>
+  the panel never scrolls as a whole (DEC-32)</pre>
+
+    <h2 id="owner">The owner's round — real traffic, four complaints, one cause</h2>
+    <p>Raised after the first tip was merged, against the running app with a browser's traffic through it. The
+    merge was undone, the mr/v1 and dod/v1 notes withdrawn, and the round landed on the same WU branch.</p>
+    <table data-c="owner">
+      <thead><tr><th>What was raised</th><th>What it turned out to be, and what changed</th></tr></thead>
+      <tbody>
+        <tr><td><strong>"Users need to scroll a long time to get to the body — which is the most important
+          part."</strong> The header zone was unbounded, as the design asked.</td>
+          <td>A design decision that its fixtures could not test. Three session cookies, a bearer token and a CSP
+          make a header table four screens tall in a 380px pane. <strong>Changed:</strong> the panel never
+          scrolls as a whole. Identity row and flow line are chrome; the headers <code>Section</code> takes its
+          natural height up to 35% of the panel and scrolls inside (heading pinned, now naming the row count);
+          the body <code>Section</code> is <code>flex-1</code> and its pane scrolls inside. Under the wall of
+          headers the e2e asserts the body zone is the taller of the two and ends on screen.</td></tr>
+        <tr><td><strong>"Some values are really long and consume a full screen — cookies, tokens."</strong></td>
+          <td>Thirty wrapped lines per value, and the design's "wrap always; never clip" made every one of them
+          load-bearing. <strong>Changed:</strong> <code>KeyValueRow</code> gains <code>collapsible</code>: a value
+          that overflows three lines is clamped, with <em>more</em> / <em>less</em> under its name. Measured, not
+          guessed — no toggle when nothing is hidden. The clamp hides lines, never characters; click still copies
+          the whole value and the confirm tones the visible lines, so <em>display-equals-payload</em> holds as a
+          named, reversible view. Tabs and ellipsis were considered and rejected — the reasoning is DEC-32's.</td></tr>
+        <tr><td><strong>"The body should be the main part and have the largest space."</strong></td>
+          <td>W8's pane was capped at a fixed 256px so the cut marker stayed visible; on a desktop window most of
+          the panel was empty. <strong>Changed:</strong> the pane fills the height its host gives
+          (<code>flex-1 min-h-0</code>) — a bounded box at any height keeps the marker at its foot, so W8's reason
+          survives the change. <code>Section</code> gains <code>className</code> so a host can size a zone; the
+          slot stays layout-neutral.</td></tr>
+        <tr><td><strong>"The main screen is also scrollable and users can scroll down into a large empty
+          space."</strong></td>
+          <td>Reproduced in the real window and bisected live: with the long-header fixture the document's scroll
+          height was 4477px against a 768px window; hiding the value cells, or giving the scroll container
+          <code>position: relative</code>, brought it to 768. A WebKit quirk — a <em>static</em> scroll
+          container's overflow leaks into the document's scrollable area when its content is a
+          <code>display:contents</code> grid, which is exactly what <code>KeyValueRow</code> is.
+          <strong>Changed:</strong> every scroll container holding that grid is <code>relative</code> (the
+          headers box and the body pane, for form bodies), and the e2e asserts the document scroll height equals
+          the window height under the wall of headers.</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="owner-design">
+      <p><strong>This amends the design it cites.</strong> Three lines of W5's Layout — one scroll region owns
+      every collection; the header collection has no cap; wrap always, never clip — are overturned by the owner's
+      decision, for a reason the design could not see from its fixtures. The archived run is not edited; the
+      standing rule is <a href="../decisions/dec-32-body-is-the-main-zone.html">DEC-32</a>, with the rejected
+      alternatives (one scroll region, tabs, ellipsis, a pixel cap, positioning alone). A build that silently
+      departs from its design's Layout is what the citation exists to make visible, so it is recorded here
+      rather than smoothed over — the same way W8 recorded its overturned Frame constraint.</p>
+    </div>
 
     <h2 id="deviations">Deviations</h2>
     <table data-item="deviations" data-c="deviations">
@@ -130,6 +186,15 @@
           <code>HeaderTable</code>, meaning the shipped inert one; a same-named replacement would have made
           that row unfalsifiable by grep. The name says what the old one did not: it renders the selected
           leg's headers.</td></tr>
+        <tr><td><span class="dev">Three registry members changed inside a build WU.</span>
+          <code>KeyValueRow</code> (<code>collapsible</code>), <code>Section</code> (<code>className</code>),
+          <code>BodyViewer</code> (the pane fills its host). Two tokens added: <code>value-clamp</code> and a
+          declared <code>maxHeight</code> scale with <code>zone-cap</code>.</td>
+          <td>The plan said no member changes — a member that needs one is a finding. The owner's round made the
+          finding: the panel's zoning cannot be expressed with layout-neutral members that own no height, and the
+          clamp belongs to the component that owns the wire pair (FormRenderer's pairs have the same problem and
+          get it for free, opt-in). Each contract line moved is stated in the member's docstring and in DEC-32's
+          <em>what this forces</em> table; all three files are declared on the review note.</td></tr>
         <tr><td><span class="dev">Existing tests rewritten, not extended.</span> Two W8 integration tests
           and one W8 e2e asserted two body panes on the page; three App tests and one e2e asserted the
           <code>curl</code> testid.</td>
@@ -172,29 +237,40 @@
     <table data-item="evidence" data-c="evidence">
       <thead><tr><th>What</th><th>Where / result</th></tr></thead>
       <tbody>
-        <tr><td>Unit</td><td><code>ui/src/FlowDetail.test.tsx</code> — 13 tests (the shipped file had 6),
-          twelve of them unit: pending sentence, identity row, scaled duration, URI copy and versions line,
+        <tr><td>Unit</td><td><code>ui/src/FlowDetail.test.tsx</code> — 15 tests (the shipped file had 6),
+          fourteen of them unit: pending sentence, identity row, scaled duration, URI copy and versions line,
           in-flight line without an arrow, wire order and value copy, empty leg, curl confirm/revert/absence,
-          ✕, Esc and the claimed-Esc guard, Esc while loading, focus return.</td></tr>
+          ✕, Esc and the claimed-Esc guard, Esc while loading, focus return, the zoning (no outer scroll
+          region, headers capped and scrolling, body <code>flex-1</code>, pane uncapped), and a clamped cookie
+          expanding on <em>more</em>. <code>ui/src/components/KeyValueRow.test.tsx</code> +4 (collapsible off by
+          default, clamp + copy-whole + expand + collapse, no toggle when nothing is hidden, collapse on value
+          change) and <code>Section.test.tsx</code> +1 (className on both variants).</td></tr>
         <tr><td>Integration</td><td><code>FlowDetail.test.tsx</code> — the thirteenth test mounts the real
           <code>BodyViewer</code> and proves one selector governs both zones while the flow line holds.
           <code>ui/src/App.test.tsx</code> — 25 tests: one new (ArrowDown, Enter, Esc → listbox focused,
           panel gone) and three corrected to the new contract.</td></tr>
-        <tr><td>E2E</td><td><code>ui/e2e/specs/flows.spec.ts</code> — 20 cases in the inspect and watch
-          blocks (three new: the leg selector, the curl payload via the recording clipboard, Esc); with
-          onboarding, 24 passing / 0 failing under <code>cargo xtask ui e2e</code> against the real Tauri
-          window, on the third run — the first two failed only the curl assertion recorded above, 19 + 4
-          passing each time.</td></tr>
-        <tr><td>Suites</td><td><code>cd ui &amp;&amp; pnpm test</code> — 574 passed / 43 files, exit 0 (base:
-          542). <code>pnpm exec eslint src</code> clean. <code>pnpm exec tsc --noEmit</code> clean.
-          <code>cargo fmt --check</code>, <code>cargo clippy --all-targets</code>, <code>cargo test</code>
-          (7 suites) — all green; no Rust changed.</td></tr>
+        <tr><td>E2E</td><td><code>ui/e2e/specs/flows.spec.ts</code> — 22 cases in the inspect and watch
+          blocks (five new: the leg selector, the curl payload via the recording clipboard, Esc, the body on
+          screen under a wall of headers with the window unscrolled, a clamped header expanding on
+          <em>more</em>); with onboarding, 26 passing / 0 failing under <code>cargo xtask ui e2e</code> against
+          the real Tauri window. The harness origin gained <code>/headers</code>: three 900-character cookies, a
+          bearer-sized token, a CSP and twelve trace headers over a small JSON body — the shape that reproduced
+          every complaint of the owner's round. Earlier runs failed only on my own assertions (the curl
+          selector twice, then a body-position threshold and a wdio selector form), never on the product.</td></tr>
+        <tr><td>Suites</td><td><code>cd ui &amp;&amp; pnpm test</code> — 581 passed / 43 files, exit 0 (base:
+          542). <code>pnpm exec eslint src</code> clean, the two new tokens included. <code>pnpm exec tsc
+          --noEmit</code> clean. <code>cargo fmt --check</code>, <code>cargo clippy --all-targets</code>,
+          <code>cargo test</code> (7 suites) — all green; the only Rust change is the harness route.</td></tr>
         <tr><td>Looked at</td><td>The real Tauri window, driven through the e2e harness to a flow and
           screenshotted on each leg: the identity row reads <em>GET 200 [request | response] 3 ms ×</em>, the
           flow line sits under it unlabelled, <em>HEADERS</em> shows <code>accept</code> and <code>host</code>
           on the request leg and <code>content-type</code> / <code>content-length</code> / <code>date</code>
           on the response leg, and <em>BODY</em> follows the same switch — <em>empty body</em> then
-          <em>hello from origin</em>. Nothing wraps in the 380px pane.</td></tr>
+          <em>hello from origin</em>. Nothing wraps in the 380px pane. After the owner's round, three more
+          on the <code>/headers</code> flow: <em>HEADERS · 20</em> stops at about a third of the panel with
+          the cookies clamped to three lines and <em>more</em> under each name, the JSON body sits fully on
+          screen beneath it with the rest of the height, and after <em>more</em> the cookie's eight visible
+          lines scroll inside the headers box while the body does not move.</td></tr>
         <tr><td>Docs</td><td><code>cargo xtask verify-doc</code> green on the W6 plan, this result, the epic
           plan, <code>web-ui.html</code> and DEC-31.</td></tr>
         <tr><td>Design</td><td><code>cargo xtask design-scope epic/redesign HEAD</code> lists
@@ -216,11 +292,17 @@
           the DOM", and the leg-selector case instead of the two-pane one.</td></tr>
         <tr><td><a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a></td><td>T2</td>
           <td>Its <em>What this forces → W6</em> row is marked done, the way W8's was.</td></tr>
+        <tr><td><a href="../decisions/dec-32-body-is-the-main-zone.html">DEC-32</a> · new</td><td>T2</td>
+          <td>The owner's round as a standing rule: a detail panel never scrolls as a whole, the body is its
+          main zone, every other zone is bounded, a screen-tall value is clamped with the rest one act away,
+          and a scroll container holding a <code>display:contents</code> grid is positioned. With the rejected
+          alternatives and what it forces on four files. Indexed in
+          <a href="../decisions/decisions-index.html">decisions-index.html</a>.</td></tr>
         <tr><td><a href="2026-09-04-redesign-plan.html">epic plan</a> · W6 block</td><td>T3</td>
           <td>What landed, and that <code>App.tsx</code> was not needed.</td></tr>
-        <tr><td>design rules · a new decision record</td><td>—</td>
-          <td>Nothing citable. No rule was made or reversed here; the leg's placement is DEC-31's, written by
-          W5. No registry member changed, so the design-rules index needs no edit.</td></tr>
+        <tr><td>design rules</td><td>—</td>
+          <td>No edit. DEC-32 is one sighting of "name the primary zone, bound the rest"; a second detail
+          screen meeting it is what would make it a slug.</td></tr>
       </tbody>
     </table>
 
@@ -237,6 +319,21 @@
           test that needs real rect geometry from a <code>Range</code> will get zeros, not a throw. Recorded so a
           confusing zero is traceable to this file rather than hunted.</td>
           <td>whoever next tests layout under jsdom</td></tr>
+        <tr><td><strong>The pane is 380px wide, and that width is half the wrap cost.</strong> A 900-character
+          cookie is thirty lines at this width and would be twenty at 520px; JSON bodies gain as much. The width
+          is <code>Layout.tsx</code>'s (<code>w-pane</code>), W3's designed shell — a wider or draggable pane is
+          a shell decision for the epic, not this panel's.</td>
+          <td>the epic (W11), or a shell follow-up</td></tr>
+        <tr><td><strong>The name column is as wide as the widest header name.</strong> The grid is
+          <code>auto 1fr</code> and <code>KeyValueRow</code>'s name cell is <code>whitespace-nowrap</code>, so
+          one <code>content-security-policy</code> costs every value in the leg a third of the pane's width and
+          cookies wrap at twenty characters. Wrapping or capping the name column is the component's call, and
+          a wider pane halves the problem on its own.</td>
+          <td>with the pane-width follow-up above</td></tr>
+        <tr><td><strong>The flow line is chrome at natural height.</strong> A URI with a kilobyte of query
+          string wraps to many pinned lines above the zones. Nothing in the owner's traffic did; if one does,
+          the same clamp-with-more the header values have is the shape.</td>
+          <td>whoever meets it</td></tr>
         <tr><td><strong>The "curl as DOM text" waiver is retired for the button, not for the clipboard.</strong>
           The stub proves the payload the app hands to <code>writeText</code>; the OS write itself remains a
           manual check, as does the native save dialog.</td>
