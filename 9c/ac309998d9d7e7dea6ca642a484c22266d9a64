@@ -4,13 +4,10 @@ epic: E-REDESIGN
 wu: E-REDESIGN.W7
 tests:
   unit:
-    count: 0
     waived: "The WU touches no product code or screens — the E-DFLOW.W9 precedent the epic plan cites for exactly this case, and the same waiver W1 carried. Its output is one closed design run (an HTML artifact) and two report docs; git diff --stat epic/redesign HEAD -- ui/src/ is empty. The nine BodyRenderer family members this run resolves against already carry their own unit tests beside each .tsx from W2; the call-site assertions this design specifies land in W8, which is the WU that writes the code."
   integration:
-    count: 0
     waived: "Same precedent. There is no bounded contract in code to exercise — the contract IS the run doc, and cargo xtask verify-doc is what judges its shape (eleven items, the Frame's six density predicates, elements·gist, interaction·gist, tune·drawn, mockup·hand-drawn, receipt coverage and freshness). W8 carries the screen-contract integration test."
   e2e:
-    count: 0
     waived: "Same precedent, and deliberately checked rather than assumed — W2's e2e waiver was voided at review when its components turned out to be unreachable from the app bundle, so a design WU claiming this waiver owes the same proof. Here it holds: no user-visible surface moves because no shipped file changed. The epic's UC-5 e2e — an XML body rendering as XML and an over-cap body stating its truncation, the two new contracts — runs against W8's built pane."
 verified:
   - "cargo xtask verify-doc — green on all four docs: the run (design-run), the W7 plan (wu-plan), the W7 result (wu-result) and the epic plan (epic-plan) after its W7 block was corrected."
