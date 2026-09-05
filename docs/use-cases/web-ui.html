@@ -86,16 +86,26 @@
       functional color, total duration, per-leg HTTP versions, and the full request + response
       header tables. No new endpoint; the panel is a pure client of the existing API.</p>
       <ul>
+        <li><strong>Both legs are on screen at once</strong>: the panel carries a
+        <em>Request body</em> and a <em>Response body</em> section, each rendering one body with
+        its own raw/decoded state — comparing the two is scrolling, not toggling.</li>
         <li><strong>Bodies render by content type</strong> over
-        <code>GET /flows/{id}/{leg}/body</code>: JSON as a collapsible tree, XML/HTML as
-        (pretty-printed) text, <code>image/*</code> as the image, form-urlencoded as a decoded
-        key/value table, other text as text, anything else as a hex dump. A
+        <code>GET /flows/{id}/{leg}/body</code>: JSON and XML/HTML as their pretty-printed source
+        in a navigable, foldable surface, <code>image/*</code> as the image over a transparency
+        checkerboard, form-urlencoded as decoded key/value rows (each value individually
+        copyable), other text as text, anything else as a toned hex dump. A
         <strong>raw / decoded</strong> toggle switches between the stored bytes
         (<code>?decode=0</code>, sniffed to text or hex) and the server-decoded rendering
-        (<code>?decode=1</code>). Oversize renderings are bounded — hex and the JSON tree cap and
-        fall back rather than hang the window.</li>
+        (<code>?decode=1</code>).</li>
+        <li><strong>A truncated body says so</strong>: renderings are capped (128 KiB of
+        characters, 4 KiB of hex) and a capped body states <em>"showing N of M — save to see
+        all"</em> in warn tone, naming the size shown, the real total, and the way to the rest. No
+        cap is silent, and no body is re-indented client-side — what is shown is what crossed the
+        wire, so a copy is evidence.</li>
         <li><strong>States are never blank</strong>: an empty, streaming-passthrough, too-large,
-        read-error, or not-yet-responded body shows an explicit notice instead of a viewer.</li>
+        read-error, not-yet-responded, in-flight or failed-to-load body shows an explicit notice
+        instead of a viewer — one distinct sentence per cause, and warn tone only on the one that
+        is a fault.</li>
         <li><strong>Copy-as-curl</strong> reproduces the request (method, URL, headers, body,
         shell-quoted); <strong>copy body</strong> puts the shown body on the clipboard (the hex
         dump for hex-rendered bodies; hidden for images); <strong>save body</strong> writes the
@@ -109,11 +119,13 @@
 
     <div class="callout" data-c="uc-5-provenance">
       <p>Pinned by the inspector e2e (<code>ui/e2e/specs/flows.spec.ts</code>): row click → headers /
-      timing / versions; a JSON response renders as a tree; the raw toggle shows the stored bytes
-      as text; the curl text is asserted in the DOM (WebDriver clipboard is unreliable — the real
-      clipboard write is a recorded manual check, as is the native save dialog); a
-      <em>brotli-compressed</em> JSON body still renders as a tree — the decode chain proven
-      through the UI; a proxied PNG renders as an image. The decode chain itself is pinned at the
+      timing / versions; a JSON response renders as copy-exact source; the raw toggle shows the
+      stored bytes as text; the curl text is asserted in the DOM (WebDriver clipboard is unreliable
+      — the real clipboard write is a recorded manual check, as is the native save dialog); a
+      <em>brotli-compressed</em> JSON body still renders decoded — the decode chain proven
+      through the UI; a proxied PNG renders as an image; an <em>XML</em> body renders as XML rather
+      than falling through to text; a body past the render cap states its truncation; and both leg
+      sections stand on the page together. The decode chain itself is pinned at the
       API seam in <code>tests/api.rs</code> and the <code>src/api/decode.rs</code> unit suite;
       viewer dispatch, states, and copy/save are covered by the Vitest unit + integration layers.
       <code>scripts/seed-proxy.mjs</code> seeds one flow per case for manual checks.</p>
