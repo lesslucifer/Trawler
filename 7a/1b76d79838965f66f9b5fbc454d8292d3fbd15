@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W4
+changes:
+  - path: docs/work/2026-09-05-redesign-w4-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan — requirement, mapping, expected result and test plan, plus two things this WU specifically needed: a table separating the rows W2 already spent from the rows that actually remained, read from the tip rather than from the epic plan's prediction; and the citation contract read out of gate.rs rather than assumed, since the epic named this WU the probe for a path it called untested."
+  - path: docs/work/2026-09-05-redesign-w4-result.html
+    tier: T3
+    action: added
+    distills: "the result — ten expected rows delivered, the probe's outcome (the gate refused nothing; the finding is that there is no finding), the review's findings with why each was real, the refuted candidates named so finder quality stays visible, and four deviations. It also carries THE FILTER DECISION: W3 escalated the method/status controls to blocked-on as an owner's call and the owner settled it during this build, so the resolution is recorded here rather than by reopening an archived run (DEC-14 freezes a closed run's substrate). The per-key table is the load-bearing part — 'method and host are dropdowns, status is not' reads as arbitrary without the server's matching semantics beside it."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "UC-4's six observable gains, which is the epic plan's own assignment to this WU — W3 deliberately deferred the wording so one use-case row is not split across two Working Units. Three landed in W2 (the reason phrase, the dot's 24px target, its accessible name), two in this build (the row's keyboard path, the two absences told apart), and a sixth from the owner's filter decision (the exactly-matched keys are chosen rather than typed, with what that costs stated: a partial host is no longer expressible in that control). Also absorbs the truncation as KNOWINGLY UNMET, so a reader of the use case need not open a design run to learn that a rulebook rule reading as absolute is broken on this screen. The provenance callout names what the e2e now actually pins."
+note: "TWO T2 DOCS WERE DELIBERATELY NOT TOUCHED, and both absences are decisions. (1) docs/design-rules/design-rules-index.html: the wrap-not-truncate clause this screen needs is W11's by W3's own escalation and by DEC-14, and the epic holds the rulebook frozen so all four screen runs pin an unchanged substrate. Verified unmoved — git hash-object is still aeff5b0fb4dea94ab5f0b7c385b8188786666e8a, matching W3's receipt pin. (2) docs/decisions/: no record added. Every call this WU implemented was already decided in W3's closed run, and the one question W3 left open was settled by the owner as a build-time call recorded in the result — a decision record would duplicate a design run downward. The FILTER DECISION IS THE ONE THING A LATER EPIC MAY WANT PROMOTED: if a future WU converts the status control, the reasoning for why status was held back (a class query is not expressible against a u16 FlowFilter.status) is in the result's filter table and marked at the call site in App.tsx, and that is where it should be read from."
