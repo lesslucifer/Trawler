@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-REDESIGN
+wu: E-REDESIGN.W3
+base: 42875df5f19c30466d6fd6c1331df063b0a626a4
+tip: 5869a46b7d82a927d2eb862a7eeba16ff73f198c
+diff_sha256: 9ab0634ec9cb316b059e73472cdaa1a7e0d4431fe9363da5a5cc1b41b6c3a381
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-09-05
