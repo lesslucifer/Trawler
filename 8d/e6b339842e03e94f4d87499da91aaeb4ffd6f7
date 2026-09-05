@@ -1,0 +1,22 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W9
+changes:
+  - path: docs/work/2026-09-04-redesign-w9-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan — requirement, mapping, the counted list of what the run must resolve (four <ol>s, two <select>s, three <details>, the verdict line, three note blocks, two clipboard calls), the three waivers and their reasons, and an outcome section recording what the closed run actually found"
+  - path: docs/work/2026-09-04-redesign-run-9-setup-quit.html
+    tier: T3
+    action: added
+    distills: "design run #9, closed and archived — two Frames (setup worked through, the dialog interrupting a quit), Layout for both surfaces with their overflow lines, an Elements catalog resolving 11 rows — 7 reuse, 1 extend (StatusLine), 1 explicit non-placement (StatusDot), 1 build-local composition (modal-shell) and 1 registry propose (Checkbox), a 12-row Interaction table, a mounted mockup across both dialog modes and the failure states, 7 Tune calls, and the five closing lists. Run blind to archived runs #4/#6/#8 per the epic's stated method. Two Tier-3 review rounds moved it further: the Checkbox reads T1 propose-to-registry consistently, the StepList tenant count is 5 with correct attribution, and the proven-decrypted milestone is named 'first flow' per the lexicon rather than 'the verify step' or 'working'; and the Elements summary counts seven reused plus one extended, agreeing with its own catalog; and the ok-toned Notice is mounted in step 2's done state rather than only asserted in prose, with the mute remedy beside it marked as this run's design rather than shipped code (it renders only once W10 lands StepStatusView.short)"
+t2_waived: "A design run ships no behaviour, so no T2 doc changes truth yet: this WU adds one design artifact and one plan under docs/work/ and touches no ui/src/ file. The epic plan assigns UC-ONBOARD's distillation to W10, where the screen is actually built. What is owed and by whom is listed below."
+distillation:
+  status: deferred
+  why: "A design run ships no behaviour, so no T2 doc changes truth yet. The epic plan assigns UC-ONBOARD's distillation to W10, where the screen is actually built, and docs/use-cases/web-ui.html moves then — not now."
+  owed:
+    - "docs/use-cases/web-ui.html (T2) — only if W10's build moves an observable UC-ONBOARD contract. Two candidates this run introduces: the two clipboard calls gain a confirm and an error state, and the quit dialog offers a remedy in the foreign-proxy case where today it only instructs."
+    - "docs/design-rules/design-rules-index.html (T2) — no new rule or vocabulary member was forced. StatusLine's toned message is an extend of an existing component, not a rulebook line."
+    - "a decision record (T2) — the epic plan anticipates one for why the app's text input and status dot are registry entries; this run adds a second candidate, the fixability-not-ownership split that decides the dialog's three modes. Both belong at epic close (W11), not here."
+new_artifacts:
+  - "Checkbox (T1) — proposed to the registry, not built. Needs its own component-design WU before W10 can build the dialog's remote mode; recorded in the run's proposals and blocked-on lists."
