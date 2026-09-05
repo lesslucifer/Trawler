@@ -422,7 +422,8 @@ C, D → replaced, not hidden</pre></details></td>
         /* Same-day by construction: a live list shows today's flows, so TimestampText
            renders S1. A hardcoded date ages into S2's cross-day prefix overnight and
            makes the mockup demonstrate a state this screen rarely shows. */
-        const at = (s) => { const d = new Date(); d.setHours(14, 22, s, 0); return d.toISOString(); };
+        const NOW = new Date();
+        const at = (s) => { const d = new Date(NOW); d.setHours(14, 22, s, 0); return d.toISOString(); };
         const FLOWS = [
           { id: "1", at: at(7), m: "GET", h: "api.example.com", p: "/v1/orders?id=4821", s: 200, d: 84 },
           { id: "2", at: at(9), m: "POST", h: "api.example.com", p: "/v1/orders", s: 201, d: 1240 },
@@ -567,7 +568,7 @@ soft:
   ordering-by-priority: "satisfied — zone order is the debugging read order; row order is time → identity → outcome, scan left to right"
   progressive-disclosure: "satisfied — C is the scan level, D is one click; the truncated path's full value is the depth"
   data-ink-first: "satisfied — no badge, no icon, no border beyond the four hairlines; Tune T2 removed the last non-value chrome in A"
-  generous-targets: "satisfied — the whole 30px row is the target, not a glyph; Tune T4 gives it a keyboard equivalent"
+  generous-targets: "satisfied — the whole 30px row is the target, not a glyph; Tune T5 gives it a keyboard equivalent"
   motion-informs: "satisfied — nothing animates; DurationText holds pending rather than ticking, per the still-at-rest quality"
   empty-states-orient: "satisfied — both absences name what will appear and the act that causes it"
   familiar-idioms: "satisfied — the network-table row grammar (time · method · host · path · status · duration), the genre a devtools user already reads"
@@ -626,6 +627,12 @@ soft:
         <td>Recorded the three options rather than picking one: (a) <code>Select</code> for method only — legal today, its <span class="avoid">@avoid</span> "two to four options" is cleared at eight verbs, and it fixes the worst case; (b) leave both and let <code>Notice</code> carry the explanation, which is what the empty state now does; (c) widen the API to accept a status class, which is the only fix that makes <code>4xx</code> expressible at all. The run does <strong>not</strong> silently keep the shipped shape — <a href="#elements">the Field row</a> now states the exactness per key, so a reader cannot mistake free text for a substring match.</td>
       </tr>
       <tr>
+        <td><strong>Tier-1 cannot see a mockup's markup at all.</strong> <code>wrap-not-truncate·payload</code> reds a payload element carrying <code>truncate</code> in static HTML, but the tokenizer treats <code>&lt;script type="text/babel"&gt;</code> as opaque raw text — and the flow spec <em>requires</em> the mockup to mount its components from exactly such a block. So this run's own truncating cells are invisible to the predicate, and <code>verify-doc</code> reports 13/13 hard rules green over markup it never read.</td>
+        <td>Draft mockup — found by the Tier-3 review, not by any stage</td>
+        <td>The harness — <code>xtask</code>. Not this run's to fix, and not W4's.</td>
+        <td>Verified both ways rather than asserted: the same element pasted into the mockup's static HTML reds <code>wrap-not-truncate·payload</code> immediately, and inside the babel block it passes. The run does not rely on the blindness — it declares the violation in prose, in the <a href="#truncation">collision table</a> and on this list, which is how the finding surfaced at all. Recorded so a later WU can decide whether the predicate should read mounted JSX; every design run's mockup has the same hole.</td>
+      </tr>
+      <tr>
         <td>The listbox keyboard contract is designed but unproven — no shipped list in this app has one, so the ↑/↓-without-wrap convention is borrowed from <code>Select</code>'s options rather than from a precedent at list scale.</td>
         <td>Interaction</td>
         <td><strong>W4</strong>, at build.</td>
@@ -675,14 +682,6 @@ soft:
     <p><em>Tier-3 review — the design dimension of the code review, judged on this artifact — runs against the closed run and lands in the tip's <code>cr/v3</code> note. Its findings are not in this table; this table is what moved <em>before</em> the close.</em></p>
 
   </main>
-  <script type="module">
-    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-    document.querySelectorAll('.diagram').forEach((d) => {
-      const pre = d.querySelector('pre.mermaid');
-      if (pre) d.dataset.mermaidSrc = pre.textContent;
-    });
-    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
-  </script>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
 </html>
