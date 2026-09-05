@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9aa0a09f34851f0dfac1a4">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W5 plan (flow detail design run)</title>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .t1{color:var(--accent);} .t2{color:var(--ok);} .t3{color:var(--warn);}
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}
+    .zone-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;}
+    .zone-card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper);}
+    .zone-card h4{margin:0 0 4px;font-size:14px;}
+    .zone-card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .zone-card p{margin:6px 0;font-size:12.5px;line-height:1.55;}
+    pre.sk{font-family:var(--mono,monospace);font-size:12px;line-height:1.45;margin:0;white-space:pre;overflow-x:auto;}
+    .seam{color:var(--warn);font-weight:600;}
+  </style>
+</head>
+<body data-artifact="wu-plan" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W5 — design run: flow detail / inspector</h1>
+      <p>The first screen run the design flow has ever executed: <code>FlowDetail</code>'s identity
+         bar, its two header legs and its copy-as-curl affordance, taken through six stages to a
+         closed, archived, Tier-3-judged artifact — so W6 builds from a design instead of from taste.</p>
+      <div class="meta">WU plan · 2026-09-04 · Trawler · T3 (docs/work/) ·
+        <code>wu/redesign/flow-detail</code> → <code>epic/redesign</code> ·
+        format: <a href="../design-flow.html">design run</a> ·
+        rulebook: <a href="../design-rules/design-rules-index.html">design-rules-index</a> @ <code>aeff5b0</code></div>
+    </div>
+  </header>
+
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      Run the <a href="../design-flow.html">design flow</a> — not the build — over the
+      <strong>flow detail panel</strong>: its identity bar, the request leg, the two header tables and
+      the copy-as-curl affordance, landing as one design-run doc under <code>docs/work/</code> that
+      carries all six stages and all five closing lists, resolves every element it meets to a
+      registry <code>reuse</code> / <code>extend</code> / <code>propose</code> verdict, receipts every
+      soft slug in the rulebook, mounts every reuse in a real stateful mockup, and closes
+      <code>verify-doc</code>-green and archived — so that W6 replaces
+      <code>FlowDetail.tsx</code>'s two local components against a judged design, and the
+      per-header click-to-copy the raw <code>&lt;dl&gt;</code> loses today is a stated decision
+      rather than an accident.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <table data-item="maps-to">
+      <tr><td><strong>Epic</strong></td><td><a href="2026-09-04-redesign-plan.html">E-REDESIGN</a> — apply the design flow to every shipped screen. This is <strong>W5</strong>, the first of the four screen runs; it depends on W2 (merged) and hands to W6.</td></tr>
+      <tr><td><strong>Use cases</strong></td><td><a href="../use-cases/web-ui.html#uc-5">UC-5</a> — inspect a captured flow: the request line, the status tone, the total duration, the per-leg HTTP versions, both header tables, copy-as-curl. <strong>No contract changes shape</strong> — a design run ships no behaviour. UC-5's two epic-level gains (the body truncation statement, xml as a real dispatch) belong to W7's screen, not this one.</td></tr>
+      <tr><td><strong>Requirement</strong></td><td>The epic plan's <strong>W5</strong> row: "Run the flow on <code>FlowDetail</code>: the identity bar, the request/response legs, the header tables and the copy-as-curl affordance. The body pane is W7's screen — this run declares the seam, it does not design through it."</td></tr>
+      <tr><td><strong>Feeds</strong></td><td><strong>W6</strong>, whose row is already written against this design: registry <code>Section</code> / <code>KeyValueRow</code> for the two locals, <code>IconButton</code> for the close glyph, <code>TextRenderer</code> + <code>CopyButton</code> for the curl block, <code>Notice</code> for the "none"/"loading…" sentences, <code>MethodLabel</code> for the raw verb, and the second inline duration formatter removed.</td></tr>
+      <tr><td><strong>Tier</strong></td><td><span class="tier t3">T3</span> — a plan, therefore <code>docs/work/</code>, never <code>docs/</code>. The run doc it produces is also T3, and is <strong>archived</strong> at close.</td></tr>
+    </table>
+
+    <h2 id="the-screen">The screen as it ships — five zones, and what each one costs today</h2>
+    <p>The design's subject is 123 lines of <code>ui/src/FlowDetail.tsx</code>. It is not greenfield:
+       every zone below ships, which makes each one a precedent the run must cite by
+       <code>file:line</code> and then keep, change, or argue away.</p>
+
+    <div class="zone-grid">
+      <div class="zone-card">
+        <h4>Identity bar <span class="tier t1">header</span></h4>
+        <div class="who">FlowDetail.tsx:67–86</div>
+        <p>Raw verb in a bare <code>&lt;span&gt;</code>, a real <code>StatusPill</code>, a hand-formatted
+           <code>${duration} ms</code>, and a bare <code>&lt;button&gt;×</code>.</p>
+        <p><strong>Costs:</strong> the verb loses <code>MethodLabel</code>'s verb→tone mapping; the
+           duration is the <em>second</em> inline copy of formatting <code>DurationText</code> owns.</p>
+      </div>
+      <div class="zone-card">
+        <h4>Request leg <span class="tier t1">uri + versions</span></h4>
+        <div class="who">FlowDetail.tsx:89–95</div>
+        <p>The URI as a mono <code>&lt;p&gt;</code>; the two HTTP versions joined by an arrow into one
+           muted line.</p>
+        <p><strong>Costs:</strong> the URI is a full value the user grabs whole and cannot click to
+           copy — <code>CopyText</code>'s stated <code>@use</code>.</p>
+      </div>
+      <div class="zone-card">
+        <h4>Copy as curl <span class="tier t2">payload + action</span></h4>
+        <div class="who">FlowDetail.tsx:97–115</div>
+        <p>A <code>&lt;pre&gt;</code> of the rendered command beside a hand-rolled copy button.</p>
+        <p><strong>Costs:</strong> <code>setCopied(true)</code> is never reversed — <strong>the sticky
+           "copied" defect</strong>, which <code>CopyButton</code>'s timed confirm deletes.</p>
+      </div>
+      <div class="zone-card">
+        <h4>Header legs ×2 <span class="tier t1">wire collections</span></h4>
+        <div class="who">FlowDetail.tsx:16–33</div>
+        <p>A local <code>HeaderTable</code>: a raw <code>&lt;dl&gt;</code> grid, with
+           <code>"none"</code> as a bare <code>&lt;p&gt;</code> when empty.</p>
+        <p><strong>Costs:</strong> no per-value click-to-copy, and <code>"none"</code> is a word where
+           <code>Notice</code>'s <code>empty-states-orient</code> sentence belongs.</p>
+      </div>
+      <div class="zone-card">
+        <h4>Body <span class="seam">SEAM — W7</span></h4>
+        <div class="who">FlowDetail.tsx:117–119</div>
+        <p>A local <code>Section</code> wrapping <code>&lt;BodyViewer&gt;</code>.</p>
+        <p><strong>This run stops at the zone boundary.</strong> It designs the slot the body pane sits
+           in — label, order, scroll ownership — and declares the seam. It does not design the pane.</p>
+      </div>
+    </div>
+
+    <h2 id="seam">Where this run stops — the W7 seam, stated once</h2>
+    <div class="callout">
+      <p><strong>The run designs the container, W7 designs the contents.</strong> Concretely, W5 owns:
+         which zone the body occupies, its label, its position in the scan order, and which zone owns
+         the scroll. W5 does <em>not</em> own: the raw/decoded toggle, the renderer dispatch, the copy
+         and save affordances, the five absence notices, or the cut marker — every one of those is a
+         <code>BodyViewer</code> decision and lands in W7's run.</p>
+      <p>In the mockup the body zone is therefore <strong>stubbed</strong>, which the flow spec
+         explicitly sanctions: "stubbed — a component's internals: code surfaces, live clipboard,
+         renderer dispatch, transitions". A stub here is the correct artifact, not a gap.</p>
+    </div>
+
+    <h2 id="decisions">The two calls the epic plan hands this run</h2>
+    <table>
+      <tr><th>Call</th><th>Where it lands</th><th>The decision</th></tr>
+      <tr>
+        <td><strong>Per-header click-to-copy</strong><br>— "stated as a decision either way"</td>
+        <td>Elements, then receipted under <code>generous-targets</code></td>
+        <td><strong>Adopt it.</strong> Header values resolve to <code>KeyValueRow</code>, whose value
+            cell <em>is</em> a <code>CopyText</code> — click copies the whole value, native drag-select
+            still passes through. So the affordance arrives as a plain <code>reuse</code> and needs no
+            warrant: the run's job is to <em>state</em> that it is gained, not to invent it. Declining
+            would mean suppressing a shipped component's own <code>@use</code>, which is a
+            <code>propose</code> carrying an argument this screen has no driver for.</td>
+      </tr>
+      <tr>
+        <td><strong>Local <code>Section</code> and <code>HeaderTable</code></strong><br>— must resolve to <code>reuse</code></td>
+        <td>Elements verdict column</td>
+        <td>The epic plan's expected result names the target: both resolve to registry entries.
+            <code>Section</code> is a near-identity match. <code>HeaderTable</code> is <em>not</em> a
+            registry entry at all — it decomposes into a <code>Section</code> holding
+            <code>KeyValueRow×</code>, which is exactly <code>FormRenderer</code>'s shipped
+            <code>@madeof</code> shape. If either fight its <code>@avoid</code>, the honest output is a
+            <code>propose</code> plus a blocked-on row — <strong>a forced <code>reuse</code> is the one
+            failure mode this run must not produce.</strong></td>
+      </tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>One design-run doc — <code>docs/work/2026-09-04-redesign-w5-flow-detail-run.html</code> —
+         closed and <code>data-status="archived"</code>, carrying:</p>
+      <table>
+        <tr><th>Artifact</th><th>What it must contain to count</th></tr>
+        <tr><td><strong>Frame</strong></td><td>A driver table — goals ranked, constraints, qualities — each row a clause with a concrete ✓/✗ pair, inside the six density budgets. Its <em>Not given</em> line is load-bearing: the panel cannot observe the ring's eviction, nor a body's size before fetching it. Every <em>Given</em> capability is answered by the close.</td></tr>
+        <tr><td><strong>Layout</strong></td><td>An annotated ASCII zone sketch with the overflow line naming <strong>every</strong> unbounded zone and its cap owner — two header collections and the body are all unbounded, and the panel scrolls as one region while the identity bar stays pinned.</td></tr>
+        <tr><td><strong>Elements</strong></td><td>A placement tree plus one row per distinct component, wrapped in <code>data-map</code> with <code>data-key</code> on every mention. The verdict column resolves <em>all</em> of: verb, status, duration, close, URI, versions, curl payload, curl action, header name/value, both empty states, and the body slot. <code>data-wire</code> and <code>data-order</code> on both header collection rows.</td></tr>
+        <tr><td><strong>Interaction</strong></td><td>A use-case table, each row grounded in a Frame goal, each response written as <code>zone → delta</code> lines with <code>UNCHANGED</code> spelled out, and a keyboard path per row drawn from the rulebook's conventions — including <kbd>Esc</kbd> to dismiss, which the rulebook already sights on this exact panel.</td></tr>
+        <tr><td><strong>Draft mockup</strong></td><td>A real build mounting the real components from <code>window.Trawler</code> via <code>specimens.bundle.js</code> — every <code>reuse</code> mounted, never drawn — with a state toggle across the states Interaction named, and zero colour literals in the doc's own CSS.</td></tr>
+        <tr><td><strong>Tune</strong></td><td>A before/after table with both cells <em>drawn</em>, each row citing a soft-rule slug.</td></tr>
+        <tr><td><strong>Five closing lists</strong></td><td><strong>Receipt</strong> — the <code>aeff5b0</code> pin plus all 12 soft slugs in rulebook order, each with a verdict from the enum and a clause of evidence. <strong>Capabilities</strong> · <strong>Proposals</strong> · <strong>Blocked-on</strong> · <strong>Review</strong>.</td></tr>
+      </table>
+      <p>Plus: the W7 seam declared once and honoured throughout, and both
+         <a href="#decisions">hand-down calls</a> stated where the table says they land.</p>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p>This WU adds no code, so the pyramid's three levels have nothing to assert against — the
+       <a href="2026-09-04-redesign-plan.html">epic plan</a>'s stated waiver intent for design WUs
+       (W1, W3, W5, W7, W9) on the E-DFLOW.W9 precedent's wording: the WU "touches no product code or
+       screens". Named here rather than waived silently.</p>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>Verdict</th><th>What actually checks this WU</th></tr>
+      <tr>
+        <td><strong>Unit</strong></td><td class="tier t3">waived</td>
+        <td>No product code changes. The design's claims become assertions in <strong>W6</strong>, beside the <code>.tsx</code> — <code>FlowDetail.test.tsx</code> asserting the confirm reverts (the sticky-copy defect), the empty legs render <code>Notice</code>, and the verb carries its tone.</td>
+      </tr>
+      <tr>
+        <td><strong>Integration</strong></td><td class="tier t3">waived</td>
+        <td>Same precedent — no bounded contract in code is exercised. The contract this WU produces is the run doc, and <code>verify-doc</code> is what judges its shape.</td>
+      </tr>
+      <tr>
+        <td><strong>E2E</strong></td><td class="tier t3">waived</td>
+        <td>Same precedent — no user-visible surface moves; <code>FlowDetail.tsx</code> is not touched. UC-5's e2e runs against the built screen in <strong>W6</strong>. The standing recorded waiver still holds there: clipboard is unreliable under WebDriver, so curl/copy payloads stay asserted as DOM text.</td>
+      </tr>
+    </table>
+
+    <p>The real gate on this WU — three mechanical checks and one adversarial:</p>
+    <table>
+      <tr><th>Check</th><th>Command</th><th>Asserts</th></tr>
+      <tr><td><strong>Tier-1</strong> · shape</td><td><code>cargo xtask verify-doc &lt;the run&gt;</code></td><td>All six stages and five lists present and non-empty · the receipt covers every soft slug with an in-enum verdict · the rulebook pin matches disk · <code>data-map</code> + <code>data-key</code> on Elements · the mockup's state toggle, zero colour literals, and <strong>every reuse mounted rather than drawn</strong> · the <code>htmldoc</code> id and bootstrap, checked even when archived.</td></tr>
+      <tr><td><strong>Close</strong> · run-closed</td><td><code>data-status="archived"</code> after green</td><td><code>6·run-closed</code> refuses the merge of any tip whose diff carries a run still open. Green <em>then</em> archive — a red run is not closeable.</td></tr>
+      <tr><td><strong>Scope</strong> · design-bearing</td><td><code>cargo xtask design-scope epic/redesign HEAD</code></td><td>The run is picked up as the artifact the design dimension must judge, with the rulebook pin its verdict is a claim about.</td></tr>
+      <tr><td><strong>Tier-3</strong> · adversarial</td><td>the <strong>code-review skill</strong> on the tip</td><td>What ⑦ cannot: "a receipt that is complete, fluent and false — a <code>satisfied</code> the design does not earn". Verdict lands in the tip's <code>cr/v3</code> note, in a <code>design:</code> section.</td></tr>
+    </table>
+    <p><strong>The merge gate:</strong> <code>cargo xtask verify-dod wu &lt;tip&gt; --target epic/redesign</code>
+       — <code>test/v2</code> carrying the three waivers with their reason, <code>doc/v1</code>, and a
+       diff-bound <code>cr/v3</code> PASS on this exact tip. <code>9·design</code> does not bind: it
+       demands a <code>design.implements</code> citation from a WU that builds, and this WU builds
+       nothing — <strong>W6</strong> is where that citation is owed, against this run's blob.</p>
+
+    <h2 id="risks">What could go wrong</h2>
+    <table>
+      <tr><th>Risk</th><th>Handling</th></tr>
+      <tr>
+        <td><strong>The forced <code>reuse</code>.</strong> The epic plan states the expected outcome ("<code>Section</code> and <code>HeaderTable</code> resolve to <code>reuse</code>"), and a run that reads that as an instruction will write the verdict it was told to reach — exactly the "complete, fluent and false" receipt Tier-3 hunts.</td>
+        <td>Read <code>@avoid</code> <strong>first</strong>, per the flow's own principle, and let it decide. An <code>@avoid</code> hit is the stage's most valuable output. If a fit genuinely fails, the run writes <code>propose</code> + a blocked-on row and the epic plan's row is what turns out wrong.</td>
+      </tr>
+      <tr>
+        <td><strong>Designing through the seam.</strong> The body is the panel's largest zone and its most interesting one; a run that drifts into the raw/decoded toggle or the renderer dispatch has stolen W7's screen and will collide with it.</td>
+        <td>The seam is declared in the run's Frame as a non-goal and the body zone is <strong>stubbed</strong> in the mockup. Any body-pane decision the container seems to force goes on <strong>blocked-on</strong> addressed to W7, never decided here.</td>
+      </tr>
+      <tr>
+        <td><strong>First-ever execution.</strong> No prior screen run exists — only the spec and W1's component-design format. Some Tier-1 predicate may prove unsatisfiable as written, or the spec ambiguous.</td>
+        <td><code>verify-doc</code>'s failure output is the oracle — never the checker source. Edits are <strong>batched</strong>: one pass, verify once, batch residuals, verify again — the norm is edit twice, verify twice. Genuine spec friction is recorded on <strong>blocked-on</strong> for the epic to rule on; <strong>this WU does not amend T1 process docs.</strong></td>
+      </tr>
+      <tr>
+        <td><strong>Restating what a component owns.</strong> The registry entries here are unusually rich (<code>CopyButton</code>'s confirm timing, <code>Notice</code>'s seven renders, <code>Section</code>'s two-level cap). Re-listing any of it in the run breaks "never re-decide what a component owns".</td>
+        <td>The States column is filled <strong>by reference</strong> — cite the entry, never re-type its values. The run's own content is the assembly: zoning, order, which absence gets which sentence, what the identity bar ranks first.</td>
+      </tr>
+      <tr>
+        <td><strong>The mockup drifting into a drawing.</strong> A hand-drawn component in correct utilities is "still a fork no class check can see" — and <code>specimens.bundle.js</code> is generated and git-ignored, so it may simply be absent.</td>
+        <td>Build it (<code>cargo xtask ui specimens</code>) before the mockup stage and mount every <code>reuse</code>/<code>extend</code> from <code>window.Trawler</code>. <code>mockup·hand-drawn</code> is a Tier-1 predicate, so a drawing reds the gate rather than reaching review.</td>
+      </tr>
+    </table>
+
+    <h2 id="sequence">Sequence</h2>
+    <div class="diagram" data-c="seq">
+<pre class="mermaid">
+flowchart TB
+  S[["load substrate — done at plan time
+  registry: 27 entries via design-registry.mjs
+  rulebook: aeff5b0 (frozen for the run)"]]
+  S --> A["author the run doc through htmldoc
+  minted id + bootstrap, then snapshot"]
+  A --> F[Frame] --> L[Layout] --> E[Elements] --> I[Interaction]
+  I --> B["build specimens.bundle.js"] --> D[Draft mockup] --> T[Tune]
+  T --> R[["receipt · capabilities · proposals
+  blocked-on · review"]]
+  R --> C[["close: re-pin aeff5b0 · verify-doc green
+  · data-status=archived"]]
+  C --> V["design-scope epic/redesign HEAD
+  → code-review skill → cr/v3 PASS"]
+  V --> M["notes: test/v2 (3 waivers) · doc/v1
+  → merge --no-ff into epic/redesign"]
+  E -. "a contract breaks the zoning" .-> L
+  T -. "reads wrong assembled" .-> L
+</pre>
+      <div class="caption">Six stages between the substrate and the closing lists, then close, judge,
+        merge. The two loop-backs into Layout are real, not decorative.</div>
+    </div>
+
+    <div class="callout warn">
+      <p><strong>The distillation is not this WU's.</strong> A design run changes no truth a T2 doc
+         states — UC-5's contract is untouched and no decision record moves. The
+         <code>docs/use-cases/web-ui.html</code> wording for UC-5's gains lands in <strong>W6</strong>
+         with the code that makes it true, the way W2 deliberately left UC-4's wording to W4 so one UC
+         row is not split across two WUs. What this WU owes at close is
+         <code>verify-doc</code> green, the archived run, and a Tier-3 PASS.</p>
+    </div>
+
+  </main>
+
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
