@@ -4,7 +4,7 @@ epic: E-EXPORT
 wu: E-EXPORT.W5
 tests:
   unit:
-    waived: "design-only diff - two T3 HTML docs and three rulebook rows, no src/ or ui/src/ bytes. The deliverable is gated by Tier-1 (cargo xtask verify-doc: receipt 17/17 soft, 13/13 hard, 0 suppressions) and by a headless render of the mockup, both stronger than a test asserting the file parses"
+    waived: "design-only diff - two T3 HTML docs and one rulebook lexicon row, no src/ or ui/src/ bytes. The deliverable is gated by Tier-1 (cargo xtask verify-doc: receipt 17/17 soft, 13/13 hard, 0 suppressions) and by a headless render of the mockup, both stronger than a test asserting the file parses"
   integration:
     waived: "no bounded contract changes - the run designs against the W2/W3/W4 endpoints, each already covered by its own integration tests"
   e2e:
