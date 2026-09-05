@@ -81,7 +81,7 @@ Not given (may not be assumed to exist):
   <td>Know what is missing</td>
   <td>an absent body has five distinct causes</td>
   <td>each cause states itself in its own words</td>
-  <td>✓ "not captured — too large (12.4 MiB)"<br>✗ "none" for a response that never arrived</td>
+  <td>✓ "not captured — too large (12994392 bytes)"<br>✗ "none" for a response that never arrived</td>
 </tr>
 <tr><td colspan="4" class="kd"><strong>Constraints</strong> — hard boundaries</td></tr>
 <tr>
@@ -218,10 +218,12 @@ read, not of the flow.</p>
     verbatim (that is CopyText — the payload here is the whole body, which is <em>rendered</em> in B but
     not <em>this element's</em> text), and the parent owns serialisation, which is what
     <code>getPayload</code> exists for. @use lands exactly: <em>"copy-as-curl, copy body"</em>.<br>The
-    label form, not the D2b icon-only form: D2b requires the payload rendered directly adjacent, and while
-    B <em>is</em> adjacent, the payload copied is not always what B shows — for an over-cap body B shows
-    128 KiB and the clipboard gets the same 128 KiB, which is the shown view. A word label is honest about
-    which of the two it is; a bare ⧉ next to a truncated pane is not.<br><strong>Its confirm fixes a
+    label form, not the D2b icon-only form: D2b requires the payload rendered directly adjacent, and B
+    <em>is</em> adjacent, so the fork is available. What rules it out is the neighbour. Copy takes
+    <strong>what B shows</strong> — 128 KiB of an over-cap body; save, one glyph away, takes
+    <strong>all of it</strong> — 9.7 MiB. Two icon-only buttons side by side would offer that choice with
+    no words on either. A word label says which of the two this one is; a bare ⧉ beside a bare ↓ does
+    not.<br><strong>Its confirm fixes a
     shipped bug:</strong> today <code>copied</code> is a <code>useState</code> that never reverts, so the
     label reads <em>copied</em> until the mode changes. <code>useConfirm</code> owns the ~2 s timer and
     resets on payload change.<br><strong>Absent for one kind:</strong> ImageRenderer's @avoid — <em>"an
@@ -390,7 +392,7 @@ redirect_uri  https://app…</pre>
     Interaction.<br><strong>No action slot.</strong> Notice's @use offers one, and a retry on the failure
     state is the obvious candidate — but retry is a new user-facing capability, which this epic's
     non-goals forbid. Deliberately unused, recorded in capabilities.</details></td>
-  <td><pre class="tb">not captured — too large (12.4 MiB)
+  <td><pre class="tb">not captured — too large (12994392 bytes)
 ⚠ failed to load body</pre>
     per its design file — mute bare · mute+detail · warn+⚠ · ok+✓ · any tone + action slot (unused here)</td>
 </tr>
@@ -532,9 +534,15 @@ screen-owned thing is the six-arm dispatch, which is a <code>switch</code> state
   <td>Body was too large</td>
   <td>Know what is missing</td>
   <td>opens a flow over the capture cap</td>
-  <td><div class="gist">States the actual size, so the cap is judgeable.</div>
-    <details class="why"><summary>▸ why</summary>B → <em>"not captured — too large (12.4 MiB)"</em>, mute
-    ← the real size lets the user decide whether to raise the cap, which a bare "too large" does not<br>
+  <td><div class="gist">States the actual size — in bytes, which is what ships.</div>
+    <details class="why"><summary>▸ why</summary>B → <em>"not captured — too large (12994392 bytes)"</em>,
+    mute ← <code>bodyNotice</code>'s literal output, quoted rather than improved. The real size lets the
+    user decide whether to raise the cap, which a bare "too large" does not<br>
+    <strong>The form is wrong and this run does not fix it here:</strong> a raw byte count is what
+    <code>CutMarker</code>'s @avoid forbids in the same pane, and <code>humanBytes</code> already ships in
+    <code>body.ts</code> (<code>ImageRenderer</code> uses it). Making the two agree is a
+    <code>body.ts</code> change, so it is a blocked-on entry for W8, not a silent edit to a domain
+    string<br>
     <strong>distinct from the cut marker:</strong> here the bytes were never captured; there they were
     captured and are partly shown. Two causes, two sentences
     (<code>absence-names-itself</code>)</details></td>
@@ -685,7 +693,7 @@ from the heading and never from a control. The toggle switches the response body
     <>
       <Notice>empty body</Notice>
       <Notice>streaming (text/event-stream) — passed through, not captured</Notice>
-      <Notice>not captured — too large (12.4 MiB)</Notice>
+      <Notice>not captured — too large (12994392 bytes)</Notice>
       <Notice>not captured — read error</Notice>
       <Notice>no response yet</Notice>
       <Notice>loading…</Notice>
@@ -818,6 +826,19 @@ entries earn their place.</p>
   That is true under every arrangement W5 can pick, so this run is not blocked on the answer. The Layout
   sketch shows the stacked form as the shape it was designed against, and names it as the panel's call.</td>
 </tr><tr>
+  <td><strong>The too-large notice states raw bytes where the pane's own rule wants a human size.</strong>
+  <code>bodyNotice</code> returns <code>not captured — too large (${body.actual} bytes)</code>, while
+  <code>CutMarker</code> — three lines below it in the same pane — is forbidden by its own @avoid from
+  showing <em>"raw byte counts"</em>. So one absence reads <em>12994392 bytes</em> while the truncation
+  statement beside it reads <em>9.7 MiB</em>.</td>
+  <td>Interaction</td>
+  <td><strong>W8</strong> — it is a <code>body.ts</code> change, not a screen decision</td>
+  <td>Quoted <code>bodyNotice</code>'s literal output everywhere in this run rather than the improved form,
+  so the design does not claim a string the code does not produce. The fix is small and already stocked:
+  <code>humanBytes</code> ships in <code>body.ts</code> and <code>ImageRenderer</code> already calls it.
+  Recorded here rather than done, because a design WU changes no product code.</td>
+</tr>
+<tr>
   <td><strong>Whether raw mode should offer a decoded-json view of a compressed body.</strong>
   <code>rawKind</code> returns only text|hex, so a raw gzip body renders as hex — correct, but a user who
   wants "the raw bytes of the JSON" has to reason about which switch does what.</td>
@@ -853,13 +874,18 @@ entries earn their place.</p>
   way. Also <code>SegmentedControl</code>'s @use, which named both switches: it still sanctions the mode
   switch, and the leg example now belongs to a control this screen does not draw.</td>
 </tr><tr>
-  <td>Keep both switches as SegmentedControls in one row rather than promoting leg to a Section band.</td>
-  <td><strong>Layout</strong> kept A as a single row; <strong>Elements</strong> records the band as a
-  considered-and-rejected fork with its reason; <strong>blocked-on</strong> hands the question to W5
-  instead of settling it here.</td>
-  <td><code>SegmentedControl</code>'s @use, which names both switches verbatim — against
-  <code>Section</code>'s @use, which names the leg level. Two entries both fit; the seam with W5's run is
-  what breaks the tie.</td>
+  <td><em>Author decision, taken before the run and overturned by the comment above.</em> Keep both
+  switches as <code>SegmentedControl</code>s in one row rather than promoting leg to a
+  <code>Section</code> band — the two candidates the <a href="2026-09-04-redesign-w7-plan.html">W7
+  plan</a> weighed up front.</td>
+  <td><strong>Superseded.</strong> It shaped the run's first draft — zone A held two switches and
+  blocked-on carried the leg question to W5 — and none of that survives: the leg left the pane entirely,
+  so the band question is moot rather than deferred. Recorded because a decision the run committed to and
+  then abandoned is part of the account; nothing in the delivered artifact rests on it.</td>
+  <td><code>SegmentedControl</code>'s @use, which named both switches verbatim, against
+  <code>Section</code>'s @use, which names the leg level. Two entries fit and the tie was broken the wrong
+  way — by which run owned the seam, when the real question was whether the pane should state the leg at
+  all.</td>
 </tr>
 <tr>
   <td>Do not add a retry affordance to the failure state.</td>

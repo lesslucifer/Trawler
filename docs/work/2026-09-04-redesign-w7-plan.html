@@ -65,9 +65,10 @@
     <div class="kind-grid" data-c="decided">
       <div class="kind-card">
         <div class="who">Layout · the control row</div>
-        <h4>Two SegmentedControls, one row</h4>
-        <p>Leg (<code>request|response</code>) and mode (<code>decoded|raw</code>) are both always-visible mutually exclusive view switches — <code>SegmentedControl</code>'s <code>@use</code> names <em>both of these two cases by name</em>. So both are literal reuse, side by side, with copy and save pushed to the row's end by <code>choose-before-act</code>.</p>
-        <p>The rejected alternative — promoting leg to a <code>Section variant="band"</code> — is plausible (<code>Section</code>'s <code>@use</code> does name <em>"a two-leg panel's leg level"</em>) but <strong>W5 owns the panel's zoning</strong>, and two runs claiming the leg seam is the conflict this decision avoids. Recorded at Elements as a considered fork, not silently dropped.</p>
+        <h4><s>Two SegmentedControls, one row</s> → <strong>one switch; the panel owns the leg</strong></h4>
+        <p class="fix">Overturned at review. The delivered run keeps only the mode switch: the panel already splits <em>Request headers</em> from <em>Response headers</em>, so a Body section switching legs inside itself stated the same fact a second way (<code>grouping-by-relatedness</code>). The pane takes the leg as a prop and the panel mounts one instance per leg — which puts both legs on the page at once. The account is in <a href="2026-09-04-redesign-w7-result.html">W7's result</a>; the decision as written below is kept unedited, because it was the basis the run actually started from.</p>
+        <p><s>Leg (<code>request|response</code>) and mode (<code>decoded|raw</code>) are both always-visible mutually exclusive view switches — <code>SegmentedControl</code>'s <code>@use</code> names <em>both of these two cases by name</em>. So both are literal reuse, side by side, with copy and save pushed to the row's end by <code>choose-before-act</code>.</s></p>
+        <p><s>The rejected alternative — promoting leg to a <code>Section variant="band"</code> — is plausible (<code>Section</code>'s <code>@use</code> does name <em>"a two-leg panel's leg level"</em>) but <strong>W5 owns the panel's zoning</strong>, and two runs claiming the leg seam is the conflict this decision avoids. Recorded at Elements as a considered fork, not silently dropped.</s> <em>Both candidates were wrong in the same way — each assumed the pane states the leg at all.</em></p>
       </div>
       <div class="kind-card">
         <div class="who">Interaction · the empty states</div>
