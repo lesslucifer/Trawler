@@ -59,7 +59,7 @@ rounds:
       no else (None is unreachable after the peek, every alternative spelling adds dead code or a
       panic path, and it is the shape round 2 already refuted on the \x arm). Verdict PASS.
 verified_findings:
-  - summary: "an ANSI-C \u/\U escape naming no character drops its consumed digits instead of staying literal"
+  - summary: 'an ANSI-C \u/\U escape naming no character drops its consumed digits instead of staying literal'
     severity: important
     fixed_in: 9ed23e5
   - summary: "saw_data_flag duplicates what the data vector already says"
