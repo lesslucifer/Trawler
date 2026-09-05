@@ -1,0 +1,25 @@
+schema: cr/v3
+scope: "WU wu/redesign/flow-detail-build -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W6
+branch: wu/redesign/flow-detail-build
+base: 25c59e2699aa80058661ee6b20245bc6e456b23b
+head: ce18bc00735fcd144b36b74387f96262e9e8b40c
+diff_sha256: db93543da6ab370d4fbffbf1da90ad8cbb9d4dcb0b7d7d89d175fa957174c4ac
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 0, waived: 0 }
+rounds:
+  - round: 1
+    tip: ce18bc00735fcd144b36b74387f96262e9e8b40c
+    gate0: "green — fmt, clippy -D warnings, tests; cached on the identical tree (1dc2405ed3)"
+    empty: [reuse, simplification, efficiency]
+    refuted:
+      - "CORRECTNESS + ALTITUDE, important (the same claim from two finders) — 'FlowDetail's Escape handler is registered on document, and ProxyCloseDialog cancels on Esc without preventDefault, so with a flow open an Esc on the quit dialog also closes the panel behind it.' The verifier confirmed the MECHANISM is real: React's synthetic onKeyDown leaves the native event bubbling to document, the dialog's handler (ProxyCloseDialog.tsx:54) does not prevent default, and App.tsx renders the dialog and the panel in the same Layout with no mutual exclusion. It refuted it as a FINDING on the rubric's pre-existing exclusion and on the record: ProxyCloseDialog.tsx is not in the diff and is W10's screen; the document-level placement is the plan's stated decision (the keyboard path that opens the panel leaves focus on the list, outside the panel's subtree); and the WU result's follow-ups table already records this exact interaction verbatim, with the one-line fix (preventDefault in the dialog's handler) assigned to W10. Recorded here so the next reader sees the interaction is known, not missed."
+      - "ALTITUDE, nit — 'the Esc-dismiss-with-focus-restore logic should be a shared hook under ui/src/components/, as useConfirm is for CopyButton and CopyText.' Refuted: document.activeElement capture-on-mount occurs exactly once in ui/src (FlowDetail.tsx); Select restores focus to its own statically known trigger ref and the dialog restores nothing, so no second consumer of the pattern exists; the rubric names inventing abstractions to force sharing as an anti-finding, and the plan records the FlowDetail-specific rationale (an arbitrary external origin, read before the panel's children can take focus)."
+design:
+  implements:
+    - path: docs/work/2026-09-04-redesign-w5-flow-detail-run.html
+      blob: 1cd046c72e9de3647211da12e31c6d6d7007d7eb
+      built: [ui/src/FlowDetail.tsx]
+verdict: PASS
+date: 2026-09-05
