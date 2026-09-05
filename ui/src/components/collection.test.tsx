@@ -19,6 +19,11 @@ const NAMES = Object.keys(REGISTRY).sort();
 
 const SPECIMENS: Record<string, ReactElement> = {
   Button: <collection.Button onClick={() => {}}>send</collection.Button>,
+  Checkbox: (
+    <collection.Checkbox checked={false} onChange={() => {}}>
+      don't show this again
+    </collection.Checkbox>
+  ),
   CopyButton: <collection.CopyButton value="v" label="copy" />,
   CopyText: <collection.CopyText value="v" label="uri" />,
   CutMarker: <collection.CutMarker shown={10} total={99} />,
@@ -53,7 +58,10 @@ const SPECIMENS: Record<string, ReactElement> = {
   SourceSurface: <collection.SourceSurface text='{"a":1}' language={json()} testId="surface" />,
   StatusDot: <collection.StatusDot status="connected" onClick={() => {}} />,
   StatusLine: (
-    <collection.StatusLine status={{ glyph: "✓", tone: "ok", message: "trusted" }} name="CA" />
+    <collection.StatusLine
+      status={{ glyph: "✓", tone: "ok", message: "trusted", short: "trusted" }}
+      name="CA"
+    />
   ),
   StatusPill: <collection.StatusPill status={200} />,
   StepList: <collection.StepList steps={["download the certificate"]} />,

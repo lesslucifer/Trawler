@@ -184,21 +184,20 @@ export function proxySteps(t: ProxyTarget, addr: string): string[] {
 // when neither can, so the remote/manual/un-probeable cases guide instead of
 // mislead. Pure data → unit-tested; the probes themselves live in Rust.
 
-// TODO [UI_DEFER] (E-DFLOW.W5, r3·22): these resolvers return full sentences, so
-// StatusLine's ≤~40-char message contract cannot be met by the component — and a
-// screen must not shorten a domain message itself (StatusLine @avoid). The short
-// form is this module's to return: StepStatusView gains a `short` field beside
-// `message`, filled here per verdict. Deferred because the setup screen still
-// renders these sentences directly; it lands with the screen that consumes
-// StatusLine.
 export type TrustProbe = "trusted" | "untrusted" | "unknown";
 export type ProxyProbe = "ours" | "foreign" | "none" | "unknown";
 export type StepTone = "ok" | "warn" | "muted";
 
+// `message` is the full sentence; `short` is the ≤40-char fragment StatusLine
+// renders. Where the sentence carried an instruction, `short` keeps the verdict
+// and `remedy` carries the instruction out to a Notice — a verdict and what to
+// do about it are two elements, not one.
 export interface StepStatusView {
   glyph: string;
   tone: StepTone;
   message: string;
+  short: string;
+  remedy?: string;
 }
 
 // What the app has observed reaching Trawler this session, plus the running
@@ -216,23 +215,55 @@ export function trustStatus(
   running: Running,
   error?: string,
 ): StepStatusView {
-  if (running === "installing") return { glyph: "⟳", tone: "muted", message: "Installing…" };
+  if (running === "installing")
+    return { glyph: "⟳", tone: "muted", message: "Installing…", short: "installing…" };
   // An authoritative positive — the machine trusts the CA, proven by the probe or
   // a decrypted flow — wins over a stale action error: the CA is trusted whatever
   // the last click did.
-  if (probe === "trusted") return { glyph: "✓", tone: "ok", message: "Trusted on this machine" };
+  if (probe === "trusted")
+    return {
+      glyph: "✓",
+      tone: "ok",
+      message: "Trusted on this machine",
+      short: "trusted on this machine",
+    };
   if (seen.decrypted)
-    return { glyph: "✓", tone: "ok", message: "Trusted — confirmed by captured traffic" };
-  if (error) return { glyph: "⚠", tone: "warn", message: `Install failed — ${error}` };
+    return {
+      glyph: "✓",
+      tone: "ok",
+      message: "Trusted — confirmed by captured traffic",
+      short: "trusted — confirmed by traffic",
+    };
+  if (error)
+    return {
+      glyph: "⚠",
+      tone: "warn",
+      message: `Install failed — ${error}`,
+      short: "install failed",
+      remedy: error,
+    };
   if (seen.trafficSeen)
     return {
       glyph: "⚠",
       tone: "warn",
       message: "Traffic is arriving but not decrypting — install the certificate on the device you're capturing from.",
+      short: "arriving but not decrypting",
+      remedy: "install the certificate on the device you're capturing from",
     };
   if (probe === "unknown")
-    return { glyph: "◐", tone: "muted", message: "Can't check automatically — we'll confirm when traffic arrives." };
-  return { glyph: "○", tone: "muted", message: "Not trusted on this machine yet" };
+    return {
+      glyph: "◐",
+      tone: "muted",
+      message: "Can't check automatically — we'll confirm when traffic arrives.",
+      short: "can't check automatically",
+      remedy: "we'll confirm when traffic arrives",
+    };
+  return {
+    glyph: "○",
+    tone: "muted",
+    message: "Not trusted on this machine yet",
+    short: "not trusted on this machine yet",
+  };
 }
 
 export function proxyStatus(
@@ -241,29 +272,65 @@ export function proxyStatus(
   running: Running,
   error?: string,
 ): StepStatusView {
-  if (running === "setting") return { glyph: "⟳", tone: "muted", message: "Setting the proxy…" };
+  if (running === "setting")
+    return { glyph: "⟳", tone: "muted", message: "Setting the proxy…", short: "setting the proxy…" };
   // Same rule as trustStatus: an authoritative positive (probe says the system
   // proxy is Trawler, or traffic is actually arriving) wins over a stale set error.
   if (probe === "ours")
-    return { glyph: "✓", tone: "ok", message: "System proxy is set to Trawler" };
+    return {
+      glyph: "✓",
+      tone: "ok",
+      message: "System proxy is set to Trawler",
+      short: "system proxy is set to Trawler",
+    };
   if (seen.trafficSeen)
-    return { glyph: "✓", tone: "ok", message: "Receiving traffic" };
-  if (error) return { glyph: "⚠", tone: "warn", message: `Couldn't set the proxy — ${error}` };
+    return { glyph: "✓", tone: "ok", message: "Receiving traffic", short: "receiving traffic" };
+  if (error)
+    return {
+      glyph: "⚠",
+      tone: "warn",
+      message: `Couldn't set the proxy — ${error}`,
+      short: "couldn't set the proxy",
+      remedy: error,
+    };
   if (probe === "foreign")
     return {
       glyph: "○",
       tone: "muted",
       message: "Another proxy is set on this machine — point it at Trawler here, or capture from a device configured to use Trawler.",
+      short: "another proxy is set",
+      remedy: "point it at Trawler here, or capture from a device configured to use Trawler",
     };
   if (probe === "unknown")
-    return { glyph: "◐", tone: "muted", message: "Can't check automatically — we'll confirm when traffic arrives." };
-  return { glyph: "○", tone: "muted", message: "No traffic reaching Trawler yet" };
+    return {
+      glyph: "◐",
+      tone: "muted",
+      message: "Can't check automatically — we'll confirm when traffic arrives.",
+      short: "can't check automatically",
+      remedy: "we'll confirm when traffic arrives",
+    };
+  return {
+    glyph: "○",
+    tone: "muted",
+    message: "No traffic reaching Trawler yet",
+    short: "no traffic reaching Trawler yet",
+  };
 }
 
 export function verifyStatus(seen: Observed): StepStatusView {
   return seen.decrypted
-    ? { glyph: "✓", tone: "ok", message: "It's working — capturing traffic." }
-    : { glyph: "○", tone: "muted", message: "Waiting for your first request." };
+    ? {
+        glyph: "✓",
+        tone: "ok",
+        message: "It's working — capturing traffic.",
+        short: "capturing traffic",
+      }
+    : {
+        glyph: "○",
+        tone: "muted",
+        message: "Waiting for your first request.",
+        short: "waiting for your first request",
+      };
 }
 
 // P1 prove-it: the concrete, copyable command that generates the first request.

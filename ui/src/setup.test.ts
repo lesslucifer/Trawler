@@ -14,6 +14,7 @@ import {
   splitProxyAddr,
   TARGETS,
   trustStatus,
+  type StepStatusView,
   verifyStatus,
 } from "./setup";
 import type { Observed, ProxyTarget, TrustTarget } from "./setup";
@@ -226,4 +227,77 @@ test("proxyOffSteps covers every target with the inverse action", () => {
   expect(proxyOffSteps("macos").join("\n")).toMatch(/-setwebproxystate .*off/);
   expect(proxyOffSteps("windows").join("\n")).toMatch(/ProxyEnable .*\/d 0/);
   expect(proxyOffSteps("terminal").join("\n")).toMatch(/unset HTTPS_PROXY/);
+});
+
+// The sixteen verdicts, asserted literally against design run #9's table. The
+// screen may not shorten a domain message (StatusLine @avoid), so the wording
+// is this module's contract — a drift here is a design defect, not a detail.
+describe("the short form every verdict carries", () => {
+  const nothing = { decrypted: false, trafficSeen: false };
+  const traffic = { decrypted: false, trafficSeen: true };
+  const decrypted = { decrypted: true, trafficSeen: true };
+
+  const VERDICTS: [string, StepStatusView, string, string | undefined][] = [
+    ["trust · installing", trustStatus("unknown", nothing, "installing"), "installing…", undefined],
+    ["trust · probe trusted", trustStatus("trusted", nothing, null), "trusted on this machine", undefined],
+    ["trust · decrypted", trustStatus("untrusted", decrypted, null), "trusted — confirmed by traffic", undefined],
+    ["trust · error", trustStatus("untrusted", nothing, null, "boom"), "install failed", "boom"],
+    [
+      "trust · traffic, no decrypt",
+      trustStatus("untrusted", traffic, null),
+      "arriving but not decrypting",
+      "install the certificate on the device you're capturing from",
+    ],
+    [
+      "trust · probe unknown",
+      trustStatus("unknown", nothing, null),
+      "can't check automatically",
+      "we'll confirm when traffic arrives",
+    ],
+    ["trust · not trusted", trustStatus("untrusted", nothing, null), "not trusted on this machine yet", undefined],
+    ["proxy · setting", proxyStatus("unknown", nothing, "setting"), "setting the proxy…", undefined],
+    ["proxy · probe ours", proxyStatus("ours", nothing, null), "system proxy is set to Trawler", undefined],
+    ["proxy · traffic seen", proxyStatus("none", traffic, null), "receiving traffic", undefined],
+    ["proxy · error", proxyStatus("none", nothing, null, "port busy"), "couldn't set the proxy", "port busy"],
+    [
+      "proxy · probe foreign",
+      proxyStatus("foreign", nothing, null),
+      "another proxy is set",
+      "point it at Trawler here, or capture from a device configured to use Trawler",
+    ],
+    [
+      "proxy · probe unknown",
+      proxyStatus("unknown", nothing, null),
+      "can't check automatically",
+      "we'll confirm when traffic arrives",
+    ],
+    ["proxy · none", proxyStatus("none", nothing, null), "no traffic reaching Trawler yet", undefined],
+    ["verify · decrypted", verifyStatus(decrypted), "capturing traffic", undefined],
+    ["verify · waiting", verifyStatus(nothing), "waiting for your first request", undefined],
+  ];
+
+  it("covers every verdict the three resolvers can return", () => {
+    expect(VERDICTS).toHaveLength(16);
+  });
+
+  it.each(VERDICTS)("%s", (_name, view, short, remedy) => {
+    expect(view.short).toBe(short);
+    expect(view.remedy).toBe(remedy);
+  });
+
+  it.each(VERDICTS)("%s fits StatusLine's ~40-char contract", (_name, view) => {
+    expect(view.short.length).toBeLessThanOrEqual(40);
+  });
+
+  it("keeps the error text out of the short form, however long it interpolates", () => {
+    const sprawling = "a".repeat(500);
+
+    expect(trustStatus("untrusted", nothing, null, sprawling).short).toBe("install failed");
+    expect(proxyStatus("none", nothing, null, sprawling).short).toBe("couldn't set the proxy");
+  });
+
+  it("leaves the full sentence on message — short is an addition, not a replacement", () => {
+    expect(trustStatus("trusted", nothing, null).message).toBe("Trusted on this machine");
+    expect(proxyStatus("foreign", nothing, null).message).toMatch(/^Another proxy is set on this machine/);
+  });
 });

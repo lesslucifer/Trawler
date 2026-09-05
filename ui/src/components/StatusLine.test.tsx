@@ -15,16 +15,18 @@ describe("StatusLine", () => {
     ["◐", "muted", "text-ink-mute"],
     ["○", "muted", "text-ink-mute"],
   ] as const)("%s renders in the %s tone", (glyph, tone, token) => {
-    expect(glyphClass({ glyph, tone, message: "a reason" })).toContain(token);
+    expect(glyphClass({ glyph, tone, message: "a reason", short: "a reason" })).toContain(token);
   });
 
   it.each(["✓", "⚠", "◐", "○"])("%s is a second channel, so tone is never the only one", (glyph) => {
-    render(<StatusLine status={{ glyph, tone: "muted", message: "a reason" }} />);
+    render(<StatusLine status={{ glyph, tone: "muted", message: "a reason", short: "a reason" }} />);
     expect(screen.getByText(glyph)).toBeInTheDocument();
   });
 
   it("in-flight draws a spinner instead of a glyph — an animation, not a verdict", () => {
-    render(<StatusLine status={{ glyph: "⟳", tone: "muted", message: "Installing…" }} />);
+    render(
+      <StatusLine status={{ glyph: "⟳", tone: "muted", message: "Installing…", short: "installing…" }} />,
+    );
 
     expect(screen.getByTestId("status-line-spinner").className).toContain("animate-spin");
     expect(screen.queryByText("⟳")).not.toBeInTheDocument();
@@ -32,7 +34,10 @@ describe("StatusLine", () => {
 
   it("renders the optional name in body ink, never toned", () => {
     render(
-      <StatusLine status={{ glyph: "⚠", tone: "warn", message: "Install failed" }} name="Certificate" />,
+      <StatusLine
+        status={{ glyph: "⚠", tone: "warn", message: "Install failed", short: "install failed" }}
+        name="Certificate"
+      />,
     );
 
     const name = screen.getByText("Certificate");
@@ -41,24 +46,60 @@ describe("StatusLine", () => {
   });
 
   it("renders without a name — the name is optional, not a placeholder", () => {
-    render(<StatusLine status={{ glyph: "○", tone: "muted", message: "Not trusted yet" }} />);
-    expect(screen.getByText("Not trusted yet")).toBeInTheDocument();
+    render(
+      <StatusLine
+        status={{ glyph: "○", tone: "muted", message: "Not trusted yet", short: "not trusted yet" }}
+      />,
+    );
+    expect(screen.getByText("not trusted yet")).toBeInTheDocument();
   });
 
   it("wraps the message rather than truncating it — a cut reason is a wrong reason", () => {
-    const message =
-      "Traffic is arriving but not decrypting — install the certificate on the device you're capturing from.";
-    render(<StatusLine status={{ glyph: "⚠", tone: "warn", message }} />);
+    const short = "arriving but not decrypting";
+    render(
+      <StatusLine status={{ glyph: "⚠", tone: "warn", message: "the full sentence", short }} />,
+    );
 
-    const rendered = screen.getByText(message);
+    const rendered = screen.getByText(short);
     expect(rendered.className).not.toContain("truncate");
     expect(rendered.className).not.toContain("line-clamp");
     expect(rendered.className).toContain("min-w-0");
   });
 
+  it.each([
+    ["ok", "text-ok"],
+    ["warn", "text-warn"],
+    ["muted", "text-ink-mute"],
+  ] as const)("the %s verdict's words carry the tone, not just its glyph", (tone, token) => {
+    render(<StatusLine status={{ glyph: "✓", tone, message: "full", short: "the verdict" }} />);
+
+    const rendered = screen.getByText("the verdict");
+    expect(rendered.className).toContain(token);
+    expect(rendered.className).toContain("font-ui");
+  });
+
+  it("renders short, never the full sentence — the call site does not shorten", () => {
+    const status = trustStatus("unknown", { decrypted: false, trafficSeen: false }, null);
+    render(<StatusLine status={status} />);
+
+    expect(screen.getByText("can't check automatically")).toBeInTheDocument();
+    expect(screen.queryByText(status.message)).not.toBeInTheDocument();
+  });
+
+  it("leaves the remedy to Notice — a verdict and an instruction are two elements", () => {
+    const status = trustStatus("untrusted", { decrypted: false, trafficSeen: true }, null);
+    render(<StatusLine status={status} />);
+
+    expect(status.remedy).toBe("install the certificate on the device you're capturing from");
+    expect(screen.queryByText(status.remedy!)).not.toBeInTheDocument();
+  });
+
   it("is pure display: no checkbox, no toggle, nothing focusable", () => {
     const { container } = render(
-      <StatusLine status={{ glyph: "✓", tone: "ok", message: "Trusted" }} name="Certificate" />,
+      <StatusLine
+        status={{ glyph: "✓", tone: "ok", message: "Trusted", short: "trusted" }}
+        name="Certificate"
+      />,
     );
 
     expect(container.querySelector("input, button, [role=checkbox], [tabindex]")).toBeNull();
@@ -80,7 +121,7 @@ describe("StatusLine", () => {
       render(<StatusLine status={trustStatus("untrusted", seen, "installing", "boom")} />);
 
       expect(screen.getByTestId("status-line-spinner")).toBeInTheDocument();
-      expect(screen.getByText("Installing…")).toBeInTheDocument();
+      expect(screen.getByText("installing…")).toBeInTheDocument();
     });
 
     it("shows observed proof over a stale error when the probe cannot say", () => {
@@ -90,7 +131,7 @@ describe("StatusLine", () => {
         />,
       );
 
-      expect(screen.getByText("Receiving traffic")).toBeInTheDocument();
+      expect(screen.getByText("receiving traffic")).toBeInTheDocument();
       expect(glyphClass(proxyStatus("unknown", { decrypted: true, trafficSeen: true }, null, "set failed"))).toContain(
         "text-ok",
       );
@@ -99,13 +140,13 @@ describe("StatusLine", () => {
     it("shows the error when nothing positive outranks it", () => {
       render(<StatusLine status={proxyStatus("unknown", seen, null, "port busy")} />);
 
-      expect(screen.getByText(/port busy/)).toBeInTheDocument();
+      expect(screen.getByText("couldn't set the proxy")).toBeInTheDocument();
       expect(screen.getByText("⚠")).toBeInTheDocument();
     });
   });
 
   it("composes TonedText — the glyph's tone comes from the primitive", () => {
-    render(<StatusLine status={{ glyph: "✓", tone: "ok", message: "Trusted" }} />);
+    render(<StatusLine status={{ glyph: "✓", tone: "ok", message: "Trusted", short: "trusted" }} />);
 
     const glyph = screen.getByText("✓");
     expect(glyph.className).toContain("font-mono");
