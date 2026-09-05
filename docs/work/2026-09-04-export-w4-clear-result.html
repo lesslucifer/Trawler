@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9abbc09f34851f0dfac38f" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-EXPORT.W4 result: the capture can be cleared</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-EXPORT.W4 result — the capture can be cleared</h1>
+      <p>Delivered as planned. Eight observables hold; the CORS widening the plan owed had already landed with W3, so this WU added <code>DELETE</code> to a grant that was already reasoned about rather than making the argument twice. A review round then corrected a claim this WU had made three times without the code backing it, and made a single delete stop scanning the whole ring.</p>
+      <div class="meta">v1 · 2026-09-04 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W4</span> · <a href="2026-09-04-export-w4-clear-plan.html">its plan</a> · <a href="2026-09-04-export-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Delivered.</strong> The requirement holds as written: <code>DELETE /flows</code>
+      removes what the listing filters select, <code>DELETE /flows/{id}</code> removes exactly one
+      and 404s an id the ring does not hold, both answer <code>{ "removed": n }</code>, the ring's
+      byte accounting stays equal to what it holds, the clear arrives on <code>/stream</code> as
+      one event per batch, the connection tally is untouched, and a filter that selects nothing
+      succeeds reporting zero.</p>
+      <table>
+        <thead><tr><th>#</th><th>Observable</th><th>Holds</th><th>Pinned by</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>DELETE /flows</code> answers a count and empties the listing</td><td><span class="badge ok">yes</span></td><td><code>clearing_the_capture_empties_the_listing_and_tells_the_stream</code></td></tr>
+          <tr><td>2</td><td>a filtered clear removes only matches; survivors stay readable at detail and both body endpoints</td><td><span class="badge ok">yes</span></td><td><code>a_filtered_clear_removes_only_its_matches_and_leaves_the_rest_whole</code></td></tr>
+          <tr><td>3</td><td>an empty match is <code>200</code>/zero; an unknown id <code>404</code>; a malformed id <code>400</code></td><td><span class="badge ok">yes</span></td><td><code>deleting_one_flow_and_the_three_ways_a_delete_is_refused</code></td></tr>
+          <tr><td>4</td><td>a subscriber receives <code>event: cleared</code> — one event for the batch</td><td><span class="badge ok">yes</span></td><td>the same integration test asserts <code>event:</code> appears exactly once in the frame</td></tr>
+          <tr><td>5</td><td><code>/stats</code> reports the same tally before and after any delete</td><td><span class="badge ok">yes</span></td><td><code>removal_never_touches_the_connection_tally</code> (unit) · <code>a_cleared_store_is_empty_not_restarted</code> (route) · asserted again in the clear-all integration test</td></tr>
+          <tr><td>6</td><td>byte accounting stays honest across removals, so a later eviction evicts the right rows</td><td><span class="badge ok">yes</span></td><td><code>ring_accounting</code> extended with removals · <code>remove_matching_re_weighs_so_the_next_eviction_uses_the_corrected_total</code></td></tr>
+          <tr><td>7</td><td>an unrecognised <code>?source=</code> refuses the clear rather than removing a different set</td><td><span class="badge ok">yes</span></td><td><code>an_unrecognised_source_refuses_the_clear_instead_of_guessing</code> · <code>a_clear_selects_by_provenance_like_every_other_endpoint</code></td></tr>
+          <tr><td>8</td><td>the CORS grant advertises <code>DELETE</code></td><td><span class="badge ok">yes</span></td><td><code>every_response_carries_the_cross_origin_grant</code>, its assertion widened</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="how">How removal is shaped, and the one thing that decided it</h2>
+    <div class="callout" data-c="how">
+      <p>Two things leave a flow behind: the map entry and its weight, and the row in the order.
+      The <strong>first is shared</strong> — <code>Ring::debit</code> is the one place a flow is
+      removed from the map and its retained bytes subtracted, called from <code>evict</code>'s
+      pop-front loop and from <code>unlink</code>, so the arithmetic exists once. The
+      <strong>second is not</strong>, deliberately: eviction already holds the row it popped,
+      while a removal has to find it — a single delete finds its one row, and a batch rebuilds the
+      order, where that cost is proportionate to a scan the filter already did. The first shape
+      this WU shipped had <code>unlink</code> claiming to unify both halves while
+      <code>evict</code> quietly kept its own copy; the review caught it, and the
+      <a href="#review">review section</a> records what changed and why the obvious fix was the
+      wrong one. <code>remove_matching</code> and <code>remove</code> are the two public doors, and
+      <a href="2026-09-04-export-w4-clear-plan.html#decisions">the plan's five decisions</a> all
+      landed as written: one store method for the filtered case, an id addressed directly rather
+      than through a <code>FlowFilter</code> that has no id field, one batch event, a variant
+      distinct from <code>FlowEvicted</code>, and the same <code>{ "removed": n }</code> envelope
+      from both routes.</p>
+      <p>The guardrail worth restating because it is the one asymmetry with eviction:
+      <strong>removal has no last-row floor.</strong> <code>evict</code> keeps a single oversized
+      flow alive so it stays inspectable; a clear that left a row behind would not be a clear, and
+      <code>a_default_filter_clears_everything_with_no_last_row_floor</code> asserts exactly that
+      against a store the cap has already reduced to one row.</p>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table>
+        <thead><tr><th>From the plan</th><th>What happened, and why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The plan expected to <em>make</em> the CORS widening and record it as a decision.</td>
+            <td><strong>Already made.</strong> The epic plan scheduled the widening here on the
+            assumption <code>DELETE</code> would be the first mutating method; import landed
+            first, so <a href="../decisions/dec-31-imported-flows-are-marked.html">DEC-31</a>
+            already carried the argument and predicted this WU would join the list. So this WU
+            added <code>DELETE</code> to the grant and turned that prediction past tense rather
+            than writing a second record making the same argument. No new decision record —
+            <a href="2026-09-04-export-w3-har-in-result.html">W3's result</a> anticipated this.</td>
+          </tr>
+          <tr>
+            <td>Not in the plan: the debug shell.</td>
+            <td><strong>One-line addition.</strong> <code>src/api/ui.html</code> refetches on
+            <code>request</code>, <code>response</code> and <code>lagged</code>; without
+            <code>cleared</code> in that list a clear followed by silence would leave stale rows
+            on screen until the next capture. <code>cleared</code> joined the list, asserted in
+            <code>ui_shell_page_and_the_request_sequence_it_performs</code>. Not a UI-rendering
+            file under <code>ui/src/</code>, so no design citation is owed — the app's own clear
+            control is W5/W6.</td>
+          </tr>
+          <tr>
+            <td>Not in the plan: <code>architecture.html</code> was <em>predicted</em> as a
+            conditional edit.</td>
+            <td><strong>Edited.</strong> The plan said the T1 line would be re-read and touched
+            only if now false. Two statements were incomplete rather than wrong — the seam caption
+            enumerated the store's events as writes and evictions and the API's role as reading
+            and ingesting — so both were widened to include clearing. Staged for manual review as
+            a rule-bearing T1 commit.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table>
+        <thead><tr><th>Level</th><th>Added</th><th>Where</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge id">unit</span></td>
+            <td>9 store tests (selection, re-weighing observable through a later eviction, the
+            no-floor clear, remove-by-id idempotence and order, the batch event and the silent
+            no-op, the tally) · 5 route tests (count, filter + empty match, refused
+            <code>source</code>, the id route's three answers, the tally through
+            <code>/stats</code>) · 1 router-table test (<code>DELETE</code> answers on
+            <code>/flows</code> and <code>/flows/{id}</code> and <em>not</em> on export or import)
+            · the <code>FlowsCleared</code> SSE shape · <code>ring_accounting</code> extended with
+            interleaved removals; plus, from the review, a middle row removed by the single-id
+            path and an id named twice debited once — both mutation-tested against broken code
+            before being trusted</td>
+            <td><code>src/store.rs</code> · <code>src/api/routes.rs</code> ·
+            <code>src/api/mod.rs</code> · <code>src/api/view.rs</code></td>
+          </tr>
+          <tr>
+            <td><span class="badge id">integration</span></td>
+            <td>5 tests over the real HTTP surface: clear-all + the live subscriber + the tally,
+            a filtered clear with a survivor read through all three of its endpoints, the three
+            refusals, a clear selecting by provenance while the live capture survives, and — from
+            the review — a paging cursor whose row a delete removed, ending the walk exactly as an
+            evicted one does</td>
+            <td><code>tests/api.rs</code></td>
+          </tr>
+          <tr>
+            <td><span class="badge id">e2e</span></td>
+            <td><strong>waived</strong> — <code>waived: "the epic's own e2e step 4 owns this
+            flow: real proxied traffic, then subscribe and DELETE. A WU-level e2e would boot the
+            same engine to assert what that step already asserts; the app half rides the WebDriver
+            suite after W6."</strong> Same reasoning W1–W3 recorded.</td>
+            <td>epic plan, <a href="2026-09-04-export-plan.html#e2e">e2e plan</a></td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Suite green:</strong> 169 lib unit · 32 <code>tests/api.rs</code> · 3
+      <code>tests/ca.rs</code> · 6 <code>tests/e2e_capture.rs</code> · 4
+      <code>tests/e2e_h2.rs</code> — 0 failures. <code>cargo fmt --check</code> and
+      <code>cargo clippy -D warnings</code> clean.</p>
+      <p><strong>Commits</strong> on <code>wu/export/clear</code>: the plan
+      (<code>d1a8982</code>), the code (<code>6a39c11</code>), the T2 distillation
+      (<code>257693a</code>), the T1 <code>architecture.html</code> commit carrying its
+      <code>Reviewed-By</code> trailer (<code>f1c0fec</code>), and the review fixes
+      (<code>35ff189</code>).</p>
+    </div>
+
+
+    <h2 id="review">The review round</h2>
+    <div class="callout" data-c="review">
+      <p>Five finders over the WU diff produced nine candidates; adversarial verification
+      confirmed four and refuted five. The refutations mattered as much as the confirmations —
+      two finders agreed on a fix that the verifier showed would be a
+      <strong>regression</strong>, and the altitude finder returned a clean verdict resting on a
+      premise the other finders had already disproved, which is why a finder's conclusion is not
+      evidence until something tries to break it.</p>
+      <table>
+        <thead><tr><th>Finding</th><th>Verdict</th><th>What shipped</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>evict</code> never called <code>unlink</code>, so the byte arithmetic still
+            existed twice — while <code>unlink</code>'s comment claimed "one helper either way"
+            and this WU's own <code>test/v2</code> note claimed <code>unlink</code> "is the only
+            place a flow leaves the ring".</td>
+            <td><span class="badge ok">real</span> · nit</td>
+            <td>The claim was false and had been written three times — in the plan's reasoning, in
+            a doc comment, and in the note that serves as gate evidence. <code>Ring::debit</code>
+            is now the single place a flow leaves the map and its bytes are subtracted, called
+            from both <code>evict</code>'s loop and <code>unlink</code>. The verifier
+            <em>refuted</em> the fix both finders implied — routing <code>evict</code> through
+            <code>unlink</code> would make every insert O(ring) and drop the last-row floor — so
+            only the two-line arithmetic is shared and each keeps its own order-mending.</td>
+          </tr>
+          <tr>
+            <td><code>unlink</code>'s <code>order.retain</code> rebuilt the whole order for a
+            single-id delete: a scan plus a hash probe per row, under the lock the live capture
+            path contends on.</td>
+            <td><span class="badge ok">real</span> · important</td>
+            <td>The severity rests on a fact worth stating plainly:
+            <code>retained_bytes()</code> counts only <em>body</em> bytes, and eviction fires only
+            on the byte cap — so a capture of body-less exchanges (GETs, 204s) grows the row count
+            without limit while <code>total_bytes</code> stays near zero. A single removal now
+            finds its one row; a batch still rebuilds, where the cost is proportionate to a scan
+            the filter already did.</td>
+          </tr>
+          <tr>
+            <td>A cursor row can now vanish by deletion as well as eviction, and neither the
+            listing contract nor UC-7 said so.</td>
+            <td><span class="badge ok">real</span> · nit</td>
+            <td>The listing contract said "a cursor the ring has <em>evicted</em>"; it now says
+            "no longer holds", naming both causes, and UC-7 gained the consequence that a delete
+            can end another client's paging walk. A regression test pairs a cursor with a delete —
+            no test had.</td>
+          </tr>
+          <tr>
+            <td>Two reborrows in <code>unlink</code> and <code>remove_matching</code> were dead
+            scaffolding from a borrow error already solved another way.</td>
+            <td><span class="badge ok">real</span> · nit</td>
+            <td>Both verified by compiling them away, then removed with the rewrite.</td>
+          </tr>
+          <tr>
+            <td><code>removed.clone()</code> is an avoidable copy · the <code>delete()</code> test
+            helper duplicates <code>post()</code> · three further candidates.</td>
+            <td>refuted</td>
+            <td>The clone's return value is consumed by tests that assert on the <em>ids</em>, not
+            just the count; and one helper per verb is the file's established convention
+            (<code>get()</code>/<code>json()</code> already pair that way), where a
+            method-parameterised helper would cost call-site clarity.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Both behaviours the fix introduced were pinned before being trusted: a middle row removed
+      by the single-id path, and an id named twice debited once. Each was mutation-tested against
+      deliberately broken code and observed to fail, so neither passes vacuously. Two properties of
+      the fix were also verified rather than argued: the <code>retain</code> predicate
+      <em>inverted</em> (from "keep what the map still holds" to "drop what we removed"), proven
+      equivalent by asserting the underlying order/map correspondence inside <code>unlink</code>
+      and running the suite — it holds across the proptests' randomised insert, import, evict and
+      remove sequences; and <code>doomed</code> can only carry a duplicate if the order does, which
+      freshly minted ids preclude and <code>a_repeated_id_is_debited_once</code> guards regardless.</p>
+      <p><strong>Round 2</strong> re-reviewed the fix as the unreviewed code it was. Two finders
+      independently found the same single defect and nothing else: the edit that extracted
+      <code>debit</code> left the old <code>unlink</code> comment above it, so the new function
+      carried two docstrings — the first naming a <code>doomed</code> parameter it does not take
+      and asserting the one-helper design the fix had just <em>rejected</em>. That is the first
+      round's own finding reintroduced by the edit that fixed it, which is the argument for
+      re-reviewing a fix rather than trusting it. Corrected in <code>5846170</code>, with a sweep
+      confirming no other stale claim survives in the code or the docs. The correctness finder
+      reported no findings on the three properties above.</p>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <table>
+        <thead><tr><th>Doc</th><th>Tier</th><th>Now carries</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../use-cases/web-ui.html#uc-7">UC-7</a></td><td>T2</td><td>the whole clearing contract: what a delete selects is what the listing lists, the count envelope, the three refusals, and the three consequences a signature does not imply — a cleared store is empty rather than restarted, the clear is one batch event distinct from eviction, and removing is not replacing</td></tr>
+          <tr><td><a href="../use-cases/use-cases-index.html">use-cases-index.html</a></td><td>T2</td><td>the UC-7 row</td></tr>
+          <tr><td><a href="../decisions/dec-31-imported-flows-are-marked.html">DEC-31</a></td><td>T2</td><td><code>GET, POST, DELETE, OPTIONS</code>, and its prediction that <code>DELETE</code> would join turned past tense with the list closed for this epic</td></tr>
+          <tr><td><a href="../architecture.html">architecture.html</a></td><td>T1</td><td>the store emits on every write, eviction <em>and clear</em>; the API ingests <em>and removes</em> while still never rewriting what the capture path recorded; the event-bus row names the clear as distinct from eviction</td></tr>
+        </tbody>
+      </table>
+      <p>One fact per tier held: the removal <em>mechanism</em> (the shared unlink, the batch
+      event) lives only in <code>src/store.rs</code> and <code>src/event.rs</code> and is
+      described nowhere as code; the CORS <em>argument</em> stays in DEC-31 alone rather than
+      being restated in UC-7.</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table>
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>The app's export, import and clear controls — including what a destructive action
+            asks before it acts, which this WU deliberately does not answer (the API removes
+            without confirmation; the confirmation is a UI concern).</td>
+            <td><span class="badge id">E-EXPORT.W5</span> design, <span class="badge id">W6</span> build</td>
+          </tr>
+          <tr>
+            <td>The epic e2e step that consumes this WU's contract against real proxied traffic.</td>
+            <td><span class="badge id">E-EXPORT</span> close</td>
+          </tr>
+          <tr>
+            <td><strong>The ring's row count is unbounded.</strong> Surfaced by the review while
+            quantifying the removal cost: <code>retained_bytes()</code> counts only body bytes, so
+            a capture of body-less exchanges (GETs, 204s, HEADs) keeps <code>total_bytes</code>
+            near zero while the row count grows until process memory runs out — the byte cap never
+            fires. This WU stopped a single delete from paying a full scan under that condition,
+            but it did not bound the condition. Whether the ring should also cap rows is a store
+            decision, not a clearing one.</td>
+            <td>a follow-up for the epic to place</td>
+          </tr>
+          <tr>
+            <td>No debt discovered. The <code>cleared</code> event is a new wire shape a future
+            client must handle, and it is stated in UC-7 rather than left to be found in the code.</td>
+            <td>—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

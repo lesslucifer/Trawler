@@ -211,7 +211,7 @@ async fn ui_shell_page_and_the_request_sequence_it_performs() {
     assert_eq!(status, StatusCode::OK);
     assert!(headers["content-type"].to_str().unwrap().starts_with("text/html"));
     let html = String::from_utf8(body).unwrap();
-    for wired in ["fetch('/flows?'", "new EventSource('/stream')"] {
+    for wired in ["fetch('/flows?'", "new EventSource('/stream')", "'cleared'"] {
         assert!(html.contains(wired), "page must wire {wired}");
     }
 
@@ -381,6 +381,27 @@ async fn a_cursor_the_ring_evicted_ends_the_walk_rather_than_restarting_it() {
     let (status, page) = json(&r, &format!("/flows?limit=2&cursor={evicted}")).await;
     assert_eq!(status, StatusCode::OK);
     assert!(page["flows"].as_array().unwrap().is_empty());
+    assert!(page["next_cursor"].is_null());
+}
+
+// A cursor row can now vanish two ways, and paging has to answer the same for
+// both - the walk ends rather than restarting at the newest row.
+#[tokio::test]
+async fn a_cursor_a_delete_removed_ends_the_walk_like_an_evicted_one() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    for uri in ["http://a.example/one", "http://b.example/two", "http://c.example/three"] {
+        store.insert(FlowBuilder::new().uri(uri).status(200).build());
+    }
+    let r = router_with(store);
+
+    let (_, first) = json(&r, "/flows?limit=1").await;
+    let cursor = first["next_cursor"].as_str().unwrap().to_owned();
+
+    assert_eq!(delete(&r, &format!("/flows/{cursor}")).await.0, StatusCode::OK);
+
+    let (status, page) = json(&r, &format!("/flows?limit=2&cursor={cursor}")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(page["flows"].as_array().unwrap().is_empty(), "the walk ends, it does not restart");
     assert!(page["next_cursor"].is_null());
 }
 
@@ -961,4 +982,136 @@ async fn the_same_file_imported_twice_yields_two_independent_sets() {
         listed.as_array().unwrap().iter().all(|r| r["uri"] == "http://twice/"),
         "the pre-existing capture is untouched and unmarked"
     );
+}
+
+async fn delete(router: &Router, uri: &str) -> (StatusCode, Value) {
+    let req = Request::builder().method("DELETE").uri(uri).body(Body::empty()).unwrap();
+    let res = router.clone().oneshot(req).await.unwrap();
+    let status = res.status();
+    let bytes = to_bytes(res.into_body(), usize::MAX).await.unwrap().to_vec();
+    let value = if bytes.is_empty() {
+        Value::Null
+    } else {
+        serde_json::from_slice(&bytes)
+            .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&bytes).into_owned()))
+    };
+    (status, value)
+}
+
+#[tokio::test]
+async fn clearing_the_capture_empties_the_listing_and_tells_the_stream() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    store.insert(FlowBuilder::new().uri("http://a.example.com/").status(200).build());
+    store.insert(FlowBuilder::new().uri("http://b.example.com/").status(200).build());
+    store.note_connection("a.example.com:443".into());
+    let r = router_with(store.clone());
+
+    let req = Request::builder().uri("/stream").body(Body::empty()).unwrap();
+    let res = r.clone().oneshot(req).await.unwrap();
+    let mut stream = res.into_body().into_data_stream();
+
+    let (status, result) = delete(&r, "/flows").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(result, json!({ "removed": 2 }));
+    assert_eq!(json(&r, "/flows").await.1.as_array().unwrap().len(), 0);
+
+    let frame = tokio::time::timeout(Duration::from_secs(2), stream.next())
+        .await
+        .expect("no SSE frame before timeout")
+        .expect("stream ended")
+        .expect("frame error");
+    let text = String::from_utf8_lossy(&frame);
+    assert!(text.contains("event: cleared"), "a subscriber must not have to refetch: {text}");
+    assert_eq!(text.matches("event:").count(), 1, "one event for the batch: {text}");
+
+    assert_eq!(
+        json(&r, "/stats").await.1["connections"],
+        1,
+        "a cleared store is empty, not restarted"
+    );
+}
+
+#[tokio::test]
+async fn a_filtered_clear_removes_only_its_matches_and_leaves_the_rest_whole() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    store.insert(FlowBuilder::new().uri("http://drop.example.com/x").status(200).build());
+    let survivor = FlowBuilder::new()
+        .uri("http://keep.example.com/y")
+        .req_body(captured(b"request payload"))
+        .resp_body(captured(b"response payload"))
+        .status(200)
+        .build();
+    let survivor_id = survivor.id.to_string();
+    store.insert(survivor);
+    let r = router_with(store);
+
+    let (status, result) = delete(&r, "/flows?host=drop.example.com").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(result, json!({ "removed": 1 }));
+
+    let (_, listed) = json(&r, "/flows").await;
+    assert_eq!(listed.as_array().unwrap().len(), 1);
+    assert_eq!(listed[0]["uri"], "http://keep.example.com/y");
+
+    assert_eq!(json(&r, &format!("/flows/{survivor_id}")).await.0, StatusCode::OK);
+    let (status, _, body) = get(&r, &format!("/flows/{survivor_id}/request/body")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, b"request payload");
+    let (status, _, body) = get(&r, &format!("/flows/{survivor_id}/response/body")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, b"response payload");
+}
+
+#[tokio::test]
+async fn deleting_one_flow_and_the_three_ways_a_delete_is_refused() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    let flow = FlowBuilder::new().uri("http://one.example.com/").status(200).build();
+    let id = flow.id.to_string();
+    store.insert(flow);
+    let r = router_with(store);
+
+    assert_eq!(delete(&r, "/flows/not-a-uuid").await.0, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        delete(&r, "/flows/00000000-0000-0000-0000-000000000000").await.0,
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        delete(&r, "/flows?host=nothing.example.com").await,
+        (StatusCode::OK, json!({ "removed": 0 })),
+        "the end state it asked for is already true"
+    );
+    assert_eq!(json(&r, "/flows").await.1.as_array().unwrap().len(), 1, "nothing left yet");
+
+    assert_eq!(
+        delete(&r, &format!("/flows/{id}")).await,
+        (StatusCode::OK, json!({ "removed": 1 }))
+    );
+    assert_eq!(json(&r, "/flows").await.1.as_array().unwrap().len(), 0);
+    assert_eq!(delete(&r, &format!("/flows/{id}")).await.0, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn a_clear_selects_by_provenance_like_every_other_endpoint() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    store.insert(FlowBuilder::new().uri("http://live.example.com/").status(200).build());
+    let r = router_with(store);
+
+    let document = {
+        let source = Arc::new(Store::new(1_000_000, 64));
+        source.insert(FlowBuilder::new().uri("http://from-file.example.com/").status(200).build());
+        export_bytes(&router_with(source)).await
+    };
+    assert_eq!(post(&r, "/flows/import", document).await.0, StatusCode::OK);
+
+    let (status, value) = delete(&r, "/flows?source=nonsense").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "a clear must never guess what it removes");
+    assert_eq!(value, "source must be captured or imported");
+    assert_eq!(json(&r, "/flows").await.1.as_array().unwrap().len(), 2);
+
+    let (_, result) = delete(&r, "/flows?source=imported").await;
+    assert_eq!(result, json!({ "removed": 1 }));
+
+    let (_, listed) = json(&r, "/flows").await;
+    assert_eq!(listed.as_array().unwrap().len(), 1);
+    assert_eq!(listed[0]["uri"], "http://live.example.com/", "the live capture is untouched");
 }

@@ -100,8 +100,9 @@ by retained bytes, either kind"]
     <code>*</code> because the native app's webview is a cross-origin client, and justified it on
     two grounds: the surface is <strong>loopback-bound</strong>, and everything it exposes is
     <strong>equally reachable with <code>curl</code></strong>. The grant advertised
-    <code>GET, OPTIONS</code> because the API was read-only. Import is the first method that
-    changes capture state, so the grant now advertises <code>GET, POST, OPTIONS</code>.</p>
+    <code>GET, OPTIONS</code> because the API was read-only. Import was the first method that
+    changes capture state and clearing (<a href="../use-cases/web-ui.html#uc-7">UC-7</a>) the
+    second, so the grant now advertises <code>GET, POST, DELETE, OPTIONS</code>.</p>
     <div class="callout">
       <p><strong>Both of DEC-12's grounds still hold, which is the whole argument.</strong> The
       bind address is unchanged, and <code>POST /flows/import</code> is as reachable with
@@ -114,8 +115,9 @@ by retained bytes, either kind"]
     </div>
     <p>The epic's own plan scheduled this widening with the
     <code>DELETE</code> work, assuming that would be the first mutating method. Import landed
-    first, so the widening landed with it and <code>DELETE</code> joins the same list — a change
-    of placement, not of reasoning.</p>
+    first, so the widening landed with it and <span class="badge id">E-EXPORT.W4</span> added
+    <code>DELETE</code> to the same list on the same argument — a change of placement, not of
+    reasoning. The list is now closed for this epic: no further method changes capture state.</p>
 
     <h2 id="refusal">All-or-nothing, and why the store is never the thing that cleans up</h2>
     <p>Import is the first endpoint taking untrusted <em>structured</em> input from a client, so

@@ -8,7 +8,7 @@ use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
 use crate::event::FlowEvent;
-use crate::flow::{BodyRec, Flow, FlowSource, Header, NotCapturedReason};
+use crate::flow::{BodyRec, Flow, FlowId, FlowSource, Header, NotCapturedReason};
 use crate::store::FlowPage;
 
 /// The timestamp format every projection puts on the wire, defined once so the
@@ -200,6 +200,12 @@ pub fn sse_event(event: &FlowEvent) -> (&'static str, Value) {
         FlowEvent::FlowEvicted { flow_id } => {
             ("evicted", json!({ "flow_id": flow_id.to_string() }))
         }
+        FlowEvent::FlowsCleared { flow_ids } => (
+            "cleared",
+            json!({
+                "flow_ids": flow_ids.iter().map(FlowId::to_string).collect::<Vec<_>>(),
+            }),
+        ),
         FlowEvent::ConnectionSeen { authority } => {
             ("connection", json!({ "authority": authority }))
         }
@@ -343,6 +349,16 @@ mod tests {
         let (name, data) = sse_event(&FlowEvent::FlowEvicted { flow_id: flow.id });
         assert_eq!(name, "evicted");
         assert_eq!(data["flow_id"], flow.id.to_string());
+
+        let other = FlowBuilder::new().uri("http://y/").build();
+        let (name, data) =
+            sse_event(&FlowEvent::FlowsCleared { flow_ids: vec![flow.id, other.id] });
+        assert_eq!(name, "cleared");
+        assert_eq!(
+            data,
+            json!({ "flow_ids": [flow.id.to_string(), other.id.to_string()] }),
+            "the batch arrives as one event carrying every id that left"
+        );
 
         let (name, data) =
             sse_event(&FlowEvent::ConnectionSeen { authority: "example.com:443".into() });
