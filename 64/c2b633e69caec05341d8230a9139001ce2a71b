@@ -1,0 +1,66 @@
+schema: test/v2
+level: working-unit
+epic: E-EXPORT
+wu: E-EXPORT.W7
+branch: wu/export/curl-in
+tests:
+  unit:
+    count: 51
+    covers: "src/api/curl.rs (48, incl. 4 proptests) in five modules. tokenizer (13): whitespace splitting and quoted joins; the single-quote idiom 'it'\\''s'; the four double-quote escapes with $HOME kept literal because the command is data, not a script; bare backslash; backslash-newline continuation inside and outside quotes including CRLF from a Windows paste; adjacent quoted segments forming one word; every ANSI-C escape incl. octal, \\U, an unknown escape kept literal as bash keeps it, a raw \\xff byte surviving because the tokenizer works on bytes, and - added by the review round, written red first - an escape naming no character (\\uD800, \\U00110000) kept literal WITH the digits it consumed, matching a real bash; an octal escape of one, two or three digits with the low byte kept (\\7, \\101, \\777, \\0 - added by round 3, pinning the arm now routed through the shared digit reader); an empty quoted word is a word; every unterminated form refused; a trailing backslash kept. flags (16): both URL spellings; the three method rules (GET, POST when a body flag is present, -X wins) with the method kept as typed; -d '' as a POST with an Empty body; header order and value trim with curl's three header forms (Name: v, Name; for empty, Name: for send-nothing); the five data spellings joined with &; --data-raw @ literal versus the four spellings that read a file, each refused; cookies joined into one header and a jar file refused; basic auth expanded with the exact base64 and the no-password refusal; --compressed's exact value; expansions keeping their place among typed headers with Cookie last; NO runtime default invented (asserted as an empty header list on a -d request); -- ending the flags; short clusters and attached values (-sSkL -XPOST -HX-A:1 -d'a=1'); all 55 ignored spellings in one command yielding a flow identical to the plain one; an ignored flag's value never taken as the URL. refusals (9): one per row of the plan's refusal table, each asserting both the variant and its Display text - empty, not-curl (with curl, /usr/bin/curl, ./curl and curl.exe accepted), ten unsupported flags by name, eight value-taking flags missing their value plus -X '', no URL and a second URL, five non-absolute URLs, header @file / no colon / no name, a non-UTF-8 URL or header refused naming the field while a --data-binary $'\\xff\\xfe' body carries the bytes, and the Windows cmd shape refused as a stray ^. shapes (5): a Chrome bash command with continuations, $'...' body and --compressed asserting the whole request; Firefox; Safari; the literal toCurl outputs ui/src/flow.test.ts pins; the flow marked Imported, no response, no duration, HTTP/1.1, stamped at or after a captured instant. properties (5): the test-only Rust mirror of toCurl reproducing the TS file's pinned strings (the anchor that stops the mirror drifting silently); a_flow_rendered_by_to_curl_parses_back_to_itself over generated methods, URLs, headers with quotes/spaces/colons in their values, and bodies incl. one with quotes, backslashes and a newline - the generator excludes the two shapes where toCurl's own output is lossy as curl reads it (a blank header value, a GET with a body), stated beside it; never-panics over arbitrary text, arbitrary bytes, and a curl-shaped near-miss built from the parser's own vocabulary with values missing, doubled, attached, quoted, unterminated and malformed. src/api/routes.rs (3): ?format=har and ?format=curl each reach their parser and answer {imported:1} with the pasted row newest and status null; an unrecognised format is refused naming format and stores nothing; three refused commands (unsupported flag, second URL, non-UTF-8 URL) each answer 400 with the named token and leave the capture unchanged. The existing import helper delegates to the new query-carrying one so every W3 handler test runs unchanged against the dispatching handler."
+  integration:
+    count: 3
+    covers: "tests/api.rs over the real axum router - this WU's bounded contract, the parser reached through the HTTP a client speaks. a_pasted_curl_command_lands_as_a_request_only_flow_marked_imported posts the Chrome-shaped fixture (continuations, -H lines, a $'...' body with an embedded quote, --compressed) to /flows/import?format=curl and reads the result back through every endpoint: the listing row (POST, the URL, source imported, status and duration null, request_body_state captured), the detail's request headers in order including the expanded Accept-Encoding, the request body bytes with their content-type, the response body endpoint answering 404 because there is no response leg, and the bus delivering a 'request' event carrying the new id - a pasted command lands exactly like a request the proxy saw. a_pasted_command_is_selected_by_provenance_beside_a_har_import imports a real export into a store holding a live flow, then pastes a command, and asserts ?source=imported returns all five with the pasted one newest, ?source=captured returns only the live row, and ?format=har still imports an empty document as {imported:0} - the HAR door unchanged under its own name. a_refused_curl_command_names_its_fault_and_leaves_the_store_untouched walks nine refusals (empty, wget, -F, -T, --data-urlencode, a second URL, -d @file, no URL, an unterminated quote from a truncated paste) each answering 400 with the expected token in the body and the listing byte-identical before and after, then an unknown ?format= refused naming format with the store still unchanged."
+  e2e:
+    waived: "The epic's own tests/e2e_export.rs step 6 owns this flow end to end - boot the engine, post a browser-shaped curl command to /flows/import?format=curl and then one carrying an unsupported flag, asserting the first appears as a request-only flow marked imported and the second is refused naming the flag - and the app half (a user pasting into the target W5 designed) rides the WebDriver suite after W6 builds it. A WU-level e2e would boot the same engine on ephemeral ports to assert what that step already asserts; the parser touches no socket and no file, so nothing about it is only observable through a running process. Same waiver reasoning W1-W4 recorded, and the epic gate re-walks it."
+note: >-
+  E-EXPORT.W7 delivers the inverse of the app's copy-as-curl: POST /flows/import?format=curl reads
+  one pasted curl command as one request-only flow marked imported. Three things carry the WU.
+  First, the accepted set is the one the epic plan settled at review (question 8) and it is the
+  code's single lookup: Flag::lookup's arms ARE the plan's accepted and ignored tables, so a token
+  in neither is refused by name - never guessed - because a silently dropped -F or -G yields a
+  flow subtly unlike the request the user pasted, which is the one failure a paste target must
+  not have. Second, the header-in-disguise rule: -u, -b and --compressed expand into the header
+  each one IS, while curl's runtime defaults (Host, User-Agent, Accept, Content-Length, the
+  form Content-Type it assumes for -d) are never invented - the flow records the command, not one
+  tool's runtime, and this is also what makes toCurl -> parse an exact inverse rather than one
+  that grows headers on every trip. Third, the round trip is proven as a property although toCurl
+  is TypeScript: a test-only Rust mirror drives the proptest, and that mirror is anchored to the
+  literal strings ui/src/flow.test.ts already pins, so it cannot drift from the TS without a test
+  naming the drift. Writing the property found the inverse's boundary - a blank header value
+  (toCurl writes -H 'Name: ', which curl reads as send-no-such-header) and a GET carrying a body
+  (curl POSTs it) - and the parser was NOT bent to match: it agrees with curl, the generator
+  excludes both shapes with the reason beside it, and DEC-32 records the boundary. The tokenizer
+  is written in the crate over bytes rather than pulled in: the subset is small, every refusal
+  needs its own wording, bash's $'...' (which Chrome emits for any body with a control character
+  or a !) is outside what shell-words crates read, and bytes let a $'\xff' body byte survive while
+  every non-body field is UTF-8-checked where it is read. The command travels as the raw request
+  body, not JSON-wrapped, because a wrapper adds a quoting layer to an input whose whole
+  difficulty is quoting. The refusal shape is W3's plain-text 400 - the shape W5's design run
+  pinned as its one blocked-on before this parser existed and designed the paste target's Notice
+  to render verbatim - so every reason is one lowercase sentence with the offending token quoted.
+  One handler-level fact worth naming: a test expectation in the integration table was wrong on
+  first writing - curl 'http://a/ -H 'A: 1' is an unterminated quote (a truncated paste), not a
+  second URL - and the test was corrected to the parser's correct answer, not the parser to the
+  test. Suite green: 219 lib unit, 35 tests/api.rs, 3 tests/ca.rs, 6 tests/e2e_capture.rs,
+  4 tests/e2e_h2.rs, 0 failures; cargo fmt --check and clippy -D warnings clean across all targets.
+  Round 1 of the review confirmed two findings and both are fixed in 9ed23e5: push_code_point
+  dropped the hex digits take_radix had consumed when the code point named no character, so
+  $'\uD800' came out as the two bytes \u where bash keeps all six - take_radix now returns the
+  digits and the writer puts them back, with the regression test named above; and saw_data_flag
+  was redundant with the data vector, which -d '' still pushes an empty element into, so the
+  method default now reads data.is_empty(). Suite green after the fix: 219 lib unit, 35
+  tests/api.rs, 3 tests/ca.rs, 6 tests/e2e_capture.rs, 4 tests/e2e_h2.rs, 0 failures.
+  Round 2 re-reviewed the fix as unreviewed code and confirmed one nit, fixed in a9d9f20: the
+  digit reader accumulated the value by hand while collecting the same digits, so the value is
+  now u32::from_str_radix over the collected buffer - identical on every reachable input (digits
+  are filtered by is_digit(radix), at most eight hex digits fit a u32, and an empty buffer maps to
+  None as before). Four candidates were refuted by verification, including a per-escape allocation
+  claim measured at ~30 ns per escape. Suite green after the fix: 219 lib unit, 35 tests/api.rs,
+  0 failures; the same tests cover the rewritten helper, since every escape test exercises it.
+  Round 3 re-reviewed a9d9f20 and confirmed two nits, both fixed in e295f23: the octal escape
+  arm still accumulated by hand beside take_radix, so ansi_c_quoted now peeks for an octal digit
+  before consuming the backslash's successor and reads one to three digits through the same
+  reader; and low_byte's u8::try_from(value & 0xff).unwrap_or(u8::MAX) carried a fallback a
+  mask to eight bits can never reach, so it reads value.to_le_bytes()[0]. The from_utf8 .ok()
+  fallback candidate was refuted as the idiomatic panic-free shape under the pinned unwrap_used
+  lint. Suite green after the fix: 220 lib unit, 35 tests/api.rs, 0 failures.
