@@ -1,0 +1,18 @@
+schema: test/v2
+level: working-unit
+epic: E-REDESIGN
+wu: E-REDESIGN.W9
+tests:
+  e2e:
+    waived: "Design WU — it touches no product code and no screen (git diff epic/redesign..HEAD -- ui/src/ is empty). The E-DFLOW.W9 precedent the epic plan cites for exactly this case, and the same waiver W1/W3/W5/W7 carry. UC-ONBOARD's e2e is rewritten in W10 against the built screens; there is no user-visible surface here for a spec to exercise."
+  integration:
+    waived: "Same precedent. There is no bounded contract in code to exercise — the contract IS the design run, and its shape is judged mechanically by verify-doc (design-run artifact: 11 items, receipt coverage against the rulebook on disk, elements data-map/data-key, mockup mounted-not-drawn, the 13 hard-rule predicates) plus the render gate below."
+  unit:
+    waived: "Same precedent. One HTML artifact and one WU plan have no unit under them. The screen's real unit tests land in W10 beside the rewritten Onboarding.tsx and ProxyCloseDialog.tsx, asserting the states this run declares."
+verified:
+  - "cargo xtask verify-doc docs/work/2026-09-04-redesign-run-9-setup-quit.html — green as design-run: receipt 17/17 soft (14 satisfied, 1 inherited, 1 satisfied-via-proposal, 1 blocked), hard rules 13/13 machine-checked, design-allow 0 live suppressions. Verified with the run OPEN so every predicate ran, then archived per close step 4."
+  - "cargo xtask verify-doc docs/work/2026-09-04-redesign-w9-plan.html — green as wu-plan."
+  - "node scripts/check-render.mjs on the run — the mockup opens over file:// in headless Chrome with a clean console: 6 mounts, 17 buttons, every reuse verdict mounted from window.Trawler rather than drawn."
+  - "cargo xtask design-scope epic/redesign HEAD — exactly 1 design artifact to judge, against rulebook aeff5b0."
+  - "pre-commit gate0 (fmt + clippy -D warnings) green on the commit."
+note: "Nine verify-doc failures were found and fixed before this note was written, none of which my hand-checks had caught: data-key slugs must be kebab-case (copy-text, not copytext) or four components resolve to nothing and the mockup reads as hand-drawn; two supporting tables sat inside data-item=elements, so the gist predicate demanded a gist on all 30 rows; three review rows cited their contract in prose rather than <code>, and the blind-run row named no stage (now `nothing`, the sanctioned answer); the mockup's own .a-stage CSS hand-wrote letter-spacing .04em instead of tracking-label, breaking both type-tokens-only and uppercase-mute-labels; and the data-wire element needed font-mono on itself. Recorded because the earlier claim in this session that the cargo gates could not run here was wrong — cargo is absent from PATH but present via $HOME/.cargo/env, which the hooks source."
