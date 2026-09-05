@@ -14,11 +14,4 @@ changes:
     tier: T2
     action: updated
     distills: "UC-4's five observable gains, which is the epic plan's own assignment to this WU — W3 deliberately deferred the wording so one use-case row is not split across two Working Units. Three landed in W2 (the reason phrase, the dot's 24px target, its accessible name) and two here (the row's keyboard path, the two absences told apart), all five now stated in one place with why each is a contract change rather than a restyle. Also absorbs the truncation as KNOWINGLY UNMET: a reader of the use case should not have to open a design run to learn that a rulebook rule reading as absolute is broken on this screen, or that the full value stays reachable. The provenance callout is updated to name what the e2e now actually pins, rather than what it pinned before the UC-4 block existed."
-  - path: docs/design-rules/design-rules-index.html
-    tier: T2
-    action: unchanged
-    distills: "deliberately not edited. The wrap-not-truncate clause this screen needs is W11's by W3's own escalation and by DEC-14 (a rulebook grows at distillation, never mid-run), and the epic holds the rulebook frozen at aeff5b0 so all four screen runs pin an unchanged substrate. Verified unmoved: git hash-object still aeff5b0fb4dea94ab5f0b7c385b8188786666e8a."
-  - path: docs/decisions/
-    tier: T2
-    action: unchanged
-    distills: "no decision record added, and the absence is the point. This WU made no decision — every call it implemented was already decided in W3's closed run, and the one open rulebook question belongs to W11. A record here would duplicate a design run downward, which is the failure the tier model exists to prevent."
+note: "TWO T2 DOCS WERE DELIBERATELY NOT TOUCHED, and both absences are decisions rather than oversights. (1) docs/design-rules/design-rules-index.html: the wrap-not-truncate clause this screen needs is W11's by W3's own escalation and by DEC-14 (a rulebook grows at distillation, never mid-run), and the epic holds the rulebook frozen so all four screen runs pin an unchanged substrate. Verified unmoved — git hash-object is still aeff5b0fb4dea94ab5f0b7c385b8188786666e8a, matching W3's receipt pin. (2) docs/decisions/: no record added, and that is the point. This WU made no decision — every call it implemented was already decided in W3's closed run, and the one open rulebook question belongs to W11. A record here would duplicate a design run downward, which is the failure the tier model exists to prevent."
