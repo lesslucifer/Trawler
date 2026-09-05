@@ -394,7 +394,7 @@ on your first flow.
             </td>
             <td><pre class="tb">curl -x http://127.0.0.1:7420 \
   https://example.com/
-                        copied</pre>Per its TSDoc: rest · hover · focus · confirming (~2 s) · native drag-select passes through.<br><strong>Carries two hard rules for this screen:</strong> <code>mono-for-wire-data</code> (it renders <code>font-mono</code>) and <code>wrap-not-truncate</code> (<code>break-all</code>, never an ellipsis) — the two commands are the screen's only verbatim payloads, declared <code>data-wire="shell command"</code> at the mockup.</td>
+                        copied</pre>Per its TSDoc: rest · hover · focus · confirming (~2 s) · native drag-select passes through.<br><strong>Carries two hard rules for this screen:</strong> <code>mono-for-wire-data</code> (it renders <code>font-mono</code>) and <code>wrap-not-truncate</code> (<code>break-all</code>, never an ellipsis) — the two commands are the only verbatim payloads across both surfaces, and each mockup zone that renders one — <code>m-steps</code> for setup, <code>m-dialog</code> for the dialog — declares <code>data-wire="shell command"</code>. The remote mode marks nothing: its steps are prose, not a payload.</td>
           </tr>
           <tr data-key="button">
             <td><strong>Button</strong><br>T1</td>
@@ -622,7 +622,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
         <div class="a-zone font-mono" id="m-steps" data-wire="shell command"></div>
         <div class="a-rule"></div>
         <div class="mb-chrome-gap font-ui text-label uppercase tracking-label text-ink-mute">quit dialog · zones E–H — ours / foreign (a local proxy is set)</div>
-        <div class="a-zone" id="m-dialog"></div>
+        <div class="a-zone font-mono" id="m-dialog" data-wire="shell command"></div>
         <div class="a-rule"></div>
         <div class="mb-chrome-gap font-ui text-label uppercase tracking-label text-ink-mute">quit dialog · zones E–H — remote (nothing local to act on)</div>
         <div class="a-zone" id="m-dialog-remote"></div>
@@ -1104,6 +1104,16 @@ soft:
           <td><strong>Tier-3 review, round 4:</strong> the <code>Checkbox</code> warrant cited <code>SegmentedControl</code>'s @avoid for a phrase that is its @use</td>
           <td><code>elements</code> — the trace now says the entry falls outside its own <span class="use">@use</span> ("an always-visible mutually exclusive view/mode switch"), and names what its @avoid actually bars</td>
           <td><code>SegmentedControl</code>'s <span class="use">@use</span> / <span class="avoid">@avoid</span> — the flow's "read @avoid first" only works if a citation names the right field</td>
+        </tr>
+        <tr>
+          <td><strong>Tier-3 review, round 9 (independent):</strong> the dialog's <code>CopyText</code> renders <code>OFF_CMD</code> verbatim, but only the setup zone declared <code>data-wire</code> — and the Elements prose asserted both were declared</td>
+          <td><code>elements</code> · <code>mockup</code> — <code>m-dialog</code> now declares <code>data-wire="shell command"</code>, and the prose names which zone marks which payload and why the remote mode marks none. The zone carries <code>font-mono</code> beside the marker because the predicate is lexical — it wants both on the same tag and cannot see that <code>CopyText</code> already renders mono (<code>CopyText.tsx:46</code>); the dialog's own <code>font-ui</code> and <code>font-serif</code> classes win in the cascade, exactly as they already do inside <code>m-steps</code></td>
+          <td>the rulebook's <strong>wire-marker</strong> callout — <code>data-wire</code> on every payload element, which the Tier-1 gate cannot enforce: <code>check_wire_data</code> fails only when the attribute is absent document-wide, so one marker satisfied it while a second payload went unmarked</td>
+        </tr>
+        <tr>
+          <td><strong>Tier-3 review, round 9 — accepted, not fixed:</strong> the remote mode's <em>quit</em> mounts without <code>frame="bare"</code>, so it renders bordered where zone H's rule says the exit is bare in every mode</td>
+          <td><code>mockup</code> — <strong>waived</strong> at the author's direction as mockup fidelity rather than design substance. The written design is unambiguous and W10 builds from it: zone H's rule, Frame B's <em>&#10007; a mode-dependent button set</em>, and both mode rows say the exit is the same bare button in the same corner</td>
+          <td>the rulebook's <code>data-ink-first</code> — recorded so W10 builds the rule, not the specimen</td>
         </tr>
       </tbody>
     </table>
