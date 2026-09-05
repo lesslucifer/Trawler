@@ -1,0 +1,22 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W8
+branch: wu/redesign/body-viewer-build
+changes:
+  - path: docs/work/2026-09-05-redesign-w8-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan, written before the code — requirement, mapping, expected result (ten observable rows) and a test plan concrete at all three levels with no waivers, since this WU changes rendered behaviour on a use-case surface. Also records the two things the design left to this WU by name: bodyNotice's raw byte count (a body.ts change the design refused to make silently) and the seam with W5/W6, whose design run is NOT merged into the epic and was deliberately not read."
+  - path: docs/work/2026-09-05-redesign-w8-result.html
+    tier: T3
+    action: added
+    distills: "The WU result — delivered against all ten expected-result rows, with five deviations recorded rather than absorbed: the third bodyNotice sentence the null-size case forced, the two e2e origin routes the new contracts needed, the data-testid the two-pane layout forced (chosen over adding a prop to registry Section, which this WU must consume unchanged), the wholesale rewrite of BodyViewer.test.tsx, and two existing e2e assertions whose wording changed with the tree. Carries a design-fidelity table stating the three places the design said do-not and where the code proves it did not."
+  - path: docs/work/2026-09-04-redesign-plan.html
+    tier: T3
+    action: updated
+    distills: "Two WU blocks. W8's records what landed — all nine members wired, 238 -> 129 lines, both UC-5 gains proven end to end, and the leg leaving the pane with the panel's zoning left untouched. W6's records what this WU did NOT fix, which matters more: its row promises the sticky-copied bug is gone, and W8 fixed only the BODY pane's copy — the panel's own copy-as-curl still carries the never-reverting useState, and the panel's own 'none'/'loading…' are still bare paragraphs. A reader of that row would otherwise take a half-fixed defect for a whole one."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "UC-5's contract, updated to what the app now does — this is the distillation W7 deliberately deferred to build time, because a design does not move a contract. Absorbed: the two gains the epic charged to this screen (a truncated body STATES its truncation with both sizes and the way out; xml is a real dispatch, not a fall-through), plus the wording that went stale with them — JSON is no longer 'a collapsible tree' and XML no longer 'pretty-printed text' but both navigable foldable source; both legs are on screen at once, each with its own mode; form values are individually copyable; the never-blank states are seven, not five, one distinct sentence each with warn tone on the one that is a fault. The provenance callout names the two new e2e contracts and the two-leg layout, so the claims stay traceable to the specs that pin them."
+t2_note: "docs/use-cases/web-ui.html carries this WU's T2 truth — see its entry above. UC-5's two gains are observable in the running app as of this tip, which is why they land here rather than at W7: a design does not move a contract, a build does. No decision record is owed (nothing here established a standing rule — the leg's placement is the panel's reasoning and lands with W5/W6), and design-rules-index.html needs no edit (design run #9 recorded zero proposals, and the one sizing token the build uses already ships with an existing consumer)."
