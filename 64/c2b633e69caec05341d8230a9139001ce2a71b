@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-EXPORT
+wu: E-EXPORT.W7
+base: 358c7f131d1e070ef438a1e74b478f496a56a659
+tip: 64c2b633e69caec05341d8230a9139001ce2a71b
+diff_sha256: abdf2a50e94038251c552a70c36ff8f584af2775f13c522216f4eeec7f9b37a6
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-09-05
