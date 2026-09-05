@@ -1,0 +1,50 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W5 (wu/export/controls-design) -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W5
+branch: wu/export/controls-design
+base: ae1cc8340f822f2fa221b05b0e56ce218287ced5
+head: d6d126855d1cea324771a92310cffca9ea954a3c
+diff_sha256: a6693c04b75c270f3e8ea82e520f69ce4d7d8fcfeaed3aa329d610a47f0703b2
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 10, verified: 8, waived: 0 }
+rounds:
+  - round: 1
+    tip: 6a25aae999a6c76f26466fad5aeea393063abd30
+    found: 7
+    confirmed: 4
+    refuted: 3
+    note: "six finders (five dimensions + design), four adversarial verifiers on the contested claims"
+  - round: 2
+    tip: f81aeecf69
+    found: 3
+    confirmed: 3
+    refuted: 0
+    note: "design dimension returned clean; correctness+simplification found the leftovers of round 1's own fix"
+  - round: 3
+    tip: d6d126855d1cea324771a92310cffca9ea954a3c
+    found: 1
+    confirmed: 1
+    refuted: 0
+    note: "final verification: all round-2 fixes correct and complete; one stale phrase in the carried-forward test note, corrected"
+confirmed:
+  - "the rulebook write-back added import and clear rows the run never proposed - the KB's own growth mechanism is propose-then-confirm, and the epic plan scoped that doc to the export answer (important, fixed: reverted, then relanded as the one proposed row)"
+  - "the doc/v1 note justified deferring the write-back by calling a T2 design-rules edit rule-bearing - DEC-14 makes KB paths non-rule-bearing and workflow.html scopes Reviewed-By to T0/T1 (important, fixed: landed same-session, untrailered)"
+  - "the run doc's Proposals row and the doc/v1 note disagreed on whether this WU discharges the lexicon obligation (important, fixed: the note was wrong, the row was right)"
+  - "the substrate count read 18; node scripts/design-registry.mjs reports 24, cited twice including inside the AskDialog warrant (nit, fixed)"
+  - "the Elements tree credited the header flow count to TonedText; ui/src/App.tsx renders a plain span (nit, fixed)"
+  - "dead CSS .a-paste/.a-ta for zone F, which the mockup never assembles (nit, fixed)"
+  - "the mockup's lead sentence claimed the paste target was screen-owned while the stubbed list said it was not (nit, fixed)"
+  - "dead CSS .a-ask-t, the same leftover class missed by the first sweep (nit, fixed)"
+refuted:
+  - "visual-weight-follows-goals unearned - refuted: the rule binds:screen and does not require per-control weight tiers; the receipt applies it past goal 1 via Tune T4"
+  - "absence-names-itself asserts a contract never given - refuted: clear_flows has a real 400+reason path via bad_request, covered by an existing unit test"
+  - "the WU is incomplete without a wu-result doc - refuted: E-REDESIGN.W3, a merged design-only WU, attested its mr/v1 report at the design-run doc itself"
+design:
+  artifacts: [docs/work/2026-09-05-export-run-10-capture-controls.html]
+  rulebook: e97069dba343d1b6ee2d1a633ff554c7750d5e74
+  findings: { found: 5, verified: 2, waived: 0 }
+  verdict: PASS
+  note: "the run's receipt legitimately pins aeff5b0, the blob it CLOSED under; the tip ships a newer rulebook because this WU's own distillation added the export row after the close. DEC-14 and doc.rs check_pin both exempt an archived run - staleness binds an OPEN run only. Round 2's design pass returned zero findings."
+verdict: PASS
+date: 2026-09-05
