@@ -74,7 +74,7 @@ flowchart LR
     sse --> clients["UI · browser · curl"]
     rest --> clients
       </pre>
-      <div class="caption">The capture path knows nothing about clients. The <strong>Store</strong> is the single source of truth: it owns the broadcast bus and emits a lifecycle event on every write and eviction. The control API is a subscriber and reader; it also <em>ingests</em> — HAR import inserts flows the proxy never saw, marked as imported, through the same ring rules — but it never rewrites or reinterprets what the capture path recorded.</div>
+      <div class="caption">The capture path knows nothing about clients. The <strong>Store</strong> is the single source of truth: it owns the broadcast bus and emits a lifecycle event on every write, eviction and clear. The control API is a subscriber and reader; it also <em>ingests</em> and <em>removes</em> — HAR import inserts flows the proxy never saw, marked as imported, through the same ring rules, and a clear takes out what the listing selects — but it never rewrites or reinterprets what the capture path recorded.</div>
     </div>
 
     <h2 id="lifecycle">Request / response lifecycle</h2>
@@ -113,7 +113,7 @@ sequenceDiagram
       <thead><tr><th>Decision</th><th>What &amp; why (short)</th></tr></thead>
       <tbody>
         <tr><td>Library + thin binary</td><td>Core is a real library; the binary just launches it — embeddable, testable without a process.</td></tr>
-        <tr><td>Store owns the event bus</td><td>Events are emitted where state is mutated, so one place defines what "captured / evicted" means.</td></tr>
+        <tr><td>Store owns the event bus</td><td>Events are emitted where state is mutated, so one place defines what "captured / evicted / cleared" means — and a user's clear is a distinct event from the ring's own eviction.</td></tr>
         <tr><td>Per-exchange correlation</td><td>Request↔response is matched with per-exchange handler state, not a shared request-id map.</td></tr>
         <tr><td>Tunnel-setup guard</td><td>The proxy skips the CONNECT line itself, so HTTPS setup never records a bogus flow. See <a href="core-technical-design.html#cert-model">design</a>.</td></tr>
         <tr><td>Byte-weighted eviction</td><td>The in-memory ring evicts by retained body bytes, not flow count, so memory — not row count — is the bound.</td></tr>
