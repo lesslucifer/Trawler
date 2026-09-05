@@ -433,14 +433,14 @@ fn ansi_c_quoted(bytes: &mut ByteStream<'_>, word: &mut Vec<u8>) -> Result<(), C
 /// The number the next digits spell, and the digits themselves — kept so an
 /// escape that names no character can be put back exactly as it was typed.
 fn take_radix(bytes: &mut ByteStream<'_>, radix: u32, max_digits: usize) -> (Option<u32>, Vec<u8>) {
-    let mut value: Option<u32> = None;
     let mut digits = Vec::new();
     for _ in 0..max_digits {
         let Some(digit) = bytes.next_if(|b| (*b as char).is_digit(radix)) else { break };
         digits.push(digit);
-        let digit = (digit as char).to_digit(radix).unwrap_or(0);
-        value = Some(value.unwrap_or(0).wrapping_mul(radix).wrapping_add(digit));
     }
+    let value = std::str::from_utf8(&digits)
+        .ok()
+        .and_then(|spelled| u32::from_str_radix(spelled, radix).ok());
     (value, digits)
 }
 
