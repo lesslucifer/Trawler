@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: d6d126855d1cea324771a92310cffca9ea954a3c
+base: ae1cc8340f822f2fa221b05b0e56ce218287ced5
+tier: key
+signer: vuluu
+report: docs/work/2026-09-05-export-run-10-capture-controls.html
+report_sha256: 3b2deccecc13a28e0dd3804b802927644e753bf9ae311ae88f5a0bfef7436b8e
+date: 2026-09-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEB3KB2FZlTmQTMqWg2mX6Nwfy2P15qveuu8JfSEtDTPHKDjncivkhI2aU
+  i3SooP9od3NiaDOiUFyJvHFdXIX88I
+  -----END SSH SIGNATURE-----
