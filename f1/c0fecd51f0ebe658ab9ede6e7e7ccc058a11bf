@@ -1,0 +1,43 @@
+schema: test/v2
+level: working-unit
+epic: E-EXPORT
+wu: E-EXPORT.W4
+branch: wu/export/clear
+tests:
+  unit:
+    count: 14
+    covers: "src/store.rs (7 tests + the extended ring_accounting proptest) - remove_matching taking exactly the filtered rows while the others stay listable and gettable; the re-weighing made OBSERVABLE rather than read off total_bytes alone, by following a partial clear with an insert that fits under the corrected total and would have evicted under the stale one (this is the assertion that would catch the byte arithmetic being wrong in a way an equality check on a private field cannot); a default filter clearing a store the cap has already reduced to a single row, which is the one place removal deliberately differs from eviction (evict keeps the last row alive so an oversized flow stays inspectable, and a clear that left a row behind would not be a clear); remove-by-id returning true once then false, and the surviving order still newest-first after a row is taken from the MIDDLE, which is the case eviction never exercises because it only pops the front; the batch event carrying every id that left with exactly one event for the batch and NOTHING at all for an empty selection (a no-op is not news a subscriber redraws for); removing one flow announcing it as a batch of one, and a missing id announcing nothing; and the connection tally surviving both doors, extending the existing note_connection assertion to removal. ring_accounting gained a removals dimension rather than a second proptest beside it, per the epic plan's explicit instruction: inserted flows now carry one of three hosts so a host filter selects a genuine subset, and generated instructions interleave a filtered clear, a remove-by-id of the oldest row, and a remove of an id that was never there, alongside the inserts, imports and evictions the property already drove. The invariant is unchanged - the sum of retained_bytes over what the ring holds equals total_bytes - with one assertion added that list() and the map agree on length, which is what catches an order left holding a dead id. The generator was PROVEN to reach the removal path rather than assumed to: a temporary inverted assertion on a removal counter was run and failed with a nonzero count, so removals demonstrably fire and demonstrably remove rows, and the scaffolding was then stripped. src/api/routes.rs (5) - the count and the emptied listing; the filter reaching the store and an empty match answering 200 with zero rather than 404 (settled question 6: the request expresses an end state and that state is already true); an unrecognised source REFUSING the clear and removing nothing, which is the one refusal that matters most on a destructive route because silently acting on a different set than the caller named is unrecoverable; the id route's three answers (200 with the same envelope, 404 for an id the ring does not hold, 400 for one that is not a flow id); and the tally read back through /stats after a clear, so 'empty, not restarted' is asserted at the endpoint a client actually reads. src/api/mod.rs (1) - DELETE answers on /flows and /flows/{id} and does NOT answer on /flows/export or /flows/import, asserted because axum returns 405 either way and a method landing on the wrong path would regress in silence; and the existing preflight test's assertion widened to GET, POST, DELETE, OPTIONS. src/api/view.rs - the FlowsCleared SSE mapping asserted as a whole JSON value (event name cleared, a flow_ids array) rather than field by field, so the wire shape is pinned."
+  integration:
+    count: 4
+    covers: "tests/api.rs over the real axum router, which is this WU's bounded contract - the store's removal reached through the HTTP a client actually speaks. clearing_the_capture_empties_the_listing_and_tells_the_stream subscribes to /stream BEFORE the delete, then asserts the count, the emptied listing, that the frame contains event: cleared, that 'event:' appears exactly once in it (the batch claim, not just the presence of an event), and that /stats reports the same tally after. a_filtered_clear_removes_only_its_matches_and_leaves_the_rest_whole gives the survivor both a request and a response body and reads it back through all three of its endpoints after the clear, because 'the rest still list' is a weaker claim than 'the rest are still whole' and a removal that corrupted the map would satisfy the first. deleting_one_flow_and_the_three_ways_a_delete_is_refused walks 400 (malformed id), 404 (unknown id), 200-with-zero (a filter matching nothing), asserts nothing left the store on any of them, then deletes the real id and asserts the second attempt 404s. a_clear_selects_by_provenance_like_every_other_endpoint exports from one store and imports into another so the ring genuinely holds both kinds, refuses source=nonsense while asserting both rows survive, then clears source=imported and asserts the live capture is the one row left - the delete inheriting ?source= from the shared filter with no delete-specific code, the same construction guarantee the export relies on. Also extended rather than added: ui_shell_page_and_the_request_sequence_it_performs now asserts the debug shell wires 'cleared' into its refetch list."
+  e2e:
+    waived: "The epic's own tests/e2e_export.rs step 4 owns this flow end to end - boot the engine, drive real proxied traffic through the proxy at a local test server, subscribe to /stream, then DELETE /flows, asserting the listing empties, the subscriber receives the clear event, and the connection tally is unchanged. A WU-level e2e would boot the same engine on ephemeral ports to assert what that step already asserts against traffic that is real rather than fixture-built, and the app half (a user reaching the clear control) rides the WebDriver suite after W6. Same waiver reasoning W1, W2 and W3 recorded, and the epic gate re-walks it."
+note: >-
+  E-EXPORT.W4 delivers the ring's third door: DELETE /flows removing what the listing selects,
+  DELETE /flows/{id} removing one, and the clear announced on the bus. Three things carry the WU.
+  First, removal shares its arithmetic with eviction. Ring::unlink is private and is the only place
+  a flow leaves the ring: it removes from the map, subtracts what was ACTUALLY held rather than any
+  declared size, and rebuilds the order by retaining survivors. Eviction pops from the front and
+  could have subtracted as it popped; a filtered removal takes rows from the middle, so writing that
+  arithmetic a second time is exactly how total_bytes drifts from what the ring holds - and the
+  drift would be invisible until eviction started evicting the wrong rows. The two public doors
+  (remove_matching over a FlowFilter, remove over a FlowId) are thin over it. Second, an id is not a
+  listing predicate. FlowFilter gained no id field, because it is the listing rule and adding one
+  would make GET /flows?id=... a second, worse detail endpoint; so the id route addresses the ring
+  directly while still going through unlink, which is why the byte accounting cannot differ between
+  the two doors. Third, FlowsCleared is a new variant rather than a reuse of FlowEvicted, and it
+  carries the whole batch. Distinct because a clear is a user acting and an eviction is the ring
+  protecting itself - an interface that conflated them would announce 'capture cleared' every time
+  memory pressure dropped a row. Batched because clearing a full ring one event at a time would lag
+  every subscriber past the broadcast capacity, which is the exact failure sse_lagged exists to
+  report, and because a UI needs one list mutation rather than N. Removal deliberately has no
+  last-row floor, the one asymmetry with eviction, and that is asserted rather than left as a
+  comment. Two things outside the plan: the debug shell (src/api/ui.html) gained 'cleared' in its
+  refetch list, because without it a clear followed by silence would leave stale rows on screen
+  until the next capture - one word, asserted by the existing shell contract test, and not a
+  UI-rendering file under ui/src/ so no design citation is owed. And the CORS widening the plan owed
+  had already landed with W3's import: DEC-31 carried the argument and predicted DELETE would join
+  the list, so this WU added the method and turned that prediction past tense rather than writing a
+  second record making the same argument. Suite green: 167 lib unit, 31 tests/api.rs, 3 tests/ca.rs,
+  6 tests/e2e_capture.rs, 4 tests/e2e_h2.rs, 0 failures; cargo fmt --check and clippy -D warnings
+  clean.
