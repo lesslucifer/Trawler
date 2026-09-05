@@ -164,7 +164,6 @@ struct Command {
     headers: Vec<Header>,
     cookies: Vec<String>,
     data: Vec<Vec<u8>>,
-    saw_data_flag: bool,
 }
 
 impl Command {
@@ -232,7 +231,6 @@ impl Command {
                 if !raw && value.starts_with(b"@") {
                     return Err(CurlError::ReadsFile(spelled(name, &value)));
                 }
-                self.saw_data_flag = true;
                 self.data.push(value);
             }
             Flag::Cookie => {
@@ -304,7 +302,7 @@ impl Command {
         let body = self.data.join(&b'&');
         let method = self
             .method
-            .unwrap_or_else(|| if self.saw_data_flag { "POST" } else { "GET" }.to_owned());
+            .unwrap_or_else(|| if self.data.is_empty() { "GET" } else { "POST" }.to_owned());
         Ok(RequestRec {
             method,
             uri,
@@ -409,8 +407,8 @@ fn ansi_c_quoted(bytes: &mut ByteStream<'_>, word: &mut Vec<u8>) -> Result<(), C
                 Some(b'e' | b'E') => word.push(0x1b),
                 Some(escaped @ (b'\\' | b'\'' | b'"' | b'?')) => word.push(escaped),
                 Some(b'x') => match take_radix(bytes, 16, 2) {
-                    Some(value) => word.push(low_byte(value)),
-                    None => word.extend(b"\\x"),
+                    (Some(value), _) => word.push(low_byte(value)),
+                    (None, _) => word.extend(b"\\x"),
                 },
                 Some(b'u') => push_code_point(word, take_radix(bytes, 16, 4), b"\\u"),
                 Some(b'U') => push_code_point(word, take_radix(bytes, 16, 8), b"\\U"),
@@ -432,14 +430,18 @@ fn ansi_c_quoted(bytes: &mut ByteStream<'_>, word: &mut Vec<u8>) -> Result<(), C
     Err(CurlError::UnterminatedQuote)
 }
 
-fn take_radix(bytes: &mut ByteStream<'_>, radix: u32, max_digits: usize) -> Option<u32> {
+/// The number the next digits spell, and the digits themselves — kept so an
+/// escape that names no character can be put back exactly as it was typed.
+fn take_radix(bytes: &mut ByteStream<'_>, radix: u32, max_digits: usize) -> (Option<u32>, Vec<u8>) {
     let mut value: Option<u32> = None;
+    let mut digits = Vec::new();
     for _ in 0..max_digits {
         let Some(digit) = bytes.next_if(|b| (*b as char).is_digit(radix)) else { break };
+        digits.push(digit);
         let digit = (digit as char).to_digit(radix).unwrap_or(0);
         value = Some(value.unwrap_or(0).wrapping_mul(radix).wrapping_add(digit));
     }
-    value
+    (value, digits)
 }
 
 /// bash keeps the low byte of an over-long `\NNN`, so `$'\777'` is `0xff`.
@@ -447,10 +449,14 @@ fn low_byte(value: u32) -> u8 {
     u8::try_from(value & 0xff).unwrap_or(u8::MAX)
 }
 
-fn push_code_point(word: &mut Vec<u8>, code: Option<u32>, literal: &[u8]) {
-    match code.and_then(char::from_u32) {
-        Some(c) => word.extend(c.to_string().as_bytes()),
-        None => word.extend(literal),
+/// A surrogate or an out-of-range `\U` names no character; bash keeps the whole
+/// escape literal, digits included, and so does this.
+fn push_code_point(word: &mut Vec<u8>, (code, digits): (Option<u32>, Vec<u8>), marker: &[u8]) {
+    if let Some(c) = code.and_then(char::from_u32) {
+        word.extend(c.to_string().as_bytes());
+    } else {
+        word.extend(marker);
+        word.extend(digits);
     }
 }
 
@@ -528,6 +534,11 @@ mod tests {
         fn ansi_c_quoting_carries_a_raw_byte_and_an_escape_with_no_digits_stays_literal() {
             let got = tokenize(br"$'\xff\x'").expect("tokenizes");
             assert_eq!(got[0], [0xff, b'\\', b'x']);
+        }
+
+        #[test]
+        fn an_escape_naming_no_character_stays_literal_with_its_digits() {
+            assert_eq!(words(r"$'\uD800 \U00110000 \uzz'"), [r"\uD800 \U00110000 \uzz"]);
         }
 
         #[test]
