@@ -1,0 +1,24 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W4
+changes:
+  - path: docs/work/2026-09-05-redesign-w4-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan — requirement, mapping, expected result and test plan, plus two things this WU specifically needed: a table separating the rows W2 already spent (the four Fields, the dot, the status cell) from the rows that actually remained, read from the tip rather than from the epic plan's prediction; and the citation contract read out of gate.rs rather than assumed, since the epic named this WU the probe for a path it called untested."
+  - path: docs/work/2026-09-05-redesign-w4-result.html
+    tier: T3
+    action: added
+    distills: "the result — nine expected rows delivered, the probe's outcome (the gate refused nothing; the finding is that there is no finding), the review's three real findings with why each was real, the three refuted candidates named so finder quality stays visible, and four deviations. D1/D2 are the two places the build moved beyond a literal reading of the plan and why; D3 states exactly what the windowing test can and cannot prove; D4 records that the truncation is the design's own verdict rather than a deviation from it."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "UC-4's five observable gains, which is the epic plan's own assignment to this WU — W3 deliberately deferred the wording so one use-case row is not split across two Working Units. Three landed in W2 (the reason phrase, the dot's 24px target, its accessible name) and two here (the row's keyboard path, the two absences told apart), all five now stated in one place with why each is a contract change rather than a restyle. Also absorbs the truncation as KNOWINGLY UNMET: a reader of the use case should not have to open a design run to learn that a rulebook rule reading as absolute is broken on this screen, or that the full value stays reachable. The provenance callout is updated to name what the e2e now actually pins, rather than what it pinned before the UC-4 block existed."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: unchanged
+    distills: "deliberately not edited. The wrap-not-truncate clause this screen needs is W11's by W3's own escalation and by DEC-14 (a rulebook grows at distillation, never mid-run), and the epic holds the rulebook frozen at aeff5b0 so all four screen runs pin an unchanged substrate. Verified unmoved: git hash-object still aeff5b0fb4dea94ab5f0b7c385b8188786666e8a."
+  - path: docs/decisions/
+    tier: T2
+    action: unchanged
+    distills: "no decision record added, and the absence is the point. This WU made no decision — every call it implemented was already decided in W3's closed run, and the one open rulebook question belongs to W11. A record here would duplicate a design run downward, which is the failure the tier model exists to prevent."
