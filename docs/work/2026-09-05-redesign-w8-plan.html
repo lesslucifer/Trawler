@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9bb7a39f34851f0dfac593">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W8 plan (build the body viewer)</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .fix{color:var(--warn);font-weight:600}
+    .yes{color:var(--ok);font-weight:600}
+    .no{color:var(--warn);font-weight:600}
+    .gone{color:var(--muted);text-decoration:line-through}
+    .build-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    .build-card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper)}
+    .build-card h4{margin:0 0 6px;font-size:14px}
+    .build-card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .build-card p{margin:6px 0;font-size:12.5px;line-height:1.55}
+    pre.tb{font-family:var(--mono,monospace);font-size:11px;line-height:1.45;margin:0;white-space:pre}
+  </style>
+</head>
+<body data-artifact="wu-plan" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W8 — build the body viewer</h1>
+      <p>The epic's first build against a full screen design. Nine registry members replace six inline
+      renderers and a <code>ModeButton</code>; <code>XmlRenderer</code> gets its first reachable surface, bodies
+      state their truncation, and the leg leaves the pane for the panel that already splits it.</p>
+      <div class="meta">WU plan · 2026-09-05 · Trawler · T3 (docs/work/) · <code>wu/redesign/body-viewer-build</code>
+      → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · designed by
+      <a href="2026-09-04-redesign-run-9-body-viewer.html">design run #9</a> ·
+      <a href="2026-09-04-redesign-w7-plan.html">W7 plan</a> ·
+      <a href="2026-09-04-redesign-w7-result.html">W7 result</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement" data-c="requirement">
+      <strong>Build — citing <a href="2026-09-04-redesign-run-9-body-viewer.html">design run #9</a> by blob, not
+      re-deciding it —</strong> a <code>BodyViewer</code> that takes <code>leg</code> as a prop and renders one
+      body: the six kinds dispatched to <code>JsonRenderer</code> · <code>XmlRenderer</code> ·
+      <code>TextRenderer</code> · <code>HexRenderer</code> · <code>FormRenderer</code> · <code>ImageRenderer</code>,
+      the mode switch to <code>SegmentedControl</code>, the two actions to <code>CopyButton</code> +
+      <code>IconButton</code>, and all seven zone states to <code>Notice</code>; with <code>FlowDetail</code>
+      mounting one pane per leg under its own heading — <strong>so that a body over the cap states its
+      truncation through <code>CutMarker</code> instead of silently swallowing it, an XML body renders as XML
+      instead of falling through to text, a JSON body copies as valid JSON, the copy label reverts, and
+      <code>BodyViewer.tsx:112</code>'s marker is closed.</strong>
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to" data-c="maps-to">
+      <tr><td><strong>Epic</strong></td><td><a href="2026-09-04-redesign-plan.html">E-REDESIGN</a> — apply the
+      design flow to every shipped screen. This is <strong>W8</strong>, the build half of the epic's largest
+      screen pair, and the second build WU after W2.</td></tr>
+      <tr><td><strong>Consumes</strong></td><td><a href="2026-09-04-redesign-run-9-body-viewer.html">Design run
+      #9</a> — closed, archived, Tier-3 PASS — through the
+      <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a> handoff.
+      <code>git rev-parse HEAD:docs/work/2026-09-04-redesign-run-9-body-viewer.html</code> is the blob this
+      WU's <code>cr/v3</code> note cites as <code>design.implements</code>. The nine members and the
+      27-entry registry are W2's; the domain layer (<code>TEXT_MAX</code>, <code>HEX_MAX</code>,
+      <code>hexRows</code>, <code>humanBytePair</code>, <code>formPairCut</code>, <code>bodyNotice</code>) already
+      ships in <code>ui/src/body.ts</code>.</td></tr>
+      <tr><td><strong>Use cases</strong></td><td><strong>UC-5</strong> — inspect a captured flow. This WU is
+      where the epic's <em>two contract-level gains</em> become true of the running app: bodies state their
+      truncation, and xml is a real dispatch. Both are distilled into
+      <a href="../use-cases/web-ui.html">web-ui.html</a> here — W7 deliberately deferred them, because a
+      design does not move a contract.</td></tr>
+      <tr><td><strong>Closes</strong></td><td><code>BodyViewer.tsx:112</code> — <em>"keeps its inline renderers
+      until a later WU rewires it to the collection (E-DFLOW.W5 Q2)"</em>. The epic plan names this WU as
+      that WU.</td></tr>
+      <tr><td><strong>Answers</strong></td><td>Design run #9's <code>blocked-on</code> entry that names W8 by
+      name: <code>bodyNotice</code>'s too-large sentence states a raw byte count three lines from a
+      <code>CutMarker</code> whose @avoid forbids exactly that. It is a <code>body.ts</code> change, which is
+      why the design recorded it rather than doing it.</td></tr>
+      <tr><td><strong>Seam with W5/W6</strong></td><td>W5's design run is <strong>not merged into
+      epic/redesign</strong> and is not reachable from this tip. This WU therefore changes
+      <code>FlowDetail.tsx</code> only at the <em>mount site</em> the pane's own design forces — one Section
+      per leg instead of one Body Section — and touches none of the panel's other zoning, which stays
+      W6's. <code>FlowDetail.tsx</code> is declared under <code>design.undesigned</code> with that
+      reason.</td></tr>
+    </table>
+
+    <h2 id="what-lands">What lands — nine members in, one hand-rolled screen out</h2>
+    <p>Every row below is a verdict design run #9 already recorded as <strong>reuse</strong>. The build's job is
+    to make them true in code, not to re-decide them.</p>
+
+    <table data-c="what-lands">
+      <thead><tr><th>Goes</th><th>Comes</th><th>What the swap delivers</th></tr></thead>
+      <tbody>
+        <tr><td><code class="gone">JsonNode</code> + <code class="gone">JsonTree</code></td><td><code>JsonRenderer</code></td>
+          <td><span class="fix">DEC-01.</span> The shipped tree renders <code>key: value</code> lines with no
+          braces, quotes or commas — not valid JSON when copied. <code>JsonRenderer</code>'s @avoid names that
+          exact form as the rejected design.</td></tr>
+        <tr><td><code class="gone">TextBody</code></td><td><code>TextRenderer</code></td>
+          <td><span class="fix">A cap that exists.</span> Today a capture-capped 10 MiB body goes straight to
+          the DOM. <code>TEXT_MAX</code> ships in <code>body.ts</code> and no screen applies it.</td></tr>
+        <tr><td><em>nothing</em> — <code>xml</code> falls through to <code>TextBody</code></td><td><code>XmlRenderer</code></td>
+          <td><span class="yes">UC-5 gain 1.</span> Its first reachable surface, ever. The dispatch arm exists
+          and points elsewhere; the server already pretty-prints with quick-xml.</td></tr>
+        <tr><td><code class="gone">TextBody(hexDump(…))</code></td><td><code>HexRenderer</code></td>
+          <td>Toned offset · hex · ascii, and <code>HEX_MAX</code> stated in warn tone with the total instead of
+          <code>hexDump</code>'s easy-to-miss <code>… N more bytes</code> ellipsis.</td></tr>
+        <tr><td><code class="gone">ImageBody</code></td><td><code>ImageRenderer</code></td>
+          <td>The checkerboard, the letterbox and the dimensions caption; the object-URL lifecycle moves behind
+          the member instead of being hand-rolled here.</td></tr>
+        <tr><td><code class="gone">FormBody</code> (raw <code>&lt;dl&gt;</code>)</td><td><code>FormRenderer</code></td>
+          <td>Per-pair click-to-copy via <code>KeyValueRow</code>, and a cut on a pair boundary rather than
+          mid-<code>%XX</code>. A <em>stated</em> user-facing gain, per the epic's ruling on the same question
+          for headers.</td></tr>
+        <tr><td><em>nothing</em> — silent caps</td><td><code>CutMarker</code></td>
+          <td><span class="yes">UC-5 gain 2.</span> Never mounted by this screen — four members render it
+          themselves. Zone C is the screen's job only in that it pins the marker to B's foot.</td></tr>
+        <tr><td><code class="gone">ModeButton</code> ×6</td><td><code>SegmentedControl</code> · <code>CopyButton</code> · <code>IconButton</code></td>
+          <td>One element carrying four jobs splits into the three that own them. <span class="fix">Fixes:</span>
+          the shipped <code>copied</code> is a <code>useState</code> that never reverts —
+          <code>useConfirm</code>'s ~2 s timer replaces it.</td></tr>
+        <tr><td>3× bare <code>&lt;p&gt;</code></td><td><code>Notice</code></td>
+          <td>Seven absences, each with its own sentence and tone — including the two (<em>loading…</em>,
+          <em>failed to load body</em>) that ship today as unstyled paragraphs.</td></tr>
+        <tr><td>the leg <code>useState</code> + 2 <code class="gone">ModeButton</code>s</td><td><em>a <code>leg</code> prop</em></td>
+          <td>The panel already splits Request headers from Response headers. One pane per leg puts both bodies
+          on the page at once — the gain the leg switch cost.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="two-domain-changes">Two changes below the screen</h2>
+    <div class="build-grid" data-c="two-domain-changes">
+      <div class="build-card">
+        <div class="who">answers the design's blocked-on · <code>ui/src/body.ts</code></div>
+        <h4><code>bodyNotice</code> states a human size</h4>
+        <p>Today: <code>not captured — too large (12994392 bytes)</code>. A raw byte count is what
+        <code>CutMarker</code>'s @avoid forbids <em>in the same pane</em>, and <code>humanBytes</code> already
+        ships two functions above it (<code>ImageRenderer</code> calls it).</p>
+        <p>After: <code>not captured — too large (12.4 MiB)</code>. The design quoted the shipped string
+        everywhere rather than claim one the code does not produce; this WU is where the two agree.</p>
+      </div>
+      <div class="build-card">
+        <div class="who">forced by the pane's contract · <code>ui/src/FlowDetail.tsx</code></div>
+        <h4>One Section per leg</h4>
+        <p>The single <code>Body</code> Section becomes <code>Request body</code> and <code>Response body</code>,
+        each mounting one <code>BodyViewer</code> with its <code>leg</code> fixed. Nothing else in the panel
+        moves — the identity bar, the curl block and the header tables stay exactly as they are, for W6.</p>
+        <p>Declared <code>design.undesigned</code>: <em>the mount site the pane's own design forces; the panel's
+        zoning is W5/W6's and is untouched.</em></p>
+      </div>
+    </div>
+
+    <h2 id="not-in-scope">Not in scope</h2>
+    <p data-c="not-in-scope">No retry affordance on the failure state (design run #9 records
+    <code>Notice</code>'s action slot as deliberately unused — a new user-facing capability, which the epic's
+    non-goals forbid). No change to any registry member — nine components are consumed exactly as they ship;
+    a member that needs a change is a finding, not an edit. No panel zoning beyond the two mount sites. No
+    third raw mode (<code>rawKind</code> returns <code>text|hex</code>, and the design made that a Frame
+    constraint). No <code>Gallery.tsx</code> deletion — that is W11.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <p>Observable by a reader who was not here:</p>
+    <table data-item="expected" data-c="expected">
+      <thead><tr><th>#</th><th>What is true after this WU</th><th>How it is checked</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>BodyViewer</code> takes <code>leg</code> as a required prop, holds no leg state,
+          and renders exactly one body. No <code>request</code>/<code>response</code> control exists in the
+          pane.</td><td>unit: the prop drives <code>getBody</code>; no button with either name is in the
+          tree</td></tr>
+        <tr><td>2</td><td>All six kinds dispatch to their family member. An <code>application/xml</code> body
+          renders through <code>XmlRenderer</code> — <code>data-testid="body-xml"</code>, which no test in the
+          repo can assert today.</td><td>unit per kind, asserting the member's own testid</td></tr>
+        <tr><td>3</td><td>A text body over <code>TEXT_MAX</code> renders <code>TEXT_MAX</code> characters
+          followed by a <code>CutMarker</code> naming both sizes and the way out. A hex body over
+          <code>HEX_MAX</code> does the same.</td><td>unit: the marker's sentence is present and the two sizes
+          differ</td></tr>
+        <tr><td>4</td><td>A JSON body copies as valid JSON — <code>JSON.parse</code> of what the clipboard
+          received succeeds.</td><td>unit: parse the captured clipboard payload</td></tr>
+        <tr><td>5</td><td><code>copy body</code> reverts to its label after the confirm window; it does not
+          stick.</td><td>unit with fake timers over <code>CONFIRM_MS</code></td></tr>
+        <tr><td>6</td><td>All seven zone states render as a <code>Notice</code> with their own sentence; the
+          failure state is the only <code>warn</code>.</td><td>unit: seven cases, tone asserted via
+          <code>data-tone</code></td></tr>
+        <tr><td>7</td><td><code>FlowDetail</code> shows <strong>both</strong> bodies at once, each under its own
+          heading, each with its own mode.</td><td>integration: switching one pane's mode leaves the other's
+          fetch untouched</td></tr>
+        <tr><td>8</td><td><code>bodyNotice</code>'s too-large sentence states a human size, so the pane never
+          shows a raw byte count beside a <code>CutMarker</code> that forbids one.</td><td>unit on
+          <code>body.ts</code></td></tr>
+        <tr><td>9</td><td><code>ui/src/BodyViewer.tsx</code> contains no <code>JsonNode</code>,
+          <code>JsonTree</code>, <code>TextBody</code>, <code>FormBody</code>, <code>ImageBody</code> or
+          <code>ModeButton</code>, and no marker at line 112.</td><td><code>grep</code>; the file's own
+          shape</td></tr>
+        <tr><td>10</td><td>The repo's <strong>second</strong> <code>design.implements</code> citation — the
+          first against a screen design run — passes gate check 9.</td><td><code>cargo xtask design-scope
+          epic/redesign HEAD</code> → the code-review skill → <code>cr/v3</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p>Every level is exercised — this WU changes rendered behaviour on a use-case surface, so none of W7's
+    waivers carry over.</p>
+    <table data-item="test-plan" data-c="test-plan">
+      <thead><tr><th>Level</th><th>Where</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Unit</strong></td>
+          <td><code>ui/src/BodyViewer.test.tsx</code> (rewritten to the new contract) ·
+          <code>ui/src/body.test.ts</code></td>
+          <td>Six dispatch cases, each asserting <em>the member's own</em> testid rather than the shipped
+          screen's — <code>body-json</code> (a <code>SourceSurface</code>, not a <code>&lt;details&gt;</code>
+          tree), <code>body-xml</code> (new), <code>body-text</code>, <code>body-hex</code>,
+          <code>body-form</code>, <code>body-image</code>. The <code>leg</code> prop drives the fetch and no leg
+          control exists. Raw mode refetches and dispatches through <code>rawKind</code>. Copy yields the hex
+          dump for hex, valid JSON for json, and reverts after <code>CONFIRM_MS</code>. Save writes all bytes
+          under the derived filename. Image renders no copy button. Over-cap text and hex each carry a
+          <code>CutMarker</code>. Seven <code>Notice</code> states with their tones. On
+          <code>body.ts</code>: <code>bodyNotice</code>'s too-large sentence states a human size and its other
+          four sentences are unchanged.</td>
+        </tr>
+        <tr>
+          <td><strong>Integration</strong></td>
+          <td><code>ui/src/FlowDetail.test.tsx</code> (extended)</td>
+          <td>The WU's bounded contract is <em>the panel mounts one pane per leg</em>: both a
+          <code>Request body</code> and a <code>Response body</code> section render, each fetches its own leg,
+          and switching one pane to raw refetches only that leg — the other pane's calls do not move. This is
+          the assertion no unit test can make, because it is about two instances coexisting.</td>
+        </tr>
+        <tr>
+          <td><strong>E2E</strong></td>
+          <td><code>ui/e2e/specs/flows.spec.ts</code> (extended)</td>
+          <td>The epic plan's two <em>new</em> UC-5 contracts, end to end against the real proxy and the real
+          API: <strong>an XML body renders as XML</strong> (the local server serves
+          <code>application/xml</code>; the pane shows <code>body-xml</code>), and <strong>an over-cap body
+          states its truncation</strong> (the server serves a body past <code>TEXT_MAX</code>; the pane shows
+          the cut marker's sentence). Hermetic — the existing spec's local server, ephemeral ports, no public
+          network.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>Also run, not new:</strong> <code>cd ui &amp;&amp; pnpm test</code> (the whole suite — 527 tests
+    at this tip, including nine body-family component tests that must stay green while their first real
+    consumer arrives), <code>pnpm exec eslint src</code> (the vocabulary lint), <code>cargo test</code>,
+    <code>cargo clippy</code>.</p>
+
+    <h2 id="gate">The merge gate</h2>
+    <p data-c="gate"><code>cargo xtask verify-dod wu &lt;tip&gt; --target epic/redesign</code> —
+    <code>test/v2</code> with all three levels counted (no waivers), <code>doc/v1</code> including the
+    <strong>T2 entry</strong> for <a href="../use-cases/web-ui.html">web-ui.html</a>, and a diff-bound
+    <code>cr/v3</code> PASS. <strong>Check 9 binds here</strong>, unlike on W7: this WU builds, so its note owes
+    <code>design.implements: [{path, blob, built}]</code> naming design run #9's blob and the files built from
+    it, plus <code>design.undesigned</code> for <code>FlowDetail.tsx</code>. Then
+    <code>cargo xtask mr confirm</code> — printed for the user, never run by the agent — and the
+    <code>--no-ff</code> merge.</p>
+
+    <h2 id="risks">What could go wrong</h2>
+    <table data-c="risks">
+      <thead><tr><th>Risk</th><th>Handling</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The build re-decides what a member owns.</strong> The natural failure of consuming nine
+        dense contracts is to re-implement a cap or a marker at the call site.</td>
+        <td>The screen sets <em>no</em> threshold and mounts <em>no</em> <code>CutMarker</code>. Every cap is
+        the member's; the screen's only truncation duty is pinning zone C to B's foot. A call site that passes
+        a max is a review finding.</td></tr>
+        <tr><td><strong>The existing tests encode the old design.</strong> <code>BodyViewer.test.tsx</code>
+        asserts a <code>&lt;details&gt;</code> tree, leg tabs and a sticky <code>copied</code> — all three are
+        things this WU deliberately removes.</td>
+        <td>Rewritten, not patched, and the rewrite is itself the evidence: each deleted assertion maps to a
+        design line that removed it. A test kept green by keeping the defect is the failure mode.</td></tr>
+        <tr><td><strong><code>SourceSurface</code> is CodeMirror.</strong> <code>JsonRenderer</code> and
+        <code>XmlRenderer</code> mount a real editor; jsdom may not render its text the way a naive assertion
+        expects.</td>
+        <td>Assert the member's <code>data-testid</code> and the copy payload, not CodeMirror's internal DOM.
+        The nine members already have passing tests at this tip — those are the reference for what is
+        assertable.</td></tr>
+        <tr><td><strong>The e2e leg selectors move.</strong> <code>flows.spec.ts</code> asserts on testids, and
+        the two-pane change adds a second instance of every body testid to the page.</td>
+        <td>Scope each e2e assertion to its leg's section rather than to a bare testid, and fix the spec in this
+        WU rather than leaving W11 a broken suite.</td></tr>
+        <tr><td><strong>The toolchain is not on PATH.</strong> This worktree's <code>~/.cargo/bin</code> is
+        empty.</td>
+        <td><code>~/.rustup/toolchains/stable-aarch64-apple-darwin/bin</code> prepended; verified working, and
+        <code>ui/node_modules</code> is installed. An environment note, not a finding.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="sequence">Sequence</h2>
+    <div class="diagram" data-c="sequence">
+      <pre class="mermaid">flowchart LR
+  P["this plan"] --> D["body.ts
+bodyNotice → humanBytes"]
+  D --> B["BodyViewer.tsx
+rewritten: leg prop,
+6-arm dispatch, 3 controls,
+7 Notices"]
+  B --> F["FlowDetail.tsx
+one Section per leg"]
+  F --> U["unit
+BodyViewer + body"]
+  U --> I["integration
+FlowDetail: two panes"]
+  I --> E["e2e
+xml · truncation"]
+  E --> T2["distil UC-5's
+two gains → web-ui.html"]
+  T2 --> N["test/v2 · doc/v1"]
+  N --> CR["design-scope →
+code-review → cr/v3"]
+  CR --> MR["mr confirm
+(printed, not run)"]
+  MR --> M["merge --no-ff
+→ epic/redesign"]</pre>
+      <div class="caption">Domain first, then the pane, then its mount site — each layer's tests before the next
+      layer needs them. The distillation happens before the notes, because <code>doc/v1</code> must account for
+      the T2 edit.</div>
+    </div>
+
+    <p><strong>The load-bearing line.</strong> Design run #9's Frame states it: <em>a body is wire evidence</em>.
+    Every gain this WU ships descends from it — copy-exactness (the JSON tree goes), a stated cut (the silent
+    caps go), and a real dispatch for xml (the fall-through goes). A build that lands the components but keeps
+    any of those three has cited a design it did not implement.</p>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
