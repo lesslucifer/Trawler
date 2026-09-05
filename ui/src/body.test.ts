@@ -141,11 +141,28 @@ test("bodyNotice maps every non-captured state to a notice, captured to null", (
   expect(bodyNotice({ state: "streaming", content_type: "text/event-stream" })).toContain(
     "streaming (text/event-stream)",
   );
-  expect(bodyNotice({ state: "not_captured", reason: "too_large", actual: 42 })).toBe(
-    "not captured — too large (42 bytes)",
-  );
   expect(bodyNotice({ state: "not_captured", reason: "read_error", actual: null })).toBe(
     "not captured — read error",
+  );
+});
+
+// The notice and a CutMarker can sit three lines apart in one pane, and the
+// marker's @avoid forbids raw byte counts — so this sentence states the same
+// kind of size the marker does.
+test("the too-large notice states a human size, never a raw byte count", () => {
+  expect(bodyNotice({ state: "not_captured", reason: "too_large", actual: 42 })).toBe(
+    "not captured — too large (42 B)",
+  );
+  expect(bodyNotice({ state: "not_captured", reason: "too_large", actual: 12_994_392 })).toBe(
+    "not captured — too large (12 MiB)",
+  );
+});
+
+// A size the server did not report is not zero: "0 B" would be a claim the
+// notice cannot make, so the sentence drops the parenthetical instead.
+test("the too-large notice omits the size when the server reported none", () => {
+  expect(bodyNotice({ state: "not_captured", reason: "too_large", actual: null })).toBe(
+    "not captured — too large",
   );
 });
 

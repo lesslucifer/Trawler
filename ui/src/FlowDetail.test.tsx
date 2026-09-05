@@ -60,6 +60,43 @@ test("copy button writes the curl to the clipboard", async () => {
   vi.unstubAllGlobals();
 });
 
+// The pane holds no leg state, so the panel is what puts both legs on the page
+// at once — the contract that replaced the leg switch the pane used to own.
+test("mounts one body pane per leg, each under its own heading", async () => {
+  const api = stubApi();
+  render(
+    <FlowDetail
+      api={api}
+      flow={view({ request_body: { state: "captured", size: 5, data_base64: "" } })}
+      onClose={() => {}}
+    />,
+  );
+
+  expect(screen.getByText("Request body")).toBeInTheDocument();
+  expect(screen.getByText("Response body")).toBeInTheDocument();
+  await waitFor(() => expect(screen.getAllByTestId("body-text")).toHaveLength(2));
+  expect(api.getBody).toHaveBeenCalledWith("f1", "request", true);
+  expect(api.getBody).toHaveBeenCalledWith("f1", "response", true);
+});
+
+test("each pane owns its own mode — switching one leg to raw leaves the other alone", async () => {
+  const api = stubApi();
+  render(
+    <FlowDetail
+      api={api}
+      flow={view({ request_body: { state: "captured", size: 5, data_base64: "" } })}
+      onClose={() => {}}
+    />,
+  );
+  await waitFor(() => expect(screen.getAllByTestId("body-text")).toHaveLength(2));
+
+  fireEvent.click(screen.getByRole("radiogroup", { name: "request body mode" })
+    .querySelector("[role='radio'][aria-checked='false']") as HTMLElement);
+
+  await waitFor(() => expect(api.getBody).toHaveBeenCalledWith("f1", "request", false));
+  expect(api.getBody).not.toHaveBeenCalledWith("f1", "response", false);
+});
+
 test("close button fires onClose", () => {
   const onClose = vi.fn();
   render(<FlowDetail api={stubApi()} flow={view()} onClose={onClose} />);

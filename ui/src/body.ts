@@ -136,6 +136,10 @@ export function formPairCut(text: string, at: number): number {
 
 // null = the body is captured and viewable; a string is the notice to show
 // instead of a viewer — states never render blank.
+//
+// Sizes are human-readable for the same reason CutMarker's are: the two can sit
+// three lines apart in one pane, and a raw byte count beside "9.7 MiB" reads as
+// a different kind of number rather than the same fact.
 export function bodyNotice(body: BodyView | null): string | null {
   if (body == null) return "no response yet";
   switch (body.state) {
@@ -146,9 +150,10 @@ export function bodyNotice(body: BodyView | null): string | null {
     case "streaming":
       return `streaming (${body.content_type}) — passed through, not captured`;
     case "not_captured":
-      return body.reason === "too_large"
-        ? `not captured — too large (${body.actual} bytes)`
-        : "not captured — read error";
+      if (body.reason !== "too_large") return "not captured — read error";
+      return body.actual == null
+        ? "not captured — too large"
+        : `not captured — too large (${humanBytes(body.actual)})`;
   }
 }
 

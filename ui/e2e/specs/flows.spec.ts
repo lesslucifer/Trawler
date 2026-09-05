@@ -12,6 +12,11 @@ const ports = JSON.parse(readFileSync(PORTS_FILE, "utf8")) as {
 const rowCount = () => $$('[data-testid="flow-row"]').length;
 const hit = (path?: string) => fetch(`${ports.control}/hit${path ? `?p=${path}` : ""}`);
 
+const RESPONSE_PANE = '[data-testid="body-viewer"][data-leg="response"]';
+const inResponsePane = (selector: string) => $(`${RESPONSE_PANE} ${selector}`);
+const responseMode = (label: "decoded" | "raw") =>
+  $(`${RESPONSE_PANE} [role="radiogroup"]`).$(`button=${label}`);
+
 // Point the real Tauri window at the ephemeral core (runtime config, no rebuild)
 // with a plain WebDriver eval — no Tauri invoke bridge.
 async function pointAppAtCore() {
@@ -25,12 +30,15 @@ async function pointAppAtCore() {
 }
 
 // UC-5 (inspect) end to end: proxy a request, click its row, and inspect it —
-// headers, timing, versions, body viewers (JSON tree, raw toggle), copy-as-curl.
-// The brotli step proves the W1 decode chain surfaces in the inspector; the image
-// step proves the type dispatch. Clipboard is unreliable under WebDriver, so curl
-// is asserted as text in the DOM (recorded waiver in the epic plan). The fresh
-// launch is onboarding (UC-ONBOARD); the first decrypted flow reveals the list, so
-// this block reveals it once up front before selecting rows to inspect.
+// headers, timing, versions, body viewers (type dispatch, raw toggle, stated
+// truncation), copy-as-curl. The brotli step proves the W1 decode chain surfaces
+// in the inspector. Clipboard is unreliable under WebDriver, so curl is asserted
+// as text in the DOM (recorded waiver in the epic plan). The fresh launch is
+// onboarding (UC-ONBOARD); the first decrypted flow reveals the list, so this
+// block reveals it once up front before selecting rows to inspect.
+//
+// The panel mounts one body pane per leg, so every body assertion is scoped to
+// its leg's section — a bare testid would match the request pane too.
 describe("UC-5 — inspect a captured flow in the native app", () => {
   before(async () => {
     await pointAppAtCore();
@@ -69,21 +77,24 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     expect(detail.toLowerCase()).toContain("content-type");
   });
 
-  it("renders a JSON response body as a tree", async () => {
-    await $('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
-    const tree = await $('[data-testid="body-json"]').getText();
-    expect(tree).toContain("greeting");
-    expect(tree).toContain('"hello"');
-    expect(tree).toContain("numbers");
+  it("renders a JSON response body as copy-exact source", async () => {
+    await inResponsePane('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
+    const shown = await inResponsePane('[data-testid="body-json"]').getText();
+    expect(shown).toContain('"greeting"');
+    expect(shown).toContain('"hello"');
+    // The braces and quotes DEC-01's rejected tree form dropped — what makes the
+    // rendered document valid JSON when copied.
+    expect(shown).toContain("{");
+    expect(shown).toContain("}");
   });
 
   it("toggles to the raw stored bytes as text", async () => {
-    await $("button=raw").click();
-    await $('[data-testid="body-text"]').waitForExist({ timeout: 15_000 });
-    const raw = await $('[data-testid="body-text"]').getText();
+    await responseMode("raw").click();
+    await inResponsePane('[data-testid="body-text"]').waitForExist({ timeout: 15_000 });
+    const raw = await inResponsePane('[data-testid="body-text"]').getText();
     expect(raw).toContain('{"greeting":"hello"');
-    await $("button=decoded").click();
-    await $('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
+    await responseMode("decoded").click();
+    await inResponsePane('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
   });
 
   it("shows a runnable curl for the request", async () => {
@@ -93,18 +104,42 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     expect(curl).toContain("-H");
   });
 
-  it("renders a brotli-compressed JSON body as a tree (decode chain via the UI)", async () => {
+  it("renders a brotli-compressed JSON body decoded (decode chain via the UI)", async () => {
     await openRowFor("/br");
-    await $('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
-    const tree = await $('[data-testid="body-json"]').getText();
-    expect(tree).toContain("compressed");
-    expect(tree).toContain('"brotli"');
+    await inResponsePane('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
+    const shown = await inResponsePane('[data-testid="body-json"]').getText();
+    expect(shown).toContain("compressed");
+    expect(shown).toContain('"brotli"');
   });
 
   it("renders an image body as an <img>", async () => {
     await openRowFor("/img");
-    await $('[data-testid="body-image"]').waitForExist({ timeout: 15_000 });
-    const src = await $('[data-testid="body-image"]').getAttribute("src");
+    await inResponsePane('[data-testid="body-image"]').waitForExist({ timeout: 15_000 });
+    const src = await inResponsePane('[data-testid="body-image"]').getAttribute("src");
     expect(src).toContain("blob:");
+  });
+
+  // The two contracts E-REDESIGN.W8 adds to UC-5.
+  it("renders an XML body as XML, not as fall-through text", async () => {
+    await openRowFor("/xml");
+    await inResponsePane('[data-testid="body-xml"]').waitForExist({ timeout: 15_000 });
+    const shown = await inResponsePane('[data-testid="body-xml"]').getText();
+    expect(shown).toContain("order");
+    expect(shown).toContain("item");
+    expect(await inResponsePane('[data-testid="body-text"]').isExisting()).toBe(false);
+  });
+
+  it("states its truncation on a body past the render cap, rather than silently cutting", async () => {
+    await openRowFor("/big");
+    await inResponsePane('[data-testid="body-text"]').waitForExist({ timeout: 15_000 });
+    const shown = await inResponsePane('[data-testid="body-text"]').getText();
+    expect(shown).toMatch(/showing .+ of .+ — save to see all/);
+  });
+
+  it("shows both legs at once, each under its own heading", async () => {
+    const detail = await $('[data-testid="detail"]').getText();
+    expect(detail).toContain("Request body");
+    expect(detail).toContain("Response body");
+    expect(await $$('[data-testid="body-viewer"]').length).toBe(2);
   });
 });
