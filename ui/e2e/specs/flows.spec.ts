@@ -16,6 +16,26 @@ const RESPONSE_PANE = '[data-testid="body-viewer"][data-leg="response"]';
 const inResponsePane = (selector: string) => $(`${RESPONSE_PANE} ${selector}`);
 const responseMode = (label: "decoded" | "raw") =>
   $(`${RESPONSE_PANE} [role="radiogroup"]`).$(`button=${label}`);
+// The panel shows one leg at a time under one selector (DEC-31), so the pane
+// for a leg exists only while that leg is selected.
+const legSegment = (leg: "request" | "response") =>
+  $('[data-testid="detail"] header [role="radiogroup"]').$(`button=${leg}`);
+const selectLeg = async (leg: "request" | "response") => {
+  await legSegment(leg).click();
+  await $(`[data-testid="body-viewer"][data-leg="${leg}"]`).waitForExist({ timeout: 15_000 });
+};
+// WebDriver cannot read the OS clipboard, so the panel's clipboard is replaced
+// with a recorder before a copy and read back after — the payload is asserted
+// for real, not inferred from a label.
+const recordClipboard = () =>
+  browser.execute(() => {
+    const w = window as unknown as { __copied?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: (text: string) => ((w.__copied = text), Promise.resolve()) },
+    });
+  });
+const lastCopied = () => browser.execute(() => (window as unknown as { __copied?: string }).__copied);
 
 // Point the real Tauri window at the ephemeral core (runtime config, no rebuild)
 // with a plain WebDriver eval — no Tauri invoke bridge.
@@ -173,15 +193,15 @@ describe("UC-4 — watch live traffic in the native app", () => {
 });
 
 // UC-5 (inspect) end to end: proxy a request, click its row, and inspect it —
-// headers, timing, versions, body viewers (type dispatch, raw toggle, stated
-// truncation), copy-as-curl. The brotli step proves the W1 decode chain surfaces
-// in the inspector. Clipboard is unreliable under WebDriver, so curl is asserted
-// as text in the DOM (recorded waiver in the epic plan). The fresh launch is
-// onboarding (UC-ONBOARD); the first decrypted flow reveals the list, so this
-// block reveals it once up front before selecting rows to inspect.
+// headers, timing, versions, the leg selector, body viewers (type dispatch, raw
+// toggle, stated truncation), copy-as-curl. The brotli step proves the W1 decode
+// chain surfaces in the inspector. The curl command is never rendered (W5's
+// design), so its payload is read back from a recording clipboard stub. The
+// fresh launch is onboarding (UC-ONBOARD); the first decrypted flow reveals the
+// list, so this block reveals it once up front before selecting rows to inspect.
 //
-// The panel mounts one body pane per leg, so every body assertion is scoped to
-// its leg's section — a bare testid would match the request pane too.
+// The panel opens on the request leg, so every response-body assertion selects
+// the response leg first; the pane's data-leg then scopes the selector.
 describe("UC-5 — inspect a captured flow in the native app", () => {
   before(async () => {
     await pointAppAtCore();
@@ -211,13 +231,32 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     await $('[data-testid="detail"]').waitForExist({ timeout: 15_000 });
   }
 
-  it("opens the detail with headers, timing, and versions on row click", async () => {
+  async function openResponseOf(path: string) {
+    await openRowFor(path);
+    await selectLeg("response");
+  }
+
+  it("opens the detail on the request leg with headers, timing, and versions", async () => {
     await openRowFor("/json");
     const detail = await $('[data-testid="detail"]').getText();
     expect(detail).toContain("/json");
     expect(detail).toContain("HTTP/1.1");
     expect(detail).toMatch(/\d+ ms/);
+    expect(detail.toLowerCase()).toContain("accept");
+    expect(detail.toLowerCase()).not.toContain("content-type");
+    expect(await legSegment("request").getAttribute("aria-checked")).toBe("true");
+  });
+
+  // DEC-31: one selector, and both leg-scoped zones follow it while the flow
+  // line does not.
+  it("the leg selector switches the headers and the body together", async () => {
+    const lineBefore = await $('[data-testid="flow-line"]').getText();
+    await selectLeg("response");
+    const detail = await $('[data-testid="detail"]').getText();
     expect(detail.toLowerCase()).toContain("content-type");
+    expect(detail.toLowerCase()).not.toContain("accept");
+    expect(await $$('[data-testid="body-viewer"]').length).toBe(1);
+    expect(await $('[data-testid="flow-line"]').getText()).toBe(lineBefore);
   });
 
   it("renders a JSON response body as copy-exact source", async () => {
@@ -240,15 +279,38 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     await inResponsePane('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
   });
 
-  it("shows a runnable curl for the request", async () => {
-    const curl = await $('[data-testid="curl"]').getText();
+  it("copies a runnable curl for the request and confirms at the button", async () => {
+    const detail = await $('[data-testid="detail"]').getText();
+    expect(detail).not.toMatch(/curl /);
+    // The flow line's one button. CopyButton nests its label, so a text selector
+    // (direct text nodes only) cannot find it; and WebKit's getText includes the
+    // visibility:hidden widest-label span, so the text is matched, not equated.
+    const copyAsCurl = $('[data-testid="flow-line"] button');
+    expect(await copyAsCurl.getText()).toContain("copy as curl");
+    expect(await copyAsCurl.getText()).not.toContain("copied");
+    await recordClipboard();
+    await copyAsCurl.click();
+    await browser.waitUntil(async () => (await lastCopied()) !== undefined, {
+      timeout: 5_000,
+      timeoutMsg: "copy as curl wrote nothing",
+    });
+    const curl = (await lastCopied())!;
     expect(curl).toMatch(/^curl /);
     expect(curl).toContain("/json");
     expect(curl).toContain("-H");
+    expect(await copyAsCurl.getText()).toContain("copied");
+  });
+
+  it("Esc dismisses the panel", async () => {
+    await browser.keys("Escape");
+    await browser.waitUntil(async () => !(await $('[data-testid="detail"]').isExisting()), {
+      timeout: 5_000,
+      timeoutMsg: "Esc left the panel open",
+    });
   });
 
   it("renders a brotli-compressed JSON body decoded (decode chain via the UI)", async () => {
-    await openRowFor("/br");
+    await openResponseOf("/br");
     await inResponsePane('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
     const shown = await inResponsePane('[data-testid="body-json"]').getText();
     expect(shown).toContain("compressed");
@@ -259,7 +321,7 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
   // a hex dump of those answers no question. Raw reverses the transport encoding
   // and stops, so what shows is the minified source the server actually sent.
   it("shows a compressed body's source in raw, not a hex dump of its frames", async () => {
-    await openRowFor("/br");
+    await openResponseOf("/br");
     await inResponsePane('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
 
     await responseMode("raw").click();
@@ -275,7 +337,7 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
   });
 
   it("renders an image body as an <img>", async () => {
-    await openRowFor("/img");
+    await openResponseOf("/img");
     await inResponsePane('[data-testid="body-image"]').waitForExist({ timeout: 15_000 });
     const src = await inResponsePane('[data-testid="body-image"]').getAttribute("src");
     expect(src).toContain("blob:");
@@ -283,7 +345,7 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
 
   // The two contracts E-REDESIGN.W8 adds to UC-5.
   it("renders an XML body as XML, not as fall-through text", async () => {
-    await openRowFor("/xml");
+    await openResponseOf("/xml");
     await inResponsePane('[data-testid="body-xml"]').waitForExist({ timeout: 15_000 });
     const shown = await inResponsePane('[data-testid="body-xml"]').getText();
     expect(shown).toContain("order");
@@ -292,16 +354,9 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
   });
 
   it("states its truncation on a body past the render cap, rather than silently cutting", async () => {
-    await openRowFor("/big");
+    await openResponseOf("/big");
     await inResponsePane('[data-testid="body-text"]').waitForExist({ timeout: 15_000 });
     const shown = await inResponsePane('[data-testid="body-text"]').getText();
     expect(shown).toMatch(/showing .+ of .+ — save to see all/);
-  });
-
-  it("shows both legs at once, each under its own heading", async () => {
-    const detail = await $('[data-testid="detail"]').getText();
-    expect(detail).toContain("Request body");
-    expect(detail).toContain("Response body");
-    expect(await $$('[data-testid="body-viewer"]').length).toBe(2);
   });
 });
