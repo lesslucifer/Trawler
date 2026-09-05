@@ -5,7 +5,7 @@ changes:
   - path: docs/work/2026-09-04-redesign-w5-plan.html
     tier: T3
     action: added
-    distills: "the WU plan — requirement, mapping to UC-5 and the epic's W5 row, the five zones as they ship with what each costs today, the W7 seam stated once, the two calls the epic plan hands this run, the expected result per stage, the test plan with its three waivers, and the risks. Its zone-card file:line citations were re-derived from FlowDetail.tsx at review: three of the four originally pointed at ranges covering the wrong sections."
+    distills: "the WU plan — requirement, mapping to UC-5 and the epic's W5 row, the five zones as they ship with what each costs today, the W7 seam stated once, the two calls the epic plan hands this run, the expected result per stage, the test plan with its three waivers, and the risks. Its five zone-card file:line citations were all re-derived from FlowDetail.tsx at review: three of the five (identity bar, request leg, copy-as-curl) originally pointed at ranges covering the wrong sections; the two others (header legs :16-33, body :117-119) were correct from the start and are unchanged."
   - path: docs/work/2026-09-04-redesign-w5-flow-detail-run.html
     tier: T3
     action: added
