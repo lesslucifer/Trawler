@@ -377,7 +377,7 @@ quit dialog
             <td><em>reuse</em><br>D — the three action notes, plus the two remedy sentences</td>
             <td>
               <div class="gist">one sentence for an outcome, with the action if one exists</div>
-              <details class="why"><div><strong>@use landed:</strong> "any zone whose whole content is a STANDING positive outcome (tone=ok)" — "installed, we'll confirm on first flow" is standing, not an acknowledgement. <strong>@avoid respected:</strong> "transient confirmations of an action (use confirm-at-point)" — the <em>copy</em> confirms belong to <code>CopyText</code>, never to a Notice · not dismissible · not a toned value (that is <code>TonedText</code>) · <strong>not a status verdict with glyph+name+message</strong>, which is <code>StatusLine</code>'s — so the note and the verdict are two components, not one, and that split is the point.</div></details>
+              <details class="why"><div><strong>@use landed:</strong> "any zone whose whole content is a STANDING positive outcome (tone=ok)" — "installed. we'll confirm it on your first flow." is standing, not an acknowledgement. <strong>@avoid respected:</strong> "transient confirmations of an action (use confirm-at-point)" — the <em>copy</em> confirms belong to <code>CopyText</code>, never to a Notice · not dismissible · not a toned value (that is <code>TonedText</code>) · <strong>not a status verdict with glyph+name+message</strong>, which is <code>StatusLine</code>'s — so the note and the verdict are two components, not one, and that split is the point.</div></details>
             </td>
             <td><pre class="tb">installed. we'll confirm it
 on your first flow.
@@ -515,7 +515,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
           <td>presses <em>install certificate</em></td>
           <td>
             <div class="gist">button disabled, progress line beside it — both halves</div>
-            <details class="why"><div>D → the <code>Button</code> disabled for the whole in-flight window AND a mute <code>Notice</code> "installing — approve the system prompt…" (fork D4, both halves or neither) · C step 1 → <code>StatusLine</code> shows <em>⟳ installing…</em>, which outranks every other verdict · on resolve → <code>Notice</code> becomes ok "installed. we'll confirm when your first flow arrives" and the verdict returns to the probe's answer ← the action never flips the step green; only a probe or captured traffic does</div></details>
+            <details class="why"><div>D → the <code>Button</code> disabled for the whole in-flight window AND a mute <code>Notice</code> "installing — approve the system prompt…" (fork D4, both halves or neither) · C step 1 → <code>StatusLine</code> shows <em>⟳ installing…</em>, which outranks every other verdict · on resolve → <code>Notice</code> becomes ok "installed. we'll confirm it on your first flow" and the verdict returns to the probe's answer ← the action never flips the step green; only a probe or captured traffic does</div></details>
           </td>
           <td>Enter / Space; focus stays on the button across the whole transition</td>
         </tr>
@@ -706,7 +706,18 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
 
               <StepRow n="2" title="set the proxy" open={open === "proxy"} onOpen={() => setOpen("proxy")}
                 view={V.proxyCantSee}>
-                <Notice tone="ok" className="mb-2">proxy set. we'll confirm it on your first flow.</Notice>
+                <div className="a-base-only mb-2">
+                  <div className="flex gap-chrome-gap">
+                    <Button onClick={() => {}}>set system proxy</Button>
+                    <Button onClick={() => {}} tone="mute">stop routing through Trawler</Button>
+                  </div>
+                  <Notice tone="ok" className="mt-2">proxy set. we'll confirm it on your first flow.</Notice>
+                </div>
+                <div className="a-hide-base mb-2">
+                  <Button onClick={() => {}} disabled>set system proxy</Button>
+                  <Notice className="mt-2">setting the proxy — approve the prompt if asked…</Notice>
+                </div>
+                <Notice className="mb-2">we'll confirm when traffic arrives.</Notice>
               </StepRow>
 
               <StepRow n="3" title="make a request" open={open === "request"} onOpen={() => setOpen("request")}
@@ -1085,9 +1096,9 @@ soft:
           <td>the Elements catalog itself — 7 <code>reuse</code> + 1 <code>extend</code> + 1 <code>n/a</code> + 2 <code>propose</code>; a summary must agree with the table it summarises</td>
         </tr>
         <tr>
-          <td><strong>Tier-3 review, round 4:</strong> the ok-toned <code>Notice</code> the run specifies was asserted in four stages but mounted in none</td>
-          <td><code>mockup</code> — step 2 now mounts it beside its unproven verdict, so the string reads "✓ proxy set. we'll confirm it on your first flow" next to "◐ can't check automatically"</td>
-          <td>the flow's mockup contract — a <code>reuse</code> is <strong>mounted, never drawn</strong>; and it is where Frame A's <code>action state ≠ step verdict</code> becomes visible rather than merely stated</td>
+          <td><strong>Tier-3 review, rounds 4–6:</strong> the ok-toned <code>Notice</code> this run specifies was asserted in four stages but mounted in none — and it took three attempts to place it in a state the screen can actually reach</td>
+          <td><code>mockup</code> — round 4 put it in step 2 with no <code>Button</code> (nothing for the action state to differ from); round 5 moved it to step 1 beside a <em>disabled</em> button, which <code>Button</code>'s @avoid allows only next to a progress line. Round 6 renders step 2's real <code>done</code> state from <code>Onboarding.tsx</code>: both actions enabled, the ok note beneath, the mute remedy below, and the verdict still "◐ can't check automatically". The toggle now carries the in-flight pair — disabled button plus its progress line</td>
+          <td><code>Button</code>'s fork-D4 rule (<em>both halves or neither</em>, and disabled only beside a progress line) · <code>Notice</code>'s @use for a standing outcome · Frame A's <code>action state ≠ step verdict</code>, which this rendering finally shows rather than asserts</td>
         </tr>
         <tr>
           <td><strong>Tier-3 review, round 4:</strong> the <code>Checkbox</code> warrant cited <code>SegmentedControl</code>'s @avoid for a phrase that is its @use</td>
