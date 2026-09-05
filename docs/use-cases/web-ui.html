@@ -93,10 +93,14 @@
         <code>GET /flows/{id}/{leg}/body</code>: JSON and XML/HTML as their pretty-printed source
         in a navigable, foldable surface, <code>image/*</code> as the image over a transparency
         checkerboard, form-urlencoded as decoded key/value rows (each value individually
-        copyable), other text as text, anything else as a toned hex dump. A
-        <strong>raw / decoded</strong> toggle switches between the stored bytes
-        (<code>?decode=0</code>, sniffed to text or hex) and the server-decoded rendering
-        (<code>?decode=1</code>).</li>
+        copyable), other text as text, anything else as a toned hex dump.</li>
+        <li><strong>Raw shows the source, not the compression frames</strong>: the
+        <strong>raw / decoded</strong> toggle switches between the bytes the server sent
+        (<code>?decode=source</code> — transport encoding reversed, nothing re-indented or
+        transcoded) and the fully rendered view (<code>?decode=1</code> — decompressed,
+        charset-normalised, JSON/XML pretty-printed). A gzipped JSON body therefore reads as its minified
+        source in raw rather than as a hex dump of gzip frames, and hex is reserved for payloads that
+        genuinely have no text form. The stored bytes stay reachable at <code>?decode=0</code>.</li>
         <li><strong>A truncated body says so</strong>: renderings are capped (128 KiB of
         characters, 4 KiB of hex) and a capped body states <em>"showing N of M — save to see
         all"</em> in warn tone, naming the size shown, the real total, and the way to the rest. No
@@ -109,8 +113,11 @@
         <li><strong>Copy-as-curl</strong> reproduces the request (method, URL, headers, body,
         shell-quoted); <strong>copy body</strong> puts the shown body on the clipboard (the hex
         dump for hex-rendered bodies; hidden for images); <strong>save body</strong> writes the
-        shown leg's bytes to a file via the OS save dialog, with a filename derived from the flow
-        id, leg, and content type.</li>
+        shown leg's bytes to a file via the OS save dialog, named after the <em>endpoint</em> — the URI's
+        last path segment, or the host when the path names nothing — plus the leg and the extension the
+        served content type implies (<code>charges-response.json</code>,
+        <code>example.com-response.html</code>), so a saved body is recognisable in a downloads folder and
+        opens in the right application.</li>
         <li>The <code>?decode=1</code> contract is server-side — gzip/deflate/brotli reversal,
         charset→UTF-8, JSON + XML pretty-printing — so <code>curl</code> and the web shell gain
         the same decoded view the app shows.</li>
@@ -124,7 +131,8 @@
       — the real clipboard write is a recorded manual check, as is the native save dialog); a
       <em>brotli-compressed</em> JSON body still renders decoded — the decode chain proven
       through the UI; a proxied PNG renders as an image; an <em>XML</em> body renders as XML rather
-      than falling through to text; a body past the render cap states its truncation; and both leg
+      than falling through to text; a brotli body in <em>raw</em> shows its minified source rather than a
+      hex dump of its frames; a body past the render cap states its truncation; and both leg
       sections stand on the page together. The decode chain itself is pinned at the
       API seam in <code>tests/api.rs</code> and the <code>src/api/decode.rs</code> unit suite;
       viewer dispatch, states, and copy/save are covered by the Vitest unit + integration layers.

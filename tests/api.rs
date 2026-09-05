@@ -124,6 +124,48 @@ async fn body_endpoints_raw_decode_and_edges() {
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
+// The raw view's contract: a compressed body is readable without being
+// re-rendered. `decode=source` reverses the transport encoding and stops —
+// no pretty-print, so the bytes are what the server actually sent.
+#[tokio::test]
+async fn decode_source_decompresses_without_pretty_printing() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    let minified = br#"{"a":1,"b":[2,3]}"#;
+    let flow = FlowBuilder::new()
+        .req_header("Content-Type", "application/json")
+        .req_header("Content-Encoding", "gzip")
+        .req_body(captured(&gzip(minified)))
+        .build();
+    let id = flow.id;
+    store.insert(flow);
+    let r = router_with(store);
+
+    let (status, _h, source) = get(&r, &format!("/flows/{id}/request/body?decode=source")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(source, minified, "source must be the served bytes, not a re-indented copy");
+
+    let (_s, _h, decoded) = get(&r, &format!("/flows/{id}/request/body?decode=1")).await;
+    assert!(decoded.len() > source.len(), "decoded pretty-prints, source does not");
+}
+
+// An uncompressed body has no transport encoding to reverse, so source and the
+// stored bytes are the same thing — and neither is pretty-printed.
+#[tokio::test]
+async fn decode_source_leaves_an_uncompressed_body_alone() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    let minified = br#"{"a":1}"#;
+    let flow = FlowBuilder::new()
+        .req_header("Content-Type", "application/json")
+        .req_body(captured(minified))
+        .build();
+    let id = flow.id;
+    store.insert(flow);
+    let r = router_with(store);
+
+    let (_s, _h, source) = get(&r, &format!("/flows/{id}/request/body?decode=source")).await;
+    assert_eq!(source, minified);
+}
+
 #[tokio::test]
 async fn decode_brotli_charset_and_xml_over_router() {
     let store = Arc::new(Store::new(1_000_000, 64));

@@ -88,7 +88,7 @@ export function BodyViewer({
 
   const save = () => {
     if (!loaded) return;
-    void saveBody(loaded.bytes, saveFilename(flow.id, leg, loaded.contentType));
+    void saveBody(loaded.bytes, saveFilename(flow.uri, leg, loaded.contentType));
   };
 
   return (

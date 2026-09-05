@@ -167,13 +167,43 @@ const EXTENSIONS: [test: (mime: string) => boolean, ext: string][] = [
   [(m) => m === "application/json" || m.endsWith("+json"), ".json"],
   [(m) => m === "text/html", ".html"],
   [(m) => m === "application/xml" || m === "text/xml" || m.endsWith("+xml"), ".xml"],
-  [(m) => m.startsWith("text/") || m === "application/x-www-form-urlencoded", ".txt"],
+  [(m) => m === "application/javascript" || m === "text/javascript", ".js"],
+  [(m) => m === "text/css", ".css"],
+  [(m) => m === "text/csv", ".csv"],
+  [(m) => m === "application/x-www-form-urlencoded", ".txt"],
+  [(m) => m.startsWith("text/"), ".txt"],
 ];
 
-export function saveFilename(flowId: string, leg: Leg, contentType: string | null): string {
+export function bodyExtension(contentType: string | null): string {
   const mime = (contentType ?? "").split(";")[0].trim().toLowerCase();
-  const ext = EXTENSIONS.find(([test]) => test(mime))?.[1] ?? ".bin";
-  return `${flowId.slice(0, 8)}-${leg}${ext}`;
+  return EXTENSIONS.find(([test]) => test(mime))?.[1] ?? ".bin";
+}
+
+// A saved body is found again in a Downloads folder, where a flow id says
+// nothing: the endpoint is what the reader remembers. Take the last path
+// segment, fall back to the host when the path names nothing (a bare "/"), and
+// keep the leg so a request and its response never collide.
+function endpointSlug(uri: string): string {
+  let host = "";
+  let path = uri;
+  try {
+    const parsed = new URL(uri);
+    host = parsed.hostname;
+    path = decodeURIComponent(parsed.pathname);
+  } catch {
+    path = uri.split("?")[0];
+  }
+  const segment = path.split("/").filter(Boolean).pop() ?? "";
+  // A path segment that already carries an extension (…/app.js) would stack a
+  // second one, and the served content type is the authority anyway. A host is
+  // never trimmed — the dot in example.com is not an extension.
+  const trimmed = segment.replace(/\.[A-Za-z0-9]{1,8}$/, "");
+  const name = trimmed || segment || host || "body";
+  return name.replace(/[^A-Za-z0-9._-]+/g, "-") || "body";
+}
+
+export function saveFilename(uri: string, leg: Leg, contentType: string | null): string {
+  return `${endpointSlug(uri)}-${leg}${bodyExtension(contentType)}`;
 }
 
 // Native app → OS save dialog (dialog plugin registers the picked path in the

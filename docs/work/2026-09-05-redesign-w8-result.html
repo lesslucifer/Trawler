@@ -29,9 +29,12 @@
   <main>
     <h2 id="outcome">Outcome</h2>
     <div class="callout" data-item="outcome" data-c="outcome">
-      <p><strong>Delivered.</strong> Every row of the plan's expected result is met, with one scope
-      addition the plan itself anticipated (the e2e origin gained two routes) and no deviation from the
-      design.</p>
+      <p><strong>Delivered.</strong> Every row of the plan's expected result is met, plus a scope addition
+      the plan anticipated (the e2e origin gained two routes). The build itself followed design run #9
+      throughout; a later <a href="#owner-round">owner's round</a> then <strong>overturned one of the
+      design's Frame constraints</strong> — raw mode is no longer <em>text | hex</em>, because the API now
+      serves a third view — and fixed two save-file defects the suite had not been asserting. That change is
+      a decision above this WU, recorded rather than absorbed.</p>
     </div>
     <table data-c="outcome-rows">
       <thead><tr><th>#</th><th>The plan's expected result</th><th>Actual</th></tr></thead>
@@ -110,7 +113,7 @@
           never reverts.</td>
           <td>All three are things this WU deliberately removes; each deleted assertion maps to a design line
           that removed it. A suite kept green by keeping the defect is the failure mode the plan named as a
-          risk. The replacement is 21 tests where the old file had 16 — the 21st added at review.</td>
+          risk. The replacement is 22 tests where the old file had 16 — one added at review, one in the owner's round.</td>
         </tr>
         <tr>
           <td><strong>Two e2e assertions in the existing spec changed wording, not intent.</strong>
@@ -143,6 +146,53 @@
           <td>No <code>action</code> prop is passed on any of the seven notices, and a unit test asserts no
           retry control exists on the failure state — so a later edit that adds one turns a test red rather
           than passing silently.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="owner-round">The owner's round — three usability defects, and a Frame constraint overturned</h2>
+    <p>Raised after the build, against the running app. Two were plain defects; the first overturns a
+    constraint design run #9 wrote into its Frame, so it is recorded as a design change rather than a fix.</p>
+    <table data-c="owner-round">
+      <thead><tr><th>What was raised</th><th>What it turned out to be, and what changed</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>"Raw only showing hex is useless."</strong></td>
+          <td><em>Partly a misreading of the symptom, and a real defect underneath.</em> Raw already showed
+          plain text for uncompressed JSON/HTML/JS/XML — <code>rawKind</code> sniffs bytes, and readable
+          UTF-8 dispatches to <code>TextRenderer</code>. Hex appeared only for bodies that are genuinely not
+          text, and the case that matters is a <strong>compressed</strong> one: a gzip or brotli body's
+          stored form is a hex dump of compression frames, which answers no question a reader has.
+          <strong>Changed:</strong> a third server view, <code>?decode=source</code>, reverses the transport
+          encoding and stops — no charset transcode, no pretty-print. Raw now asks for that, so a compressed
+          body reads as the minified source the server actually sent, and hex is left to payloads with no
+          text form at all (images, protobuf, octet-stream).
+          <strong>This overturns a Frame constraint.</strong> Design run #9 states <em>"Raw mode has two
+          kinds only — rawKind returns text | hex"</em> with the explicit ✓ example <em>"raw gzip bytes land
+          in HexRenderer"</em>. That is no longer true, by the owner's decision. The constraint was written
+          against what the API could then serve; the API now serves a third view, so the premise moved rather
+          than the rule being broken. Recorded here because a build that silently contradicts its design's
+          Frame is exactly what the citation is meant to make visible.</td>
+        </tr>
+        <tr>
+          <td><strong>"The saved file has no proper extension."</strong></td>
+          <td><em>A real defect, and the test suite could not see it.</em> <code>saveFilename</code> did map
+          a content type to an extension, but the only test that exercised saving asserted the Blob's
+          <em>size</em> and never the filename, so the whole naming path was untested at the call site. The
+          extension list was also short — <code>.js</code>, <code>.css</code> and <code>.csv</code> all fell
+          through to <code>.bin</code> or <code>.txt</code>. <strong>Changed:</strong> the list covers them,
+          and a new test asserts the actual download name; it was checked by reverting the fix and watching
+          it fail.</td>
+        </tr>
+        <tr>
+          <td><strong>"The filename is the id — is that useful?"</strong></td>
+          <td><em>No.</em> <code>0192a1b2-response.json</code> identifies nothing in a downloads folder. The
+          endpoint is what a reader remembers. <strong>Changed:</strong> the name is the URI's last path
+          segment — or the host when the path is bare — plus the leg and the extension:
+          <code>charges-response.json</code>, <code>example.com-response.html</code>. Writing the tests
+          first caught two bugs in my own implementation: the host fallback stripped <code>.com</code> as if
+          it were an extension, and a percent-escape in the path survived into the filename as literal
+          <code>%20</code>.</td>
+        </tr>
       </tbody>
     </table>
 
@@ -197,21 +247,21 @@
           at blob <code>5b3bd77d872ba6b1552106f061b67c4c2e3f9030</code> —
           <code>data-artifact="design-run"</code>, <code>data-status="archived"</code>. This is the repo's
           second <code>design.implements</code> citation and its first against a screen design run.</td></tr>
-        <tr><td><strong>Unit</strong></td><td><code>ui/src/BodyViewer.test.tsx</code> rewritten — 21 tests
+        <tr><td><strong>Unit</strong></td><td><code>ui/src/BodyViewer.test.tsx</code> rewritten — 22 tests
           (dispatch ×6, the leg prop, raw refetch, three truncation paths, copy-as-valid-JSON, copy-as-hex,
           the reverting confirm, image-has-no-copy, save-writes-all, and the seven zone states).
-          <code>ui/src/body.test.ts</code> +2 (the human size, and the null size). The 21st test came from the review — see above.</td></tr>
+          <code>ui/src/body.test.ts</code> +6 (the human size, the null size, and four on the endpoint-derived filename). The 21st BodyViewer test came from the review and the 22nd from the owner's round — see above.</td></tr>
         <tr><td><strong>Integration</strong></td><td><code>ui/src/FlowDetail.test.tsx</code> +2 — the WU's
           bounded contract: one pane per leg, each fetching its own leg; switching one pane's mode leaves
           the other's calls untouched.</td></tr>
         <tr><td><strong>E2E</strong></td><td><code>ui/e2e/specs/flows.spec.ts</code> +3, and the harness
-          origin +2 routes. <strong>13 passing, 0 failing</strong> — including the epic's two new UC-5
-          contracts: <em>an XML body renders as XML</em> and <em>a body past the render cap states its
+          origin +2 routes. <strong>14 passing, 0 failing</strong> — including the epic's two new UC-5
+          contracts and the owner's round's compressed-raw contract: <em>an XML body renders as XML</em> and <em>a body past the render cap states its
           truncation</em>, both against the real proxy, the real API and the real Tauri window.</td></tr>
-        <tr><td><strong>Suites</strong></td><td><code>pnpm test</code> 536 passed / 42 files (527 at the
+        <tr><td><strong>Suites</strong></td><td><code>pnpm test</code> 540 passed / 42 files (527 at the
           base — the nine body-family component tests stayed green as their first real consumer arrived) ·
           <code>pnpm exec eslint src</code> clean · <code>tsc --noEmit</code> clean ·
-          <code>cargo test</code> 7 suites green · <code>cargo clippy</code> clean.</td></tr>
+          <code>cargo test</code> 7 suites green (+2 API integration tests for <code>decode=source</code>) · <code>cargo clippy</code> clean.</td></tr>
         <tr><td><strong>Docs</strong></td><td><code>verify-doc</code> green on the plan, this report and
           <code>web-ui.html</code>.</td></tr>
         <tr><td><strong>The marker closed</strong></td><td><code>grep</code> across <code>ui/src/</code> for

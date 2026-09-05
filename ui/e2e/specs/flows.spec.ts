@@ -112,6 +112,25 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     expect(shown).toContain('"brotli"');
   });
 
+  // Raw's whole job for a compressed body: the stored bytes are gzip frames, and
+  // a hex dump of those answers no question. Raw reverses the transport encoding
+  // and stops, so what shows is the minified source the server actually sent.
+  it("shows a compressed body's source in raw, not a hex dump of its frames", async () => {
+    await openRowFor("/br");
+    await inResponsePane('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
+
+    await responseMode("raw").click();
+    await inResponsePane('[data-testid="body-text"]').waitForExist({ timeout: 15_000 });
+    const raw = await inResponsePane('[data-testid="body-text"]').getText();
+    expect(raw).toContain('"compressed":"brotli"');
+    expect(await inResponsePane('[data-testid="body-hex"]').isExisting()).toBe(false);
+
+    // Raw is the source, not a rendering: the decoded view indents, raw does not.
+    expect(raw).not.toContain("\n  ");
+    await responseMode("decoded").click();
+    await inResponsePane('[data-testid="body-json"]').waitForExist({ timeout: 15_000 });
+  });
+
   it("renders an image body as an <img>", async () => {
     await openRowFor("/img");
     await inResponsePane('[data-testid="body-image"]').waitForExist({ timeout: 15_000 });

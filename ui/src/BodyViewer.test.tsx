@@ -273,6 +273,35 @@ test("save writes all the bytes, which is what makes the cut marker's advice tru
   click.mockRestore();
 });
 
+// The saved file lands in a Downloads folder, where the flow id names nothing
+// and a missing extension makes the OS refuse to open it.
+test("save names the file after the endpoint and the served type", async () => {
+  vi.stubGlobal("URL", { ...URL, createObjectURL: vi.fn(() => "blob:save"), revokeObjectURL: vi.fn() });
+  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  const downloads: string[] = [];
+  const anchor = vi
+    .spyOn(HTMLAnchorElement.prototype, "download", "set")
+    .mockImplementation(function (this: HTMLAnchorElement, name: string) {
+      downloads.push(name);
+    });
+  const api = apiWith({ bytes: text('{"a":1}'), contentType: "application/json" });
+  render(
+    <BodyViewer
+      api={api}
+      flow={flow({ uri: "https://api.example.com/v1/charges?limit=3" })}
+      leg="response"
+    />,
+  );
+  await screen.findByTestId("body-json");
+
+  fireEvent.click(screen.getByRole("button", { name: "save" }));
+
+  await waitFor(() => expect(click).toHaveBeenCalled());
+  expect(downloads).toEqual(["charges-response.json"]);
+  anchor.mockRestore();
+  click.mockRestore();
+});
+
 test("the five capture absences each state their own cause, and never fetch", () => {
   const cases: [BodyView, string][] = [
     [{ state: "empty" }, "empty body"],
