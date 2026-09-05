@@ -10,7 +10,7 @@ import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
 import { Onboarding } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
-import { Field, StatusDot } from "./components/index";
+import { Field, StatusDot, TonedText } from "./components/index";
 import { dotStatus, initial, reduce, type OnbState } from "./onboardingMachine";
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
@@ -45,6 +45,10 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       dispatch({ t: "captured" });
     }
   }, [state.phase, state.everProven, flows]);
+
+  // Which absence the list shows turns on whether the user narrowed it, so an
+  // empty-but-blank field must not count as an active filter.
+  const hasFilter = Object.values(filter).some((v) => (v ?? "") !== "");
 
   const proxyAddr = defaultProxyAddr();
 
@@ -166,9 +170,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             value={filter.status ?? ""}
             onChange={(e) => update("status", e.target.value)}
           />
-          <span className="whitespace-nowrap text-ink-mute">
+          <TonedText tone="muted" className="whitespace-nowrap">
             {flows.length} {flows.length === 1 ? "flow" : "flows"}
-          </span>
+          </TonedText>
         </>
       }
       detail={
@@ -183,7 +187,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       }
     >
       {closeDialog}
-      <FlowList flows={flows} selectedId={selectedId} onSelect={setSelectedId} />
+      <FlowList flows={flows} selectedId={selectedId} onSelect={setSelectedId} filtered={hasFilter} />
     </Layout>
   );
 }

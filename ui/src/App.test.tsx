@@ -278,12 +278,51 @@ test("a non-matching host filter empties the list; SSE appends a new row", async
 
   fireEvent.change(screen.getByLabelText("host"), { target: { value: "other.test" } });
   await waitFor(() => expect(screen.queryByTestId("flow-row")).toBeNull());
-  expect(screen.getByTestId("empty")).toBeInTheDocument();
+  // The filter excluded the traffic — telling the user to send some would be
+  // telling them to repeat what they have already done.
+  expect(screen.getByTestId("empty")).toHaveTextContent("no flows match this filter");
+  expect(screen.getByTestId("empty")).not.toHaveTextContent("no flows yet");
 
   fireEvent.change(screen.getByLabelText("host"), { target: { value: "" } });
   rows = [...rows, flow({ id: "f2", uri: "http://example.com/second", status: 404 })];
   fire();
   await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
+});
+
+test("a proven launch with no traffic says nothing is captured, not that a filter excluded it", async () => {
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={PROVEN} />);
+
+  const empty = await screen.findByTestId("empty");
+  expect(empty).toHaveTextContent("no flows yet");
+  expect(empty).not.toHaveTextContent("no flows match this filter");
+});
+
+test("the flow count reads as a value at a deliberately absent tone, not as a label", async () => {
+  const { api } = mockApi(() => [flow({ id: "f1" }), flow({ id: "f2" })]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findAllByTestId("flow-row");
+
+  const count = screen.getByText(/2 flows/);
+  expect(count.className).toMatch(/text-ink-mute/);
+  expect(count.className).toMatch(/font-mono/);
+});
+
+test("the keyboard selects a row and opens its detail without a pointer", async () => {
+  const { api } = mockApi(() => [
+    flow({ id: "f1", uri: "http://example.com/a" }),
+    flow({ id: "f2", uri: "http://example.com/b" }),
+  ]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findAllByTestId("flow-row");
+
+  const list = screen.getByRole("listbox");
+  fireEvent.keyDown(list, { key: "ArrowDown" });
+  fireEvent.keyDown(list, { key: "ArrowDown" });
+  fireEvent.keyDown(list, { key: "Enter" });
+
+  await screen.findByTestId("detail");
+  expect(api.getFlow).toHaveBeenCalledWith("f2");
 });
 
 // Inspector tests (E-UIINSPECT) run in the proven phase — post-onboarding, the

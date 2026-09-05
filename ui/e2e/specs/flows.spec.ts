@@ -24,6 +24,88 @@ async function pointAppAtCore() {
   await $("header").waitForExist({ timeout: 15_000 });
 }
 
+// UC-4 (watch) end to end: the list is the screen a developer leaves open while
+// debugging. Every assertion here is on what E-REDESIGN.W4 built from W3's
+// design — the reason phrase in the pill's accessible name, the two absences
+// told apart, and the keyboard path the row did not have at all before. Each one
+// fails against the pre-WU build, which is what makes them proof rather than
+// green paint.
+describe("UC-4 — watch live traffic in the native app", () => {
+  before(async () => {
+    await pointAppAtCore();
+    await hit(); // a decrypted flow reveals the list (leaves onboarding, UC-ONBOARD)
+    await browser.waitUntil(async () => (await rowCount()) >= 1, {
+      timeout: 15_000,
+      timeoutMsg: "list never revealed after the first decrypted flow",
+    });
+  });
+
+  it("a proxied request lands as a row carrying every column", async () => {
+    await hit("/json");
+    await browser.waitUntil(
+      async () => {
+        for (const row of await $$('[data-testid="flow-row"]')) {
+          if ((await row.getText()).includes("/json")) return true;
+        }
+        return false;
+      },
+      { timeout: 15_000, timeoutMsg: "no row for /json" },
+    );
+
+    const row = (await $$('[data-testid="flow-row"]')).at(-1)!;
+    const text = await row.getText();
+    expect(text).toMatch(/\d{2}:\d{2}:\d{2}/); // absolute time, for log correlation
+    expect(text).toContain("GET");
+    expect(text).toMatch(/\d+ ms/);
+  });
+
+  it("a status carries its reason phrase, so the tone is never the only channel", async () => {
+    const pill = await $('[aria-label="200 OK"]');
+    await pill.waitForExist({ timeout: 15_000 });
+    expect(await pill.getText()).toContain("200");
+  });
+
+  it("a filter narrows the list", async () => {
+    await $('[aria-label="host"]').setValue("no-such-host.invalid");
+    await browser.waitUntil(async () => (await rowCount()) === 0, {
+      timeout: 15_000,
+      timeoutMsg: "the filter never narrowed the list",
+    });
+  });
+
+  it("an unmatched filter says the query excludes the traffic, not that none exists", async () => {
+    const empty = await $('[data-testid="empty"]');
+    await empty.waitForExist({ timeout: 15_000 });
+    const text = await empty.getText();
+    expect(text).toContain("no flows match this filter");
+    expect(text).not.toContain("no flows yet");
+  });
+
+  it("clearing the filter brings the rows back", async () => {
+    await $('[aria-label="host"]').setValue(" ");
+    await $('[aria-label="host"]').clearValue();
+    await browser.waitUntil(async () => (await rowCount()) >= 1, {
+      timeout: 15_000,
+      timeoutMsg: "the list never came back after clearing the filter",
+    });
+  });
+
+  it("the keyboard selects a row and opens its detail — no pointer at all", async () => {
+    // Focused without a click, so the assertion below is about the keys alone.
+    await browser.execute(() => {
+      (document.querySelector('[data-testid="flow-scroll"]') as HTMLElement).focus();
+    });
+    await browser.keys("ArrowDown");
+    await browser.waitUntil(
+      async () => (await $$('[data-testid="flow-row"][aria-selected="true"]')).length === 1,
+      { timeout: 15_000, timeoutMsg: "ArrowDown never selected a row" },
+    );
+
+    await browser.keys("Enter");
+    await $('[data-testid="detail"]').waitForExist({ timeout: 15_000 });
+  });
+});
+
 // UC-5 (inspect) end to end: proxy a request, click its row, and inspect it —
 // headers, timing, versions, body viewers (JSON tree, raw toggle), copy-as-curl.
 // The brotli step proves the W1 decode chain surfaces in the inspector; the image
