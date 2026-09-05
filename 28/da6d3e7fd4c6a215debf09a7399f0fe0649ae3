@@ -1,0 +1,34 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W7 (wu/export/curl-in) -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W7
+branch: wu/export/curl-in
+base: 358c7f131d1e070ef438a1e74b478f496a56a659
+head: 28da6d3e7fd4c6a215debf09a7399f0fe0649ae3
+diff_sha256: a37baf4af2fa100ee5c1504d56c9fc138199963b4bd70a25a062062b4ed6aa91
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 3, verified: 2, waived: 0 }
+rounds:
+  - round: 1
+    found: 3
+    verified: 2
+    detail: >-
+      Five finders, three candidates, adversarial verification confirming two. (1) push_code_point
+      discards the hex digits take_radix already consumed when the code point is not a character
+      (a UTF-16 surrogate \uD800, a \U above 0x10FFFF), emitting only the two-byte marker - a
+      silent divergence from the module's own claim that an escape bash does not know stays
+      literal; verified by tokenizing both shapes and comparing with a real bash, which keeps the
+      six-byte literal. Important, not blocker: Chrome never emits a surrogate escape. (2)
+      Command.saw_data_flag is redundant with !data.is_empty(), since -d '' still pushes an empty
+      element - nit. Refuted: UC-6 quoting two example refusal wordings and the format refusal
+      string is stating a wire-visible contract the same file already does for the import
+      envelope, not copying code; the verifier did note the doc/v1 note's self-description
+      ("not their wording") is imprecise, carried forward as a note correction in round 2.
+verified_findings:
+  - summary: "an ANSI-C \u/\U escape naming no character drops its consumed digits instead of staying literal"
+    severity: important
+  - summary: "saw_data_flag duplicates what the data vector already says"
+    severity: nit
+waivers: []
+verdict: FAIL
+date: 2026-09-05
