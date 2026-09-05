@@ -1,0 +1,23 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W5
+changes:
+  - path: docs/work/2026-09-04-redesign-w5-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan — requirement, mapping to UC-5 and the epic's W5 row, the five zones as they ship with what each costs today (cited file:line), the W7 seam stated once, the two calls the epic plan hands this run, the expected result per stage, the test plan with its three waivers, and the risks. The central risk it names is the one that mattered: the epic plan predicts Section AND HeaderTable resolve to reuse, and a run that reads a prediction as an instruction will write the verdict it was told to reach."
+  - path: docs/work/2026-09-04-redesign-w5-flow-detail-run.html
+    tier: T3
+    action: added
+    distills: "the design run itself — six stages and five closing lists, closed, verify-doc green, then archived. Frame (four goals ranked, six constraints including 'two scopes, not one' and 'the body already switches leg', three qualities, with Given/Not-given as first-class lines); Layout (one pinned identity row carrying the leg selector, an unlabelled flow line, two leg-scoped zones, and an overflow line naming every unbounded zone and its cap owner); Elements (13 rows, every verdict traced to the entry's @avoid read FIRST); Interaction (seven use cases, each a zone-to-delta with UNCHANGED spelled out and a keyboard path); a stateful mounted mockup; nine Tune calls; and the receipt, capabilities, proposals, blocked-on and review lists. Archived, so it is closed for good — its successor is W6's build, not a reopening."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: unchanged
+    distills: "read as substrate and pinned at aeff5b0fb4dea94ab5f0b7c385b8188786666e8a; re-checked at close and unmoved. No rule was added or amended by this run — the vocabulary covered the screen."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: unchanged
+    distills: "UC-5's contract does not change shape: a design run ships no behaviour. Its observable gains (the reverting copy confirm, the empty-leg sentence, the toned verb, Esc) become true in W6 and are stated there, so one UC row is not split across two WUs — the same discipline W2 applied by leaving UC-4's wording to W4."
+distillation:
+  ran: true
+  outcome: "Nothing to distil UP. A design run changes no truth a T2 doc states: no decision record moves, no use-case contract changes shape, and no rulebook line was proposed. The run is T3 scratch whose distillation target is W6's code, not a T2 document — and per DEC-16 a design artifact retires into the TSDoc of the component it designs, which for a SCREEN run is the screen's own build. Two items are therefore carried forward as blocked-on rather than distilled: Esc/focus-return (W6 owns making them true) and the moved leg-switch seam (the epic owns W7's plan row, which W5 may not edit)."
