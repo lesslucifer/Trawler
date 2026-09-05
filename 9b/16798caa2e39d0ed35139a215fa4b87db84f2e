@@ -1,0 +1,44 @@
+schema: cr/v3
+scope: "WU setup-quit-dialog -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W9
+branch: wu/redesign/setup-quit-dialog
+base: 42875df5f19c30466d6fd6c1331df063b0a626a4
+head: 9b16798caa2e39d0ed35139a215fa4b87db84f2e
+diff_sha256: 328b5e1d13be6e914e2773a4139ecf88557bec9b01ee4961d3efbfb223b97da7
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 17, verified: 3, waived: 0 }
+verified_findings:
+  - id: contradiction-checkbox-tier
+    severity: blocker
+    where: "docs/work/2026-09-04-redesign-run-9-setup-quit.html — Elements summary + T4 break-down + Proposals paragraph"
+    what: "The Elements stage still calls the opt-out a T4 build-local composition and states 'zero new components proposed for the registry', while the Proposals table, the closing paragraph and the Review table all record Checkbox as a T1 propose-to-registry. The run contradicts itself on the tier of the same element and on its own headline count."
+    why_real: "Confirmed by direct read: the stale text survived the mid-run promotion of the checkbox. Found independently by the correctness and reuse finders."
+  - id: ol-miscount
+    severity: important
+    where: "docs/work/2026-09-04-redesign-w9-plan.html counted table; run's StepList placement cell"
+    what: "Both docs name proxy-off-steps as the fourth <ol> and place it 'in the dialog'. That testid is ui/src/Onboarding.tsx:278; the dialog's own list is <ol data-testid=\"proxy-close-steps\"> at ProxyCloseDialog.tsx:82 and is never counted. Five instructional <ol>s exist across the two files, not four."
+    why_real: "Verified by grep: Onboarding.tsx has guided-steps:183, removal-steps:190, proxy-steps:261, proxy-off-steps:278; ProxyCloseDialog.tsx has proxy-close-steps:82. The plan's own heading calls this count 'falsifiable', which makes the miscount load-bearing."
+  - id: broken-anchor
+    severity: nit
+    where: "docs/work/2026-09-04-redesign-run-9-setup-quit.html — StatusLine Elements row"
+    what: "href=\"#short-field\" targets an id that no longer exists; the section is id=\"short-field-h2\" after it was moved out of data-item=elements."
+    why_real: "grep confirms one href=\"#short-field\" and only id=\"short-field-h2\"."
+refuted:
+  - "mode model overstates branching (ours/foreign/remote) — refuted: proxy_status is a genuinely 3-valued enum (ProxyStatus::Ours/Foreign/None, setup.rs:293-297); the run SPLITS a pre-existing 2-way collapse rather than inventing branching, and remote diverges structurally (inline steps, one button, the only opt-out)."
+  - "foreign-mode wording unmounted in the mockup — refuted: the flow's mockup rule is that every reuse/extend verdict be MOUNTED not drawn (per-component), not that every copy variant be rendered; verify-doc is green on that predicate and the wording is stated in the Interaction and mode tables."
+  - "supporting sections escape verify-doc by sitting outside data-item — refuted: design-flow.html does not forbid narrative outside the eleven items, archived run #4 (bc65d8a) has the same shape, and the checker's data_rows() counts ANY >=3-td row inside elements, so relocating reference tables was the correct fix rather than faking gist/why on non-catalog rows."
+  - "Layout paragraph redundant and uncollapsed — refuted: the collapse convention is scoped to table cells in Elements/Interaction; Layout's spec defines no cell-collapse mechanism, and each stage restating a fact through its own lens is the format working as intended."
+  - "the modal-shell/Checkbox warrant is special pleading — refuted: the split is grounded in the tier model, not sample size alone (T1 primitive vs T4 composition, design-flow.html tier table); modal-shell breaks down into lower-tier parts, a checkbox has none."
+  - "StatusLine extend oversteps a screen run's authority — refuted: design-flow.html names 'an extend's declared delta' as screen-owned content; and StatusLine's @anatomy binds 'never toned' to the NAME segment, not the message, so the run changes an ink choice, not a stated prohibition."
+  - "visual-weight-follows-goals should be downgraded like confirm-at-point — refuted: confirm-at-point depends on StepStatusView.short, an unsuppliable domain field; the toning is an extend the run resolves itself. The run had already applied the downgrade only where warranted."
+  - "absence-names-itself violated by two identical 'can't check automatically' verdicts — refuted: pre-existing and unworsened (ui/src/setup.ts:234,259 are byte-identical today; this diff touches zero lines of that file) and the run improves it by splitting sentence into short + Notice. The rule is scoped per surface; the two render in differently-titled step rows."
+  - "warrant repeated six times — refuted: Elements Fit, Proposals and Review are three spec-mandated closing artifacts with different schemas; each occurrence carries distinct content (fit trace / owner / reviewer provenance)."
+  - "one-term-per-concept cites 'first flow' which the design never uses — folded into the receipt-accuracy fix rather than reported separately."
+design:
+  artifacts: [docs/work/2026-09-04-redesign-run-9-setup-quit.html]
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 6, verified: 0, waived: 0 }
+  verdict: PASS
+verdict: FAIL
+date: 2026-09-05
