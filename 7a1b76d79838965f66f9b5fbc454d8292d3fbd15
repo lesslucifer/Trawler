@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 7a1b76d79838965f66f9b5fbc454d8292d3fbd15
+base: 713d5c3efc13fc459593d1d1753feb373a5afad8
+tier: key
+signer: vuluu
+report: docs/work/2026-09-05-redesign-w4-result.html
+report_sha256: 98bf2e233e2761ad2b6b96c78d0e3c22f018f988a6967d7984260b4dde7ae21d
+date: 2026-09-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEB32xM7SU6cE2Tzs3IL4NlV890fopFVy9qcnLn8Eqd9LqhSZlAkPZe1Tj
+  gM1KY0zoHBz6PQOM7pS+QExC9o1BwE
+  -----END SSH SIGNATURE-----
