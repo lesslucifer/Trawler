@@ -19,27 +19,4 @@ changes:
     tier: T2
     action: updated
     distills: "UC-5's contract, updated to what the app now does — this is the distillation W7 deliberately deferred to build time, because a design does not move a contract. Absorbed: the two gains the epic charged to this screen (a truncated body STATES its truncation with both sizes and the way out; xml is a real dispatch, not a fall-through), plus the wording that went stale with them — JSON is no longer 'a collapsible tree' and XML no longer 'pretty-printed text' but both navigable foldable source; both legs are on screen at once, each with its own mode; form values are individually copyable; the never-blank states are seven, not five, one distinct sentence each with warn tone on the one that is a fault. The provenance callout names the two new e2e contracts and the two-leg layout, so the claims stay traceable to the specs that pin them."
-  - path: ui/src/BodyViewer.tsx
-    tier: T4
-    action: updated
-  - path: ui/src/BodyViewer.test.tsx
-    tier: T4
-    action: updated
-  - path: ui/src/FlowDetail.tsx
-    tier: T4
-    action: updated
-  - path: ui/src/FlowDetail.test.tsx
-    tier: T4
-    action: updated
-  - path: ui/src/body.ts
-    tier: T4
-    action: updated
-  - path: ui/src/body.test.ts
-    tier: T4
-    action: updated
-  - path: ui/e2e/specs/flows.spec.ts
-    tier: T4
-    action: updated
-  - path: ui/e2e/harness/main.rs
-    tier: T4
-    action: updated
+t2_note: "docs/use-cases/web-ui.html carries this WU's T2 truth — see its entry above. UC-5's two gains are observable in the running app as of this tip, which is why they land here rather than at W7: a design does not move a contract, a build does. No decision record is owed (nothing here established a standing rule — the leg's placement is the panel's reasoning and lands with W5/W6), and design-rules-index.html needs no edit (design run #9 recorded zero proposals, and the one sizing token the build uses already ships with an existing consumer)."
