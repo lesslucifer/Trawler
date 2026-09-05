@@ -200,15 +200,15 @@ flowchart LR
         <h3>W6 · Build the flow detail</h3>
         <p data-item="wu-summary">Replace the local <code>Section</code>/<code>HeaderTable</code> with registry <code>Section</code>/<code>KeyValueRow</code>, the close glyph with <code>IconButton</code>, the curl block with <code>TextRenderer</code>+<code>CopyButton</code>, the "none"/"loading…" sentences with <code>Notice</code>, and the raw verb with <code>MethodLabel</code>. Removes the second inline copy of the duration formatting.</p>
         <p data-item="wu-maps-to">W5's design; UC-5.</p>
-        <p data-item="wu-expected">The detail panel renders from registry components; the sticky "copied" bug (it never reverts today) is gone with <code>CopyButton</code>'s timed confirm.</p>
+        <p data-item="wu-expected">The detail panel renders from registry components; the sticky "copied" bug (it never reverts today) is gone with <code>CopyButton</code>'s timed confirm. <em>Still owed here:</em> W8 fixed only the body pane's copy — the panel's own copy-as-curl button still has the never-reverting <code>useState</code>, and the panel's <code>none</code>/<code>loading…</code> sentences are still bare paragraphs.</p>
         <p data-item="wu-deps">W5</p>
       </div>
 
       <div data-wu="E-REDESIGN.W7">
         <h3>W7 · Design run — body viewer</h3>
-        <p data-item="wu-summary">The largest run: nine registry members, six body kinds, a raw/decoded toggle <s>and a leg switch</s> (<strong>the leg switch is gone — W5 took leg selection to the panel</strong>, so <code>BodyViewer</code>'s own toggle is deleted rather than redesigned and the body reads the panel's leg as a prop; see <a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a>). The Frame must state that a body is <em>wire evidence</em> — which is what forces copy-exactness and a stated truncation rather than a silent cap.</p>
+        <p data-item="wu-summary">The largest run: nine registry members, six body kinds and a raw/decoded toggle. The Frame must state that a body is <em>wire evidence</em> — which is what forces copy-exactness and a stated truncation rather than a silent cap.<br><em>Moved before the run:</em> the leg switch left the pane. The panel already splits <em>Request headers</em> from <em>Response headers</em>, so a Body section switching legs inside itself stated the same fact twice; the pane now takes the leg as a prop and the panel mounts one per leg. <a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a> (raised in W5) is the decision that moved it and states the rejected alternatives; the run's own account is in <a href="2026-09-04-redesign-w7-result.html">W7's result</a>.</p>
         <p data-item="wu-maps-to">UC-5 (type-dispatched body viewers, raw/decoded toggle, copy/save body).</p>
-        <p data-item="wu-expected">A closed run resolving all six kinds to the family members, <s>the mode switches</s> the <strong>decode</strong> switch to <code>SegmentedControl</code>, and the truncation statement to <code>CutMarker</code>. Leg is no longer this run's to resolve.</p>
+        <p data-item="wu-expected">A closed run resolving all six kinds to the family members, the <strong>decode</strong> switch to <code>SegmentedControl</code>, and the truncation statement to <code>CutMarker</code>. Leg was not this run's to resolve. <em>Landed:</em> every element <code>reuse</code>, zero proposals, 17/17 soft slugs receipted.</p>
         <p data-item="wu-deps">W2</p>
       </div>
 
@@ -216,7 +216,7 @@ flowchart LR
         <h3>W8 · Build the body viewer</h3>
         <p data-item="wu-summary">Wire all nine body-family members, making <code>XmlRenderer</code> reachable for the first time and replacing the hand-built JSON tree with <code>JsonRenderer</code> (its <code>@avoid</code> names the current lossy form as the rejected design, DEC-01). Restore <code>TEXT_MAX</code>/<code>HEX_MAX</code> with <code>CutMarker</code>, and swap <code>ModeButton</code> for <code>SegmentedControl</code> plus <code>CopyButton</code>/<code>IconButton</code> — <strong>for the decode pair only</strong>, per <a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a>, which states what the leg pair becomes and why. Closes the <code>E-DFLOW.W5 Q2</code> marker.</p>
         <p data-item="wu-maps-to">W7's design; UC-5.</p>
-        <p data-item="wu-expected">Bodies render through the family, state their truncation, and copy exactly; <code>xml</code> gets a real surface.</p>
+        <p data-item="wu-expected">Bodies render through the family, state their truncation, and copy exactly; <code>xml</code> gets a real surface. <strong>Landed:</strong> all nine members wired, <code>BodyViewer.tsx</code> 238 → 129 lines, and the two UC-5 gains proven end to end against the real app. Also — following the design — the leg left the pane: it is a prop, and <code>FlowDetail</code> mounts one instance per leg, so both bodies are readable at once. The panel's <em>zoning</em> is untouched and stays W6's. The account is in <a href="2026-09-05-redesign-w8-result.html">W8's result</a>.</p>
         <p data-item="wu-deps">W7</p>
       </div>
 

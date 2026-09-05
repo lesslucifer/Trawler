@@ -114,8 +114,12 @@ export function FlowDetail({
           <HeaderTable headers={flow.response_headers} />
         </Section>
 
-        <Section title="Body">
-          <BodyViewer api={api} flow={flow} />
+        <Section title="Request body">
+          <BodyViewer api={api} flow={flow} leg="request" />
+        </Section>
+
+        <Section title="Response body">
+          <BodyViewer api={api} flow={flow} leg="response" />
         </Section>
       </div>
     </div>

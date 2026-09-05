@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Filter, FlowSummary, FlowView, TrawlerApi } from "./api";
+import { toRow } from "./flow";
 
 const DEBOUNCE_MS = 150;
 
@@ -14,12 +15,23 @@ export function useFlows(api: TrawlerApi) {
   // tunnel but no flow). Onboarding treats connections>0 as "proxy is routing";
   // the flow list itself ignores them. Seeded once from /stats, then bumped live.
   const [connections, setConnections] = useState(0);
+  // Every host capture has ever seen, which is NOT what `flows` holds: that list
+  // is server-filtered, so deriving the host options from it would collapse them
+  // to the one already chosen and strand the user there. Accumulated instead, so
+  // a host stays selectable once observed.
+  const [hosts, setHosts] = useState<string[]>([]);
 
   const filterRef = useRef(filter);
   filterRef.current = filter;
 
   const refresh = useCallback(() => {
-    api.listFlows(filterRef.current).then(setFlows).catch(() => {});
+    api
+      .listFlows(filterRef.current)
+      .then((list) => {
+        setFlows(list);
+        setHosts((known) => merge(known, list));
+      })
+      .catch(() => {});
   }, [api]);
 
   const timer = useRef<ReturnType<typeof setTimeout>>();
@@ -51,7 +63,16 @@ export function useFlows(api: TrawlerApi) {
     [],
   );
 
-  return { filter, flows, connections, update };
+  return { filter, flows, hosts, connections, update };
+}
+
+function merge(known: string[], list: FlowSummary[]): string[] {
+  const seen = new Set(known);
+  for (const flow of list) {
+    const { host } = toRow(flow);
+    if (host) seen.add(host);
+  }
+  return seen.size === known.length ? known : [...seen].sort();
 }
 
 // Fetches GET /flows/{id} when the selection changes; null clears it. A cancel

@@ -66,7 +66,9 @@ async fn main() {
             .route("/", get(|| async { "hello from origin" }))
             .route("/json", get(json_body))
             .route("/br", get(brotli_json_body))
-            .route("/img", get(png_body));
+            .route("/img", get(png_body))
+            .route("/xml", get(xml_body))
+            .route("/big", get(oversized_text_body));
         let _ = axum_server::from_tcp_rustls(origin, tls).serve(app.into_make_service()).await;
     });
 
@@ -168,6 +170,22 @@ const PNG_1X1: &[u8] = &[
 
 async fn png_body() -> impl IntoResponse {
     ([(header::CONTENT_TYPE, "image/png")], PNG_1X1)
+}
+
+async fn xml_body() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "application/xml")],
+        r#"<order id="9f3c"><item sku="A-1" qty="2"/></order>"#,
+    )
+}
+
+// Past the UI's 128 KiB render cap and far under the 10 MiB capture cap, so the
+// body is captured whole and the pane must state what it left out.
+async fn oversized_text_body() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/plain")],
+        "trawler ".repeat(25_000),
+    )
 }
 
 async fn stop_handler(State(ctrl): State<Control>) -> &'static str {

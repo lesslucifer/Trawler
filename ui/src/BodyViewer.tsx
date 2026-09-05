@@ -4,151 +4,58 @@ import {
   bodyKind,
   bodyNotice,
   bodyText,
-  formEntries,
   hexDump,
   rawKind,
   saveBody,
   saveFilename,
-  TREE_MAX,
   type BodyKind,
 } from "./body";
+import {
+  CopyButton,
+  FormRenderer,
+  HexRenderer,
+  IconButton,
+  ImageRenderer,
+  JsonRenderer,
+  Notice,
+  SegmentedControl,
+  TextRenderer,
+  XmlRenderer,
+} from "./components/index";
 
-function JsonNode({ name, value }: { name: string; value: unknown }) {
-  if (value !== null && typeof value === "object") {
-    const entries = Object.entries(value);
-    const shape = Array.isArray(value) ? `[${entries.length}]` : `{${entries.length}}`;
-    return (
-      <details open>
-        <summary className="cursor-pointer text-ink-mute">
-          {name} <span className="text-ink-body">{shape}</span>
-        </summary>
-        <div className="border-l border-hairline pl-4">
-          {entries.map(([key, child]) => (
-            <JsonNode key={key} name={key} value={child} />
-          ))}
-        </div>
-      </details>
-    );
-  }
-  return (
-    <div>
-      <span className="text-ink-mute">{name}: </span>
-      <span className="break-all">{JSON.stringify(value)}</span>
-    </div>
-  );
-}
+const MODES = [
+  { value: "decoded", label: "decoded" },
+  { value: "raw", label: "raw" },
+];
 
-function JsonTree({ text }: { text: string }) {
-  if (text.length > TREE_MAX) return <TextBody text={text} />;
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return <TextBody text={text} />;
-  }
-  return (
-    <div data-testid="body-json" className="font-mono text-body text-ink-body">
-      <JsonNode name="$" value={parsed} />
-    </div>
-  );
-}
-
-function TextBody({ text }: { text: string }) {
-  return (
-    <pre
-      data-testid="body-text"
-      className="overflow-x-auto whitespace-pre-wrap break-all font-mono text-body text-ink-body"
-    >
-      {text}
-    </pre>
-  );
-}
-
-function FormBody({ text }: { text: string }) {
-  return (
-    <dl
-      data-testid="body-form"
-      className={
-        // design-allow: grid-cols-[auto_1fr] — a two-column template shape, no size in it
-        "grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y font-mono text-body text-ink-body"
-      }
-    >
-      {formEntries(text).map(([key, value], i) => (
-        <div key={i} className="contents">
-          <dt className="whitespace-nowrap text-ink-mute">{key}</dt>
-          <dd className="break-all">{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function ImageBody({ bytes, contentType }: { bytes: Uint8Array; contentType: string | null }) {
-  const [url, setUrl] = useState<string>();
-  useEffect(() => {
-    const objectUrl = URL.createObjectURL(new Blob([bytes], { type: contentType ?? "" }));
-    setUrl(objectUrl);
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [bytes, contentType]);
-  if (!url) return null;
-  return (
-    <img
-      data-testid="body-image"
-      src={url}
-      alt="body"
-      className="max-w-full border border-hairline"
-    />
-  );
-}
-
-function Rendered({ fetched, kind }: { fetched: BodyFetch; kind: BodyKind }) {
+function Dispatch({ fetched, kind }: { fetched: BodyFetch; kind: BodyKind }) {
   switch (kind) {
     case "json":
-      return <JsonTree text={bodyText(fetched.bytes)} />;
-    case "image":
-      return <ImageBody bytes={fetched.bytes} contentType={fetched.contentType} />;
-    case "form":
-      return <FormBody text={bodyText(fetched.bytes)} />;
-    // The screen keeps its inline renderers until a later WU rewires it to the
-    // collection (E-DFLOW.W5 Q2), so xml renders as text here exactly as before
-    // bodyKind gained its sixth kind — XmlRenderer's surface arrives with that
-    // rewiring, not with the dispatch split.
-    case "text":
+      return <JsonRenderer text={bodyText(fetched.bytes)} />;
     case "xml":
-      return <TextBody text={bodyText(fetched.bytes)} />;
+      return <XmlRenderer text={bodyText(fetched.bytes)} />;
+    case "form":
+      return <FormRenderer text={bodyText(fetched.bytes)} />;
+    case "image":
+      return <ImageRenderer bytes={fetched.bytes} contentType={fetched.contentType} />;
     case "hex":
-      return <TextBody text={hexDump(fetched.bytes)} />;
+      return <HexRenderer bytes={fetched.bytes} />;
+    case "text":
+      return <TextRenderer text={bodyText(fetched.bytes)} />;
   }
 }
 
-function ModeButton({
-  active,
-  onClick,
-  children,
+export function BodyViewer({
+  api,
+  flow,
+  leg,
 }: {
-  active: boolean;
-  onClick: () => void;
-  children: string;
+  api: TrawlerApi;
+  flow: FlowView;
+  leg: Leg;
 }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-      className={`rounded-button border border-hairline px-2 py-chrome-tight text-body ${
-        active ? "bg-canvas-soft text-ink" : "text-ink-mute hover:text-ink"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-export function BodyViewer({ api, flow }: { api: TrawlerApi; flow: FlowView }) {
-  const [leg, setLeg] = useState<Leg>(flow.response_body ? "response" : "request");
   const [decode, setDecode] = useState(true);
   const [fetched, setFetched] = useState<BodyFetch | "error" | null>(null);
-  const [copied, setCopied] = useState(false);
 
   const body: BodyView | null = leg === "request" ? flow.request_body : flow.response_body;
   const notice = bodyNotice(body);
@@ -158,7 +65,6 @@ export function BodyViewer({ api, flow }: { api: TrawlerApi; flow: FlowView }) {
 
   useEffect(() => {
     setFetched(null);
-    setCopied(false);
     if (body?.state !== "captured") return;
     let cancelled = false;
     api.getBody(flow.id, leg, decode).then(
@@ -174,64 +80,49 @@ export function BodyViewer({ api, flow }: { api: TrawlerApi; flow: FlowView }) {
     };
   }, [api, flow.id, leg, decode, body?.state]);
 
-  // Copy delivers what the viewer shows: the hex dump for hex-rendered bodies,
-  // the body text otherwise. Images have no text representation — no copy.
-  const copyBody = () => {
-    if (!loaded) return;
-    const shown = kind === "hex" ? hexDump(loaded.bytes) : bodyText(loaded.bytes);
-    navigator.clipboard?.writeText(shown).then(
-      () => setCopied(true),
-      () => {},
-    );
-  };
+  // Copy delivers what the pane shows: the hex dump for hex-rendered bodies,
+  // the body text otherwise. An image has no text form — ImageRenderer's @avoid
+  // is why there is no copy button for that kind at all.
+  const shownText = () =>
+    loaded == null ? "" : kind === "hex" ? hexDump(loaded.bytes) : bodyText(loaded.bytes);
 
   const save = () => {
     if (!loaded) return;
-    void saveBody(loaded.bytes, saveFilename(flow.id, leg, loaded.contentType));
+    void saveBody(loaded.bytes, saveFilename(flow.uri, leg, loaded.contentType));
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-chrome-gap">
-        <ModeButton active={leg === "request"} onClick={() => setLeg("request")}>
-          request
-        </ModeButton>
-        <ModeButton active={leg === "response"} onClick={() => setLeg("response")}>
-          response
-        </ModeButton>
-        <span className="mx-chrome-gap text-ink-mute">·</span>
-        <ModeButton active={decode} onClick={() => setDecode(true)}>
-          decoded
-        </ModeButton>
-        <ModeButton active={!decode} onClick={() => setDecode(false)}>
-          raw
-        </ModeButton>
+    <div data-testid="body-viewer" data-leg={leg} className="flex min-h-0 flex-col gap-2">
+      <div className="flex items-center gap-chrome-gap">
+        <SegmentedControl
+          options={MODES}
+          value={decode ? "decoded" : "raw"}
+          onChange={(value) => setDecode(value === "decoded")}
+          ariaLabel={`${leg} body mode`}
+        />
         {loaded && (
-          <span className="ml-auto flex gap-chrome-gap">
+          <span className="ml-auto flex items-center gap-chrome-gap">
             {kind !== "image" && (
-              <ModeButton active={false} onClick={copyBody}>
-                {copied ? "copied" : "copy body"}
-              </ModeButton>
+              <CopyButton label="copy body" getPayload={shownText} />
             )}
-            <ModeButton active={false} onClick={save}>
-              save
-            </ModeButton>
+            <IconButton glyph="save" onClick={save} label="save" />
           </span>
         )}
       </div>
 
       {notice != null ? (
-        <p data-testid="body-notice" className="text-body text-ink-mute">
-          {notice}
-        </p>
+        <Notice>{notice}</Notice>
       ) : fetched === "error" ? (
-        <p data-testid="body-notice" className="text-body text-warn">
-          failed to load body
-        </p>
+        <Notice tone="warn">failed to load body</Notice>
       ) : !loaded || kind == null ? (
-        <p className="text-body text-ink-mute">loading…</p>
+        <Notice>loading…</Notice>
       ) : (
-        <Rendered fetched={loaded} kind={kind} />
+        // The cut marker rides in the member's own output, so B's scroll box is
+        // what would carry it out of sight — the one line whose job is to be
+        // seen. Capping B's height keeps the marker at its foot instead.
+        <div data-testid="body-pane" className="max-h-body-max min-h-0 overflow-auto">
+          <Dispatch fetched={loaded} kind={kind} />
+        </div>
       )}
     </div>
   );

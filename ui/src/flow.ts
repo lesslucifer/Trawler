@@ -21,14 +21,14 @@ export function isDecryptedHttps(flows: FlowSummary[]): boolean {
 }
 
 export interface FlowRow {
-  time: string;
-  method: string;
   host: string;
   path: string;
-  status: number | null;
-  duration: string;
 }
 
+// Splits a flow's URI into the two payload cells the list shows side by side.
+// The row's other four values are passed raw to the components that own their
+// formatting — TimestampText, MethodLabel, StatusPill and DurationText each
+// refuse a pre-formatted value, so this is the only transform left here.
 export function toRow(flow: FlowSummary): FlowRow {
   let host = "";
   let path = flow.uri;
@@ -39,14 +39,7 @@ export function toRow(flow: FlowSummary): FlowRow {
   } catch {
     // relative/opaque URI — show it whole as the path
   }
-  return {
-    time: new Date(flow.started_at).toLocaleTimeString(),
-    method: flow.method,
-    host,
-    path,
-    status: flow.status,
-    duration: flow.duration_ms == null ? "" : `${flow.duration_ms} ms`,
-  };
+  return { host, path };
 }
 
 // Captured bytes → a UTF-8 string. atob yields Latin1-per-char, so re-encode the
