@@ -57,11 +57,11 @@ function mockApi(store: () => FlowSummary[], connections = 0) {
   let onConnection = () => {};
   const api: TrawlerApi = {
     listFlows: vi.fn(async (filter: Filter) => {
-      const rows = store();
-      if (filter.host?.trim()) {
-        return rows.filter((f) => f.uri.includes(filter.host!.trim()));
-      }
-      return rows;
+      // Mirrors FlowFilter::matches (store.rs): host and q are both
+      // case-insensitive substrings of the URI.
+      const like = (uri: string, needle?: string) =>
+        !needle?.trim() || uri.toLowerCase().includes(needle.trim().toLowerCase());
+      return store().filter((f) => like(f.uri, filter.host) && like(f.uri, filter.q));
     }),
     connectionCount: vi.fn(async () => connections),
     caCertPem: vi.fn(async () => PEM),
@@ -270,23 +270,88 @@ test("a connection event turns the proxy step green while trust warns — no flo
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
-test("a non-matching host filter empties the list; SSE appends a new row", async () => {
-  let rows = [flow({ id: "f1", uri: "http://example.com/" })];
+// Choosing a host offered by the dropdown, rather than typing one: the options
+// are every host capture has seen, so narrowing to one excludes the others.
+async function chooseHost(label: string) {
+  fireEvent.click(screen.getByLabelText("host"));
+  fireEvent.click(await screen.findByRole("option", { name: label }));
+}
+
+test("choosing a host narrows the list to it; SSE appends a new row once cleared", async () => {
+  let rows = [
+    flow({ id: "f1", uri: "http://example.com/" }),
+    flow({ id: "f2", uri: "http://other.test/" }),
+  ];
   const { api, fire } = mockApi(() => rows);
+  render(<App api={api} initialState={PROVEN} />);
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
+
+  await chooseHost("other.test");
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(1));
+  expect(screen.getByTestId("flow-row")).toHaveTextContent("other.test");
+
+  await chooseHost("any host");
+  rows = [...rows, flow({ id: "f3", uri: "http://example.com/second", status: 404 })];
+  fire();
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(3));
+});
+
+test("the method filter offers the verbs as a closed set rather than free text", async () => {
+  const { api } = mockApi(() => [flow({ id: "f1" })]);
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
 
-  fireEvent.change(screen.getByLabelText("host"), { target: { value: "other.test" } });
+  fireEvent.click(screen.getByLabelText("method"));
+  const offered = (await screen.findAllByRole("option")).map((o) => o.textContent);
+  expect(offered).toContain("GET");
+  expect(offered).toContain("DELETE");
+  // The exactness the design flagged: typing "GE" used to return an empty list
+  // indistinguishable from no traffic, because the server matches the verb whole.
+  expect(offered).not.toContain("GE");
+});
+
+test("host options are every host seen, not only those the current filter leaves", async () => {
+  const rows = [
+    flow({ id: "f1", uri: "http://example.com/" }),
+    flow({ id: "f2", uri: "http://other.test/" }),
+  ];
+  const { api } = mockApi(() => rows);
+  render(<App api={api} initialState={PROVEN} />);
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
+
+  await chooseHost("other.test");
+  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(1));
+
+  // example.com is absent from the filtered list, and must still be selectable —
+  // otherwise choosing a host would strand the user on it.
+  fireEvent.click(screen.getByLabelText("host"));
+  const offered = (await screen.findAllByRole("option")).map((o) => o.textContent);
+  expect(offered).toContain("example.com");
+  expect(offered).toContain("any host");
+});
+
+test("the status filter stays free text, deferred rather than half-converted", async () => {
+  const { api } = mockApi(() => [flow({ id: "f1" })]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  const status = screen.getByLabelText("status");
+  expect(status.tagName).toBe("INPUT");
+  fireEvent.change(status, { target: { value: "404" } });
+  expect(status).toHaveValue("404");
+});
+
+test("a host that matches nothing says the query excludes the traffic, not that none exists", async () => {
+  // The host is real (it was captured, so it is offered) but the traffic it
+  // matched has since been filtered away by a second key.
+  const { api } = mockApi(() => [flow({ id: "f1", uri: "http://example.com/" })]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findByTestId("flow-row");
+
+  fireEvent.change(screen.getByLabelText("filter"), { target: { value: "no-such-path" } });
   await waitFor(() => expect(screen.queryByTestId("flow-row")).toBeNull());
-  // The filter excluded the traffic — telling the user to send some would be
-  // telling them to repeat what they have already done.
   expect(screen.getByTestId("empty")).toHaveTextContent("no flows match this filter");
   expect(screen.getByTestId("empty")).not.toHaveTextContent("no flows yet");
-
-  fireEvent.change(screen.getByLabelText("host"), { target: { value: "" } });
-  rows = [...rows, flow({ id: "f2", uri: "http://example.com/second", status: 404 })];
-  fire();
-  await waitFor(() => expect(screen.getAllByTestId("flow-row")).toHaveLength(2));
 });
 
 test("a proven launch with no traffic says nothing is captured, not that a filter excluded it", async () => {

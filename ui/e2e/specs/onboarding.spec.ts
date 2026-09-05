@@ -65,13 +65,15 @@ describe("UC-5 — onboard to the first captured flow", () => {
 
   // UC-4 list behaviour, now reached through onboarding: the revealed list filters
   // and appends live exactly as before W4.
-  it("filters the row out on a non-matching host and back in when cleared", async () => {
-    await $('[aria-label="host"]').setValue("no-such-host.test");
+  it("filters the row out on a non-matching query and back in when cleared", async () => {
+    // Host is a dropdown of what capture has seen, so an unmatchable value is no
+    // longer expressible there; the free-text key is where an arbitrary query lives.
+    await $('[aria-label="filter"]').setValue("no-such-path.test");
     await browser.waitUntil(async () => (await rowCount()) === 0, {
       timeout: 15_000,
       timeoutMsg: "non-matching filter did not empty the list",
     });
-    await $('[aria-label="host"]').setValue("");
+    await $('[aria-label="filter"]').clearValue();
     await browser.waitUntil(async () => (await rowCount()) >= 1, { timeout: 15_000 });
   });
 

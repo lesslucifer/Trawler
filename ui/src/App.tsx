@@ -10,12 +10,30 @@ import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
 import { Onboarding } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
-import { Field, StatusDot, TonedText } from "./components/index";
+import { Field, MethodLabel, Select, StatusDot, TonedText, type SelectOption } from "./components/index";
 import { dotStatus, initial, reduce, type OnbState } from "./onboardingMachine";
+
+// Select holds at most one option and never returns to unselected, so "any" is a
+// real choice that happens to mean no filter — not a clear affordance the
+// component's contract rules out.
+const ANY = "\u0000any";
+
+const METHOD_OPTIONS: SelectOption[] = [
+  { id: ANY, label: "any method" },
+  ...["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "CONNECT", "TRACE"].map((m) => ({
+    id: m,
+    label: m,
+    element: <MethodLabel method={m} />,
+  })),
+];
+
+function hostOptions(hosts: string[]): SelectOption[] {
+  return [{ id: ANY, label: "any host" }, ...hosts.map((h) => ({ id: h, label: h }))];
+}
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const { filter, flows, connections, update } = useFlows(client);
+  const { filter, flows, hosts, connections, update } = useFlows(client);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detail = useFlowDetail(client, selectedId);
@@ -148,20 +166,27 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             value={filter.q ?? ""}
             onChange={(e) => update("q", e.target.value)}
           />
-          <Field
-            aria-label="host"
-            placeholder="host"
+          <Select
+            label="host"
+            placeholder="any host"
             className="w-field-lg"
-            value={filter.host ?? ""}
-            onChange={(e) => update("host", e.target.value)}
+            options={hostOptions(hosts)}
+            value={filter.host || ANY}
+            onChange={(id) => update("host", id === ANY ? "" : id)}
           />
-          <Field
-            aria-label="method"
-            placeholder="method"
-            className="w-field-sm"
-            value={filter.method ?? ""}
-            onChange={(e) => update("method", e.target.value)}
+          <Select
+            label="method"
+            placeholder="any method"
+            className="w-field-lg"
+            searchable={false}
+            options={METHOD_OPTIONS}
+            value={filter.method || ANY}
+            onChange={(id) => update("method", id === ANY ? "" : id)}
           />
+          {/* Status stays free text deliberately. A dropdown of seen codes is
+              possible, but the useful query is a class (4xx) and FlowFilter.status
+              is a u16 — so neither control expresses what a user actually wants.
+              Deferred to a later epic to design the interaction, not half-converted. */}
           <Field
             aria-label="status"
             placeholder="status"

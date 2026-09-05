@@ -65,8 +65,25 @@ describe("UC-4 — watch live traffic in the native app", () => {
     expect(await pill.getText()).toContain("200");
   });
 
+  it("the method filter offers the verbs rather than taking free text", async () => {
+    await $('button[aria-label="method"]').click();
+    await $('[role="option"]').waitForExist({ timeout: 15_000 });
+    const labels: string[] = [];
+    for (const option of await $$('[role="option"]')) {
+      labels.push(await option.getAttribute("aria-label"));
+    }
+    expect(labels).toContain("GET");
+    expect(labels).toContain("any method");
+    // The exactness the design flagged: the verb is matched whole server-side,
+    // so a partial verb was never a legal query and is no longer typeable.
+    expect(labels).not.toContain("GE");
+    await browser.keys("Escape");
+  });
+
   it("a filter narrows the list", async () => {
-    await $('[aria-label="host"]').setValue("no-such-host.invalid");
+    // The free-text field is the one key that stays free text: the server
+    // substring-matches it, so an arbitrary value is a legal query.
+    await $('[aria-label="filter"]').setValue("no-such-path.invalid");
     await browser.waitUntil(async () => (await rowCount()) === 0, {
       timeout: 15_000,
       timeoutMsg: "the filter never narrowed the list",
@@ -82,12 +99,56 @@ describe("UC-4 — watch live traffic in the native app", () => {
   });
 
   it("clearing the filter brings the rows back", async () => {
-    await $('[aria-label="host"]').setValue(" ");
-    await $('[aria-label="host"]').clearValue();
+    await $('[aria-label="filter"]').clearValue();
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
       timeoutMsg: "the list never came back after clearing the filter",
     });
+  });
+
+  it("the host filter offers the hosts capture has seen, and choosing one narrows to it", async () => {
+    await $('button[aria-label="host"]').click();
+    await $('[role="option"]').waitForExist({ timeout: 15_000 });
+    // The harness origin is localhost on an ephemeral port, so the option is
+    // matched by prefix rather than by a port this spec cannot know.
+    let captured: WebdriverIO.Element | undefined;
+    for (const option of await $$('[role="option"]')) {
+      const label = await option.getAttribute("aria-label");
+      if (label?.startsWith("localhost:")) captured = option;
+    }
+    expect(captured).toBeDefined();
+
+    await captured!.click();
+    await browser.waitUntil(async () => (await rowCount()) >= 1, {
+      timeout: 15_000,
+      timeoutMsg: "choosing the captured host emptied the list",
+    });
+
+    await $('button[aria-label="host"]').click();
+    await $('[role="option"][aria-label="any host"]').click();
+    await browser.waitUntil(async () => (await rowCount()) >= 1, {
+      timeout: 15_000,
+      timeoutMsg: "the list never came back after choosing any host",
+    });
+  });
+
+  it("the two dropdowns and the status field share the header row without wrapping", async () => {
+    const box = async (sel: string) =>
+      browser.execute((s: string) => {
+        const r = document.querySelector(s)!.getBoundingClientRect();
+        return { top: Math.round(r.top), w: Math.round(r.width) };
+      }, sel);
+
+    const host = await box('button[aria-label="host"]');
+    const method = await box('button[aria-label="method"]');
+    const status = await box('input[aria-label="status"]');
+
+    // One row: the controls share a top edge, so the header did not wrap.
+    expect(host.top).toBe(method.top);
+    expect(method.top).toBe(status.top);
+    // Select's own 132px floor is respected rather than crushed by the caller's width.
+    expect(host.w).toBeGreaterThanOrEqual(132);
+    expect(method.w).toBeGreaterThanOrEqual(132);
   });
 
   it("the keyboard selects a row and opens its detail — no pointer at all", async () => {
