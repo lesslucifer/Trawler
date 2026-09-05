@@ -141,28 +141,98 @@ test("bodyNotice maps every non-captured state to a notice, captured to null", (
   expect(bodyNotice({ state: "streaming", content_type: "text/event-stream" })).toContain(
     "streaming (text/event-stream)",
   );
-  expect(bodyNotice({ state: "not_captured", reason: "too_large", actual: 42 })).toBe(
-    "not captured — too large (42 bytes)",
-  );
   expect(bodyNotice({ state: "not_captured", reason: "read_error", actual: null })).toBe(
     "not captured — read error",
   );
 });
 
-test("saveFilename derives short-id, leg, and a content-type extension", () => {
-  const id = "0192a1b2-c3d4-7e8f-9012-3456789abcde";
-  expect(saveFilename(id, "response", "application/json; charset=utf-8")).toBe(
-    "0192a1b2-response.json",
+// The notice and a CutMarker can sit three lines apart in one pane, and the
+// marker's @avoid forbids raw byte counts — so this sentence states the same
+// kind of size the marker does.
+test("the too-large notice states a human size, never a raw byte count", () => {
+  expect(bodyNotice({ state: "not_captured", reason: "too_large", actual: 42 })).toBe(
+    "not captured — too large (42 B)",
   );
-  expect(saveFilename(id, "request", "application/x-www-form-urlencoded")).toBe(
-    "0192a1b2-request.txt",
+  expect(bodyNotice({ state: "not_captured", reason: "too_large", actual: 12_994_392 })).toBe(
+    "not captured — too large (12 MiB)",
   );
-  expect(saveFilename(id, "response", "image/png")).toBe("0192a1b2-response.png");
-  expect(saveFilename(id, "response", "image/webp")).toBe("0192a1b2-response.webp");
-  expect(saveFilename(id, "response", "image/avif")).toBe("0192a1b2-response.avif");
-  expect(saveFilename(id, "response", "image/svg+xml")).toBe("0192a1b2-response.svg");
-  expect(saveFilename(id, "response", "text/html")).toBe("0192a1b2-response.html");
-  expect(saveFilename(id, "response", null)).toBe("0192a1b2-response.bin");
+});
+
+// A size the server did not report is not zero: "0 B" would be a claim the
+// notice cannot make, so the sentence drops the parenthetical instead.
+test("the too-large notice omits the size when the server reported none", () => {
+  expect(bodyNotice({ state: "not_captured", reason: "too_large", actual: null })).toBe(
+    "not captured — too large",
+  );
+});
+
+test("saveFilename names the endpoint, the leg, and the served type", () => {
+  const uri = "https://api.stripe.com/v1/charges";
+  expect(saveFilename(uri, "response", "application/json; charset=utf-8")).toBe(
+    "charges-response.json",
+  );
+  expect(saveFilename(uri, "request", "application/x-www-form-urlencoded")).toBe(
+    "charges-request.txt",
+  );
+  expect(saveFilename(uri, "response", "image/png")).toBe("charges-response.png");
+  expect(saveFilename(uri, "response", "image/svg+xml")).toBe("charges-response.svg");
+  expect(saveFilename(uri, "response", "text/html")).toBe("charges-response.html");
+  expect(saveFilename(uri, "response", "application/javascript")).toBe("charges-response.js");
+  expect(saveFilename(uri, "response", "text/css")).toBe("charges-response.css");
+  expect(saveFilename(uri, "response", null)).toBe("charges-response.bin");
+});
+
+// The id told the reader nothing in a Downloads folder; the endpoint does.
+test("saveFilename falls back to the host when the path names nothing", () => {
+  expect(saveFilename("https://example.com/", "response", "text/html")).toBe(
+    "example.com-response.html",
+  );
+  expect(saveFilename("https://example.com", "response", "text/html")).toBe(
+    "example.com-response.html",
+  );
+});
+
+test("saveFilename does not stack a second extension on a segment that has one", () => {
+  expect(saveFilename("https://cdn.example.com/static/app.js", "response", "application/javascript")).toBe(
+    "app-response.js",
+  );
+});
+
+// A filename that is only separators, or that leads with one, reads as broken
+// and is hostile to a shell — every degenerate URI must still land on a name.
+test("saveFilename never emits a leading separator or an empty name", () => {
+  for (const uri of [
+    "https://x.com/%",
+    "https://x.com/%zz",
+    "https://x.com/a%E0%A4%A",
+    "https://x.com/...",
+    "https://x.com/---",
+    "",
+    "/",
+    "https://x.com/.gitignore",
+  ]) {
+    const name = saveFilename(uri, "response", "text/plain");
+    expect(name).not.toMatch(/^[-._]/);
+    expect(name.endsWith("-response.txt")).toBe(true);
+    expect(name.length).toBeGreaterThan("-response.txt".length);
+  }
+});
+
+// A wholly non-ASCII path sanitizes to nothing; the punycode host still names
+// the endpoint, which beats a generic fallback.
+test("saveFilename falls back to the host for an IDN path, not to 'body'", () => {
+  expect(saveFilename("https://\u4f8b\u3048.jp/\u9053", "response", "text/html")).toBe(
+    "xn--r8jz45g.jp-response.html",
+  );
+});
+
+test("saveFilename drops the query and anything a filename cannot carry", () => {
+  expect(saveFilename("https://example.com/a b/rep ort?x=1&y=2", "response", "text/csv")).toBe(
+    "rep-ort-response.csv",
+  );
+  expect(saveFilename("not a url at all", "response", "text/plain")).toBe(
+    "not-a-url-at-all-response.txt",
+  );
 });
 
 test("bodyText decodes bytes as UTF-8", () => {

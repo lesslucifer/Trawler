@@ -99,7 +99,7 @@ test("stream routes a connection event to onConnection only, never onEvent", () 
   expect(onEvent).toHaveBeenCalledOnce();
 });
 
-test("getBody fetches the leg body, decode=1 only when asked, and keeps the content type", async () => {
+test("getBody asks for the rendered view or the source, and keeps the content type", async () => {
   const bytes = new TextEncoder().encode("hi");
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
@@ -114,8 +114,10 @@ test("getBody fetches the leg body, decode=1 only when asked, and keeps the cont
   expect(decoded.contentType).toBe("text/plain");
   expect([...decoded.bytes]).toEqual([...bytes]);
 
+  // Raw asks for source, not the stored bytes: a gzipped body's stored form is
+  // a hex dump of compression frames, which answers nothing.
   await api.getBody("f1", "request", false);
-  expect(fetchMock).toHaveBeenLastCalledWith("http://x/flows/f1/request/body");
+  expect(fetchMock).toHaveBeenLastCalledWith("http://x/flows/f1/request/body?decode=source");
 });
 
 test("getBody throws on a non-ok response", async () => {

@@ -44,6 +44,13 @@ enum Leg {
     Response,
 }
 
+#[derive(Clone, Copy)]
+enum BodyView {
+    Stored,
+    Source,
+    Decoded,
+}
+
 pub async fn list_flows(
     Query(query): Query<ListQuery>,
     State(state): State<AppState>,
@@ -122,7 +129,7 @@ pub async fn ca_cert(State(state): State<AppState>) -> Response {
         .into_response()
 }
 
-fn body_response(state: &AppState, id: &str, leg: Leg, decode: bool) -> Response {
+fn body_response(state: &AppState, id: &str, leg: Leg, decode: BodyView) -> Response {
     let Some(flow_id) = parse_flow_id(id) else {
         return bad_id();
     };
@@ -142,14 +149,16 @@ fn body_response(state: &AppState, id: &str, leg: Leg, decode: bool) -> Response
         return StatusCode::NO_CONTENT.into_response();
     };
 
-    let out = if decode {
-        decode::decode_body(
+    let out = match decode {
+        BodyView::Decoded => decode::decode_body(
             bytes,
             header_value(headers, "content-encoding"),
             header_value(headers, "content-type"),
-        )
-    } else {
-        bytes.to_vec()
+        ),
+        BodyView::Source => {
+            decode::decompress_body(bytes, header_value(headers, "content-encoding"))
+        }
+        BodyView::Stored => bytes.to_vec(),
     };
 
     let content_type =
@@ -165,8 +174,15 @@ fn bad_id() -> Response {
     (StatusCode::BAD_REQUEST, "invalid flow id").into_response()
 }
 
-fn wants_decode(query: &BodyQuery) -> bool {
-    matches!(query.decode.as_deref(), Some("1" | "true"))
+/// `decode=1` renders the payload; `decode=source` only reverses the transport
+/// encoding, so a compressed body is readable without being re-indented; absent
+/// or anything else is the stored bytes.
+fn wants_decode(query: &BodyQuery) -> BodyView {
+    match query.decode.as_deref() {
+        Some("1" | "true") => BodyView::Decoded,
+        Some("source") => BodyView::Source,
+        _ => BodyView::Stored,
+    }
 }
 
 #[cfg(test)]
