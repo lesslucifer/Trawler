@@ -1,0 +1,36 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W5
+changes:
+  - path: docs/work/2026-09-04-redesign-w5-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan — requirement, mapping to UC-5 and the epic's W5 row, the five zones as they ship with what each costs today, the W7 seam stated once, the two calls the epic plan hands this run, the expected result per stage, the test plan with its three waivers, and the risks. Its five zone-card file:line citations were all re-derived from FlowDetail.tsx at review: three of the five (identity bar, request leg, copy-as-curl) originally pointed at ranges covering the wrong sections; the two others (header legs :16-33, body :117-119) were correct from the start and are unchanged."
+  - path: docs/work/2026-09-04-redesign-w5-flow-detail-run.html
+    tier: T3
+    action: added
+    distills: "the design run — six stages and five closing lists, closed, verify-doc green, then archived. Frame (four goals, six constraints including 'two scopes, not one' and 'the body already switches leg', three qualities, Given/Not-given as first-class lines); Layout (one pinned identity row carrying the leg selector, an unlabelled flow line, two leg-scoped zones, an overflow line naming every unbounded zone and its cap owner); Elements (13 rows, every verdict traced to the entry's @avoid read FIRST); Interaction (seven use cases as zone-to-delta with UNCHANGED spelled out and a keyboard path each); a stateful mounted mockup; nine Tune calls; and the receipt, capabilities, proposals, blocked-on and review lists."
+  - path: docs/work/2026-09-04-redesign-plan.html
+    tier: T3
+    action: updated
+    distills: "the epic's W7 and W8 rows, corrected to what this WU left them. W7's summary strikes 'and a leg switch' and names where it went; its expected result narrows to the decode switch. W8's build row marks the ModeButton to SegmentedControl swap as the DECODE PAIR ONLY, since the leg pair at BodyViewer.tsx:196-201 is deleted rather than swapped. Done here on W2's precedent (d7f186c edited the epic plan's W4 and W11 rows in its own WU): a plan that still promises work already done is how a follow-up gets lost. NOTE: an earlier commit in this WU (934307b) claimed the W8 half of this edit while the row was byte-identical — the replacement string had matched on whitespace the file does not contain, and the failure was silent. Caught at review; applied for real in ca18daa."
+  - path: docs/decisions/dec-31-leg-is-panel-scoped.html
+    tier: T2
+    action: added
+    distills: "the leg-scoping rule this run reversed into, lifted out of the archived run so it outlives it: leg selection is the PANEL's, the body pane receives it as a prop, and every zone of a detail screen declares whether it is flow-scoped (identical on both legs, stated once, unlabelled) or leg-scoped (replaced when the selector moves). Carries the four rejected alternatives (both legs stacked; a tablist, which SegmentedControl's @avoid excludes; a switch per zone; deferring to W7) and what it forces on W6, W7, W8 and any later per-leg screen. Distilled from the run's Tune 8 and Tune 9 — the run keeps the drawn before/after, this record keeps the rule."
+    distilled_to: [docs/decisions/decisions-index.html]
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "the DEC-31 row, so the record is reachable index-first, appended after DEC-30 in the table's ascending order."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: unchanged
+    distills: "read as substrate and pinned at aeff5b0fb4dea94ab5f0b7c385b8188786666e8a; re-checked at close and unmoved. No rule added or amended — the vocabulary covered the screen. DEC-31 is a decision, not yet a rulebook slug: one sighting is a decision, and a second sighting of the flow-scoped/leg-scoped split is what would lock it into the rulebook."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: unchanged
+    distills: "UC-5's contract does not change shape: a design run ships no behaviour. Its observable gains (the reverting copy confirm, the empty-leg sentence, the toned verb, Esc) become true in W6 and are stated there, so one UC row is not split across two WUs — the discipline W2 applied by leaving UC-4's wording to W4."
+distillation:
+  ran: true
+  outcome: "Checklist walked row by row. 'Behaviour changed or got defined?' — no: this WU ships no code and UC-5's contract is untouched. 'Non-obvious choice made or reversed?' — YES: leg selection was reversed from BodyViewer to the panel, deleting a shipped control and redirecting W7 and W8. DEC-31 opened at docs/decisions/dec-31-leg-is-panel-scoped.html with its index row. 'Design convention surfaced, locked, or contradicted?' — surfaced, not locked: the flow-scoped/leg-scoped split has one sighting, and the rulebook's own wording makes a second sighting what locks a pattern, so no design-rules entry is owed yet. 'Component map or invariant changed?' — no. 'Repeating process emerged or changed?' — no. 'T0 rule should change?' — no. CORRECTION OF RECORD: two earlier notes in this WU got this row wrong, both caught at review. The first cited DEC-16 to conclude 'nothing to distil UP' — DEC-16 governs a built component's design file retiring into its TSDoc and has no bearing on a screen run, and the misread let the applicable row go unexamined. The second examined the right row but declined the record by borrowing the 'second sighting' threshold from the design-rules row, which is unconditional in the decisions row; DEC-16's own test — reasoning that still constrains future work is preserved, a dead end is not — points the same way, and this reversal constrains three WUs. This note supersedes both."
