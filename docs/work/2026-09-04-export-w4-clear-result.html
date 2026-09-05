@@ -9,7 +9,7 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-EXPORT.W4 result — the capture can be cleared</h1>
-      <p>Delivered as planned. Eight observables hold; the CORS widening the plan owed had already landed with W3, so this WU added <code>DELETE</code> to a grant that was already reasoned about rather than making the argument twice.</p>
+      <p>Delivered as planned. Eight observables hold; the CORS widening the plan owed had already landed with W3, so this WU added <code>DELETE</code> to a grant that was already reasoned about rather than making the argument twice. A review round then corrected a claim this WU had made three times without the code backing it, and made a single delete stop scanning the whole ring.</p>
       <div class="meta">v1 · 2026-09-04 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W4</span> · <a href="2026-09-04-export-w4-clear-plan.html">its plan</a> · <a href="2026-09-04-export-plan.html">epic plan</a></div>
     </div>
   </header>
@@ -40,12 +40,17 @@
 
     <h2 id="how">How removal is shaped, and the one thing that decided it</h2>
     <div class="callout" data-c="how">
-      <p><code>evict</code> pops from the front of the order and subtracts as it pops; a filtered
-      removal takes rows from the middle. Rather than a second copy of the byte arithmetic — the
-      way <code>total_bytes</code> drifts from what the ring holds — both go through one private
-      <code>Ring::unlink</code> that removes from the map, subtracts what was actually held, and
-      rebuilds the order by retaining survivors. <code>remove_matching</code> and
-      <code>remove</code> are the two public doors onto it, and
+      <p>Two things leave a flow behind: the map entry and its weight, and the row in the order.
+      The <strong>first is shared</strong> — <code>Ring::debit</code> is the one place a flow is
+      removed from the map and its retained bytes subtracted, called from <code>evict</code>'s
+      pop-front loop and from <code>unlink</code>, so the arithmetic exists once. The
+      <strong>second is not</strong>, deliberately: eviction already holds the row it popped,
+      while a removal has to find it — a single delete finds its one row, and a batch rebuilds the
+      order, where that cost is proportionate to a scan the filter already did. The first shape
+      this WU shipped had <code>unlink</code> claiming to unify both halves while
+      <code>evict</code> quietly kept its own copy; the review caught it, and the
+      <a href="#review">review section</a> records what changed and why the obvious fix was the
+      wrong one. <code>remove_matching</code> and <code>remove</code> are the two public doors, and
       <a href="2026-09-04-export-w4-clear-plan.html#decisions">the plan's five decisions</a> all
       landed as written: one store method for the filtered case, an id addressed directly rather
       than through a <code>FlowFilter</code> that has no id field, one batch event, a variant
@@ -103,22 +108,26 @@
         <tbody>
           <tr>
             <td><span class="badge id">unit</span></td>
-            <td>7 store tests (selection, re-weighing observable through a later eviction, the
+            <td>9 store tests (selection, re-weighing observable through a later eviction, the
             no-floor clear, remove-by-id idempotence and order, the batch event and the silent
             no-op, the tally) · 5 route tests (count, filter + empty match, refused
             <code>source</code>, the id route's three answers, the tally through
             <code>/stats</code>) · 1 router-table test (<code>DELETE</code> answers on
             <code>/flows</code> and <code>/flows/{id}</code> and <em>not</em> on export or import)
             · the <code>FlowsCleared</code> SSE shape · <code>ring_accounting</code> extended with
-            interleaved removals</td>
+            interleaved removals; plus, from the review, a middle row removed by the single-id
+            path and an id named twice debited once — both mutation-tested against broken code
+            before being trusted</td>
             <td><code>src/store.rs</code> · <code>src/api/routes.rs</code> ·
             <code>src/api/mod.rs</code> · <code>src/api/view.rs</code></td>
           </tr>
           <tr>
             <td><span class="badge id">integration</span></td>
-            <td>4 tests over the real HTTP surface: clear-all + the live subscriber + the tally,
+            <td>5 tests over the real HTTP surface: clear-all + the live subscriber + the tally,
             a filtered clear with a survivor read through all three of its endpoints, the three
-            refusals, and a clear selecting by provenance while the live capture survives</td>
+            refusals, a clear selecting by provenance while the live capture survives, and — from
+            the review — a paging cursor whose row a delete removed, ending the walk exactly as an
+            evicted one does</td>
             <td><code>tests/api.rs</code></td>
           </tr>
           <tr>
@@ -131,14 +140,84 @@
           </tr>
         </tbody>
       </table>
-      <p><strong>Suite green:</strong> 167 lib unit · 31 <code>tests/api.rs</code> · 3
+      <p><strong>Suite green:</strong> 169 lib unit · 32 <code>tests/api.rs</code> · 3
       <code>tests/ca.rs</code> · 6 <code>tests/e2e_capture.rs</code> · 4
       <code>tests/e2e_h2.rs</code> — 0 failures. <code>cargo fmt --check</code> and
       <code>cargo clippy -D warnings</code> clean.</p>
       <p><strong>Commits</strong> on <code>wu/export/clear</code>: the plan
       (<code>d1a8982</code>), the code (<code>6a39c11</code>), the T2 distillation
-      (<code>257693a</code>), plus the staged T1 <code>architecture.html</code> commit awaiting
-      manual review.</p>
+      (<code>257693a</code>), the T1 <code>architecture.html</code> commit carrying its
+      <code>Reviewed-By</code> trailer (<code>f1c0fec</code>), and the review fixes
+      (<code>35ff189</code>).</p>
+    </div>
+
+
+    <h2 id="review">The review round</h2>
+    <div class="callout" data-c="review">
+      <p>Five finders over the WU diff produced nine candidates; adversarial verification
+      confirmed four and refuted five. The refutations mattered as much as the confirmations —
+      two finders agreed on a fix that the verifier showed would be a
+      <strong>regression</strong>, and the altitude finder returned a clean verdict resting on a
+      premise the other finders had already disproved, which is why a finder's conclusion is not
+      evidence until something tries to break it.</p>
+      <table>
+        <thead><tr><th>Finding</th><th>Verdict</th><th>What shipped</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>evict</code> never called <code>unlink</code>, so the byte arithmetic still
+            existed twice — while <code>unlink</code>'s comment claimed "one helper either way"
+            and this WU's own <code>test/v2</code> note claimed <code>unlink</code> "is the only
+            place a flow leaves the ring".</td>
+            <td><span class="badge ok">real</span> · nit</td>
+            <td>The claim was false and had been written three times — in the plan's reasoning, in
+            a doc comment, and in the note that serves as gate evidence. <code>Ring::debit</code>
+            is now the single place a flow leaves the map and its bytes are subtracted, called
+            from both <code>evict</code>'s loop and <code>unlink</code>. The verifier
+            <em>refuted</em> the fix both finders implied — routing <code>evict</code> through
+            <code>unlink</code> would make every insert O(ring) and drop the last-row floor — so
+            only the two-line arithmetic is shared and each keeps its own order-mending.</td>
+          </tr>
+          <tr>
+            <td><code>unlink</code>'s <code>order.retain</code> rebuilt the whole order for a
+            single-id delete: a scan plus a hash probe per row, under the lock the live capture
+            path contends on.</td>
+            <td><span class="badge ok">real</span> · important</td>
+            <td>The severity rests on a fact worth stating plainly:
+            <code>retained_bytes()</code> counts only <em>body</em> bytes, and eviction fires only
+            on the byte cap — so a capture of body-less exchanges (GETs, 204s) grows the row count
+            without limit while <code>total_bytes</code> stays near zero. A single removal now
+            finds its one row; a batch still rebuilds, where the cost is proportionate to a scan
+            the filter already did.</td>
+          </tr>
+          <tr>
+            <td>A cursor row can now vanish by deletion as well as eviction, and neither the
+            listing contract nor UC-7 said so.</td>
+            <td><span class="badge ok">real</span> · nit</td>
+            <td>The listing contract said "a cursor the ring has <em>evicted</em>"; it now says
+            "no longer holds", naming both causes, and UC-7 gained the consequence that a delete
+            can end another client's paging walk. A regression test pairs a cursor with a delete —
+            no test had.</td>
+          </tr>
+          <tr>
+            <td>Two reborrows in <code>unlink</code> and <code>remove_matching</code> were dead
+            scaffolding from a borrow error already solved another way.</td>
+            <td><span class="badge ok">real</span> · nit</td>
+            <td>Both verified by compiling them away, then removed with the rewrite.</td>
+          </tr>
+          <tr>
+            <td><code>removed.clone()</code> is an avoidable copy · the <code>delete()</code> test
+            helper duplicates <code>post()</code> · three further candidates.</td>
+            <td>refuted</td>
+            <td>The clone's return value is consumed by tests that assert on the <em>ids</em>, not
+            just the count; and one helper per verb is the file's established convention
+            (<code>get()</code>/<code>json()</code> already pair that way), where a
+            method-parameterised helper would cost call-site clarity.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Both behaviours the fix introduced were pinned before being trusted: a middle row removed
+      by the single-id path, and an id named twice debited once. Each was mutation-tested against
+      deliberately broken code and observed to fail, so neither passes vacuously.</p>
     </div>
 
     <h2 id="distillation">Distillation</h2>
@@ -172,6 +251,16 @@
           <tr>
             <td>The epic e2e step that consumes this WU's contract against real proxied traffic.</td>
             <td><span class="badge id">E-EXPORT</span> close</td>
+          </tr>
+          <tr>
+            <td><strong>The ring's row count is unbounded.</strong> Surfaced by the review while
+            quantifying the removal cost: <code>retained_bytes()</code> counts only body bytes, so
+            a capture of body-less exchanges (GETs, 204s, HEADs) keeps <code>total_bytes</code>
+            near zero while the row count grows until process memory runs out — the byte cap never
+            fires. This WU stopped a single delete from paying a full scan under that condition,
+            but it did not bound the condition. Whether the ring should also cap rows is a store
+            decision, not a clearing one.</td>
+            <td>a follow-up for the epic to place</td>
           </tr>
           <tr>
             <td>No debt discovered. The <code>cleared</code> event is a new wire shape a future
