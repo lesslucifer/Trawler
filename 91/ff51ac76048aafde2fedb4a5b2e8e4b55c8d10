@@ -2,7 +2,6 @@ schema: dod/v1
 level: working-unit
 epic: E-REDESIGN
 wu: E-REDESIGN.W8
-branch: wu/redesign/body-viewer-build
 base: 3ce5f6ba2e2ad9c72b070938fa5017596b6f59fb
 tip: 91ff51ac76048aafde2fedb4a5b2e8e4b55c8d10
 diff_sha256: 2c53e643423749a55f23fb1c89672d5eda1b7a10186ce67a8104cffd697bbfab
