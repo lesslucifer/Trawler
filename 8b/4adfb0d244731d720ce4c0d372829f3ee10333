@@ -1,0 +1,31 @@
+schema: cr/v3
+scope: "WU E-REDESIGN.W9 setup + quit dialog design run -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W9
+branch: wu/redesign/setup-quit-dialog
+base: 42875df5f19c30466d6fd6c1331df063b0a626a4
+head: 8b4adfb0d244731d720ce4c0d372829f3ee10333
+diff_sha256: 68a9c48d629c567b62e27c7f2fcfbbe2f4e0e26d885195151a9fab1ce487f02b
+dimensions: [correctness, reuse, simplification, efficiency, altitude, design]
+findings: { found: 5, verified: 2, waived: 0 }
+waivers: []
+verified_findings:
+  - dimension: design
+    location: "docs/work/2026-09-04-redesign-run-9-setup-quit.html:805"
+    severity: important
+    summary: "The remote-mode mockup mounts quit with no frame prop, so it renders bordered (Button.tsx:50 defaults frame=border) while the actionable-mode quit at line 772 is frame=bare. The Layout zone-H rule states the exit is a bare Button 'in every mode and every state'; Frame B accepts '- a mode-dependent button set'; lines 299 and 598 both say 'the same button in the same corner'. The receipt's data-ink-first justification ('the one border left in the dialog's actions is what ranks them') only holds if the solo quit is bare, since a lone bordered button ranks nothing."
+  - dimension: correctness
+    location: "docs/work/2026-09-04-redesign-run-9-setup-quit.html:397"
+    severity: important
+    summary: "The Elements prose claims 'the two commands are the screen's only verbatim payloads, declared data-wire=\"shell command\" at the mockup', but only the setup zone m-steps (line 622) carries the marker. The dialog zone m-dialog mounts OFF_CMD through CopyText (line 748) with no data-wire. The rulebook's wire-marker callout requires data-wire on EVERY payload element, so this is both a false statement and a rule violation. The Tier-1 gate cannot see it: xtask/src/doc.rs check_wire_data fails only when data-wire is absent document-wide, so one marker satisfies it trivially."
+refuted:
+  - "simplification: the plan repeats the Checkbox verdict at lines 37/86/143 plus the Outcome table - refuted, documentation-system.html:168-169 gives T3 work docs 'No quality bar, no altitude rule', and each annotation attaches to a structurally different table"
+  - "simplification: the plan's Outcome table duplicates the run - refuted, it is a ~26-word synthesis serving as this WU's --report target; the sibling design WUs' result reports were archived under the T3 lifecycle, not omitted"
+  - "simplification: the inline 'Proposals:' paragraph at line 457 is cuttable - refuted, it is a spec-mandated instantiation of design-flow.html:226's Elements template"
+design:
+  artifacts: [docs/work/2026-09-04-redesign-run-9-setup-quit.html]
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 1, verified: 1, waived: 0 }
+  verdict: FAIL
+verdict: FAIL
+date: 2026-09-05
