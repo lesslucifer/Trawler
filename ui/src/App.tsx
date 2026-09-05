@@ -10,7 +10,15 @@ import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
 import { Onboarding } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
-import { Field, MethodLabel, Select, StatusDot, TonedText, type SelectOption } from "./components/index";
+import {
+  Field,
+  HTTP_METHODS,
+  MethodLabel,
+  Select,
+  StatusDot,
+  TonedText,
+  type SelectOption,
+} from "./components/index";
 import { dotStatus, initial, reduce, type OnbState } from "./onboardingMachine";
 
 // Select holds at most one option and never returns to unselected, so "any" is a
@@ -20,7 +28,7 @@ const ANY = "\u0000any";
 
 const METHOD_OPTIONS: SelectOption[] = [
   { id: ANY, label: "any method" },
-  ...["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS", "CONNECT", "TRACE"].map((m) => ({
+  ...HTTP_METHODS.map((m) => ({
     id: m,
     label: m,
     element: <MethodLabel method={m} />,

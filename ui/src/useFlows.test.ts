@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useFlows } from "./useFlows";
-import type { StreamHandlers, TrawlerApi } from "./api";
+import type { FlowSummary, StreamHandlers, TrawlerApi } from "./api";
 
 // Fake API with a hand-resolved /stats promise and a captured stream handler set,
 // so a test can interleave a live `connection` bump with the seed's resolution.
@@ -61,4 +61,54 @@ test("the /stats seed still advances the counter when it is ahead of live bumps"
   expect(result.current.connections).toBe(4);
   act(() => f.fireConnection());
   expect(result.current.connections).toBe(5);
+});
+
+// The host options must survive their own filter. `flows` is server-filtered, so
+// deriving the options from it would shrink them to the host already chosen and
+// leave the user no way to pick another.
+function hostApi(pages: FlowSummary[][]) {
+  let page = 0;
+  const api: TrawlerApi = {
+    listFlows: async () => pages[Math.min(page++, pages.length - 1)],
+    connectionCount: async () => 0,
+    caCertPem: async () => "",
+    getFlow: async () => { throw new Error("unused"); },
+    getBody: async () => { throw new Error("unused"); },
+    stream: () => () => {},
+  };
+  return api;
+}
+
+function summary(id: string, uri: string): FlowSummary {
+  return {
+    id,
+    started_at: "2026-07-12T10:00:00Z",
+    duration_ms: 1,
+    method: "GET",
+    uri,
+    status: 200,
+    request_body_state: "empty",
+    response_body_state: "empty",
+  };
+}
+
+test("a host stays on offer after the filter narrows the list away from it", async () => {
+  const api = hostApi([
+    [summary("f1", "http://example.com/"), summary("f2", "http://other.test/")],
+    [summary("f2", "http://other.test/")],
+  ]);
+  const { result } = renderHook(() => useFlows(api));
+  await waitFor(() => expect(result.current.hosts).toEqual(["example.com", "other.test"]));
+
+  act(() => result.current.update("host", "other.test"));
+  await waitFor(() => expect(result.current.flows).toHaveLength(1));
+
+  expect(result.current.hosts).toEqual(["example.com", "other.test"]);
+});
+
+test("a URI with no parseable host contributes no option", async () => {
+  const api = hostApi([[summary("f1", "/relative/only"), summary("f2", "http://example.com/")]]);
+  const { result } = renderHook(() => useFlows(api));
+
+  await waitFor(() => expect(result.current.hosts).toEqual(["example.com"]));
 });

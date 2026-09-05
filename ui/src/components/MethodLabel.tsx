@@ -6,6 +6,17 @@ const METHOD_TONE: Record<string, string> = {
   DELETE: "text-warn",
 };
 
+// The verbs this component knows how to render, toned ones first. Exported so a
+// caller offering a choice of methods draws from the same set it will display,
+// rather than keeping a second list that drifts from this one.
+export const HTTP_METHODS = [
+  ...Object.keys(METHOD_TONE),
+  "HEAD",
+  "OPTIONS",
+  "CONNECT",
+  "TRACE",
+];
+
 /**
  * MethodLabel — the HTTP verb of a flow; uppercase mono, fixed-width slot, toned by what the request does to the resource.
  * @tier T2 — owns the verb→tone mapping (read/create/replace/amend/destroy → palette tokens, else body ink), mirroring StatusPill's status→tone

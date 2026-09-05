@@ -57,8 +57,10 @@ function mockApi(store: () => FlowSummary[], connections = 0) {
   let onConnection = () => {};
   const api: TrawlerApi = {
     listFlows: vi.fn(async (filter: Filter) => {
-      // Mirrors FlowFilter::matches (store.rs): host and q are both
-      // case-insensitive substrings of the URI.
+      // Close enough to FlowFilter::matches (store.rs) for these tests: q really
+      // is a case-insensitive substring of the URI, while host is matched there
+      // against the parsed host alone. The fixtures put each host in exactly one
+      // flow's authority, so the two agree here.
       const like = (uri: string, needle?: string) =>
         !needle?.trim() || uri.toLowerCase().includes(needle.trim().toLowerCase());
       return store().filter((f) => like(f.uri, filter.host) && like(f.uri, filter.q));
