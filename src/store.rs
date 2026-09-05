@@ -42,11 +42,6 @@ impl Ring {
         ids.filter_map(|id| self.flows.get(id)).filter(|flow| filter.matches(flow))
     }
 
-    /// Drops `doomed` from both the order and the map, re-weighing by what was
-    /// actually held. Eviction pops from the front and so could subtract as it
-    /// popped; a removal takes rows from the middle, so the order is rebuilt by
-    /// retaining survivors — one helper either way, because two copies of the
-    /// byte arithmetic is how `total_bytes` drifts from what the ring holds.
     /// Removes one flow from the map and debits what it actually held. The
     /// order is the caller's to mend: eviction pops the row it already took
     /// from the front, while a removal has to find it.
