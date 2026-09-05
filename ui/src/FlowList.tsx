@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { FlowSummary } from "./api";
+import { defaultProxyAddr, type FlowSummary } from "./api";
 import { toRow } from "./flow";
 import { DurationText, MethodLabel, Notice, StatusPill, TimestampText } from "./components/index";
 
@@ -8,11 +8,10 @@ const ROW_HEIGHT = 30;
 
 const COLUMNS = "110px 70px 180px 1fr 70px 90px";
 
-const PROXY_ADDR = "127.0.0.1:7420";
-
 function HeaderRow() {
   return (
     <div
+      data-wire="none"
       className="grid gap-3 border-b border-hairline px-4 py-chrome-y text-body uppercase tracking-label text-ink-mute"
       style={{ gridTemplateColumns: COLUMNS }}
     >
@@ -35,7 +34,7 @@ function Absence({ filtered }: { filtered: boolean }) {
       {filtered ? (
         <Notice detail="clear a field to widen the search">no flows match this filter</Notice>
       ) : (
-        <Notice detail={`send traffic through the proxy — ${PROXY_ADDR}`}>no flows yet</Notice>
+        <Notice detail={`send traffic through the proxy — ${defaultProxyAddr()}`}>no flows yet</Notice>
       )}
     </div>
   );
@@ -112,6 +111,8 @@ export function FlowList({
         data-testid="flow-scroll"
         role="listbox"
         aria-label="flows"
+        data-wire="collection"
+        data-order="wire"
         aria-activedescendant={selectedIndex < 0 ? undefined : `flow-row-${selectedId}`}
         tabIndex={0}
         onKeyDown={onKeyDown}
@@ -140,18 +141,24 @@ export function FlowList({
                   transform: `translateY(${item.start}px)`,
                 }}
               >
-                <TimestampText timestamp={flow.started_at} />
-                <MethodLabel method={flow.method} />
+                <span data-wire="started_at">
+                  <TimestampText timestamp={flow.started_at} />
+                </span>
+                <span data-wire="method">
+                  <MethodLabel method={flow.method} />
+                </span>
                 <span data-wire="host" className="truncate">
                   {row.host}
                 </span>
                 <span data-wire="path" className="truncate">
                   {row.path}
                 </span>
-                <span className="text-center">
+                <span data-wire="status" className="text-center">
                   <StatusPill status={flow.status} />
                 </span>
-                <DurationText value={flow.duration_ms} />
+                <span data-wire="duration_ms">
+                  <DurationText value={flow.duration_ms} />
+                </span>
               </div>
             );
           })}

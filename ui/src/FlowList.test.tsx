@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { vi } from "vitest";
 import { FlowList } from "./FlowList";
-import type { FlowSummary } from "./api";
+import { defaultProxyAddr, type FlowSummary } from "./api";
 
 function flow(over: Partial<FlowSummary> = {}): FlowSummary {
   return {
@@ -90,7 +90,7 @@ test("an empty list with no filter names the act that fills it", () => {
   render(<FlowList flows={[]} />);
 
   expect(screen.getByTestId("empty")).toHaveTextContent("no flows yet");
-  expect(screen.getByTestId("empty")).toHaveTextContent("127.0.0.1:7420");
+  expect(screen.getByTestId("empty")).toHaveTextContent(defaultProxyAddr());
   expect(screen.getByTestId("empty")).not.toHaveTextContent(
     "no flows match this filter",
   );
@@ -168,6 +168,45 @@ test("Enter and Space open the selected row", () => {
   render(<FlowList flows={three} selectedId="b" onSelect={onSelect} />);
   fireEvent.keyDown(listbox(), { key: " " });
   expect(onSelect).toHaveBeenCalledWith("b");
+});
+
+// A 200-row list is windowed down to a fraction of itself, so a selection driven
+// past that window has no element to scroll to unless the component asks the
+// virtualizer for one. jsdom implements no scrollTo, so the virtualizer's own
+// scroll is a no-op here and the window cannot actually follow — what this
+// asserts is that the request is made for every step, including the ones past
+// the window's edge. That the browser then honours it is the e2e's assertion.
+test("the keyboard asks the virtualizer to follow a selection past the rendered window", () => {
+  const scrollTo = vi.fn();
+  HTMLElement.prototype.scrollTo = scrollTo;
+  const many = Array.from({ length: 200 }, (_, i) => flow({ id: `f${i}` }));
+  const onSelect = vi.fn();
+  const { rerender } = render(<FlowList flows={many} selectedId="f0" onSelect={onSelect} />);
+
+  const rendered = () => rows().map((r) => r.id);
+  expect(rendered().length).toBeLessThan(many.length);
+  const ids = rendered();
+  const lastRendered = Number(ids[ids.length - 1].replace("flow-row-f", ""));
+
+  let selected = "f0";
+  for (let i = 0; i <= lastRendered; i++) {
+    scrollTo.mockClear();
+    fireEvent.keyDown(listbox(), { key: "ArrowDown" });
+    selected = onSelect.mock.lastCall![0] as string;
+    expect(scrollTo).toHaveBeenCalled();
+    rerender(<FlowList flows={many} selectedId={selected} onSelect={onSelect} />);
+  }
+
+  // The last step selected a row the window had never rendered.
+  expect(Number(selected.replace("f", ""))).toBeGreaterThan(lastRendered);
+});
+
+test("arrowing up into an unselected list also starts at the first row", () => {
+  const onSelect = vi.fn();
+  render(<FlowList flows={three} onSelect={onSelect} />);
+
+  fireEvent.keyDown(listbox(), { key: "ArrowUp" });
+  expect(onSelect).toHaveBeenCalledWith("a");
 });
 
 test("clicking a row still selects it", () => {
