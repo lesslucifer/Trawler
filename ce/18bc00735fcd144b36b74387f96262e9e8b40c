@@ -1,0 +1,26 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W6
+branch: wu/redesign/flow-detail-build
+changes:
+  - path: docs/work/2026-09-05-redesign-w6-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan, written before the code — requirement, mapping (W5's run blob cited as design.implements; DEC-31's W6 row as the rule this build makes true), the four-zone layout the build must reach, the goes/comes table of every element the design resolved, the four things the design left to this WU by name (the leg state with its request default, Esc at the document rather than the panel and why, focus return without a list API, the two sanctioned T3 locals), ten expected-result rows, and a test plan at all three levels with no waivers — including retiring the curl-as-DOM-text waiver by stubbing the clipboard under WebDriver."
+  - path: docs/work/2026-09-05-redesign-w6-result.html
+    tier: T3
+    action: added
+    distills: "The WU result — all ten expected-result rows met, five deviations recorded rather than absorbed (the jsdom Range polyfill the CodeMirror teardown forced, with the base-vs-branch exit codes that prove why; two fixes to one e2e assertion, wdio's text selector and WebKit's getText both tripping on CopyButton's nested label; two test hooks the design does not mention; the LegHeaders name; the rewritten W8 assertions, each mapped to the design line that removed it), a design-fidelity table for the seven things the design said not to do and where the code proves it did not, evidence including two screenshots of the panel on each leg in the real window, the distillation, and three follow-ups — the quit dialog not claiming its Esc (W10's), the polyfill as shared infrastructure, and the clipboard waiver's remaining half."
+  - path: docs/work/2026-09-04-redesign-plan.html
+    tier: T3
+    action: updated
+    distills: "The W6 block, twice. At the plan: its summary corrected to the design — TextRenderer left the screen at W5's review (the curl block is a CopyButton alone), the leg SegmentedControl entered the identity row per DEC-31, and W8's one-pane-per-leg mount is what this WU replaces. At the result: what landed, that App.tsx needed no change, and the link to the result."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "UC-5's contract as the running app now honours it. The lead names the panel's four zones. The 'both legs are on screen at once' bullet W8 wrote is REPLACED — DEC-31 overrides it — by one leg at a time under one selector in the identity row, governing headers and body together while the URI, versions and curl never move; the panel opens on request; the two absence sentences are quoted. Two bullets added: every wire value is a copy target (headers in wire order, duplicates preserved, click copies exactly that value, drag-select still selects) and Esc dismisses with focus returning to the list. The copy-as-curl bullet now says the command is never rendered and the confirm reverts. The provenance callout names the recording clipboard stub in place of 'the curl text is asserted in the DOM', the leg-selector case in place of 'both leg sections stand on the page together', and Esc."
+  - path: docs/decisions/dec-31-leg-is-panel-scoped.html
+    tier: T2
+    action: updated
+    distills: "Its 'What this forces → W6' row is marked done, the way W8's was: one SegmentedControl in the identity row, one Headers and one Body zone following it."
+t2_note: "docs/use-cases/web-ui.html and docs/decisions/dec-31-leg-is-panel-scoped.html carry this WU's T2 truth — see their entries above. No new decision record is owed: nothing here made or reversed a standing rule; the leg's placement and its request default are DEC-31's, written by W5, and this WU is the row that closes it. design-rules-index.html needs no edit: no registry member changed and no vocabulary was minted (the header table keeps its existing design-allow pragma)."
