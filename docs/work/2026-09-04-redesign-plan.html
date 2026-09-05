@@ -214,7 +214,7 @@ flowchart LR
 
       <div data-wu="E-REDESIGN.W8">
         <h3>W8 · Build the body viewer</h3>
-        <p data-item="wu-summary">Wire all nine body-family members, making <code>XmlRenderer</code> reachable for the first time and replacing the hand-built JSON tree with <code>JsonRenderer</code> (its <code>@avoid</code> names the current lossy form as the rejected design, DEC-01). Restore <code>TEXT_MAX</code>/<code>HEX_MAX</code> with <code>CutMarker</code>, and swap <code>ModeButton</code> for <code>SegmentedControl</code> plus <code>CopyButton</code>/<code>IconButton</code>. Closes the <code>E-DFLOW.W5 Q2</code> marker.</p>
+        <p data-item="wu-summary">Wire all nine body-family members, making <code>XmlRenderer</code> reachable for the first time and replacing the hand-built JSON tree with <code>JsonRenderer</code> (its <code>@avoid</code> names the current lossy form as the rejected design, DEC-01). Restore <code>TEXT_MAX</code>/<code>HEX_MAX</code> with <code>CutMarker</code>, and swap <code>ModeButton</code> for <code>SegmentedControl</code> plus <code>CopyButton</code>/<code>IconButton</code> — <strong>for the decode pair only</strong>: the leg pair (<code>BodyViewer.tsx:196–201</code>) is deleted, not swapped, and the leg arrives as a prop from the panel (W5/W6). Closes the <code>E-DFLOW.W5 Q2</code> marker.</p>
         <p data-item="wu-maps-to">W7's design; UC-5.</p>
         <p data-item="wu-expected">Bodies render through the family, state their truncation, and copy exactly; <code>xml</code> gets a real surface.</p>
         <p data-item="wu-deps">W7</p>

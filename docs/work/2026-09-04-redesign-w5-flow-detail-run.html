@@ -10,7 +10,6 @@
   <style>
     .tier{font-weight:600;white-space:nowrap;}
     .v-reuse{color:var(--ok);font-weight:600;}
-    .v-extend{color:var(--accent);font-weight:600;}
     .v-propose{color:var(--warn);font-weight:600;}
     .u-use{color:var(--ok);}
     .u-avoid{color:var(--warn);}
@@ -226,7 +225,7 @@
        ONE pinned row, not two - the selector rides in A (see Tune 9)
        C and D are the ONLY leg-scoped zones; B is flow-scoped
 
-scroll / overflow: zone A is pinned (flex:none) and never scrolls. Zones B–E
+scroll / overflow: zone A is pinned (flex:none) and never scrolls. Zones B–D
   share a single vertical scroll region (flex:1, min-height:0, overflow-y:auto)
   — the panel scrolls as one document, so a 40-header request pushes the
   response leg down rather than scrolling inside itself.
@@ -318,7 +317,7 @@ panel-level states: <span data-key="Notice">Notice ◆</span> (pending, when flo
             <details class="why"><summary>why</summary><ul>
               <li><span class="u-avoid">@avoid</span> "actions with no fitting glyph" — <code>×</code> for close is unambiguous.</li>
               <li><span class="u-avoid">@avoid</span> "primary actions (no visual weight at rest)" — close is deliberately not primary here; the Frame ranks it nowhere.</li>
-              <li><span class="u-use">@use</span> "icon-only triggers unambiguous in place: <strong>close ×</strong>". Today's bare <code>&lt;button&gt;</code> (<code>:74–81</code>) has no hit floor and no focus ring.</li>
+              <li><span class="u-use">@use</span> "icon-only triggers unambiguous in place: <strong>close ×</strong>". Today's bare <code>&lt;button&gt;</code> (<code>:72–79</code>) has no hit floor and no focus ring.</li>
             </ul></details>
           </td>
           <td><pre class="sk">┌────┐
@@ -388,7 +387,7 @@ panel-level states: <span data-key="Notice">Notice ◆</span> (pending, when flo
             <details class="why"><summary>why</summary><ul>
               <li><span class="u-avoid">@avoid</span> "prose" — a URI is not prose.</li>
               <li><span class="u-avoid">@avoid</span> "explicit copy actions with their own label" — that is the curl action, which is why the same zone carries a labelled <code>CopyButton</code> for the command and a bare <code>CopyText</code> for the URI.</li>
-              <li><span class="u-use">@use</span> "full-value fields grabbed whole: <strong>the request URI</strong>" — named. Today it is an inert <code>&lt;p&gt;</code> (<code>:90</code>), so goal 3 is unserved in the one zone that names the target.</li>
+              <li><span class="u-use">@use</span> "full-value fields grabbed whole: <strong>the request URI</strong>" — named. Today it is an inert <code>&lt;p&gt;</code> (<code>:84</code>), so goal 3 is unserved in the one zone that names the target.</li>
             </ul></details>
           </td>
           <td><pre class="sk">https://api.x.io/v2/users?id=7
@@ -446,7 +445,7 @@ panel-level states: <span data-key="Notice">Notice ◆</span> (pending, when flo
               <li><span class="u-avoid">@avoid</span> "data needing sort/filter" — cleared by <code>wire-order-preserved</code>: headers render in wire order and this screen offers no sort.</li>
               <li><span class="u-avoid">@avoid</span> "standalone full-value fields with no name column" — there is a name column; the URI in zone B is the standalone case and correctly gets bare <code>CopyText</code>.</li>
               <li><span class="u-use">@use</span> "any wire key/value line: <strong>request/response headers</strong>" — named, first.</li>
-              <li><strong>The epic's hand-down call, answered:</strong> per-header click-to-copy is <span class="v-reuse">adopted</span>, and it arrives free — the value cell <em>is</em> a <code>CopyText</code> (<code>@madeof</code>), whose guard lets native drag-select pass through. Today's raw <code>&lt;dl&gt;</code> (<code>:19–32</code>) renders an inert <code>&lt;dd&gt;</code>. Declining would mean suppressing a shipped component's own value cell, which no Frame driver asks for.</li>
+              <li><strong>The epic's hand-down call, answered:</strong> per-header click-to-copy is <span class="v-reuse">adopted</span>, and it arrives free — the value cell <em>is</em> a <code>CopyText</code> (<code>@madeof</code>), whose guard lets native drag-select pass through. Today's raw <code>&lt;dl&gt;</code> (<code>:21–33</code>) renders an inert <code>&lt;dd&gt;</code>. Declining would mean suppressing a shipped component's own value cell, which no Frame driver asks for.</li>
               <li><strong>Consequence the screen must absorb:</strong> <code>KeyValueRow</code> is <code>display:contents</code>, so <em>the two-column grid is the caller's to supply</em> — see the <a href="#header-table">header table</a> row below.</li>
             </ul></details>
           </td>
@@ -486,7 +485,7 @@ authorization  Bearer eyJhbGciOi…
               <li><span class="u-use">@use</span> "any zone that has nothing to show and must say which nothing it is (empty · pending) — <strong>HeaderTable empty/pending, the detail panel's load failures</strong>" — both tenants named.</li>
               <li>Microcopy — the screen's decision, not the component's, and constrained by <code>empty-states-orient</code> + the rulebook lexicon (<code>none</code> is "the empty-set microcopy for an absent value"):<br>
                   empty leg → <strong>"none — this leg sent no headers"</strong> (today: bare <code>"none"</code> at <code>:18</code>, which states the fact and not what it means);<br>
-                  pending panel → <strong>"loading this flow…"</strong> (today: <code>"loading…"</code> at <code>:52</code>).<br>
+                  pending panel → <strong>"loading this flow…"</strong> (today: <code>"loading…"</code> at <code>:51</code>).<br>
                   Neither carries an action slot: the user cannot cause a header to exist, and the fetch is already in flight — the rule's "where they cannot, it explains what happened" branch.</li>
             </ul></details>
           </td>
@@ -1139,7 +1138,9 @@ soft:
             the opposite: it edited the epic plan's W4 and W11 rows inside its own WU, on the grounds
             that "a plan that still promises work already done is how a follow-up gets lost". Found at
             the Tier-3 review.</td>
-        <td>Designed the panel-level selector, then <strong>corrected the epic plan here</strong>: W7's
+        <td>Distilled to <a href="../decisions/dec-31-leg-is-panel-scoped.html"><strong>DEC-31</strong></a>,
+            which is where the rule outlives this archived run. Designed the panel-level selector, then
+            <strong>corrected the epic plan here</strong>: W7's
             summary strikes the leg switch and names where it went, its expected result narrows to the
             <em>decode</em> switch, and W8's build row marks the <code>ModeButton</code> →
             <code>SegmentedControl</code> swap as the decode pair <em>only</em> — the leg pair
