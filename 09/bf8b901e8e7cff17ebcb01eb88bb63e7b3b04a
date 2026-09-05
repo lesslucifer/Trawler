@@ -1,0 +1,41 @@
+schema: cr/v3
+scope: "WU E-REDESIGN.W5 (wu/redesign/flow-detail) -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W5
+branch: wu/redesign/flow-detail
+base: 42875df5f19c30466d6fd6c1331df063b0a626a4
+head: 09bf8b901e8e7cff17ebcb01eb88bb63e7b3b04a
+diff_sha256: 867f2ab0056fb3ff5c61a3ee1cb8c11928b3b31f90b031d8362272c11b46ec25
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+design:
+  artifacts: [docs/work/2026-09-04-redesign-w5-flow-detail-run.html]
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 0, verified: 0, waived: 0 }
+  verdict: PASS
+verdict: PASS
+date: 2026-09-05
+note: |
+  Re-bound from 0be1018 to 09bf8b9 after the WU result report was committed. The
+  only delta is docs/work/2026-09-04-redesign-w5-result.html, added: no design
+  artifact changed, so the design verdict carries forward unaltered and
+  design-scope still lists exactly one artifact against rulebook aeff5b0.
+  The added report was itself checked rather than re-stamped: verify-doc green as
+  wu-result, every cross-link resolves, and its load-bearing claims verified
+  against the repo — 5 commits, 5 files in the reviewed range, BodyViewer.tsx:148
+  is the default-leg useState and :196-201 the leg ModeButton pair, and W2's
+  d7f186c did edit the epic plan. gate0 green on this tip.
+  Round 5 verdict, unchanged: design returned zero findings for the third
+  consecutive round. Correctness raised one blocker, REFUTED — it claimed
+  0be1018's message misattributed note fixes "already applied in 24c4620",
+  inferring that from the notes being byte-identical on both commits. Notes are
+  mutable and attached out of band, so identical present-day content proves
+  nothing about when it was written; the notes ref's own history shows 24c4620's
+  note still contained the invented rule at 17:03:43 and the retraction landing at
+  17:07:58, before 0be1018 at 17:14:20.
+  Five rounds in total, all FAIL until this one: 9 findings on f621253 (incl. a
+  blocker), 8 on 934307b (incl. a fix claimed in three artifacts and never
+  applied), 4 on ca18daa (two note blockers), 3 on 24c4620 (one note blocker).
+  Every finding across all five rounds was documentation bookkeeping or a stale
+  citation. None was a design defect.
