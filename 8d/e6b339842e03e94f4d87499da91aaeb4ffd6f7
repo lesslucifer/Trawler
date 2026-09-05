@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 8de6b339842e03e94f4d87499da91aaeb4ffd6f7
+base: 42875df5f19c30466d6fd6c1331df063b0a626a4
+tier: key
+signer: vuluu
+report: docs/work/2026-09-04-redesign-w9-plan.html
+report_sha256: ac5c3829dbe307f4e54863915f8c73455e71a4ba62e62125f827ca6acf8b7ee2
+date: 2026-09-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBpGWD2rdTitWg44EqFn6i1aQohnDt8KbQnqQZMwrFiM7fNEuzNTvxfLA
+  rVV2TrNxaGgxaXgRDe3ciTp1+wXXcI
+  -----END SSH SIGNATURE-----
