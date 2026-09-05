@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-EXPORT.W7 result — paste a curl command, get a flow</h1>
       <p><code>POST /flows/import?format=curl</code> reads one pasted <code>curl</code> command as a request-only flow marked <code>imported</code>, delivered as planned: the settled flag set is the code's one lookup, every other token is refused by name, and the <code>toCurl</code> inverse is proven as a property — with its boundary found and recorded.</p>
-      <div class="meta">v1 · 2026-09-05 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W7</span> · <a href="2026-09-05-export-w7-curl-in-plan.html">WU plan</a> · <a href="2026-09-04-export-plan.html#w7">epic plan</a></div>
+      <div class="meta">v2 · 2026-09-05 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W7</span> · <a href="2026-09-05-export-w7-curl-in-plan.html">WU plan</a> · <a href="2026-09-04-export-plan.html#w7">epic plan</a></div>
     </div>
   </header>
   <main>
@@ -91,6 +91,29 @@
       body travels raw, and the refusal is W3's plain text.</p>
     </div>
 
+    <h2 id="review">The review round</h2>
+    <table data-c="review">
+      <thead><tr><th>Finding</th><th>Verdict</th><th>What changed</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>An ANSI-C <code>\u</code>/<code>\U</code> escape naming no character — a UTF-16 surrogate, a code point past <code>0x10FFFF</code> — dropped the digits the reader had already consumed and kept only the two-byte marker, while the module claimed an escape bash does not know stays literal (correctness · important)</td>
+          <td>confirmed — a verifier tokenized both shapes and compared with a real bash, which keeps the six-byte literal</td>
+          <td>the digit reader now returns the digits it consumed and the code-point writer puts them back when no character results; regression test <code>an_escape_naming_no_character_stays_literal_with_its_digits</code> written red first, then green. Not reachable from a browser paste — Chrome's <code>\uXXXX</code> only ever names control characters and <code>!</code> — but reachable from a hand-written one</td>
+        </tr>
+        <tr>
+          <td><code>saw_data_flag</code> was set only where the data vector was pushed and read only once, so the vector already said what it said (simplification · nit)</td>
+          <td>confirmed — including that <code>-d ''</code> pushes an empty element, so the vector is non-empty exactly when the flag was true</td>
+          <td>field removed; the method default reads <code>data.is_empty()</code>. <code>an_empty_data_value_still_makes_it_a_post_with_no_body</code> guards the equivalence</td>
+        </tr>
+        <tr>
+          <td>UC-6 quoting two example refusal wordings and the <code>format</code> refusal string copies code into a T2 doc (altitude · important)</td>
+          <td>refuted — a use case states the wire-visible contract, exactly as the same file quotes the import envelope; the flag tables and grammar stay in code. The verifier did find the <code>doc/v1</code> note's self-description ("not their wording") imprecise, since two wordings are shown as examples</td>
+          <td>the note now says UC-6 illustrates two wordings and states that the full set is the code's; no doc change</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Five finders, three candidates, two confirmed. Reuse and efficiency returned clean: the tokenizer is single-pass over the body bytes, the join is one allocation, the body limit and the single store lock are the HAR path's own.</p>
+
     <h2 id="evidence">Evidence</h2>
     <div data-item="evidence">
       <table>
@@ -98,8 +121,8 @@
         <tbody>
           <tr>
             <td><span class="badge id">unit</span></td>
-            <td>49 (46 in <code>curl.rs</code> incl. 4 proptests · 3 in <code>routes.rs</code>)</td>
-            <td><strong>tokenizer</strong> (11): word splitting · the single-quote idiom · the four double-quote escapes with a literal <code>$HOME</code> · bare backslash · continuations inside and outside quotes incl. CRLF · adjacent segments · every ANSI-C escape incl. octal, <code>\U</code>, an unknown escape kept and a raw <code>\xff</code> byte · an empty quoted word · every unterminated form · a trailing backslash. <strong>flags</strong> (16): both URL spellings · the three method rules · <code>-d ''</code> · header order, trim, and curl's three header forms · five data spellings joined · <code>--data-raw @</code> versus the four that read a file · cookies and the jar refusal · basic auth and its password refusal · <code>--compressed</code> · expansion order · no invented defaults · <code>--</code> · clusters and attached values · all 55 ignored spellings · an ignored value never taken as the URL. <strong>refusals</strong> (9): each row of the plan's table with its exact <code>Display</code>, incl. the non-UTF-8 field versus a body that may carry any byte, and the Windows <code>cmd</code> shape. <strong>shapes</strong> (5): Chrome, Firefox, Safari, the pinned <code>toCurl</code> literals, the flow's mark/instant/version/absent response. <strong>properties</strong> (5): the mirror anchored to the TS pins · the round trip · never-panics over text, over bytes, over a curl-shaped near-miss. <strong>handler</strong> (3): dispatch with HAR default · unknown format refused · a refused command stores nothing.</td>
+            <td>50 (47 in <code>curl.rs</code> incl. 4 proptests · 3 in <code>routes.rs</code>)</td>
+            <td><strong>tokenizer</strong> (12): word splitting · the single-quote idiom · the four double-quote escapes with a literal <code>$HOME</code> · bare backslash · continuations inside and outside quotes incl. CRLF · adjacent segments · every ANSI-C escape incl. octal, <code>\U</code>, an unknown escape kept and a raw <code>\xff</code> byte · an escape naming no character (a surrogate, an out-of-range <code>\U</code>) kept literal with its digits, added by the review · an empty quoted word · every unterminated form · a trailing backslash. <strong>flags</strong> (16): both URL spellings · the three method rules · <code>-d ''</code> · header order, trim, and curl's three header forms · five data spellings joined · <code>--data-raw @</code> versus the four that read a file · cookies and the jar refusal · basic auth and its password refusal · <code>--compressed</code> · expansion order · no invented defaults · <code>--</code> · clusters and attached values · all 55 ignored spellings · an ignored value never taken as the URL. <strong>refusals</strong> (9): each row of the plan's table with its exact <code>Display</code>, incl. the non-UTF-8 field versus a body that may carry any byte, and the Windows <code>cmd</code> shape. <strong>shapes</strong> (5): Chrome, Firefox, Safari, the pinned <code>toCurl</code> literals, the flow's mark/instant/version/absent response. <strong>properties</strong> (5): the mirror anchored to the TS pins · the round trip · never-panics over text, over bytes, over a curl-shaped near-miss. <strong>handler</strong> (3): dispatch with HAR default · unknown format refused · a refused command stores nothing.</td>
           </tr>
           <tr>
             <td><span class="badge id">integration</span></td>
@@ -113,11 +136,11 @@
           </tr>
         </tbody>
       </table>
-      <p>Suite green: 218 lib unit, 35 <code>tests/api.rs</code>, 3 <code>tests/ca.rs</code>,
+      <p>Suite green: 219 lib unit, 35 <code>tests/api.rs</code>, 3 <code>tests/ca.rs</code>,
       6 <code>tests/e2e_capture.rs</code>, 4 <code>tests/e2e_h2.rs</code>, 0 failures;
       <code>cargo fmt --check</code> and <code>clippy -D warnings</code> clean across all targets.
       Commits: plan <code>426977c</code> · code <code>c328330</code> · distillation
-      <code>09676c2</code> · this result.</p>
+      <code>09676c2</code> · result <code>28da6d3</code> · review fixes <code>9ed23e5</code> · this amended result.</p>
     </div>
 
     <h2 id="distillation">Distillation</h2>
