@@ -180,7 +180,7 @@
     <h2 id="uc-onboard">UC-ONBOARD — Onboard a fresh machine to the first captured flow</h2>
     <div data-c="uc-onboard-contract">
       <p>On a machine that can't yet decrypt HTTPS, the native app opens a three-step guided setup — Trust
-      the CA · Set the proxy · Verify — instead of the flow list. Its rule
+      the CA · Set the proxy · Make a request — instead of the flow list. Its rule
       (<span class="badge id">E-UISETUP</span>): <strong>do the work for the user in the common case, tell
       the truth in every case, and prove success only by real capture.</strong></p>
       <ul>
@@ -204,11 +204,20 @@
         routing through Trawler" even before decryption works. Traffic seen but not decrypting ⇒ the Trust
         step says "install the certificate on the device you're capturing from".</li>
         <li><strong>Only a decrypted flow reveals the list.</strong> A probe-green step or a bare connection
-        never ends onboarding — the payoff (Verify → flow list) fires solely on the first <code>https://</code>
-        flow (a decrypted request the MITM rewrote to absolute form). The Verify step shows a concrete
+        never ends onboarding — the payoff (the last step → flow list) fires solely on the first <code>https://</code>
+        flow (a decrypted request the MITM rewrote to absolute form). The last step shows a concrete
         prove-it: open any site, or run a copyable <code>curl -x http://&lt;addr&gt; https://example.com</code>
         with the real proxy address. Capture, once proven, latches (the status dot re-invokes setup on demand;
         "Back to flows" returns).</li>
+        <li><strong>A copied command says whether it copied</strong> (E-REDESIGN.W10). Both commands — the
+        prove-it and the per-OS proxy snippet — are the copy target themselves, confirming at the value; a
+        clipboard write the browser refuses says <em>copy failed</em> rather than doing nothing visible.</li>
+        <li><strong>Quitting with a proxy still set asks first, and can fix it</strong> (E-REDESIGN.W10).
+        Where a proxy is set on this machine — Trawler's or another's, since turning the OS proxy off does
+        not depend on whose address is set — the dialog offers to turn it off, and a failed attempt says so
+        and opens the manual steps instead of quitting onto a dead proxy. Where nothing is set locally but a
+        remote device may still route here, it is a notice with a durable "don't show this again". Esc, the
+        backdrop and ✕ all cancel the quit.</li>
       </ul>
     </div>
 
@@ -221,7 +230,7 @@ flowchart TD
   W --> C{"What arrived?"}
   C -- "any connection" --> PX["Proxy step green: receiving traffic"]
   C -- "http flow, no https" --> TR["Trust: not decrypting, install the CA on the sending device"]
-  C -- "https flow (decrypted)" --> OK["Trust green + Verify green: reveal the flow list"]
+  C -- "https flow (decrypted)" --> OK["Trust green + last step green: reveal the flow list"]
       </pre>
       <div class="caption">Probes light the steps instantly for the local case; observed traffic confirms — and, for a remote device, is the only thing that can. The list reveal is decrypted-flow-only.</div>
     </div>
