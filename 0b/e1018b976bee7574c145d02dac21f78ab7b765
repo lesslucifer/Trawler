@@ -4,13 +4,10 @@ epic: E-REDESIGN
 wu: E-REDESIGN.W5
 tests:
   unit:
-    count: 0
     waived: "The WU touches no product code or screens — the E-DFLOW.W9 precedent the epic plan cites for design WUs (W1, W3, W5, W7, W9), and the same waiver W1 carried. The diff is two HTML documents under docs/work/; ui/src/ and src/ are untouched, so there is nothing for a unit to assert against. The design's claims become assertions in W6, beside the .tsx: that the copy confirm reverts (the sticky-copied defect this run names at FlowDetail.tsx:58-61), that an empty leg renders Notice rather than a bare word, that the verb carries MethodLabel's tone, and that Esc closes the panel."
   integration:
-    count: 0
     waived: "Same precedent. There is no bounded contract in code to exercise: the contract this WU produces IS the run document, and cargo xtask verify-doc is what judges its shape — 17/17 soft rules receipted against the rulebook on disk, 13/13 hard rules machine-checked, every reuse verdict mounted rather than drawn."
   e2e:
-    count: 0
     waived: "Same precedent, and it holds here in a way it did not for W2: no user-visible surface moves. FlowDetail.tsx is not touched by this diff — the run designs its replacement, it does not build it. UC-5's e2e runs against the built screen in W6. (W2's identical waiver was voided at review because the fix migrated three screens; this diff contains no code at all, so that failure mode cannot arise. Verified across BOTH commits: git diff --stat 42875df..HEAD lists five documentation files and nothing else — the three docs/work/ files (the two this WU adds plus the epic plan, whose W7/W8 rows the review's blocker required this WU to correct) and the two docs/decisions/ files carrying DEC-31 and its index row.)"
 verified:
   - "cargo xtask verify-doc docs/work/2026-09-04-redesign-w5-flow-detail-run.html — green (design-run). receipt 17/17 soft · 14 satisfied · 2 inherited · 1 blocked. hard rules 13/13 machine-checked. design-allow: 0 live suppressions. Run archived AFTER green, per the flow spec's step order — an earlier draft was marked archived before it had ever been verified, at which point the checker skipped it entirely and reported neither pass nor fail; reopening it surfaced 22 real failures across two batches. A design run marked archived without a prior green is unverified, not verified."
