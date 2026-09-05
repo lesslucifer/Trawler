@@ -1,0 +1,21 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W7
+changes:
+  - path: docs/work/2026-09-04-redesign-run-9-body-viewer.html
+    tier: T3
+    action: added
+    distills: "The design itself — the artifact W8 cites by blob. Six stages plus five closing lists: the Frame's load-bearing constraint that a body is wire evidence (which is what forces copy-exactness and a stated truncation rather than a silent cap); a Layout whose overflow line names every unbounded zone and its cap owner; an Elements catalog resolving all thirteen elements to reuse with each verdict traced to an entry's @use/@avoid; an Interaction table whose seven absence rows give each cause its own words; a mockup that MOUNTS ten real components rather than drawing them; and a receipt covering all 17 soft slugs against rulebook aeff5b0f. Zero proposals — the vocabulary W2 completed held for every element."
+  - path: docs/work/2026-09-04-redesign-w7-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan — requirement, mapping, expected result and the test plan with its three waivers named and reasoned. Also records the two shape decisions taken up front with their rejected alternatives, so the run did not re-litigate them mid-stage; one of the two (keeping the leg switch in the control row) was overturned at review; the review found the plan asserting it unmarked, so it is now struck through with a forward link to the result, following W2's precedent at both levels rather than only the epic one."
+  - path: docs/work/2026-09-04-redesign-w7-result.html
+    tier: T3
+    action: added
+    distills: "The WU result — delivered against the eight expected-result rows (row 8 records the Tier-3 FAIL and its fix), with a review-rounds section naming each round-1 finding, its fix and the three refuted candidates, and four deviations recorded: the leg switch leaving the pane (the review's finding, traced through every stage), the blocked-on entry it answered rather than carried, the false Tune finding the mockup render caught, and the epic-plan block this WU corrected. States explicitly that distillation is deferred and why."
+  - path: docs/work/2026-09-04-redesign-plan.html
+    tier: T3
+    action: updated
+    distills: "The epic plan's W7 summary block, which still described the run as designing 'a raw/decoded toggle and a leg switch'. The leg switch is no longer this pane's, so the row now states what moved at review and links the account in W7's result; the expected row records what actually landed. Same rule W2 followed when its scope moved — a plan still describing a control the design deleted would mislead the epic review."
+t2_waived: "Nothing citable yet, and deliberately so. This WU produced a design, not a behaviour. The epic's own distillation plan assigns UC-5's two gains — bodies state their truncation, xml becomes a real dispatch — to docs/use-cases/web-ui.html at BUILD time (W8); they are not true of the running app until W8 ships them, and writing them into a T2 use-case now would make the doc lie about the app. The rulebook needs no edit because the run recorded zero proposals: no rule, token, lexicon term or key binding was needed that it lacks. No decision record is owed either — the leg-placement reasoning belongs to the panel (W5/W6), and one screen's zoning is not yet a standing rule. The verdict is recorded rather than skipped, per DoD-W check 6."
