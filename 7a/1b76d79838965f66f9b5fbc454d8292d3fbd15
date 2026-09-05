@@ -1,0 +1,23 @@
+schema: cr/v3
+scope: "WU E-REDESIGN.W4 flow-list-shell-build -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W4
+branch: wu/redesign/flow-list-shell-build
+base: 713d5c3efc13fc459593d1d1753feb373a5afad8
+head: 7a1b76d79838965f66f9b5fbc454d8292d3fbd15
+diff_sha256: 6db6e25fe7afd58d3761af4d72c3b9134af2a9bc7a9a0026d27c7ee1da456c2c
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 13, verified: 7, waived: 0 }
+waivers: []
+design:
+  implements:
+    - path: docs/work/2026-09-04-flow-list-shell.html
+      blob: c6e7fb0aa5adace8446f25d7c33a90d029cfcbab
+      built: [ui/src/App.tsx, ui/src/FlowList.tsx, ui/src/Layout.tsx]
+  undesigned:
+    - path: ui/src/components/MethodLabel.tsx
+      why: "exports the nine-verb set its own tone map already half-held, so the filter dropdown draws from the component that renders the verbs instead of keeping a third copy. TSDoc and one exported constant - no rendered output changes, and the component's design was retired into this TSDoc under DEC-16."
+    - path: ui/src/components/Select.tsx
+      why: "one clause added to the existing @avoid line, recording that a clearable filter supplies its own 'any' option rather than asking for the clear affordance the contract forbids. Documentation of a constraint the component already enforced - no behaviour, markup or prop changes."
+verdict: PASS
+date: 2026-09-05
