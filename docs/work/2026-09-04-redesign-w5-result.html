@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9be3719f34851f0dfac75e">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W5 result (flow detail design run)</title>
+  <style>
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}
+    .ok{color:var(--ok);font-weight:600;}
+    .warn{color:var(--warn);font-weight:600;}
+    .muted{color:var(--muted);}
+    pre.sk{font-family:var(--mono,monospace);font-size:11.5px;line-height:1.45;margin:0;
+      white-space:pre;overflow-x:auto;}
+    .round{font-weight:600;white-space:nowrap;}
+  </style>
+</head>
+<body data-artifact="wu-result" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W5 — result: the flow detail design run</h1>
+      <p>The first screen run the design flow has executed, delivered. Five review rounds reshaped it;
+         three of them corrected the author, and none of the twenty-four findings was a design defect.</p>
+      <div class="meta">WU result · 2026-09-05 · Trawler · T3 (docs/work/) ·
+        <code>wu/redesign/flow-detail</code> → <code>epic/redesign</code> ·
+        <a href="2026-09-04-redesign-w5-plan.html">its plan</a> ·
+        <a href="2026-09-04-redesign-w5-flow-detail-run.html">the run</a> ·
+        tip <code>0be1018</code> · 5 commits · 5 files, +1747/−3</div>
+    </div>
+  </header>
+
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>The plan asked for…</th><th>Delivered</th></tr>
+      <tr>
+        <td>A closed, archived design run over <code>FlowDetail</code> — six stages, five closing
+            lists, every element resolved to a registry verdict</td>
+        <td><span class="ok">✓</span> <a href="2026-09-04-redesign-w5-flow-detail-run.html">the run</a>,
+            <code>verify-doc</code> green then archived, in that order. Receipt 17/17 soft ·
+            14 satisfied · 2 inherited · 1 blocked. Hard rules 13/13 machine-checked. Zero live
+            <code>design-allow</code> suppressions.</td>
+      </tr>
+      <tr>
+        <td>The local <code>Section</code> and <code>HeaderTable</code> resolve to
+            <code>reuse</code></td>
+        <td><span class="warn">Half.</span> <code>Section</code> is a clean reuse.
+            <strong><code>HeaderTable</code> is not</strong> — no registry entry owns a two-column pair
+            grid, and <code>KeyValueRow</code> is <code>display:contents</code>, so the columns are the
+            caller's. It resolves to a <code>reuse</code> of <code>KeyValueRow</code> inside a
+            <strong>T3 local</strong> table. The epic plan's prediction was wrong and the run says so
+            rather than forcing the verdict it was told to reach.</td>
+      </tr>
+      <tr>
+        <td>The per-header click-to-copy stated as a decision either way</td>
+        <td><span class="ok">✓</span> Adopted, and it arrives free: <code>KeyValueRow</code>'s value
+            cell <em>is</em> a <code>CopyText</code> (<code>@madeof</code>), whose guard leaves native
+            drag-select intact.</td>
+      </tr>
+      <tr>
+        <td>The W7 seam declared, not designed through</td>
+        <td><span class="warn">Declared, then deliberately moved.</span> The body pane's internals stay
+            W7's. But leg selection moved <em>up</em> to the panel — see the review below — so W7's leg
+            switch is deleted rather than redesigned. Distilled to
+            <a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a> and carried into the epic
+            plan's W7 and W8 rows.</td>
+      </tr>
+      <tr>
+        <td><span class="muted">(not asked for)</span></td>
+        <td><span class="ok">+ DEC-31</span> — a T2 decision record. Opened at review, under the
+            distillation checklist's "non-obvious choice made or reversed" row.</td>
+      </tr>
+    </table>
+
+    <h2 id="screen">What the panel became</h2>
+    <p>Six zones at the first draft, five after round 2, four after round 3 — each collapse forced by a
+       reviewer, not by taste:</p>
+<pre class="sk">
+┌─────────────────────────────────────────────┐
+│ A  POST 201 [request│response] 148 ms   ✕   │ ← PINNED. identity + leg,
+├─────────────────────────────────────────────┤   one row, not two
+│ B  https://api.example.io/v2/users?id=7     │ ← flow-scoped: identical on
+│    HTTP/1.1 → HTTP/2      [ copy as curl ]  │   both legs, so unlabelled
+├─────────────────────────────────────────────┤   and stated once
+│ C  HEADERS   (of the selected leg)          │ ← leg-scoped: replaced when
+├─────────────────────────────────────────────┤   the selector moves
+│ D  BODY      (of the SAME leg)   SEAM · W7  │
+└─────────────────────────────────────────────┘
+</pre>
+    <p>The load-bearing idea is the <strong>scope split</strong>, and it is what the last round
+       produced: a zone is <em>flow-scoped</em> or <em>leg-scoped</em>, and that decides whether it
+       carries a label and whether it follows the selector.</p>
+
+    <h2 id="review">The review — five rounds, and what each cost</h2>
+    <p>Every round found something. <strong>None of it was a design defect.</strong> Rounds 3, 4 and 5
+       returned zero design findings; everything else was documentation bookkeeping or a stale citation.</p>
+    <table>
+      <tr><th>Round</th><th>Tip</th><th>Found</th><th>The one that mattered</th></tr>
+      <tr>
+        <td><span class="round">1</span></td><td><code>f621253</code></td><td>9</td>
+        <td><strong class="warn">Blocker.</strong> The epic plan's W7 row still promised a leg switch
+            W5 had deleted, and the run justified leaving it stale with
+            <em>"W5 may not edit W7's plan row"</em> — <strong>a rule the author invented</strong>. No
+            T1/T2 doc contains it, and W2's precedent (<code>d7f186c</code>) is the opposite.</td>
+      </tr>
+      <tr>
+        <td><span class="round">2</span></td><td><code>934307b</code></td><td>8</td>
+        <td><strong class="warn">A fix claimed but never applied.</strong> The commit message, the
+            <code>doc/v1</code> note and the run all asserted the W8 row was corrected; the row was
+            byte-identical. The replacement had matched whitespace the file does not contain and failed
+            silently, with asserts on only two of three edits.</td>
+      </tr>
+      <tr>
+        <td><span class="round">3</span></td><td><code>ca18daa</code></td><td>4</td>
+        <td><strong class="warn">Two note blockers.</strong> The notes were never carried to the tip, so
+            the newest readable <code>doc/v1</code> still said the leg reversal was "deliberately not
+            written to <code>docs/decisions/</code>" — while DEC-31 sat on disk contradicting it.</td>
+      </tr>
+      <tr>
+        <td><span class="round">4</span></td><td><code>24c4620</code></td><td>3</td>
+        <td><strong class="warn">The retracted rule survived in one place.</strong> The
+            <code>test/v2</code> note's closing field still asserted the invented rule: carrying the
+            note forward, the author edited its waiver fields and never re-read the field below them.</td>
+      </tr>
+      <tr>
+        <td><span class="round">5</span></td><td><code>0be1018</code></td><td>1, refuted</td>
+        <td><span class="ok">PASS.</span> Correctness claimed the round-4 message misattributed note
+            fixes, inferring it from the notes being byte-identical on both commits. <strong>Notes are
+            mutable and attached out of band</strong>, so identical content today proves nothing about
+            when it was written. The notes ref's history refutes it: <code>24c4620</code>'s note still
+            contained the invented rule at 17:03:43; the retraction was written at 17:07:58.</td>
+      </tr>
+    </table>
+
+    <h2 id="reversals">Three reviewer rounds that corrected the design</h2>
+    <table>
+      <tr><th>The reviewer said</th><th>What it changed, and why the author was wrong</th></tr>
+      <tr>
+        <td>"the curl copy should be a button only, users don't really need to see the curl content"</td>
+        <td><strong>Applied.</strong> It improved the component fit rather than bending it:
+            <code>CopyButton</code>'s <code>@use</code> is a payload that is
+            "derived/<em>invisible</em>", which became literally true, and its <code>@avoid</code> on
+            the icon-only form then <em>forbade</em> a glyph — so the label had to carry its own noun.
+            A later round removed the titled <code>Section</code> around it too: a heading over one
+            self-labelling button is the redundancy <code>labels-add-context</code> names.</td>
+      </tr>
+      <tr>
+        <td>"I still think we need a tabs or kind of switch between request / response … Same for the
+            body"</td>
+        <td><strong>Reversed the author's refusal.</strong> The decisive fact was in the code, not the
+            argument: <code>BodyViewer</code> already shipped a request/response toggle
+            (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>, at <code>ca18daa</code>; W8 has
+            since deleted it), so the panel was never showing
+            "both legs at once" — its <em>headers</em> were, while the body beneath them toggled. The
+            first refusal weighed the switch against a goal phrased as "compare the two legs" and
+            <strong>never checked whether the screen already contradicted it</strong>.</td>
+      </tr>
+      <tr>
+        <td>"please rethink thoroughly about the overall layout &amp; UI UX best practices … Do not just
+            focus on one problem"</td>
+        <td><strong>Fair on both counts.</strong> The rounds had been patching one fault at a time.
+            Looking at the panel whole found three faults with one cause — two stacked pinned bars, a
+            "Request" zone that never followed the selector (introduced by the author in the previous
+            round), and two headings for one leg — all because every zone was being treated as
+            leg-scoped when only two are. That became the Frame driver the layout now derives from.</td>
+      </tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>#</th><th>Deviation</th><th>Why</th></tr>
+      <tr><td>D1</td>
+        <td>The epic plan's W5 row predicted <code>HeaderTable</code> would resolve to
+            <code>reuse</code>; it resolves to a <strong>T3 local</strong>.</td>
+        <td>No registry entry owns a pair grid. <code>FormRenderer</code> is exactly that shape but its
+            <code>@use</code> binds it to a dispatched <code>form</code> body. A <code>KeyValueTable</code>
+            (T2) was considered and <strong>declined</strong>: two call sites and three utility classes
+            is what the tier model routes to T3.</td></tr>
+      <tr><td>D2</td>
+        <td>The WU edited the <strong>epic plan</strong>, a shared file W7 and W8 read.</td>
+        <td>Required by round 1's blocker. W2's precedent (<code>d7f186c</code>) is explicit: a WU that
+            changes what a later WU owns corrects the rows in its own WU.</td></tr>
+      <tr><td>D3</td>
+        <td>The WU opened a <strong>T2 decision record</strong> (DEC-31), which a design WU does not
+            normally do.</td>
+        <td>The distillation checklist's "Non-obvious choice made or reversed? → New
+            <code>decisions/</code> record" row is unconditional. Two rounds' worth of reasoning to the
+            contrary was wrong: the first cited DEC-16 (which governs <em>component</em> design-file
+            retirement), the second borrowed a "second sighting" threshold from the design-rules row.</td></tr>
+      <tr><td>D4</td>
+        <td>The <strong>seam moved</strong>: leg selection is the panel's, so W7 loses a subject the
+            epic plan gave it.</td>
+        <td>A body run cannot fix a panel-level contradiction, and W7 designing a control the panel had
+            already subsumed is the collision a seam exists to prevent.</td></tr>
+      <tr><td>D5</td>
+        <td>Two receipt verdicts are <code>blocked</code>, not <code>satisfied</code>.</td>
+        <td><kbd>Esc</kbd> is designed per the rulebook's own sighting on this panel, but
+            <code>FlowDetail.tsx</code> binds no key handler. A designed path is not a shipped one, and
+            <code>satisfied</code> there would be the "complete, fluent and false" receipt the Tier-3
+            review exists to catch. W6 owns making both true.</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <ul data-item="evidence">
+      <li><code>cargo xtask verify-doc</code> — green on the run (<code>design-run</code>), the WU plan
+          (<code>wu-plan</code>) and the epic plan (<code>epic-plan</code>). Receipt 17/17 soft ·
+          14 satisfied · 2 inherited · 1 blocked; hard rules 13/13; <code>design-allow</code> 0 live
+          suppressions. <strong>Green then archived, in that order</strong> — an early draft was marked
+          archived before it had ever been verified, at which point the checker skipped it entirely and
+          reported neither pass nor fail; reopening it surfaced 22 real failures across two batches.</li>
+      <li><code>node scripts/check-render.mjs</code> — the run's mockup renders over
+          <code>file://</code> with a clean console, 4 mounts / 5 buttons, <strong>10 of 11 runs</strong>
+          (the single failure was a known harness race, reproduced only while a review agent drove
+          headless Chrome against the same file concurrently; 5/5 clean immediately after).</li>
+      <li><strong>Live behaviour, not asserted in prose:</strong> clicking the <em>response</em> segment
+          in headless Chrome swaps the header table (<code>aria-label="response headers"</code>, first
+          key <code>content-type</code>) <em>and</em> the body stub, while the URI is
+          <strong>UNCHANGED</strong> — the flow-scoped/leg-scoped split actually working.</li>
+      <li><code>cargo xtask gate0</code> — fmt + clippy <code>-D warnings</code> + all tests green.</li>
+      <li><code>git hash-object docs/design-rules/design-rules-index.html</code> =
+          <code>aeff5b0…</code>, re-checked at every close against the receipt's pin — the rulebook
+          never moved under the run.</li>
+      <li><code>node scripts/design-registry.mjs</code> — 27 entries, read once at the start and frozen.</li>
+      <li><code>git diff --stat 42875df..0be1018</code> — 5 files, all under <code>docs/</code>,
+          <strong>0 lines of <code>src/</code> or <code>ui/src/</code></strong>. This is the evidence
+          behind all three test waivers.</li>
+      <li><strong>Every citation re-verified line by line</strong> at the final tip, in both the
+          <code>File.tsx:N</code> and bare <code>:N</code> forms — 19 across five documents. Ten were
+          wrong across rounds 1 and 2; fixing only the prefixed form in round 1 left four wrong, which
+          is why the shorthand is now checked explicitly.</li>
+      <li><code>cargo xtask verify-dod wu 0be1018 --target epic/redesign</code> — every gate green
+          except <code>8·manual-review</code>, which is the human's by design.</li>
+    </ul>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <table>
+        <tr><th>Checklist row</th><th>Answer</th></tr>
+        <tr><td>Behaviour changed or got defined?</td>
+            <td>No — this WU ships no code and UC-5's contract is untouched. Its observable gains land
+                in W6 with the code that makes them true, so one UC row is not split across two WUs.</td></tr>
+        <tr><td><strong>Non-obvious choice made or reversed?</strong></td>
+            <td><strong class="ok">Yes → <a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a></strong>
+                plus its index row. Leg selection reversed from <code>BodyViewer</code> to the panel,
+                deleting a shipped control and redirecting W7 and W8.</td></tr>
+        <tr><td>Design convention surfaced, locked, or contradicted?</td>
+            <td>Surfaced, not locked. The flow-scoped/leg-scoped split has <strong>one sighting</strong>;
+                the rulebook's own wording makes a second sighting what locks a pattern, so no
+                <code>design-rules/</code> entry is owed yet.</td></tr>
+        <tr><td>Component map or invariant changed?</td><td>No.</td></tr>
+        <tr><td>Repeating process emerged or changed?</td><td>No.</td></tr>
+        <tr><td>T0 rule should change?</td><td>No.</td></tr>
+      </table>
+      <p class="muted">Two T2 docs were re-checked and deliberately left unchanged:
+         <code>design-rules-index.html</code> (read as substrate, pinned, unmoved) and
+         <code>use-cases/web-ui.html</code> (UC-5's shape is untouched by a design run).</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups">
+      <tr><th>Who</th><th>What they inherit</th></tr>
+      <tr><td><strong>W6</strong><br><span class="muted">build the panel</span></td>
+        <td>Build from <a href="2026-09-04-redesign-w5-flow-detail-run.html">this run</a>'s blob — the
+            first <code>design.implements</code> citation this epic owes. Make the two
+            <code>blocked</code> receipt rows true: bind <kbd>Esc</kbd> and return focus to the list row
+            that opened the panel. Hold the leg state at panel level and pass it down; the default is
+            <strong>request</strong>, always.</td></tr>
+      <tr><td><strong>W7</strong><br><span class="muted">design the body viewer</span></td>
+        <td><strong>Read <a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a> before
+            starting.</strong> The leg switch is not this run's subject — it is deleted, not
+            redesigned. The run shrinks to the decode toggle, the dispatch and the absences.</td></tr>
+      <tr><td><strong>W8</strong><br><span class="muted">build the body viewer</span></td>
+        <td>The <code>ModeButton</code> → <code>SegmentedControl</code> swap is the <strong>decode pair
+            only</strong>. The leg pair — <code>BodyViewer.tsx:196–201</code> at <code>ca18daa</code> — is deleted. <em>Done in W8.</em></td></tr>
+      <tr><td><strong>The epic</strong></td>
+        <td>A second sighting of the flow-scoped/leg-scoped split — W7's screen is the likely one —
+            is what would promote DEC-31 into a rulebook slug.</td></tr>
+      <tr><td><strong>Process</strong></td>
+        <td>Two gaps this WU exposed, neither yet fixed: a design run marked
+            <code>data-status="archived"</code> before it has ever been verified is <em>skipped</em> by
+            the checker rather than refused, so it can carry any number of failures silently. And a
+            review agent ran <code>git checkout --</code> on the working tree mid-review, destroying two
+            applied fixes; the finders are meant to be read-only.</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -242,6 +242,24 @@
             <strong>DEC-16</strong> step ①; DEC-17, DEC-18, DEC-19, DEC-20 and DEC-21 all stand</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-31-leg-is-panel-scoped.html"><code>dec-31-leg-is-panel-scoped.html</code></a></td>
+          <td><span class="badge id">DEC-31</span></td>
+          <td><strong>Leg selection belongs to the panel, not the body pane</strong> — and every zone of a
+            detail screen declares whether it is <em>flow-scoped</em> (identical on both legs, stated once,
+            deliberately unlabelled) or <em>leg-scoped</em> (replaced when the selector moves). Closes a
+            two-models-of-one-concept defect: the shipped flow detail stacked both header legs while
+            <code>BodyViewer</code> carried its own request/response toggle
+            (<code>BodyViewer.tsx:148</code>, <code>:196–201</code> at <code>ca18daa</code>), so the screen answered "which leg?"
+            twice, differently, and nothing connected the answers. Rejected: keeping both legs stacked (it
+            was never the real behaviour), a tablist (<code>SegmentedControl</code>'s <code>@avoid</code>
+            excludes tabs that own panels), a switch per zone (the defect, formalised), and deferring to W7
+            (a body run cannot fix a panel-level contradiction). Forces the leg switch OUT of W7's subjects
+            and narrows W8's <code>ModeButton</code> swap to the decode pair; the leg pair is deleted, not
+            swapped. Default leg is <strong>request</strong>, always — the shipped per-flow rule moved the
+            screen under the user between flows</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

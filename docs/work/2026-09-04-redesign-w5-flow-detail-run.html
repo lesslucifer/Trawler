@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9aa0a19f34851f0dfac1a6">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W5 design run (FlowDetail)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    .tier{font-weight:600;white-space:nowrap;}
+    .v-reuse{color:var(--ok);font-weight:600;}
+    .v-propose{color:var(--warn);font-weight:600;}
+    .u-use{color:var(--ok);}
+    .u-avoid{color:var(--warn);}
+    table{font-size:13px;}
+    .gist{font-size:12.5px;line-height:1.5;}
+    details.why{margin-top:6px;font-size:12px;color:var(--muted);}
+    details.why summary{cursor:pointer;color:var(--accent);}
+    details.why ul{margin:6px 0 0 16px;padding:0;}
+    details.why li{margin:3px 0;line-height:1.5;}
+    pre.sk,pre.tb{font-family:var(--mono,monospace);font-size:11.5px;line-height:1.4;margin:0;
+      white-space:pre;overflow-x:auto;color:var(--ink);}
+    pre.tree{font-family:var(--mono,monospace);font-size:12.5px;line-height:1.55;margin:0;
+      white-space:pre;overflow-x:auto;}
+    td.shape{min-width:190px;}
+    .zd{color:var(--muted);}
+    tr.withdrawn{opacity:.75;}
+    .mock-note{font-size:12.5px;color:var(--muted);}
+
+    /* ---- mockup: assembly only. Colours and families come from the app's own
+           config via specimens.bundle.js (--a-*); the magnitudes below are the
+           same config's spacing / borderRadius / fontSize keys, mirrored once
+           here because a doc's CSS cannot import a Tailwind theme. ---- */
+    :root{
+      --tw-2:8px; --tw-3:12px; --tw-4:16px; --tw-6:24px;
+      --tw-chrome-y:4px; --tw-grid-gap-x:12px; --tw-grid-gap-y:4px;
+      --tw-pane:380px; --tw-border:1px;
+      --tw-radius-lg:6px; --tw-radius-card:4px; --tw-body:12px;
+    }
+    /* Every magnitude below is a ui/tailwind.config.js value, named where it
+       is used: spacing 2=8px 3=12px 4=16px 6=24px · grid-gap-x=12px
+       grid-gap-y=4px · pane=380px · radius lg=6px card=4px · fontSize body=12px. */
+    .app{background:var(--a-canvas);color:var(--a-ink);font-family:var(--a-ui);
+      border:var(--tw-border) solid var(--a-line);border-radius:var(--tw-radius-lg);overflow:hidden;}
+    .a-mock{display:flex;flex-direction:column;height:var(--tw-pane);}
+    .a-ident{display:flex;align-items:center;gap:var(--tw-2);padding:var(--tw-2) var(--tw-4);
+      border-bottom:var(--tw-border) solid var(--a-line);flex:none;}
+    .a-panel{display:flex;flex-direction:column;flex:1;min-height:0;}
+    .a-zones{flex:1;min-height:0;overflow-y:auto;}
+    /* zone B: flow-scoped, deliberately unlabelled - no Section (Tune 9) */
+    .a-flowline{padding:var(--tw-3) var(--tw-4);
+      border-bottom:var(--tw-border) solid var(--a-line);}
+    .a-kv{display:grid;grid-template-columns:auto 1fr;
+      column-gap:var(--tw-grid-gap-x);row-gap:var(--tw-grid-gap-y);}
+    .a-stub{border:var(--tw-border) dashed var(--a-mute);border-radius:var(--tw-radius-card);
+      padding:var(--tw-6) var(--tw-4);text-align:center;color:var(--a-mute);
+      font-family:var(--a-mono);font-size:var(--tw-body);}
+    .a-pending{padding:var(--tw-3) var(--tw-4);}
+    /* doc.css styles <h2>/<h3> as document headings (3rem margin, 1.45rem, a 2px
+       rule). Section renders its title as one, so without this reset the doc's
+       prose styling leaks into the mounted component and the panel shows the
+       DOC's rhythm instead of the screen's. Not a design value - a scoping fix. */
+    .app h2,.app h3{margin:0;padding:0;border:0;font-size:inherit;
+      font-weight:inherit;letter-spacing:inherit;line-height:inherit;}
+    .app p{color:inherit;margin:0;}
+    .a-push{margin-left:auto;}
+    .a-vers{font-family:var(--a-mono);font-size:var(--tw-body);color:var(--a-mute);}
+    .a-reqfoot{display:flex;align-items:center;justify-content:space-between;
+      gap:var(--tw-2);margin-top:var(--tw-grid-gap-y);}
+    .statebtn{margin-top:var(--tw-3);background:var(--paper);color:var(--ink);
+      border:var(--tw-border) solid var(--line);border-radius:var(--tw-radius-lg);
+      padding:var(--tw-chrome-y) var(--tw-3);font-size:var(--tw-body);cursor:pointer;}
+    /* the toggle sets .empty on #mock; Panel observes it and empties the
+       SELECTED leg, so the empty state is reachable on either leg */
+  </style>
+</head>
+<body data-artifact="design-run" data-status="archived">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run — flow detail / inspector</h1>
+      <p>The screen a user lands on after clicking a row: what one captured exchange <em>was</em>.
+         Six stages over <code>FlowDetail</code>'s identity bar, request leg, header legs and
+         copy-as-curl — stopping at the body pane, which is W7's screen.</p>
+      <div class="meta">Design run · 2026-09-04 · Trawler · T3 (docs/work/) · <strong>closed &amp; archived</strong> · verify-doc green, 17/17 soft receipted ·
+        E-REDESIGN.W5 · <a href="2026-09-04-redesign-w5-plan.html">its plan</a> ·
+        subject: <code>ui/src/FlowDetail.tsx</code> · hands to W6<br>
+        substrate — registry: 27 entries via <code>scripts/design-registry.mjs</code> ·
+        rulebook: <a href="../design-rules/design-rules-index.html">design-rules-index</a>
+        @ <code>aeff5b0</code> (frozen for this run)</div>
+    </div>
+  </header>
+
+  <main>
+
+    <h2 id="frame">1 · Frame</h2>
+    <div data-item="frame">
+      <p><strong>Purpose:</strong> a developer mid-debug reads what one captured exchange was, and
+         takes a piece of it out to a terminal.</p>
+      <p><strong>Given:</strong> method · status · duration · both HTTP versions · the full URI ·
+         request headers in wire order · response headers in wire order · a derived curl command ·
+         the body pane as a mounted child · a close handler · a null flow meaning "still loading".</p>
+      <p><strong>Not given:</strong> no timing breakdown · no per-leg timestamps · no body size before
+         fetching · no eviction notice while open · no replay · no next/previous flow.</p>
+
+      <table>
+        <tr><th>Driver</th><th>why</th><th>…therefore (design consequence)</th><th>on this screen</th></tr>
+
+        <tr><td colspan="4"><strong>Goals — the ranking is the visual hierarchy</strong></td></tr>
+        <tr>
+          <td><strong>1 · Identify the exchange</strong></td>
+          <td>arrived from a row click; must confirm it is the right one</td>
+          <td>verb, status, duration pinned above the scroll</td>
+          <td>✓ identity bar survives scrolling<br>✗ verb only inside the request section</td>
+        </tr>
+        <tr>
+          <td><strong>2 · Read the wire truth</strong></td>
+          <td>the headers are the answer to most debugging</td>
+          <td>both legs full, wire order, nothing folded away</td>
+          <td>✓ every header rendered, mono, wrapped<br>✗ "show 8 more headers"</td>
+        </tr>
+        <tr>
+          <td><strong>3 · Take a piece out</strong></td>
+          <td>the fix happens in a terminal, not here</td>
+          <td>copy affordances on values, not one bulk export</td>
+          <td>✓ click a header value, it is copied<br>✗ one "export flow" button</td>
+        </tr>
+        <tr>
+          <td><strong>4 · Read one leg at a time</strong></td>
+          <td>a leg is the unit of a debugging question</td>
+          <td>one switch selects the leg for the whole panel</td>
+          <td>✓ headers and body follow one selector<br>✗ two switches, or a switch for only one zone</td>
+        </tr>
+
+        <tr><td colspan="4"><strong>Constraints — hard boundaries</strong></td></tr>
+        <tr>
+          <td><strong>Panel, not a page</strong></td>
+          <td>it shares the window with the live list</td>
+          <td>one narrow column; no side-by-side legs</td>
+          <td>✓ zones stack vertically<br>✗ two columns of headers</td>
+        </tr>
+        <tr>
+          <td><strong>Two scopes, not one</strong></td>
+          <td>uri and versions are the flow's; headers and body are a leg's</td>
+          <td>leg-scoped zones follow the selector, flow-scoped ones never do</td>
+          <td>✓ the uri stated once, unlabelled<br>✗ a "Request" zone beside a response table</td>
+        </tr>
+        <tr>
+          <td><strong>The body already switches leg</strong></td>
+          <td>BodyViewer ships its own request/response toggle</td>
+          <td>the panel owns leg, or it contradicts itself</td>
+          <td>✓ one selector above both zones<br>✗ headers stacked while the body toggles</td>
+        </tr>
+        <tr>
+          <td><strong>Header count is unbounded</strong></td>
+          <td>capture data, not authored content</td>
+          <td>one scroll region owns every collection</td>
+          <td>✓ panel body scrolls as one<br>✗ each leg scrolls itself</td>
+        </tr>
+        <tr>
+          <td><strong>Values are untrusted and long</strong></td>
+          <td>proxied traffic; a cookie is 2 KB</td>
+          <td>wrap always; never widen, never clip</td>
+          <td>✓ token wraps inside its column<br>✗ ellipsis on a JWT</td>
+        </tr>
+        <tr>
+          <td><strong>The body is W7's</strong></td>
+          <td>a separate screen with its own run</td>
+          <td>design the slot; stub the pane</td>
+          <td>✓ labelled zone, last<br>✗ a decode toggle decided here</td>
+        </tr>
+        <tr>
+          <td><strong>Flow may be null</strong></td>
+          <td>detail is fetched after the click</td>
+          <td>pending is a stated state, not a blank</td>
+          <td>✓ one sentence naming the wait<br>✗ empty panel for 200 ms</td>
+        </tr>
+
+        <tr><td colspan="4"><strong>Qualities — Tune's yardstick</strong></td></tr>
+        <tr>
+          <td><strong>Reads like a log</strong></td>
+          <td>the neighbouring surface is a terminal</td>
+          <td>wire data mono; chrome recedes</td>
+          <td>✓ labels mute, values ink<br>✗ header names in a UI font</td>
+        </tr>
+        <tr>
+          <td><strong>Dense but not cramped</strong></td>
+          <td>40 headers must fit the eye</td>
+          <td>tight rows, generous zone gaps</td>
+          <td>✓ 4px rows, 12px zone padding<br>✗ 8px between header rows</td>
+        </tr>
+        <tr>
+          <td><strong>Nothing moves on its own</strong></td>
+          <td>the list beside it is already live</td>
+          <td>no polling, no re-render of an open flow</td>
+          <td>✓ static once loaded<br>✗ a live-ticking duration</td>
+        </tr>
+        <tr><td colspan="4"><strong>Non-goals</strong> — body rendering and its toggles (W7) · the
+            flow list and its filters (W3) · replay/edit/re-send · timing waterfalls · flow-to-flow
+            navigation · diffing two flows.</td></tr>
+      </table>
+    </div>
+
+    <h2 id="layout">2 · Layout</h2>
+    <div data-item="layout">
+<pre class="sk">
+┌─────────────────────────────────────────────┐
+│ A  identity bar                             │ ← PINNED. goals 1 + 4 in ONE
+│    POST 201 [request│response] 148ms  ✕     │   row: what this flow is, and
+│                                             │   which leg is being read
+├─────────────────────────────────────────────┤
+│ B  flow line          (no heading)          │ ← the URI, versions and the
+│    https://api.example.io/v2/users?id=7     │   action that reproduces them.
+│    HTTP/1.1 → HTTP/2      [copy as curl]    │   FLOW-level: identical on both
+│                                             │   legs, so it is stated ONCE
+│                                             │   and carries no leg label
+├─────────────────────────────────────────────┤
+│ C  HEADERS   (of the selected leg)          │ ← goal 2. ONE table. A picks
+│    key/value ×n  (unbounded)                │   the leg; wire order
+├─────────────────────────────────────────────┤
+│ D  BODY      (of the SAME leg)   SEAM · W7  │ ← last. this run owns the slot,
+│    ░░░ pane mounted by BodyViewer ░░░       │   its label and its order only
+└─────────────────────────────────────────────┘
+       B…D are ONE scroll region, not three
+       ONE pinned row, not two - the selector rides in A (see Tune 9)
+       C and D are the ONLY leg-scoped zones; B is flow-scoped
+
+scroll / overflow: zone A is pinned (flex:none) and never scrolls. Zones B–D
+  share a single vertical scroll region (flex:1, min-height:0, overflow-y:auto)
+  — the panel scrolls as one document, so a 40-header request pushes the
+  response leg down rather than scrolling inside itself.
+  Unbounded zones and their caps:
+    C     the selected leg's header collection — NO cap; every header renders
+          (constraint "read the wire truth"). Capped only by the shared scroll
+          region, which the SCREEN owns. Switching leg replaces its contents,
+          never appends.
+    D     body — capped by BodyViewer's own family policy (TEXT_MAX / HEX_MAX
+          / TREE_MAX, each with a CutMarker). Cap owner: the COMPONENT, W7.
+    B     the URI — unbounded in length, bounded in height by wrapping; no
+          scroll of its own, and it SCROLLS AWAY rather than being pinned,
+          so a 3-line URI never eats the panel's fixed chrome. Cap owner:
+          the screen, via wrap-not-truncate. The curl action adds nothing
+          unbounded: the command it copies is never rendered (Tune 7).
+    A     the identity row is fixed-height and must stay one line: verb,
+          status and duration are all bounded, and the selector is two
+          fixed segments. Nothing unbounded may enter it - which is why
+          the URI sits in B and not here.
+</pre>
+    </div>
+
+    <h2 id="elements">3 · Elements</h2>
+    <div data-item="elements" data-map>
+<pre class="tree">
+flow detail panel
+flow-scoped ─────────────────────────────────────────────────
+├─ A identity bar ──── <span data-key="MethodLabel">MethodLabel</span> · <span data-key="StatusPill">StatusPill</span> · <span data-key="SegmentedControl">SegmentedControl</span> · <span data-key="DurationText">DurationText</span> · <span data-key="IconButton">IconButton</span>
+├─ B flow line ─────── <span class="zd">no Section</span> ▸ <span data-key="CopyText">CopyText ◆</span> · <span class="zd">versions line (inline)</span> · <span data-key="CopyButton">CopyButton</span>
+leg-scoped ── governed by A's selector ──────────────────────
+├─ C headers ───────── <span data-key="Section">Section ◆</span> ▸ <span data-key="KeyValueRow">▣ header table</span>
+└─ D body ──── SEAM ── <span data-key="Section">Section ◆</span> ▸ <span class="zd">BodyViewer (stubbed — W7)</span>
+
+▣ header table = screen-owned two-column grid ▸ <span data-key="KeyValueRow">KeyValueRow ◆</span>× | <span data-key="Notice">Notice ◆</span> when empty
+◆ = recurring   ▸ = fills the slot of
+panel-level states: <span data-key="Notice">Notice ◆</span> (pending, when flow is null)
+</pre>
+
+      <table>
+        <tr><th>Component</th><th>Placement · verdict</th><th>Fit (gist · why)</th><th class="shape">Shape (reference) · States</th></tr>
+
+        <tr data-key="MethodLabel">
+          <td><strong>MethodLabel</strong><br><span class="tier">T2</span></td>
+          <td>A · <span class="v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">Its only non-list tenant is named in its own <code>@use</code>.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li><span class="u-avoid">@avoid</span> "per-call-site verb styling" — the screen ships exactly that today (a bare <code>&lt;span&gt;</code> at <code>FlowDetail.tsx:67</code>), so the current code is the violation and reuse is the repair.</li>
+              <li><span class="u-use">@use</span> "list rows, <strong>the identity bar</strong> — pass the raw method string" — this zone is that tenant, verbatim.</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">GET</pre>Per its TSDoc: verb→tone map, fixed-width slot, no interaction states.</td>
+        </tr>
+
+        <tr data-key="StatusPill">
+          <td><strong>StatusPill</strong><br><span class="tier">T2</span></td>
+          <td>A · <span class="v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">Already reused here; the raw status is what it wants.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li><span class="u-avoid">@avoid</span> "pre-resolving tone at the call site" — the screen passes <code>flow.status</code> raw (<code>FlowDetail.tsx:68</code>) and resolves nothing. Clear.</li>
+              <li><span class="u-avoid">@avoid</span> "proxy connection health — StatusDot" — not this; this is an HTTP status.</li>
+              <li><span class="u-use">@use</span> "anywhere a flow's HTTP outcome is shown".</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">200</pre>Per its TSDoc: 2xx/4xx-5xx/else tones, <code>…</code> when null.</td>
+        </tr>
+
+        <tr data-key="DurationText">
+          <td><strong>DurationText</strong><br><span class="tier">T1</span></td>
+          <td>A · <span class="v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">Deletes the screen's second copy of duration formatting.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li><span class="u-avoid">@avoid</span> "a live-ticking counter while in-flight" — cleared by the Frame quality "nothing moves on its own"; a null duration holds width, it does not tick.</li>
+              <li><span class="u-avoid">@avoid</span> "tinting fast/slow with ok/warn" — this screen tones nothing by speed.</li>
+              <li><span class="u-use">@use</span> "the detail header identity bar" — named. <code>FlowDetail.tsx:69–71</code> hand-writes <code>${'{'}duration_ms{'}'} ms</code> instead.</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">148 ms
+1.4 s</pre>Per its TSDoc: fast/slow/pending — S-states are the component's.</td>
+        </tr>
+
+        <tr data-key="IconButton">
+          <td><strong>IconButton</strong><br><span class="tier">T1</span></td>
+          <td>A · <span class="v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">Close is the archetype its <code>@use</code> names first.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li><span class="u-avoid">@avoid</span> "actions with no fitting glyph" — <code>×</code> for close is unambiguous.</li>
+              <li><span class="u-avoid">@avoid</span> "primary actions (no visual weight at rest)" — close is deliberately not primary here; the Frame ranks it nowhere.</li>
+              <li><span class="u-use">@use</span> "icon-only triggers unambiguous in place: <strong>close ×</strong>". Today's bare <code>&lt;button&gt;</code> (<code>:72–79</code>) has no hit floor and no focus ring.</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">┌────┐
+│ ✕  │ 28px
+└────┘</pre>Per its TSDoc: rest/hover/focus/active/disabled + accessible name.</td>
+        </tr>
+
+        <tr data-key="SegmentedControl">
+          <td><strong>SegmentedControl</strong><br><span class="tier">T1</span></td>
+          <td>A · <span class="v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">Its <code>@use</code> names this exact case, word for word.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li><span class="u-avoid">@avoid</span> "actions (that is a button)" — selecting a leg
+                  changes what is displayed; it performs nothing.</li>
+              <li><span class="u-avoid">@avoid</span> "multi-select" — exactly one leg is shown.</li>
+              <li><span class="u-avoid">@avoid</span> "<strong>tabs that own panels (tablist)</strong>"
+                  — <em>the one to answer</em>, since the reviewer asked for "tabs". This control is a
+                  radiogroup that switches content the <em>screen</em> owns, which is what it is for;
+                  a tablist would mean each leg owning its own panel subtree. The design takes the
+                  segmented form and the ARIA that comes with it, not tab semantics.</li>
+              <li><span class="u-avoid">@avoid</span> "&gt;4 options" — two.</li>
+              <li><span class="u-avoid">@avoid</span> "domain rules in the control — defaults,
+                  persistence, visibility belong to the tenant" — honoured: the panel decides the
+                  default leg (see Interaction) and the component decides nothing.</li>
+              <li><span class="u-use">@use</span> "<strong>any always-visible</strong> mutually
+                  exclusive view/mode switch: decode (raw | decoded) ·
+                  <strong>leg (request | response)</strong>" — named outright. The vocabulary
+                  anticipated this control; the run's first pass simply did not take it.</li>
+              <li><strong>Placement (round 3):</strong> it sits <em>inside</em> the identity row, not
+                  in a band of its own. "Always-visible" only requires that it not scroll away, and
+                  the identity row is already pinned with room between the status and the duration —
+                  so a second pinned band would buy nothing and cost a whole row of chrome above every
+                  screen of data (<code>data-ink-first</code>). It also puts the scope selector in the
+                  same row as the thing it scopes.</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">┌─────────┬──────────┐
+│ request │ response │
+└─────────┴──────────┘</pre>Per its TSDoc: value-active · hover · focus · disabled; roving tabindex.</td>
+        </tr>
+
+        <tr data-key="Section">
+          <td><strong>Section</strong><br><span class="tier">T1</span></td>
+          <td>C, D · <span class="v-reuse">reuse</span><br><span class="zd">recurring ◆ ×2</span></td>
+          <td>
+            <div class="gist">The local copy is this component, re-typed.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li><span class="u-avoid">@avoid</span> "a Section inside another Section's CONTENT slot" — <strong>cleared by the Layout</strong>: C and D are siblings in one scroll region, never nested. This is the <code>@avoid</code> that would have fired had the legs been nested, which is why zone D is a sibling of C rather than a child.</li>
+              <li><span class="u-avoid">@avoid</span> "a Section that needs to collapse" — none here; the Frame forbids folding headers away (goal 2).</li>
+              <li><span class="u-avoid">@avoid</span> "unlabelled grouping" — every zone is labelled, so a Section is right rather than plain spacing.</li>
+              <li><span class="u-use">@use</span> "every labelled zone of a detail screen: request, response, headers, body panels" — the two leg-scoped zones, named. <strong>Zone B takes no Section</strong>: <span class="u-avoid">@avoid</span> "unlabelled grouping (plain spacing does it)" routes it away, and any heading it could carry would either repeat the identity bar above it or claim a leg it does not have (Tune 9). Zone A (the identity bar) is deliberately unlabelled: it is chrome, not a labelled grouping, so <span class="u-avoid">@avoid</span> "unlabelled grouping (plain spacing does it)" routes it away from Section.</li>
+              <li><code>variant="band"</code> is <strong>deliberately unused</strong>: a second grouping level would nest the legs, which the Layout rejects.</li>
+              <li>Precedent: <code>FlowDetail.tsx:7–14</code> is a local re-implementation — same heading, same hairline, same padding, one drifted token (<code>text-body</code> where the registry uses <code>text-chrome</code>).</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">REQUEST HEADERS
+────────────────
+&lt;slot&gt;</pre>None of its own — states belong to slot children (its TSDoc).</td>
+        </tr>
+
+        <tr data-key="CopyText">
+          <td><strong>CopyText</strong><br><span class="tier">T1</span></td>
+          <td>B · <span class="v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">The URI is the first value its <code>@use</code> lists.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li><span class="u-avoid">@avoid</span> "prose" — a URI is not prose.</li>
+              <li><span class="u-avoid">@avoid</span> "explicit copy actions with their own label" — that is the curl action, which is why the same zone carries a labelled <code>CopyButton</code> for the command and a bare <code>CopyText</code> for the URI.</li>
+              <li><span class="u-use">@use</span> "full-value fields grabbed whole: <strong>the request URI</strong>" — named. Today it is an inert <code>&lt;p&gt;</code> (<code>:84</code>), so goal 3 is unserved in the one zone that names the target.</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">https://api.x.io/v2/users?id=7
+▔▔▔▔▔▔▔▔ click copies whole</pre>Per its TSDoc: rest/hover/focus/confirming + native drag-select.</td>
+        </tr>
+
+        <tr data-key="TextRenderer">
+          <td><strong>TextRenderer</strong><br><span class="tier">T2</span></td>
+          <td>— · <span class="v-propose">not used</span><br><span class="zd">retired by review</span></td>
+          <td>
+            <div class="gist">Dropped: the reviewer removed the payload this would have rendered.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li><span class="u-avoid">@avoid</span> "guessing a grammar it was not given" — the screen hands it a finished string and asks for no highlighting.</li>
+              <li><span class="u-avoid">@avoid</span> "truncating without the marker" — nothing truncates; the payload wraps.</li>
+              <li><span class="u-avoid">@avoid</span> "a CodeMirror surface" — correct: a curl line has nothing to fold, so <code>SourceSurface</code> would be wrong here.</li>
+              <li><strong>Why the row survives as a record:</strong> the fit was assessed and was sound — every <code>@avoid</code> cleared and the shape matched (mono, wrapping, uncoloured, capped). It is dropped for a <em>product</em> reason, not a fit failure: the reviewer's call that the command needs no pane (Tune 7). Kept here so a later run does not re-derive the fit from scratch.</li>
+              <li><strong>And it dissolves a blocked-on:</strong> the family's <code>@use</code> is body-scoped ("every text <strong>body</strong>…") and a curl command is not a body. With the pane gone this screen no longer has a non-body tenant, so the wording question it raised for W7 is withdrawn.</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">curl -X POST 'https://…' \
+  -H 'content-type: appl…' \
+  --data-raw '{"a":1}'</pre>Per its TSDoc: rendered · rendered+cut (TEXT_MAX). No empty state.</td>
+        </tr>
+
+        <tr data-key="CopyButton">
+          <td><strong>CopyButton</strong><br><span class="tier">T1</span></td>
+          <td>B · <span class="v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">Rides in the request zone, and kills the sticky-"copied" defect.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li><span class="u-avoid">@avoid</span> "showing a value the user grabs verbatim (that is CopyText)" — <strong>cleared outright</strong> after the review: the command is no longer displayed at all, so there is no verbatim value on screen to confuse with <code>CopyText</code>'s remit. This is now the component's cleanest possible fit — its <code>@use</code> is "a copy affordance where the payload is <strong>derived/invisible</strong>", and after Tune 7 the payload is exactly that.</li>
+              <li><span class="u-avoid">@avoid</span> "icon-only form UNLESS the payload is rendered directly adjacent" — <strong>decisive now</strong>: with no payload on screen the icon-only D2b form is forbidden, so the button must carry a <em>worded</em> label. It reads "copy as curl", which is also what lets its own Section dissolve (<code>labels-add-context</code>: the label states the fact, so a heading repeating it would be the redundancy).</li>
+              <li><strong>Placement (rounds 2–3):</strong> it sits on the flow line (zone B), beside
+                  the URI it reproduces, rather than in a zone of its own. Curl is <em>flow</em>-scoped
+                  like the URI and versions — the command a user copies does not change with the
+                  selected leg — which is exactly why it belongs in B and not beside the header table.
+                  <code>choose-before-act</code> holds: the leg selector sits above it, in A.</li>
+              <li><span class="u-avoid">@avoid</span> "serialising the payload itself (the parent owns press logic)" — honoured: the screen passes <code>toCurl(flow)</code>'s output; the component only writes it.</li>
+              <li><span class="u-use">@use</span> "any one-click copy where the payload is derived: <strong>copy-as-curl</strong>" — named.</li>
+              <li>Defect closed: <code>FlowDetail.tsx:58–61</code> sets <code>copied</code> true and never reverts. The component's <code>confirming</code> state expires (~2 s) and resets on payload change.</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">┌──────┐   ┌────────┐
+│ copy │ → │ copied │
+└──────┘   └────────┘</pre>Per its TSDoc: rest/hover/focus/active/confirming/error/disabled.</td>
+        </tr>
+
+        <tr data-key="KeyValueRow">
+          <td><strong>KeyValueRow</strong><br><span class="tier">T1</span></td>
+          <td>C · <span class="v-reuse">reuse</span><br><span class="zd">one table, selected leg</span><br><span data-wire="collection" data-order="wire">data-wire="collection" · data-order="wire"</span></td>
+          <td>
+            <div class="gist">Headers are its first tenant — and the value gains click-copy.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li><span class="u-avoid">@avoid</span> "editable forms (that is Field)" — read-only capture data.</li>
+              <li><span class="u-avoid">@avoid</span> "data needing sort/filter" — cleared by <code>wire-order-preserved</code>: headers render in wire order and this screen offers no sort.</li>
+              <li><span class="u-avoid">@avoid</span> "standalone full-value fields with no name column" — there is a name column; the URI in zone B is the standalone case and correctly gets bare <code>CopyText</code>.</li>
+              <li><span class="u-use">@use</span> "any wire key/value line: <strong>request/response headers</strong>" — named, first.</li>
+              <li><strong>The epic's hand-down call, answered:</strong> per-header click-to-copy is <span class="v-reuse">adopted</span>, and it arrives free — the value cell <em>is</em> a <code>CopyText</code> (<code>@madeof</code>), whose guard lets native drag-select pass through. Today's raw <code>&lt;dl&gt;</code> (<code>:21–33</code>) renders an inert <code>&lt;dd&gt;</code>. Declining would mean suppressing a shipped component's own value cell, which no Frame driver asks for.</li>
+              <li><strong>Consequence the screen must absorb:</strong> <code>KeyValueRow</code> is <code>display:contents</code>, so <em>the two-column grid is the caller's to supply</em> — see the <a href="#header-table">header table</a> row below.</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">content-type   application/json
+authorization  Bearer eyJhbGciOi…
+               ▔▔ wraps, click copies</pre>Per its TSDoc: rest · hover/focus/confirming on the value · drag-select.</td>
+        </tr>
+
+        <tr id="header-table">
+          <td><strong>header table</strong><br><span class="tier">T3 · local</span></td>
+          <td>C · <span class="v-propose">build local ▣</span><br><span class="zd">waive reuse (T3)</span></td>
+          <td>
+            <div class="gist">Nothing in the registry owns a bare two-column grid.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li>What it is: the <code>&lt;dl class="grid grid-cols-[auto_1fr]"&gt;</code> wrapper that gives <code>KeyValueRow</code>'s <code>display:contents</code> cells their columns, plus the branch to <code>Notice</code> when a leg is empty. Roughly 8 lines.</li>
+              <li>Why no entry fits: <code>Section</code> is chrome and supplies no grid (<code>@avoid</code> is silent on layout because it owns none). <code>FormRenderer</code> <em>is</em> exactly this shape — its <code>@anatomy</code> says "KeyValueRow× in a two-column grid <strong>this component supplies</strong>" — but its <code>@use</code> is "a body dispatched to <code>form</code>", so reusing it for headers would force a body renderer past its dispatch contract. That is a <code>propose</code>, not a <code>reuse</code>.</li>
+              <li>Why not propose a shared <code>KeyValueTable</code> T2: two call sites exist (headers ×2 and <code>FormRenderer</code>'s pairs) and the grid is three utility classes. The tier model says T3 = "build local, waive reuse", and this is the case it describes. Recorded in <a href="#proposals">proposals</a> as a <strong>declined</strong> proposal with that reasoning, so the next screen that meets a third pair-grid can overturn it on evidence.</li>
+              <li><code>wire-order-preserved</code>: <code>data-order="wire"</code> — the component maps <code>flow.request_headers</code> in array order, adding no sort. Duplicate header names (<code>set-cookie</code> ×3) therefore survive, which a keyed map would silently collapse.</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">┌ auto ┬─ 1fr ────────┐
+│ name │ value (wraps) │  ← grid
+│ name │ value         │    cols
+└──────┴───────────────┘</pre>Empty → <code>Notice</code>. Pending → the panel's own state, not this one's.</td>
+        </tr>
+
+        <tr data-key="Notice">
+          <td><strong>Notice</strong><br><span class="tier">T1</span></td>
+          <td>C (empty) + panel (pending) · <span class="v-reuse">reuse</span><br><span class="zd">recurring ◆</span></td>
+          <td>
+            <div class="gist">Replaces the two bare words this screen shows today.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li><span class="u-avoid">@avoid</span> "transient confirmations of an action" — neither tenant is transient; both are standing absences.</li>
+              <li><span class="u-avoid">@avoid</span> "a dismissible message" — not dismissible.</li>
+              <li><span class="u-avoid">@avoid</span> "wrapping a notice in a card or panel of its own" — honoured: it renders inside the existing <code>Section</code> slot, adding no frame.</li>
+              <li><span class="u-avoid">@avoid</span> "a toned value rather than a sentence" — both tenants are sentences, at <code>tone="mute"</code>.</li>
+              <li><span class="u-use">@use</span> "any zone that has nothing to show and must say which nothing it is (empty · pending) — <strong>HeaderTable empty/pending, the detail panel's load failures</strong>" — both tenants named.</li>
+              <li>Microcopy — the screen's decision, not the component's, and constrained by <code>empty-states-orient</code> + the rulebook lexicon (<code>none</code> is "the empty-set microcopy for an absent value"):<br>
+                  empty leg → <strong>"none — this leg sent no headers"</strong> (today: bare <code>"none"</code> at <code>:18</code>, which states the fact and not what it means);<br>
+                  pending panel → <strong>"loading this flow…"</strong> (today: <code>"loading…"</code> at <code>:51</code>).<br>
+                  Neither carries an action slot: the user cannot cause a header to exist, and the fetch is already in flight — the rule's "where they cannot, it explains what happened" branch.</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">none — this leg sent no headers</pre>Per its TSDoc: not interactive; mute bare is the render used.</td>
+        </tr>
+
+        <tr data-key="versions-line">
+          <td><strong>versions line</strong><br><span class="tier">T3 · inline</span></td>
+          <td>B · <span class="v-propose">build local</span><br><span class="zd">waive reuse (T3)</span></td>
+          <td>
+            <div class="gist">Two protocol strings and an arrow — no component's shape.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li>What it is: <code>HTTP/1.1 → HTTP/2</code> as one muted mono line; the arrow appears only when a response version exists (in-flight flows have none).</li>
+              <li>Why no entry fits: it is not a key/value pair (there is no name column), not a toned value, not a status. <code>KeyValueRow</code> would invent two label cells for one fact; <code>TonedText</code> <span class="u-avoid">@avoid</span>s "a short value whose meaning is <em>not</em> carried by tone" — these carry none.</li>
+              <li>Not a <code>propose</code>: a screen-specific concatenation of two given strings is what T3 is for.</li>
+              <li><code>mono-for-wire-data</code>: these are wire values, so mono — <code>data-wire="protocol-version"</code> in the mockup.</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">HTTP/1.1 → HTTP/2</pre>Rendered · response-absent (no arrow). No interaction.</td>
+        </tr>
+
+        <tr data-key="BodyViewer">
+          <td><strong>BodyViewer</strong><br><span class="tier">T4 · <span class="v-propose">SEAM</span></span></td>
+          <td>D · <span class="zd">not resolved here — W7</span></td>
+          <td>
+            <div class="gist">This run owns the slot; W7 owns everything inside it.</div>
+            <details class="why"><summary>why</summary><ul>
+              <li>Resolved by this run: the zone exists, is labelled "Body", sits last in the scan order, and takes no cap of its own — the shared scroll region and the renderer family's own caps cover it.</li>
+              <li><strong>The seam moved, deliberately (round 2).</strong> The epic plan's W7 row lists "a raw/decoded toggle <em>and a leg switch</em>" among the body run's subjects, and <code>BodyViewer</code> shows one today (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>, as of <code>ca18daa</code>). Leaving it there would have kept two leg selectors on one panel — the inconsistency the reviewer named. <strong>Leg is now the panel's, selected in the identity row; the body reads it as a prop.</strong> W7's leg switch is therefore <em>deleted</em>, not redesigned, and its run shrinks to the decode toggle, the dispatch and the absences. Recorded in <a href="#blocked">blocked-on</a> for the epic to carry into W7's plan row.</li>
+              <li><strong>Still left to W7:</strong> the raw/decoded toggle, the renderer dispatch, copy/save affordances, the five absence notices, the cut marker. Every one is a <code>BodyViewer</code>-internal decision; deciding any here would collide with W7's run.</li>
+              <li>Stubbed in the <a href="#mockup">mockup</a> — sanctioned by the flow spec: "stubbed — a component's internals: code surfaces, live clipboard, renderer dispatch".</li>
+            </ul></details>
+          </td>
+          <td><pre class="sk">░░░░░░░░░░░░░░░░░
+ body pane — W7
+░░░░░░░░░░░░░░░░░</pre>Declared by W7, against <code>BodyViewer</code>'s own contract.</td>
+        </tr>
+      </table>
+
+      <p><strong>T4 break-down:</strong> flow detail panel (T4) → identity bar (T3 zone) ·
+         <code>Section</code> ×2 (T1) · header table (T3) → <code>KeyValueRow</code> (T1) →
+         <code>CopyText</code> (T1) · <code>MethodLabel</code> (T2) · <code>StatusPill</code> (T2) →
+         <code>TonedText</code> (T1) · <code>DurationText</code> (T1) · <code>IconButton</code> (T1) →
+         <code>Button</code> (T1) · <code>CopyButton</code> (T1) → <code>Button</code> (T1) ·
+         <code>TextRenderer</code> (T2) · <code>Notice</code> (T1) · versions line (T3 inline) ·
+         <code>BodyViewer</code> (T4 — W7's seam).</p>
+      <p><strong>Proposals:</strong> none accepted. One considered and declined —
+         <code>KeyValueTable</code> (T2), the shared pair-grid; see
+         <a href="#proposals">proposals</a> for why two call sites and three utility classes do not
+         earn a registry entry yet.</p>
+    </div>
+
+    <h2 id="interaction">4 · Interaction</h2>
+    <div data-item="interaction">
+      <table>
+        <tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th><th>Keyboard path</th></tr>
+        <tr>
+          <td>Confirm the right flow is open</td>
+          <td>1 · identify</td>
+          <td>reads zone A after the row click</td>
+          <td>
+            <div class="gist">Identity stays put; scrolling the legs changes nothing in A.</div>
+            <details class="why"><summary>zone → delta</summary><pre class="tb">A → verb·status·duration, pinned
+B → uri, wrapped in full
+C,D → UNCHANGED by scroll  ← A never
+      scrolls away, so identity
+      survives a 40-header read</pre></details>
+          </td>
+          <td>none — display only</td>
+        </tr>
+        <tr>
+          <td>Read one header's full value</td>
+          <td>2 · wire truth</td>
+          <td>scrolls to the leg, reads the row</td>
+          <td>
+            <div class="gist">The value wraps in place; nothing widens or clips.</div>
+            <details class="why"><summary>zone → delta</summary><pre class="tb">C/D → value wraps in its column
+A   → UNCHANGED
+B   → scrolls out of view  ← the
+      curl action rides in B, so
+      it is passed before the legs</pre></details>
+          </td>
+          <td><kbd>Tab</kbd> reaches each value (it is a <code>CopyText</code> trigger)</td>
+        </tr>
+        <tr>
+          <td>Switch to the other leg</td>
+          <td>4 · one leg at a time</td>
+          <td>clicks <em>response</em> in the identity row</td>
+          <td>
+            <div class="gist">Headers and body both follow; one act, both zones.</div>
+            <details class="why"><summary>zone → delta</summary><pre class="tb">A  → response segment active;
+     verb, status, duration
+     UNCHANGED beside it
+C  → header table REPLACED with
+     the response leg's headers,
+     scrolled to its own top
+D  → body switches to the SAME
+     leg  ← the whole point: one
+     selector, never two
+B  → UNCHANGED  ← the uri, the
+     versions and curl are the
+     FLOW's, not a leg's</pre></details>
+          </td>
+          <td><kbd>←</kbd>/<kbd>→</kbd> move and select within the group (its roving tabindex; radiogroup semantics) · <kbd>Tab</kbd> enters the group once</td>
+        </tr>
+        <tr>
+          <td>Copy one header value</td>
+          <td>3 · take a piece</td>
+          <td>clicks the value cell</td>
+          <td>
+            <div class="gist">Value copied; the cell itself confirms, then reverts.</div>
+            <details class="why"><summary>zone → delta</summary><pre class="tb">C/D → that value → clipboard,
+       cell confirms ~2 s, reverts
+all  → UNCHANGED  ← no toast, no
+       layout shift; confirm is
+       at the point of action</pre></details>
+          </td>
+          <td><kbd>Enter</kbd>/<kbd>Space</kbd> on the focused value (rulebook: activate) · partial take = native selection + <kbd>⌘C</kbd>, never intercepted</td>
+        </tr>
+        <tr>
+          <td>Take the request to a terminal</td>
+          <td>3 · take a piece</td>
+          <td>clicks <em>copy as curl</em> in zone B</td>
+          <td>
+            <div class="gist">The label confirms and reverts — today's stuck "copied", fixed.</div>
+            <details class="why"><summary>zone → delta</summary><pre class="tb">B → label "copy as curl"
+     → "copied", ~2 s, then back
+     ← the shipped bug is exactly
+       this reverting
+all → UNCHANGED  ← nothing is
+      revealed: the command was
+      never on screen (Tune 7)</pre></details>
+          </td>
+          <td><kbd>Enter</kbd>/<kbd>Space</kbd> on the focused button (rulebook: activate)</td>
+        </tr>
+        <tr>
+          <td>Select a leg that sent no headers</td>
+          <td>2 · wire truth</td>
+          <td>switches to a leg with none</td>
+          <td>
+            <div class="gist">The zone stays and explains itself; it never vanishes.</div>
+            <details class="why"><summary>zone → delta</summary><pre class="tb">C  → Notice, mute:
+  "none — this leg sent no headers"
+     ← the zone stays, labelled;
+       it does not vanish, or an
+       empty leg reads as a
+       rendering failure
+A  → the segment stays selectable
+     ← never disable a leg for
+       being empty: that hides
+       the fact it IS empty
+other → UNCHANGED</pre></details>
+          </td>
+          <td>none — no action exists to offer</td>
+        </tr>
+        <tr>
+          <td>Land while the flow is still fetching</td>
+          <td>1 · identify</td>
+          <td>clicks a row; detail not yet in</td>
+          <td>
+            <div class="gist">One sentence replaces the panel — no skeleton identity bar.</div>
+            <details class="why"><summary>zone → delta</summary><pre class="tb">whole panel → Notice, mute:
+  "loading this flow…"
+A → absent  ← nothing is known
+    yet, so a skeleton identity
+    bar would draw fields that
+    may never arrive</pre></details>
+          </td>
+          <td>none</td>
+        </tr>
+        <tr>
+          <td>Dismiss the panel</td>
+          <td>— (returns to the list, goal 1's source)</td>
+          <td>clicks ✕ in zone A</td>
+          <td>
+            <div class="gist">Panel closes; the list keeps its scroll position.</div>
+            <details class="why"><summary>zone → delta</summary><pre class="tb">panel → closed, list regains width
+list  → selection cleared, scroll
+        position UNCHANGED  ← the
+        user returns to where they
+        were reading</pre></details>
+          </td>
+          <td><kbd>Esc</kbd> — the rulebook's "dismiss the surface" convention, already sighted on <em>flow detail panel</em> · <kbd>Enter</kbd>/<kbd>Space</kbd> on the focused ✕</td>
+        </tr>
+      </table>
+      <div class="callout">
+        <p><strong>Which leg opens selected — the panel's decision, not the control's.</strong>
+           <code>SegmentedControl</code>'s <span class="u-avoid">@avoid</span> puts defaults on the
+           tenant, so this run states it: the panel opens on <strong>request</strong>, always. The
+           shipped body picks per-flow (<code>flow.response_body ? "response" : "request"</code>,
+           <code>BodyViewer.tsx:148</code> at <code>ca18daa</code>) — a rule that made the selected leg depend on what the
+           flow happened to contain. With one panel-level selector that would move the whole screen
+           under the user between flows, so it goes: a request always exists, and it is what the user
+           clicked a row to identify.</p>
+      </div>
+      <div class="callout warn">
+        <p><strong>One keyboard path is not yet true in code.</strong> The rulebook sights
+           <kbd>Esc</kbd> on the flow detail panel, but <code>FlowDetail.tsx</code> binds no key
+           handler — only the ✕ closes it. This run designs it as the rulebook states it; W6 is where
+           it becomes true, and it is listed in <a href="#blocked">blocked-on</a> so the build does not
+           read it as already shipped.</p>
+      </div>
+    </div>
+
+    <h2 id="mockup">5 · Draft mockup</h2>
+    <p>The real components, mounted from <code>window.Trawler</code> — not drawn. The toggle switches
+       the two absence states the Interaction table named. Everything outside a mount is assembly:
+       the doc's own CSS writes only <code>--a-*</code> variables, which
+       <code>specimens.bundle.js</code> derives from <code>ui/tailwind.config.js</code>, so no colour,
+       type or space value is authored here.</p>
+
+    <div data-item="mockup">
+      <div class="app">
+        <div class="a-mock" id="mock">
+          <div id="m-panel" class="a-panel"></div>
+        </div>
+      </div>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="empty"
+        data-label-off="▶ show the selected leg empty" data-label-on="◀ show it populated">▶ show the selected leg empty</button>
+
+      <p class="mock-note">
+        The pending state is the whole panel replaced by one <code>Notice</code> — mounted separately
+        below, since it is not a zone delta but the panel's only content:</p>
+      <div class="app">
+        <div id="m-pending-wrap">
+          <div class="a-pending" id="m-pending"></div>
+        </div>
+      </div>
+
+    <script type="text/babel">
+      const {
+        React, createRoot, Section, KeyValueRow, Notice, CopyButton, CopyText,
+        IconButton, MethodLabel, DurationText, StatusPill, SegmentedControl,
+      } = window.Trawler;
+
+      const mount = (id, node) => {
+        const el = document.getElementById(id);
+        if (el) createRoot(el).render(node);
+      };
+
+      const URI = "https://api.example.io/v2/users?id=7&expand=profile";
+      const CURL =
+        "curl -X POST 'https://api.example.io/v2/users?id=7&expand=profile' \\\n" +
+        "  -H 'content-type: application/json' \\\n" +
+        "  -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' \\\n" +
+        "  --data-raw '{\"name\":\"ada\",\"role\":\"admin\"}'";
+
+      const REQ = [
+        ["host", "api.example.io"],
+        ["content-type", "application/json"],
+        ["authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dQw4w9WgXcQ"],
+        ["accept-encoding", "gzip, deflate, br"],
+      ];
+      const RES = [
+        ["content-type", "application/json; charset=utf-8"],
+        ["set-cookie", "session=abc123; Path=/; HttpOnly; SameSite=Lax"],
+        ["set-cookie", "csrf=xyz789; Path=/"],
+        ["x-request-id", "01HQ2K8M4N7P9R3T5V6W8Y0Z"],
+      ];
+
+      const HeaderTable = ({ headers, leg }) =>
+        headers.length === 0 ? (
+          <Notice>none — this leg sent no headers</Notice>
+        ) : (
+          <dl className="a-kv" data-wire="header-value" data-order="wire" aria-label={leg}>
+            {headers.map(([name, value], i) => (
+              <KeyValueRow key={i} name={name} value={value} />
+            ))}
+          </dl>
+        );
+
+      /* One selector drives both zones — the round-2 decision, mounted rather
+         than asserted. The empty-leg toggle empties whichever leg is selected. */
+      const LEGS = [
+        { value: "request", label: "request" },
+        { value: "response", label: "response" },
+      ];
+
+      function Panel() {
+        const [leg, setLeg] = React.useState("request");
+        const [empty, setEmpty] = React.useState(false);
+        React.useEffect(() => {
+          const mock = document.getElementById("mock");
+          const sync = () => setEmpty(mock.classList.contains("empty"));
+          sync();
+          const obs = new MutationObserver(sync);
+          obs.observe(mock, { attributes: true, attributeFilter: ["class"] });
+          return () => obs.disconnect();
+        }, []);
+        const headers = empty ? [] : leg === "request" ? REQ : RES;
+        return (
+          <>
+            <div className="a-ident">
+              <MethodLabel method="POST" />
+              <StatusPill status={201} />
+              <SegmentedControl options={LEGS} value={leg} onChange={setLeg} ariaLabel="leg" />
+              <span className="a-push"><DurationText value={148} /></span>
+              <IconButton glyph="close" label="close" onClick={() => {}} />
+            </div>
+            <div className="a-zones">
+              <div className="a-flowline">
+                <div data-wire="uri"><CopyText value={URI} label="request URI" /></div>
+                <div className="a-reqfoot">
+                  <span data-wire="protocol-version" className="a-vers">HTTP/1.1 → HTTP/2</span>
+                  <CopyButton label="copy as curl" value={CURL} />
+                </div>
+              </div>
+              <Section title="Headers">
+                <HeaderTable headers={headers} leg={leg + " headers"} />
+              </Section>
+              <Section title="Body">
+                <div className="a-stub">░░░ {leg} body — BodyViewer, designed in W7 ░░░</div>
+              </Section>
+            </div>
+          </>
+        );
+      }
+
+      mount("m-panel", <Panel />);
+
+      mount("m-pending", <Notice>loading this flow…</Notice>);
+    </script>
+    </div>
+
+    <table>
+      <tr><th>Layer</th><th>What is it here</th></tr>
+      <tr><td><strong>composed</strong><br><span class="zd">mounted from <code>window.Trawler</code></span></td>
+        <td><code>MethodLabel</code> · <code>StatusPill</code> · <code>DurationText</code> ·
+            <code>IconButton</code> · <strong><code>SegmentedControl</code></strong> ·
+            <code>Section</code> ×2 · <code>CopyText</code> · <code>CopyButton</code> ·
+            <code>KeyValueRow</code> ×4 · <code>Notice</code> ×2 — every
+            <span class="v-reuse">reuse</span> verdict, mounted. The panel is <strong>stateful</strong>:
+            the selector really swaps the header table and the body stub, so the round-2 decision is
+            demonstrated rather than asserted.</td></tr>
+      <tr><td><strong>screen-owned</strong><br><span class="zd">the doc's assembly + T3 elements</span></td>
+        <td>the pinned/scroll split (<code>.a-ident</code> / <code>.a-zones</code>) · the
+            <strong>unlabelled flow line</strong> (<code>.a-flowline</code> — zone B takes no
+            <code>Section</code>, per Tune 9) · the
+            <strong>header table's two-column grid</strong> (<code>.a-kv</code> — the T3 element, and
+            the reason it exists: <code>KeyValueRow</code> is <code>display:contents</code>) · the
+            <strong>versions line</strong> (T3 inline) · the reset that stops the doc's own
+            <code>&lt;h2&gt;</code> styling reaching <code>Section</code>'s title.</td></tr>
+      <tr><td><strong>stubbed</strong></td>
+        <td>the body pane (W7's screen) · the live clipboard (the confirm animates; the OS write is the
+            component's) · the list beside the panel (W3's screen).</td></tr>
+    </table>
+
+    <h2 id="tune">6 · Tune</h2>
+    <table data-item="tune">
+      <tr><th>Call</th><th>Before</th><th>After</th><th>Slug</th></tr>
+      <tr>
+        <td>Duration was mid-bar, competing with status</td>
+        <td><pre class="tb">POST 201 148 ms  ✕
+▔▔▔▔ ▔▔▔ ▔▔▔▔▔▔
+three equal weights</pre></td>
+        <td><pre class="tb">POST 201 ········ 148 ms ✕
+▔▔▔▔ ▔▔▔          ▔▔▔▔▔▔
+identity  |  measurement</pre></td>
+        <td><code>visual-weight-follows-goals</code></td>
+      </tr>
+      <tr>
+        <td>Curl sat below both legs — past 40 rows of scroll</td>
+        <td><pre class="tb">REQUEST
+REQUEST HEADERS  (×24)
+RESPONSE HEADERS (×18)
+COPY AS CURL     ← here
+BODY</pre></td>
+        <td><pre class="tb">REQUEST
+COPY AS CURL     ← here
+REQUEST HEADERS  (×24)
+RESPONSE HEADERS (×18)
+BODY</pre></td>
+        <td><code>ordering-by-priority</code></td>
+      </tr>
+      <tr>
+        <td>Legs read as one undifferentiated run of rows</td>
+        <td><pre class="tb">REQUEST HEADERS
+ host       api.example.io
+ accept     */*
+RESPONSE HEADERS
+ set-cookie session=abc
+▔ no boundary but the label</pre></td>
+        <td><pre class="tb">REQUEST HEADERS
+ host       api.example.io
+ accept     */*
+──────────────────────────
+RESPONSE HEADERS
+ set-cookie session=abc
+▔ hairline = the leg boundary</pre></td>
+        <td><code>grouping-by-relatedness</code></td>
+      </tr>
+      <tr>
+        <td>"none" stated the fact, not what it meant</td>
+        <td><pre class="tb">RESPONSE HEADERS
+none
+▔▔▔▔ is it empty, or broken?</pre></td>
+        <td><pre class="tb">RESPONSE HEADERS
+none — this leg sent no headers
+▔▔▔▔ empty, and it is not a fault</pre></td>
+        <td><code>empty-states-orient</code></td>
+      </tr>
+      <tr>
+        <td>The URI looked inert — the one value most often taken</td>
+        <td><pre class="tb">REQUEST
+https://api.example.io/v2/…
+▔ a paragraph; nothing invites</pre></td>
+        <td><pre class="tb">REQUEST
+https://api.example.io/v2/…
+▔▔▔▔▔▔▔ hover: the whole value
+        is the target, and clicks</pre></td>
+        <td><code>generous-targets</code></td>
+      </tr>
+      <tr>
+        <td><strong>7 ·</strong> The curl command occupied a pane nobody reads — and then a heading nothing needed</td>
+        <td><pre class="tb">COPY AS CURL
+┌────────────────────────┐ ┌────┐
+│curl -X POST 'https://… │ │copy│
+│  -H 'content-type: ap… │ └────┘
+│  --data-raw '{"a":1}'  │
+└────────────────────────┘
+▔ 4 lines to render a string
+  whose only use is elsewhere</pre></td>
+        <td><pre class="tb">REQUEST
+https://api.example.io/v2/…
+HTTP/1.1 → HTTP/2
+                ┌──────────────┐
+                │ copy as curl │
+                └──────────────┘
+▔ the action joins the zone whose
+  subject it reproduces; no pane,
+  no heading of its own</pre></td>
+        <td><code>data-ink-first</code><br><code>progressive-disclosure</code><br><code>labels-add-context</code></td>
+      </tr>
+      <tr>
+        <td><strong>8 ·</strong> Two models of "which leg" on one panel — resolved to one selector</td>
+        <td><pre class="tb">REQUEST HEADERS
+ host        api.example.io
+RESPONSE HEADERS
+ set-cookie  session=abc
+BODY
+ [request|response] [raw|dec]
+▔ headers stacked, body toggled:
+  the panel contradicted itself</pre></td>
+        <td><pre class="tb">POST 201        148 ms  ✕
+┌─────────┬──────────┐
+│ request │ response │  ← pinned
+└─────────┴──────────┘
+HEADERS   (selected leg)
+BODY      (SAME leg)
+▔ one selector governs both</pre></td>
+        <td><code>one-term-per-concept</code><br><code>familiar-idioms</code><br><code>progressive-disclosure</code></td>
+      </tr>
+      <tr>
+        <td><strong>9 ·</strong> Two pinned bars, and a zone claiming a leg it did not follow</td>
+        <td><pre class="tb">POST 201        148 ms  ✕
+[request│response]
+REQUEST          ← says request
+ uri · versions · curl
+HEADERS          ← shows RESPONSE
+ content-type …
+▔ two bars of chrome, and a
+  label contradicting the data</pre></td>
+        <td><pre class="tb">POST 201 [req│resp] 148ms ✕
+ uri
+ versions        [copy as curl]
+HEADERS   ← the selected leg
+BODY      ← the same leg
+▔ one bar; flow-scoped facts
+  unlabelled, leg-scoped ones
+  under the selector</pre></td>
+        <td><code>data-ink-first</code><br><code>labels-add-context</code><br><code>grouping-by-relatedness</code></td>
+      </tr>
+      <tr>
+        <td>Header rows carried a zebra wash that informed nothing</td>
+        <td><pre class="tb">░host        api.example.io░
+ content-type application/j…
+░accept       */*          ░</pre></td>
+        <td><pre class="tb"> host        api.example.io
+ content-type application/j…
+ accept       */*
+▔ alignment does the separating</pre></td>
+        <td><code>data-ink-first</code></td>
+      </tr>
+      <details class="why"><summary>why — one line per call, and whether it loops back to Layout</summary>
+        <ul>
+          <li><strong>Duration right-aligned:</strong> the Frame ranks identify (1) above measure; three
+              equal-weight items read as three peers. Pushing duration to the far edge makes verb+status
+              one cluster and duration a separate reading. Loops back to Layout: <strong>no</strong> —
+              zone A is unchanged, only its internal alignment.</li>
+          <li><strong>Curl moved above the legs:</strong> goal 3 is the third goal but its zone was last
+              before the body — reachable only after scrolling two unbounded collections. Order now
+              follows scan priority (identify → target → take → compare) rather than the shipped
+              sequence. Loops back to Layout: <strong>yes</strong> — the curl action's position is a Layout fact,
+              and the sketch above already carries the corrected order.</li>
+          <li><strong>Hairline between legs:</strong> <code>Section</code>'s own bottom hairline
+              supplies it, so the boundary is free — the call is to <em>keep</em> the separator between
+              C and D and to add none <em>inside</em> a leg, where every row is the same kind of thing.
+              Loops back to Layout: <strong>no</strong>.</li>
+          <li><strong>Empty-leg sentence:</strong> a bare "none" cannot be told from a rendering
+              failure; the rule wants the zone to explain what happened where the user cannot act. The
+              lexicon fixes the first word ("<code>none</code> — the empty-set microcopy"), so the
+              sentence extends it rather than replacing it. Loops back to Layout:
+              <strong>no</strong>.</li>
+          <li><strong>URI as a target:</strong> the inert <code>&lt;p&gt;</code> was the largest natural
+              hit area on the screen going unused — "could the target be bigger for free?" answers yes,
+              and <code>CopyText</code> supplies it. Loops back to Layout: <strong>no</strong>.</li>
+          <li><strong>Curl pane removed (7):</strong> the reviewer's call — users do not read the
+              command, they run it elsewhere. Stripping it in imagination loses nothing:
+              <code>CopyButton</code>'s <code>@use</code> is a payload that is
+              "<em>derived/invisible</em>", and rendering four mono lines to be copied whole was the
+              largest block of non-data pixels on the screen. <strong>Second round:</strong> the
+              reviewer then noted that what remained "shouldn't be a whole section if it only contains
+              this" — correct, and the same rule twice. A titled <code>Section</code> around one
+              self-labelling button is a heading that repeats its only child
+              (<code>labels-add-context</code>), so the zone dissolved and the button joined zone B,
+              whose subject — the request — is exactly what curl reproduces. The screen drops from six
+              zones to five. Loops back to Layout: <strong>yes, twice</strong> — the sketch, its
+              overflow line and every zone letter after B carry it. Two consequences recorded upstream: the label
+              gains its noun ("copy as curl", per <code>labels-add-context</code>, since no visible
+              payload supplies it), and <code>TextRenderer</code> leaves this screen — which
+              withdraws the <code>@use</code>-wording question it had raised for W7.</li>
+          <li><strong>One leg selector (8):</strong> the reviewer asked for a leg switch twice, and
+              the second time the decisive fact turned up in the code: <strong><code>BodyViewer</code>
+              already ships one</strong> (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>, as of
+              <code>ca18daa</code>). So
+              the panel was never showing "both legs at once" — only its <em>headers</em> were, while
+              the body underneath them toggled. That is two models of one concept on one screen, which
+              is what <code>one-term-per-concept</code> forbids at the level of vocabulary and what the
+              reviewer read as confusing. My first-round refusal weighed the switch against a goal 4
+              phrased as "compare the two legs" and never checked whether the panel already
+              contradicted it; it did. <strong>Goal 4 is re-stated</strong> as "read one leg at a
+              time", and leg selection moves up to a pinned <code>SegmentedControl</code> whose
+              <code>@use</code> names this exact case — "leg (request | response)". Loops back to
+              Layout: <strong>yes</strong> — the selector enters the pinned identity row, and the two header zones collapse
+              into one. It also moves a seam: W7's leg switch is deleted rather than redesigned (see
+              blocked-on).</li>
+          <li><strong>One pinned row, and two scopes (9):</strong> the reviewer objected to giving
+              the leg selector a section of its own and asked for the layout to be reconsidered whole
+              rather than patched — right on both counts. Three faults, one cause: the panel had
+              <em>two</em> stacked bars of chrome above every screen of data; zone B was titled
+              "Request" but never followed the selector, so choosing <em>response</em> produced
+              "Request / Headers(response) / Body(response)"; and "Request" and "Headers" were two
+              headings for one leg. The cause was treating every zone as leg-scoped when only two are.
+              <strong>The Frame now carries that as a driver</strong> ("two scopes, not one"), and the
+              structure falls out of it: the selector joins the identity row it scopes — pinned costs
+              nothing there, since that row was already pinned and had space between status and
+              duration — while the URI, versions and curl become an <em>unlabelled</em> flow line,
+              stated once because they are identical on both legs. Only headers and body carry
+              headings, and both follow the selector. <code>labels-add-context</code> is what forbids
+              the old "Request" heading: it repeated the identity row when the request leg was
+              selected and lied when the response leg was. Loops back to Layout: <strong>yes</strong> —
+              this is a Layout rewrite, and Elements, Interaction and the mockup all follow it.</li>
+          <li><strong>Zebra removed:</strong> stripping it in imagination loses nothing — the two-column
+              grid already separates rows, so the wash was decoration on the screen's densest zone. It
+              is also not in the shipped code; the call is to <em>not</em> add it when 40 rows start
+              looking dense. Loops back to Layout: <strong>no</strong>.</li>
+        </ul>
+      </details>
+    </table>
+
+    <h2 id="receipt">Receipt</h2>
+    <div data-item="receipt">
+<pre>
+rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+soft:
+  visual-weight-follows-goals: "satisfied — one pinned row carries goal 1 (verb, status) and goal 4 (the selector) together, the two facts a reader re-checks most; duration is right-aligned away from that cluster (Tune 1) and the unbounded collections scroll beneath it"
+  grouping-by-relatedness: "satisfied — the panel groups by SCOPE, which is its real semantic boundary (Tune 9): flow-scoped facts (identity row, then the uri/versions/curl line) sit above leg-scoped ones (headers, body), and the selector marks the seam between them. Inside the header table no separator divides rows that are the same kind of thing (Tune 3)"
+  ordering-by-priority: "satisfied — identify, target, take, compare, body; curl moved above the unbounded legs (Tune 2)"
+  progressive-disclosure: "satisfied — the list row is the scan level and this panel IS the act of depth. Within it, one leg is the default view and the other is one explicit act away (the identity row's selector), which is the pattern rather than an exception to it; the curl pane is gone, since a payload only ever copied is depth nobody asked for (Tune 7)"
+  data-ink-first: "satisfied — one pinned chrome row rather than two, the selector riding in space the identity row already had (Tune 9); no zebra, no badges (Tune 6); the curl pane is gone (Tune 7); the dashed body frame is a mockup stub, not a screen element"
+  generous-targets: "satisfied — the whole URI and each whole header value copy on click via CopyText; the close is IconButton's 28px shell, not a bare glyph (Tune 5)"
+  motion-informs: "inherited — the screen owns no motion; the only transience is CopyButton's and CopyText's ~2 s confirm, which their own contracts own and expire"
+  empty-states-orient: "satisfied — empty leg says 'none — this leg sent no headers', pending panel says 'loading this flow…'; neither carries an action slot, because the user cannot cause a header to exist (Tune 4)"
+  familiar-idioms: "satisfied — the devtools request-detail genre: pinned identity line, wire-order header tables, copy-as-curl, and a leg selector at the top of the panel, which is how every network inspector scopes a detail view. Tune 8 adopts the idiom the first pass had departed from"
+  display-equals-payload: "satisfied — headers, URI and versions render verbatim in wire order with no view applied; the curl command is derived and its zone label 'Copy as curl' names it as such, never presented as captured bytes"
+  labels-add-context: "satisfied — only the two leg-scoped zones carry headings ('Headers', 'Body') and neither names a leg, because the selector above them already does (Tune 9). The flow line is deliberately unlabelled: a 'Request' heading there repeated the identity row on one leg and contradicted the data on the other. The action reads 'copy as curl' rather than 'copy' because no visible payload or heading supplies its noun (Tune 7)"
+  calm-microcopy: "satisfied — all microcopy is lowercase and terse: 'copy', 'copied', 'none — this leg sent no headers', 'loading this flow…'. No exclamation, no sentence case, no 'No headers found.'"
+  one-term-per-concept: "satisfied — 'request'/'response' spelled out per the lexicon (never req/res), 'copy' for the clipboard write, 'none' as the empty-set microcopy. Tune 8 is this rule applied structurally: 'leg' had two competing selectors on one panel (headers stacked, body toggled) and now has exactly one"
+  confirm-at-point: "inherited — the two copy affordances confirm inline at the value and at the button, which their contracts own; the screen adds no toast and no status line, and the Interaction rows record 'all → UNCHANGED' to say so"
+  absence-names-itself: "satisfied — this screen has exactly two absences and they get different sentences: an empty header leg ('none — this leg sent no headers') and a not-yet-fetched flow ('loading this flow…'). The body's five absences are BodyViewer's own, at the W7 seam"
+  focus-returns-to-origin: "blocked — Esc-to-dismiss is designed but not bound today, so where focus lands after a keyboard close cannot be honoured yet; W6 owns returning focus to the list row that opened the panel. Same blocked-on row as the Esc binding"
+  choose-before-act: "satisfied — the panel now HAS a control row and it is ordered by this rule: the leg selector sits above every zone it scopes and above the one action on the screen (copy as curl in zone B), so what you are looking at is stated before anything offers to act on it"
+</pre>
+    </div>
+
+    <h2 id="capabilities">Capabilities</h2>
+    <table data-item="capabilities">
+      <tr><th>Given capability</th><th>Verdict</th><th>Where / why</th></tr>
+      <tr><td>method</td><td>used</td><td>zone A, the one pinned row — <code>MethodLabel</code>, raw string in</td></tr>
+      <tr><td>status</td><td>used</td><td>zone A — <code>StatusPill</code>, raw number in</td></tr>
+      <tr><td>duration</td><td>used</td><td>zone A — <code>DurationText</code>, right-aligned (Tune 1)</td></tr>
+      <tr><td>both HTTP versions</td><td>used</td><td>zone B, the flow line — the T3 versions line; the arrow is conditional on the response version existing. Both legs' versions on one line, so it is flow-scoped too</td></tr>
+      <tr><td>the full URI</td><td>used</td><td>zone B, the flow line — <code>CopyText</code>, wrapped, click-copies whole. Stated once: it does not change with the selected leg</td></tr>
+      <tr><td>request headers (wire order)</td><td>used</td><td>zone C, when the selector reads <em>request</em> — header table ▸ <code>KeyValueRow</code>×, <code>data-order="wire"</code>. The default leg</td></tr>
+      <tr><td>response headers (wire order)</td><td>used</td><td>zone C, when the selector reads <em>response</em> — the same table, its contents replaced</td></tr>
+      <tr><td>the derived curl command</td><td>used, <strong>not displayed</strong></td><td>zone B, the flow line — a <code>CopyButton</code> beside the versions; the command reaches the clipboard and never the screen (Tune 7), and does not change with the leg</td></tr>
+      <tr><td>the body pane as a mounted child</td><td><strong>used at the seam</strong></td><td>zone D — the slot, its label and its order are designed, and it now receives the panel's leg as a prop; the pane's contents stay W7's</td></tr>
+      <tr><td>a close handler</td><td>used</td><td>zone A — <code>IconButton</code>; <kbd>Esc</kbd> is designed onto the same handler (blocked in code)</td></tr>
+      <tr><td>null flow = still loading</td><td>used</td><td>panel-level <code>Notice</code> "loading this flow…"; zone A is absent rather than skeletoned</td></tr>
+      <tr><td colspan="3"><em>Nothing given is deliberately unused.</em> The Frame's <strong>Not given</strong> line is what constrains this screen — no timing breakdown, no per-leg timestamps, no eviction notice, no replay — and none of it is faked.</td></tr>
+    </table>
+
+    <h2 id="proposals">Proposals</h2>
+    <table data-item="proposals">
+      <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Verdict · owner</th></tr>
+      <tr>
+        <td>T2 widget<br><span class="zd">considered</span></td>
+        <td><code>KeyValueTable</code> — a two-column pair grid owning the columns that
+            <code>KeyValueRow</code>'s <code>display:contents</code> cells need, plus the empty branch</td>
+        <td><code>Section</code> supplies no grid; <code>FormRenderer</code> is exactly this shape
+            (<code>@anatomy</code>: "a two-column grid this component supplies") but its
+            <code>@use</code> binds it to a dispatched <code>form</code> body, so headers cannot reuse
+            it without forcing its dispatch contract</td>
+        <td><strong>declined</strong> — two call sites and three utility classes; the tier model routes
+            this to T3 "build local, waive reuse". Overturnable on evidence: a third pair-grid tenant
+            (W7's <code>FormRenderer</code> zone, or a trailers table) should re-open it.
+            <span class="zd">owner: the next screen run that meets one</span></td>
+      </tr>
+      <tr>
+        <td colspan="4"><em>No proposal accepted.</em> Every element resolved to a registry
+            <span class="v-reuse">reuse</span> or to a T3 local the tier model already sanctions — the
+            27-entry registry covered this screen without a gap, which is the outcome W1 and W2 were
+            for.</td>
+      </tr>
+    </table>
+
+    <h2 id="blocked">Blocked-on</h2>
+    <table data-item="blocked-on">
+      <tr><th>What is missing</th><th>Stage that hit it</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
+      <tr>
+        <td><kbd>Esc</kbd> is not bound on the panel. The rulebook's dismiss convention sights it on
+            "flow detail panel", but <code>FlowDetail.tsx</code> binds no key handler — only the ✕
+            closes.</td>
+        <td>Interaction</td>
+        <td><strong>W6</strong> (build)</td>
+        <td>Designed it as the rulebook states, and receipted
+            <code>focus-returns-to-origin: blocked</code> rather than <code>satisfied</code> — so the
+            build cannot read it as already shipped. (<code>keyboard-parity</code> is a
+            <strong>hard</strong> rule and carries no receipt row at all: Tier-1 checks it by
+            predicate, against the keyboard path named per Interaction row, which this run does
+            supply. What is not yet true is where focus <em>lands</em>, which is the soft rule's
+            question.)</td>
+      </tr>
+      <tr>
+        <td><strong>W7's plan row said the body run owns "a leg switch" — corrected in this WU.</strong>
+            This run took leg selection to the panel's identity row, so that subject no longer exists
+            inside <code>BodyViewer</code> — its shipped toggle is deleted rather than redesigned.</td>
+        <td>Elements · Layout <span class="zd">(round 2)</span></td>
+        <td><strong>this WU — resolved.</strong> An earlier draft said the epic owned it, "which this
+            run may not". <strong>No such rule exists</strong> in the workflow, and W2's precedent is
+            the opposite: it edited the epic plan's W4 and W11 rows inside its own WU, on the grounds
+            that "a plan that still promises work already done is how a follow-up gets lost". Found at
+            the Tier-3 review.</td>
+        <td>Designed the panel-level selector and corrected the epic plan's W7 and W8 rows here.
+            The rule and everything it forces are
+            <a href="../decisions/dec-31-leg-is-panel-scoped.html"><strong>DEC-31</strong></a>'s, which
+            is where they outlive this archived run.</td>
+      </tr>
+      <tr class="withdrawn">
+        <td><s><code>TextRenderer</code>'s <code>@use</code> is body-scoped, but its best fit on this
+            screen was the curl command, which is not a body.</s><br>
+            <strong>Withdrawn at review.</strong> The curl pane is gone (Tune 7), so this screen has no
+            non-body tenant and the question it raised for W7 does not arise.</td>
+        <td>Elements</td>
+        <td><span class="zd">— (was W7)</span></td>
+        <td>Nothing owed. Recorded rather than deleted, so W7 can see the question was raised and why
+            it lapsed.</td>
+      </tr>
+      <tr>
+        <td>No capability tells the panel its flow was evicted from the capture ring while open (Frame:
+            <em>Not given</em>). The rulebook lexicon has the words —
+            "<strong>no longer captured</strong> — the capture ring moved past this flow. Not a fault" —
+            but nothing raises the event.</td>
+        <td>Frame</td>
+        <td><strong>the epic</strong> — it needs an API/store capability, not a screen decision</td>
+        <td>Designed no state for it: a notice that can never fire would be worse than its absence.
+            The panel shows what it was handed; a stale open flow stays readable.</td>
+      </tr>
+    </table>
+
+    <h2 id="review">Review</h2>
+    <table data-item="review">
+      <tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr>
+      <tr>
+        <td>Author's pre-review pass, against the plan's <em>What could go wrong</em>: the epic plan
+            predicts "<code>Section</code> and <code>HeaderTable</code> resolve to <code>reuse</code>" —
+            check whether the second half was reached honestly or written to match.</td>
+        <td><strong>Elements.</strong> <code>Section</code> is a clean reuse. <code>HeaderTable</code>
+            is <em>not</em>: no registry entry owns a pair grid, and <code>KeyValueRow</code> being
+            <code>display:contents</code> means the columns are the caller's. Split the row into a
+            <span class="v-reuse">reuse</span> of <code>KeyValueRow</code> plus a
+            <span class="v-propose">T3 local</span> header table, and recorded the
+            <code>KeyValueTable</code> proposal as declined-with-reasons rather than forcing a reuse.</td>
+        <td><code>KeyValueRow</code>'s <code>@anatomy</code> ("display:contents inside parent") and
+            <code>FormRenderer</code>'s <code>@use</code> (dispatch-bound) · the tier model's T3 row
+            ("build local, waive reuse") · <code>wire-order-preserved</code>, which the local table
+            is what honours</td>
+      </tr>
+      <tr>
+        <td>Same pass, on the seam risk: the body is the largest zone — check that no body-pane decision
+            leaked in.</td>
+        <td><strong>Frame</strong> (body added as an explicit non-goal and constraint),
+            <strong>Elements</strong> (<code>BodyViewer</code> row resolves the slot only, listing what
+            W7 keeps), <strong>mockup</strong> (pane stubbed, not rendered).</td>
+        <td>the flow spec's stub layer ("renderer dispatch" is stubbed) · the epic plan's W5 row ("this
+            run declares the seam, it does not design through it") · <code>absence-names-itself</code>,
+            whose five body sentences are BodyViewer's to own · <code>display-equals-payload</code>,
+            whose raw/decoded naming sits behind the seam</td>
+      </tr>
+      <tr>
+        <td><strong>Reviewer, on Layout:</strong> "the curl copy should be a button only, users don't
+            really need to see the curl content".</td>
+        <td><strong>Layout</strong> (the curl zone is one line, action only; its overflow entry drops),
+            <strong>Elements</strong> (<code>TextRenderer</code> retired from the screen;
+            <code>CopyButton</code>'s two <code>@avoid</code> answers both invert in its favour),
+            <strong>Interaction</strong> (the copy row's delta is now "all → UNCHANGED"),
+            <strong>mockup</strong> (pane unmounted), <strong>Tune 7</strong>,
+            <strong>capabilities</strong> (curl is used but not displayed), and one
+            <strong>blocked-on withdrawn</strong>. The label also gained its noun.</td>
+        <td><code>CopyButton</code>'s <code>@use</code> ("payload is derived/<strong>invisible</strong>")
+            and its <code>@avoid</code> on the icon-only form, which now forbids a glyph ·
+            <code>data-ink-first</code> · <code>progressive-disclosure</code> ·
+            <code>labels-add-context</code></td>
+      </tr>
+      <tr>
+        <td><strong>Reviewer, round 3, on the mockup:</strong> "I don't think we should use a separated
+            section just for the request / response switch, please rethink thoroughly about the overall
+            layout &amp; UI UX best practices … Do not just focus on one problem".</td>
+        <td><strong>Fair on both counts — the rounds had been patching one fault at a time, and this
+            one was mine to catch.</strong> Reconsidering the panel whole found three faults with a
+            single cause: two stacked pinned bars above every screen of data; zone B titled "Request"
+            while never following the selector (choosing <em>response</em> rendered "Request /
+            Headers(response) / Body(response)"); and "Request" and "Headers" as two headings for one
+            leg. The cause was treating every zone as leg-scoped when only two are. Added the Frame
+            driver <strong>"two scopes, not one"</strong> and rebuilt from it: <strong>Layout</strong>
+            (one pinned row; the selector joins the identity row; B becomes an unlabelled flow line),
+            <strong>Elements</strong> (tree split flow-scoped / leg-scoped; <code>Section</code> drops
+            to two tenants; B takes none), <strong>Interaction</strong> (the delta now shows B
+            UNCHANGED on a leg switch), the <strong>mockup</strong> (one component, verified in Chrome:
+            switching leg swaps headers and body while the URI stays), and <strong>Tune 9</strong>.</td>
+        <td><code>data-ink-first</code> (a whole chrome row buying nothing) ·
+            <code>labels-add-context</code> (a heading that repeated the identity row on one leg and
+            contradicted the data on the other) · <code>grouping-by-relatedness</code> (the real
+            boundary is scope, not zone order) · <code>Section</code>'s
+            <span class="u-avoid">@avoid</span> "unlabelled grouping (plain spacing does it)", which
+            is what keeps the flow line out of a Section</td>
+      </tr>
+      <tr>
+        <td><strong>Reviewer, round 2, on the mockup:</strong> "so Copy as CURL shouldn't be a whole
+            section if it only contains this".</td>
+        <td><strong>Agreed — and it is the round-1 call finishing its own logic.</strong> Removing the
+            payload left a titled <code>Section</code> whose heading repeated its one self-labelling
+            child. The zone dissolved: the button joined <strong>zone B</strong>, whose subject — the
+            request — is exactly what curl reproduces, and the screen went from six zones to five.
+            Moved the <strong>Layout</strong> sketch and overflow line, every zone letter after B
+            across <strong>Elements</strong>, <strong>Interaction</strong> and
+            <strong>capabilities</strong>, the <strong>mockup</strong>, and <strong>Tune 7</strong>,
+            which now records both halves of the call.</td>
+        <td><code>labels-add-context</code> ("a label carries only the fact its context doesn't
+            already state" — here the heading and its only child stated the same fact) ·
+            <code>data-ink-first</code> · <code>Section</code>'s <span class="u-avoid">@avoid</span>
+            "unlabelled grouping (plain spacing does it)", read in reverse: a labelled grouping with
+            one self-describing element is the same redundancy</td>
+      </tr>
+      <tr>
+        <td><strong>Reviewer, on Layout (round 1):</strong> "Should we have tabs to select between
+            request / response?" — <strong>and again on the mockup (round 2):</strong> "I still think
+            we need a tabs or kind of switch … showing both headers in the same view may be confusing.
+            Same for the body if it requires another switch."</td>
+        <td><strong>Reversed my round-1 refusal, and the second ask was right</strong> — the reasoning
+            is <a href="#tune">Tune 8</a>'s. Moved: <strong>Frame</strong> (goal 4 re-stated "read one
+            leg at a time"), <strong>Layout</strong> (a <code>SegmentedControl</code> in the pinned
+            identity row; the two header zones collapsed into one), <strong>Elements</strong> (its
+            catalog row), <strong>Interaction</strong> (a new use-case row with its keyboard path, and
+            the default-leg decision), <strong>Tune 8 inverted</strong>, six <strong>receipt</strong>
+            rows re-evidenced, and the <strong>mockup</strong> rebuilt stateful so the selector really
+            drives both zones.</td>
+        <td><code>SegmentedControl</code>'s <span class="u-use">@use</span>, which names "leg (request
+            | response)" outright, and its <span class="u-avoid">@avoid</span> "tabs that own panels
+            (tablist)" — so this is a segmented radiogroup, not tabs ·
+            <code>one-term-per-concept</code> (two selectors for one concept) ·
+            <code>choose-before-act</code>, which the panel now satisfies rather than skips ·
+            <strong>the epic plan's W7 row</strong>, whose leg switch this deletes — see blocked-on
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Reviewer, on the mockup:</strong> "the gap of each section … is too large in this
+            mock up, is it a real case in practice".</td>
+        <td><strong>A real defect in the mockup, not the design.</strong> <code>doc.css</code> styles
+            every <code>&lt;h2&gt;</code> as a document heading (<code>margin:3rem 0 1rem</code>,
+            1.45rem, a 2px rule) and <code>Section</code> renders its title as one — so the doc's prose
+            styling was leaking into the mounted component, inflating every zone gap and drawing
+            phantom separators. The panel was also cut off, hiding both header legs. Scoped a reset
+            inside <code>.app</code>; the mockup now shows <code>Section</code>'s real
+            <code>py-3</code> rhythm and every zone renders. <em>No design value changed</em> — the
+            answer to "is it a real case" is no.</td>
+        <td><code>Section</code>'s shipped markup (<code>px-4 py-3</code>, an <code>h2</code> title) ·
+            the flow spec's rule that a mockup mounts the real component, whose corollary is that the
+            doc must not restyle what it mounts</td>
+      </tr>
+      <tr>
+        <td>Same pass, on the receipt: <code>focus-returns-to-origin</code> was first written
+            <code>satisfied</code> because every row has a keyboard path <em>designed</em>.</td>
+        <td><strong>Receipt</strong> → <code>blocked</code>, plus a blocked-on row and a callout under
+            the Interaction table. A designed path is not a shipped one, and
+            <code>satisfied</code> would have been the "complete, fluent and false" receipt the Tier-3
+            review exists to catch. <strong>Corrected at the Tier-3 review:</strong> the first write-up
+            of this row named <code>keyboard-parity</code>, which is a <em>hard</em> rule and therefore
+            carries no receipt verdict to correct — the soft rule that actually holds the
+            <code>blocked</code> verdict for this defect is <code>focus-returns-to-origin</code>. The
+            catch was real; the slug was wrong.</td>
+        <td><code>focus-returns-to-origin</code> (soft, the receipted verdict) · the hard/soft split
+            itself, which the first write-up crossed · the rulebook's dismiss convention, which sights
+            <kbd>Esc</kbd> on this exact panel</td>
+      </tr>
+    </table>
+
+  </main>
+
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
