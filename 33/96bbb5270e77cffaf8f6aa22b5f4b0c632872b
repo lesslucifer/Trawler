@@ -1,0 +1,71 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W4 (wu/export/clear) -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W4
+branch: wu/export/clear
+base: ec60941b020ab233f6f9568a5f4217c34cf4dd34
+head: 3396bbb5270e77cffaf8f6aa22b5f4b0c632872b
+diff_sha256: 44b5544fb03874a221f90372155d66188e3b0f11c8d32776f2c0ee237ebba77c
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 10, verified: 5, waived: 0 }
+rounds:
+  - round: 1
+    found: 9
+    verified: 4
+    detail: >-
+      Five finders, nine candidates, adversarial verification confirming four. (1) evict never
+      called the new unlink, so the byte arithmetic still existed twice while unlink's comment and
+      this WU's own test/v2 note both claimed it was unified - the claim had been written three
+      times over. Fixed by extracting Ring::debit as the single place a flow leaves the map and is
+      debited, called from both. The fix both finders IMPLIED - routing evict through unlink - was
+      refuted by verification as a regression, since it would make every insert O(ring length) and
+      drop the last-row floor, so only the two-line arithmetic is shared and each caller keeps its
+      own order-mending. (2) unlink's order.retain rebuilt the whole order for a single-id delete,
+      a scan plus a hash probe per row under the lock the live capture path contends on; verified
+      important because retained_bytes counts only body bytes, so a capture of body-less exchanges
+      grows the row count without limit while the byte cap never fires. A single removal now finds
+      its one row; a batch still rebuilds, where the cost is proportionate to a scan the filter
+      already did. (3) A cursor row can now vanish by deletion as well as eviction, and neither the
+      listing contract (scoped to "evicted") nor UC-7 said so, with no test pairing the two - the
+      contract sentence now names both causes, UC-7 carries the consequence, and a regression test
+      pins it. (4) Two reborrows were dead scaffolding from a borrow error already solved another
+      way, each verified by compiling it away. Five refuted: removed.clone() (the returned ids are
+      genuinely consumed by tests asserting identity, not just count), the delete()/post() test
+      helper duplication (one helper per verb is the file's established convention, as get()/json()
+      already show, and a method-parameterised helper would cost call-site clarity), and three
+      further candidates. The altitude finder returned a clean verdict resting on the premise that
+      unlink was the only place a flow leaves the ring - a premise two other finders had already
+      disproved - so its all-clear carried no weight on that question, though its separate layering
+      conclusions stood.
+  - round: 2
+    found: 1
+    verified: 1
+    detail: >-
+      Re-review of the fix as the unreviewed code it was. Two finders independently found the same
+      single defect and nothing else: the edit that extracted debit had left the old unlink comment
+      sitting above it, so the new function carried two docstrings - the first naming a doomed
+      parameter it does not take and asserting the one-helper design the fix had just rejected.
+      That is round 1's own finding reintroduced by the edit that fixed it, which is the argument
+      for re-reviewing a fix rather than trusting it. Corrected in 5846170, with a sweep confirming
+      no other stale claim survives in code or docs. The correctness finder reported no findings on
+      the three properties flagged as riskiest in the fix: debit's behaviour in both callers, the
+      inverted retain predicate, and duplicate ids in doomed.
+verified_findings:
+  - summary: "evict kept its own copy of the byte arithmetic while unlink's comment and the test/v2 note claimed unification"
+    severity: nit
+    fixed_in: 35ff189
+  - summary: "unlink's full order.retain made a single-id delete O(ring length) under the capture-path lock"
+    severity: important
+    fixed_in: 35ff189
+  - summary: "a cursor row removed by a delete was undocumented in the listing contract and UC-7, and untested"
+    severity: nit
+    fixed_in: 35ff189
+  - summary: "two dead reborrows left from a borrow error solved another way"
+    severity: nit
+    fixed_in: 35ff189
+  - summary: "debit carried a second, stale docstring describing the design the fix rejected"
+    severity: important
+    fixed_in: 5846170
+waivers: []
+verdict: PASS
+date: 2026-09-05
