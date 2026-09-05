@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9aa0aa9f34851f0dfac1a8">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W9 plan (setup + quit dialog design run)</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W9 — design run: setup + quit dialog</h1>
+      <p>One design run over <code>Onboarding</code> and <code>ProxyCloseDialog</code>, run blind to the three archived runs of this same screen — so the verdicts are earned against today's 27-entry registry, not inherited from a design nobody rebuilt.</p>
+      <div class="meta">WU plan · 2026-09-04 · Trawler · T3 (docs/work/) · <code>wu/redesign/setup-quit-dialog</code> → <code>epic/redesign</code> · format: <strong>design run</strong> · rulebook: <code>aeff5b0f</code></div>
+    </div>
+  </header>
+  <main data-artifact="wu-plan">
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      Apply the <a href="../design-flow.html">design flow</a> — substrate load, six stages, five closing lists, close — to the two surfaces of UC-ONBOARD, <code>ui/src/Onboarding.tsx</code> and <code>ui/src/ProxyCloseDialog.tsx</code>, as <strong>one closed run</strong> landing at <code>docs/work/2026-09-04-redesign-run-9-setup-quit.html</code>, so that every element on both surfaces resolves to a registry <em>reuse</em>, an <em>extend</em> with a declared delta, or a <em>propose</em> with a warrant — and W10 has a Tier-3-judged design to cite by blob. <strong>Designs only: this WU commits nothing under <code>ui/src/</code>.</strong>
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <div data-item="maps-to">
+      <table>
+        <tbody>
+          <tr>
+            <td><strong>Epic</strong></td>
+            <td><code>E-REDESIGN</code> — apply the design flow to every shipped screen. This is <strong>W9</strong>, the last of the four screen runs; <strong>W10 builds what it designs</strong>, and W11 closes the epic.</td>
+          </tr>
+          <tr>
+            <td><strong>Use case</strong></td>
+            <td><a href="../use-cases/web-ui.html">UC-ONBOARD</a> — first capture. No UC contract changes shape here: a design run ships no behaviour. Two <em>observable</em> contracts move at build time and are named in this run's Interaction table so they are decisions, not side effects — see <a href="#gains">what the run is allowed to change</a>.</td>
+          </tr>
+          <tr>
+            <td><strong>Requirement</strong></td>
+            <td>The epic plan's W9 row: run the flow on both surfaces <em>blind</em>, resolving the four <code>&lt;ol&gt;</code>s to <code>StepList</code>, both <code>&lt;select&gt;</code>s to <code>Select</code>, the status line to <code>StatusLine</code> and <code>ManualPanel</code> to <code>Disclosure</code>; the dialog's modal shell and checkbox carry a stated build-local warrant.</td>
+          </tr>
+          <tr>
+            <td><strong>Consumes</strong></td>
+            <td>W2's 27-entry registry (via <code>scripts/design-registry.mjs</code>) and the rulebook at <code>aeff5b0f</code>, both frozen for the run. W1's three designs are already <em>built</em>, so <code>Field</code>, <code>StatusDot</code> and <code>Disclosure</code> are reuse candidates, not proposals.</td>
+          </tr>
+          <tr>
+            <td><strong>Hands to</strong></td>
+            <td>W10, through the DEC-25 handoff: <code>design.implements: [{path, blob}]</code> in W10's <code>cr/v3</code> note. W10 also closes the <code>[UI_DEFER]</code> marker at <code>setup.ts:187</code> — this run must therefore <em>state</em> the <code>short</code> field's per-verdict content, since <code>StatusLine</code>'s <code>@avoid</code> forbids the screen shortening a domain message.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="substrate">The substrate, frozen</h2>
+    <p>Read once, before stage 1, and named in the receipt. Both are inputs — never edited mid-run.</p>
+    <table>
+      <thead><tr><th>Input</th><th>Pin</th><th>What it gives the run</th></tr></thead>
+      <tbody>
+        <tr><td>rulebook</td><td><code>aeff5b0fb4dea94ab5f0b7c385b8188786666e8a</code></td><td>17 soft slugs the receipt must cover in rulebook order; the <code>Binds at</code> column decides which bind per stage.</td></tr>
+        <tr><td>registry</td><td>27 entries, emitted</td><td>every <code>@use</code>/<code>@avoid</code> the Elements verdicts are judged against. Read <code>@avoid</code> first.</td></tr>
+        <tr><td>mockup bundle</td><td><code>doc-assets/components/specimens.bundle.js</code></td><td><code>window.Trawler</code> — the real components the mockup mounts. Built (737 KB); git-ignored, so a re-run is the fix for staleness.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="surfaces">The two surfaces — what is there today</h2>
+    <div class="cards">
+      <div class="card">
+        <h3><code>Onboarding.tsx</code> <span class="badge id">464 lines</span></h3>
+        <p>A centred three-step checklist — trust the CA, set the proxy, verify — with per-step probed verdicts, two elevated one-click actions, and per-OS manual fallbacks.</p>
+        <p><strong>Local components that resolve away:</strong> <code>ActionButton</code>, <code>ManualPanel</code>, <code>TrustCa</code>, <code>SetProxy</code>, <code>ProveIt</code> — plus a <code>toneClass</code> map at line 360, the epic's <em>third</em> copy of the tone map.</p>
+      </div>
+      <div class="card">
+        <h3><code>ProxyCloseDialog.tsx</code> <span class="badge id">133 lines</span></h3>
+        <p>The quit-time proxy dialog, two modes off the live proxy status: <code>remove</code> (Remove / Keep) and <code>notice</code> (info-only, with a durable "don't show again").</p>
+        <p><strong>Hand-rolled with no registry owner:</strong> the modal shell, the scrim backdrop-as-button, the ✕ dismiss, and the checkbox. Its <code>&lt;ol&gt;</code> of proxy-off steps is the fourth <code>StepList</code> tenant.</p>
+      </div>
+    </div>
+
+    <h3 id="counted">What the run must resolve — counted, so the Elements stage is falsifiable</h3>
+    <table>
+      <thead><tr><th>Raw element</th><th>Where</th><th>Expected verdict</th></tr></thead>
+      <tbody>
+        <tr><td>4 × <code>&lt;ol class="list-decimal"&gt;</code></td><td><code>guided-steps</code>, <code>removal-steps</code>, <code>proxy-steps</code>, <code>proxy-off-steps</code> — the fourth in the dialog</td><td><code>StepList</code> reuse ×4</td></tr>
+        <tr><td>2 × <code>&lt;select&gt;</code></td><td><code>trust-target</code> (6 options), <code>proxy-target</code> (7 options)</td><td><code>Select</code> reuse — both clear the ≥5-option <code>@use</code> line</td></tr>
+        <tr><td>3 × <code>&lt;details&gt;</code></td><td><code>ManualPanel</code> + "remove the certificate later" + "turn the proxy off later"</td><td><code>Disclosure</code> reuse ×3</td></tr>
+        <tr><td>per-step verdict line</td><td><code>step-*-status</code> — glyph + message + <code>toneClass</code></td><td><code>StatusLine</code> reuse; forces the <code>short</code> field</td></tr>
+        <tr><td>3 × action note block</td><td><code>INSTALL_NOTE</code>, <code>SETPROXY_NOTE</code>, <code>UNSETPROXY_NOTE</code></td><td><code>Notice</code> reuse — and a <code>Button</code> fork-D4 call, since each note pairs a disabled button with an in-flight line</td></tr>
+        <tr><td>2 × <code>navigator.clipboard</code></td><td><code>copy-snippet</code>, <code>copy-prove-it</code> — both unguarded, no confirm, no error path</td><td><code>CopyText</code> (the snippet is displayed) vs <code>CopyButton</code> (a derived payload) — the run decides per site, it does not guess</td></tr>
+        <tr><td>modal shell · backdrop · ✕ · checkbox</td><td><code>ProxyCloseDialog</code></td><td>the epic's proposed default: <strong>screen-local T4, warranted at Elements</strong> — the ✕ still resolves to <code>IconButton</code></td></tr>
+        <tr><td>stepper nav (Back / Next / back-to-flows)</td><td><code>onb-back</code>, <code>onb-next</code>, <code>onb-exit</code></td><td><code>Button</code> reuse; whether a three-item checklist needs prev/next at all is a <a href="#tune-candidates">Tune</a> question</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="frame-pressure">Where the Frame does real work</h2>
+    <p>Two lines carry this run. Both are load-bearing because they <em>forbid</em> something the screen would otherwise reach for.</p>
+    <div class="callout">
+      <p><strong><code>Not given</code> — the app cannot observe per-step completion.</strong> A step is proven by a <em>probe</em> or by captured traffic, never by the stepper's cursor. That is why <code>StepList</code>'s <code>@avoid</code> already refuses per-step completion and a current-step highlight, and why <code>StatusLine</code>'s refuses a checkbox rendering: <em>"a tick lies in most real states."</em> The Frame states the absence; the components enforce it. A design that draws a tick per step has broken the Frame, not just a rule.</p>
+    </div>
+    <div class="callout">
+      <p><strong>The two surfaces share a Frame's constraints but not its goals.</strong> Setup is a screen the user works <em>through</em> once; the dialog is a two-second interruption at quit, where the top goal is <em>do not strand the machine without internet</em>. One run, two Frames — and the run says so rather than averaging them into one driver table.</p>
+    </div>
+
+    <h2 id="gains">What the run is allowed to change — and what it may not</h2>
+    <table>
+      <thead><tr><th>#</th><th>Change</th><th>Why it is a decision, not drift</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><strong>The two copy actions gain a confirm and an error state.</strong></td>
+          <td>Today both call <code>navigator.clipboard.writeText</code> unguarded — a rejected promise is silent and the user is told nothing. <code>CopyText</code>/<code>CopyButton</code> own a ~2 s confirm and a <code>failed</code> state. This is <code>confirm-at-point</code> being satisfied for the first time on this screen; recorded in the Interaction table.</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong><code>StepStatusView</code> gains <code>short</code></strong> — stated here, built in W10.</td>
+          <td><code>StatusLine</code>'s <code>@avoid</code> forbids the call site shortening a domain message, and the <code>[UI_DEFER]</code> marker at <code>setup.ts:187</code> already assigned the short form to the domain module. The run must fill it <em>per verdict</em> — nine verdicts across <code>trustStatus</code>/<code>proxyStatus</code>/<code>verifyStatus</code> — or the Elements verdict for <code>StatusLine</code> is a <em>blocked</em>, not a reuse.</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>The dialog's ✕ becomes an <code>IconButton</code>; the shell does not become a component.</strong></td>
+          <td>The epic's open question proposed the default and gave the reason: one dialog does not establish a vocabulary. The run states the warrant at Elements rather than widening W1 on a sample of one.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout warn">
+      <p><strong>Out of scope, explicitly.</strong> No reading of the three archived runs (#4 · #6 · #8) of this same screen — <em>the epic plan makes blindness the method</em>, and W9 runs blind as #8 ran blind to #4 and #6. No hi-fi visual design; the mounted mockup is the finish line. No change to the flow spec, the rulebook or the gate. No new component design files — a <em>propose</em> here is a proposal row and a blocked-on entry, and it lands as its own WU, not inside this run. No W11 inputs: the coverage map and the DEC-13 revert question are epic follow-ups, deferred by decision.</p>
+    </div>
+
+    <h2 id="tune-candidates">Tune candidates — named now, decided in the run</h2>
+    <p>Listed so the Tune stage has something falsifiable to accept or reject; each must land as a drawn before/after citing a slug, or not land at all.</p>
+    <table>
+      <thead><tr><th>Candidate</th><th>Slug it would cite</th></tr></thead>
+      <tbody>
+        <tr><td>Back / Next on a three-item checklist that already reveals its active step — is the pair chrome that informs nothing?</td><td><code>data-ink-first</code>, and <code>familiar-idioms</code> (a checklist is not a wizard)</td></tr>
+        <tr><td>Every step renders a bordered card whether active or not; the border does double duty as "active" via a colour swap.</td><td><code>grouping-by-relatedness</code>, <code>data-ink-first</code></td></tr>
+        <tr><td>The verdict line sits right-aligned in the step's own header button, so the whole header is one hit target that both navigates and displays.</td><td><code>generous-targets</code>, <code>visual-weight-follows-goals</code></td></tr>
+        <tr><td>The dialog's two modes differ in body, steps, checkbox <em>and</em> button set — four axes for two modes.</td><td><code>absence-names-itself</code>, <code>ordering-by-priority</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>One closed, archived, Tier-3-judged design run covering both surfaces, <code>verify-doc</code> green, with:</p>
+      <ul>
+        <li>Two Frames (setup · dialog), each with its own <code>Given</code>/<code>Not given</code> and a falsifiable ✓/✗ pair per driver.</li>
+        <li>An Elements stage resolving <strong>every</strong> element in <a href="#counted">the count above</a> — the four <code>&lt;ol&gt;</code>s, both <code>&lt;select&gt;</code>s, all three <code>&lt;details&gt;</code>, the verdict line, the three note blocks and the two copy sites — to <em>reuse</em>, <em>extend</em> or <em>propose</em>, each judged against <code>@use</code>/<code>@avoid</code>.</li>
+        <li>A stated, warranted <strong>build-local</strong> verdict for the dialog's shell and checkbox — the epic's open question answered in the run, where it belongs.</li>
+        <li>A mockup that <strong>mounts</strong> the real <code>window.Trawler</code> components across the states the Interaction table names — never draws them.</li>
+        <li>A receipt covering all 17 soft slugs in rulebook order, pinned to <code>aeff5b0f</code>, with the <code>short</code>-field dependency recorded as <em>blocked</em> or <em>satisfied-via-proposal</em> rather than a fluent <em>satisfied</em>.</li>
+        <li>A capabilities list answering every <code>Given</code>: used, deliberately unused, or blocked.</li>
+      </ul>
+      <p><strong>The check that matters:</strong> W10 can build the whole of both surfaces from this run alone, without re-deciding what a component owns — and <code>design-scope origin/epic/redesign HEAD</code> reports exactly one design-bearing artifact.</p>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table>
+        <thead><tr><th>Level</th><th>Status</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>e2e</strong></td>
+            <td><span class="badge approval">waived</span></td>
+            <td><code>waived: "design WU — touches no product code or screens"</code>, on the W9 precedent's own wording carried by the epic plan. UC-ONBOARD's e2e is rewritten in <strong>W10</strong>, against the built screen.</td>
+          </tr>
+          <tr>
+            <td><strong>integration</strong></td>
+            <td><span class="badge approval">waived</span></td>
+            <td>Same waiver, same reason — there is no bounded contract to exercise until W10 builds one.</td>
+          </tr>
+          <tr>
+            <td><strong>unit</strong></td>
+            <td><span class="badge approval">waived</span></td>
+            <td>The WU adds no code. The diff is one HTML artifact under <code>docs/work/</code> plus this plan — docs-only, which the workflow exempts.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>The real gates on a design WU are not test levels:</p>
+      <table>
+        <thead><tr><th>Gate</th><th>Command</th><th>What it refuses</th></tr></thead>
+        <tbody>
+          <tr><td>Tier-1 · structural</td><td><code>cargo xtask verify-doc docs/work/2026-09-04-redesign-run-9-setup-quit.html</code></td><td>a missing or empty stage, a receipt short of the 17 slugs, a stale rulebook pin, a hand-drawn component in the mockup, a colour literal, a gist over 14 words, a Tune row with fewer than two drawn cells</td></tr>
+          <tr><td>Tier-3 · design review</td><td>the <strong>code-review skill</strong> on the tip → <code>cr/v3</code> PASS with a <code>design:</code> section</td><td>a receipt that is complete, fluent and <em>false</em> — a <em>satisfied</em> the design does not earn</td></tr>
+          <tr><td>scope</td><td><code>cargo xtask design-scope origin/epic/redesign HEAD</code></td><td>an unaccounted design-bearing artifact, or a run left open (<code>data-status="archived"</code> missing)</td></tr>
+          <tr><td>merge</td><td><code>cargo xtask verify-dod wu &lt;tip&gt; --target epic/redesign</code></td><td><code>test/v2</code> + <code>doc/v1</code> + diff-bound <code>cr/v3</code> PASS absent; <code>6·run-closed</code> for an open run</td></tr>
+        </tbody>
+      </table>
+      <div class="callout warn">
+        <p><strong>Environment note.</strong> This worktree has <strong>no Rust toolchain</strong> — <code>cargo</code> is not on <code>PATH</code>, so <code>verify-doc</code>, <code>design-scope</code> and <code>verify-dod</code> cannot run here. The specimens bundle was built directly with <code>node scripts/build-specimens.mjs</code> (the documented equivalent), so the mockup can mount real components. <strong>Every <code>cargo</code> gate above must run where a toolchain exists before this WU is offered for merge</strong>; a run that has never been <code>verify-doc</code>'d is not closeable.</p>
+      </div>
+    </div>
+
+    <h2 id="outcome">Outcome — what the run found</h2>
+    <p>The run closed at <a href="2026-09-04-redesign-run-9-setup-quit.html">design run #9</a>. Three things the plan could only forecast:</p>
+    <table>
+      <tbody>
+        <tr><td><strong>The <code>short</code> gap is measured</strong></td><td><strong>4 of 16 verdicts</strong> exceed <code>StatusLine</code>'s ~40-char contract (101, 116, 63, 63 chars), and the two <code>error</code> verdicts interpolate without bound. All 16 short forms are specified in the run; four remedies move out of the verdict into a <code>Notice</code>.</td></tr>
+        <tr><td><strong>One new registry component</strong></td><td>Nine entries reused across both surfaces. The modal shell stays <em>build local</em> on the sample-of-one warrant; the checkbox became a <code>Checkbox</code> <strong>T1 registry propose</strong> at review — a primitive whose contract generalises from one instance, unlike a two-mode modal. It needs its own component-design WU before W10 can build the dialog's remote mode.</td></tr>
+        <tr><td><strong>The dialog's mode model was wrong, and the review caught it</strong></td><td><code>unset_proxy</code> clears whatever proxy the host has, so a <em>foreign</em> proxy was always as fixable as ours — the first pass gave it read-only instructions. Three modes now key on fixability, not ownership: <em>ours</em> and <em>foreign</em> both offer the action plus a collapsed manual route; only <em>remote</em> is info-only, and it alone carries the opt-out.</td></tr>
+        <tr><td><strong>Two slugs do not resolve</strong></td><td><code>confirm-at-point</code> is <em>satisfied-via-proposal</em> (contingent on <code>short</code> landing) and <code>focus-returns-to-origin</code> is <em>blocked</em> — modality is genuinely unowned until W10 builds the shell. Neither is claimed as satisfied.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="sequence">Sequence</h2>
+    <div class="diagram" data-c="seq">
+      <pre class="mermaid">
+flowchart TB
+  S["substrate frozen
+rulebook aeff5b0f · 27-entry registry · specimens bundle"] --> F1["Frame ×2
+setup · dialog"]
+  F1 --> L["Layout
+zones + overflow line, per surface"]
+  L --> E["Elements
+the counted map → reuse / extend / propose"]
+  E --> I["Interaction
+UC-ONBOARD tasks · zone→delta · keyboard"]
+  I --> M["Draft mockup
+mounts window.Trawler, state toggle"]
+  M --> T["Tune
+drawn before/after, each citing a slug"]
+  T --> R["5 closing lists
+receipt · capabilities · proposals · blocked-on · review"]
+  R --> C["close
+re-pin · verify-doc green · archived"]
+  C --> V["Tier-3 code-review → cr/v3 PASS"]
+  V --> MG["merge --no-ff → epic/redesign"]
+  E -. "an @avoid hit rezones" .-> L
+  T -. "reads wrong assembled" .-> L
+      </pre>
+      <div class="caption">The flow as this run will walk it. Both loop-backs into Layout are real, and an <code>@avoid</code> hit at Elements is the most valuable thing the run can produce — it means the design wants something the vocabulary does not have.</div>
+    </div>
+
+    <h2 id="risks">Risks</h2>
+    <table>
+      <thead><tr><th>Risk</th><th>Handling</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Two surfaces averaged into one Frame.</strong> A single driver table covering both would produce goals true of neither.</td>
+          <td>Two Frames, stated as two. The density budgets are per-cell, so two tables cost no more than one bloated one.</td>
+        </tr>
+        <tr>
+          <td><strong>A fluent receipt.</strong> 18 slugs × a screen this large invites <em>satisfied</em> on rules the design never tested.</td>
+          <td><em>inherited</em> is a first-class verdict and the cheap honest answer for component-bound rules. The <code>short</code>-field dependency is recorded as <em>blocked</em> if it is not fully specified — Tier-3 exists to catch exactly this.</td>
+        </tr>
+        <tr>
+          <td><strong>Blindness reconstructs a worse design</strong> than the three archived runs already reached.</td>
+          <td>Accepted by the epic, by decision — and the registry is the ratchet: the three runs predate W2's 27 entries, so a verdict earned against today's <code>@use</code>/<code>@avoid</code> is a stronger artifact than one inherited from a design nobody rebuilt.</td>
+        </tr>
+        <tr>
+          <td><strong>Scope creep into W10.</strong> The <code>short</code> field is domain code, and the temptation is to just write it.</td>
+          <td>This WU commits nothing under <code>ui/src/</code>. The run <em>states</em> the nine short forms as design content; W10 lands them in <code>setup.ts</code> and closes the marker.</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
