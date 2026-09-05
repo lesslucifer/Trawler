@@ -1,0 +1,43 @@
+schema: cr/v3
+scope: "WU wu/redesign/body-viewer -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W7
+branch: wu/redesign/body-viewer
+base: 42875df5f19c30466d6fd6c1331df063b0a626a4
+head: 9cac309998d9d7e7dea6ca642a484c22266d9a64
+diff_sha256: 7221e509dd7892675a3f352a46ddc789ac01f8bd8ab9fd57e64d19ae8d7fdc23
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 19, verified: 5, waived: 0 }
+rounds:
+  - round: 1
+    tip: a8dddf9b5625619532b9f4b084f30689b6b62e7e
+    verdict: FAIL
+    verified:
+      - "CORRECTNESS/REUSE/DESIGN, important — the run rendered the too-large body absence as 'not captured — too large (12.4 MiB)' in four places while claiming the five absences come 'straight from bodyNotice'. ui/src/body.ts:150 actually returns 'not captured — too large (${body.actual} bytes)'. The other four absences quote body.ts character-for-character, which establishes the doc's quoting convention as literal — so this one read as bodyNotice's output and was not. Raised independently by two dimensions. Fixed in 8b627a3: the run now quotes the shipped string, and the humanised form it wanted became a blocked-on entry owed to W8 (a body.ts change: CutMarker's @avoid forbids raw byte counts three lines below in the same pane, and humanBytes already ships and is already used by ImageRenderer)."
+      - "ALTITUDE/SIMPLIFICATION, important — the review table's third row still described the run's first draft: it claimed Elements 'records the band as a considered-and-rejected fork' (the Elements stage contains zero occurrences of 'band' or 'Section') and that blocked-on 'hands the question to W5' (blocked-on carries only the narrower panel-zoning question). A closed, archived, gate-green artifact whose own review log contradicted itself. Fixed in 8b627a3: rewritten as what it was — a pre-run author decision the reviewer's comment overturned, kept as superseded rather than deleted."
+      - "ALTITUDE, important — the result's evidence row said 'One comment, on the Layout stage', while the run's review item carries four rows spanning six items. Fixed in 8b627a3: the row now separates the one external comment from the four instructions the flow requires recording."
+      - "DESIGN, nit — the CopyButton D2b warrant contradicted itself: it asserted 'the payload copied is not always what B shows' and then gave an example proving the opposite. The conclusion survived on an independent warrant, so it was held at nit. Fixed in 8b627a3: the real reason is that copy takes what B shows and save takes all of it, so two bare glyphs side by side would name neither."
+      - "SIMPLIFICATION/ALTITUDE, nit — the W7 plan asserted its overturned shape decision unmarked, though the result claimed 'the same rule W2 followed' and W2 struck through at BOTH levels (its WU plan's voided e2e waiver carries <s> plus a forward link). Fixed in 8b627a3: struck through with a forward link to the result."
+    refuted:
+      - "EFFICIENCY, important — 'the two-instance design doubles eager fetches per flow open and never states the cost'. The Layout sketch writes 'its own mode + fetch' into the diagram itself, the Frame carries a 'One fetch per leg+mode' row, and blocked-on explicitly defers the mounting arrangement — eager or lazy — to W5. Bodies are capped server-side at 10 MiB (src/config.rs) and the fetch early-returns on any non-captured state."
+      - "CORRECTNESS, important — 'the epic plan's edited W7 block reads as present-tense fact about shipped code'. It sits under an explicit 'Moved at review:' label, inside a flowchart whose caption states design WUs commit nothing under ui/src/, and links to W7's result which says the change becomes observable only when W6/W8 build it."
+      - "CORRECTNESS, nit — 'the result's hero overstates completion'. The same page states zero change under ui/src/ twice within a few lines."
+  - round: 2
+    tip: 8b627a3b935f1eb1390355b16ed4a4ae3fa44ea4
+    scope: "re-review of the five fixes and their blast radius by fresh correctness, design and altitude finders"
+    verdict: PASS
+    verified: []
+    refuted:
+      - "DESIGN, blocker — 'CopyButton's @avoid names BodyViewer's pane as a D2b case, so choosing the label form is a silent registry override'. The @avoid reads 'icon-only form UNLESS the payload is rendered directly adjacent (fork D2b: BodyViewer's pane, ...)' — a permissive exception clause, not a mandate; every other @avoid entry follows the same avoid-X-unless-Y convention. The fixed text concedes availability explicitly ('the fork is available. What rules it out is the neighbour') and states its rationale in the why cell, which is the flagging the claim demanded."
+      - "DESIGN, important — 'the raw-bytes fix relocates rather than resolves; the run should have specified the humanised string as the design'. Refuted by direct precedent: StatusLine's @avoid states 'shortening a domain message at the call site: the short form is the domain's to return (see the [UI_DEFER] marker in setup.ts)', and ui/src/setup.ts:187 is that marker — the same situation resolved the same way, and itself the product of a design run's round-3 review. bodyNotice is domain logic, not a component; CutMarker's @avoid binds CutMarker's own truncation statement, a different surface. Inventing a string the code does not return would have violated the flow's 'gaps escalate, they are never invented'."
+      - "DESIGN, important — 'the superseded review row is a category stretch; the spec says every reviewer instruction'. Rows 1 and 4 of the same table are also self-made calls, the schema's contract column admits 'taste', and the archived run #8 records an owner's taste call as a review row — so 'reviewer instruction' is read broadly. Recording a superseded decision documents real history the spec does not forbid."
+      - "DESIGN, nit — 'the receipt's absence-names-itself is satisfied while a blocked-on row discloses a forbidden form'. The rulebook defines that slug as 'every distinct absence gets its own wording ... two causes never share one sentence' — byte formatting is outside it. The flow defines the closing artifacts as one bundle and blocked-on sits immediately adjacent to the receipt."
+      - "DESIGN, nit — 'the result's review-round wording is self-contradictory'. It enumerates the four rows' real natures rather than claiming each is an external instruction; disclosure, not contradiction."
+    result: "Correctness returned empty after verifying all five fixes against the code and re-sweeping every ui/src/ claim in the run (all 11 mockup prop shapes, the rulebook blob, the 17 slugs, the cut-marker arithmetic, no dead links). Altitude returned empty, and independently confirmed the body.ts deferral to W8 is correct per the epic's own design/build split rather than dropped scope. The design dimension's five candidates were all refuted on the registry's and the flow spec's own text."
+design:
+  artifacts: [docs/work/2026-09-04-redesign-run-9-body-viewer.html]
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 7, verified: 2, waived: 0 }
+  verdict: PASS
+verdict: PASS
+date: 2026-09-05
