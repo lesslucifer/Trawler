@@ -515,7 +515,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
           <td>presses <em>install certificate</em></td>
           <td>
             <div class="gist">button disabled, progress line beside it — both halves</div>
-            <details class="why"><div>D → the <code>Button</code> disabled for the whole in-flight window AND a mute <code>Notice</code> "installing — approve the system prompt…" (fork D4, both halves or neither) · C step 1 → <code>StatusLine</code> shows <em>⟳ installing…</em>, which outranks every other verdict · on resolve → <code>Notice</code> becomes ok "installed. we'll confirm it on your first flow" and the verdict returns to the probe's answer ← the action never flips the step green; only a probe or captured traffic does</div></details>
+            <details class="why"><div>D → the <code>Button</code> disabled for the whole in-flight window AND a mute <code>Notice</code> "installing — approve the system prompt…" (fork D4, both halves or neither) · C step 1 → <code>StatusLine</code> shows <em>⟳ installing…</em>, which outranks every other verdict · on resolve → <code>Notice</code> becomes ok "installed. we'll confirm it on your first flow." and the verdict returns to the probe's answer ← the action never flips the step green; only a probe or captured traffic does</div></details>
           </td>
           <td>Enter / Space; focus stays on the button across the whole transition</td>
         </tr>
@@ -1087,7 +1087,7 @@ soft:
         </tr>
         <tr>
           <td><strong>Tier-3 review, round 3:</strong> the round-2 lexicon fix swapped the noun but kept a forbidden verb — "we'll confirm it's working on your first flow"</td>
-          <td><code>elements</code> · <code>mockup</code> — the <code>Notice</code> copy now reads "installed. we'll confirm it on your first flow", carrying neither <em>verify</em> nor <em>working</em></td>
+          <td><code>frame</code> · <code>elements</code> — the designed <code>Notice</code> copy now reads "installed. we'll confirm it on your first flow.", carrying neither <em>verify</em> nor <em>working</em>. The mockup mounts step 1's failure path, so the string appears there as a specimen and an acceptance line, not as mounted copy</td>
           <td>the rulebook's <strong>lexicon</strong>: <code>first flow</code> forbids <em>verify · test · done · working</em> alike — the <code>one-term-per-concept</code> slug</td>
         </tr>
         <tr>
