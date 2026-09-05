@@ -1,0 +1,59 @@
+schema: doc/v1
+epic: E-EXPORT
+wu: E-EXPORT.W7
+branch: wu/export/curl-in
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "UC-6 gains a third block, 'A single request, pasted' (id uc-6-curl), stating the second import form at the API boundary: POST /flows/import?format=curl with the command as the raw text body becomes ONE request-only flow - method, URL, headers and body as the command states them, source imported, no response and no duration because nothing was sent, the shape a captured flow already has between request and reply so every reading endpoint and the app's row already show it. Four request/answer rows: what a browser's Copy as cURL (Chrome, Firefox, Safari bash shape) or the app's own copy-as-curl emits - the URL, -X, -H, the -d family, -b, -u, --compressed in single, double or $'...' quoting with continuations - answering {imported:1} with -u/-b/--compressed arriving as the Authorization, Cookie and Accept-Encoding headers they stand for, several -d joined with &, the method defaulting as curl's does, and NOTHING curl would add at run time invented; transfer-only flags from an enumerated list consumed in silence as the one silent case; everything else (named: -F, -T, --data-urlencode, an unknown flag, a second URL, no URL, a non-absolute URL, a value curl would read from a file, -u with no password, a header with no colon, an unterminated quote, a first word that is not curl) refused 400 with a one-sentence reason NAMING the token and the capture unchanged, because a silently dropped flag yields a flow subtly unlike the pasted request; and ?format= anything but har or curl refused, absent meaning HAR unchanged. Plus: the instant is the moment it was read, and Windows cmd's Copy as cURL shape is refused rather than half-read. Links DEC-32 for the why. The export/import provenance callout now attributes the curl paste to W7 with its module and the inverse's proof (a property against a mirror anchored to the app's own pinned outputs). Header to v8 and the E-EXPORT attribution widened to name the curl paste."
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: updated
+    distills: "The UC-6 row gains its second way in: the same door under ?format=curl takes one pasted curl command - what a browser's Copy as cURL emits - as a request-only imported flow, refusing any flag outside that set by name."
+  - path: docs/decisions/dec-32-curl-parser-accepts-what-a-browser-emits.html
+    tier: T2
+    action: added
+    distills: "DEC-32, the why behind the parser's boundary. Context: copy-as-curl exists (UC-5), the inverse was requested at plan review, and curl has hundreds of flags behind a shell grammar, so the question was where to stop and what to do at the edge. Decision: accept what a developer actually pastes - a browser's Copy as cURL and toCurl - and refuse everything else naming the flag; a closed accepted set and a closed transfer-only set, a three-fates diagram (accepted/expanded, consumed, refused - no fourth), and the statement that the two lists are the arms of one lookup so code and record can only disagree if the code changes. Four alternatives rejected: reimplementing curl's CLI (hundreds of flags, most irrelevant to the wire, a permanent obligation), accepting everything and ignoring the unknown (-F ignored turns multipart into a bare POST, -G ignored moves the body - a flow subtly unlike the pasted request that the user cannot see), shelling out to curl (it would run the request, which is E-REPLAY, and tests could not be hermetic), and a shell-words dependency (the subset is small, refusals need their own wording, and $'...' which Chrome emits is outside what they read). The header-in-disguise rule as a table: a flag that IS a header expands because dropping it changes what the request is; curl's runtime defaults are never invented because the flow records the command not one tool's runtime (User-Agent: curl/8.x on a Chrome-copied request would be a lie) and because that is what keeps toCurl -> parse an exact inverse; headers in disguise a browser never emits (-A, -e, -r, -I) are refused and widening is a reopening of this record. The wire: raw body not JSON-wrapped (a wrapper adds a quoting layer to an input whose difficulty is quoting; the same bytes work from a shell with --data-binary @-), ?format=curl on the existing door with an unknown value refused naming format (the same rule ?source= follows), the refusal as HAR import's plain-text 400 written to be rendered verbatim on the paste target as the capture-controls design pinned before the parser existed, and the flow stamped at read time with HTTP/1.1 and no response. What the inverse guarantees and where it stops: equality on method, URI, headers and body proven as a property with the serializer mirrored and anchored to the TS pins, and the two shapes not round-tripped because curl itself drops or changes them (a blank header value written as -H 'Name: ', a GET with a body). Consequences: both sets closed with additions reopening the record; the Windows cmd shape refused not half-read; a pasted command is a second FORMAT behind the import door and the same mark, not a second capture format (DEC-30) and not a third provenance (DEC-31); the parser never runs the request (E-REPLAY). Ends with the one-fact-per-tier statement that the flag tables and grammar live only in src/api/curl.rs."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "The DEC-32 row after DEC-31: the parser accepts what a browser's Copy as cURL and the app's copy-as-curl emit and refuses every other token naming it, never reimplementing curl and never ignoring the unknown; flags that are headers expand while runtime defaults are never invented, which keeps toCurl -> parse an exact inverse; raw body under ?format=curl; the refusal is HAR import's plain-text 400 written for the paste target. Header to v16."
+  - path: docs/decisions/dec-30-har-as-the-interchange-format.html
+    tier: T2
+    action: updated
+    distills: "One consequence widened where a reader might otherwise think W7 contradicts the record: the 'a future format request re-opens this record' row now says the pasted curl command W7 added is NOT one - a single-request convenience behind the same import door, never a capture file - so 'HAR and only HAR' keeps its meaning; links DEC-32. Meta names W7 among the amendments."
+  - path: docs/decisions/dec-31-imported-flows-are-marked.html
+    tier: T2
+    action: updated
+    distills: "The one-ring diagram gains the third producer - a pasted curl command through flow_from_curl with source = Imported - beside the proxy and the .har file, so the picture shows every door that exists. The consequences row that predicted W7 ('a curl paste is a second format behind the same endpoint and the same mark, not a third provenance') turns past tense, adds that the mark says 'the proxy never saw this' whatever the file or command it came from, and links DEC-32. Meta names W4 and W7 among the amendments."
+  - path: docs/work/2026-09-05-export-w7-curl-in-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan, written before the code - the requirement sentence, the mapping to the epic's W7 block, UC-6, expected result 8 and settled question 8 with the note that W7 lands before W6 so the build has a real endpoint behind the paste target W5 designed, a dispatch diagram, the accepted table made concrete (each token, what it becomes, and the detail the build must honour), the closed ignored table with why the silent case is safe and why -A/-e stay out, the shell-quoting table incl. the refused Windows cmd shape and the no-dependency call, seven contract calls (the module, the ?format= dispatch, the raw body, the envelope, the header-in-disguise rule, the instant and version, and the Rust-mirror round-trip proof anchored to the TS pins), the refusal table with every reason's wording and why it is written for the paste target, nine observables, the test plan per level with the e2e waiver reasoned to the epic's own step 6, and the distillation owed incl. a new DEC-32 and architecture.html as a re-read."
+  - path: docs/work/2026-09-05-export-w7-curl-in-result.html
+    tier: T3
+    action: added
+    distills: "The WU result - delivered against all nine observables with each one's proving tests named, the shipped files with what stayed untouched (no UI-rendering file, no dependency, no route change), six contract calls the build made (-d '' as a POST with an Empty body while only -X '' is a missing value, the empty body flag still flipping the method, a path-prefixed curl accepted, several -b joined and placed last, a bare - as a URL candidate, the header value trimmed at both ends with the name verbatim), one deviation - the plan's 'any flow' round-trip claim narrowed to exclude the two shapes where toCurl's own output is lossy as curl reads it, with why the parser was not bent to match - a review-round table (the surrogate escape dropping its digits, confirmed and fixed with a red-first regression test; the redundant saw_data_flag, confirmed and removed; the UC-6 wording claim, refuted with the note's imprecision carried into this note) plus a round-2 table (the hand-rolled digit accumulator, confirmed and replaced by from_str_radix; the allocation, stale-comment, tuple and \\x-arm candidates refuted with the verifiers' evidence), plus a round-3 table (the octal arm now read through the shared digit reader and the low-byte helper's dead fallback removed, both confirmed; the UTF-8 fallback candidate refuted), the evidence table with per-level counts, the distillation ledger incl. architecture.html re-read and NOT edited with the reason, why the archived W5 run's blocked-on entry is left as written, and follow-ups: W6's paste target and importCurl, the epic e2e step 6, widening the set as a DEC-32 reopening, and no debt."
+note: >-
+  Code and test files in this diff (src/api/curl.rs, src/api/routes.rs, src/api/mod.rs,
+  tests/api.rs) carry no doc/v1 entry - they are T4, the truth the docs point at. T2 synthesis is
+  UC-6's new pasted-request block plus its index row (the what) and a new DEC-32 plus its index row
+  (the why), with DEC-30 and DEC-31 each amended by one consequence where this WU spends an
+  argument those records already made - a second format is not a second capture format, and the
+  mark covers every flow the proxy never saw. One fact per tier held deliberately: the flag tables
+  and the tokenizer's grammar live only in src/api/curl.rs and are described in the docs only by
+  their boundary (what a browser emits; an enumerated transfer-only list), never enumerated; UC-6
+  names the reasons a refusal can carry and illustrates two wordings as examples of the shape a
+  person reads on the paste target, while the full set of wordings is the code's - corrected in
+  round 2 after a verifier found the first phrasing ("not their wording") imprecise. T1
+  architecture.html was re-read as the plan required and NOT edited: its seam caption says the API
+  ingests flows the proxy never saw via HAR import, and its contract line says the API reads,
+  subscribes, ingests and removes - both stay true with a second ingest format behind the same
+  door; incomplete as an example, false nowhere, and a T1 example list is not where a format is
+  registered. The archived W5 design run is not touched: its blocked-on entry saying W7's contract
+  did not yet exist was true when written, and UC-6 plus this result are where the resolution
+  lives. verify-doc green over every doc in the tree (50 checked, none red) with every relative
+  href resolving on disk. All five edited docs were snapshotted before their first edit this
+  session and both new T3 docs and the new DEC-32 at creation, so <doc>.html?diff=latest shows
+  exactly what changed.
