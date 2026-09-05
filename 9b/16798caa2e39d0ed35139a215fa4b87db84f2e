@@ -10,6 +10,7 @@ changes:
     tier: T3
     action: added
     distills: "design run #9, closed and archived — two Frames (setup worked through, the dialog interrupting a quit), Layout for both surfaces with their overflow lines, an Elements catalog resolving 10 keyed components plus two build-local compositions, a 12-row Interaction table, a mounted mockup across both dialog modes and the failure states, 7 Tune calls, and the five closing lists. Run blind to archived runs #4/#6/#8 per the epic's stated method"
+t2_waived: "A design run ships no behaviour, so no T2 doc changes truth yet: this WU adds one design artifact and one plan under docs/work/ and touches no ui/src/ file. The epic plan assigns UC-ONBOARD's distillation to W10, where the screen is actually built. What is owed and by whom is listed below."
 distillation:
   status: deferred
   why: "A design run ships no behaviour, so no T2 doc changes truth yet. The epic plan assigns UC-ONBOARD's distillation to W10, where the screen is actually built, and docs/use-cases/web-ui.html moves then — not now."
