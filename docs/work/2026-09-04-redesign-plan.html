@@ -206,9 +206,9 @@ flowchart LR
 
       <div data-wu="E-REDESIGN.W7">
         <h3>W7 · Design run — body viewer</h3>
-        <p data-item="wu-summary">The largest run: nine registry members, six body kinds, a raw/decoded toggle and a leg switch. The Frame must state that a body is <em>wire evidence</em> — which is what forces copy-exactness and a stated truncation rather than a silent cap.</p>
+        <p data-item="wu-summary">The largest run: nine registry members, six body kinds and a raw/decoded toggle. The Frame must state that a body is <em>wire evidence</em> — which is what forces copy-exactness and a stated truncation rather than a silent cap.<br><em>Moved at review:</em> the leg switch left the pane. The panel already splits <em>Request headers</em> from <em>Response headers</em>, so a Body section switching legs inside itself stated the same fact twice; the pane now takes the leg as a prop and the panel mounts one per leg. The account is in <a href="2026-09-04-redesign-w7-result.html">W7's result</a>.</p>
         <p data-item="wu-maps-to">UC-5 (type-dispatched body viewers, raw/decoded toggle, copy/save body).</p>
-        <p data-item="wu-expected">A closed run resolving all six kinds to the family members, the mode switches to <code>SegmentedControl</code>, and the truncation statement to <code>CutMarker</code>.</p>
+        <p data-item="wu-expected">A closed run resolving all six kinds to the family members, the mode switch to <code>SegmentedControl</code>, and the truncation statement to <code>CutMarker</code>. <em>Landed:</em> every element <code>reuse</code>, zero proposals, 17/17 soft slugs receipted.</p>
         <p data-item="wu-deps">W2</p>
       </div>
 
