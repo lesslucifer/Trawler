@@ -1,0 +1,12 @@
+schema: test/v2
+level: commit
+epic: E-EXPORT
+branch: epic/export
+tests:
+  unit:
+    count: 42
+    covers: "No test changed. The commit deletes proptest-regressions/store.txt, whose two seeds were captured from deliberately inverted assertions used as review scaffolding - one to prove ring_accounting reaches the removal path, one to mutation-test the new unlink tests - rather than from any genuine failure. The whole store suite including ring_accounting and paging_a_live_ring_never_duplicates_or_skips passes without them, which is the evidence they pinned nothing: a real regression seed reproduces a real failure, and one of these shrinks to an empty store, a state no invariant here can fail. W2's proptest-regressions/api/har.txt is deliberately untouched - that seed came from an actual failure during the work and its note says so."
+note: >-
+  Housekeeping on the epic branch after W4 merged. The seeds were an artifact of proving the tests
+  work rather than of the tests catching anything, and leaving them in would misrepresent the
+  property's history to whoever reads it next.
