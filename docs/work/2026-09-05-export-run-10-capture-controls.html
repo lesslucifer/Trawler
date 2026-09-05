@@ -48,10 +48,6 @@
       border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:12px;}
     .a-ask-t{font-size:12.5px;color:var(--a-ink);}
     .a-ask-b{display:flex;gap:6px;justify-content:flex-end;}
-    .a-paste{display:flex;flex-direction:column;gap:6px;}
-    .a-ta{background:var(--a-canvas);border:1px solid var(--a-line);border-radius:3px;
-      padding:8px;font-family:var(--a-mono);font-size:12px;color:var(--a-body);
-      min-height:48px;resize:none;white-space:pre-wrap;}
     /* state switching — CSS, not script */
     .a-mock .x-only{display:none;}
     .a-mock.clearing .a-scrim{display:flex;}
@@ -65,7 +61,7 @@
     <div class="inner">
       <h1>Design run — the capture-management controls</h1>
       <p>The first three controls that change server state: take the capture out, bring one back, and empty it. Designed onto the flow list, the screen whose chrome is currently a filter bar and a list.</p>
-      <div class="meta">Design run · 2026-09-05 · Trawler · T3 (docs/work/) · <a href="2026-09-05-export-w5-controls-design-plan.html">E-EXPORT.W5</a> · UC-4 · UC-6 · UC-7 · flow: <a href="../design-flow.html">design-flow</a> · rulebook pinned <code>aeff5b0</code> · registry 18 entries · builds in <strong>W6</strong></div>
+      <div class="meta">Design run · 2026-09-05 · Trawler · T3 (docs/work/) · <a href="2026-09-05-export-w5-controls-design-plan.html">E-EXPORT.W5</a> · UC-4 · UC-6 · UC-7 · flow: <a href="../design-flow.html">design-flow</a> · rulebook pinned <code>aeff5b0</code> · registry 24 entries · builds in <strong>W6</strong></div>
     </div>
   </header>
   <main>
@@ -185,7 +181,7 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
     <h2 id="elements">3 · Elements</h2>
     <div data-item="elements" data-map data-c="elements">
       <pre class="sk">shell
-├─ A  header ─── StatusDot ◆ · title (inline) · Field ×4 ◆ · <span data-key="toned-text">TonedText</span> (count)
+├─ A  header ─── StatusDot ◆ · title (inline) · Field ×4 ◆ · count (inline span)
 │   └─ A′ acts ── <span data-key="icon-button">IconButton</span> ×3 ◆ (export ⇧ · import ⇩ · clear ⌫) · <span data-key="toned-text">TonedText</span> ◆ (progress)
 ├─ B  labels ─── column label row ▣
 ├─ C  list ───── FlowRow ▣ ×n · <span data-key="notice">Notice</span> ◆ (absences)
@@ -258,7 +254,7 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
           <td>
             <div class="gist">Nothing in the collection is a dialog, and two doors now need one.</div>
             <details class="why"><summary>why</summary>
-              <p>The registry has 18 entries and no modal, no scrim, no focus trap. <code>ProxyCloseDialog</code> exists in <code>ui/src/</code> but is a <em>screen</em>, not a collection entry — it hand-rolls its own scrim and panel. This run needs the same frame twice (the clear ask, the curl paste), and W7's paste makes a third caller likely, so the second sighting the vocabulary waits for has arrived.</p>
+              <p>The registry has 24 entries and no modal, no scrim, no focus trap. <code>ProxyCloseDialog</code> exists in <code>ui/src/</code> but is a <em>screen</em>, not a collection entry — it hand-rolls its own scrim and panel. This run needs the same frame twice (the clear ask, the curl paste), and W7's paste makes a third caller likely, so the second sighting the vocabulary waits for has arrived.</p>
               <p><strong>What the plan got wrong.</strong> The epic plan says the clear confirmation is "wired through the existing <code>useConfirm</code>". It cannot be: <code>useConfirm</code> is a ~2 s <em>after-the-fact</em> flash shared by <code>CopyText</code> and <code>CopyButton</code> — it reports that something happened, it never asks permission. Using it for a destructive act would mean clearing first and flashing afterwards. Recorded as a <a href="#blocked-on">deviation</a>, not silently corrected.</p>
               <p>Proposed rather than built here, and deliberately <em>not</em> designed in full: a component's states, tones and internal layout are its own design file's truth. This run states the two things it needs from it and leaves the rest to the proposal's owner.</p></details>
           </td>
@@ -413,7 +409,7 @@ A′ → focus returns to ⌫ ← focus-returns-to-origin</pre></details></td>
 
     <h2 id="mockup">5 · Draft mockup</h2>
     <div data-item="mockup" data-c="mockup">
-      <p>Assembled from the real collection — every <em>reuse</em> above is mounted from <code>window.Trawler</code>, never drawn. Screen-owned: the zoning, the row grid, the filter fields (they live in <code>ui/src/components.tsx</code>, outside the collection), the modal frame and the paste target. The toggle crosses to the state <a href="#interaction">Interaction row 5</a> names.</p>
+      <p>Assembled from the real collection — every <em>reuse</em> above is mounted from <code>window.Trawler</code>, never drawn. Screen-owned: the zoning, the row grid, the filter fields (they live in <code>ui/src/components.tsx</code>, outside the collection), and the modal frame. The toggle crosses to the state <a href="#interaction">Interaction row 5</a> names.</p>
       <div class="app">
         <div class="a-mock" id="mock">
           <div class="a-head" id="m-head" data-wire="none"></div>
