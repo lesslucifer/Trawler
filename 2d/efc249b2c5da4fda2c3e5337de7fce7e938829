@@ -1,0 +1,30 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W5
+branch: wu/redesign/flow-detail
+changes:
+  - path: docs/decisions/dec-31-leg-is-panel-scoped.html
+    tier: T2
+    action: added
+    distills: "The standing rule this WU produced: leg selection belongs to the panel, and every zone of a detail screen declares whether it is flow-scoped or leg-scoped. Distilled from the flow-detail design run (Tune 8, Tune 9). The record openly carries its own reversal — W5's first pass REFUSED a leg switch and was overturned on the second reviewer round once the shipped toggle was read in the code rather than assumed absent. Its code citations are pinned to ca18daa, the commit where they resolve; W8 has since deleted the toggle they point at, which is this decision taking effect rather than the citation going wrong."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-31's index row, after DEC-30 and numbered without collision. Carries the same pinned citation as the record."
+  - path: docs/work/2026-09-04-redesign-w5-flow-detail-run.html
+    tier: T3
+    action: added
+    distills: "The closed, archived design run over FlowDetail — six stages, 17/17 soft slugs receipted, stopping at the body pane which is W7's screen. Judged by the review's design dimension against rulebook aeff5b0: PASS, zero surviving findings."
+  - path: docs/work/2026-09-04-redesign-w5-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan written before the run."
+  - path: docs/work/2026-09-04-redesign-w5-result.html
+    tier: T3
+    action: added
+    distills: "The WU result across five review rounds. Records two process gaps this WU exposed and did not fix: a design run marked archived before it has ever been verified is SKIPPED by the checker rather than refused, and a review agent ran git checkout -- mid-review, destroying two applied fixes when finders are meant to be read-only."
+  - path: docs/work/2026-09-04-redesign-plan.html
+    tier: T3
+    action: updated
+    distills: "The epic plan's W7 row, the one file this sync conflicted on. Both branches had recorded the leg switch leaving the body pane, from different vantage points: the epic in the past tense with W7/W8 result docs to cite, W5 prospectively with strike-through and a DEC-31 citation. Resolved to the landed prose plus the citation. The attribution was then corrected twice under review — it first credited DEC-31/W5 with moving the leg, and said the two runs converged 'hours' apart. Neither was true: W7 deleted the switch in its own review round at 14:11, W5 closed its run at 14:16, DEC-31 was written at 15:17. The row now says what happened — moved at review on both branches, minutes apart, with W7 declining the decision record and leaving it to W5."
+t2_note: "docs/decisions/dec-31-leg-is-panel-scoped.html carries this WU's T2 truth. No use-case doc moves: DEC-31 governs where a control lives, and the observable contract in the running app was already distilled to docs/use-cases/web-ui.html by W8, which this tip merges rather than changes. design-rules-index.html needs no edit — the flow-scoped/leg-scoped split has ONE sighting, and the rulebook's own wording makes a second sighting what would promote it to a slug."
