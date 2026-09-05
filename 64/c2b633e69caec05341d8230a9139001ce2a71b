@@ -1,0 +1,79 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W7 (wu/export/curl-in) -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W7
+branch: wu/export/curl-in
+base: 358c7f131d1e070ef438a1e74b478f496a56a659
+head: 64c2b633e69caec05341d8230a9139001ce2a71b
+diff_sha256: abdf2a50e94038251c552a70c36ff8f584af2775f13c522216f4eeec7f9b37a6
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 13, verified: 5, waived: 0 }
+rounds:
+  - round: 1
+    found: 3
+    verified: 2
+    detail: >-
+      Five finders, three candidates, two confirmed. (1) push_code_point discarded the hex digits
+      take_radix had consumed when the code point named no character (a UTF-16 surrogate, a \U
+      past 0x10FFFF), emitting only the two-byte marker where bash keeps the six-byte literal -
+      verified by tokenizing both shapes and comparing with a real bash. Important, not blocker:
+      Chrome never emits a surrogate escape. (2) Command.saw_data_flag was redundant with
+      !data.is_empty(), since -d '' still pushes an empty element. Refuted: UC-6 quoting two
+      example refusal wordings and the format refusal string - a use case states the wire-visible
+      contract as the same file already does for the import envelope; the verifier noted the
+      doc/v1 note's self-description ("not their wording") was imprecise, corrected in round 2.
+  - round: 2
+    found: 5
+    verified: 1
+    detail: >-
+      Re-review of 9ed23e5 as unreviewed code. Correctness compared the fix byte-for-byte with a
+      real bash; altitude confirmed the reworded doc/v1 note. One nit confirmed: take_radix
+      accumulated the value by hand in lockstep with collecting the same digits, where
+      u32::from_str_radix over the buffer computes the identical value. Four refuted: a
+      per-escape Vec allocation (measured ~30 ns per escape over a million, bounded by the store
+      cap, the same growth the tokenizer pays per byte); the ansi_c_quoted closing sentence
+      (incomplete, not false - push_code_point's own comment carries the fact); the tuple return
+      and the \x arm's discarded digits (taste).
+  - round: 3
+    found: 3
+    verified: 2
+    detail: >-
+      Re-review of a9d9f20. Correctness checked from_str_radix against the old accumulator over
+      all 256 byte values. Two nits confirmed: the octal arm still accumulated by hand beside the
+      shared take_radix (the verifier noting the helper's no-digits-means-no-escape rule does not
+      apply to octal, whose first digit the outer match had consumed); and low_byte's
+      u8::try_from(value & 0xff).unwrap_or(u8::MAX) carried a fallback a mask to eight bits can
+      never reach. Refuted: the from_utf8 .ok() fallback in take_radix - the idiomatic panic-free
+      shape under the pinned unwrap_used lint on a genuinely radix-generic reader.
+  - round: 4
+    found: 2
+    verified: 0
+    detail: >-
+      Re-review of e295f23, which peeks for an octal digit before consuming and reads all one to
+      three digits through take_radix, and reads the low byte with to_le_bytes()[0]. Correctness
+      traced the guard's fallthrough for \0, \7, \77, \777, \0z and \8 (which stays the
+      literal \8 as before); altitude re-matched the doc/v1 entry list against the docs in the
+      diff. Two candidates, both refuted: the octal-digit predicate spelled once as a byte range
+      and once as is_digit(8) (equivalent over all 256 bytes; extracting a helper for a one-line
+      range check is the abstraction-forcing the rubric excludes), and the guard arm's if let with
+      no else (None is unreachable after the peek, every alternative spelling adds dead code or a
+      panic path, and it is the shape round 2 already refuted on the \x arm). Verdict PASS.
+verified_findings:
+  - summary: "an ANSI-C \u/\U escape naming no character drops its consumed digits instead of staying literal"
+    severity: important
+    fixed_in: 9ed23e5
+  - summary: "saw_data_flag duplicates what the data vector already says"
+    severity: nit
+    fixed_in: 9ed23e5
+  - summary: "take_radix hand-rolls the accumulation u32::from_str_radix already does over the digits it collects"
+    severity: nit
+    fixed_in: a9d9f20
+  - summary: "the octal escape arm accumulates by hand beside the shared take_radix"
+    severity: nit
+    fixed_in: e295f23
+  - summary: "low_byte carries an unreachable fallback where to_le_bytes()[0] has none"
+    severity: nit
+    fixed_in: e295f23
+waivers: []
+verdict: PASS
+date: 2026-09-05
