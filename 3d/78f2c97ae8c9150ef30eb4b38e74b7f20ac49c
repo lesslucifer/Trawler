@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W10
+branch: wu/redesign/setup-quit-build
+changes:
+  - path: docs/work/2026-09-05-redesign-w10-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan, written before the code — requirement, mapping, the eight registry members in and five hand-rolled locals out, the three changes below the screen (the short field with all sixteen values inline, StatusLine's extend, the clipboard), and a test plan concrete at all three levels with no waivers. Its load-bearing section is the deviation callout: design run #9 rules Checkbox 'its own WU, not W10', and this WU builds it anyway at the author's direction, so the plan states the cost — a registry entry with no component design file behind it, which the epic's expected result ('every component design the epic added has a roster entry') asks for — and names W11 as the inheritor rather than leaving it to be discovered."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's contract. The step rename lands in all four places the doc named 'Verify' (the step is 'make a request' now; the payoff is 'the last step'), which is a wording move the design made and the build shipped. Two genuinely NEW observable behaviours are stated because a user can see them and could not before: a copied command confirms at the value and says 'copy failed' when the browser refuses the write, where the two calls it replaces were unguarded and silent; and quitting with a proxy still set now offers to turn it off in BOTH local cases — 'foreign' included, since unset_proxy sets the OS proxy state off without reading whose address is set — and refuses to quit onto a dead proxy when that fails, opening the manual steps instead. The remote case keeps its durable opt-out. Esc, backdrop and the dismiss glyph all cancel."
+t2_note: "docs/use-cases/web-ui.html carries this WU's T2 truth — see its entry above. The quit dialog's three-mode model is stated there for the first time: the doc had NO quit-dialog content at all before this WU, so the mode change (two modes to three, 'foreign' moving from read-only notice to actionable) altered no documented claim and adds one. No decision record is owed: the build-local modal shell is design run #9's warranted proposal, recorded in the run and now built, not a new standing rule. The Checkbox deviation is deliberately NOT distilled to T2 — it is a process fact about how this WU was scoped, not a user-observable contract; it lives in the plan, in cr/v3 and in the result report, where W11 will read it."
