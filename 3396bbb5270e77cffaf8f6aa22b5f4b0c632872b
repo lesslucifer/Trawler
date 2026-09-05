@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 3396bbb5270e77cffaf8f6aa22b5f4b0c632872b
+base: ec60941b020ab233f6f9568a5f4217c34cf4dd34
+tier: key
+signer: vuluu
+report: docs/work/2026-09-04-export-w4-clear-result.html
+report_sha256: b69ca32482be55cb2eeefe4eb6956ce8342e316038f787de2c4c5891388e2ac3
+date: 2026-09-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDGK54IGQsgSi2AtDbuKmkqpJWlgj5R1DqYbbF2Jiq8Jm5XvD0Ugkxioa
+  B6KNIe14fmlb/TdWOYq93EAH9jFo4B
+  -----END SSH SIGNATURE-----
