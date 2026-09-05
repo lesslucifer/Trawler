@@ -1,0 +1,39 @@
+schema: cr/v3
+scope: "WU wu/redesign/flow-detail -> epic/redesign (epic sync + its conflict resolution)"
+epic: E-REDESIGN
+wu: E-REDESIGN.W5
+branch: wu/redesign/flow-detail
+base: 3ed73511549eb2ac276c4c3d9f7cc80e254b0e65
+head: 2defc249b2c5da4fda2c3e5337de7fce7e938829
+diff_sha256: 48465aedcb9c39690335222f29789387ebcfaf1fe65ec96a9dde343025848d59
+dimensions: [correctness, reuse, simplification, efficiency, altitude, design]
+findings: { found: 9, verified: 3, waived: 0 }
+rounds:
+  - round: 1
+    tip: 54c043d6f6c020b68dd6aa04be7b2fe10092ba51
+    scope: "the merge tip — six finders over the docs-only diff, merge-base pinned at the epic tip"
+    verified:
+      - "CORRECTNESS/ALTITUDE/EFFICIENCY, important — three finders independently found the same defect. DEC-31 proved its case by citing the shipped leg toggle at BodyViewer.tsx:148 and :196-201. Those citations were EXACT when written (git show ca18daa:ui/src/BodyViewer.tsx line 148 is the useState<Leg> per-flow default, 196-201 the two leg ModeButtons). The epic sync brought in W8, which deleted that toggle and took the file 238 -> 129 lines, so all eight citations across four docs pointed past the end of the file. The verifier established this is NOT a pre-existing issue: DEC-31 does not exist at BASE at all, and this merge is the first commit in history where the decision and the post-W8 code coexist in one tree — so the dangling citation is the diff's own to fix. It also refuted the 'accepted convention' defence by checking every other decision record: DEC-31 is the ONLY one in the repo that cites source line numbers, so no precedent protects it. Fixed in 4dd1657 by pinning all eight to ca18daa rather than deleting them — the evidence is what made the decision provable, and a reader can still run git show and read the two lines the argument rests on."
+      - "ALTITUDE, blocker as raised / nit as verified — the epic plan's W7 row, written by this session's conflict resolution, said the leg switch was 'Moved before the run' and credited 'DEC-31 (raised in W5)' as 'the decision that moved it'. The chronology refutes both: W7 deleted the switch in its own review round at 14:11 (8b627a3), W5 closed its run at 14:16 (f621253), DEC-31 was written at 15:17 (ca18daa). The verifier downgraded blocker -> nit on evidence the finder had missed, and it is the fact that settles the attribution: W7's own result explicitly DECLINES the decision record — 'None from this WU. The leg-placement reasoning is the panel's, and lands with W5/W6' — so W5 writing DEC-31 fills a gap W7 left, rather than claiming a call W7 made. W5's own blocked-on row still warns W7 about a control W7 had already removed, which proves neither branch was reading the other. Fixed in 4dd1657: the row now says moved at review on both branches, independently, with W7 declining the record and leaving it to W5."
+    refuted:
+      - "REUSE, nit — 'the W5 result's W6 follow-up row restates DEC-31 instead of linking, unlike the adjacent W7 and W8 rows.' The claim's own premise is false: W8's row carries no link to DEC-31 either, so W6 is not the outlier the finding describes. The wording is also paraphrase, not verbatim — reworded into imperative instruction form and stripped of DEC-31's supporting rationale. A follow-ups row is a work-handoff instruction, a different genre from a second assertion of a rule's reasoning. Falls under the rubric's pure-taste exclusion."
+      - "DESIGN, important — 'the Elements table dismisses Section variant=\"band\" without engaging its @use clause naming a two-leg panel's leg level as band's intended tenant.' The claim's premise is factually wrong. Section's @use describes a screen showing BOTH legs at once, each needing a grouping label. W5's final design shows ONE leg at a time: zone A is a request|response radiogroup and the Layout states outright that switching leg REPLACES the contents, never appends. DEC-31 identifies 'keep both legs stacked' as the OLD SHIPPED behaviour it rejects. So the @use clause does not describe this screen, and the row's one-line dismissal is a valid back-reference to reasoning the Layout stage already established."
+      - "ALTITUDE, important — 'DEC-31 narrates itself as having preempted a collision W7 had already resolved.' Misreads the rejected-alternatives table, which rejects the EPIC PLAN's original assignment of the leg switch to W7 — correctly labelled 'where the epic plan had put it' — not W7's actual behaviour. A decision record is written after the fact by nature; DEC-31 self-describes as 'distilled from the flow-detail design run' and openly records that W5's first pass REFUSED the leg switch and was reversed on review. An honest record of its own reversal is the opposite of self-flattering narration."
+  - round: 2
+    tip: 4dd165728afe5914d835d8a90766905b770e7aaf
+    scope: "fresh correctness + altitude finder over both fixes and their blast radius"
+    verified:
+      - "ALTITUDE, blocker — the attribution fix introduced a NEW error while correcting the old one: it said the two runs converged 'hours apart' when 8b627a3 (14:11:21) and f621253 (14:16:03) are 4m42s apart, and the fix commit's own message had already stated 'five minutes' correctly. The doc contradicted the log that introduced it. Caught by this session and by the round-2 finder independently; fixed in 2defc24. Recorded rather than quietly amended because the error was mine, made while fixing another, and the five minutes are the POINT of the sentence — two branches converging that close is what makes it parallel discovery."
+    result: "Everything else in both fixes verified sound: all eight citations correctly pinned and resolving at ca18daa; 'W7 declined the decision record and left it to W5' confirmed against W7's own distillation table; no new broken link, malformed HTML or contradiction introduced."
+  - round: 3
+    tip: 2defc249b2c5da4fda2c3e5337de7fce7e938829
+    scope: "final sweep — every factual claim in both fix commits, the W7 row's consistency with W7's result and the W8 row beside it, all eight pins, cross-document link integrity, internal contradictions, HTML well-formedness"
+    result: "EMPTY. All 8 pins verified exact against git show ca18daa:ui/src/BodyViewer.tsx. Every href across all six files resolved relative to its containing directory — zero missing targets. All six files parse with balanced, correctly nested tags including the inserted <em>/<code> spans. The 238 -> 129 line count independently corroborated. No contradiction between DEC-31, the index, the epic plan, the W5 result and the W5 run."
+design:
+  artifacts: [docs/work/2026-09-04-redesign-w5-flow-detail-run.html]
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 1, verified: 0, waived: 0 }
+  verdict: PASS
+notes: "Docs-only diff: git diff --stat base..head -- src/ ui/src/ ui/e2e/ tests/ xtask/ is empty, so no design.implements or design.undesigned is owed — the diff renders nothing. Gate 0 green on every reviewed tip. One limitation found and recorded rather than fixed: xtask's check_citation validates citation PATHS and BLOBS but never source line numbers, so no gate catches a stale file.tsx:NNN citation — this review is the only thing standing between that defect and the epic."
+verdict: PASS
+date: 2026-09-05
