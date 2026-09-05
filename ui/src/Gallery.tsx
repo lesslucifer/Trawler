@@ -557,15 +557,15 @@ export function Gallery() {
       <Section title="StatusLine — a resolved verdict (T2)">
         <Row label="the four settled glyphs">
           <div className="flex flex-col gap-chrome-y">
-            <StatusLine status={{ glyph: "✓", tone: "ok", message: "Trusted on this machine" }} />
-            <StatusLine status={{ glyph: "⚠", tone: "warn", message: "Install failed — declined" }} />
-            <StatusLine status={{ glyph: "◐", tone: "muted", message: "Can't check automatically" }} />
-            <StatusLine status={{ glyph: "○", tone: "muted", message: "Not trusted yet" }} />
+            <StatusLine status={{ glyph: "✓", tone: "ok", message: "Trusted on this machine", short: "trusted on this machine" }} />
+            <StatusLine status={{ glyph: "⚠", tone: "warn", message: "Install failed — declined", short: "install failed" }} />
+            <StatusLine status={{ glyph: "◐", tone: "muted", message: "Can't check automatically", short: "can't check automatically" }} />
+            <StatusLine status={{ glyph: "○", tone: "muted", message: "Not trusted yet", short: "not trusted yet" }} />
           </div>
         </Row>
         <Row label="in-flight — a spinner, and it outranks everything">
           <div className="flex flex-col gap-chrome-y">
-            <StatusLine status={{ glyph: "⟳", tone: "muted", message: "Installing…" }} />
+            <StatusLine status={{ glyph: "⟳", tone: "muted", message: "Installing…", short: "installing…" }} />
             <StatusLine
               name="over a stale error"
               status={trustStatus("untrusted", NOTHING_SEEN, "installing", "the last install failed")}
@@ -596,8 +596,8 @@ export function Gallery() {
         </Row>
         <Row label="with the name slot">
           <div className="flex flex-col gap-chrome-y">
-            <StatusLine name="Certificate" status={{ glyph: "✓", tone: "ok", message: "Trusted" }} />
-            <StatusLine name="System proxy" status={{ glyph: "○", tone: "muted", message: "Not set" }} />
+            <StatusLine name="Certificate" status={{ glyph: "✓", tone: "ok", message: "Trusted", short: "trusted" }} />
+            <StatusLine name="System proxy" status={{ glyph: "○", tone: "muted", message: "Not set", short: "not set" }} />
           </div>
         </Row>
         <Row label="a long message wraps">

@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { COPY, STEPS, stepStatus, type OnbEvent, type OnbState, type Step } from "./onboardingMachine";
+import { Button, CopyText, Disclosure, Notice, Select, StatusLine, StepList } from "./components/index";
 import {
   canAutoSetup,
   defaultProxyTarget,
@@ -25,34 +26,37 @@ import {
   type TrustTarget,
 } from "./setup";
 
-// The onboarding surface: a centered stepper rendered from the state machine.
-// Trust-ca (W2) and set-proxy (W3) are live; live verify (W4) lands later.
-// Back to flows shows only once a list exists.
+// The onboarding surface: a checklist of preconditions, each carrying a probed
+// verdict. Not a wizard — the steps are re-entered out of order, so there is no
+// Back/Next pair, and completion is unobservable: `stepStatus` decides which
+// step is OPEN, never whether one is DONE.
 
 // The local action states are proven-by-running only: done/failed report just
-// that the elevated command ran (or didn't). Capture is proven solely by W4's
-// live flow, so neither action ever transitions the machine.
+// that the elevated command ran (or didn't). Capture is proven solely by a live
+// flow, so neither action ever transitions the machine.
 type ActionState = "idle" | "running" | "done" | "failed";
 
-const INSTALL_NOTE: Record<ActionState, string | null> = {
-  idle: null,
-  running: "Installing — approve the system prompt…",
-  done: "Installed. We'll confirm it's working at the Verify step.",
-  failed: "Automatic install failed — use the manual steps below.",
+interface ActionNote {
+  tone: "mute" | "ok" | "warn";
+  text: string;
+}
+
+const INSTALL_NOTE: Partial<Record<ActionState, ActionNote>> = {
+  running: { tone: "mute", text: "installing — approve the system prompt…" },
+  done: { tone: "ok", text: "installed. we'll confirm it on your first flow." },
+  failed: { tone: "warn", text: "automatic install failed — use the manual steps below." },
 };
 
-const SETPROXY_NOTE: Record<ActionState, string | null> = {
-  idle: null,
-  running: "Setting the proxy — approve the prompt if asked…",
-  done: "Proxy set. We'll confirm it's working at the Verify step.",
-  failed: "Automatic setup failed — use the manual steps below.",
+const SETPROXY_NOTE: Partial<Record<ActionState, ActionNote>> = {
+  running: { tone: "mute", text: "setting the proxy — approve the prompt if asked…" },
+  done: { tone: "ok", text: "proxy set. we'll confirm it on your first flow." },
+  failed: { tone: "warn", text: "automatic setup failed — use the manual steps below." },
 };
 
-const UNSETPROXY_NOTE: Record<ActionState, string | null> = {
-  idle: null,
-  running: "Turning the proxy off — approve the prompt if asked…",
-  done: "Proxy off. Set it again to resume routing through Trawler.",
-  failed: "Couldn't turn the proxy off — follow the steps below instead.",
+const UNSETPROXY_NOTE: Partial<Record<ActionState, ActionNote>> = {
+  running: { tone: "mute", text: "turning the proxy off — approve the prompt if asked…" },
+  done: { tone: "ok", text: "proxy off. set it again to resume routing through Trawler." },
+  failed: { tone: "warn", text: "couldn't turn the proxy off — follow the steps below instead." },
 };
 
 function useAction(run?: () => Promise<void>) {
@@ -75,7 +79,9 @@ function useAction(run?: () => Promise<void>) {
   return { state, error, trigger };
 }
 
-function ActionButton({
+// Fork D4: a Button in flight is disabled AND accompanied by a progress line —
+// both halves or neither, so a dead control is never the only signal.
+function Action({
   testId,
   label,
   state,
@@ -87,54 +93,66 @@ function ActionButton({
   label: string;
   state: ActionState;
   error?: string;
-  note: Record<ActionState, string | null>;
+  note: Partial<Record<ActionState, ActionNote>>;
   onClick: () => void;
 }) {
+  const shown = note[state];
   return (
-    <div className="mb-2">
-      <button
-        type="button"
-        data-testid={testId}
-        disabled={state === "running"}
-        onClick={onClick}
-        className="rounded-button border border-hairline px-2 py-chrome-y text-ink disabled:opacity-disabled"
-      >
+    <div>
+      <Button onClick={onClick} disabled={state === "running"}>
         {label}
-      </button>
-      {note[state] && (
+      </Button>
+      {shown && (
         <div data-testid={`${testId}-status`} data-state={state} className="mt-chrome-y">
-          <p>{note[state]}</p>
-          {state === "failed" && error && (
-            <p data-testid={`${testId}-error`} className="text-warn">
-              {error}
-            </p>
-          )}
+          <Notice tone={shown.tone} detail={state === "failed" ? error : undefined}>
+            {shown.text}
+          </Notice>
         </div>
       )}
     </div>
   );
 }
 
-// P3 — the manual steps. When a one-click action exists (`collapsed`), the whole
-// per-OS block hides behind a "Set it up manually" disclosure so the happy path
-// isn't buried; otherwise it renders inline (no auto path, so it's the only way).
-// A failed auto action force-opens it — the failure note says "use the manual
-// steps below", so they must be visible when it does.
-function ManualPanel({
+// Disclosure always discloses; the host owns the "collapsed or not at all"
+// branch. With an auto path the manual steps hide behind a summary; without one
+// they are the only route, so they render bare.
+function ManualRoute({
   collapsed,
-  open,
+  defaultOpen,
   children,
 }: {
   collapsed: boolean;
-  open?: boolean;
-  children: ReactNode;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
 }) {
   if (!collapsed) return <div className="mt-2">{children}</div>;
   return (
-    <details data-testid="manual" className="mt-2" open={open}>
-      <summary className="cursor-pointer text-ink-mute">Set it up manually</summary>
-      <div className="mt-chrome-y">{children}</div>
-    </details>
+    <div className="mt-2">
+      <div data-testid="manual">
+        <Disclosure summary="set it up manually" defaultOpen={defaultOpen}>
+          {children}
+        </Disclosure>
+      </div>
+    </div>
+  );
+}
+
+function TargetPicker({
+  options,
+  value,
+  onChange,
+  label,
+}: {
+  options: readonly { id: string; label: string }[];
+  value: string;
+  onChange: (id: string) => void;
+  label: string;
+}) {
+  return (
+    <div className="mb-2 flex items-center gap-chrome-gap font-ui text-body text-ink-mute">
+      steps for
+      <Select options={[...options]} value={value} onChange={onChange} label={label} />
+    </div>
   );
 }
 
@@ -155,7 +173,7 @@ function TrustCa({
   return (
     <div className="mt-2">
       {auto && (
-        <ActionButton
+        <Action
           testId="install-ca"
           label={COPY.steps["trust-ca"].action}
           state={state}
@@ -164,36 +182,24 @@ function TrustCa({
           onClick={onInstall}
         />
       )}
-      <ManualPanel collapsed={Boolean(auto)} open={state === "failed"}>
-        <label className="flex items-center gap-2">
-          Steps for
-          <select
-            data-testid="trust-target"
-            value={target}
-            onChange={(e) => setTarget(e.target.value as TrustTarget)}
-            className="rounded-button border border-hairline bg-transparent px-chrome-x py-chrome-tight text-ink"
-          >
-            {TARGETS.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <ol data-testid="guided-steps" className="mt-chrome-y list-decimal pl-6">
-          {guidedSteps(target).map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
-        <details className="mt-2">
-          <summary className="cursor-pointer text-ink-mute">Remove the certificate later</summary>
-          <ol data-testid="removal-steps" className="mt-chrome-y list-decimal pl-6">
-            {removalSteps(target).map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
-        </details>
-      </ManualPanel>
+      <ManualRoute collapsed={Boolean(auto)} defaultOpen={state === "failed"}>
+        <TargetPicker
+          options={TARGETS}
+          value={target}
+          onChange={(id) => setTarget(id as TrustTarget)}
+          label="trust target"
+        />
+        <div data-testid="guided-steps">
+          <StepList steps={guidedSteps(target)} />
+        </div>
+        <div className="mt-2">
+          <Disclosure summary="remove the certificate later">
+            <div data-testid="removal-steps">
+              <StepList steps={removalSteps(target)} />
+            </div>
+          </Disclosure>
+        </div>
+      </ManualRoute>
     </div>
   );
 }
@@ -203,6 +209,7 @@ function SetProxy({
   addr,
   state,
   error,
+  remedy,
   onSetProxy,
   unset,
 }: {
@@ -210,6 +217,7 @@ function SetProxy({
   addr: string;
   state: ActionState;
   error?: string;
+  remedy?: string;
   onSetProxy?: () => void;
   unset: ReturnType<typeof useAction>;
 }) {
@@ -223,87 +231,55 @@ function SetProxy({
   return (
     <div className="mt-2">
       {auto && (
-        <ActionButton
-          testId="set-proxy"
-          label={COPY.steps["set-proxy"].action}
-          state={state}
-          error={error}
-          note={SETPROXY_NOTE}
-          onClick={onSetProxy}
-        />
+        <div className="mb-2 flex flex-wrap gap-chrome-gap">
+          <Action
+            testId="set-proxy"
+            label={COPY.steps["set-proxy"].action}
+            state={state}
+            error={error}
+            note={SETPROXY_NOTE}
+            onClick={onSetProxy}
+          />
+          {showStop && unset.trigger && (
+            <Action
+              testId="unset-proxy"
+              label="stop routing through Trawler"
+              state={unset.state}
+              error={unset.error}
+              note={UNSETPROXY_NOTE}
+              onClick={unset.trigger}
+            />
+          )}
+        </div>
       )}
-      {showStop && unset.trigger && (
-        <ActionButton
-          testId="unset-proxy"
-          label="Stop routing through Trawler"
-          state={unset.state}
-          error={unset.error}
-          note={UNSETPROXY_NOTE}
-          onClick={unset.trigger}
-        />
+      {remedy && (
+        <div data-testid="set-proxy-remedy" className="mb-2">
+          <Notice>{remedy}</Notice>
+        </div>
       )}
-      <ManualPanel collapsed={Boolean(auto)} open={state === "failed"}>
-        <label className="flex items-center gap-2">
-          Steps for
-          <select
-            data-testid="proxy-target"
-            value={target}
-            onChange={(e) => setTarget(e.target.value as ProxyTarget)}
-            className="rounded-button border border-hairline bg-transparent px-chrome-x py-chrome-tight text-ink"
-          >
-            {PROXY_TARGETS.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <ol data-testid="proxy-steps" className="mt-chrome-y list-decimal pl-6">
-          {proxySteps(target, addr).map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
-        {snippet && (
-          <button
-            type="button"
-            data-testid="copy-snippet"
-            onClick={() => navigator.clipboard.writeText(snippet)}
-            className="mt-chrome-y rounded-button border border-hairline px-2 py-chrome-y text-ink"
-          >
-            Copy command
-          </button>
-        )}
-        <details className="mt-2">
-          <summary className="cursor-pointer text-ink-mute">Turn the proxy off later</summary>
-          <ol data-testid="proxy-off-steps" className="mt-chrome-y list-decimal pl-6">
-            {proxyOffSteps(target).map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
-        </details>
-      </ManualPanel>
-    </div>
-  );
-}
-
-// P1 — the Verify step's prove-it: a concrete, copyable command that generates
-// the first request. Text only; the app never fires it (epic non-goal). Success
-// still flips green from a real captured flow (App watches the stream).
-function ProveIt({ addr }: { addr: string }) {
-  const cmd = proveItSnippet(addr);
-  return (
-    <div className="mt-2">
-      <pre data-testid="prove-it" className="overflow-x-auto rounded-button border border-hairline px-2 py-chrome-y text-ink">
-        {cmd}
-      </pre>
-      <button
-        type="button"
-        data-testid="copy-prove-it"
-        onClick={() => navigator.clipboard.writeText(cmd)}
-        className="mt-chrome-y rounded-button border border-hairline px-2 py-chrome-y text-ink"
-      >
-        Copy command
-      </button>
+      <ManualRoute collapsed={Boolean(auto)} defaultOpen={state === "failed"}>
+        <TargetPicker
+          options={PROXY_TARGETS}
+          value={target}
+          onChange={(id) => setTarget(id as ProxyTarget)}
+          label="proxy target"
+        />
+        <div data-testid="proxy-steps">
+          <StepList
+            steps={[
+              ...proxySteps(target, addr),
+              ...(snippet ? [<CopyText key="snippet" value={snippet} label="proxy command" />] : []),
+            ]}
+          />
+        </div>
+        <div className="mt-2">
+          <Disclosure summary="turn the proxy off later">
+            <div data-testid="proxy-off-steps">
+              <StepList steps={proxyOffSteps(target)} />
+            </div>
+          </Disclosure>
+        </div>
+      </ManualRoute>
     </div>
   );
 }
@@ -331,14 +307,12 @@ export function Onboarding({
   onSetProxy?: () => Promise<void>;
   onUnsetProxy?: () => Promise<void>;
 }) {
-  const atFirst = state.step === STEPS[0];
-  const atLast = state.step === STEPS[STEPS.length - 1];
   const install = useAction(onInstallCa);
   const setProxyAction = useAction(onSetProxy);
   const unsetProxyAction = useAction(onUnsetProxy);
 
-  // The honest per-step status (W6): a local probe or observed traffic, not the
-  // stepper's cursor. `stepStatus` still decides which step's body is expanded.
+  // The honest per-step verdict: a local probe or observed traffic, not the
+  // stepper's cursor.
   const running = (r: Running, active: boolean) => (active ? r : null);
   const statusOf = (step: Step): StepStatusView => {
     if (step === "trust-ca")
@@ -357,106 +331,80 @@ export function Onboarding({
       );
     return verifyStatus(observed);
   };
-  const toneClass = { ok: "text-ok", warn: "text-warn", muted: "text-ink-mute" } as const;
 
   return (
     <div className="flex h-full flex-col overflow-auto">
       <div className="flex justify-end px-4 py-2">
         {state.everProven && (
-          <button
-            type="button"
-            data-testid="onb-exit"
-            onClick={() => dispatch({ t: "exit" })}
-            className="rounded-button px-2 py-chrome-y text-note text-ink-mute hover:text-ink"
-          >
+          <Button onClick={() => dispatch({ t: "exit" })} frame="bare" tone="mute">
             {COPY.back}
-          </button>
+          </Button>
         )}
       </div>
 
       <div className="flex flex-1 items-center justify-center p-6">
         <div className="w-full max-w-dialog-max">
           <h2 className="text-center font-serif text-title italic text-ink">{COPY.title}</h2>
-          <p className="mb-4 text-center text-note text-ink-mute">{COPY.subtitle}</p>
+          <p className="mb-4 text-center font-ui text-note text-ink-mute">{COPY.subtitle}</p>
 
-          <ol>
-            {STEPS.map((step, i) => {
-              const status = stepStatus(state, step);
-              const active = status === "active";
-              const copy = COPY.steps[step];
-              const view = statusOf(step);
-              return (
-                <li
-                  key={step}
-                  data-testid={`step-${step}`}
-                  data-status={status}
-                  data-tone={view.tone}
-                  className={`my-2 rounded-lg border px-3 py-2 ${
-                    active ? "border-ink-mute" : "border-hairline"
-                  }`}
+          {STEPS.map((step, i) => {
+            const status = stepStatus(state, step);
+            const open = status === "active";
+            const copy = COPY.steps[step];
+            const view = statusOf(step);
+            return (
+              <div
+                key={step}
+                data-testid={`step-${step}`}
+                data-status={status}
+                data-tone={view.tone}
+                className={`my-2 rounded-lg border px-3 py-2 ${
+                  open ? "border-ink-mute" : "border-hairline"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => dispatch({ t: "goto", step })}
+                  className="flex w-full items-baseline justify-between gap-2 text-left font-ui text-body text-ink"
                 >
-                  <button
-                    type="button"
-                    onClick={() => dispatch({ t: "goto", step })}
-                    className="flex w-full items-center justify-between gap-2 text-left text-ink"
-                  >
-                    <span>
-                      {i + 1} · {copy.title}
-                    </span>
-                    <small data-testid={`step-${step}-status`} className={`text-right ${toneClass[view.tone]}`}>
-                      {view.glyph} {view.message}
-                    </small>
-                  </button>
+                  <span>
+                    {i + 1} · {copy.title}
+                  </span>
+                  <span data-testid={`step-${step}-status`} className="shrink-0">
+                    <StatusLine status={view} />
+                  </span>
+                </button>
 
-                  {active && (
-                    <div data-testid="step-body" className="mt-2 text-note text-ink-mute">
-                      <p>{copy.body}</p>
-                      {step === "trust-ca" ? (
-                        <TrustCa
-                          os={os}
-                          state={install.state}
-                          error={install.error}
-                          onInstall={install.trigger}
-                        />
-                      ) : step === "set-proxy" ? (
-                        <SetProxy
-                          os={os}
-                          addr={proxyAddr}
-                          state={setProxyAction.state}
-                          error={setProxyAction.error}
-                          onSetProxy={setProxyAction.trigger}
-                          unset={unsetProxyAction}
-                        />
-                      ) : (
-                        <ProveIt addr={proxyAddr} />
-                      )}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-
-          <div className="mt-3 flex justify-between">
-            <button
-              type="button"
-              data-testid="onb-back"
-              disabled={atFirst}
-              onClick={() => dispatch({ t: "back" })}
-              className="rounded-button border border-hairline px-3 py-chrome-y text-ink disabled:opacity-disabled"
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              data-testid="onb-next"
-              disabled={atLast}
-              onClick={() => dispatch({ t: "next" })}
-              className="rounded-button border border-hairline px-3 py-chrome-y text-ink disabled:opacity-disabled"
-            >
-              Next
-            </button>
-          </div>
+                {open && (
+                  <div data-testid="step-body" className="mt-2">
+                    <p className="font-ui text-body text-ink-mute">{copy.body}</p>
+                    {step === "trust-ca" ? (
+                      <TrustCa
+                        os={os}
+                        state={install.state}
+                        error={install.error}
+                        onInstall={install.trigger}
+                      />
+                    ) : step === "set-proxy" ? (
+                      <SetProxy
+                        os={os}
+                        addr={proxyAddr}
+                        state={setProxyAction.state}
+                        error={setProxyAction.error}
+                        remedy={view.remedy}
+                        onSetProxy={setProxyAction.trigger}
+                        unset={unsetProxyAction}
+                      />
+                    ) : (
+                      <div className="mt-2">
+                        <CopyText value={proveItSnippet(proxyAddr)} label="prove-it command" />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

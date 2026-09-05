@@ -115,7 +115,9 @@ describe("@madeof composes — the parts are reused, never re-drawn", () => {
 
   it("StatusLine renders a TonedText for its glyph", () => {
     const { container } = render(
-      <collection.StatusLine status={{ glyph: "⚠", tone: "warn", message: "install failed" }} />,
+      <collection.StatusLine
+        status={{ glyph: "⚠", tone: "warn", message: "install failed", short: "install failed" }}
+      />,
     );
 
     const toned = tonedTexts(container);
