@@ -1,6 +1,8 @@
 schema: doc/v1
 epic: E-REDESIGN
 wu: E-REDESIGN.W3
+t2_waived: "Nothing citable yet, and deliberately so - this WU produced a design, not a behaviour. No observable contract moved because zero ui/src/ files changed, so docs/use-cases/web-ui.html stays untouched: UC-4's three gains that W2's fix landed early (the reason phrase, the dot's 24px target, its accessible name) remain W4's row to state once, when the rest of its migration lands, rather than being split across two WUs. The rulebook needs an edit and must not get one here: this run found that wrap-not-truncate has no clause for a fixed-height virtualized row, but editing design-rules-index.html inside this WU would move the blob under the run's own pinned receipt and trip receipt-rulebook-stale, and W5/W7/W9 have not yet pinned it either - the flow spec freezes the substrate per run and DEC-14 grows it at distillation. Carried on the run's blocked-on to W11, where the epic's distillation plan already reserves the rulebook row for W2's held chromatic-meanings entry. No decision record is owed: one screen's zoning is not yet a standing rule, and the truncation argument is a rulebook gap rather than a decision. The verdict is recorded rather than skipped, per DoD-W check 6."
+
 changes:
   - path: docs/work/2026-09-04-redesign-w3-plan.html
     tier: T3
