@@ -1,3 +1,4 @@
+pub mod curl;
 mod decode;
 pub mod har;
 pub mod routes;
@@ -15,7 +16,8 @@ use crate::store::Store;
 use routes::AppState;
 
 /// Build the control API: the embedded UI shell, filtered listing, a HAR 1.2
-/// export of it and the import that reads one back, a connection tally
+/// export of it and the import that reads one back (or a pasted `curl`
+/// command, under `?format=curl`), a connection tally
 /// (`/stats`), full-flow detail, raw or decoded bodies, a live SSE stream, and
 /// the CA download.
 pub fn router(store: Arc<Store>, ca_cert_pem: Arc<String>) -> Router {

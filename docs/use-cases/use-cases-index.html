@@ -59,7 +59,7 @@
         <tr>
           <td><a href="web-ui.html#uc-6"><code>web-ui.html</code></a></td>
           <td><span class="badge id">UC-6</span></td>
-          <td>The HAR 1.2 round trip: out over <code>GET /flows/export</code> — the export selects what the listing lists — and back in over <code>POST /flows/import</code>, whose entries become ordinary flows marked <code>imported</code> and selectable by that mark. A body Trawler never captured is marked as such in both directions, never treated as empty; a malformed document is refused whole, changing nothing</td>
+          <td>The HAR 1.2 round trip: out over <code>GET /flows/export</code> — the export selects what the listing lists — and back in over <code>POST /flows/import</code>, whose entries become ordinary flows marked <code>imported</code> and selectable by that mark. A body Trawler never captured is marked as such in both directions, never treated as empty; a malformed document is refused whole, changing nothing. The same door under <code>?format=curl</code> takes one pasted <code>curl</code> command — what a browser's "Copy as cURL" emits — as a request-only imported flow, refusing any flag outside that set by name</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>

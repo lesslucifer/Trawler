@@ -984,6 +984,131 @@ async fn the_same_file_imported_twice_yields_two_independent_sets() {
     );
 }
 
+const CHROME_COMMAND: &str = "curl 'https://api.example.com/v1/orders?page=2' \\\n  \
+  -H 'accept: application/json' \\\n  \
+  -H 'content-type: application/json' \\\n  \
+  -H 'cookie: sid=abc' \\\n  \
+  --data-raw $'{\"note\":\"it\\'s here\"}' \\\n  \
+  --compressed";
+
+// The WU contract at the router: a browser's "Copy as cURL" lands as one
+// request-only flow that every reading endpoint already knows how to serve.
+#[tokio::test]
+async fn a_pasted_curl_command_lands_as_a_request_only_flow_marked_imported() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    store.insert(FlowBuilder::new().uri("http://live/").status(200).build());
+    let r = router_with(store.clone());
+    let mut events = store.subscribe();
+
+    let (status, result) =
+        post(&r, "/flows/import?format=curl", CHROME_COMMAND.as_bytes().to_vec()).await;
+    assert_eq!(status, StatusCode::OK, "{result}");
+    assert_eq!(result, json!({ "imported": 1 }));
+
+    let (_, listed) = json(&r, "/flows").await;
+    let rows = listed.as_array().unwrap();
+    assert_eq!(rows.len(), 2);
+    let row = &rows[0];
+    assert_eq!(row["method"], "POST");
+    assert_eq!(row["uri"], "https://api.example.com/v1/orders?page=2");
+    assert_eq!(row["source"], "imported");
+    assert!(row["status"].is_null(), "nothing was sent, so nothing answered: {row}");
+    assert!(row["duration_ms"].is_null());
+    assert_eq!(row["request_body_state"], "captured");
+
+    let id = row["id"].as_str().unwrap();
+    let (status, detail) = json(&r, &format!("/flows/{id}")).await;
+    assert_eq!(status, StatusCode::OK);
+    let headers: Vec<(&str, &str)> = detail["request_headers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|h| (h["name"].as_str().unwrap(), h["value"].as_str().unwrap()))
+        .collect();
+    assert_eq!(
+        headers,
+        [
+            ("accept", "application/json"),
+            ("content-type", "application/json"),
+            ("cookie", "sid=abc"),
+            ("Accept-Encoding", "deflate, gzip, br, zstd"),
+        ]
+    );
+    assert!(detail["response_headers"].is_null() || detail["status"].is_null(), "{detail}");
+
+    let (status, headers, body) = get(&r, &format!("/flows/{id}/request/body")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(headers["content-type"], "application/json");
+    assert_eq!(body, br#"{"note":"it's here"}"#);
+    let (status, _, _) = get(&r, &format!("/flows/{id}/response/body")).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "there is no response leg to read");
+
+    let event = tokio::time::timeout(Duration::from_secs(2), events.recv()).await.unwrap().unwrap();
+    let (name, payload) = trawler::api::view::sse_event(&event);
+    assert_eq!(name, "request", "a pasted command lands like a request the proxy saw");
+    assert_eq!(payload["flow_id"], id);
+}
+
+#[tokio::test]
+async fn a_pasted_command_is_selected_by_provenance_beside_a_har_import() {
+    let source = router_with(seeded_store());
+    let document = export_bytes(&source).await;
+    let r = router_with({
+        let store = Arc::new(Store::new(1_000_000, 64));
+        store.insert(FlowBuilder::new().uri("http://live/").status(200).build());
+        store
+    });
+    post(&r, "/flows/import", document).await;
+    post(&r, "/flows/import?format=curl", b"curl http://pasted/".to_vec()).await;
+
+    let (_, imported) = json(&r, "/flows?source=imported").await;
+    assert_eq!(imported.as_array().unwrap().len(), 5);
+    assert_eq!(imported[0]["uri"], "http://pasted/");
+    let (_, captured) = json(&r, "/flows?source=captured").await;
+    assert_eq!(rows(&captured), [("http://live/".to_owned(), "captured".to_owned())]);
+
+    let (status, result) = post(
+        &r,
+        "/flows/import?format=har",
+        b"{\"log\":{\"version\":\"1.2\",\"entries\":[]}}".to_vec(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(result, json!({ "imported": 0 }), "the HAR door is unchanged under its own name");
+}
+
+#[tokio::test]
+async fn a_refused_curl_command_names_its_fault_and_leaves_the_store_untouched() {
+    let r = router_with(seeded_store());
+    let (_, before) = json(&r, "/flows").await;
+
+    let refusals: [(&str, &str); 9] = [
+        ("", "empty command"),
+        ("wget http://a/", "not a curl command: starts with \"wget\""),
+        ("curl http://a/ -F 'file=@x'", "unsupported flag -F"),
+        ("curl http://a/ -T upload.bin", "unsupported flag -T"),
+        ("curl http://a/ --data-urlencode 'a=b'", "unsupported flag --data-urlencode"),
+        ("curl http://a/ http://b/", "a second URL: \"http://b/\""),
+        ("curl http://a/ -d @body.json", "-d @body.json reads a file"),
+        ("curl -H 'A: 1'", "no URL"),
+        ("curl 'http://a/ -H 'A: 1'", "unterminated quote"),
+    ];
+    for (command, expected) in refusals {
+        let (status, reason) =
+            post(&r, "/flows/import?format=curl", command.as_bytes().to_vec()).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{command:?}: {reason}");
+        let reason = reason.as_str().unwrap_or_default().to_owned();
+        assert!(reason.contains(expected), "expected {expected:?} in {reason:?}");
+        let (_, after) = json(&r, "/flows").await;
+        assert_eq!(after, before, "a refused command changed the capture");
+    }
+
+    let (status, reason) = post(&r, "/flows/import?format=saz", b"curl http://a/".to_vec()).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(reason, "format must be har or curl");
+    assert_eq!(json(&r, "/flows").await.1, before);
+}
+
 async fn delete(router: &Router, uri: &str) -> (StatusCode, Value) {
     let req = Request::builder().method("DELETE").uri(uri).body(Body::empty()).unwrap();
     let res = router.clone().oneshot(req).await.unwrap();

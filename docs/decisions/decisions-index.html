@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v15 · 2026-09-04 · Trawler</div>
+      <div class="meta">v16 · 2026-09-05 · Trawler</div>
     </div>
   </header>
   <main>
@@ -245,6 +245,18 @@
             body's bytes outrank a <code>size</code> that disagrees — the ring must weigh what it holds. The CORS
             grant gains <code>POST</code> for the first mutating method, <strong>extending DEC-12 rather than
             reversing it</strong>: still loopback-bound, still nothing a local <code>curl</code> cannot reach</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-32-curl-parser-accepts-what-a-browser-emits.html"><code>dec-32-curl-parser-accepts-what-a-browser-emits.html</code></a></td>
+          <td><span class="badge id">DEC-32</span></td>
+          <td><strong>The curl parser accepts what a browser's "Copy as cURL" and the app's own copy-as-curl
+            emit, and refuses every other token naming it</strong> — never reimplementing curl, never ignoring
+            what it does not understand, because a silently dropped flag yields a flow subtly unlike the pasted
+            request. Flags that <em>are</em> headers (<code>-u</code>, <code>-b</code>, <code>--compressed</code>)
+            expand; curl's runtime defaults are never invented, which is what keeps <code>toCurl → parse</code> an
+            exact inverse. The command travels as the raw body under <code>?format=curl</code>, and the refusal
+            is HAR import's plain-text <code>400</code>, written to be rendered verbatim on the paste target</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

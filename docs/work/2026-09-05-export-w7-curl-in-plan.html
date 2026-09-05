@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9beea29f34851f0dfac784" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-EXPORT.W7 plan: paste a curl command, get a flow</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-EXPORT.W7 — paste a curl command, get a flow</h1>
+      <p>The inverse of the copy-as-curl the app already ships: a parser that turns one pasted <code>curl</code> command into one request-only flow, reached as <code>POST /flows/import?format=curl</code> — accepting exactly what a browser's "Copy as cURL" and Trawler's own <code>toCurl</code> emit, and refusing everything else by name.</p>
+      <div class="meta">v1 · 2026-09-05 · Trawler · T3 WU plan · <span class="badge id">E-EXPORT.W7</span> · <a href="2026-09-04-export-plan.html#w7">epic plan</a> · <a href="2026-09-04-export-w3-har-in-result.html">W3 result</a> · <a href="2026-09-05-export-w5-controls-design-plan.html">W5 plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      <strong><code>POST /flows/import?format=curl</code> reads one <code>curl</code> command —
+      the shape a browser's "Copy as cURL" or Trawler's own <code>toCurl</code> emits, shell
+      quoting and backslash line-continuations included — and inserts one request-only flow
+      marked <code>imported</code>, carrying the command's method, URL, headers and body, with
+      <code>-u</code>, <code>-b</code> and <code>--compressed</code> expanded into the headers
+      they stand for and transfer-only flags consumed silently; any other flag, a second URL,
+      or a value the command does not itself carry is refused with <code>400</code> and a
+      reason naming it, leaving the capture unchanged.</strong>
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">
+      <span class="badge id">E-EXPORT</span> · the epic plan's
+      <a href="2026-09-04-export-plan.html#w7">W7 summary block</a> ·
+      <strong>UC-6</strong> extended to a second, single-request import form — the inverse of
+      UC-5's copy-as-curl · the epic plan's
+      <a href="2026-09-04-export-plan.html#expected">expected result 8</a> and
+      <a href="2026-09-04-export-plan.html#open-questions">settled question 8</a>, which fixed
+      the accepted flag set before a line was written. Depends on
+      <a href="2026-09-04-export-w3-har-in-result.html">W3</a>: reuses <code>Flow::imported()</code>,
+      <code>Store::import</code>, the <code>source</code> filter and the plain-text
+      <code>400</code> refusal shape. Lands <em>before</em> W6 so the build has a real
+      endpoint behind the paste target
+      <a href="2026-09-05-export-w5-controls-design-plan.html">W5</a> designed — W5's run
+      recorded this WU's refusal contract as its one open blocked-on and designed the paste
+      affordance against W3's shape; this WU honours exactly that shape.
+    </p>
+
+    <h2 id="shape">Where the parser lives</h2>
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  P["POST /flows/import
+body: the pasted command"] --> Q{"?format="}
+  Q -->|"absent · har"| H["har::flows_from_har
+(W3, unchanged)"]
+  Q -->|"curl"| C["curl::flow_from_curl
+tokenize → walk flags → one Flow"]
+  Q -->|"anything else"| R400["400 · format must be har or curl"]
+  H -->|"Vec&lt;Flow&gt;"| S["Store::import
+one lock, marked imported"]
+  C -->|"vec![flow]"| S
+  C -.->|"Err(reason)"| R["400 · plain-text reason
+naming the flag"]
+  S --> OK["200 · {imported: n}"]
+      </pre>
+      <div class="caption">Hình 1 — one door, two formats. The curl parser is a sibling of the HAR parser behind the same route, feeding the same store method, so a pasted command is inserted, marked and announced exactly as a HAR entry is.</div>
+    </div>
+
+    <h2 id="accepted">What the parser accepts — the set settled in question 8, made concrete</h2>
+    <table data-c="accepted">
+      <thead><tr><th>Token</th><th>Becomes</th><th>Detail the build must honour</th></tr></thead>
+      <tbody>
+        <tr><td>the leading <code>curl</code></td><td>required</td><td>the first word must be <code>curl</code> (a path ending in <code>/curl</code> counts); anything else is "not a curl command" — a paste target that accepts any text is not a curl paste target</td></tr>
+        <tr><td>the bare URL · <code>--url</code></td><td>the URI</td><td>exactly one, absolute, <code>http://</code> or <code>https://</code> — a second is refused as such, none is refused as such, a scheme-less or unparsable one is refused naming it</td></tr>
+        <tr><td><code>-X</code> · <code>--request</code></td><td>the method</td><td>kept as typed; absent ⇒ <code>GET</code>, or <code>POST</code> when a body flag is present — curl's own rule</td></tr>
+        <tr><td><code>-H</code> · <code>--header</code></td><td>a request header</td><td><code>Name: value</code> with the value trimmed of its leading space; <code>Name;</code> is curl's spelling of an empty value; <code>Name:</code> alone is curl's "send no such header" and adds nothing; no colon at all is refused; a value starting with <code>@</code> reads a file and is refused</td></tr>
+        <tr><td><code>-d</code> · <code>--data</code> · <code>--data-raw</code> · <code>--data-binary</code> · <code>--data-ascii</code></td><td>the request body</td><td>several are joined with <code>&amp;</code>, as curl does; <code>@file</code> under every spelling but <code>--data-raw</code> is refused because the bytes are not in the command; <code>--data-raw @x</code> is literal, exactly curl's distinction</td></tr>
+        <tr><td><code>-b</code> · <code>--cookie</code></td><td>a <code>Cookie</code> header</td><td>a value with no <code>=</code> names a cookie-jar file to curl and is refused</td></tr>
+        <tr><td><code>-u</code> · <code>--user</code></td><td><code>Authorization: Basic</code> + base64</td><td>expanded, because dropping it changes what the request is; a value with no <code>:</code> would make curl prompt for a password and is refused</td></tr>
+        <tr><td><code>--compressed</code></td><td><code>Accept-Encoding: deflate, gzip, br, zstd</code></td><td>the header a current curl build sends for it — same reason as <code>-u</code></td></tr>
+        <tr><td><code>--</code></td><td>end of flags</td><td>everything after it is the URL</td></tr>
+        <tr><td>short clusters · attached values</td><td>each letter its own flag</td><td><code>-sS</code>, <code>-XPOST</code>, <code>-d'{…}'</code> — humans type these even though browsers do not, and each letter is judged by the same tables</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="ignored">Consumed and ignored — transfer-only, never on the wire</h3>
+    <table data-c="ignored">
+      <thead><tr><th>Takes no value</th><th>Takes a value, which is skipped with it</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>-s --silent -S --show-error -k --insecure -i --include -v --verbose -L --location -f --fail -# --progress-bar --no-progress-meter -g --globoff -N --no-buffer -0 --http1.0 --http1.1 --http2 --http2-prior-knowledge --http3 --tlsv1.2 --tlsv1.3 -4 --ipv4 -6 --ipv6 --proxy-insecure --no-keepalive</code></td>
+          <td><code>-o --output -w --write-out -m --max-time --connect-timeout --retry --retry-delay -x --proxy --cacert --capath --cert --key --resolve --connect-to --max-redirs --limit-rate --interface</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="ignored-why">
+      <p>The ignore list is <strong>closed and enumerated in code</strong>; it is the only silent case and it is safe precisely because none of these leaves a trace in the request. Everything not in the accepted table or this one is refused <em>naming the flag</em> — <code>-F</code>, <code>-T</code>, <code>--form-string</code>, <code>--data-urlencode</code>, <code>-G</code>, <code>-I</code>, <code>--json</code>, <code>-A</code>, <code>-e</code>, and anything unrecognised — because silently dropping any of them would produce a flow subtly unlike the request the user pasted. <code>-A</code> and <code>-e</code> are headers in disguise like <code>-u</code>, but browsers never emit them and the settled set does not include them; a refusal that says "write it as <code>-H</code>" is one edit away, a silent guess is not.</p>
+    </div>
+
+    <h2 id="quoting">Shell quoting — what the tokenizer speaks</h2>
+    <table data-c="quoting">
+      <thead><tr><th>Form</th><th>Read as</th><th>Who emits it</th></tr></thead>
+      <tbody>
+        <tr><td>whitespace between words · <code>\</code>-newline</td><td>a word boundary · nothing (the continuation joins the lines)</td><td>every browser and <code>toCurl</code> use spaces; Chrome and Safari wrap with continuations</td></tr>
+        <tr><td><code>'…'</code></td><td>literal, no escapes; <code>'it'\''s'</code> is the idiom for an embedded quote</td><td><code>toCurl</code>, Firefox, Safari, Chrome (bash)</td></tr>
+        <tr><td><code>"…"</code></td><td>literal except <code>\"</code> <code>\\</code> <code>\$</code> <code>\`</code> and <code>\</code>-newline; <code>$VAR</code> is <em>not</em> expanded — the command is data, not a script</td><td>humans</td></tr>
+        <tr><td><code>\x</code> outside quotes</td><td>the character <code>x</code></td><td>humans</td></tr>
+        <tr><td><code>$'…'</code></td><td>ANSI-C quoting: <code>\n \t \r \\ \' \" \xHH</code> and octal; an unknown escape stays literal, as bash keeps it</td><td>Chrome, for a body carrying control characters</td></tr>
+        <tr><td>an unterminated quote</td><td>refused — "unterminated quote"</td><td>a truncated paste</td></tr>
+        <tr><td>Windows <code>cmd</code> shape (<code>^</code> continuations, <code>^"</code>)</td><td><em>not spoken</em> — the stray <code>^</code> reaches the flag walk as an unexpected argument and is refused naming it</td><td>Chrome's "Copy as cURL (cmd)" — out of the settled set, refused honestly rather than half-read</td></tr>
+      </tbody>
+    </table>
+    <p>Written in the crate rather than pulled in: the subset is small, every refusal needs its own wording, and <code>$'…'</code> is outside what the common shell-words crates read. No new dependency.</p>
+
+    <h2 id="decisions">The contract calls this WU makes</h2>
+    <table data-c="decisions">
+      <thead><tr><th>Question</th><th>Call, and why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Where does the parser live?</td>
+          <td><strong><code>src/api/curl.rs</code></strong>, beside <code>har.rs</code>: a second format behind the same import door. It is not inside <code>har.rs</code> — the two share nothing but the <code>Flow</code> they produce — and not in <code>routes.rs</code>, which stays the thin HTTP layer. One public function, <code>flow_from_curl(&amp;str) -&gt; Result&lt;Flow, CurlError&gt;</code>, and a <code>CurlError</code> whose <code>Display</code> is the refusal text.</td>
+        </tr>
+        <tr>
+          <td>How is the format selected?</td>
+          <td><strong><code>?format=</code> on the existing route</strong>: absent or <code>har</code> ⇒ W3's parser, <code>curl</code> ⇒ this one, anything else ⇒ <code>400 format must be har or curl</code> — the same refuse-by-name rule <code>?source=</code> follows, because a silently defaulted format would parse a curl command as JSON and report "not a JSON document" for the wrong reason.</td>
+        </tr>
+        <tr>
+          <td>What is the request body?</td>
+          <td><strong>The pasted command, raw, as UTF-8 text</strong> — not wrapped in JSON. A wrapper would add a quoting layer to an input whose whole difficulty is quoting; the paste target sends what was pasted. Bytes that are not UTF-8 are refused as such.</td>
+        </tr>
+        <tr>
+          <td>What does success answer?</td>
+          <td><code>{ "imported": 1 }</code> — the envelope the door already answers with. A pasted command is an import of one.</td>
+        </tr>
+        <tr>
+          <td>Which headers are synthesised?</td>
+          <td><strong>Only the ones a flag <em>is</em>.</strong> <code>-u</code>, <code>-b</code> and <code>--compressed</code> are headers spelled as flags, so they expand. curl's own runtime defaults — <code>Host</code>, <code>User-Agent</code>, <code>Accept: */*</code>, <code>Content-Length</code>, the <code>application/x-www-form-urlencoded</code> it assumes for <code>-d</code> — are <em>not</em> invented: the flow records the command, not one tool's runtime, and this is also what makes <code>toCurl → parse</code> an exact inverse rather than one that grows headers on every trip.</td>
+        </tr>
+        <tr>
+          <td>What instant and version does the flow carry?</td>
+          <td><code>started_at</code> = the moment it was read, which <code>Flow::new</code> already stamps: nothing happened on a wire, so the only truthful instant is when the flow came to exist — the same one a captured flow gets. <code>version</code> is <code>HTTP/1.1</code>, the wire default W3 already uses for a writer that recorded none. No response, no duration: the shape the store, the API and the UI already handle between request and reply.</td>
+        </tr>
+        <tr>
+          <td>How is the round trip against <code>toCurl</code> proven, given it is TypeScript?</td>
+          <td>A <strong>test-only Rust mirror of <code>toCurl</code></strong> — the ten-line serializer (<code>-X</code> omitted for <code>GET</code>, single-quoted URL, <code>-H</code> per header, <code>--data-raw</code> for a captured body, the <code>'\''</code> idiom) — drives the proptest. The mirror is anchored to the TS test file's own <em>pinned literal outputs</em> (<code>ui/src/flow.test.ts</code> asserts exact strings), each repeated as a Rust example test, so the mirror cannot drift from the TS without a test naming the drift. The e2e's real paste through the app closes the loop at epic close.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="refusals">Every refusal, and what it names</h2>
+    <table data-c="refusals">
+      <thead><tr><th>Input</th><th>Reason returned (400, plain text)</th></tr></thead>
+      <tbody>
+        <tr><td>empty or whitespace-only</td><td><code>empty command</code></td></tr>
+        <tr><td>first word is not <code>curl</code></td><td><code>not a curl command: starts with "wget"</code></td></tr>
+        <tr><td>a flag outside both tables</td><td><code>unsupported flag -F</code></td></tr>
+        <tr><td>a value-taking flag at the end of the command</td><td><code>-H needs a value</code></td></tr>
+        <tr><td>no URL</td><td><code>no URL</code></td></tr>
+        <tr><td>a second bare argument</td><td><code>a second URL: "http://other/" — one request per command</code></td></tr>
+        <tr><td>a URL that is not absolute http(s)</td><td><code>URL "example.com/x" is not an absolute http:// or https:// URL</code></td></tr>
+        <tr><td><code>-d @body.json</code> · <code>-H @headers</code> · <code>-b jar.txt</code></td><td><code>-d @body.json reads a file, whose bytes are not in the command</code></td></tr>
+        <tr><td><code>-u alice</code></td><td><code>-u has no password — curl would prompt for one</code></td></tr>
+        <tr><td><code>-H 'no colon here'</code></td><td><code>header "no colon here" has no colon</code></td></tr>
+        <tr><td>an unterminated <code>'</code> <code>"</code> or <code>$'</code></td><td><code>unterminated quote</code></td></tr>
+        <tr><td>a body that is not UTF-8</td><td><code>not UTF-8</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="refusal-shape">
+      <p>The shape is W3's, unchanged: <code>400</code> with the reason as the body, no envelope. W5's design run named this WU's contract as its one blocked-on and designed the paste target's <code>Notice</code> to render "the server's reason verbatim" — so the reason is written to be read by a person on that screen: lowercase, one sentence, the offending token quoted.</p>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <thead><tr><th>#</th><th>Observable after this WU</th><th>How a reader checks it</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>POST /flows/import?format=curl</code> with a Chrome-shaped command (continuations, <code>-H</code> lines, <code>--data-raw</code>, <code>--compressed</code>) answers <code>{"imported":1}</code>; <code>GET /flows</code> shows one new row with the method, the URL, <code>status: null</code>, <code>source: "imported"</code>; <code>GET /flows/{id}</code> carries every <code>-H</code> header plus the expanded <code>Accept-Encoding</code>; the request body endpoint returns the pasted body bytes; the response body endpoint is <code>404</code> because there is no response.</td><td>integration over the real router</td></tr>
+          <tr><td>2</td><td>Firefox's and Safari's shapes of the same request, and the one-line <code>toCurl</code> shape, parse to the same method, URL, headers and body.</td><td>unit, one literal command per shape</td></tr>
+          <tr><td>3</td><td><code>-u alice:secret</code> becomes <code>Authorization: Basic YWxpY2U6c2VjcmV0</code>; <code>-b 'a=1; b=2'</code> becomes <code>Cookie: a=1; b=2</code>; <code>--compressed</code> becomes <code>Accept-Encoding</code>; no <code>Host</code>, <code>User-Agent</code>, <code>Accept</code>, <code>Content-Type</code> or <code>Content-Length</code> is invented.</td><td>unit, one test per expansion and one asserting the absent defaults</td></tr>
+          <tr><td>4</td><td>A command carrying <code>-sS -k -L -o /dev/null --connect-timeout 5</code> yields a flow identical to the same command without them.</td><td>unit, both tables walked</td></tr>
+          <tr><td>5</td><td>A command with <code>-F</code>, <code>-T</code>, <code>--data-urlencode</code>, a second URL, <code>-d @file</code>, or no URL is refused <code>400</code> with the reason in the table above, and the listing is byte-identical before and after.</td><td>integration for the store-unchanged claim over a table of refusals; unit for every row of the refusal table</td></tr>
+          <tr><td>6</td><td><code>?format=nonsense</code> is refused naming <code>format</code>; <code>?format=har</code> and no <code>format</code> at all still import a HAR document exactly as before — every existing import test passes untouched.</td><td>unit on the handler; the existing W3 tests</td></tr>
+          <tr><td>7</td><td>Any flow rendered by <code>toCurl</code>'s shape and parsed back compares equal on method, URI, headers and body.</td><td>proptest over generated flows, the mirror anchored to the TS file's pinned outputs</td></tr>
+          <tr><td>8</td><td>The parser never panics: not on arbitrary bytes, not on a curl-shaped near-miss (a random walk of accepted flags with missing, doubled and malformed values).</td><td>two proptests</td></tr>
+          <tr><td>9</td><td>The pasted flow arrives on <code>/stream</code> as a <code>request</code> event as it lands, and <code>GET /flows?source=imported</code> selects it beside HAR-imported rows.</td><td>integration with a live SSE subscriber</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table>
+        <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="badge id">unit</span> <code>src/api/curl.rs</code></td>
+            <td>
+              <ul>
+                <li><strong>tokenizer</strong>: plain words · single quotes and the <code>'\''</code> idiom · double quotes with each recognised escape and a literal <code>$VAR</code> · a bare backslash escape · backslash-newline inside and outside quotes · <code>$'…'</code> with each escape, octal, and an unknown escape kept literal · adjacent quoted segments joined into one word · unterminated quote of each kind refused</li>
+                <li><strong>flags</strong>: each accepted spelling → its effect · <code>-H</code>'s three curl forms (<code>Name: v</code>, <code>Name;</code>, <code>Name:</code>) and the no-colon refusal · several <code>-d</code> joined with <code>&amp;</code> · <code>--data-raw @x</code> literal versus <code>-d @x</code> refused · <code>-u</code>/<code>-b</code>/<code>--compressed</code> expansions with the exact header values · the three method rules · <code>--</code> · short clusters and attached values · every ignored flag consumed, with and without its value</li>
+                <li><strong>shapes</strong>: a Chrome (bash) command, a Firefox command, a Safari command, and the pinned <code>toCurl</code> literals from <code>ui/src/flow.test.ts</code> — each asserting the whole resulting request</li>
+                <li><strong>refusals</strong>: one test per row of the refusal table, each asserting the reason names the offending token</li>
+                <li><strong>the flow</strong>: marked <code>imported</code>, no response, no duration, <code>HTTP/1.1</code>, host derived from the URL, a <code>Captured</code> body with its size or <code>Empty</code> when no body flag was given</li>
+                <li><strong>proptests</strong>: <code>a_flow_rendered_by_to_curl_parses_back_to_itself</code> — the WU's central claim, over generated methods, URLs, header lists (including values with quotes, spaces and colons) and bodies · <code>the_parser_never_panics_on_arbitrary_text</code> · <code>the_parser_never_panics_on_a_curl_shaped_near_miss</code>, whose generator builds commands from the accepted vocabulary with values missing, doubled or malformed — the load-bearing half, since random text mostly fails at the first word</li>
+              </ul>
+            </td>
+          </tr>
+          <tr>
+            <td><span class="badge id">unit</span> <code>src/api/routes.rs</code></td>
+            <td>the <code>format</code> dispatch: absent and <code>har</code> reach the HAR parser, <code>curl</code> reaches the curl parser and answers <code>{"imported":1}</code>, an unrecognised value is refused naming <code>format</code>; a refused curl command stores nothing; a non-UTF-8 body is refused</td>
+          </tr>
+          <tr>
+            <td><span class="badge id">integration</span> <code>tests/api.rs</code></td>
+            <td>Over the real axum router — this WU's bounded contract, the parser reached through the HTTP a client actually speaks: a browser-shaped command lands as a request-only imported flow readable at its detail and request-body endpoints with <code>404</code> on the response body, announced on <code>/stream</code>, and selected by <code>?source=imported</code> beside a HAR-imported row; a table of refused commands each answering <code>400</code> with the named token while the listing stays byte-identical; the HAR door unchanged under <code>?format=har</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="badge id">e2e</span></td>
+            <td><strong>waived to the epic's own step</strong>, on the reasoning W1–W4 recorded: the epic e2e (<code>tests/e2e_export.rs</code>, step 6 of the <a href="2026-09-04-export-plan.html#e2e">epic e2e plan</a>) posts a browser-shaped command and then one with an unsupported flag against the running engine, and the app half — the paste through the real window — rides the WebDriver suite after W6. A WU-level e2e here would boot the same engine to assert what that step already owns.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Hermetic:</strong> the parser touches no socket and no file; the integration layer runs the router in-process. No public network, no repo paths.</p>
+    </div>
+
+    <h2 id="distillation">Distillation this WU owes</h2>
+    <table data-c="distillation">
+      <thead><tr><th>Doc</th><th>Tier</th><th>Absorbs</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../use-cases/web-ui.html">use-cases/web-ui.html</a></td><td>T2</td><td>UC-6 gains its single-request form: the <code>?format=curl</code> request/answer rows, what a pasted command becomes, and the refusal contract at the API boundary — the app's paste target is UC-4's surface and lands with W6</td></tr>
+        <tr><td><a href="../use-cases/use-cases-index.html">use-cases-index.html</a></td><td>T2</td><td>the UC-6 row names the second way in</td></tr>
+        <tr><td><code>decisions/dec-32-…</code> (new, number confirmed at authoring)</td><td>T2</td><td>why the parser accepts the browser-emitted set and refuses the rest by name rather than reimplementing curl; why a flag that <em>is</em> a header expands while curl's runtime defaults are never invented; why the command travels raw rather than JSON-wrapped</td></tr>
+        <tr><td><a href="../decisions/dec-30-har-as-the-interchange-format.html">DEC-30</a></td><td>T2</td><td>one sentence: the curl paste is a single-request convenience behind the same door, not a second capture format — the record's "HAR and only HAR" keeps its meaning</td></tr>
+        <tr><td><a href="../decisions/dec-31-imported-flows-are-marked.html">DEC-31</a></td><td>T2</td><td>one sentence: the <code>imported</code> mark covers every flow the proxy never saw, a pasted command included</td></tr>
+        <tr><td><a href="../architecture.html">architecture.html</a></td><td>T1</td><td>re-read only: the seam caption says the API ingests flows the proxy never saw, which stays true; edited only if a statement is now false</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
