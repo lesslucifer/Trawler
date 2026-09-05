@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9bfb909f34851f0dfac7e0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W6 result (the flow detail, built)</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .met{color:var(--ok);font-weight:600}
+    .dev{color:var(--warn);font-weight:600}
+    pre.tb{font-family:var(--mono,monospace);font-size:11px;line-height:1.45;margin:0;white-space:pre}
+  </style>
+</head>
+<body data-artifact="wu-result" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W6 result — the flow detail, built</h1>
+      <p>The panel now has four zones split by scope and one model of "which leg". Every element the design
+      resolved to <em>reuse</em> is mounted from the registry, the two keyboard promises W5 receipted as
+      <em>blocked</em> are true, and the curl payload is asserted for real in the e2e for the first time.</p>
+      <div class="meta">WU result · 2026-09-05 · Trawler · T3 (docs/work/) · <code>wu/redesign/flow-detail-build</code>
+      → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · plan:
+      <a href="2026-09-05-redesign-w6-plan.html">W6 plan</a> · the design:
+      <a href="2026-09-04-redesign-w5-flow-detail-run.html">W5's run</a> · rule:
+      <a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <p data-item="outcome" data-c="outcome-lead"><strong>Delivered.</strong> Every row of the plan's expected result is
+    met. <code>FlowDetail.tsx</code> is the same length it was (127 → 130 lines) with none of its own chrome
+    left: no local <code>Section</code>, no raw <code>&lt;dl&gt;</code> rows, no <code>&lt;pre&gt;</code>, no
+    <code>copied</code> state. One test-infrastructure change the plan did not foresee and two fixes to one e2e
+    assertion are recorded under <a href="#deviations">deviations</a>; none touched the screen.</p>
+    <table data-c="outcome">
+      <thead><tr><th>#</th><th>The plan's expected result</th><th>Actual</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Opens on <em>request</em>; one leg radiogroup in the identity row; no other leg
+          control</td><td><span class="met">met</span> — <code>useState&lt;Leg&gt;("request")</code>; the
+          unit test finds exactly two radiogroups on the whole panel: <em>leg</em> and the pane's own
+          <em>request body mode</em>, and no <em>Request headers</em> / <em>Response headers</em>
+          text</td></tr>
+        <tr><td>2</td><td>Switching leg replaces the headers <em>and</em> hands the body pane the same leg;
+          the flow line does not move</td><td><span class="met">met</span> — integration: after
+          <em>response</em>, <code>content-type</code> is in and <code>accept</code> is out, the one pane
+          reads <code>data-leg="response"</code>, <code>getBody</code> is called once more and only for the
+          response leg, and the flow line's text is byte-identical. Proven again in the real window</td></tr>
+        <tr><td>3</td><td>Wire order, duplicates preserved, every value a copy target</td>
+          <td><span class="met">met</span> — three <code>set-cookie</code> rows in array order; clicking
+          <code>b=2</code> writes exactly <code>b=2</code> and the cell confirms</td></tr>
+        <tr><td>4</td><td>URI copies whole; verb, status with reason phrase, duration through the
+          components</td><td><span class="met">met</span> — <em>copy uri</em> is a button; <em>200 OK</em>
+          is the pill's accessible name; <em>42 ms</em> carries <em>42 milliseconds</em>; 1400 renders
+          <em>1.4 s</em></td></tr>
+        <tr><td>5</td><td><em>copy as curl</em> writes <code>toCurl(flow)</code>, confirms, reverts; the
+          command is nowhere in the DOM</td><td><span class="met">met</span> — fake timers over
+          <code>CONFIRM_MS</code>; the panel's text contains no <code>curl '</code>. In the e2e the payload
+          is read back from the recording clipboard stub and starts with <code>curl </code></td></tr>
+        <tr><td>6</td><td>Empty leg says so and stays selectable; null flow shows one sentence and no
+          identity row</td><td><span class="met">met</span> — both sentences as <code>Notice</code> at
+          <code>data-tone="mute"</code>; the <em>Headers</em> heading stays; neither segment is
+          disabled</td></tr>
+        <tr><td>7</td><td>Esc and ✕ close; focus returns to the opener</td><td><span class="met">met</span>
+          — unit: Esc from <code>document.body</code> fires <code>onClose</code>, including while the panel
+          is only loading; the element focused at mount has focus after close. App integration: ArrowDown,
+          Enter, Esc ends with the listbox focused and no panel. E2E: Esc dismisses the real panel</td></tr>
+        <tr><td>8</td><td>A <code>defaultPrevented</code> Esc does not close the panel</td>
+          <td><span class="met">met</span> — a dispatched Esc with <code>preventDefault()</code> already
+          called leaves <code>onClose</code> at one call</td></tr>
+        <tr><td>9</td><td>No local <code>Section</code>/<code>HeaderTable</code>, no <code>copied</code>
+          state, no <code>&lt;pre&gt;</code>; every element from <code>./components/index</code></td>
+          <td><span class="met">met</span> — the T3 local is <code>LegHeaders</code> (the design's "header
+          table": the <code>&lt;dl&gt;</code> grid plus the empty branch, 17 lines including its pragma);
+          the versions line is a four-line function</td></tr>
+        <tr><td>10</td><td>The third <code>design.implements</code> citation passes gate check 9</td>
+          <td>blob <code>1cd046c72e9de3647211da12e31c6d6d7007d7eb</code>, cited on the
+          <code>cr/v3</code> note with <code>built: [ui/src/FlowDetail.tsx]</code>; <code>App.tsx</code> was
+          not touched, so no <code>undesigned</code> declaration is owed</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="panel">What the panel is now</h2>
+    <pre class="tb" data-c="panel">┌─────────────────────────────────────────────┐
+│ GET  200  [request│response]        42 ms ✕ │  MethodLabel · StatusPill · SegmentedControl ·
+├─────────────────────────────────────────────┤  DurationText · IconButton — shrink-0, never scrolls
+│ http://example.com/a?x=1                    │  CopyText
+│ HTTP/1.1 → HTTP/2.0          [copy as curl] │  versions line (T3) · CopyButton
+├─────────────────────────────────────────────┤
+│ HEADERS                                     │  Section ▸ LegHeaders (T3) ▸ KeyValueRow × n | Notice
+│ accept          */*                         │
+├─────────────────────────────────────────────┤
+│ BODY                                        │  Section ▸ BodyViewer leg={leg}
+│ [decoded│raw]           [copy body] [↓]     │
+└─────────────────────────────────────────────┘
+  the three lower zones share one overflow-auto region</pre>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <thead><tr><th>What changed</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><span class="dev">A jsdom polyfill in <code>ui/src/setup-tests.ts</code>.</span>
+          <code>Range.prototype.getClientRects</code> and <code>getBoundingClientRect</code> now exist
+          under the test environment, returning nothing.</td>
+          <td>CodeMirror measures text on the frame after it mounts, and jsdom's <code>Range</code> has
+          neither method, so that frame always throws. On the base it threw into the virtual console and the
+          suite exited 0. On this branch the App test that reaches the response body mounts the editor
+          <em>after a click</em> — one act later than before — and the pending frame outlived the test file,
+          which turned the same error into an unhandled one and <code>pnpm test</code> into exit 1.
+          Verified both ways: the base worktree exits 0 with the identical stderr line; this branch exited
+          1 before the polyfill and 0 after. The polyfill is the honest fix — a jsdom gap closed once for every
+          test — rather than re-timing one test around it.</td></tr>
+        <tr><td><span class="dev">The curl e2e selects the button by its zone.</span>
+          <code>$('[data-testid="flow-line"] button')</code>, not <code>button=copy as curl</code>.</td>
+          <td>Two e2e runs each failed exactly one case, mine both times, in the same test. First, wdio's
+          <code>tag=text</code> selector matches direct text nodes, and <code>CopyButton</code> nests its label
+          in spans; the <code>SegmentedControl</code> segments have direct text, which is why the same idiom
+          works for them. Second, WebKit's <code>getText</code> reports the <code>visibility:hidden</code>
+          widest-label span too — the one that keeps the button from resizing when it reads <em>copied</em> —
+          so the text came back as <code>copy as curlcopy as curl</code>. The spec now matches the label rather
+          than equating it, before and after the click. Product code untouched by either fix.</td></tr>
+        <tr><td><span class="dev">Two test hooks the design does not mention.</span>
+          <code>data-testid="flow-line"</code> on zone B, and <code>data-testid="detail-loading"</code> kept on
+          a plain wrapper around the pending <code>Notice</code>.</td>
+          <td>The integration and e2e tests must read the flow line's text before and after a leg switch to
+          prove it did not move, and the existing loading testid has three consumers. Both sit on elements
+          the screen owns; no registry member gained a prop.</td></tr>
+        <tr><td><span class="dev">The T3 local is named <code>LegHeaders</code>.</span></td>
+          <td>The design calls it "header table". The plan's expected-result row 9 says the file defines no
+          <code>HeaderTable</code>, meaning the shipped inert one; a same-named replacement would have made
+          that row unfalsifiable by grep. The name says what the old one did not: it renders the selected
+          leg's headers.</td></tr>
+        <tr><td><span class="dev">Existing tests rewritten, not extended.</span> Two W8 integration tests
+          and one W8 e2e asserted two body panes on the page; three App tests and one e2e asserted the
+          <code>curl</code> testid.</td>
+          <td>Each deleted assertion maps to a design line: the two-pane layout to DEC-31 (the W8 result
+          named the panel's zoning as W6's), the rendered curl to Tune 7. Their replacements assert what the
+          design put there instead — one selector moving both zones, and the payload itself.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="fidelity">What the design said not to do, and where the code shows it did not</h2>
+    <table data-c="fidelity">
+      <thead><tr><th>The design's rule</th><th>What the code does</th></tr></thead>
+      <tbody>
+        <tr><td>"A flow-scoped zone carries no leg label" — no <em>Request</em> heading over the URI.</td>
+          <td>Zone B is a <code>div</code>, not a <code>Section</code>; the only headings on the panel are
+          <em>Headers</em> and <em>Body</em>. A unit test asserts neither <em>Request headers</em> nor
+          <em>Response headers</em> exists.</td></tr>
+        <tr><td>"One selector, never two."</td>
+          <td>The panel holds the leg once and passes it to both leg-scoped zones. The unit test counts every
+          radiogroup on the panel and finds the leg's and the pane's decode switch — nothing else.</td></tr>
+        <tr><td>"Nothing unbounded may enter row A."</td>
+          <td>Row A mounts verb, status, the two-segment control, duration and a 28px button. The URI sits in
+          B, wrapping, and scrolls away.</td></tr>
+        <tr><td>"Nothing moves on its own" — no live-ticking duration.</td>
+          <td><code>DurationText</code> receives <code>flow.duration_ms</code> and holds a transparent
+          placeholder when it is null; the screen has no timer of any kind. Its only two transients are the
+          components' own ~2 s confirms.</td></tr>
+        <tr><td>"The command is never rendered" (Tune 7).</td>
+          <td><code>toCurl(flow)</code> is called inside <code>getPayload</code>, at click time only. Unit
+          and e2e both assert the panel's text contains no <code>curl</code>.</td></tr>
+        <tr><td>"Default leg is request, always" (DEC-31) — not the per-flow rule.</td>
+          <td><code>useState&lt;Leg&gt;("request")</code>; <code>flow.response_body</code> is read nowhere in
+          the file.</td></tr>
+        <tr><td>No zebra, no eviction notice, no action slot on either <code>Notice</code>.</td>
+          <td>None of the three exists in the file.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <thead><tr><th>What</th><th>Where / result</th></tr></thead>
+      <tbody>
+        <tr><td>Unit</td><td><code>ui/src/FlowDetail.test.tsx</code> — 13 tests (the shipped file had 6),
+          twelve of them unit: pending sentence, identity row, scaled duration, URI copy and versions line,
+          in-flight line without an arrow, wire order and value copy, empty leg, curl confirm/revert/absence,
+          ✕, Esc and the claimed-Esc guard, Esc while loading, focus return.</td></tr>
+        <tr><td>Integration</td><td><code>FlowDetail.test.tsx</code> — the thirteenth test mounts the real
+          <code>BodyViewer</code> and proves one selector governs both zones while the flow line holds.
+          <code>ui/src/App.test.tsx</code> — 25 tests: one new (ArrowDown, Enter, Esc → listbox focused,
+          panel gone) and three corrected to the new contract.</td></tr>
+        <tr><td>E2E</td><td><code>ui/e2e/specs/flows.spec.ts</code> — 20 cases in the inspect and watch
+          blocks (three new: the leg selector, the curl payload via the recording clipboard, Esc); with
+          onboarding, 24 passing / 0 failing under <code>cargo xtask ui e2e</code> against the real Tauri
+          window, on the third run — the first two failed only the curl assertion recorded above, 19 + 4
+          passing each time.</td></tr>
+        <tr><td>Suites</td><td><code>cd ui &amp;&amp; pnpm test</code> — 574 passed / 43 files, exit 0 (base:
+          542). <code>pnpm exec eslint src</code> clean. <code>pnpm exec tsc --noEmit</code> clean.
+          <code>cargo fmt --check</code>, <code>cargo clippy --all-targets</code>, <code>cargo test</code>
+          (7 suites) — all green; no Rust changed.</td></tr>
+        <tr><td>Looked at</td><td>The real Tauri window, driven through the e2e harness to a flow and
+          screenshotted on each leg: the identity row reads <em>GET 200 [request | response] 3 ms ×</em>, the
+          flow line sits under it unlabelled, <em>HEADERS</em> shows <code>accept</code> and <code>host</code>
+          on the request leg and <code>content-type</code> / <code>content-length</code> / <code>date</code>
+          on the response leg, and <em>BODY</em> follows the same switch — <em>empty body</em> then
+          <em>hello from origin</em>. Nothing wraps in the 380px pane.</td></tr>
+        <tr><td>Docs</td><td><code>cargo xtask verify-doc</code> green on the W6 plan, this result, the epic
+          plan, <code>web-ui.html</code> and DEC-31.</td></tr>
+        <tr><td>Design</td><td><code>cargo xtask design-scope epic/redesign HEAD</code> lists
+          <code>ui/src/FlowDetail.tsx</code> as the one rendering surface touched; cited to W5's run at
+          blob <code>1cd046c7…</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation" data-c="distillation">
+      <thead><tr><th>Doc</th><th>Tier</th><th>What it absorbed</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../use-cases/web-ui.html">web-ui.html</a> · UC-5</td><td>T2</td>
+          <td>The contract as the running app now honours it: one leg at a time under one selector (replacing
+          W8's "both legs at once" bullet, which DEC-31 overrides), the panel opening on <em>request</em>, the
+          two absence sentences, every header value and the URI as copy targets, Esc with focus return, and
+          copy-as-curl as a labelled button whose command is never rendered and whose confirm reverts. The
+          provenance callout now names the recording clipboard stub instead of "the curl text is asserted in
+          the DOM", and the leg-selector case instead of the two-pane one.</td></tr>
+        <tr><td><a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a></td><td>T2</td>
+          <td>Its <em>What this forces → W6</em> row is marked done, the way W8's was.</td></tr>
+        <tr><td><a href="2026-09-04-redesign-plan.html">epic plan</a> · W6 block</td><td>T3</td>
+          <td>What landed, and that <code>App.tsx</code> was not needed.</td></tr>
+        <tr><td>design rules · a new decision record</td><td>—</td>
+          <td>Nothing citable. No rule was made or reversed here; the leg's placement is DEC-31's, written by
+          W5. No registry member changed, so the design-rules index needs no edit.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <thead><tr><th>What</th><th>Whose</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The quit dialog does not claim its Esc.</strong> <code>ProxyCloseDialog</code> cancels
+          on Esc without <code>preventDefault()</code>, so with a flow open, Esc on the dialog also closes the
+          panel behind it. <code>Select</code> does claim it, and the panel honours that. The fix is one call in
+          the dialog's handler; this WU has no design for that file.</td>
+          <td>W10 (the setup screen and quit dialog build)</td></tr>
+        <tr><td><strong>The CodeMirror polyfill is now shared infrastructure.</strong> Any future component
+          test that needs real rect geometry from a <code>Range</code> will get zeros, not a throw. Recorded so a
+          confusing zero is traceable to this file rather than hunted.</td>
+          <td>whoever next tests layout under jsdom</td></tr>
+        <tr><td><strong>The "curl as DOM text" waiver is retired for the button, not for the clipboard.</strong>
+          The stub proves the payload the app hands to <code>writeText</code>; the OS write itself remains a
+          manual check, as does the native save dialog.</td>
+          <td>standing — no owner</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
