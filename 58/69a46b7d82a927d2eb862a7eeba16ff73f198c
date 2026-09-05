@@ -4,13 +4,10 @@ epic: E-REDESIGN
 wu: E-REDESIGN.W3
 tests:
   unit:
-    count: 0
     waived: "The WU adds no product code — its whole output is one design run under docs/work/, and git diff --stat epic/redesign HEAD -- ui/src/ is empty. This is the E-DFLOW.W9 precedent the epic plan cites for exactly this case: the WU 'touches no product code or screens'. There is nothing to unit-test; the screen's own unit tests are W4's, where FlowList.test.tsx lands — today the only screen in ui/src/ with no adjacent test file — and each will assert the states and absences THIS design declares."
   integration:
-    count: 0
     waived: "Same precedent. There is no bounded contract in code to exercise: the contract IS the run doc, and cargo xtask verify-doc is what judges its shape. The eleven Tier-1 items, the receipt's slug coverage against the rulebook on disk, and the mockup's mount rule are the mechanical checks that stand in for an integration test here, and all are green."
   e2e:
-    count: 0
     waived: "Same precedent. No user-visible surface moves — the diff is two HTML files. UC-4's e2e runs against the rebuilt screen in W4 and the epic's own at W11. NOT waived on the grounds that nothing could move: W2's e2e waiver was voided by a review finding that its components were unreachable from the bundle, so the question was asked again here and answered by the empty ui/src/ diff rather than by assumption."
 verified:
   - "cargo xtask verify-doc docs/work/2026-09-04-flow-list-shell.html — green (design-run). receipt 17/17 soft · 14 satisfied · 2 n/a · 1 violated; hard rules 13/13 machine-checked; design-allow 0 live suppressions."
