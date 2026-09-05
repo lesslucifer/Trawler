@@ -1,0 +1,43 @@
+schema: cr/v3
+scope: "WU wu/redesign/flow-detail-build -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W6
+branch: wu/redesign/flow-detail-build
+base: 25c59e2699aa80058661ee6b20245bc6e456b23b
+head: 4b68ff79c44f3efe8ca545ba773cb9849b94f7c3
+diff_sha256: ca88b8d3bcfaacda745fc2e7c07bcad0dfa3f0bf41597cc613297e112effd60f
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 7, verified: 0, waived: 0 }
+rounds:
+  - round: 1
+    tip: ce18bc00735fcd144b36b74387f96262e9e8b40c
+    gate0: "green — fmt, clippy -D warnings, tests; cached on the identical tree (1dc2405ed3)"
+    empty: [reuse, simplification, efficiency]
+    refuted:
+      - "CORRECTNESS + ALTITUDE, important (the same claim from two finders) — 'FlowDetail's Escape handler is registered on document, and ProxyCloseDialog cancels on Esc without preventDefault, so with a flow open an Esc on the quit dialog also closes the panel behind it.' The verifier confirmed the MECHANISM is real and refuted it as a FINDING on the rubric's pre-existing exclusion and on the record: ProxyCloseDialog.tsx is not in the diff and is W10's screen; the document-level placement is the plan's stated decision (the keyboard path that opens the panel leaves focus on the list); and the WU result's follow-ups table records this exact interaction with the one-line fix assigned to W10. Recorded so the next reader sees the interaction is known, not missed."
+      - "ALTITUDE, nit — 'the Esc-dismiss-with-focus-restore logic should be a shared hook.' Refuted: document.activeElement capture-on-mount occurs once in ui/src; Select restores focus to its own trigger ref and the dialog restores nothing, so no second consumer exists; the rubric names inventing abstractions to force sharing as an anti-finding."
+    result: "PASS on ce18bc0. That tip was then signed, merged, tested by the owner against real traffic, rejected and un-merged; the mr/v1 and dod/v1 notes were withdrawn from it and its cr/v3 note stands as evidence of that round."
+  - round: 2
+    tip: 4b68ff79c44f3efe8ca545ba773cb9849b94f7c3
+    scope: "the owner's round (commit 4b68ff7) — the panel re-zoned per DEC-32: headers capped at 35% of the panel and scrolling inside, body flex-1, KeyValueRow collapsible, Section className, BodyViewer's pane filling its host and positioned, two tokens, a /headers harness route and its two e2e cases — reviewed by five fresh finders over the whole WU diff"
+    gate0: "green — cached on the identical tree (f82b18b27d)"
+    empty: [simplification, altitude]
+    refuted:
+      - "REUSE, nit — 'the jsdom overflow shim is duplicated between KeyValueRow.test.tsx and FlowDetail.test.tsx.' Refuted: setup-tests.ts is the only shared UI test file and holds global fixups only; the repo's existing precedent for this class of shim (App.test.tsx and FlowList.test.tsx both defining offsetHeight/getBoundingClientRect for react-virtual) is per-file; the two shims differ in shape (toggle-plus-afterEach for a describe block vs wrap-and-restore for one test); and the rubric excludes inventing abstractions to force sharing."
+      - "EFFICIENCY, nit — 'every collapsible KeyValueRow performs a synchronous scrollHeight/clientHeight read per row per render.' Refuted: the effect's deps are [collapsible, open, value], so it runs per mount and per value change, never per render; all rows commit together and the first read flushes one layout that the rest hit clean, since setOverflows writes no DOM; header counts are small and user-navigation-triggered — not a hot path under the rubric; DEC-32 records 'measured, not guessed' as the mechanism."
+      - "CORRECTNESS, nit — 'no resize listener, so overflows goes stale when the panel or window is resized.' Refuted: the aside is a fixed w-pane (380px, Layout.tsx:25 / tailwind.config.js) with no splitter, so no resize reaches the value column; the only width-changing event is a leg switch, which changes value on the index-keyed row and re-runs the effect; and the clamp itself applies regardless of overflows — only the toggle's visibility could desync, and no path reaches it."
+      - "CORRECTNESS, nit — 'LegHeaders keys stateful KeyValueRows by index, so a leg switch reconciles row N across unrelated headers.' Refuted: wire order with duplicates preserved (DEC-32, data-order=\"wire\") makes index the only identity-safe key — three set-cookie rows can share name and value; the reset-before-paint the claim depends on is standard useLayoutEffect semantics and is exercised by 'collapses again when the value changes under it' (KeyValueRow.test.tsx), re-run green by the verifier; an unchanged value keeping its expanded state is the documented meaning of open."
+design:
+  implements:
+    - path: docs/work/2026-09-04-redesign-w5-flow-detail-run.html
+      blob: 1cd046c72e9de3647211da12e31c6d6d7007d7eb
+      built: [ui/src/FlowDetail.tsx]
+  undesigned:
+    - path: ui/src/BodyViewer.tsx
+      why: "Two class strings on the pane W8 built from design run #9, nothing else: the root gains flex-1 and the scroll box trades a fixed max-h-body-max (256px) for flex-1 min-h-0 plus position: relative, so the pane fills the height its host now gives it and its overflow cannot leak into the document under WebKit. The dispatch, the mode switch, the actions and the seven notices are byte-identical. W8's reason for the fixed cap — a bounded box keeps the cut marker at its foot — holds at any bounded height, which the host (FlowDetail's flex-1 Section) now provides; the change is the pane inheriting DEC-32's zoning, not a re-shaped surface, and design run #9 says nothing about the pane's outer height."
+    - path: ui/src/components/KeyValueRow.tsx
+      why: "An opt-in collapsible prop, off by default, so FormRenderer and Gallery render exactly what they did: when set, the value cell is clamped to max-h-value-clamp (three wire lines) with a more/less Button under the name, shown only when a layout-effect measurement finds the value actually overflowing, and reset on value change. The value stays the verbatim CopyText — click copies the whole of it and the confirm tones the visible lines — so the member's contract lines that moved (@anatomy, @use, @avoid, @states, @madeof) are the ones its docstring now states, and DEC-32 records the rule and the rejected alternatives (ellipsis, tabs). A registry-member design file no longer exists for it (DEC-16 retired them; the docstring is the contract), and the change is a bounded addition to the component that already owns the wire pair, made because the owner's round found real traffic burying the body under thirty-line cookies."
+    - path: ui/src/components/Section.tsx
+      why: "A className pass-through onto the section element in both variants, defaulting to empty — the same affordance Button, CopyText, MethodLabel, Notice and StatusLine already have. It adds no layout of its own: the heading, padding, hairline and the transparent slot are unchanged, and a host uses it to make the zone a flex column with a min-h-0 and a max-h cap. Needed because DEC-32's zoning cannot be expressed on a member that owns no height, and recorded in its @anatomy line."
+verdict: PASS
+date: 2026-09-05
