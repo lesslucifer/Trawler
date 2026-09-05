@@ -274,7 +274,7 @@ panel-level states: <span data-key="Notice">Notice ◆</span> (pending, when flo
           <td>
             <div class="gist">Its only non-list tenant is named in its own <code>@use</code>.</div>
             <details class="why"><summary>why</summary><ul>
-              <li><span class="u-avoid">@avoid</span> "per-call-site verb styling" — the screen ships exactly that today (a bare <code>&lt;span&gt;</code> at <code>FlowDetail.tsx:69</code>), so the current code is the violation and reuse is the repair.</li>
+              <li><span class="u-avoid">@avoid</span> "per-call-site verb styling" — the screen ships exactly that today (a bare <code>&lt;span&gt;</code> at <code>FlowDetail.tsx:67</code>), so the current code is the violation and reuse is the repair.</li>
               <li><span class="u-use">@use</span> "list rows, <strong>the identity bar</strong> — pass the raw method string" — this zone is that tenant, verbatim.</li>
             </ul></details>
           </td>
@@ -287,7 +287,7 @@ panel-level states: <span data-key="Notice">Notice ◆</span> (pending, when flo
           <td>
             <div class="gist">Already reused here; the raw status is what it wants.</div>
             <details class="why"><summary>why</summary><ul>
-              <li><span class="u-avoid">@avoid</span> "pre-resolving tone at the call site" — the screen passes <code>flow.status</code> raw (<code>FlowDetail.tsx:70</code>) and resolves nothing. Clear.</li>
+              <li><span class="u-avoid">@avoid</span> "pre-resolving tone at the call site" — the screen passes <code>flow.status</code> raw (<code>FlowDetail.tsx:68</code>) and resolves nothing. Clear.</li>
               <li><span class="u-avoid">@avoid</span> "proxy connection health — StatusDot" — not this; this is an HTTP status.</li>
               <li><span class="u-use">@use</span> "anywhere a flow's HTTP outcome is shown".</li>
             </ul></details>
@@ -303,7 +303,7 @@ panel-level states: <span data-key="Notice">Notice ◆</span> (pending, when flo
             <details class="why"><summary>why</summary><ul>
               <li><span class="u-avoid">@avoid</span> "a live-ticking counter while in-flight" — cleared by the Frame quality "nothing moves on its own"; a null duration holds width, it does not tick.</li>
               <li><span class="u-avoid">@avoid</span> "tinting fast/slow with ok/warn" — this screen tones nothing by speed.</li>
-              <li><span class="u-use">@use</span> "the detail header identity bar" — named. <code>FlowDetail.tsx:71–73</code> hand-writes <code>${'{'}duration_ms{'}'} ms</code> instead.</li>
+              <li><span class="u-use">@use</span> "the detail header identity bar" — named. <code>FlowDetail.tsx:69–71</code> hand-writes <code>${'{'}duration_ms{'}'} ms</code> instead.</li>
             </ul></details>
           </td>
           <td><pre class="sk">148 ms
@@ -527,7 +527,7 @@ authorization  Bearer eyJhbGciOi…
       </table>
 
       <p><strong>T4 break-down:</strong> flow detail panel (T4) → identity bar (T3 zone) ·
-         <code>Section</code> ×5 (T1) · header table (T3) → <code>KeyValueRow</code> (T1) →
+         <code>Section</code> ×2 (T1) · header table (T3) → <code>KeyValueRow</code> (T1) →
          <code>CopyText</code> (T1) · <code>MethodLabel</code> (T2) · <code>StatusPill</code> (T2) →
          <code>TonedText</code> (T1) · <code>DurationText</code> (T1) · <code>IconButton</code> (T1) →
          <code>Button</code> (T1) · <code>CopyButton</code> (T1) → <code>Button</code> (T1) ·
@@ -816,7 +816,7 @@ list  → selection cleared, scroll
       <tr><td><strong>composed</strong><br><span class="zd">mounted from <code>window.Trawler</code></span></td>
         <td><code>MethodLabel</code> · <code>StatusPill</code> · <code>DurationText</code> ·
             <code>IconButton</code> · <strong><code>SegmentedControl</code></strong> ·
-            <code>Section</code> ×3 · <code>CopyText</code> · <code>CopyButton</code> ·
+            <code>Section</code> ×2 · <code>CopyText</code> · <code>CopyButton</code> ·
             <code>KeyValueRow</code> ×4 · <code>Notice</code> ×2 — every
             <span class="v-reuse">reuse</span> verdict, mounted. The panel is <strong>stateful</strong>:
             the selector really swaps the header table and the body stub, so the round-2 decision is
@@ -1122,19 +1122,28 @@ soft:
         <td>Interaction</td>
         <td><strong>W6</strong> (build)</td>
         <td>Designed it as the rulebook states, and receipted
-            <code>keyboard-parity: blocked</code> rather than <code>satisfied</code> — so the build
-            cannot read it as already shipped.</td>
+            <code>focus-returns-to-origin: blocked</code> rather than <code>satisfied</code> — so the
+            build cannot read it as already shipped. (<code>keyboard-parity</code> is a
+            <strong>hard</strong> rule and carries no receipt row at all: Tier-1 checks it by
+            predicate, against the keyboard path named per Interaction row, which this run does
+            supply. What is not yet true is where focus <em>lands</em>, which is the soft rule's
+            question.)</td>
       </tr>
       <tr>
-        <td><strong>W7's plan row still says the body run owns "a leg switch".</strong> This run took
-            leg selection to the panel's identity row, so that subject no longer exists inside
-            <code>BodyViewer</code> — its shipped toggle is deleted rather than redesigned.</td>
+        <td><strong>W7's plan row said the body run owns "a leg switch" — corrected in this WU.</strong>
+            This run took leg selection to the panel's identity row, so that subject no longer exists
+            inside <code>BodyViewer</code> — its shipped toggle is deleted rather than redesigned.</td>
         <td>Elements · Layout <span class="zd">(round 2)</span></td>
-        <td><strong>the epic</strong> — it edits W7's and W8's rows, which this run may not</td>
-        <td>Designed the panel-level selector and stated the consequence here. W7's run must read this
-            row before it starts, or it will design a control W5 has already removed. W8's build row
-            keeps its <code>ModeButton</code> → <code>SegmentedControl</code> swap for the
-            <em>decode</em> pair only.</td>
+        <td><strong>this WU — resolved.</strong> An earlier draft said the epic owned it, "which this
+            run may not". <strong>No such rule exists</strong> in the workflow, and W2's precedent is
+            the opposite: it edited the epic plan's W4 and W11 rows inside its own WU, on the grounds
+            that "a plan that still promises work already done is how a follow-up gets lost". Found at
+            the Tier-3 review.</td>
+        <td>Designed the panel-level selector, then <strong>corrected the epic plan here</strong>: W7's
+            summary strikes the leg switch and names where it went, its expected result narrows to the
+            <em>decode</em> switch, and W8's build row marks the <code>ModeButton</code> →
+            <code>SegmentedControl</code> swap as the decode pair <em>only</em> — the leg pair
+            (<code>BodyViewer.tsx:196–201</code>) is deleted, not swapped.</td>
       </tr>
       <tr class="withdrawn">
         <td><s><code>TextRenderer</code>'s <code>@use</code> is body-scoped, but its best fit on this
@@ -1282,14 +1291,19 @@ soft:
             doc must not restyle what it mounts</td>
       </tr>
       <tr>
-        <td>Same pass, on the receipt: <code>keyboard-parity</code> was first written
+        <td>Same pass, on the receipt: <code>focus-returns-to-origin</code> was first written
             <code>satisfied</code> because every row has a keyboard path <em>designed</em>.</td>
         <td><strong>Receipt</strong> → <code>blocked</code>, plus a blocked-on row and a callout under
             the Interaction table. A designed path is not a shipped one, and
             <code>satisfied</code> would have been the "complete, fluent and false" receipt the Tier-3
-            review exists to catch.</td>
-        <td><code>keyboard-parity</code> (hard, binds at Interaction) · the rulebook's dismiss
-            convention, which sights <kbd>Esc</kbd> on this exact panel</td>
+            review exists to catch. <strong>Corrected at the Tier-3 review:</strong> the first write-up
+            of this row named <code>keyboard-parity</code>, which is a <em>hard</em> rule and therefore
+            carries no receipt verdict to correct — the soft rule that actually holds the
+            <code>blocked</code> verdict for this defect is <code>focus-returns-to-origin</code>. The
+            catch was real; the slug was wrong.</td>
+        <td><code>focus-returns-to-origin</code> (soft, the receipted verdict) · the hard/soft split
+            itself, which the first write-up crossed · the rulebook's dismiss convention, which sights
+            <kbd>Esc</kbd> on this exact panel</td>
       </tr>
     </table>
 
