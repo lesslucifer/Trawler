@@ -1,0 +1,42 @@
+schema: cr/v3
+scope: "WU E-EXPORT.W7 (wu/export/curl-in) -> epic/export"
+epic: E-EXPORT
+wu: E-EXPORT.W7
+branch: wu/export/curl-in
+base: 358c7f131d1e070ef438a1e74b478f496a56a659
+head: fb6819bd63525827217faacefabfc0757e11e117
+diff_sha256: aa6d34840442f0307a89c34969c7971a74a072c222a0c9f57da8833945fe050e
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 8, verified: 3, waived: 0 }
+rounds:
+  - round: 1
+    found: 3
+    verified: 2
+    detail: >-
+      See the round-1 note on 28da6d3: the surrogate escape dropping its digits (important) and
+      the redundant saw_data_flag (nit), both fixed in 9ed23e5; the UC-6 wording claim refuted.
+  - round: 2
+    found: 5
+    verified: 1
+    detail: >-
+      Re-review of the fix as unreviewed code. Correctness and altitude returned clean, the
+      correctness finder having compared the fix byte-for-byte with a real bash. Four of five
+      candidates refuted by verification: the per-escape Vec allocation (measured at ~30 ns per
+      escape over a million escapes, bounded by the store cap, the same growth pattern the
+      tokenizer already pays per byte); the ansi_c_quoted doc sentence (incomplete, not false, the
+      fact carried by push_code_point's own comment); the tuple-vs-struct shape and the \x arm's
+      discarded digits (both taste). One confirmed nit: take_radix hand-rolls a digit accumulator
+      in lockstep with collecting the same digits, where u32::from_str_radix over the collected
+      buffer computes the identical value on every reachable input.
+verified_findings:
+  - summary: "an ANSI-C \u/\U escape naming no character drops its consumed digits instead of staying literal"
+    severity: important
+    fixed_in: 9ed23e5
+  - summary: "saw_data_flag duplicates what the data vector already says"
+    severity: nit
+    fixed_in: 9ed23e5
+  - summary: "take_radix hand-rolls the accumulation u32::from_str_radix already does over the digits it collects"
+    severity: nit
+waivers: []
+verdict: FAIL
+date: 2026-09-05
