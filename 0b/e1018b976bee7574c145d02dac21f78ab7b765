@@ -1,0 +1,37 @@
+schema: cr/v3
+scope: "WU E-REDESIGN.W5 (wu/redesign/flow-detail) -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W5
+branch: wu/redesign/flow-detail
+base: 42875df5f19c30466d6fd6c1331df063b0a626a4
+head: 0be1018b976bee7574c145d02dac21f78ab7b765
+diff_sha256: 3f7291041ea5c595e102fe338dca8bcf201465c9f4243d33658aa526d7e3feef
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+design:
+  artifacts: [docs/work/2026-09-04-redesign-w5-flow-detail-run.html]
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 0, verified: 0, waived: 0 }
+  verdict: PASS
+verdict: PASS
+date: 2026-09-05
+note: |
+  Round 5 of five. Design returned zero findings for the third consecutive round,
+  having re-verified every reuse verdict against the live registry, the three T3
+  verdicts against FormRenderer.tsx and Section's @avoid, the receipt's
+  inherited/blocked classifications in both directions, and all five zone-card
+  citations. Correctness raised one blocker, REFUTED at verification: it claimed
+  0be1018's message misattributes note fixes that "were already applied in
+  24c4620", inferring this from the test/v2 and doc/v1 notes being byte-identical
+  on both commits. Notes are mutable and attached out of band, so identical
+  present-day content proves nothing about when it was written. The notes ref's
+  own history settles it: 24c4620 was committed 17:02:46 and its note at that time
+  (notes-commit 6046d4a, 17:03:43) still CONTAINED the invented rule; the
+  retraction was written at 17:07:58 (notes-commit 85fb900), during round 4's fix
+  pass, and 0be1018 followed at 17:14:20. The message is accurate.
+  Prior rounds, all FAIL, all fixed on their own tips: round 1 (f621253) 9
+  findings incl. a blocker; round 2 (934307b) 8 incl. a claimed-but-never-applied
+  epic-plan edit; round 3 (ca18daa) 4 incl. two note blockers; round 4 (24c4620) 3
+  incl. one note blocker. Every finding across five rounds was documentation
+  bookkeeping or a stale citation; none was a design defect.
