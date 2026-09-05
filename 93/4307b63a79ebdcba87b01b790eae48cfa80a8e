@@ -1,0 +1,27 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W5
+changes:
+  - path: docs/work/2026-09-04-redesign-w5-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan — requirement, mapping to UC-5 and the epic's W5 row, the five zones as they ship with what each costs today, the W7 seam stated once, the two calls the epic plan hands this run, the expected result per stage, the test plan with its three waivers, and the risks. Its zone-card file:line citations were re-derived from FlowDetail.tsx at the Tier-3 review: three of the four pointed at ranges covering the wrong sections."
+  - path: docs/work/2026-09-04-redesign-w5-flow-detail-run.html
+    tier: T3
+    action: added
+    distills: "the design run itself — six stages and five closing lists, closed, verify-doc green, then archived. Frame (four goals, six constraints including 'two scopes, not one', three qualities, Given/Not-given as first-class lines); Layout (one pinned identity row carrying the leg selector, an unlabelled flow line, two leg-scoped zones, and an overflow line naming every unbounded zone and its cap owner); Elements (13 rows, every verdict traced to the entry's @avoid read FIRST); Interaction (seven use cases as zone-to-delta with UNCHANGED spelled out and a keyboard path each); a stateful mounted mockup; nine Tune calls; and the receipt, capabilities, proposals, blocked-on and review lists."
+  - path: docs/work/2026-09-04-redesign-plan.html
+    tier: T3
+    action: updated
+    distills: "the epic's W7 and W8 rows, corrected to what this WU actually left them. W7's summary strikes 'and a leg switch' and names where it went (the panel, W5); its expected result narrows to the decode switch. W8's build row marks the ModeButton to SegmentedControl swap as the DECODE PAIR ONLY, since the leg pair at BodyViewer.tsx:196-201 is deleted rather than swapped. Done in this WU on W2's precedent (d7f186c edited the epic plan's W4 and W11 rows in its own WU): a plan that still promises work already done is how a follow-up gets lost. An earlier draft of this WU asserted 'W5 may not edit W7's plan row' — no such rule exists in the workflow, and the Tier-3 review found the invention."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: unchanged
+    distills: "read as substrate and pinned at aeff5b0fb4dea94ab5f0b7c385b8188786666e8a; re-checked at close and unmoved. No rule was added or amended — the vocabulary covered the screen."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: unchanged
+    distills: "UC-5's contract does not change shape: a design run ships no behaviour. Its observable gains (the reverting copy confirm, the empty-leg sentence, the toned verb, Esc) become true in W6 and are stated there, so one UC row is not split across two WUs — the discipline W2 applied by leaving UC-4's wording to W4."
+distillation:
+  ran: true
+  outcome: "Checklist walked row by row. 'Behaviour changed or got defined?' — no: this WU ships no code and UC-5's contract is untouched. 'Non-obvious choice made or reversed?' — YES, and examined rather than assumed: this run reversed leg selection from BodyViewer to the panel, which deletes a shipped control and redirects W7 and W8. Judged SCREEN-LOCAL and deliberately not written to docs/decisions/: the reversal is recorded in the run's Tune 8, in its blocked-on, and now in the epic plan's W7/W8 rows, which is where a reader of W7 actually meets it. If a third screen needs the same leg-scoping rule, that second sighting is the signal to open a DEC and the design-rules entry with it. 'Design convention surfaced or locked?' — not yet, by the same reasoning: one sighting is not a pattern. 'Component map or invariant changed?' — no. 'Repeating process changed?' — no. 'T0 rule?' — no. NOTE: an earlier version of this note cited DEC-16 to conclude 'nothing to distil UP'. That was a misread — DEC-16 governs a built component's design file retiring into its TSDoc, and has no bearing on a screen run — and it let the 'reversed choice' row go unexamined behind the wrong rule. Found at the Tier-3 review; the row is examined above on its own terms."
