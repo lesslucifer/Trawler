@@ -217,7 +217,22 @@
       </table>
       <p>Both behaviours the fix introduced were pinned before being trusted: a middle row removed
       by the single-id path, and an id named twice debited once. Each was mutation-tested against
-      deliberately broken code and observed to fail, so neither passes vacuously.</p>
+      deliberately broken code and observed to fail, so neither passes vacuously. Two properties of
+      the fix were also verified rather than argued: the <code>retain</code> predicate
+      <em>inverted</em> (from "keep what the map still holds" to "drop what we removed"), proven
+      equivalent by asserting the underlying order/map correspondence inside <code>unlink</code>
+      and running the suite — it holds across the proptests' randomised insert, import, evict and
+      remove sequences; and <code>doomed</code> can only carry a duplicate if the order does, which
+      freshly minted ids preclude and <code>a_repeated_id_is_debited_once</code> guards regardless.</p>
+      <p><strong>Round 2</strong> re-reviewed the fix as the unreviewed code it was. Two finders
+      independently found the same single defect and nothing else: the edit that extracted
+      <code>debit</code> left the old <code>unlink</code> comment above it, so the new function
+      carried two docstrings — the first naming a <code>doomed</code> parameter it does not take
+      and asserting the one-helper design the fix had just <em>rejected</em>. That is the first
+      round's own finding reintroduced by the edit that fixed it, which is the argument for
+      re-reviewing a fix rather than trusting it. Corrected in <code>5846170</code>, with a sweep
+      confirming no other stale claim survives in the code or the docs. The correctness finder
+      reported no findings on the three properties above.</p>
     </div>
 
     <h2 id="distillation">Distillation</h2>
