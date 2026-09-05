@@ -1,0 +1,16 @@
+level: wu
+wu: E-EXPORT.W5
+unit:
+  waived: "design-only diff - the WU adds two T3 HTML docs and three rulebook rows; no src/ or ui/src/ bytes change. The deliverable is proven by Tier-1 (cargo xtask verify-doc) on every write and at turn end, and by cargo xtask ui specimens --check on the mockup"
+integration:
+  waived: "no bounded contract changes - the run designs against W2/W3/W4 endpoints already covered by their own integration tests"
+e2e:
+  waived: "deferred to the epic e2e step per the epic plan - the WebDriver row covering export -> clear -> import -> curl paste needs W6 built controls, which this WU does not build"
+verified:
+  - "cargo xtask verify-doc <run>: green as ready - receipt 17/17 soft, 13/13 hard, 0 suppressions, then archived"
+  - "cargo xtask verify-doc <plan>: green (wu-plan)"
+  - "mockup renders headless Chrome with a clean console: all four mounts non-empty (m-head, m-labels, m-rows, m-ask)"
+  - "mockup JSX compiles under esbuild; every mounted prop checked against the real component signature in ui/src/components/"
+  - "the import mark measured in the browser: 12px wide on every row, every timestamp at left=36 - Tune T4 alignment claim proven, not asserted"
+note:
+  - "cargo xtask ui specimens --check fails in this sandbox for THIS run and equally for the already-merged prior run (epic/redesign flow-list-shell): the Babel CDN is too slow to load, so no text/babel block executes. Reproduced both ways; verified green with a locally cached babel.min.js"
