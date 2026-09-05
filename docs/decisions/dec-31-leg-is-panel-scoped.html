@@ -30,7 +30,9 @@
     <p>The shipped flow detail panel answered "which leg am I looking at?" <strong>twice, differently</strong>.
        Its header tables stacked both legs at once — <em>Request headers</em> above
        <em>Response headers</em> — while the body pane beneath them carried its own
-       request/response toggle (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>). Nothing
+       request/response toggle (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>
+       <em>as it stood at <code>ca18daa</code></em> — W8 has since deleted it, which is this
+       decision taking effect). Nothing
        connected the two: scrolling past both header tables and then switching the body's leg was the
        only way to read one leg's headers beside that leg's body.</p>
     <div class="callout warn" data-c="two-models">
@@ -125,8 +127,8 @@
                 accordingly.</td></tr>
         <tr><td><strong>W8</strong><br><span class="meta">build the body viewer</span></td>
             <td>The <code>ModeButton</code> → <code>SegmentedControl</code> swap applies to the
-                <strong>decode pair only</strong>. The leg pair at <code>BodyViewer.tsx:196–201</code>
-                is <strong>deleted</strong>, not swapped.</td></tr>
+                <strong>decode pair only</strong>. The leg pair — <code>BodyViewer.tsx:196–201</code> at <code>ca18daa</code> —
+                is <strong>deleted</strong>, not swapped. <em>Done: W8 deleted it.</em></td></tr>
         <tr><td><strong>Any later screen</strong><br><span class="meta">that shows per-leg data</span></td>
             <td>Declare each zone's scope before laying it out. A second sighting of this rule is what
                 would lock it into <a href="../design-rules/design-rules-index.html">the rulebook</a> as

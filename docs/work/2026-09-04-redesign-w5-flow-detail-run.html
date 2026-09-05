@@ -514,7 +514,7 @@ authorization  Bearer eyJhbGciOi…
             <div class="gist">This run owns the slot; W7 owns everything inside it.</div>
             <details class="why"><summary>why</summary><ul>
               <li>Resolved by this run: the zone exists, is labelled "Body", sits last in the scan order, and takes no cap of its own — the shared scroll region and the renderer family's own caps cover it.</li>
-              <li><strong>The seam moved, deliberately (round 2).</strong> The epic plan's W7 row lists "a raw/decoded toggle <em>and a leg switch</em>" among the body run's subjects, and <code>BodyViewer</code> shows one today (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>). Leaving it there would have kept two leg selectors on one panel — the inconsistency the reviewer named. <strong>Leg is now the panel's, selected in the identity row; the body reads it as a prop.</strong> W7's leg switch is therefore <em>deleted</em>, not redesigned, and its run shrinks to the decode toggle, the dispatch and the absences. Recorded in <a href="#blocked">blocked-on</a> for the epic to carry into W7's plan row.</li>
+              <li><strong>The seam moved, deliberately (round 2).</strong> The epic plan's W7 row lists "a raw/decoded toggle <em>and a leg switch</em>" among the body run's subjects, and <code>BodyViewer</code> shows one today (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>, as of <code>ca18daa</code>). Leaving it there would have kept two leg selectors on one panel — the inconsistency the reviewer named. <strong>Leg is now the panel's, selected in the identity row; the body reads it as a prop.</strong> W7's leg switch is therefore <em>deleted</em>, not redesigned, and its run shrinks to the decode toggle, the dispatch and the absences. Recorded in <a href="#blocked">blocked-on</a> for the epic to carry into W7's plan row.</li>
               <li><strong>Still left to W7:</strong> the raw/decoded toggle, the renderer dispatch, copy/save affordances, the five absence notices, the cut marker. Every one is a <code>BodyViewer</code>-internal decision; deciding any here would collide with W7's run.</li>
               <li>Stubbed in the <a href="#mockup">mockup</a> — sanctioned by the flow spec: "stubbed — a component's internals: code surfaces, live clipboard, renderer dispatch".</li>
             </ul></details>
@@ -676,7 +676,7 @@ list  → selection cleared, scroll
            <code>SegmentedControl</code>'s <span class="u-avoid">@avoid</span> puts defaults on the
            tenant, so this run states it: the panel opens on <strong>request</strong>, always. The
            shipped body picks per-flow (<code>flow.response_body ? "response" : "request"</code>,
-           <code>BodyViewer.tsx:148</code>) — a rule that made the selected leg depend on what the
+           <code>BodyViewer.tsx:148</code> at <code>ca18daa</code>) — a rule that made the selected leg depend on what the
            flow happened to contain. With one panel-level selector that would move the whole screen
            under the user between flows, so it goes: a request always exists, and it is what the user
            clicked a row to identify.</p>
@@ -1009,7 +1009,8 @@ BODY      ← the same leg
               withdraws the <code>@use</code>-wording question it had raised for W7.</li>
           <li><strong>One leg selector (8):</strong> the reviewer asked for a leg switch twice, and
               the second time the decisive fact turned up in the code: <strong><code>BodyViewer</code>
-              already ships one</strong> (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>). So
+              already ships one</strong> (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>, as of
+              <code>ca18daa</code>). So
               the panel was never showing "both legs at once" — only its <em>headers</em> were, while
               the body underneath them toggled. That is two models of one concept on one screen, which
               is what <code>one-term-per-concept</code> forbids at the level of vocabulary and what the

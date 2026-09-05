@@ -250,7 +250,7 @@
             deliberately unlabelled) or <em>leg-scoped</em> (replaced when the selector moves). Closes a
             two-models-of-one-concept defect: the shipped flow detail stacked both header legs while
             <code>BodyViewer</code> carried its own request/response toggle
-            (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>), so the screen answered "which leg?"
+            (<code>BodyViewer.tsx:148</code>, <code>:196–201</code> at <code>ca18daa</code>), so the screen answered "which leg?"
             twice, differently, and nothing connected the answers. Rejected: keeping both legs stacked (it
             was never the real behaviour), a tablist (<code>SegmentedControl</code>'s <code>@avoid</code>
             excludes tabs that own panels), a switch per zone (the defect, formalised), and deferring to W7
