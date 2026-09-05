@@ -1,0 +1,60 @@
+schema: doc/v1
+epic: E-EXPORT
+wu: E-EXPORT.W4
+branch: wu/export/clear
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "Amended by the review round: the UC-3/UC-4 listing contract said 'a cursor the ring has EVICTED ends the walk' - this WU added a second way for a cursor row to vanish and said so nowhere, so the sentence now reads 'a cursor the ring no longer holds', names both causes and links UC-7, and UC-7 gained a fourth consequence, that a delete can end another client's in-flight paging walk with the same empty final page eviction has always given, because the walk cannot resume from a row that is gone and the cause does not change the answer. UC-7 added as a new record (id uc-7), the epic's second new use case, stating the clearing contract at the API boundary. Four request/answer rows: DELETE /flows answering {removed: n} with the whole capture gone and NO row kept back; the filtered form, where a delete selects exactly what the listing with those parameters lists - the same filter as the listing and the export, not a third implementation - and every survivor stays whole, still listed and still readable at GET /flows/{id} and at both body endpoints; a filter matching nothing answering 200 with zero because the request expresses an end state and that state is already true, with an unrecognised source= as the one exception at 400 because a destructive request must never act on a set the caller did not name; and DELETE /flows/{id} at 200, 404 when the id is not in the ring (the one delete that 404s, because there the client named something specific), 400 when it is not a flow id. Plus the three consequences a reader cannot infer from the endpoint signature: a cleared store is EMPTY, NOT RESTARTED - the connection tally is untouched and the proxy keeps running, because the tally is a monotonic 'traffic reached us' measure rather than storage, so clearing is not a way to reset the session; the clear arrives as ONE event for the whole batch carrying every id that left, so emptying a full ring cannot lag a subscriber past the stream's buffer into the lagged gap, and it is a DISTINCT event from the ring's own evicted, because an interface that conflated them would announce 'capture cleared' every time memory pressure dropped a row; and removing is not replacing - loading someone else's capture over your own is a delete followed by an import, two operations the client already has, rather than a destructive mode hidden inside the POST. A provenance callout attributes the API half to W4 with the app's clear control following in the same epic, records that both routes converge on one Store removal sharing its unlinking with eviction so the ring's byte accounting cannot differ between the two, that the invariant is asserted as a property over arbitrary sequences of inserts, imports, evictions and removals, and points at DEC-31 for the CORS reasoning rather than restating it. The doc's summary line and header attribution both widen to name UC-7; header to v7."
+  - path: docs/use-cases/use-cases-index.html
+    tier: T2
+    action: updated
+    distills: "The UC-7 row after UC-6, so index-first reading reaches the clearing contract: what a delete selects is what the listing lists with no third implementation, the id route and its 404, the one cleared event per batch as distinct from eviction, and that a cleared store is empty rather than restarted with the tally and the proxy untouched."
+  - path: docs/decisions/dec-31-imported-flows-are-marked.html
+    tier: T2
+    action: updated
+    distills: "Amended where this WU spends the argument the record already made. The CORS section's grant line moves from 'Import is the first method that changes capture state, so the grant now advertises GET, POST, OPTIONS' to naming clearing as the second and advertising GET, POST, DELETE, OPTIONS, linking UC-7. Its closing note - which recorded that the epic plan had scheduled the widening with the DELETE work, that import landed first, and that DELETE would join the same list - turns that prediction past tense, attributing the addition to E-EXPORT.W4 on the same argument and stating the list is now CLOSED for this epic because no further method changes capture state. Deliberately NO new decision record: DEC-31 already reasons that the widening extends DEC-12 rather than reversing it (both grounds still hold - the bind address is unchanged, and a DELETE is as reachable with curl as a GET always was), and a second record would make the same argument twice. The batch-event choice is a mechanism the code carries, not a decision needing a record."
+  - path: docs/architecture.html
+    tier: T1
+    action: updated
+    distills: "Two statements the plan flagged for re-checking, both INCOMPLETE rather than false once removal landed, each widened to what is now true. The seam diagram's caption said the Store 'emits a lifecycle event on every write and eviction' and that the control API 'is a subscriber and reader; it also ingests'; it now says every write, eviction AND CLEAR, and that the API ingests AND REMOVES - a clear takes out what the listing selects - while keeping intact the load-bearing half W3 established, that the API never rewrites or reinterprets what the capture path recorded, which removal does not touch. The 'Store owns the event bus' invariant row said one place defines what 'captured / evicted' means; it now reads 'captured / evicted / cleared' and adds that a user's clear is a distinct event from the ring's own eviction - the reason FlowsCleared is not FlowEvicted, stated at the altitude where the bus's contract lives rather than left to be inferred from the enum. Rule-bearing T1, so the commit carries Reviewed-By: key vuluu via cargo xtask mr commit (f1c0fec), separated from the T2 distillation commit so only the rule-bearing change needed a human."
+  - path: docs/work/2026-09-04-export-w4-clear-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan, written before the code - requirement, mapping to the epic's W4 block and to UC-7 with the note that the CORS widening this WU was scheduled to make had already landed with W3, a diagram showing both routes converging on one Store method so 'what a delete selects' cannot drift from 'what a listing selects', a table of the five contract calls the WU had to make (one store method for the filtered case with the id route's 404 distinguished by the returned vector; no id field on FlowFilter because an id is not a listing predicate; one batch event rather than one per flow; a variant distinct from FlowEvicted; and the same {removed: n} envelope the import answers with), a callout on the byte invariant naming exactly where it can go wrong - eviction pops from the front and a filtered removal takes from the middle, so the order is rebuilt by retaining survivors - and stating the one asymmetry that removal has no last-row floor, eight observables, the test plan per level with the e2e waiver reasoned to the epic's own step, and the distillation owed including architecture.html as a conditional T1 edit."
+  - path: docs/work/2026-09-04-export-w4-clear-result.html
+    tier: T3
+    action: added
+    distills: "The WU result - delivered against all eight observables with each one's proving tests named, a callout on how removal is shaped and the one thing that decided it (the shared unlink, and the no-last-row-floor asymmetry with the test that asserts it against a store the cap has already reduced to one row), three deviations (the CORS widening already spent by W3 so no second record was written; the debug shell's one-word 'cleared' addition outside the plan, with why it was needed and why no design citation is owed; and architecture.html moving from a predicted conditional edit to an actual one because two statements were incomplete rather than wrong), the evidence table with per-level counts and the e2e waiver, the distillation ledger, and three follow-ups - the app's controls including what a destructive action asks before it acts, which this WU deliberately does not answer since the API removes without confirmation and the confirmation is a UI concern; the epic e2e step that consumes this contract; and no debt discovered, with the note that the cleared event is a new wire shape a future client must handle and is stated in UC-7 rather than left to be found in the code."
+note: >-
+  Code and test files in this diff (src/store.rs, src/event.rs, src/api/routes.rs, src/api/mod.rs,
+  src/api/view.rs, src/api/ui.html, tests/api.rs) carry no doc/v1 entry - they are T4, the truth the
+  docs point at, and this note accounts for documentation changes. T2 synthesis is UC-7 plus its
+  index row (the what), with DEC-31 amended where this WU spends an argument that record already
+  made (the why). One fact per tier held deliberately in two places: the removal MECHANISM - the
+  shared unlink, the batch event, the no-last-row-floor - lives only in src/store.rs and
+  src/event.rs and is described nowhere as code, and the CORS ARGUMENT stays in DEC-31 alone rather
+  than being restated in UC-7, which links to it. No new decision record was written: the epic plan
+  named a CORS decision as W4's, but W3 already made it, so writing a second record would argue the
+  same point twice - the deviation is recorded in the result. T1 WAS edited, as the plan predicted
+  it conditionally would be: architecture.html's seam caption and event-bus row both enumerated the
+  store's behaviour without clearing, incomplete rather than false, and both were widened. That edit
+  is rule-bearing and carries Reviewed-By: key vuluu in commit f1c0fec via cargo xtask mr commit,
+  per the workflow standard's commit-level manual review, and was deliberately committed separately
+  from the T2 distillation so only the rule-bearing change required a human. verify-doc green over
+  every doc in the tree, governed and ungoverned, with every relative href resolving on disk. All
+  four edited docs were snapshotted before their first edit this session and both new docs at
+  creation, so <doc>.html?diff=latest shows exactly what changed. Amended after the code review:
+  one T2 doc changed as a result - the listing contract's cursor sentence was scoped to eviction
+  and this WU had made it incomplete, so it now names removal too and UC-7 carries the consequence.
+  The result doc gained a review-round section recording four confirmed findings and five refuted,
+  and its 'how removal is shaped' section was CORRECTED rather than appended to: it described both
+  doors going through one unlink that rebuilds the order, which the fix made false. T1
+  architecture.html needed no change from the review - its edited statements are about what the
+  store and API do, not how removal mends the order, and both remain true. The review also surfaced
+  a latent issue outside this WU's scope, recorded as a follow-up rather than silently fixed: the
+  ring's ROW count is unbounded, because retained_bytes counts only body bytes, so a capture of
+  body-less exchanges never trips the byte cap. Amended again after round 2: the result doc records
+  that round and the one defect it found - a stale docstring the fix itself reintroduced - and no
+  T1 or T2 doc changed as a result, the finding being wholly code-internal.
