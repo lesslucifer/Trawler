@@ -1,0 +1,27 @@
+schema: test/v2
+level: commit
+epic: E-EXPORT
+branch: epic/export
+tests:
+  unit:
+    waived: "docs-only diff plus one comment. Thirteen HTML files change and the three decision records are renamed; the only non-doc byte is a prose comment in src/api/har.rs naming the record the HAR round-trip property is a claim about (DEC-30 -> DEC-35). No executable byte changes, so there is nothing a unit test could assert that the compiler and the link checker do not already."
+  integration:
+    waived: "no bounded contract is touched. The renumbering changes which id a decision record carries, never what any endpoint does; src/api/har.rs's projection, the import parsers and the store are byte-identical apart from the comment."
+  e2e:
+    waived: "no user-observable behaviour. A decision record's number is not reachable from the running app or the API."
+verified:
+  - "cargo xtask gate0 - fmt + clippy -D warnings + the full suite green."
+  - "cargo xtask verify-doc over the thirteen changed docs - none red."
+  - "this_repo_s_own_docs_resolve_every_link_they_ship (xtask/tests) green: every relative href in the tree resolves on disk after the renames, which is the real assertion this commit owes - a renumbering's one failure mode is a dangling citation."
+  - "grep over the whole worktree for the three old slugs and their DEC- forms: no stale reference outside .git."
+note: >-
+  The back-merge that precedes this commit brought E-REDESIGN's DEC-30/31/32 onto a branch that
+  already had three records of its own under those numbers. Both lines minted honestly and in
+  parallel; E-REDESIGN reached main first, so its numbers stand and this epic's three move to
+  DEC-35/36/37. That is the resolution DEC-11 already set as precedent when E-GATEFAST and
+  E-MRSIG raced for DEC-9, and each renamed record now carries the same sentence DEC-11 carries -
+  minted as X, renumbered at the Y merge - so a reader following an old citation lands somewhere
+  that explains itself rather than on a 404. The redesign trio is deliberately untouched: its
+  ids are on main and every citation to them, including App.test.tsx's DEC-31 (leg-is-panel-scoped,
+  not imported-flows-are-marked), still resolves. The index rows move with their numbers so the
+  routing table reads 29..37 in order rather than 30,31,32,30,31,32,33,34.
