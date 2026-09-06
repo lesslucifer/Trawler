@@ -310,13 +310,14 @@ describe("the short form every verdict carries", () => {
 // that command in exactly once — zero would drop the copy affordance, twice
 // would render two CopyTexts for one command.
 describe("every command is present exactly once in the steps that introduce it", () => {
-  it("PROXY_TARGETS covers the whole union, so the cases below are exhaustive", () => {
-    // proxyOffSteps' switch is exhaustive over ProxyTarget (tsc proves that), so
-    // every member it handles must also be offered in the list the screens read.
-    const listed = PROXY_TARGETS.map((t) => t.id).sort();
-    const handled = listed.filter((id) => proxyOffSteps(id).length > 0).sort();
-    expect(handled).toEqual(listed);
-    expect(listed).toHaveLength(7);
+  // Coverage of the union is tsc's job, not this file's: PROXY_TARGETS is built
+  // from a Record keyed by ProxyTarget, so a member added without a label fails to
+  // compile. A runtime check here could only compare the list with itself.
+  it("offers every target it can render steps for", () => {
+    for (const { id, label } of PROXY_TARGETS) {
+      expect(label).not.toBe("");
+      expect(proxyOffSteps(id).length).toBeGreaterThan(0);
+    }
   });
 
   it.each(PROXY_TARGETS.map((t) => t.id))("%s", (id) => {

@@ -116,6 +116,18 @@ describe("the actionable modes — a proxy is set on this machine", () => {
     expect(onRemove).toHaveBeenCalledOnce();
   });
 
+  it("keeps focus inside the panel when the remedy retires under it", async () => {
+    const onRemove = vi.fn().mockResolvedValue(undefined);
+    mount("ours", { onRemove });
+
+    const remedy = screen.getByRole("button", { name: CLOSE_COPY.turnOff });
+    remedy.focus();
+    fireEvent.click(remedy);
+
+    await waitFor(() => expect(screen.getByTestId("proxy-close-done")).toBeInTheDocument());
+    expect(screen.getByTestId("proxy-close-dialog").contains(document.activeElement)).toBe(true);
+  });
+
   it("never offers the opt-out — this mode has something local to fix", () => {
     mount("ours");
     expect(screen.queryByRole("checkbox")).toBeNull();

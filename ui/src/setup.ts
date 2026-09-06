@@ -110,15 +110,22 @@ export function defaultProxyTarget(os: HostOs): ProxyTarget {
   return os === "other" ? "terminal" : os;
 }
 
-export const PROXY_TARGETS: readonly { id: ProxyTarget; label: string }[] = [
-  { id: "macos", label: "macOS" },
-  { id: "windows", label: "Windows" },
-  { id: "linux", label: "Linux (GNOME)" },
-  { id: "firefox", label: "Firefox" },
-  { id: "terminal", label: "Terminal / CLI" },
-  { id: "ios-sim", label: "iOS Simulator" },
-  { id: "android", label: "Android" },
-];
+// Keyed by the union so tsc proves the list offers every target: a member added
+// to ProxyTarget without a label here fails to compile. A runtime check over the
+// list could only ever compare it with itself.
+const PROXY_TARGET_LABELS: Record<ProxyTarget, string> = {
+  macos: "macOS",
+  windows: "Windows",
+  linux: "Linux (GNOME)",
+  firefox: "Firefox",
+  terminal: "Terminal / CLI",
+  "ios-sim": "iOS Simulator",
+  android: "Android",
+};
+
+export const PROXY_TARGETS: readonly { id: ProxyTarget; label: string }[] = (
+  Object.keys(PROXY_TARGET_LABELS) as ProxyTarget[]
+).map((id) => ({ id, label: PROXY_TARGET_LABELS[id] }));
 
 export function splitProxyAddr(addr: string): { host: string; port: number } {
   const at = addr.lastIndexOf(":");

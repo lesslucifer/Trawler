@@ -72,6 +72,14 @@ function ModalShell({
     };
   }, []);
 
+  // A control that unmounts while focused (the remedy retiring once the proxy is
+  // off) drops focus to <body>, where the Tab trap cannot re-engage — the next Tab
+  // would walk the page behind the scrim. Recover it into the panel.
+  useEffect(() => {
+    if (!panel.current || panel.current.contains(document.activeElement)) return;
+    panel.current.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+  });
+
   const trap = (event: React.KeyboardEvent) => {
     if (event.key === "Escape") {
       onCancel();
