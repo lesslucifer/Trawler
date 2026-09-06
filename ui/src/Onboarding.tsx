@@ -43,6 +43,11 @@ import {
 // dialog. Reporting it as done would state an outcome the system never produced.
 type ActionState = "idle" | "running" | "done" | "failed" | "nothing";
 
+// An action that resolves a string names what it produced; the note quotes that
+// name rather than the one we asked for, since the two differ whenever the user
+// renames the file in the save dialog.
+type ActionNotes = Partial<Record<ActionState, ActionNote | ((named: string) => ActionNote)>>;
+
 interface ActionNote {
   tone: NoticeTone;
   text: string;
@@ -60,9 +65,19 @@ const SETPROXY_NOTE: Partial<Record<ActionState, ActionNote>> = {
   failed: { tone: "warn", text: "automatic setup failed — use the manual steps below." },
 };
 
-const SAVECA_NOTE: Partial<Record<ActionState, ActionNote>> = {
+// The save resolves a full path natively and a bare name in the browser; the
+// steps below name a file, so the note does too.
+const fileName = (path: string) => path.split(/[/\\]/).pop() ?? path;
+
+const SAVECA_NOTE: ActionNotes = {
   running: { tone: "mute", text: "saving…" },
-  done: { tone: "ok", text: `saved as ${CA_FILENAME}. now trust it with the steps below.` },
+  done: (path: string) => ({
+    tone: "ok",
+    text:
+      fileName(path) === CA_FILENAME
+        ? `saved as ${CA_FILENAME}. now trust it with the steps below.`
+        : `saved as ${fileName(path)} — the steps below name ${CA_FILENAME}, so use ${fileName(path)} instead.`,
+  }),
   nothing: { tone: "mute", text: "nothing was saved — the save was cancelled." },
   failed: { tone: "warn", text: "couldn't save the certificate — check that Trawler is running." },
 };
@@ -73,16 +88,20 @@ const UNSETPROXY_NOTE: Partial<Record<ActionState, ActionNote>> = {
   failed: { tone: "warn", text: "couldn't turn the proxy off — follow the steps below instead." },
 };
 
-function useAction(run?: () => Promise<boolean | void>) {
+function useAction(run?: () => Promise<string | null | void>) {
   const [state, setState] = useState<ActionState>("idle");
   const [error, setError] = useState<string>();
+  const [named, setNamed] = useState("");
   const trigger =
     run &&
     (() => {
       setState("running");
       setError(undefined);
       run().then(
-        (outcome) => setState(outcome === false ? "nothing" : "done"),
+        (outcome) => {
+          if (typeof outcome === "string") setNamed(outcome);
+          setState(outcome === null ? "nothing" : "done");
+        },
         (err: unknown) => {
           console.error("setup action failed:", err);
           setState("failed");
@@ -90,7 +109,7 @@ function useAction(run?: () => Promise<boolean | void>) {
         },
       );
     });
-  return { state, error, trigger };
+  return { state, error, named, trigger };
 }
 
 // Fork D4: disabled in flight AND a progress line beside it — both halves or
@@ -101,16 +120,19 @@ function Action({
   state,
   error,
   note,
+  named,
   onClick,
 }: {
   testId: string;
   label: string;
   state: ActionState;
   error?: string;
-  note: Partial<Record<ActionState, ActionNote>>;
+  note: ActionNotes;
+  named?: string;
   onClick: () => void;
 }) {
-  const shown = note[state];
+  const entry = note[state];
+  const shown = typeof entry === "function" ? entry(named ?? "") : entry;
   return (
     <div>
       <Button onClick={onClick} disabled={state === "running"}>
@@ -187,6 +209,7 @@ function TrustCa({
               state={save.state}
               error={save.error}
               note={SAVECA_NOTE}
+              named={save.named}
               onClick={save.trigger}
             />
           </div>
@@ -322,7 +345,7 @@ export function Onboarding({
   proxyProbe?: ProxyProbe;
   observed?: Observed;
   onInstallCa?: () => Promise<void>;
-  onSaveCa?: () => Promise<boolean>;
+  onSaveCa?: () => Promise<string | null>;
   onSetProxy?: () => Promise<void>;
   onUnsetProxy?: () => Promise<void>;
   onRecheck?: () => void;

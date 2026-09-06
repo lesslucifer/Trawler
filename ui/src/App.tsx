@@ -112,7 +112,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   const saveCa = async () => {
     const pem = await client.caCertPem();
-    return (await saveBody(new TextEncoder().encode(pem), CA_FILENAME)) !== null;
+    return saveBody(new TextEncoder().encode(pem), CA_FILENAME);
   };
 
   const setProxy = async () => {

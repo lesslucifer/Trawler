@@ -260,4 +260,7 @@ test("saveBody reports the path it wrote, and null when the native dialog was ca
   vi.resetModules();
   const written = await (await import("./body")).saveBody(bytes, "trawler-ca.pem");
   expect(written).toBe("/tmp/picked.pem");
+  // The returned path is a claim that the bytes landed there; assert the write
+  // itself, or a refactor that reports the path without writing passes.
+  expect(writeFile).toHaveBeenCalledWith("/tmp/picked.pem", bytes);
 });

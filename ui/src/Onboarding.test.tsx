@@ -406,7 +406,7 @@ test("no third tone map — the screen never maps a verdict tone to a class", ()
 // produced — every manual route began with an instruction the user could not
 // carry out. The step is an action, not prose.
 test("the certificate is saved by a button, not by a sentence telling the user to save it", async () => {
-  const onSaveCa = vi.fn(async () => true);
+  const onSaveCa = vi.fn(async () => "trawler-ca.pem");
   render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
 
   fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
@@ -465,10 +465,34 @@ test("re-checking reports a proxy that was green and is no longer", async () => 
 // tells the user a file exists, and step 2 then sends them to a terminal to run
 // sudo against it.
 test("a cancelled save says so, and never claims a file that was not written", async () => {
-  const onSaveCa = vi.fn(async () => false);
+  const onSaveCa = vi.fn(async () => null);
   render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
 
   fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
   expect(await screen.findByText(/nothing was saved/)).toBeInTheDocument();
   expect(screen.queryByText(/saved as trawler-ca\.pem/)).toBeNull();
+});
+
+// defaultPath only pre-fills the dialog's name input, so the user can save as
+// anything. Naming the constant would state a file that isn't on disk, and the
+// steps below run against that name.
+test("a save under a different name reports the name that landed, not the one we asked for", async () => {
+  const onSaveCa = vi.fn(async () => "/Users/someone/Downloads/ca-backup.pem");
+  render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
+  expect(await screen.findByText(/saved as ca-backup\.pem/)).toBeInTheDocument();
+  expect(screen.queryByText(/saved as trawler-ca\.pem/)).toBeNull();
+});
+
+// The native dialog resolves a full path; the steps below name a file, so the
+// confirmation names the file and not the directory that holds it.
+test("a save to the asked-for name under any directory confirms plainly", async () => {
+  const onSaveCa = vi.fn(async () => "/Users/someone/Downloads/trawler-ca.pem");
+  render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
+  const note = await screen.findByTestId("save-ca-status");
+  expect(note).toHaveTextContent("saved as trawler-ca.pem. now trust it with the steps below.");
+  expect(note).not.toHaveTextContent("/Users/someone/Downloads");
 });

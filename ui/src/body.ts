@@ -222,9 +222,10 @@ export function saveFilename(uri: string, leg: Leg, contentType: string | null):
 
 // Native app → OS save dialog (dialog plugin registers the picked path in the
 // fs plugin's scope); plain browser (vite dev) → anchor download.
-// Returns where the bytes landed, or null when the native dialog was cancelled —
-// the two resolve identically otherwise, so a caller that states an outcome (the
-// setup screen names the file it saved) cannot tell them apart without this.
+// Returns the name the bytes landed under, or null when the native dialog was
+// cancelled. Both are load-bearing for the setup screen, which states an outcome:
+// a cancel resolves like a write, and `filename` is only the dialog's pre-filled
+// default, so neither "did it save" nor "under what name" is knowable without it.
 export async function saveBody(bytes: Uint8Array, filename: string): Promise<string | null> {
   if ("__TAURI_INTERNALS__" in window) {
     const { save } = await import("@tauri-apps/plugin-dialog");
