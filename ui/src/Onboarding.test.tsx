@@ -290,6 +290,28 @@ test("a failed install shows its error once, not twice", async () => {
   expect(screen.queryByTestId("trust-ca-remedy")).toBeNull();
 });
 
+test("the trust-CA command is copyable, not prose the user must retype", () => {
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
+
+  expect(
+    screen.getByRole("button", { name: /copy certificate command/ }),
+  ).toBeInTheDocument();
+  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/security add-trusted-cert/);
+});
+
+test("the removal command is copyable too", () => {
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
+  expect(screen.getByRole("button", { name: /copy removal command/ })).toBeInTheDocument();
+});
+
+test("a target whose steps are point-and-click offers no command to copy", () => {
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" onInstallCa={vi.fn()} />);
+  choose("trust target", "Firefox");
+
+  expect(screen.queryByRole("button", { name: /copy certificate command/ })).toBeNull();
+  expect(screen.getByTestId("guided-steps")).toHaveTextContent(/own certificate store/);
+});
+
 test("the proxy command appears exactly once — the step list is not doubled", () => {
   render(<Onboarding state={atSetProxy} dispatch={vi.fn()} os="macos" proxyAddr={ADDR} onSetProxy={vi.fn()} />);
 

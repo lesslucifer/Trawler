@@ -14,6 +14,8 @@ import {
   removalSteps,
   splitProxyAddr,
   TARGETS,
+  removalSnippet,
+  trustSnippet,
   trustStatus,
   type StepStatusView,
   verifyStatus,
@@ -313,6 +315,33 @@ describe("every command is present exactly once in the steps that introduce it",
   // Coverage of the union is tsc's job, not this file's: PROXY_TARGETS is built
   // from a Record keyed by ProxyTarget, so a member added without a label fails to
   // compile. A runtime check here could only compare the list with itself.
+  it.each(TARGETS.map((t) => t.id))("%s: its trust and removal commands each appear once", (id) => {
+    for (const [steps, command] of [
+      [guidedSteps(id), trustSnippet(id)],
+      [removalSteps(id), removalSnippet(id)],
+    ] as [string[], string | null][]) {
+      if (command === null) continue;
+      expect(steps.filter((s) => s === command)).toHaveLength(1);
+    }
+  });
+
+  // A command named but absent from its steps would render no CopyText at all;
+  // one present but unnamed would stay uncopyable prose. Both are silent, so the
+  // pairing is asserted in both directions.
+  it.each(TARGETS.map((t) => t.id))("%s: no step is an unnamed command", (id) => {
+    const looksLikeCommand = (step: string) =>
+      /^(sudo|certutil|adb|networksetup|reg|gsettings|unset|export|curl) /.test(step);
+
+    for (const [steps, command] of [
+      [guidedSteps(id), trustSnippet(id)],
+      [removalSteps(id), removalSnippet(id)],
+    ] as [string[], string | null][]) {
+      for (const step of steps.filter(looksLikeCommand)) {
+        expect(step).toBe(command);
+      }
+    }
+  });
+
   // The list is derived from a Record now, so its order is insertion order rather
   // than something the reader can see in an array literal — and the order is what
   // the user sees in the picker.

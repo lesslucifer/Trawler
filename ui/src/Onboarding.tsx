@@ -14,8 +14,10 @@ import {
   proxyStatus,
   proxySteps,
   PROXY_TARGETS,
+  removalSnippet,
   removalSteps,
   TARGETS,
+  trustSnippet,
   trustStatus,
   verifyStatus,
   type HostOs,
@@ -165,10 +167,20 @@ function TrustCa({
           onChange={(id) => setTarget(id as TrustTarget)}
           label="trust target"
         />
-        <ManualSteps steps={guidedSteps(target)} testId="guided-steps" />
+        <ManualSteps
+          steps={guidedSteps(target)}
+          command={trustSnippet(target)}
+          commandLabel="certificate command"
+          testId="guided-steps"
+        />
         <div className="mt-2">
           <Disclosure summary="remove the certificate later">
-            <ManualSteps steps={removalSteps(target)} testId="removal-steps" />
+            <ManualSteps
+              steps={removalSteps(target)}
+              command={removalSnippet(target)}
+              commandLabel="removal command"
+              testId="removal-steps"
+            />
           </Disclosure>
         </div>
       </ManualFallback>

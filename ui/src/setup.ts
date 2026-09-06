@@ -36,16 +36,19 @@ const DOWNLOAD = "Save Trawler's certificate as trawler-ca.pem.";
 const STEPS: Record<TrustTarget, string[]> = {
   macos: [
     DOWNLOAD,
-    "Run: sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
+    "Run it in a terminal:",
+    "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
     "Or double-click the file to add it in Keychain Access, then set the Trawler CA to Always Trust.",
   ],
   windows: [
     DOWNLOAD,
-    "In an elevated terminal run: certutil -addstore -f ROOT trawler-ca.pem",
+    "In an elevated terminal run:",
+    "certutil -addstore -f ROOT trawler-ca.pem",
   ],
   linux: [
     DOWNLOAD,
-    "Run: sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
+    "Run it in a terminal:",
+    "sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
     "Chrome reads the NSS store instead: certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem",
   ],
   firefox: [
@@ -60,11 +63,28 @@ const STEPS: Record<TrustTarget, string[]> = {
   ],
   android: [
     DOWNLOAD,
-    "Push it to the device: adb push trawler-ca.pem /sdcard/Download/",
+    "Push it to the device:",
+    "adb push trawler-ca.pem /sdcard/Download/",
     "Settings → Security → Encryption & credentials → Install a certificate → CA certificate.",
     "Apps targeting Android 7+ only trust user CAs when their network security config opts in.",
   ],
 };
+
+// The one copyable command per target, or null where the steps are point-and-click.
+// Named here rather than inferred at the call site: the module builds the arrays,
+// so it is the module that knows which element is a command.
+const TRUST_COMMANDS: Record<TrustTarget, string | null> = {
+  macos: "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
+  windows: "certutil -addstore -f ROOT trawler-ca.pem",
+  linux: "sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
+  firefox: null,
+  "ios-sim": null,
+  android: "adb push trawler-ca.pem /sdcard/Download/",
+};
+
+export function trustSnippet(target: TrustTarget): string | null {
+  return TRUST_COMMANDS[target];
+}
 
 export function guidedSteps(target: TrustTarget): string[] {
   return STEPS[target];
@@ -73,14 +93,17 @@ export function guidedSteps(target: TrustTarget): string[] {
 // Trawler's CA is issued with CN "Trawler Proxy CA" — removal keys off that name.
 const REMOVE: Record<TrustTarget, string[]> = {
   macos: [
-    'Run: sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
+    "Run it in a terminal:",
+    'sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
     "Or delete the Trawler Proxy CA entry in Keychain Access → System.",
   ],
   windows: [
-    'In an elevated terminal run: certutil -delstore ROOT "Trawler Proxy CA"',
+    "In an elevated terminal run:",
+    'certutil -delstore ROOT "Trawler Proxy CA"',
   ],
   linux: [
-    "Run: sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
+    "Run it in a terminal:",
+    "sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
     "NSS store: certutil -d sql:$HOME/.pki/nssdb -D -n trawler",
   ],
   firefox: [
@@ -95,6 +118,19 @@ const REMOVE: Record<TrustTarget, string[]> = {
     "Settings → Security → Encryption & credentials → Trusted credentials → User → remove Trawler Proxy CA.",
   ],
 };
+
+const REMOVE_COMMANDS: Record<TrustTarget, string | null> = {
+  macos: 'sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
+  windows: 'certutil -delstore ROOT "Trawler Proxy CA"',
+  linux: "sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
+  firefox: null,
+  "ios-sim": null,
+  android: null,
+};
+
+export function removalSnippet(target: TrustTarget): string | null {
+  return REMOVE_COMMANDS[target];
+}
 
 export function removalSteps(target: TrustTarget): string[] {
   return REMOVE[target];
