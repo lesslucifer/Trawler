@@ -1,0 +1,9 @@
+schema: dod/v1
+level: epic
+epic: E-REDESIGN
+branch: epic/redesign
+base: e4deda27a098951372f28f69cdf2211915169672
+tip: e7e787ff26f56662e07c92d5a3b701a4d3a69890
+diff_sha256: 5968a4416dcfc13df077d98c8a7fd7b6ff6c624f59e369d97a5b947d2fc52111
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]
+date: 2026-09-06
