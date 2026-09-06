@@ -1,0 +1,16 @@
+schema: cr/v3
+scope: "WU E-REDESIGN.W11 (epic close) -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W11
+branch: wu/redesign/epic-close
+base: 58bb4e5f7ec46bee519b4703f5c30f02f30332a4
+head: a1f1f267e2ef12309fb50e6ba8e29d79cd9a147c
+diff_sha256: e99341d36f38c5a01d087c29fd5adace9924ea266cbf96919e4442272bad552d
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 11, verified: 5, waived: 0 }
+design:
+  undesigned:
+    - path: ui/src/main.tsx
+      why: "A deletion inside the entry point, not a surface change. The diff removes the dev-only `?gallery` branch that lazily mounted the throwaway Gallery screen, and inlines the one-call-site `mount` helper that existed only to serve that branch and its sibling. What remains renders exactly what it rendered before - `<App />` inside StrictMode - so no element, layout or testid moved and no design covers or needs to cover it. The deleted Gallery.tsx is not listed here because design-scope does not report it: a file absent at the tip is not a touched rendered surface."
+verdict: PASS
+date: 2026-09-06
