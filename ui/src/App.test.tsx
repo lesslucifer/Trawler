@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
 import { afterEach, beforeAll, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import App from "./App";
@@ -454,7 +454,9 @@ test("the keyboard selects a row and opens its detail without a pointer", async 
 // Inspector tests (E-UIINSPECT) run in the proven phase — post-onboarding, the
 // list is where a flow is selected. Onboarding's StatusDot replaced the old
 // LiveDot, so that dot's connection-state test retired with it.
-test("clicking a row fetches /flows/{id} and opens the detail panel with curl", async () => {
+test("clicking a row fetches /flows/{id} and opens the detail panel with copy-as-curl", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  vi.stubGlobal("navigator", { clipboard: { writeText } });
   const { api } = mockApi(() => [flow({ id: "f1", uri: "http://example.com/a", method: "GET" })]);
   render(<App api={api} initialState={PROVEN} />);
   fireEvent.click(await screen.findByTestId("flow-row"));
@@ -462,9 +464,26 @@ test("clicking a row fetches /flows/{id} and opens the detail panel with curl", 
   const detail = await screen.findByTestId("detail");
   expect(api.getFlow).toHaveBeenCalledWith("f1");
   expect(detail).toHaveTextContent("http://example.com/a");
-  expect(screen.getByTestId("curl")).toHaveTextContent(
-    "curl 'http://example.com/a' -H 'Accept: application/json'",
-  );
+  expect(detail.textContent).not.toContain("curl '");
+  fireEvent.click(screen.getByRole("button", { name: "copy as curl" }));
+  expect(writeText).toHaveBeenCalledWith("curl 'http://example.com/a' -H 'Accept: application/json'");
+  vi.unstubAllGlobals();
+});
+
+test("Esc closes the panel and hands focus back to the list that opened it", async () => {
+  const { api } = mockApi(() => [flow({ id: "f1", uri: "http://example.com/a" })]);
+  render(<App api={api} initialState={PROVEN} />);
+  await screen.findAllByTestId("flow-row");
+
+  const list = screen.getByRole("listbox");
+  list.focus();
+  fireEvent.keyDown(list, { key: "ArrowDown" });
+  fireEvent.keyDown(list, { key: "Enter" });
+  await screen.findByTestId("detail");
+
+  fireEvent.keyDown(document.body, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByTestId("detail")).toBeNull());
+  expect(document.activeElement).toBe(list);
 });
 
 test("a captured response body is fetched decoded and rendered by the viewer", async () => {
@@ -480,6 +499,9 @@ test("a captured response body is fetched decoded and rendered by the viewer", a
   } satisfies FlowView);
   render(<App api={api} initialState={PROVEN} />);
   fireEvent.click(await screen.findByTestId("flow-row"));
+  await screen.findByTestId("detail");
+  // The panel opens on the request leg (DEC-31); the response body is one act away.
+  fireEvent.click(within(screen.getByRole("radiogroup", { name: "leg" })).getByRole("radio", { name: "response" }));
 
   const tree = await screen.findByTestId("body-json");
   expect(api.getBody).toHaveBeenCalledWith("f1", "response", true);
@@ -496,13 +518,13 @@ test("selecting a different flow resets the copy button (no stale 'copied')", as
 
   const [rowA, rowB] = await screen.findAllByTestId("flow-row");
   fireEvent.click(rowA);
-  await screen.findByTestId("curl");
-  fireEvent.click(screen.getByText("copy"));
+  await screen.findByTestId("detail");
+  fireEvent.click(screen.getByRole("button", { name: "copy as curl" }));
   await waitFor(() => expect(screen.getByText("copied")).toBeInTheDocument());
 
   fireEvent.click(rowB);
   await waitFor(() => expect(screen.getByTestId("detail")).toHaveTextContent("http://b/"));
-  expect(screen.getByText("copy")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "copy as curl" })).toBeInTheDocument();
   expect(screen.queryByText("copied")).toBeNull();
   vi.unstubAllGlobals();
 });

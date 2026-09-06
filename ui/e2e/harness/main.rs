@@ -68,7 +68,8 @@ async fn main() {
             .route("/br", get(brotli_json_body))
             .route("/img", get(png_body))
             .route("/xml", get(xml_body))
-            .route("/big", get(oversized_text_body));
+            .route("/big", get(oversized_text_body))
+            .route("/headers", get(long_headers_body));
         let _ = axum_server::from_tcp_rustls(origin, tls).serve(app.into_make_service()).await;
     });
 
@@ -186,6 +187,30 @@ async fn oversized_text_body() -> impl IntoResponse {
         [(header::CONTENT_TYPE, "text/plain")],
         "trawler ".repeat(25_000),
     )
+}
+
+// A response whose headers dwarf its body: the shape real traffic has (session
+// cookies, a bearer-sized token, a long CSP), so the inspector's layout can be
+// checked against headers that would otherwise push the body off screen.
+async fn long_headers_body() -> impl IntoResponse {
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+    for i in 0..3 {
+        let cookie = format!("session{i}={}; Path=/; HttpOnly; Secure", "x".repeat(900));
+        headers.append(header::SET_COOKIE, cookie.parse().unwrap());
+    }
+    headers.insert("x-token", format!("Bearer {}", "eyJhbGciOiJIUzI1NiJ9.".repeat(40)).parse().unwrap());
+    headers.insert(
+        header::CONTENT_SECURITY_POLICY,
+        "default-src 'self'; script-src 'self' https://cdn.example.com; img-src * data:; connect-src 'self' https://api.example.com wss://live.example.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'".parse().unwrap(),
+    );
+    for i in 0..12 {
+        headers.insert(
+            axum::http::HeaderName::from_bytes(format!("x-trace-{i}").as_bytes()).unwrap(),
+            format!("{i:08x}-{}", "ab".repeat(16)).parse().unwrap(),
+        );
+    }
+    (headers, r#"{"greeting":"hello","under":"the headers"}"#)
 }
 
 async fn stop_handler(State(ctrl): State<Control>) -> &'static str {

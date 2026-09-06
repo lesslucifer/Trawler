@@ -26,7 +26,7 @@
       → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · plan:
       <a href="2026-09-05-redesign-w10-plan.html">W10 plan</a> · the design:
       <a href="2026-09-04-redesign-run-9-setup-quit.html">design run #9</a>, amended in this WU · the why:
-      <a href="../decisions/dec-32-two-layers-and-a-clock.html">DEC-32</a></div>
+      <a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a></div>
     </div>
   </header>
   <main>
@@ -100,6 +100,14 @@
           onboarding and quitting are more complicated than this run treats them. Nothing here is rolled
           back; the WU closes on its gate, and the later epic starts from what is on screen rather than from a
           plan.</td></tr>
+        <tr><td><strong>Synced to <code>epic/redesign</code> before landing; the decision record became DEC-33.</strong></td>
+          <td>W6 (the flow detail) merged into the epic while this WU awaited its signature, and the merge
+          conflicted: both WUs had minted <code>DEC-32</code>. The epic's record landed first, so this WU's — not
+          yet on the epic, so not a renumbering of a landed record — became <code>DEC-33</code> in the file, the
+          index, DEC-13's note, UC-ONBOARD, the plan and this report. The index was resolved by hand;
+          <code>web-ui.html</code> and <code>App.test.tsx</code> auto-merged and the merged tree re-ran every
+          suite. The merge orphans every binding on the previous tip (test, doc, review, the owner's signature),
+          so each is re-made on the merged tip — the sign-last rule, paid once.</td></tr>
       </tbody>
     </table>
 
@@ -118,7 +126,7 @@
           step; the save as a button; "think carefully about UX"</td>
           <td>Two layers, never blended — steps 1–2 from the probes only, step 3 from timestamps against a
           clock; one dated re-check row plus re-probe on window focus; the save as a ↓ ending the sentence that
-          names the file. The run amended; <a href="../decisions/dec-32-two-layers-and-a-clock.html">DEC-32</a>
+          names the file. The run amended; <a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a>
           written</td><td><code>d48cc94</code></td></tr>
       </tbody>
     </table>
@@ -150,9 +158,9 @@
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tbody>
-        <tr><td><strong>Tip</strong></td><td>the final commit on <code>wu/redesign/setup-quit-build</code> — this
-          report, docs-only, on top of <code>d48cc94</code>. Fourteen commits: the plan, the build, nine review
-          rounds, three owner rounds, the report.</td></tr>
+        <tr><td><strong>Tip</strong></td><td>the final commit on <code>wu/redesign/setup-quit-build</code> — the sync
+          merge with <code>epic/redesign</code>, on top of this report and <code>d48cc94</code>. Fifteen commits: the
+          plan, the build, nine review rounds, three owner rounds, the report, the sync.</td></tr>
         <tr><td><strong>The design cited</strong></td><td><code>docs/work/2026-09-04-redesign-run-9-setup-quit.html</code>
           at blob <code>b29c435a1e5b18bc22dc92dd553f525036c7a449</code> — the amended run,
           <code>data-status="archived"</code>. Cited for <code>Checkbox.tsx</code>, <code>manualSteps.tsx</code>,
@@ -169,12 +177,14 @@
           step 3 and not step 2, check-again and window focus re-reading both probes, the save writing the
           filename the steps name.</td></tr>
         <tr><td><strong>E2E</strong></td><td><code>cargo xtask ui e2e</code> — <strong>25 passing, 0 failing</strong>
-          (6 onboarding + 19 flows) against the real WebKit window and an ephemeral core, at <code>d48cc94</code>.</td></tr>
-        <tr><td><strong>Suites</strong></td><td><code>npx vitest run</code> 727 passed / 45 files ·
+          (6 onboarding + 19 flows) against the real WebKit window and an ephemeral core, at <code>d48cc94</code>;
+          <strong>28 passing, 0 failing</strong> (6 onboarding + 22 flows — W6's three join) on the merged tree.</td></tr>
+        <tr><td><strong>Suites</strong></td><td><code>npx vitest run</code> 727 passed / 45 files at
+          <code>d48cc94</code>, <strong>742 / 45</strong> on the merged tree (W6's fifteen join) ·
           <code>tsc --noEmit</code> clean · <code>eslint src</code> clean · <code>cargo xtask gate0</code> green
-          (fmt, clippy -D warnings, the Rust suite).</td></tr>
+          (fmt, clippy -D warnings, the Rust suite) — each re-run on the merged tree.</td></tr>
         <tr><td><strong>Docs</strong></td><td><code>verify-doc</code> green on the plan, this report, the amended
-          run (checked with its archived flag lifted, then re-archived), <code>web-ui.html</code>, DEC-13, DEC-32
+          run (checked with its archived flag lifted, then re-archived), <code>web-ui.html</code>, DEC-13, DEC-33
           and the decisions index.</td></tr>
       </tbody>
     </table>
@@ -189,7 +199,7 @@
             no longer goes green on a connection; the save is a ↓ ending the step that names the file; a probe
             reading is a dated snapshot re-taken on demand and on window focus; the quit dialog's three modes
             and the copy confirms are stated for the first time.</td></tr>
-          <tr><td><a href="../decisions/dec-32-two-layers-and-a-clock.html">DEC-32</a></td><td>T2</td>
+          <tr><td><a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a></td><td>T2</td>
             <td><strong>Added.</strong> Why this machine and the wire are two layers, why recency is a clock and not
             a boolean, the 30 s / 3 s constants and six rejected options.</td></tr>
           <tr><td><a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a></td><td>T2</td>
@@ -211,7 +221,7 @@
       <tbody>
         <tr><td><strong>Onboarding and quitting, redesigned.</strong> The owner's verdict on the built surface: more
           complicated than this run treats it, and not yet as good as expected. The next epic starts from the
-          running screens, DEC-32's two-layer model, and the three owner rounds above — not from a plan.</td>
+          running screens, DEC-33's two-layer model, and the three owner rounds above — not from a plan.</td>
           <td><strong>owner</strong> — a later epic</td></tr>
         <tr><td><strong>Clamp negative ages in <code>trafficStatus</code>.</strong> A timestamp ahead of <code>now</code>
           (a backward wall-clock step) satisfies both recency checks unconditionally; the false verdict lasts as long

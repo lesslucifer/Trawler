@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9bf8f69f34851f0dfac7c0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W6 plan (build the flow detail)</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .fix{color:var(--warn);font-weight:600}
+    .yes{color:var(--ok);font-weight:600}
+    .gone{color:var(--muted);text-decoration:line-through}
+    .build-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    .build-card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper)}
+    .build-card h4{margin:0 0 6px;font-size:14px}
+    .build-card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .build-card p{margin:6px 0;font-size:12.5px;line-height:1.55}
+    pre.tb{font-family:var(--mono,monospace);font-size:11px;line-height:1.45;margin:0;white-space:pre}
+  </style>
+</head>
+<body data-artifact="wu-plan" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W6 — build the flow detail</h1>
+      <p>The panel a user lands on after clicking a row, rebuilt from W5's closed design: four zones split by
+      scope, one leg selector in the pinned identity row, every header value a copy target, a curl action
+      whose payload is never rendered, and the two keyboard promises the design receipted as
+      <em>blocked</em> — Esc dismisses, focus returns to the row's list.</p>
+      <div class="meta">WU plan · 2026-09-05 · Trawler · T3 (docs/work/) · <code>wu/redesign/flow-detail-build</code>
+      → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · designed by
+      <a href="2026-09-04-redesign-w5-flow-detail-run.html">W5's design run</a> ·
+      <a href="2026-09-04-redesign-w5-plan.html">W5 plan</a> ·
+      <a href="2026-09-04-redesign-w5-result.html">W5 result</a> ·
+      <a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement" data-c="requirement">
+      <strong>Build — citing <a href="2026-09-04-redesign-w5-flow-detail-run.html">W5's design run</a> by blob,
+      not re-deciding it —</strong> a <code>FlowDetail</code> whose pinned identity row carries
+      <code>MethodLabel</code> · <code>StatusPill</code> · a <code>SegmentedControl</code> selecting the leg ·
+      <code>DurationText</code> · an <code>IconButton</code> close; whose unlabelled flow line carries the URI
+      as <code>CopyText</code>, the versions line and a <code>CopyButton</code> reading <em>copy as curl</em>;
+      and whose two leg-scoped <code>Section</code>s — <em>Headers</em> (a wire-order table of
+      <code>KeyValueRow</code>s, <code>Notice</code> when the leg sent none) and <em>Body</em> (one
+      <code>BodyViewer</code> given the selected leg) — both follow that one selector, with the pending panel a
+      <code>Notice</code> — <strong>so that the panel holds exactly one model of "which leg", opens on
+      <em>request</em> always, copies any header value or the URI on click, confirms and reverts its curl
+      copy instead of sticking on "copied", closes on Esc, and returns focus to the list that opened
+      it.</strong>
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to" data-c="maps-to">
+      <tr><td><strong>Epic</strong></td><td><a href="2026-09-04-redesign-plan.html">E-REDESIGN</a> — apply the
+      design flow to every shipped screen. This is <strong>W6</strong>, the build half of the flow-detail pair,
+      and the third build WU after W8 and W4.</td></tr>
+      <tr><td><strong>Consumes</strong></td><td><a href="2026-09-04-redesign-w5-flow-detail-run.html">W5's
+      design run</a> — closed, archived, Tier-3 PASS, merged into <code>epic/redesign</code> at
+      <code>25c59e2</code> — through the <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a>
+      handoff. <code>git rev-parse HEAD:docs/work/2026-09-04-redesign-w5-flow-detail-run.html</code> =
+      <code>1cd046c72e9de3647211da12e31c6d6d7007d7eb</code> is the blob this WU's <code>cr/v3</code> note
+      cites as <code>design.implements</code>. Every component named is W2's; the pane is W8's, consumed as it
+      ships (it already takes <code>leg</code> as a prop and refetches when it changes).</td></tr>
+      <tr><td><strong>Rule</strong></td><td><a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a>
+      — leg selection is the panel's. Its <em>What this forces → W6</em> row is the contract this build
+      makes true: the panel holds the leg state, passes it down, and defaults to <em>request</em>, always.
+      That row is marked done here.</td></tr>
+      <tr><td><strong>Use cases</strong></td><td><strong>UC-5</strong> — inspect a captured flow. Three
+      observable changes land in <a href="../use-cases/web-ui.html">web-ui.html</a> with this WU: one leg on
+      screen at a time under one selector (replacing W8's "both legs at once" wording, which DEC-31
+      overrides); every header value and the URI copy on click; Esc dismisses the panel. The curl contract keeps
+      its shape and loses its rendered text.</td></tr>
+      <tr><td><strong>Closes</strong></td><td>The epic plan's W6 row's <em>still owed</em> list: the panel's
+      copy-as-curl <code>useState</code> that never reverts, and the bare <code>none</code> /
+      <code>loading…</code> paragraphs. Plus the two <em>blocked</em> entries the design receipted rather than
+      claimed: the Esc binding and <code>focus-returns-to-origin</code>.</td></tr>
+      <tr><td><strong>Does not touch</strong></td><td><code>BodyViewer.tsx</code> (W8's, consumed unchanged),
+      <code>Layout.tsx</code> and <code>FlowList.tsx</code> (W3/W4's shell and list), every registry member.
+      <code>App.tsx</code> is touched only if the tests force a hook it lacks; the plan expects it does not, since
+      focus return needs no list API — the panel records what had focus when it mounted.</td></tr>
+    </table>
+
+    <h2 id="what-lands">What lands — the four zones, from the shipped six</h2>
+    <p>Every row below is a verdict the design run already recorded. The build's job is to make them true in
+    code, not to re-decide them. Zone letters are the design's.</p>
+    <pre class="tb" data-c="layout">┌─────────────────────────────────────────────┐
+│ A  POST  201  [request│response]   148 ms ✕ │  pinned · flow-scoped facts + the leg selector
+├─────────────────────────────────────────────┤
+│ B  https://api.example.io/v2/users?id=7     │  flow-scoped · unlabelled · stated once
+│    HTTP/1.1 → HTTP/2        [ copy as curl ]│
+├─────────────────────────────────────────────┤
+│ C  HEADERS        (of the selected leg)     │  leg-scoped · Section · KeyValueRow × n
+├─────────────────────────────────────────────┤
+│ D  BODY           (of the SAME leg)         │  leg-scoped · Section · BodyViewer leg={leg}
+└─────────────────────────────────────────────┘
+     B…D are ONE scroll region; A never scrolls</pre>
+    <table data-c="what-lands">
+      <thead><tr><th>Goes</th><th>Comes</th><th>What the swap delivers</th></tr></thead>
+      <tbody>
+        <tr><td>local <code class="gone">Section</code> (7 lines)</td><td>registry <code>Section</code> ×2</td>
+          <td>The drifted heading token (<code>text-body</code> where the registry uses <code>text-chrome</code>)
+          goes with it. Only the two leg-scoped zones carry a heading — <em>Headers</em>, <em>Body</em> — and
+          neither names a leg, because the selector above them does.</td></tr>
+        <tr><td><code class="gone">HeaderTable</code> — raw <code>&lt;dl&gt;</code>, inert <code>&lt;dd&gt;</code></td>
+          <td>header table (T3 local) ▸ <code>KeyValueRow</code> ×n</td>
+          <td><span class="yes">Per-header click-to-copy</span>, adopted as the epic's hand-down decision. The
+          grid wrapper stays the screen's — <code>KeyValueRow</code> is <code>display:contents</code>, so the
+          two columns are the caller's — with <code>data-wire="collection" data-order="wire"</code>: array
+          order, no sort, duplicate names (<code>set-cookie</code> ×3) survive.</td></tr>
+        <tr><td>two stacked header <code class="gone">Section</code>s</td><td>one <em>Headers</em> zone + the selector</td>
+          <td><span class="fix">DEC-31.</span> One model of "which leg" on the panel. Switching leg replaces the
+          table's contents; the zone never vanishes when a leg sent none.</td></tr>
+        <tr><td>two <code class="gone">Request body</code> / <code class="gone">Response body</code> Sections</td>
+          <td>one <em>Body</em> zone, <code>BodyViewer leg={leg}</code></td>
+          <td>The pane follows the same selector as the headers — the whole point of DEC-31. W8 put one pane per
+          leg as the mount site the pane's own design forced before W5 was reachable; the panel's zoning was
+          left to this WU by name.</td></tr>
+        <tr><td>bare <code class="gone">&lt;span&gt;</code> verb</td><td><code>MethodLabel</code></td>
+          <td>The verb→tone map lives in one place; the screen passes the raw string.</td></tr>
+        <tr><td><code class="gone">`${duration_ms} ms`</code></td><td><code>DurationText</code></td>
+          <td>Deletes the screen's second copy of duration formatting; right-aligned, away from the identity
+          cluster (Tune 1); a null duration holds width instead of showing nothing.</td></tr>
+        <tr><td>bare <code class="gone">&lt;button&gt;×</code></td><td><code>IconButton glyph="close"</code></td>
+          <td>A 28px hit area and a focus ring where today there is a glyph with neither.</td></tr>
+        <tr><td>inert <code class="gone">&lt;p&gt;</code> URI</td><td><code>CopyText</code></td>
+          <td>The most-taken value on the screen becomes its largest copy target; native drag-select still
+          passes through.</td></tr>
+        <tr><td><code class="gone">&lt;pre data-testid="curl"&gt;</code> + <code class="gone">copy</code> button</td>
+          <td><code>CopyButton label="copy as curl"</code>, on the flow line</td>
+          <td><span class="fix">Fixes the sticky "copied"</span> — <code>useConfirm</code>'s ~2 s timer replaces
+          the <code>useState</code> that never reverted. The command is never rendered (Tune 7); the label
+          carries its noun because no visible payload supplies it.</td></tr>
+        <tr><td>bare <code class="gone">none</code> · <code class="gone">loading…</code></td><td><code>Notice</code> ×2</td>
+          <td><em>none — this leg sent no headers</em> · <em>loading this flow…</em>. Two absences, two
+          sentences, no action slot — the user can cause neither.</td></tr>
+        <tr><td><em>nothing</em></td><td>Esc → close · focus → origin</td>
+          <td><span class="yes">The two blocked receipts become true.</span> The rulebook sights Esc on this
+          panel and the design bound it; the build is where it ships.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="left-to-build">What the design left to this WU by name</h2>
+    <div class="build-grid" data-c="left-to-build">
+      <div class="build-card">
+        <div class="who">the panel's state · DEC-31</div>
+        <h4>Leg is a <code>useState</code> in <code>FlowDetail</code>, default <code>"request"</code></h4>
+        <p>Passed to the header table and to <code>BodyViewer</code>. The shipped per-flow rule
+        (<code>flow.response_body ? "response" : "request"</code>) is not reintroduced: a request always exists,
+        and it is what the user clicked a row to identify. <code>App</code> already remounts the panel per
+        selection (<code>key={selectedId}</code>), so a new flow opens on <em>request</em> without extra
+        code.</p>
+      </div>
+      <div class="build-card">
+        <div class="who">blocked-on · Interaction</div>
+        <h4>Esc dismisses the panel</h4>
+        <p>A <code>keydown</code> listener on <code>document</code> for the panel's lifetime — not on the panel's
+        root — because the keyboard path that opens it (Enter on the list) leaves focus on the list, outside
+        the panel. Ignored when the event is already <code>defaultPrevented</code>: <code>Select</code> claims
+        Esc that way for its popup. The quit dialog does not, so a dialog-and-panel Esc closes both;
+        recorded as a follow-up for W10, whose screen the dialog is.</p>
+      </div>
+      <div class="build-card">
+        <div class="who">blocked-on · focus-returns-to-origin</div>
+        <h4>Focus returns to what opened the panel</h4>
+        <p>The panel records <code>document.activeElement</code> when it mounts — the list's listbox, whether the
+        row was clicked or entered — and focuses it again on close, by ✕ or Esc, if it is still in the
+        document. No list API, no change to <code>FlowList</code>; the panel owns its own exit.</p>
+      </div>
+      <div class="build-card">
+        <div class="who">T3 locals the run sanctioned</div>
+        <h4>Header table · versions line</h4>
+        <p>Both <em>build local, waive reuse</em> per the tier model, each recorded in the run with why no entry
+        fits. The header table is the <code>&lt;dl&gt;</code> grid (~8 lines, its existing
+        <code>design-allow</code> pragma kept) plus the branch to <code>Notice</code>; the versions line is
+        <code>HTTP/1.1 → HTTP/2</code> as one muted mono line, <code>data-wire="protocol-version"</code>, the
+        arrow only when a response version exists.</p>
+      </div>
+    </div>
+
+    <h2 id="not-in-scope">Not in scope</h2>
+    <p data-c="not-in-scope">No change to any registry member or to <code>BodyViewer</code> — components are
+    consumed exactly as they ship; a member that needs a change is a finding, not an edit. No
+    <code>KeyValueTable</code> component — the run considered and declined it; a third pair-grid tenant may
+    reopen it. No eviction notice (the Frame's <em>Not given</em>; nothing raises the event). No timing
+    breakdown, no replay, no next/previous flow. No zebra on header rows (Tune 6). No change to the quit
+    dialog's own Esc handling (W10's screen). No <code>Gallery.tsx</code> deletion — that is W11.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <p>Observable by a reader who was not here:</p>
+    <table data-item="expected" data-c="expected">
+      <thead><tr><th>#</th><th>What is true after this WU</th><th>How it is checked</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>The panel opens on <em>request</em>, always; exactly one <code>radiogroup</code>
+          selects the leg, in the identity row; no other leg control exists on the panel.</td>
+          <td>unit: the request headers are shown first; one radiogroup named for the leg; no <em>Request
+          headers</em> / <em>Response headers</em> heading exists</td></tr>
+        <tr><td>2</td><td>Switching the leg replaces the header table <em>and</em> hands the same leg to the
+          body pane, while the URI, versions and curl do not move.</td>
+          <td>integration: after selecting <em>response</em>, the response leg's header names are in the
+          table, the request leg's are not, <code>[data-leg="response"]</code> is the only pane, and the
+          flow line's text is unchanged</td></tr>
+        <tr><td>3</td><td>Headers render in wire order, duplicate names preserved, and every value is a copy
+          target: clicking one writes exactly that value to the clipboard and the cell confirms.</td>
+          <td>unit: three <code>set-cookie</code> rows all present in array order; a click yields the
+          value; the <em>copied</em> chip appears</td></tr>
+        <tr><td>4</td><td>The URI copies whole on click. The identity row carries the verb through
+          <code>MethodLabel</code>, the status with its reason phrase, and the duration through
+          <code>DurationText</code> (<code>42 ms</code>; <code>1.4 s</code> above a second).</td>
+          <td>unit: <code>copy uri</code> is a button; <code>200 OK</code> is the pill's accessible name;
+          the duration text and its spoken label</td></tr>
+        <tr><td>5</td><td><em>copy as curl</em> writes <code>toCurl(flow)</code> to the clipboard, reads
+          <em>copied</em>, and reverts after <code>CONFIRM_MS</code>. The command itself is nowhere in the
+          DOM.</td>
+          <td>unit with fake timers; the rendered text contains no <code>curl </code></td></tr>
+        <tr><td>6</td><td>A leg with no headers shows <em>none — this leg sent no headers</em> inside a
+          <em>Headers</em> zone that stays; the leg stays selectable. A null flow shows <em>loading this
+          flow…</em> and no identity row.</td>
+          <td>unit: both sentences, both as <code>Notice</code> (<code>data-tone="mute"</code>); the segment is
+          not disabled</td></tr>
+        <tr><td>7</td><td>Esc closes the panel; so does ✕. Either way focus lands back on the element that had
+          it when the panel opened.</td>
+          <td>unit: <code>onClose</code> fires on Esc; integration in <code>App</code>: open by keyboard, Esc,
+          the listbox is <code>document.activeElement</code> and the panel is gone</td></tr>
+        <tr><td>8</td><td>An Esc that <code>Select</code> already handled does not close the panel.</td>
+          <td>unit: a <code>defaultPrevented</code> Esc leaves <code>onClose</code> uncalled</td></tr>
+        <tr><td>9</td><td><code>ui/src/FlowDetail.tsx</code> defines no <code>Section</code>, no
+          <code>HeaderTable</code>, no <code>useState</code> named <code>copied</code>, and renders no
+          <code>&lt;pre&gt;</code>; it imports every element it mounts from
+          <code>./components/index</code>.</td>
+          <td><code>grep</code>; the file's own shape</td></tr>
+        <tr><td>10</td><td>The repo's third <code>design.implements</code> citation passes gate check 9,
+          naming W5's run blob and <code>FlowDetail.tsx</code>.</td>
+          <td><code>cargo xtask design-scope epic/redesign HEAD</code> → the code-review skill →
+          <code>cr/v3</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p>Every level is exercised — this WU changes rendered behaviour on a use-case surface, so W5's design-WU
+    waivers do not carry over.</p>
+    <table data-item="test-plan" data-c="test-plan">
+      <thead><tr><th>Level</th><th>Where</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Unit</strong></td>
+          <td><code>ui/src/FlowDetail.test.tsx</code> (rewritten to the new contract)</td>
+          <td>The pending <code>Notice</code> and the absence of the identity row while <code>flow</code> is
+          null. The identity row: verb, status accessible name with reason phrase, duration formatting, the
+          leg radiogroup with <em>request</em> checked, ✕ firing <code>onClose</code>. The flow line: the URI
+          as a <code>copy uri</code> button whose click writes the URI; the versions line with and without a
+          response version. The header table: wire order with duplicates, a value click copying that value and
+          confirming, the empty-leg sentence with the zone heading still present and the segment enabled.
+          Curl: the payload equals <code>toCurl(flow)</code>, <em>copied</em> shows, reverts after
+          <code>CONFIRM_MS</code> under fake timers, and no curl text is in the DOM. Keyboard: Esc calls
+          <code>onClose</code>; a <code>defaultPrevented</code> Esc does not; after close the element focused at
+          mount has focus again. Existing assertions that encoded the two-pane layout are deleted, each
+          mapped to the design line that removed it.</td>
+        </tr>
+        <tr>
+          <td><strong>Integration</strong></td>
+          <td><code>ui/src/FlowDetail.test.tsx</code> (panel + real <code>BodyViewer</code>) ·
+          <code>ui/src/App.test.tsx</code> (extended and corrected)</td>
+          <td>The WU's bounded contract is <em>one selector governs both leg-scoped zones</em>: selecting
+          <em>response</em> replaces the header rows and makes <code>getBody</code> fetch the response leg, with
+          the request leg's fetch count unchanged from before the switch, while the flow line's text is
+          byte-identical before and after. In <code>App</code>: the keyboard path — ArrowDown, Enter, Esc —
+          ends with the listbox focused and no panel; and the two existing App tests that assert the
+          <code>curl</code> testid and a response body fetched on open are corrected to the new contract (the
+          curl payload via the stubbed clipboard; the response pane after selecting the response leg).</td>
+        </tr>
+        <tr>
+          <td><strong>E2E</strong></td>
+          <td><code>ui/e2e/specs/flows.spec.ts</code> (extended and corrected)</td>
+          <td>Against the real proxy, API and Tauri window: <strong>the leg selector switches headers and body
+          together</strong> (the request leg shows <code>accept</code>, the response leg shows
+          <code>content-type</code>, and the body pane's <code>data-leg</code> follows); <strong>copy as curl
+          confirms with the real command</strong> — <code>navigator.clipboard</code> is replaced through
+          <code>browser.execute</code> with a stub that records the payload, so the payload is asserted for
+          real and the standing "curl as DOM text" waiver is retired for this button; <strong>Esc closes the
+          panel</strong>. Every response-body assertion W8 wrote is re-scoped through a helper that selects the
+          response leg first, since only the selected leg's pane exists; W8's "both legs at once" case is
+          replaced by the selector case, per DEC-31. Hermetic — the harness's own origin, ephemeral ports, no
+          public network.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>Also run, not new:</strong> <code>cd ui &amp;&amp; pnpm test</code> (the whole suite — 542 tests at
+    this tip), <code>pnpm exec eslint src</code> (the vocabulary lint), <code>pnpm exec tsc --noEmit</code>,
+    <code>cargo test</code>, <code>cargo clippy --all-targets</code>, <code>cargo xtask ui e2e</code>.</p>
+
+    <h2 id="gate">The merge gate</h2>
+    <p data-c="gate"><code>cargo xtask verify-dod wu &lt;tip&gt; --target epic/redesign</code> —
+    <code>test/v2</code> with all three levels counted (no waivers), <code>doc/v1</code> including the
+    <strong>T2 entries</strong> for <a href="../use-cases/web-ui.html">web-ui.html</a> and
+    <a href="../decisions/dec-31-leg-is-panel-scoped.html">DEC-31</a>, and a diff-bound <code>cr/v3</code>
+    PASS whose <code>design.implements</code> names W5's run blob with <code>built: [ui/src/FlowDetail.tsx]</code>.
+    <code>App.tsx</code>, if touched, is declared <code>design.undesigned</code> with its reason. Then
+    <code>cargo xtask mr confirm</code> — printed for the user, never run by the agent — and the
+    <code>--no-ff</code> merge.</p>
+
+    <h2 id="risks">What could go wrong</h2>
+    <table data-c="risks">
+      <thead><tr><th>Risk</th><th>Handling</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The build re-decides what a member owns.</strong> The natural failure here is a
+        second confirm timer, a hand-rolled focus ring on the close, or a tone resolved at the call site.</td>
+        <td>The screen passes raw values (<code>method</code>, <code>status</code>, <code>duration_ms</code>) and
+        holds no confirm state. Anything visual it adds is layout: the pinned/scroll split, the grid, the flow
+        line's flex row.</td></tr>
+        <tr><td><strong>The existing tests encode the old layout.</strong> Two W8 integration tests and one W8
+        e2e assert two body panes on the page at once; the App tests and one e2e assert a rendered curl
+        text.</td>
+        <td>Rewritten, not patched, and each deleted assertion maps to a design line (DEC-31, Tune 7). A suite
+        kept green by keeping the old layout is the failure mode.</td></tr>
+        <tr><td><strong>Esc has other tenants.</strong> <code>Select</code> closes its popup on Esc; the quit
+        dialog cancels on Esc.</td>
+        <td>The panel ignores a <code>defaultPrevented</code> Esc, which is how <code>Select</code> claims it.
+        The dialog does not prevent default, so both would close — a W10 finding, recorded, not fixed here in a
+        file this WU has no design for.</td></tr>
+        <tr><td><strong>The e2e origin's request carries few headers.</strong> A reqwest client through the
+        proxy sends <code>accept</code> and <code>host</code>; <code>content-type</code> is a response
+        header.</td>
+        <td>The request-leg assertion uses <code>accept</code>; <code>content-type</code> is asserted after
+        selecting the response leg — which is itself the new contract.</td></tr>
+        <tr><td><strong>Clipboard under WebDriver.</strong> A real write fails or prompts, which is why curl was
+        asserted as DOM text — text this WU removes.</td>
+        <td>Replace <code>navigator.clipboard</code> with a recording stub via <code>browser.execute</code>
+        before the click; assert the recorded payload. If the WebView refuses the override, fall back to the
+        <em>copied</em> label and keep the waiver wording.</td></tr>
+        <tr><td><strong>Focus return races the unmount.</strong> Focusing the origin after <code>onClose</code>
+        has unmounted the panel is fine; focusing something the panel contained is not.</td>
+        <td>The origin is read once at mount, before any element in the panel can take focus, and focused only
+        if still connected.</td></tr>
+        <tr><td><strong>The toolchain is not on PATH.</strong> This worktree's <code>~/.cargo/bin</code> is
+        empty and <code>ui/node_modules</code> is present.</td>
+        <td><code>~/.rustup/toolchains/stable-aarch64-apple-darwin/bin</code> prepended; verified. An environment
+        note, not a finding.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="sequence">Sequence</h2>
+    <div class="diagram" data-c="sequence">
+      <pre class="mermaid">flowchart LR
+  P["this plan"] --> F["FlowDetail.tsx
+rewritten: four zones,
+leg state, Esc, focus"]
+  F --> U["unit
+FlowDetail"]
+  U --> I["integration
+FlowDetail + BodyViewer
+App keyboard path"]
+  I --> E["e2e
+leg switch · curl · Esc"]
+  E --> T2["distil → web-ui.html
+DEC-31 row done"]
+  T2 --> N["test/v2 · doc/v1"]
+  N --> CR["design-scope →
+code-review → cr/v3"]
+  CR --> MR["mr confirm
+(printed, not run)"]
+  MR --> M["merge --no-ff
+→ epic/redesign"]</pre>
+      <div class="caption">One screen file, then its tests outward — unit, the two-zone contract, the real
+      window. The distillation happens before the notes, because <code>doc/v1</code> must account for the T2
+      edits.</div>
+    </div>
+
+    <p><strong>The load-bearing line.</strong> The design's Frame states it: <em>two scopes, not one</em>. A zone
+    is flow-scoped or leg-scoped, and that decides whether it carries a label and whether it follows the
+    selector. A build that lands the components but leaves a "Request" heading over the URI, or a second leg
+    control anywhere, has cited a design it did not implement.</p>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
