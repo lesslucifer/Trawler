@@ -292,6 +292,21 @@
             tunnel" clause; the signal itself is unchanged</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-34-fixed-height-rows-truncate.html"><code>dec-34-fixed-height-rows-truncate.html</code></a></td>
+          <td><span class="badge id">DEC-34</span></td>
+          <td><strong>A fixed-height virtualized row may truncate, on three conditions</strong> —
+            <code>wrap-not-truncate</code> keeps its predicate and its Tier-1 red; a design may record
+            <code>violated</code> and ship the cut only where a declared Frame constraint makes wrapping
+            impossible, the full value stays reachable by a named route, and the cut is visible. The escape is
+            declared on the receipt and judged by a reviewer, never detected. Answers the flow-list run's
+            escalation to the epic close. Rejected: overruling the design (variable row height ends
+            virtualization), widening the column (the rule forbids it and a path is unbounded), weakening the
+            predicate (it cannot see row height, so it would have to trust the subject), an eighth verdict
+            <code>violated-by-constraint</code> beside DEC-15's fixed seven (reads as absolution where
+            <code>violated</code> plus a reason is already honest). Carries <code>display-equals-payload</code>'s identical violation</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

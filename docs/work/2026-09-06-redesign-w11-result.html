@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d35889f34851f0dfac8a6">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W11 result: epic close</title>
+</head>
+<body data-artifact="wu-result" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W11 result — epic close</h1>
+      <p>The scaffolding is gone, the two escalated rulebook questions are answered, and the three
+        contracts are green against the real window.</p>
+      <div class="meta">v1 · 2026-09-06 · Trawler · T3 (docs/work/) · branch <code>wu/redesign/epic-close</code> ·
+        <a href="2026-09-06-redesign-w11-plan.html">the plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div class="callout" data-item="outcome" data-c="outcome">
+      <p><strong>Delivered, and it grew.</strong> The requirement — delete the throwaway screen and
+        its mount guard, account for every rendered surface, prove the three contracts end to end —
+        is met in full. What the plan did not carry, and the work found by reading what the epic's
+        own runs escalated: <strong>two rulebook distillations named W11 by name</strong>, one from
+        W3's design run and one held back by W2. Both landed here, which is where they were sent.</p>
+    </div>
+    <table data-c="against-expected">
+      <thead><tr><th>#</th><th>Expected (from the plan)</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>grep -r Gallery ui/src/</code> returns nothing; one mount path</td>
+          <td><strong>✓</strong> 795 lines gone (screen + test); <code>main.tsx</code> is one
+            <code>render(&lt;App /&gt;)</code>, the one-call-site <code>mount</code> helper inlined
+            with the branch it existed for</td></tr>
+        <tr><td>2</td><td><code>design-scope</code> reports zero unaccounted surfaces</td>
+          <td><strong>✓</strong> over this WU's diff: <em>one</em> rendered file touched
+            (<code>main.tsx</code>), declared <code>undesigned</code>. The plan predicted two —
+            a deleted file is not a touched surface at the tip, so <code>Gallery.tsx</code> needs
+            no declaration. The epic-range answer is the epic gate's, run at its own seam</td></tr>
+        <tr><td>3</td><td><code>cargo xtask ui e2e</code> green on the rebuilt screens</td>
+          <td><strong>✓ 28 passing, 2 spec files, 0 failing</strong> — 22 in
+            <code>flows.spec.ts</code> (UC-4 + UC-5, including the epic's two new contracts: an XML
+            body renders as XML, an over-cap body states its truncation) and 6 in
+            <code>onboarding.spec.ts</code> (UC-ONBOARD through to the list reveal), driving the real
+            WebKit window against an ephemeral core</td></tr>
+        <tr><td>4</td><td>every component design the epic added has a roster entry</td>
+          <td><strong>✓</strong> <code>Field</code> · <code>StatusDot</code> ·
+            <code>Disclosure</code> all resolve; the registry emits <strong>28 entries</strong>, up
+            from 24 at the epic's start</td></tr>
+        <tr><td>5</td><td>the epic's truth in T2; <code>docs/work/</code> empty at the epic tip</td>
+          <td><strong>✓ / deferred by design.</strong> T2 is current — <a href="../use-cases/web-ui.html">web-ui.html</a>
+            for the three contracts, DEC-30 … <strong>DEC-34</strong> for the reasoning. The archive
+            move is <em>not</em> this WU's: a WU cannot archive its own result report, because gate
+            check 8 re-hashes it against the tracked file at the tip. It is a standalone docs-only
+            commit on the epic branch, after this merge</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <thead><tr><th>What changed</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Two rulebook distillations were added to the scope.</strong> The plan
+            named the T2 sweep in general terms; the work found two specific debts addressed to
+            W11 in writing.</td>
+          <td>The flow-list run's <em>blocked-on</em> list says: <em>"the rulebook — W11, which
+            already owns this epic's rulebook distillation… the rule is amended or the design is
+            overruled at distillation."</em> W2's result says the chromatic-meanings row is
+            <em>"carried to W11, where the epic's own distillation plan already reserves the
+            row."</em> W4's follow-ups repeat the first. Closing the epic without them would
+            archive three documents that each say a later WU owns a thing no WU then did.</td></tr>
+        <tr><td><strong>The <code>wrap-not-truncate</code> answer is a decision record
+            (DEC-34), not a rulebook edit alone.</strong></td>
+          <td>The full argument — the constraint, the three rejected alternatives, the registry's
+            wrap-vs-nowrap precedent — lives in a design run that is about to be archived out of
+            git. The rulebook holds one-line predicates by its own standard, so the reasoning had
+            to synthesize <em>up</em> into a permanent T2 record or die with the run.</td></tr>
+        <tr><td><strong>The predicate was not weakened.</strong> The plan left the shape open
+            ("amended or overruled"); the work chose a third answer.</td>
+          <td>The predicate cannot see row height, so any mechanical exception would have to trust
+            a <code>data-</code> attribute the design writes about itself. Keeping the Tier-1 red
+            and bounding the <em>declared</em> violation preserves the one property worth having:
+            the breach is stated on the receipt and read by a reviewer.</td></tr>
+        <tr><td><strong><code>onboarding.spec.ts</code> was relabelled.</strong> Not in the plan's
+            deletion table; found while reading the spec the epic's e2e proof rests on.</td>
+          <td>Its <code>describe</code> and file header both said <strong>UC-5</strong> while the
+            file proves <strong>UC-ONBOARD</strong> — a stale label W10's rewrite carried through
+            with the spine. An epic that closes on "the e2e proves three contracts" should not have
+            one of them naming the wrong one.</td></tr>
+        <tr><td><strong>W10's plan doc gained its governance tags.</strong></td>
+          <td>It shipped with no <code>data-artifact</code>, so <code>verify-doc</code> skipped it
+            as ungoverned and it was never checked against the WU-plan checklist. It had all four
+            items under untagged headings; tagging them makes the archived artifact governed and
+            green rather than silently exempt.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <thead><tr><th>Check</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><code>cd ui &amp;&amp; pnpm test</code></td>
+          <td><strong>741 passed, 44 files</strong> (was 742 / 45 — the delta is
+            <code>Gallery.test.tsx</code>'s single test, deleted with the screen it rendered).
+            Nothing else moved.</td></tr>
+        <tr><td><code>cd ui &amp;&amp; pnpm exec eslint src</code></td>
+          <td>clean — including the <code>design/vocabulary</code> rule over the whole of
+            <code>ui/src/</code></td></tr>
+        <tr><td><code>cargo test</code> · <code>cargo clippy</code> · <code>cargo fmt</code></td>
+          <td>green; no core code in this WU's diff</td></tr>
+        <tr><td><code>cargo xtask ui e2e</code></td>
+          <td><strong>28 passing, 2 spec files, 0 failing</strong> — the epic's e2e evidence,
+            listed per contract in <a href="#outcome">Outcome</a> row 3</td></tr>
+        <tr><td><code>cargo xtask verify-doc</code> (whole tree)</td>
+          <td><strong>65 docs checked, none red</strong> — re-run at the final tip, after the rulebook blob moved
+            <code>aeff5b0</code> → <code>849cc8e</code>. The four design runs pin the old blob and
+            stay green because all four are <code>data-status="archived"</code>: a run that closed
+            under an older rulebook is a record, not a stale claim.</td></tr>
+        <tr><td><code>cargo xtask design-scope epic/redesign HEAD</code></td>
+          <td>one rendered file — <code>ui/src/main.tsx</code> — for one
+            <code>design.undesigned</code> entry. No design artifact in the diff, so no design
+            dimension fires at this seam.</td></tr>
+        <tr><td>Commits</td>
+          <td>plan · the deletions · the distillation — three, on
+            <code>wu/redesign/epic-close</code> off <code>58bb4e5</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation" data-c="distillation">
+      <thead><tr><th>Doc</th><th>Tier</th><th>What landed</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../decisions/dec-34-fixed-height-rows-truncate.html">dec-34-fixed-height-rows-truncate.html</a></td>
+          <td>T2</td>
+          <td><strong>New.</strong> The escalated clause, answered: three conditions bound the
+            escape, four alternatives are recorded as rejected, and the Tier-1 red is explicitly
+            unchanged. Indexed in <code>decisions-index.html</code>.</td></tr>
+        <tr><td><a href="../design-rules/design-rules-index.html">design-rules-index.html</a></td>
+          <td>T2</td>
+          <td>Two amendments. <code>wrap-not-truncate</code> carries the escape clause and points
+            at DEC-34, its check text stating the escape is <em>declared, never detected</em>. The
+            chromatic-meanings table gains <code>StatusDot</code> as a second owner of
+            <code>ok</code> and <code>warn</code>, and <code>ink-mute</code> as a first-class row —
+            the not-yet-known channel, a lifecycle state and never a verdict.</td></tr>
+        <tr><td><a href="../use-cases/web-ui.html">web-ui.html</a></td>
+          <td>T2</td>
+          <td>UC-4's "one rule knowingly unmet" now names the three conditions and cites DEC-34,
+            instead of pointing at work not yet done. Provenance bumped to v5, recording that all
+            three native surfaces were re-designed and rebuilt by E-REDESIGN. No contract moved
+            here — this WU adds no capability.</td></tr>
+        <tr><td>T1</td><td>T1</td>
+          <td><strong>Nothing.</strong> The flow, the rulebook's structure and the gate were inputs
+            to this epic. DEC-34 grows the rulebook's <em>content</em>, which DEC-14 already
+            provides for; nothing this WU found argues the method is wrong.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="review">What the review found</h2>
+    <table data-c="review">
+      <thead><tr><th>Round</th><th>Candidates</th><th>Verified</th><th>What moved</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>3 (from 5 finders — simplification and efficiency returned none)</td><td>1</td>
+          <td>DEC-34 called a hypothetical <code>violated-by-constraint</code> <em>a seventh
+            verdict</em>. The receipt enum already holds seven (<code>VERDICTS</code> in
+            <code>xtask/src/doc.rs</code>), and <a href="../decisions/dec-15-design-run-enforcement.html">DEC-15</a>
+            names it a fixed seven-verdict enum — so an addition is the eighth. The rejection
+            argued the right thing and miscounted the thing it argued about; it now cites the
+            record that owns the vocabulary instead of reasoning past it.</td></tr>
+        <tr><td>2</td><td rowspan="3">4 (reuse and efficiency returned none; two dimensions found
+            the stale count independently)</td><td rowspan="3">3</td>
+          <td><strong>A permanent T2 doc linked into a doc scheduled for deletion.</strong>
+            <code>use-cases/web-ui.html</code> cited the flow-list design run by
+            <code>&lt;a href&gt;</code> — and the <code>doc/v1</code> note asserted no such link
+            existed. The archive move would have 404'd a citation in a permanent record and
+            reddened verify-doc's link check at the epic gate, after the signatures. Rewritten as
+            plain text marked <em>archived</em>, the standard's rule for an archived target; a
+            sweep of every T1/T2 doc confirms it was the only one.</td></tr>
+        <tr><td>2</td>
+          <td><strong>The Evidence row still read 64</strong> where this document's own review
+            section already said 65. Round 1 explained the discrepancy instead of correcting the
+            row it explained.</td></tr>
+        <tr><td>2</td>
+          <td><strong>The refuted table restated the follow-up beside it</strong> — now one
+            sentence, and the follow-up no longer credits an unwritten document with answering
+            anything.</td></tr>
+        <tr><td>3</td><td>3 (correctness, efficiency and reuse each re-ran round 2's fixes against
+            the tree)</td><td>1</td>
+          <td>Two candidates refuted on evidence: the coverage map <em>is</em> E-DFLOW.W11's —
+            its 32 assertions are that epic's own result report's 30 inherited + 1 retired + 1
+            answered — and DEC-34's note on Tier-1's blindness names a different predicate
+            (<code>wrap-not-truncate</code>) from the one DEC-26 measured
+            (<code>check_vocabulary</code>), so it continues a lineage rather than duplicating a
+            record. The third was this table itself: three findings packed into one cell, against
+            the rule that a wall of text fails review. Split to one row each.</td></tr>
+        <tr><td>4</td><td>1</td><td>1</td>
+          <td>A confirming pass over the whole diff, which found the arithmetic of the row above:
+            it read <em>0 verified</em> while recording a fix it had just made. Corrected to 1.
+            Everything else re-checked clean against the tree — the rulebook blob, the href sweep,
+            the doc count, the design-scope answer, the registry roster and the unit suite.</td></tr>
+      </tbody>
+    </table>
+    <p>Two candidates were refuted on evidence: a <em>64 docs checked</em> count that described the
+      tree before this report existed (a doc cannot verify a tree containing its own unwritten
+      bytes — the Evidence row above is the re-run over all 65), and a claim that the epic plan's
+      two deferred items were dropped, when the standard gives the <em>epic</em> result report its
+      own follow-ups item at its own seam (the items are carried below, so the trail cannot
+      break).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <thead><tr><th>What</th><th>Whose</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Tier-1 cannot read a mockup's mounted JSX.</strong>
+            <code>wrap-not-truncate</code>'s predicate reds a truncating payload element in static
+            HTML, but the tokenizer treats <code>&lt;script type="text/babel"&gt;</code> as opaque
+            — and the flow spec requires the mockup to mount its components from exactly such a
+            block. Every design run's mockup has the hole; verify-doc reports hard rules green over
+            markup it never read. Verified both ways by W3, unchanged by DEC-34.</td>
+          <td>the harness (<code>xtask</code>) — a later epic</td></tr>
+        <tr><td><strong><code>Checkbox</code> has no component design file.</strong> W10 built it
+            under the author's call when run #9 ruled it out of scope, and asked W11 to back-fill
+            the file or record the drop. <strong>Recorded, not back-filled:</strong> it has a
+            roster entry with the full six-tag TSDoc, so <code>components·unbuilt</code> is
+            satisfied and the gate has nothing to refuse. A design file written now would be born
+            retired under DEC-16 — a document created solely to be deleted. What is genuinely owed
+            is a second sighting: one tenant is not a vocabulary.</td>
+          <td>closed here; revisit at a second tenant</td></tr>
+        <tr><td><strong>The detail pane's 380px width.</strong> W6 found half the wrap cost is the
+            pane, not the component — a 900-character cookie is thirty lines at this width and
+            twenty at 520px. The width is <code>Layout.tsx</code>'s, W3's designed shell, so a
+            wider or draggable pane is a shell design question and needs its own run.</td>
+          <td>a later epic — a shell design WU</td></tr>
+        <tr><td><strong>The method/status filters are exact matches behind a free-text box.</strong>
+            Open exactly as W3 left it and W4 confirmed: a <code>Select</code> for method is legal
+            today, but a status-class query (<code>4xx</code>) needs the API to accept one.</td>
+          <td>owner, then a later WU</td></tr>
+        <tr><td><strong>Carried to the epic result, not settled here:</strong> the epic plan
+            deferred two items to the close — the <strong>E-DFLOW.W11 coverage map</strong>
+            (32 assertions classified, executed by W10's rewritten <code>onboarding.spec.ts</code>)
+            and the <strong>DEC-13 revert question</strong> (already decided 2026-09-02, a day
+            before this epic's plan was written; the inherited assertion survived the rebuild and
+            is asserted at <code>ui/src/App.test.tsx</code>). Neither is open work this WU shirked —
+            both were settled elsewhere; what is owed is the recording, in the epic result's
+            follow-ups, which is the artifact the plan named.</td>
+          <td>the epic result</td></tr>
+        <tr><td><strong>A second truncation sighting is the signal.</strong> DEC-34's own
+            consequence: two screens needing the escape means the payload cell wants a registry
+            entry, which the flow-list run already named as a near-miss awaiting a second call
+            site.</td>
+          <td>whoever designs the second one</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
