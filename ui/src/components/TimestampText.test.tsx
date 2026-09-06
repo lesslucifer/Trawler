@@ -73,6 +73,26 @@ describe("TimestampText", () => {
     expect(shown(at)).toBe(moment(at).format("HH:mm:ss"));
   });
 
+  it("bounds today exactly — local midnight is today, the millisecond before it is not", () => {
+    expect(shown(localToday(0, 0, 0))).toBe("00:00:00");
+    expect(shown(new Date(2026, 6, 21, 23, 59, 59, 999))).toBe("21/07 · 23:59:59");
+  });
+
+  it("bounds the year exactly — its first instant carries no year, the one before it does", () => {
+    expect(shown(new Date(2026, 0, 1, 0, 0, 0))).toBe("01/01 · 00:00:00");
+    expect(shown(new Date(2025, 11, 31, 23, 59, 59, 999))).toBe("31/12/2025 · 23:59:59");
+  });
+
+  // The same timestamp reads differently on either side of midnight, so anything
+  // the component remembers about it must not survive the crossing.
+  it("re-labels a timestamp once the clock leaves the day it was rendered under", () => {
+    const at = localToday(14, 7, 52);
+    expect(shown(at)).toBe("14:07:52");
+
+    vi.setSystemTime(new Date(2026, 6, 23, 0, 30, 0));
+    expect(shown(at)).toBe("22/07 · 14:07:52");
+  });
+
   it("is muted mono with tabular figures for a stable column", () => {
     const { container } = render(<TimestampText timestamp={localToday(14, 7, 52)} />);
     const span = container.querySelector("span");
