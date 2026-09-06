@@ -1,0 +1,14 @@
+schema: test/v2
+level: working-unit
+epic: E-RFINISH
+wu: E-RFINISH.W2
+branch: wu/redesign-finish/docstrings
+tests:
+  unit:
+    count: 21
+    covers: "ui/src/components/citations.test.ts over scripts/design-citations.mjs - the boundary a clean tree cannot demonstrate, because a clean tree shows no refusal at all. (1) what counts as a citation: a two-hump name is looked up, a single-hump prose capital is not (Inter, Pass, Enter, Space, Blob, Date, Warp) and neither is a shout or an initialism (JSON, WCAG, ASCII, STANDING, UNLESS, NEVER); a name inside a dead path is reported on both halves; the same citation twice is one refusal. (2) each of the four resolution sources admits a name - an export/module basename, an imported binding, a package.json dependency - and nothing else does, which is the no-allowlist rule asserted as a test. (3) paths: a tracked path resolves, a bare basename resolves, an untracked path is refused, and a :N pin is judged on its path alone. (4) only the @tier block is read, so a sibling comment cannot smuggle a citation past the check. All exercise the injected-tree form of refusals(), so no fixture asserts a copy of the real tree."
+  integration:
+    count: 2
+    covers: "ui/src/components/collection.test.tsx, read against the real tree beside the existing '@avoid alternatives are reachable' block it generalises - from redirects the barrel can answer for, to every name any tag cites. (1) unresolved() is empty across all 28 entries; the assertion reports per component, so a failure names the file and the token. (2) refusals() over the real reachable() still refuses a name nothing owns, which is what keeps (1) from passing on an empty or broken resolver. RED FIRST at the branch point: (1) failed with CopyButton HeaderTable, CutMarker BodyRenderer, Notice HeaderTable, TonedText components.tsx:25. Green at the tip."
+  e2e:
+    waived: "No user-facing surface, no route and no rendered state - every edit is inside a /** ... */ block and the oracle is build-time only. Rendered output is byte-identical, and the proof is that the five touched components' own unit tests, every specimen mount and every @madeof composition test in the collection suite pass UNEDITED (45 files, 768 tests). The epic e2e is W10 and covers no part of this WU."
