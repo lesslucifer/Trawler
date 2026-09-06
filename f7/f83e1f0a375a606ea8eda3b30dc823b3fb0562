@@ -1,0 +1,79 @@
+schema: test/v2
+level: working-unit
+epic: E-EXPORT
+wu: E-EXPORT.W9
+branch: wu/export/controls-redesign
+tests:
+  unit:
+    waived: "design-only diff — the WU adds two T3 HTML docs (the plan and the run) and amends the epic plan's WU table. No src/ or ui/src/ byte changes, so there is nothing a unit test could assert. The run's own correctness is not unit-testable; it is held by the Tier-1 checker on every write and at every turn end, which is a stronger and already-wired gate than a test asserting the file parses."
+  integration:
+    waived: "no bounded contract changes. Every endpoint the run designs against — GET /flows/export, POST /flows/import, ?format=curl, DELETE /flows, DELETE /flows/{id} — is merged and covered by W2/W3/W4/W7's own integration tests. This run reads their shapes; it does not alter one."
+  e2e:
+    waived: "deferred to the epic's own e2e step, which already owns the row: WebDriver drives the built app through export → clear → import → curl paste. That needs W6's built controls, which this WU deliberately does not build."
+verified:
+  - "cargo xtask verify-doc <the run> — green as design-run: 17/17 soft slugs receipted (14 satisfied, 2 inherited, 1 satisfied-via-proposal), 13/13 hard rules machine-checked, 0 design-allow suppressions."
+  - "node scripts/check-render.mjs <the run> — ok, 6 mounts, 12 buttons, clean console over a real file:// origin with no flags. This is the check the Tier-1 predicates cannot make: a component that throws leaves an empty div beside correct prose, which reads as 'no specimen here' rather than 'broken'."
+  - "The rulebook was re-pinned at close (step 1) and still hashes a7f9ae3 — it did not move under the run."
+  - "cargo xtask design-scope epic/export HEAD — exactly one design artifact to judge, the run itself."
+  - "cargo xtask gate0 — fmt + clippy -D warnings + the full suite green."
+  - "doc-assets/components/specimens.bundle.js rebuilt before the mockup was written, so the mounted collection is the 28-entry one and not the 24-entry bundle left over from run 10's session."
+  - "Round 1 of the code review, re-verified after the fix: verify-doc green on both docs, check-render ok (6 mounts, 12 buttons, clean console), the rulebook re-pinned at a7f9ae3 for the second close."
+note: >-
+  A design WU produces no executable bytes, so three waivers is the honest shape rather than a
+  convenient one, and the load-bearing gates are Tier-1 plus the Tier-3 design review. What is
+  worth recording as testing is the render check: run 10 could not have caught a broken mount
+  either, and the failure mode is silent by construction. Six mounts render, which is every mount
+  the doc declares.
+  One environmental finding, fixed locally and not committed because it is not a repo fact: this
+  worktree's ui/node_modules/.bin/esbuild was a pnpm shim that wrapped esbuild's native Go binary
+  with `node`, so `cargo xtask ui specimens` died with a SyntaxError dumping the Mach-O header.
+  pnpm install reported "Already up to date" and did not regenerate it. Repaired by rewriting the
+  shim to exec the platform binary directly; node_modules is git-ignored, so nothing about that
+  repair is in the diff. Worth naming because the next agent to rebuild the bundle in a fresh
+  worktree will hit it, and because the bundle being stale is exactly the failure that would have
+  let this run mount 24-entry components while claiming 28.
+  A second environmental note: xtask's test binaries are cached in a target/ symlinked to the main
+  checkout, so two suites first failed against paths in a deleted worktree (TRA-RD-W7). Touching
+  the sources to force a rebuild made them green; no source change was involved.
+  Round 1 of the review confirmed three findings and refuted three; the two that mattered were
+  both this run claiming more than it had earned, and both are fixed in the follow-up commit. The
+  mockup's curl refusal was a string the server never sends ("--data-urlencode is not supported"
+  where CurlError::UnsupportedFlag emits "unsupported flag --data-urlencode"), which mattered
+  because the run asserted in three places that it had read that wording from src/api/curl.rs and
+  its Stubbed list did not name the wording as illustrative. And blocked-on was declared empty on
+  a miscount: run 10 carried five entries, not one, and while four are genuinely disposed of the
+  fifth — the header's untested wrap behaviour — was dropped rather than carried. It is carried
+  now and stated as more pressing than run 10 left it, because two header members are now
+  popup-bearing Selects where run 10 measured four plain boxes. A third finding, a receipt
+  quoting copy the design does not contain, was a citation slip that left its verdict standing.
+  One refuted candidate is recorded as a build fact rather than discarded: ui/src/api.ts does not
+  subscribe to the `cleared` SSE event the server emits, so W6 must add the listener or a clear
+  will empty the store and leave the list on screen. The diff carries no code, so this is not a
+  defect in it; the run now states it where the build will read it.
+  Round 2 re-reviewed round 1's fix as unreviewed text and confirmed one finding, refuting two.
+  The fix had recorded the Tier-3 round as four rows in the run's own review list; that list is
+  for what moved before the close, and the Tier-3 verdict's home is this note's sibling, the cr/v3
+  note (design-flow section 8, DEC-24, which warns that re-emitting a finding elsewhere doubles
+  the artifact and buries it). Run 10 states the same rule in its own review table and two earlier
+  post-review fixes followed it. The rows are gone and the rule is stated. Refuted: the carried
+  wrap entry is a real blocked-on entry rather than a mis-filed test item, because the row shape's
+  "what the run did meanwhile" column exists precisely so an entry can carry an interim answer and
+  still be blocked; and "there is no E-EXPORT.W8" holds under the workflow's own definition of a
+  Working Unit. Round 2 also caught a stale note rather than a stale doc: the doc/v1 note had been
+  carried onto the fixed tip unchanged and still described an empty blocked-on list. Both notes are
+  now written against the tip they are attached to.
+  Round 3 found that round 2's fix had overshot in three places, all the same mistake: the
+  paragraph replacing the deleted rows named the findings and asserted they were fixed, its count
+  of them was wrong because the commit writing it was fixing a fourth, and a parenthetical left on
+  a review row recorded that a review had corrected the document. All three are gone; the run now
+  states the rule in run 10's exact words and stops, which is what this repo's two earlier
+  post-Tier-3 fixes did.
+  A second environmental finding, alongside the esbuild shim: scripts/check-render.mjs is
+  sensitive to CDN latency. It samples the page on a fixed budget, and the mockup compiles through
+  Babel standalone fetched from jsdelivr; when that fetch is slow the script has not run at
+  sampling time and every mount reads empty. Measured at 5.2s for babel.min.js during this
+  session, with the checker reporting "empty mounts: m-head, m-labels, m-rows, m-ask, m-paste".
+  The already-merged run 10 fails identically in the same minute and passes when the CDN is fast,
+  so this is the harness and the network, not either document. This run passed the check cleanly
+  three times (6 mounts, 12 buttons, clean console) when the CDN was responsive; a red from this
+  checker should be re-run before it is believed.
