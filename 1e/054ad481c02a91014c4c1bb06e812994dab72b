@@ -2,6 +2,18 @@ schema: doc/v1
 epic: E-EXPORT
 branch: epic/export
 changes:
+  - path: docs/decisions/dec-30-har-as-the-interchange-format.html
+    tier: T2
+    action: renamed
+    distills: "Left this path for dec-35-har-as-the-interchange-format.html. The record is not retired and nothing it decides changes - only the number it carries, because E-REDESIGN's DEC-30 reached main first."
+  - path: docs/decisions/dec-31-imported-flows-are-marked.html
+    tier: T2
+    action: renamed
+    distills: "Left this path for dec-36-imported-flows-are-marked.html, for the same collision."
+  - path: docs/decisions/dec-32-curl-parser-accepts-what-a-browser-emits.html
+    tier: T2
+    action: renamed
+    distills: "Left this path for dec-37-curl-parser-accepts-what-a-browser-emits.html, for the same collision."
   - path: docs/decisions/dec-35-har-as-the-interchange-format.html
     tier: T2
     action: renamed
