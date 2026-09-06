@@ -36,7 +36,7 @@
       committed suite; all three named costs carry a before number taken at the benchmark's own commit and an
       after number from the tip. Two of the three are paid — the time column re-renders
       <strong>2.9×</strong> faster where its timestamps repeat — which is what an SSE refresh does — and is
-      free rather than faster where they do not, and the host merge <strong>251×</strong> — and the third is paid on the
+      free rather than faster where they do not, and the host merge <strong>249×</strong> — and the third is paid on the
       member the benchmark could show it helping (<strong>51.6×</strong>) and
       <strong class="bad">reverted</strong> on the member it could not. The 741 assertions that existed before
       this WU all pass unchanged; 14 were added.
@@ -68,64 +68,66 @@
           <td rowspan="3"><strong>1</strong><br>TimestampText</td>
           <td>re-render of a 42-row window, every timestamp seen before —
           <em>the SSE refresh</em><br><span class="meta">pre-fix sources</span></td>
-          <td class="num">2,806.62 hz<br>0.356 ms</td><td class="num">8,249.88 hz<br>0.121 ms</td>
-          <td class="num good">2.94</td>
+          <td class="num">2,806.62 hz<br>0.356 ms</td><td class="num">8,068.16 hz<br>0.124 ms</td>
+          <td class="num good">2.87</td>
         </tr>
         <tr>
           <td>re-render of a 42-row window, every timestamp new — <em>the memo never
           hits</em><br><span class="meta">pre-fix sources</span></td>
-          <td class="num">1,265.78 hz<br>0.790 ms</td><td class="num">1,325.41 hz<br>0.755 ms</td>
-          <td class="num">1.05</td>
+          <td class="num">1,265.78 hz<br>0.790 ms</td><td class="num">1,299.25 hz<br>0.770 ms</td>
+          <td class="num">1.03</td>
         </tr>
         <tr>
           <td>first mount of a 42-row window<br><span class="meta">pre-fix sources</span></td>
-          <td class="num">1,411.06 hz<br>0.709 ms</td><td class="num">2,283.19 hz<br>0.438 ms</td>
-          <td class="num good">1.62</td>
+          <td class="num">1,411.06 hz<br>0.709 ms</td><td class="num">2,359.34 hz<br>0.424 ms</td>
+          <td class="num good">1.67</td>
         </tr>
         <tr>
           <td rowspan="3"><strong>2</strong><br>useFlows.merge</td>
           <td>steady state — 5000 flows, every host known<br><span class="meta">at the commit</span></td>
-          <td class="num">10.4346 hz<br>95.83 ms</td><td class="num">2,616.10 hz<br>0.382 ms</td>
-          <td class="num good">251</td>
+          <td class="num">10.4346 hz<br>95.83 ms</td><td class="num">2,593.86 hz<br>0.386 ms</td>
+          <td class="num good">249</td>
         </tr>
         <tr>
           <td>cold — 5000 flows into an empty set<br><span class="meta">at the commit</span></td>
-          <td class="num">10.3611 hz<br>96.51 ms</td><td class="num">2,588.83 hz<br>0.386 ms</td>
-          <td class="num good">250</td>
+          <td class="num">10.3611 hz<br>96.51 ms</td><td class="num">2,562.88 hz<br>0.390 ms</td>
+          <td class="num good">247</td>
         </tr>
         <tr>
           <td>5000 flows, no two sharing a host — <em>the memo never hits</em><br><span class="meta">pre-fix sources</span></td>
-          <td class="num">9.1192 hz<br>109.66 ms</td><td class="num">19.0964 hz<br>52.37 ms</td>
-          <td class="num good">2.09</td>
+          <td class="num">9.1192 hz<br>109.66 ms</td><td class="num">19.2154 hz<br>52.04 ms</td>
+          <td class="num good">2.11</td>
         </tr>
         <tr>
           <td rowspan="3"><strong>3</strong><br>the size report</td>
           <td>TextRenderer — 10 MiB, as BodyViewer renders it<br><span class="meta">at the commit</span></td>
-          <td class="num">67.3927 hz<br>14.84 ms</td><td class="num">3,475.28 hz<br>0.288 ms</td>
-          <td class="num good">51.6</td>
+          <td class="num">67.3927 hz<br>14.84 ms</td><td class="num">3,642.68 hz<br>0.275 ms</td>
+          <td class="num good">54.1</td>
         </tr>
         <tr>
           <td>FormRenderer — 40k pairs <span class="bad">(fix reverted)</span><br><span class="meta">at the commit</span></td>
-          <td class="num">1.9237 hz<br>519.8 ms</td><td class="num">1.8901 hz<br>529.1 ms</td>
-          <td class="num bad">1.00</td>
+          <td class="num">1.9237 hz<br>519.8 ms</td><td class="num">1.7708 hz<br>564.7 ms</td>
+          <td class="num bad">&#8776;1</td>
         </tr>
         <tr>
           <td>FormRenderer — 10 MiB <span class="bad">(fix reverted)</span><br><span class="meta">pre-fix sources</span></td>
-          <td class="num">1.9183 hz<br>521.3 ms</td><td class="num">1.8949 hz<br>527.7 ms</td>
-          <td class="num bad">1.00</td>
+          <td class="num">1.9183 hz<br>521.3 ms</td><td class="num">1.9013 hz<br>526.0 ms</td>
+          <td class="num bad">&#8776;1</td>
         </tr>
         <tr>
           <td colspan="2"><em>controls — cases this WU did not touch</em>: <code>byteLength</code> over 10 MiB ·
           over the 128 KiB shown slice · TextRenderer with no size supplied</td>
           <td class="num">73.93 · 5,695 · 67.39 hz</td>
-          <td class="num">71.53 · 5,469 · 68.58 hz</td>
+          <td class="num">72.42 · 5,470 · 69.75 hz</td>
           <td class="num">≈1.00</td>
         </tr>
       </tbody>
     </table>
     <div class="callout" data-c="controls-note">
-      The three controls move by under 4% and bound the run-to-run noise, which is what makes the 1.00 on
-      FormRenderer readable as <em>nothing happened</em> rather than as a small win lost in the error.
+      The three controls move by under 4% and bound the run-to-run noise, which is what makes FormRenderer's
+      <em>&#8776;1</em> readable as nothing happened rather than as a small win lost in the error. Its two
+      rows carry the noisiest samples in the suite (±7.1% and ±2.9%), which is itself the finding: at half a
+      second a run, dominated by DOM the cut does not bound, a byte count is not what there is to win.
     </div>
 
     <h2 id="refused">What the benchmark refused</h2>
@@ -183,7 +185,7 @@
         <code>pnpm bench</code> in <code>ui/</code>, <code>cargo xtask ui bench</code> from the root. It is
         not in <code>pnpm test</code> and not in any gate: wall-clock numbers are not deterministic, and the
         gate is served by the counts below instead.</td></tr>
-        <tr><td><strong>Unit</strong></td><td>10 added. <code>xtask/src/ui.rs</code> — <code>ui bench</code>
+        <tr><td><strong>Unit</strong></td><td>13 added. <code>xtask/src/ui.rs</code> — <code>ui bench</code>
         takes no arguments and is in <code>USAGE</code>. <code>TimestampText.test.tsx</code> — today's and the
         year's bounds are exact to the millisecond, and a timestamp is re-labelled once the clock leaves the
         day it was rendered under (the memo's generation). <code>flow.test.ts</code> — <code>hostOf</code>
@@ -193,7 +195,7 @@
         <code>TextRenderer.test.tsx</code> — states the size its caller knew, derives the identical string
         when the caller cannot supply one, and <strong>never states a shown size larger than the total</strong>
         over a body of unreadable bytes.</td></tr>
-        <tr><td><strong>Integration</strong></td><td>5, in <code>ui/src/perf.test.tsx</code> — one per seam,
+        <tr><td><strong>Integration</strong></td><td>6, in <code>ui/src/perf.test.tsx</code> — one per seam,
         each asserting work not done <em>and</em> the output that must not move: the list re-renders ten times
         and parses no timestamp (rendered time cells identical); a refresh whose hosts are already known
         parses no URI (host list identical by reference); TextRenderer and BodyViewer never hand the
@@ -204,15 +206,16 @@
         <tr><td><strong>E2E</strong></td><td><span class="bad">waived</span> — no contract moves, and the only
         difference an e2e could see here is a duration, which the testing standard forbids asserting at every
         level. The epic's e2e is W10's.</td></tr>
-        <tr><td><strong>Review</strong></td><td>One round, five isolated finders plus twelve verifiers. Seventeen
-        candidates raised, <strong>one confirmed</strong> — the lossy-decode regression above, verified with the
-        exact arithmetic and the dispatch path traced. Ten refuted, two of them by a written ruling rather than
-        by argument: <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a> explicitly rejects
-        recording rejected alternatives in a component's TSDoc, so leaving FormRenderer's untouched was the
-        rule rather than an omission. The blocker raised against the benchmark's warm memo was refuted for the
-        case it named and left a real gap beside it, now closed. One candidate's verifier died on a session
-        limit rather than a verdict; the re-run judged it.</td></tr>
-        <tr><td><strong>Suites</strong></td><td><code>vitest run</code> 757 passed / 45 files — the 741 that
+        <tr><td><strong>Review</strong></td><td><strong>Two rounds</strong>, five isolated finders each, twenty-six
+        verifiers between them. Round one: seventeen candidates, <strong>one confirmed</strong> — a lossy-decode
+        regression that printed a shown size larger than the total. Ten refuted, two of them by a written ruling
+        rather than by argument: <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a> explicitly
+        rejects recording rejected alternatives in a component's TSDoc, so leaving FormRenderer's untouched was
+        the rule rather than an omission. Round two, run on the fixed tip, found <strong>five more, every one of
+        them in code this WU had just added</strong> — the fix's own U+FFFD guard, the memo's cap check, its key,
+        its comment, and the report's account of its own method. All five are fixed above, and the deviations table
+        carries each.</td></tr>
+        <tr><td><strong>Suites</strong></td><td><code>vitest run</code> 761 passed / 45 files — the 741 that
         predate this WU unchanged. <code>cargo test --all</code> green. <code>tsc --noEmit</code> and
         <code>eslint .</code> clean, <code>bench/</code> inside the typechecked and linted set.</td></tr>
       </tbody>
@@ -287,6 +290,32 @@
           answers what the warm-only suite could not — the miss path does not regress (1.05×), so the memo is
           free on a miss and 2.9× on a hit, and the headline belongs to the case it names rather than to the
           component in general.</td>
+        </tr>
+        <tr>
+          <td>—</td>
+          <td><strong>Five more found by the second review round, all in this WU's own new code.</strong>
+          <em>The first fix's guard was a proxy</em> — TextRenderer read a replacement character in the shown
+          slice as proof the decode had failed, but a body can carry that character on purpose, and downstream
+          the two are identical. Such a body is valid UTF-8 with a free size, and the guard spent a whole-body
+          encode on it — landing the false positive on exactly the mis-encoded traffic this proxy exists to
+          show. Output was never wrong, only re-derived. Moved to where the answer is a fact:
+          <code>decodeBody</code> tries the strict decoder and falls back, the same single decode for a whole
+          body, and BodyViewer passes a size only when it means what the renderer compares it against.
+          <em>The memo enforced its cap on lookups as well as inserts</em>, so the render after the 4096th
+          distinct timestamp threw away the entry it was about to find. <em>Its key held a raw value with no
+          type tag</em>, and a numeric string keys the same as the number while moment reads them differently.
+          <em>Its comment claimed the cache holds only what is on screen</em>; nothing evicts a row that
+          scrolls away. <em>And the memo-miss bench's pool overlapped the warm one at index 0</em>, so its
+          purity rested on warm-up happening to consume the overlap — the number was never contaminated,
+          verified, but the pools are now disjoint by construction.</td>
+        </tr>
+        <tr>
+          <td>—</td>
+          <td><strong>This report misstated its own method, and the second round caught it.</strong> It claimed
+          every before number came from a run at <code>bf7a449</code>; three of the cases did not exist there.
+          The rows now carry the method that produced each, and the two routes are described above the table.
+          The numbers were right and the method was sound — the account of it was not, which in a repo where
+          the report is the durable record is the same kind of defect as a wrong number.</td>
         </tr>
         <tr>
           <td>—</td>
