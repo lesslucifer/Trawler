@@ -157,8 +157,7 @@ describe("the body pane's size report", () => {
     expect(container.textContent).toContain("⚠ showing 256 KiB of 266 KiB — save to see all");
   });
 
-  it("BodyViewer supplies the size the fetch already counted", async () => {
-    const bytes = OVER_CAP_BYTES;
+  const viewerOver = (bytes: Uint8Array, contentType: string) => {
     const view: FlowView = {
       id: "f1",
       started_at: "2026-09-06T09:00:00Z",
@@ -174,16 +173,30 @@ describe("the body pane's size report", () => {
       response_body: null,
     };
     const api = {
-      getBody: async (): Promise<BodyFetch> => ({ bytes, contentType: "text/plain" }),
+      getBody: async (): Promise<BodyFetch> => ({ bytes, contentType }),
     } as unknown as TrawlerApi;
+    return render(<BodyViewer api={api} flow={view} leg="request" />);
+  };
 
-    const { container, findByTestId } = render(
-      <BodyViewer api={api} flow={view} leg="request" />,
-    );
+  it("BodyViewer supplies the size the fetch already counted", async () => {
+    const { container, findByTestId } = viewerOver(OVER_CAP_BYTES, "text/plain");
     await findByTestId("body-text");
 
     expect(container.textContent).toContain("⚠ showing 256 KiB of 266 KiB — save to see all");
     expect(encoded.length).toBeGreaterThan(0);
     expect(Math.max(...encoded)).toBeLessThanOrEqual(TEXT_MAX);
+  });
+
+  // A text/*-labelled body is dispatched on its declared type, never on its
+  // bytes, so an unreadable one reaches this renderer. Its byte count and its
+  // decoded text's byte count then measure different things, and taking the
+  // first while measuring the shown slice with the second printed a marker that
+  // claimed to be showing three times the body that existed.
+  it("states no shown size larger than the total when the body will not decode", async () => {
+    const bytes = new Uint8Array(TEXT_MAX + 5000).fill(0xff);
+    const { container, findByTestId } = viewerOver(bytes, "text/plain");
+    await findByTestId("body-text");
+
+    expect(container.textContent).toContain("⚠ showing 384 KiB of 399 KiB — save to see all");
   });
 });
