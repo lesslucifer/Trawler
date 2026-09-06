@@ -125,7 +125,44 @@ describe("the actionable modes — a proxy is set on this machine", () => {
     fireEvent.click(remedy);
 
     await waitFor(() => expect(screen.getByTestId("proxy-close-done")).toBeInTheDocument());
-    expect(screen.getByTestId("proxy-close-dialog").contains(document.activeElement)).toBe(true);
+    // The panel, not the scrim: the scrim also holds the backdrop button, so
+    // asserting containment there would pass on the very escape this guards.
+    expect(screen.getByTestId("proxy-close-panel").contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).not.toHaveAttribute("aria-label", "cancel");
+  });
+
+  it("does not chase focus that is legitimately elsewhere", async () => {
+    const onRemove = vi.fn().mockResolvedValue(undefined);
+    const { rerender } = render(
+      <ProxyCloseDialog
+        mode="ours"
+        os="macos"
+        onRemove={onRemove}
+        onKeep={vi.fn()}
+        onAcknowledge={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    // A click on the panel's prose blurs to <body> without removing anything; a
+    // re-render must leave that alone rather than yanking focus back.
+    (document.activeElement as HTMLElement | null)?.blur();
+    expect(document.activeElement).toBe(document.body);
+
+    for (let i = 0; i < 5; i += 1) {
+      rerender(
+        <ProxyCloseDialog
+          mode="ours"
+          os="macos"
+          onRemove={onRemove}
+          onKeep={vi.fn()}
+          onAcknowledge={vi.fn()}
+          onCancel={vi.fn()}
+        />,
+      );
+    }
+
+    expect(document.activeElement).toBe(document.body);
   });
 
   it("never offers the opt-out — this mode has something local to fix", () => {
@@ -188,6 +225,21 @@ describe("the modal shell — three routes out, one outcome", () => {
     expect(p.onCancel).toHaveBeenCalledOnce();
   });
 
+  it("counts the disclosure summary as a stop — the trap must match the tab ring", () => {
+    mount("ours");
+
+    const panel = screen.getByTestId("proxy-close-panel");
+    const summary = panel.querySelector("summary");
+    expect(summary).not.toBeNull();
+
+    summary!.focus();
+    const forward = createEvent.keyDown(screen.getByTestId("proxy-close-dialog"), { key: "Tab" });
+    fireEvent(screen.getByTestId("proxy-close-dialog"), forward);
+
+    // Mid-ring, so no wrap: the summary is not an edge.
+    expect(forward.defaultPrevented).toBe(false);
+  });
+
   it("is a modal with an accessible name", () => {
     mount("ours");
 
@@ -200,7 +252,7 @@ describe("the modal shell — three routes out, one outcome", () => {
     mount("ours");
 
     await waitFor(() => {
-      expect(screen.getByTestId("proxy-close-dialog").contains(document.activeElement)).toBe(true);
+      expect(screen.getByTestId("proxy-close-panel").contains(document.activeElement)).toBe(true);
     });
   });
 
