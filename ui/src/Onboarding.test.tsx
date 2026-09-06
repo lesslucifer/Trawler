@@ -306,6 +306,37 @@ test("the proxy-off command is copyable here too, not a bare string", () => {
   expect(screen.getByRole("button", { name: /proxy-off command/ })).toBeInTheDocument();
 });
 
+test("a failed set-proxy shows its error once, not twice", async () => {
+  const onSetProxy = vi.fn(() => Promise.reject(new Error("denied")));
+  const Harn = () => {
+    const [state, dispatch] = useReducer(reduce, atSetProxy);
+    return <Onboarding state={state} dispatch={dispatch} os="macos" proxyAddr={ADDR} onSetProxy={onSetProxy} />;
+  };
+  render(<Harn />);
+
+  fireEvent.click(screen.getByRole("button", { name: "set system proxy" }));
+  expect(await screen.findByText(/use the manual steps below/)).toBeInTheDocument();
+
+  expect(screen.getByTestId("set-proxy-status")).toHaveTextContent("denied");
+  expect(screen.queryByTestId("set-proxy-remedy")).toBeNull();
+});
+
+// The error lives in the action's own Notice, which only exists on the auto path.
+// Switching the target away unmounts it, so the remedy must come back rather than
+// leaving the error nowhere on screen.
+test("switching target after a failed install keeps the error reachable", async () => {
+  const onInstallCa = vi.fn(() => Promise.reject(new Error("elevation declined")));
+  render(<Harness start={onboarding} os="macos" onInstallCa={onInstallCa} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
+  expect(await screen.findByText(/use the manual steps below/)).toBeInTheDocument();
+
+  choose("trust target", "Firefox");
+
+  expect(screen.queryByTestId("install-ca-status")).toBeNull();
+  expect(screen.getByTestId("trust-ca-remedy")).toHaveTextContent("elevation declined");
+});
+
 test("the proxy status line goes green on a connection even with no decrypt", () => {
   render(
     <Onboarding

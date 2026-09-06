@@ -64,11 +64,14 @@ export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
     // The rejection reaches the dialog, which offers the manual route instead.
     // Only the unset itself is allowed to report failure — once the proxy IS off,
     // a window that will not close is not "couldn't turn the proxy off", and
-    // telling the user to undo it by hand would be advice to undo nothing.
+    // telling the user to undo it by hand would be advice to undo nothing. A
+    // destroy that rejects is swallowed for that reason, not overlooked.
     remove: () =>
-      deps.invoke("unset_proxy").then(() => {
-        void quit();
-      }),
+      deps.invoke("unset_proxy").then(() =>
+        quit().catch((err: unknown) => {
+          console.error("window destroy failed after the proxy was unset:", err);
+        }),
+      ),
     // Live proxy state is the only source of truth (no persisted marker): keeping
     // the proxy is just quitting — there is nothing to record, and next launch
     // does no reconciliation.

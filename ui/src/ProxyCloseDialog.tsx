@@ -207,7 +207,10 @@ export function ProxyCloseDialog({
   const attemptRemove = () => {
     setRemedyState("running");
     try {
-      Promise.resolve(onRemove()).catch(() => setRemedyState("failed"));
+      Promise.resolve(onRemove()).then(
+        () => setRemedyState("idle"),
+        () => setRemedyState("failed"),
+      );
     } catch {
       setRemedyState("failed");
     }

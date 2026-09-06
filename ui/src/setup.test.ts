@@ -6,6 +6,7 @@ import {
   hostOs,
   proveItSnippet,
   PROXY_TARGETS,
+  proxyOffSnippet,
   proxyOffSteps,
   proxySnippet,
   proxyStatus,
@@ -302,5 +303,28 @@ describe("the short form every verdict carries", () => {
     expect(foreign.short).toBe("another proxy is set");
     expect(foreign.short).not.toMatch(/point it at Trawler/);
     expect(foreign.remedy).toMatch(/^point it at Trawler here/);
+  });
+});
+
+// withCommand replaces the step equal to the command, so the resolvers must put
+// that command in exactly once — zero would drop the copy affordance, twice
+// would render two CopyTexts for one command.
+describe("every command is present exactly once in the steps that introduce it", () => {
+  it.each(PROXY_TARGETS.map((t) => t.id))("%s", (id) => {
+    const addr = "10.0.0.1:7420";
+    const pairs: [string[], string | null][] = [
+      [proxySteps(id, addr), proxySnippet(id, addr)],
+      [proxyOffSteps(id), proxyOffSnippet(id)],
+    ];
+
+    for (const [steps, command] of pairs) {
+      if (command === null) continue;
+      expect(steps.filter((s) => s === command)).toHaveLength(1);
+    }
+  });
+
+  it.each(PROXY_TARGETS.map((t) => t.id))("%s repeats no step", (id) => {
+    const steps = proxyOffSteps(id);
+    expect(new Set(steps).size).toBe(steps.length);
   });
 });

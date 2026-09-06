@@ -90,6 +90,19 @@ describe("the actionable modes — a proxy is set on this machine", () => {
     expect(onRemove).toHaveBeenCalledTimes(2);
   });
 
+  it("a remedy that resolves without quitting does not strand the dialog in flight", async () => {
+    // onRemove resolves once the unset succeeds; the window destroy that follows
+    // is fire-and-forget, so the button must not sit disabled forever waiting for
+    // a close that may never come.
+    const onRemove = vi.fn().mockResolvedValue(undefined);
+    mount("ours", { onRemove });
+
+    fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.turnOff }));
+
+    await waitFor(() => expect(screen.queryByTestId("proxy-close-running")).toBeNull());
+    expect(screen.getByRole("button", { name: CLOSE_COPY.turnOff })).toBeEnabled();
+  });
+
   it("never offers the opt-out — this mode has something local to fix", () => {
     mount("ours");
     expect(screen.queryByRole("checkbox")).toBeNull();

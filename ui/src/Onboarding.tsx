@@ -152,6 +152,10 @@ function TrustCa({
 }) {
   const [target, setTarget] = useState<TrustTarget>(defaultTarget(os));
   const auto = onInstall && canAutoSetup(os) && target === defaultTarget(os);
+  // The action's own Notice already carries the error, but only while it is
+  // mounted — switching target unmounts it, so the remedy takes over rather than
+  // leaving the failure stated nowhere.
+  const statedByAction = Boolean(auto) && state === "failed";
 
   return (
     <div className="mt-2">
@@ -165,7 +169,7 @@ function TrustCa({
           onClick={onInstall}
         />
       )}
-      {remedy && (
+      {remedy && !statedByAction && (
         <div data-testid="trust-ca-remedy" className="mb-2">
           <Notice>{remedy}</Notice>
         </div>
@@ -218,6 +222,7 @@ function SetProxy({
   const [target, setTarget] = useState<ProxyTarget>(defaultProxyTarget(os));
   const auto = onSetProxy && canAutoSetup(os) && target === defaultProxyTarget(os);
   const snippet = proxySnippet(target, addr);
+  const statedByAction = Boolean(auto) && state === "failed";
   // Offered the moment a native set succeeds; the stop action turns the system
   // proxy back off (idempotent — no-op if it isn't set).
   const showStop = auto && state === "done";
@@ -246,7 +251,7 @@ function SetProxy({
           )}
         </div>
       )}
-      {remedy && (
+      {remedy && !statedByAction && (
         <div data-testid="set-proxy-remedy" className="mb-2">
           <Notice>{remedy}</Notice>
         </div>
@@ -378,7 +383,7 @@ export function Onboarding({
                         os={os}
                         state={install.state}
                         error={install.error}
-                        remedy={install.state === "failed" ? undefined : view.remedy}
+                        remedy={view.remedy}
                         onInstall={install.trigger}
                       />
                     ) : step === "set-proxy" ? (
