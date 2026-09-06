@@ -43,8 +43,6 @@ export const CLOSE_COPY = {
   failed: "couldn't turn the proxy off — try the steps below.",
 } as const;
 
-const DISMISS_LABEL = "cancel";
-
 // summary is a native tab stop, so it belongs here: a trap whose stop list
 // disagrees with the browser's tab ring wraps at the wrong element.
 const FOCUSABLE =
@@ -70,39 +68,14 @@ function ModalShell({
 
   useEffect(() => {
     invoker.current = document.activeElement;
-    panel.current?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+    // Not the first stop: that is the ✕, and an opening dialog must not put its
+    // destructive escape under the first Enter.
+    const stops = [...(panel.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
+    (stops.find((el) => el.getAttribute("aria-label") !== "cancel") ?? stops[0])?.focus();
     return () => {
       (invoker.current as HTMLElement | null)?.focus?.();
     };
   }, []);
-
-  // A control that unmounts WHILE FOCUSED (the remedy retiring once the proxy is
-  // off) drops focus to <body>, where the Tab trap cannot re-engage and the next
-  // Tab walks the page behind the scrim. Recovery is deliberately narrow: it fires
-  // only when the element this effect last saw focused has since left the
-  // document, so focus the user moved themselves is never chased. It also skips
-  // the dismiss glyph, since a recovered focus must not put a destructive action
-  // under the next Enter.
-  const lastFocused = useRef<Element | null>(null);
-  useEffect(() => {
-    const panelEl = panel.current;
-    if (!panelEl) return;
-    const remember = () => {
-      lastFocused.current = document.activeElement;
-    };
-    panelEl.addEventListener("focusin", remember);
-    return () => panelEl.removeEventListener("focusin", remember);
-  }, []);
-
-  useEffect(() => {
-    const panelEl = panel.current;
-    const lost = lastFocused.current;
-    if (!panelEl || lost === null || lost.isConnected) return;
-    lastFocused.current = null;
-
-    const stops = [...panelEl.querySelectorAll<HTMLElement>(FOCUSABLE)];
-    (stops.find((el) => el.getAttribute("aria-label") !== DISMISS_LABEL) ?? stops[0])?.focus();
-  });
 
   const trap = (event: React.KeyboardEvent) => {
     if (event.key === "Escape") {
@@ -144,7 +117,7 @@ function ModalShell({
       >
         <div className="mb-3 flex items-start justify-between gap-2">
           <h2 className="font-serif text-title italic">{title}</h2>
-          <IconButton glyph="close" label={DISMISS_LABEL} onClick={onCancel} />
+          <IconButton glyph="close" label="cancel" onClick={onCancel} />
         </div>
         {children}
       </div>
@@ -277,11 +250,9 @@ export function ProxyCloseDialog({
         <Button onClick={onKeep} frame="bare" tone="mute">
           {CLOSE_COPY.quit}
         </Button>
-        {!done && (
-          <Button onClick={attemptRemove} disabled={running}>
-            {failed ? CLOSE_COPY.tryAgain : CLOSE_COPY.turnOff}
-          </Button>
-        )}
+        <Button onClick={attemptRemove} disabled={running || done}>
+          {failed ? CLOSE_COPY.tryAgain : CLOSE_COPY.turnOff}
+        </Button>
       </div>
     </ModalShell>
   );

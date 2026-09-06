@@ -23,6 +23,14 @@ const mount = (mode: CloseMode, over: Partial<Parameters<typeof ProxyCloseDialog
 
 const ACTIONABLE: CloseMode[] = ["ours", "foreign"];
 
+// The same root and selector the trap uses, so these tests exercise the real
+// stop list rather than one that happens to share its edges.
+const FOCUSABLE =
+  'a[href], button:not([disabled]), summary, input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const tabStops = () => [
+  ...screen.getByTestId("proxy-close-panel").querySelectorAll<HTMLElement>(FOCUSABLE),
+];
+
 describe("the actionable modes — a proxy is set on this machine", () => {
   it.each(ACTIONABLE)("%s offers one action row: a bare quit and the remedy", (mode) => {
     mount(mode);
@@ -103,6 +111,8 @@ describe("the actionable modes — a proxy is set on this machine", () => {
     await waitFor(() => expect(screen.getByTestId("proxy-close-done")).toBeInTheDocument());
     expect(screen.getByTestId("proxy-close-done")).toHaveTextContent(CLOSE_COPY.done);
     expect(screen.queryByTestId("proxy-close-running")).toBeNull();
+    // Nothing unmounts under the user: the spent remedy stays put, disabled.
+    expect(screen.getByRole("button", { name: CLOSE_COPY.turnOff })).toBeInTheDocument();
   });
 
   it("does not offer to turn off a proxy it just turned off — no second elevation prompt", async () => {
@@ -112,58 +122,11 @@ describe("the actionable modes — a proxy is set on this machine", () => {
     fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.turnOff }));
     await waitFor(() => expect(screen.getByTestId("proxy-close-done")).toBeInTheDocument());
 
-    expect(screen.queryByRole("button", { name: CLOSE_COPY.turnOff })).toBeNull();
+    expect(screen.getByRole("button", { name: CLOSE_COPY.turnOff })).toBeDisabled();
     expect(onRemove).toHaveBeenCalledOnce();
   });
 
-  it("keeps focus inside the panel when the remedy retires under it", async () => {
-    const onRemove = vi.fn().mockResolvedValue(undefined);
-    mount("ours", { onRemove });
 
-    const remedy = screen.getByRole("button", { name: CLOSE_COPY.turnOff });
-    remedy.focus();
-    fireEvent.click(remedy);
-
-    await waitFor(() => expect(screen.getByTestId("proxy-close-done")).toBeInTheDocument());
-    // The panel, not the scrim: the scrim also holds the backdrop button, so
-    // asserting containment there would pass on the very escape this guards.
-    expect(screen.getByTestId("proxy-close-panel").contains(document.activeElement)).toBe(true);
-    expect(document.activeElement).not.toHaveAttribute("aria-label", "cancel");
-  });
-
-  it("does not chase focus that is legitimately elsewhere", async () => {
-    const onRemove = vi.fn().mockResolvedValue(undefined);
-    const { rerender } = render(
-      <ProxyCloseDialog
-        mode="ours"
-        os="macos"
-        onRemove={onRemove}
-        onKeep={vi.fn()}
-        onAcknowledge={vi.fn()}
-        onCancel={vi.fn()}
-      />,
-    );
-
-    // A click on the panel's prose blurs to <body> without removing anything; a
-    // re-render must leave that alone rather than yanking focus back.
-    (document.activeElement as HTMLElement | null)?.blur();
-    expect(document.activeElement).toBe(document.body);
-
-    for (let i = 0; i < 5; i += 1) {
-      rerender(
-        <ProxyCloseDialog
-          mode="ours"
-          os="macos"
-          onRemove={onRemove}
-          onKeep={vi.fn()}
-          onAcknowledge={vi.fn()}
-          onCancel={vi.fn()}
-        />,
-      );
-    }
-
-    expect(document.activeElement).toBe(document.body);
-  });
 
   it("never offers the opt-out — this mode has something local to fix", () => {
     mount("ours");
@@ -248,13 +211,19 @@ describe("the modal shell — three routes out, one outcome", () => {
     expect(dialog).toHaveAttribute("aria-label", CLOSE_COPY.ours.title);
   });
 
-  it("takes focus into the panel on open", async () => {
-    mount("ours");
+  it.each(["ours", "foreign", "remote"] as CloseMode[])(
+    "%s: takes focus into the panel on open, but never onto the dismiss glyph",
+    async (mode) => {
+      mount(mode);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("proxy-close-panel").contains(document.activeElement)).toBe(true);
-    });
-  });
+      await waitFor(() => {
+        expect(screen.getByTestId("proxy-close-panel").contains(document.activeElement)).toBe(true);
+      });
+      // The ✕ is the first stop in the DOM; opening onto it would put the
+      // destructive escape under the first Enter.
+      expect(document.activeElement).not.toHaveAttribute("aria-label", "cancel");
+    },
+  );
 
   it("returns focus to the invoker when it unmounts", async () => {
     const invoker = document.createElement("button");
@@ -285,7 +254,7 @@ describe("the modal shell — three routes out, one outcome", () => {
     mount("ours");
 
     const dialog = screen.getByTestId("proxy-close-dialog");
-    const stops = [...dialog.querySelectorAll<HTMLElement>("button:not([tabindex='-1'])")];
+    const stops = tabStops();
     stops[stops.length - 1].focus();
 
     const forward = createEvent.keyDown(dialog, { key: "Tab" });
@@ -299,7 +268,7 @@ describe("the modal shell — three routes out, one outcome", () => {
     mount("ours");
 
     const dialog = screen.getByTestId("proxy-close-dialog");
-    const stops = [...dialog.querySelectorAll<HTMLElement>("button:not([tabindex='-1'])")];
+    const stops = tabStops();
     stops[0].focus();
 
     const backward = createEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
@@ -313,7 +282,7 @@ describe("the modal shell — three routes out, one outcome", () => {
     mount("ours");
 
     const dialog = screen.getByTestId("proxy-close-dialog");
-    const stops = [...dialog.querySelectorAll<HTMLElement>("button:not([tabindex='-1'])")];
+    const stops = tabStops();
     stops[0].focus();
 
     const forward = createEvent.keyDown(dialog, { key: "Tab" });
