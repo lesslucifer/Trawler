@@ -242,14 +242,20 @@ scroll / overflow: A pinned, content-height, wraps to a second line before it
           <td>
             <div class="gist">The near-miss was the contract, not the control.</div>
             <details class="why"><summary>why</summary>
-              <p>The first pass escalated this cell as a real near-miss: <span class="avoid">@avoid</span> "a choice
-              among known options (that is <code>Select</code> — a miss <em>by kind</em>)" and the API matched
-              <code>status</code> exactly. <strong>The re-examination inverts it.</strong> A
-              <code>Select</code> can offer only what its caller passes, and the caller can pass only what capture
-              has already seen — the same accumulation <code>hosts</code> uses. But
+              <p><strong>The first pass reached this verdict too, and left it resting on the wrong leg.</strong>
+              Its per-key table already ruled "<code>Field</code>, but not a <code>Select</code> either: the useful
+              query is a class (4xx), which neither control expresses" — a verdict about what the
+              <em>API</em> could not serve, which is why it went to that run's blocked-on list as one of three
+              options rather than closing. Read that way, <code>Field</code> survived only because nothing better
+              was expressible; the moment W5 makes <code>4xx</code> expressible, that argument expires and the
+              <code>Select</code> question is open again.</p>
+              <p>So this run re-asks it on the control's own terms, and <code>Field</code> wins on a second,
+              durable leg: a <code>Select</code> can offer only what its caller passes, and the caller can pass only
+              what capture has already seen — the same accumulation <code>hosts</code> uses. But
               <em>filtering for a 404 before any 404 has arrived is the debugging act</em>: set the filter, then
               reproduce. A control that cannot express an unobserved value cannot serve this key. The set is not
-              known, so the miss by kind does not land, and the input stays a pattern.</p>
+              knowable, so <span class="avoid">@avoid</span>'s "a choice among known options" never applies here —
+              and it still will not after W5, which is the part the first pass's reasoning could not promise.</p>
               <p>Lands in <span class="use">@use</span> "any free-text entry … pass value + onChange + aria-label;
               pass width through <code>className</code>". Clears <span class="avoid">@avoid</span> "validating,
               debouncing, formatting or restricting what is typed" — <strong>and the shipped call site does not</strong>:
@@ -407,8 +413,8 @@ more        Secure; SameSite=Lax…</pre>Per its TSDoc — rest · hover/focus/c
           <td>C · cell 5<br><span class="v v-reuse">reuse</span> — unchanged</td>
           <td><div class="gist">Owns status→tone and the reason phrase.</div>
             <details class="why"><summary>why</summary><p>The class filter narrows <em>which</em> pills are on
-            screen and changes nothing about them: <span class="avoid">@avoid</span> "pre-resolving tone at the call
-            site" still holds, and the design passes the raw status exactly as before. A class query is a list
+            screen and changes nothing about them: <span class="avoid">@avoid</span> "pre-resolving tone or formatting at
+            the call site" still holds, and the design passes the raw status exactly as before. A class query is a list
             question, not a cell question.</p></details></td>
           <td><pre class="sk">200   404   …</pre>Per its TSDoc — ok · warn · muted, null → "…".</td>
         </tr>
@@ -489,8 +495,11 @@ more        Secure; SameSite=Lax…</pre>Per its TSDoc — rest · hover/focus/c
       <tr>
         <td>440px</td>
         <td class="v-propose">rejected</td>
-        <td>Buys 27 characters for 60px of every path cell. The smallest change that is still a change, and the
-        worst ratio on the table.</td>
+        <td>Buys 27 characters for 60px of every path cell — and by the marginal ratio it is the
+        <em>best</em> step on the table (2.2px per character against 520→560's 2.7), which is precisely why the
+        ratio is not the argument. What decides it is where the three lines <em>stop</em>: at ~135 characters they
+        are still inside the opaque part of a session value, so the reader still has to act. The width is spent and
+        the act is not avoided — the smallest change that is still a change.</td>
       </tr>
       <tr>
         <td>560px and wider</td>
@@ -1220,10 +1229,12 @@ soft:
       <tr>
         <td><em>The Elements stage, re-reading the first pass's escalation:</em> the status field was recorded as a
         near-miss against <code>Field</code>'s <span class="avoid">@avoid</span> "a choice among known options".</td>
-        <td><strong>Elements</strong> — the near-miss is resolved in the opposite direction from the one the first
-        pass leaned toward. The set is <em>not</em> known: a <code>Select</code> can only offer codes capture has
-        already seen, and filtering for a 404 before one arrives is the debugging act. The control was never wrong;
-        the contract behind it was, which is why <a href="#elements">the row</a> reads as a reuse and W5 exists.</td>
+        <td><strong>Elements</strong> — not a reversal: the first pass ruled <code>Field</code> too. What moved is
+        the leg it stands on. That run rejected <code>Select</code> because the API could not serve a class, which
+        is an argument W5 is about to expire; <a href="#elements">the row</a> now rejects it because the set of
+        useful statuses is <em>unknowable</em> — a <code>Select</code> can only offer codes capture has already
+        seen, and filtering for a 404 before one arrives is the debugging act. The verdict survives W5 instead of
+        depending on it.</td>
         <td><code>Field</code>'s <span class="avoid">@avoid</span> "a miss by kind" · <code>Select</code>'s
         <span class="use">@use</span> "any single choice from five or more options" · <code>store.rs:66</code></td>
       </tr>
