@@ -289,19 +289,25 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
             <td data-key="button"><strong>Button</strong><br><span class="kd">T1</span></td>
             <td>E, F · the answers<br><span class="v v-reuse">reuse</span></td>
             <td>
-              <div class="gist">A word each, and deliberately no emphasis on either.</div>
+              <div class="gist">A word each: the escape bare, the act at the default frame.</div>
               <details class="why"><summary>why</summary>
                 <p>Lands in <span class="use">@use</span> "any action that needs a word and is not
                 a copy". The interesting clearance is <span class="avoid">@avoid</span> "emphasis
                 by styling: pick which actions to offer instead, a Button never carries a
                 primary/filled variant" — so the destructive answer cannot be made red or heavy,
-                which is the convention most confirm dialogs reach for. The alarm lives in the
-                question instead, and the two answers are peers.</p>
+                which is the convention most confirm dialogs reach for. The component has no such
+                variant to reach for: its frames are <code>border</code> and <code>bare</code> and
+                its tones <code>body</code> and <code>mute</code>, so the only styling choice left
+                is which answer to de-emphasise. The alarm lives in the question, not on a
+                button.</p>
                 <p>Also clears <span class="avoid">@avoid</span> "warn-toning it inside a warn
                 Notice (the message owns the alarm, the button is the way out)" — that line
                 describes this exact composition, so the design follows it rather than fighting
-                it. <code>ProxyCloseDialog</code> is the shipped precedent: two bare mute buttons,
-                the alarm in the prose.</p>
+                it. <code>ProxyCloseDialog</code> is the shipped precedent, and the shape is asymmetric: the
+                escape is <code>frame="bare" tone="mute"</code> and the act takes the defaults,
+                with the alarm in the prose. Both asks here follow it — cancel and "choose a
+                file…" bare, clear and import at the default — so the screen carries one button
+                idiom rather than inventing a second.</p>
               </details>
             </td>
             <td><pre class="tb">[ cancel ]  [ clear ]</pre>Per its TSDoc — rest · hover · focus ·
@@ -669,7 +675,7 @@ C  → UNCHANGED   ← the whole point of asking</pre>
         const noop = () => {};
 
         mount("m-head", <>
-          <StatusDot status="capturing" onClick={noop} />
+          <StatusDot status="connected" onClick={noop} />
           <span className="a-title">Trawler</span>
           <Field aria-label="filter" placeholder="filter — free text" value="" onChange={noop}
                  className="min-w-field flex-1" />
