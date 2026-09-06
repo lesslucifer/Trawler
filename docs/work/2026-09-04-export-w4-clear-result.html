@@ -72,7 +72,7 @@
             <td>The plan expected to <em>make</em> the CORS widening and record it as a decision.</td>
             <td><strong>Already made.</strong> The epic plan scheduled the widening here on the
             assumption <code>DELETE</code> would be the first mutating method; import landed
-            first, so <a href="../decisions/dec-31-imported-flows-are-marked.html">DEC-31</a>
+            first, so <a href="../decisions/dec-36-imported-flows-are-marked.html">DEC-36</a>
             already carried the argument and predicted this WU would join the list. So this WU
             added <code>DELETE</code> to the grant and turned that prediction past tense rather
             than writing a second record making the same argument. No new decision record —
@@ -242,13 +242,13 @@
         <tbody>
           <tr><td><a href="../use-cases/web-ui.html#uc-7">UC-7</a></td><td>T2</td><td>the whole clearing contract: what a delete selects is what the listing lists, the count envelope, the three refusals, and the three consequences a signature does not imply — a cleared store is empty rather than restarted, the clear is one batch event distinct from eviction, and removing is not replacing</td></tr>
           <tr><td><a href="../use-cases/use-cases-index.html">use-cases-index.html</a></td><td>T2</td><td>the UC-7 row</td></tr>
-          <tr><td><a href="../decisions/dec-31-imported-flows-are-marked.html">DEC-31</a></td><td>T2</td><td><code>GET, POST, DELETE, OPTIONS</code>, and its prediction that <code>DELETE</code> would join turned past tense with the list closed for this epic</td></tr>
+          <tr><td><a href="../decisions/dec-36-imported-flows-are-marked.html">DEC-36</a></td><td>T2</td><td><code>GET, POST, DELETE, OPTIONS</code>, and its prediction that <code>DELETE</code> would join turned past tense with the list closed for this epic</td></tr>
           <tr><td><a href="../architecture.html">architecture.html</a></td><td>T1</td><td>the store emits on every write, eviction <em>and clear</em>; the API ingests <em>and removes</em> while still never rewriting what the capture path recorded; the event-bus row names the clear as distinct from eviction</td></tr>
         </tbody>
       </table>
       <p>One fact per tier held: the removal <em>mechanism</em> (the shared unlink, the batch
       event) lives only in <code>src/store.rs</code> and <code>src/event.rs</code> and is
-      described nowhere as code; the CORS <em>argument</em> stays in DEC-31 alone rather than
+      described nowhere as code; the CORS <em>argument</em> stays in DEC-36 alone rather than
       being restated in UC-7.</p>
     </div>
 

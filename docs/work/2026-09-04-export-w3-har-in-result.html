@@ -61,7 +61,7 @@
         </tr>
         <tr>
           <td>4</td>
-          <td>a round trip preserves everything DEC-30 says it preserves</td>
+          <td>a round trip preserves everything DEC-35 says it preserves</td>
           <td><code>a_flow_survives_export_and_reimport</code> (proptest — the WU's central
             claim, asserting equality on exactly the preserved set and asserting the
             <em>boundary</em> of the unpreserved one) ·
@@ -294,7 +294,7 @@
         <a href="2026-09-04-export-plan.html#wu-summaries">epic plan</a> scheduled it with W4's
         <code>DELETE</code>, assuming that would be the first mutating method. Import is, so the
         grant became <code>GET, POST, OPTIONS</code> now and W4 adds <code>DELETE</code> to the
-        same list. The plan predicted this deviation and it is recorded in DEC-31 as placement,
+        same list. The plan predicted this deviation and it is recorded in DEC-36 as placement,
         not reasoning — a deviation from the <em>epic</em> plan, the only one.
       </li>
       <li>
@@ -399,7 +399,7 @@
       <code>cargo fmt --check</code> clean. No new proptest regression seed was produced: the three
       new properties found no failure. Commits on <code>wu/export/har-in</code>: the plan
       (<code>f2ab2f7</code>), the implementation (<code>06b87fe</code>), the T2 distillation
-      (<code>bd5f519</code>), DEC-30's amendment (<code>15c0403</code>), the T1 edit
+      (<code>bd5f519</code>), DEC-35's amendment (<code>15c0403</code>), the T1 edit
       (<code>75845ab</code>), and this result.
     </p>
 
@@ -467,12 +467,12 @@
             validated, bytes do outrank a declared size, and no parsing path can panic.
             Refuted: <code>import</code> returning the accepted count rather than the
             post-eviction survivor count (UC-6 commits explicitly to "how many entries it took",
-            DEC-31 accepts eviction as a designed cost, and a survivor count would be stale the
+            DEC-36 accepts eviction as a designed cost, and a survivor count would be stale the
             moment a concurrent capture lands — differently arbitrary, not more truthful); a
             <code>SystemTime::from</code> panic path the fuzz generator cannot reach (empirically
             unreachable — <code>time</code> 0.3 without <code>large-dates</code> caps years at
             ±9999, and the extremes were run without a panic); and a <code>params</code>-only
-            <code>postData</code> reading as not-captured (exactly what DEC-30's
+            <code>postData</code> reading as not-captured (exactly what DEC-35's
             sentinel-not-invention rule requires — reconstructing wire bytes from parsed params
             would fabricate bytes never on the wire).</td>
         </tr>
@@ -554,7 +554,7 @@
             since both surfaces read it.</td>
         </tr>
         <tr>
-          <td><code>decisions/dec-31-imported-flows-are-marked.html</code></td>
+          <td><code>decisions/dec-36-imported-flows-are-marked.html</code></td>
           <td>T2 (new)</td>
           <td>the epic's second planned decision: one ring and one closed-enum field rather than a
             second collection (with the three rejected alternatives), what that choice
@@ -564,7 +564,7 @@
             it rather than to care.</td>
         </tr>
         <tr>
-          <td><a href="../decisions/dec-30-har-as-the-interchange-format.html">decisions/dec-30-…</a></td>
+          <td><a href="../decisions/dec-35-har-as-the-interchange-format.html">decisions/dec-30-…</a></td>
           <td>T2</td>
           <td>its "the importer is defined against this projection" consequence stops being a
             forward reference and names where the parser landed; its round-trip section gained the
@@ -581,7 +581,7 @@
         <tr>
           <td><a href="../decisions/decisions-index.html">decisions/decisions-index.html</a></td>
           <td>T2</td>
-          <td>the DEC-31 row; header to v15.</td>
+          <td>the DEC-36 row; header to v15.</td>
         </tr>
         <tr>
           <td><a href="../architecture.html">architecture.html</a></td>
@@ -595,7 +595,7 @@
       </tbody>
     </table>
     <p>
-      One fact per tier: the <em>what</em> in UC-6, the <em>why</em> in DEC-30 and DEC-31, the
+      One fact per tier: the <em>what</em> in UC-6, the <em>why</em> in DEC-35 and DEC-36, the
       mapping only in <code>src/api/har.rs</code>. The plan's inversion and body tables are T3
       planning artifacts archived with the epic — nothing copied them into a permanent doc.
       <code>verify-doc</code> green over all 51 docs; every relative href resolves on disk; the

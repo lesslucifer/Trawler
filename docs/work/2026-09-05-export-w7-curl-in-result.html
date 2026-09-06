@@ -86,7 +86,7 @@
       </table>
       <p>The loss is in the serializer's output as curl reads it, not in the parser, so the parser
       was not bent to match; the generator excludes the two shapes, the exclusion is stated beside
-      it, and DEC-32 carries the boundary. Nothing else deviated: every row of the plan's accepted,
+      it, and DEC-37 carries the boundary. Nothing else deviated: every row of the plan's accepted,
       ignored and refusal tables shipped as written, the module lives where the plan put it, the
       body travels raw, and the refusal is W3's plain text.</p>
     </div>
@@ -199,14 +199,14 @@
         <tbody>
           <tr><td><a href="../use-cases/web-ui.html#uc-6-curl">use-cases/web-ui.html</a></td><td>T2</td><td>UC-6's new "A single request, pasted" block — the request/answer rows for <code>?format=curl</code>, what is expanded and what is never invented, the refusal contract, the <code>format</code> refusal, the Windows shape; the provenance callout names W7 and the inverse's proof; header to v8</td></tr>
           <tr><td><a href="../use-cases/use-cases-index.html">use-cases-index.html</a></td><td>T2</td><td>the UC-6 row names the second way in</td></tr>
-          <tr><td><a href="../decisions/dec-32-curl-parser-accepts-what-a-browser-emits.html">DEC-32</a></td><td>T2</td><td>new — why the boundary is the browser-emitted set and a named refusal; the header-in-disguise rule versus curl's runtime defaults; the raw body and <code>?format=</code>; the round trip's boundary; four alternatives rejected incl. a shell-words dependency</td></tr>
-          <tr><td><a href="../decisions/decisions-index.html">decisions-index.html</a></td><td>T2</td><td>the DEC-32 row; v16</td></tr>
-          <tr><td><a href="../decisions/dec-30-har-as-the-interchange-format.html">DEC-30</a></td><td>T2</td><td>one consequence widened: the curl paste is not a second capture format, so "HAR and only HAR" keeps its meaning</td></tr>
-          <tr><td><a href="../decisions/dec-31-imported-flows-are-marked.html">DEC-31</a></td><td>T2</td><td>the one-ring diagram gains the pasted-command door; the W7 consequence row turns past tense and links DEC-32</td></tr>
+          <tr><td><a href="../decisions/dec-37-curl-parser-accepts-what-a-browser-emits.html">DEC-37</a></td><td>T2</td><td>new — why the boundary is the browser-emitted set and a named refusal; the header-in-disguise rule versus curl's runtime defaults; the raw body and <code>?format=</code>; the round trip's boundary; four alternatives rejected incl. a shell-words dependency</td></tr>
+          <tr><td><a href="../decisions/decisions-index.html">decisions-index.html</a></td><td>T2</td><td>the DEC-37 row; v16</td></tr>
+          <tr><td><a href="../decisions/dec-35-har-as-the-interchange-format.html">DEC-35</a></td><td>T2</td><td>one consequence widened: the curl paste is not a second capture format, so "HAR and only HAR" keeps its meaning</td></tr>
+          <tr><td><a href="../decisions/dec-36-imported-flows-are-marked.html">DEC-36</a></td><td>T2</td><td>the one-ring diagram gains the pasted-command door; the W7 consequence row turns past tense and links DEC-37</td></tr>
           <tr><td><a href="../architecture.html">architecture.html</a></td><td>T1</td><td><strong>re-read, not edited</strong>: the seam caption's "HAR import inserts flows the proxy never saw" and the API's "reads, subscribes, ingests, removes" contract line both stay true with a second ingest format behind the same door — incomplete as an example, false nowhere</td></tr>
         </tbody>
       </table>
-      <p>One fact per tier: the <em>what</em> in UC-6, the <em>why</em> in DEC-32, the flag tables
+      <p>One fact per tier: the <em>what</em> in UC-6, the <em>why</em> in DEC-37, the flag tables
       and the grammar only in <code>src/api/curl.rs</code>. The W5 design run's blocked-on entry
       is not edited — it is a closed, archived run, and its statement that W7's contract "does not
       exist yet" was true when written; this result and UC-6 are where the resolution lives.</p>
@@ -217,8 +217,8 @@
       <ul>
         <li><strong>W6</strong> builds the paste target against a live endpoint now: the textarea posts the raw text to <code>/flows/import?format=curl</code> and renders the <code>400</code> body verbatim in its <code>Notice</code>, exactly as W5 designed. The API client gains <code>importCurl</code> there.</li>
         <li><strong>The epic e2e</strong>, step 6: a browser-shaped command and one with an unsupported flag against the running engine.</li>
-        <li><strong>Widening the accepted set</strong> — <code>-A</code>, <code>-e</code>, <code>-I</code>, <code>--data-urlencode</code>, the Windows <code>cmd</code> shape — is a deliberate reopening of DEC-32 if users paste them; each is refused by name today, so the demand will be visible.</li>
-        <li>No debt discovered. The <code>toCurl</code> serializer's two lossy shapes (blank header values, a <code>GET</code> with a body) are a property of UC-5's copy-as-curl as curl reads it, recorded in DEC-32; changing the serializer is a UC-5 question, not this WU's.</li>
+        <li><strong>Widening the accepted set</strong> — <code>-A</code>, <code>-e</code>, <code>-I</code>, <code>--data-urlencode</code>, the Windows <code>cmd</code> shape — is a deliberate reopening of DEC-37 if users paste them; each is refused by name today, so the demand will be visible.</li>
+        <li>No debt discovered. The <code>toCurl</code> serializer's two lossy shapes (blank header values, a <code>GET</code> with a body) are a property of UC-5's copy-as-curl as curl reads it, recorded in DEC-37; changing the serializer is a UC-5 question, not this WU's.</li>
       </ul>
     </div>
 

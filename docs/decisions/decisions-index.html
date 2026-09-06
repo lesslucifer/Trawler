@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v17 · 2026-09-06 · Trawler</div>
+      <div class="meta">v18 · 2026-09-06 · Trawler</div>
     </div>
   </header>
   <main>
@@ -219,47 +219,6 @@
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
-          <td><a href="dec-30-har-as-the-interchange-format.html"><code>dec-30-har-as-the-interchange-format.html</code></a></td>
-          <td><span class="badge id">DEC-30</span></td>
-          <td><strong>HAR 1.2 is the one interchange format</strong>, chosen because the tools a recipient already
-            runs can open it — Trawler's own JSON, a second native format and multi-format support all rejected.
-            Where HAR requires a field Trawler has no truthful value for, the answer is <strong>HAR's own sentinel,
-            never an invented number</strong>: header-block sizes, the wire reason phrase and the timing phase
-            breakdown are reported unavailable rather than guessed. The body states HAR cannot express
-            (streamed · too large · read error) carry <strong>no text plus a comment naming the reason</strong>, so a
-            skipped body is never indistinguishable from an empty one; a too-large body reports the size it had,
-            because that size is known. Round-trip fidelity is stated in both directions — what is preserved, and
-            the five facts that are not. The export never decodes bodies: the file records the wire</td>
-          <td><span class="badge auto">active</span></td>
-        </tr>
-        <tr>
-          <td><a href="dec-31-imported-flows-are-marked.html"><code>dec-31-imported-flows-are-marked.html</code></a></td>
-          <td><span class="badge id">DEC-31</span></td>
-          <td><strong>An imported flow is a first-class flow carrying a closed-enum
-            <code>source</code> mark</strong> (<code>captured</code> | <code>imported</code>), in the same
-            byte-weighted ring and under the same read paths — a second store beside the ring and a free-text
-            provenance both rejected. The costs are stated rather than hidden: an import can evict a live capture,
-            and a re-imported file yields fresh ids over its original instants. A bad <code>?source=</code> is
-            refused, never served as a silently empty listing. <strong>All-or-nothing import</strong>: the document
-            parses whole before the store is touched, so "never a partially-populated store" is structural, and the
-            body's bytes outrank a <code>size</code> that disagrees — the ring must weigh what it holds. The CORS
-            grant gains <code>POST</code> for the first mutating method, <strong>extending DEC-12 rather than
-            reversing it</strong>: still loopback-bound, still nothing a local <code>curl</code> cannot reach</td>
-          <td><span class="badge auto">active</span></td>
-        </tr>
-        <tr>
-          <td><a href="dec-32-curl-parser-accepts-what-a-browser-emits.html"><code>dec-32-curl-parser-accepts-what-a-browser-emits.html</code></a></td>
-          <td><span class="badge id">DEC-32</span></td>
-          <td><strong>The curl parser accepts what a browser's "Copy as cURL" and the app's own copy-as-curl
-            emit, and refuses every other token naming it</strong> — never reimplementing curl, never ignoring
-            what it does not understand, because a silently dropped flag yields a flow subtly unlike the pasted
-            request. Flags that <em>are</em> headers (<code>-u</code>, <code>-b</code>, <code>--compressed</code>)
-            expand; curl's runtime defaults are never invented, which is what keeps <code>toCurl → parse</code> an
-            exact inverse. The command travels as the raw body under <code>?format=curl</code>, and the refusal
-            is HAR import's plain-text <code>400</code>, written to be rendered verbatim on the paste target</td>
-          <td><span class="badge auto">active</span></td>
-        </tr>
-        <tr>
           <td><a href="dec-30-the-three-gap-components.html"><code>dec-30-the-three-gap-components.html</code></a></td>
           <td><span class="badge id">DEC-30</span></td>
           <td>The app's <strong>one text input, one state dot and one collapse primitive are registry entries, not
@@ -346,6 +305,47 @@
             predicate (it cannot see row height, so it would have to trust the subject), an eighth verdict
             <code>violated-by-constraint</code> beside DEC-15's fixed seven (reads as absolution where
             <code>violated</code> plus a reason is already honest). Carries <code>display-equals-payload</code>'s identical violation</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-35-har-as-the-interchange-format.html"><code>dec-35-har-as-the-interchange-format.html</code></a></td>
+          <td><span class="badge id">DEC-35</span></td>
+          <td><strong>HAR 1.2 is the one interchange format</strong>, chosen because the tools a recipient already
+            runs can open it — Trawler's own JSON, a second native format and multi-format support all rejected.
+            Where HAR requires a field Trawler has no truthful value for, the answer is <strong>HAR's own sentinel,
+            never an invented number</strong>: header-block sizes, the wire reason phrase and the timing phase
+            breakdown are reported unavailable rather than guessed. The body states HAR cannot express
+            (streamed · too large · read error) carry <strong>no text plus a comment naming the reason</strong>, so a
+            skipped body is never indistinguishable from an empty one; a too-large body reports the size it had,
+            because that size is known. Round-trip fidelity is stated in both directions — what is preserved, and
+            the five facts that are not. The export never decodes bodies: the file records the wire</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-36-imported-flows-are-marked.html"><code>dec-36-imported-flows-are-marked.html</code></a></td>
+          <td><span class="badge id">DEC-36</span></td>
+          <td><strong>An imported flow is a first-class flow carrying a closed-enum
+            <code>source</code> mark</strong> (<code>captured</code> | <code>imported</code>), in the same
+            byte-weighted ring and under the same read paths — a second store beside the ring and a free-text
+            provenance both rejected. The costs are stated rather than hidden: an import can evict a live capture,
+            and a re-imported file yields fresh ids over its original instants. A bad <code>?source=</code> is
+            refused, never served as a silently empty listing. <strong>All-or-nothing import</strong>: the document
+            parses whole before the store is touched, so "never a partially-populated store" is structural, and the
+            body's bytes outrank a <code>size</code> that disagrees — the ring must weigh what it holds. The CORS
+            grant gains <code>POST</code> for the first mutating method, <strong>extending DEC-12 rather than
+            reversing it</strong>: still loopback-bound, still nothing a local <code>curl</code> cannot reach</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-37-curl-parser-accepts-what-a-browser-emits.html"><code>dec-37-curl-parser-accepts-what-a-browser-emits.html</code></a></td>
+          <td><span class="badge id">DEC-37</span></td>
+          <td><strong>The curl parser accepts what a browser's "Copy as cURL" and the app's own copy-as-curl
+            emit, and refuses every other token naming it</strong> — never reimplementing curl, never ignoring
+            what it does not understand, because a silently dropped flag yields a flow subtly unlike the pasted
+            request. Flags that <em>are</em> headers (<code>-u</code>, <code>-b</code>, <code>--compressed</code>)
+            expand; curl's runtime defaults are never invented, which is what keeps <code>toCurl → parse</code> an
+            exact inverse. The command travels as the raw body under <code>?format=curl</code>, and the refusal
+            is HAR import's plain-text <code>400</code>, written to be rendered verbatim on the paste target</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

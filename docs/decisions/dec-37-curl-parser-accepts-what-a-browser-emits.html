@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trawler — DEC-32: the curl parser accepts what a browser emits</title>
+  <title>Trawler — DEC-37: the curl parser accepts what a browser emits</title>
 </head>
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>DEC-32 — The curl parser accepts what a browser emits, expands only the flags that are headers, and refuses the rest by name</h1>
+      <h1>DEC-37 — The curl parser accepts what a browser emits, expands only the flags that are headers, and refuses the rest by name</h1>
       <p>A pasted <code>curl</code> command is the inverse of copy-as-curl, not a reimplementation of curl. The parser's boundary is the set a developer actually pastes; everything outside it is a refusal that names the token, never a guess.</p>
-      <div class="meta">DEC-32 · 2026-09-05 · Trawler · E-EXPORT.W7 · status: active</div>
+      <div class="meta">DEC-37 · 2026-09-05 · Trawler · E-EXPORT.W7 · minted as DEC-32 on the E-EXPORT branch, renumbered at the E-REDESIGN merge · status: active</div>
     </div>
   </header>
   <main>
@@ -182,8 +182,8 @@ the store untouched"]
         <tr>
           <td>A pasted command is a second <em>format</em> behind the import door and the same
           <code>imported</code> mark — not a second capture format, and not a third provenance</td>
-          <td><a href="dec-30-har-as-the-interchange-format.html">DEC-30</a> ·
-          <a href="dec-31-imported-flows-are-marked.html">DEC-31</a></td>
+          <td><a href="dec-35-har-as-the-interchange-format.html">DEC-35</a> ·
+          <a href="dec-36-imported-flows-are-marked.html">DEC-36</a></td>
         </tr>
         <tr>
           <td>The parser never runs the request; firing a pasted command at a server is a

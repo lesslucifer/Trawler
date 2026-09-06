@@ -311,7 +311,7 @@
             the property checked the phases were <em>present</em>, never that they were legal.
             Two refuted: a literal <code>+</code> in a query decoding as a space is real
             behaviour but not a defect (the wire-exact URI is preserved in
-            <code>request.url</code>, <code>queryString</code> is a derived convenience DEC-30
+            <code>request.url</code>, <code>queryString</code> is a derived convenience DEC-35
             excludes from round-trip fidelity, and W3 reads <code>url</code>); an untested
             malformed filter on the export is byte-identical pre-existing axum extractor
             behaviour, verified by running both endpoints.</td>
@@ -326,7 +326,7 @@
             tokens were reused from <code>BodyRec::state</code>, which structurally cannot
             produce <code>too_large</code>/<code>read_error</code> — it returns the coarse
             <code>not_captured</code>. The comment now names the real source
-            (<code>BodyView</code>'s <code>reason</code>), which is what DEC-30 said all along.</td>
+            (<code>BodyView</code>'s <code>reason</code>), which is what DEC-35 said all along.</td>
           </tr>
           <tr>
             <td>efficiency</td>
@@ -362,7 +362,7 @@
       <p><strong>Round 2</strong> re-reviewed the fixed tip and found five more nits, four of
       them one real miss: the timings fix <em>introduced an exception</em> to an invariant three
       places still asserted — <code>HarTimings</code>' own doc comment, UC-6's sentinel sentence
-      and DEC-30's round-trip row all said the phases sum to the total, which stops being true
+      and DEC-35's round-trip row all said the phases sum to the total, which stops being true
       when the total is <code>-1</code> and the phases are zeroed. All three now state the
       exception and why HAR forces it. The fifth: the replacement comment on
       <code>not_captured_comment</code> over-generalized, attributing all three tokens to
@@ -401,7 +401,7 @@
             <td>the <span class="badge id">UC-6</span> row, so index-first reading reaches it</td>
           </tr>
           <tr>
-            <td><code>decisions/dec-30-har-as-the-interchange-format.html</code></td>
+            <td><code>decisions/dec-35-har-as-the-interchange-format.html</code></td>
             <td>T2 <em>(new)</em></td>
             <td>the epic's first planned decision: why HAR 1.2 and only HAR (with the three
             rejected alternatives), the sentinel-not-invention rule for required fields Trawler
@@ -412,7 +412,7 @@
           <tr>
             <td><code>decisions/decisions-index.html</code></td>
             <td>T2</td>
-            <td>the DEC-30 row</td>
+            <td>the DEC-35 row</td>
           </tr>
           <tr>
             <td><code>architecture.html</code></td>
@@ -452,7 +452,7 @@
             <td>Cookie attributes (<code>expires</code>, <code>httpOnly</code>, <code>path</code>,
             …) are not parsed out of <code>Set-Cookie</code> into HAR's optional cookie fields —
             the header itself is preserved verbatim, so nothing is lost from the file.</td>
-            <td>Recorded in <a href="../decisions/dec-30-har-as-the-interchange-format.html">DEC-30</a>
+            <td>Recorded in <a href="../decisions/dec-35-har-as-the-interchange-format.html">DEC-35</a>
             as a stated non-preservation, not debt: HAR's cookie attributes are optional, and
             omitting an optional field is honest where guessing it would not be. New work only if a
             real reader is found that needs them.</td>

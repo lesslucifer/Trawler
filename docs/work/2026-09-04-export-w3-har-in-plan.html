@@ -35,7 +35,7 @@
       file to have its entries appear as flows in the listing… an imported flow is marked
       <code>imported</code>, is filterable by that mark, and is otherwise an ordinary flow") ·
       the roadmap's "HAR import" line ·
-      <a href="../decisions/dec-30-har-as-the-interchange-format.html">DEC-30</a>, whose stated
+      <a href="../decisions/dec-35-har-as-the-interchange-format.html">DEC-35</a>, whose stated
       consequence is that "the importer is defined against this projection rather than against the
       HAR spec independently, so the two cannot drift into a format Trawler writes but cannot
       read". Depends on <a href="2026-09-04-export-w2-har-out-result.html">W2</a>: the projection
@@ -64,7 +64,7 @@ oldest-first"| I["Store::import"]
     </div>
     <p>
       The parser lives beside the projection it inverts, in <code>src/api/har.rs</code>, because
-      DEC-30's consequence is that the two are defined against each other — a second module could
+      DEC-35's consequence is that the two are defined against each other — a second module could
       drift, and the reason tokens W2 made public (<code>not_captured_comment</code>) exist
       precisely so the vocabulary has one spelling. The deserializable HAR types are
       <em>separate</em> from W2's <code>Serialize</code> types: what Trawler writes is a fixed
@@ -120,7 +120,7 @@ oldest-first"| I["Store::import"]
       by the same byte weight, is read by the same <code>GET /flows/{id}</code> and the same body
       endpoints, and appears on <code>/stream</code> like any other. A second store would double
       every read path in the API for a distinction one field expresses. Recorded as a decision
-      (DEC-31 below), because it is the reason the ring's rules apply to a flow nobody captured.
+      (DEC-36 below), because it is the reason the ring's rules apply to a flow nobody captured.
     </div>
 
     <h2 id="inversion">The inversion — reading back what W2 wrote</h2>
@@ -128,7 +128,7 @@ oldest-first"| I["Store::import"]
       Every row is the inverse of a row in
       <a href="2026-09-04-export-w2-har-out-plan.html#mapping">W2's field mapping</a>, read against
       W2's shipped code where its result recorded a correction. What HAR carries but Trawler's
-      domain model has no home for is <strong>dropped, not smuggled</strong>: DEC-30 already states
+      domain model has no home for is <strong>dropped, not smuggled</strong>: DEC-35 already states
       the round-trip's boundary in both directions, and a field invented on the way in would be as
       dishonest as one invented on the way out.
     </p>
@@ -140,15 +140,15 @@ oldest-first"| I["Store::import"]
         <tr><td><code>log.entries[]</code></td><td>one <code>Flow</code> each, inserted <strong>oldest-first</strong></td><td>W2 writes newest-first, so inserting in file order would land the capture reversed in a newest-first ring. Reversing on the way in is what makes the round-trip's <em>order</em> stable, and it is a stated observable rather than an accident of iteration</td></tr>
         <tr><td><code>entry.startedDateTime</code></td><td><code>Flow.started_at</code>, parsed RFC3339</td><td>question 4: original timestamps preserved, so an imported capture sorts by when it happened. Absent or unparseable ⇒ refused; a fabricated "now" would silently reorder the file</td></tr>
         <tr><td><code>entry.time</code></td><td><code>Flow.duration_ms</code>; <code>-1</code> (or negative, or absent) ⇒ <code>None</code></td><td>the sentinel round-trips to the absence it came from. <strong>This is the row W2's result corrected</strong>: a <code>-1</code> total sits beside zeroed <code>timings</code>, so the parser must read <code>time</code> and never try to recompute the total from the phases</td></tr>
-        <tr><td><code>entry.timings</code></td><td>ignored entirely</td><td>Trawler holds one span, not a phase breakdown (DEC-30, "not preserved"). Reading the phases back would at best re-derive <code>time</code> and at worst contradict it</td></tr>
-        <tr><td><code>entry.request.method</code> · <code>.url</code> · <code>.httpVersion</code></td><td><code>RequestRec</code> directly; <code>host</code> re-derived by <code>Flow::new</code></td><td>the URL is the wire-exact string W2 wrote, which is why <code>queryString</code> is ignored (a derived convenience DEC-30 excludes from fidelity). A missing or empty <code>method</code>/<code>url</code> is refused</td></tr>
+        <tr><td><code>entry.timings</code></td><td>ignored entirely</td><td>Trawler holds one span, not a phase breakdown (DEC-35, "not preserved"). Reading the phases back would at best re-derive <code>time</code> and at worst contradict it</td></tr>
+        <tr><td><code>entry.request.method</code> · <code>.url</code> · <code>.httpVersion</code></td><td><code>RequestRec</code> directly; <code>host</code> re-derived by <code>Flow::new</code></td><td>the URL is the wire-exact string W2 wrote, which is why <code>queryString</code> is ignored (a derived convenience DEC-35 excludes from fidelity). A missing or empty <code>method</code>/<code>url</code> is refused</td></tr>
         <tr><td><code>entry.request.headers</code> · <code>.response.headers</code></td><td>the header vectors, order and duplicates preserved</td><td>a header with no <code>name</code> is refused; the value defaults to empty (a valueless header is legal on the wire)</td></tr>
         <tr><td><code>entry.request.cookies</code> · <code>.response.cookies</code></td><td>ignored</td><td>they were <em>derived</em> from the <code>Cookie</code>/<code>Set-Cookie</code> headers on the way out and those headers are preserved verbatim, so reading them back would duplicate the header the flow already carries</td></tr>
         <tr><td><code>entry.request.postData</code> + <code>.bodySize</code></td><td>the request <code>BodyRec</code></td><td>see the body table — the asymmetric case, because W2 omits <code>postData</code> for every uncaptured request body</td></tr>
-        <tr><td><code>entry.response.status</code> · <code>.httpVersion</code></td><td><code>ResponseRec</code></td><td><code>statusText</code> ignored: Trawler never retained the wire reason phrase and re-deriving it is DEC-30's "not preserved" row. A status outside 100–599 is refused</td></tr>
+        <tr><td><code>entry.response.status</code> · <code>.httpVersion</code></td><td><code>ResponseRec</code></td><td><code>statusText</code> ignored: Trawler never retained the wire reason phrase and re-deriving it is DEC-35's "not preserved" row. A status outside 100–599 is refused</td></tr>
         <tr><td><code>entry.response.content</code></td><td>the response <code>BodyRec</code></td><td>see the body table</td></tr>
         <tr><td><code>entry.response.redirectURL</code></td><td>ignored</td><td>it was the <code>Location</code> header, which is preserved in the header list</td></tr>
-        <tr><td><code>headersSize</code> · <code>cache</code></td><td>ignored</td><td>never retained (DEC-30); Trawler has no field for either</td></tr>
+        <tr><td><code>headersSize</code> · <code>cache</code></td><td>ignored</td><td>never retained (DEC-35); Trawler has no field for either</td></tr>
         <tr><td>an entry with no <code>response</code> object</td><td>a request-only flow — <code>response: None</code>, <code>duration_ms: None</code></td><td>W2 never <em>writes</em> one (it omits response-less flows), but a foreign HAR may carry one and W7's curl import produces exactly this shape. Accepted rather than refused: it is a state the store, the API and the UI already handle</td></tr>
       </tbody>
     </table>
@@ -232,7 +232,7 @@ oldest-first"| I["Store::import"]
     <div class="callout">
       <strong>The round-trip is a property, not an example.</strong> The requirement is that
       <em>any</em> flow the ring can hold, exported and re-imported, compares equal on every field
-      DEC-30 says the format preserves. That is an all-inputs claim, so it is a proptest over
+      DEC-35 says the format preserves. That is an all-inputs claim, so it is a proptest over
       generated flows — not three hand-picked ones — and its failure output is a shrunk flow that
       names the field that lost data.
     </div>
@@ -342,7 +342,7 @@ oldest-first"| I["Store::import"]
         </tr>
         <tr>
           <td>4</td>
-          <td>A round-trip preserves everything DEC-30 says it preserves: method, URL, both HTTP
+          <td>A round-trip preserves everything DEC-35 says it preserves: method, URL, both HTTP
             versions, status, every header in order with duplicates, the captured instant, the
             duration, captured body bytes exactly, and which of the four states each body was
             in.</td>
@@ -420,7 +420,7 @@ oldest-first"| I["Store::import"]
           <td>unit · proptest</td>
           <td><code>src/api/har.rs</code> inline</td>
           <td><code>a_flow_survives_export_and_reimport</code> — the WU's central claim
-            (observable 4), asserting equality on exactly DEC-30's preserved set and explicitly
+            (observable 4), asserting equality on exactly DEC-35's preserved set and explicitly
             <em>not</em> on its unpreserved set, so the property documents the boundary rather
             than assuming it · <code>the_parser_never_panics_on_arbitrary_bytes</code> —
             arbitrary bytes and arbitrary near-miss JSON documents (observable 7). Both strategies
@@ -504,7 +504,7 @@ oldest-first"| I["Store::import"]
             it</td>
         </tr>
         <tr>
-          <td><code>decisions/dec-31-imported-flows-are-marked.html</code> (created at distillation)</td>
+          <td><code>decisions/dec-36-imported-flows-are-marked.html</code> (created at distillation)</td>
           <td>T2 (new)</td>
           <td>the epic plan's second planned decision: why an imported flow is a first-class flow
             carrying a <code>source</code> rather than a separate collection (and what that costs
@@ -517,10 +517,10 @@ oldest-first"| I["Store::import"]
         <tr>
           <td><a href="../decisions/decisions-index.html">decisions/decisions-index.html</a></td>
           <td>T2</td>
-          <td>the DEC-31 row</td>
+          <td>the DEC-36 row</td>
         </tr>
         <tr>
-          <td><a href="../decisions/dec-30-har-as-the-interchange-format.html">decisions/dec-30-…</a></td>
+          <td><a href="../decisions/dec-35-har-as-the-interchange-format.html">decisions/dec-30-…</a></td>
           <td>T2</td>
           <td>its "the importer is defined against this projection" consequence stops being a
             forward reference and names where the parser landed; its round-trip table gains the
@@ -558,7 +558,7 @@ oldest-first"| I["Store::import"]
       <tbody>
         <tr>
           <td>One module for both directions, or a separate <code>import.rs</code>?</td>
-          <td><strong>One</strong> — <code>src/api/har.rs</code>. DEC-30's stated consequence is
+          <td><strong>One</strong> — <code>src/api/har.rs</code>. DEC-35's stated consequence is
             that the parser is defined against the projection; separating them is exactly how the
             two drift into a format Trawler writes but cannot read. The deserializable types are
             separate <em>types</em> in that module, because reading must be permissive where
