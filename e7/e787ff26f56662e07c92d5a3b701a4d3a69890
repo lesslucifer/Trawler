@@ -1,0 +1,15 @@
+schema: test/v2
+level: commit
+epic: E-REDESIGN
+branch: epic/redesign
+tests:
+  unit:
+    count: 741
+    where: "cd ui && pnpm test - ui/src/setup.test.ts carries the guards this change makes structural"
+    note: "No test was added, and that is the point: setup.test.ts already asserts that every command appears exactly once in its steps and that no step is an unnamed command. Those guards were written against the duplicated literals and passed by convention - the two copies happened to agree. After this change they hold by construction, because STEPS and REMOVE splice in the same constants the snippet accessors return. The suite is unchanged at 741 passing across 44 files, which is the assertion: a pure single-sourcing must move no behaviour, and the guards that would have caught a drift prove it did not."
+verified:
+  - "cd ui && pnpm exec tsc --noEmit - clean. The non-null assertions on TRUST_COMMANDS.macos! / .windows! / .linux! / .android! and the three REMOVE_COMMANDS ones are the same idiom proxySteps already uses for proxySnippet's return value in this file."
+  - "cd ui && pnpm test - 741 passed, 44 files, 0 failed - identical to before the change."
+  - "cd ui && pnpm exec eslint src - clean."
+  - "cargo xtask gate0 - fmt, clippy -D warnings and the Rust suite green (no core code in this commit)."
+note: "A standalone commit on the epic branch, outside any WU, made in response to a verified finding from the epic-scope review: the epic introduced TRUST_COMMANDS and REMOVE_COMMANDS in W10 while leaving the same strings typed a second time inside STEPS and REMOVE. The coupling is load-bearing rather than cosmetic - manualSteps.tsx renders the copy affordance only where step === command by strict string equality - so a future edit to one literal and not the other would drop the copy button silently. Fixed here rather than deferred because the fix is a substitution the file's own later section already models, the guards to prove it exist, and the alternative was shipping the epic with a known trap in the screen it spent a whole WU rebuilding."
