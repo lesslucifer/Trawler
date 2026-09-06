@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-RFINISH
+wu: E-RFINISH.W3
+changes:
+  - path: docs/work/2026-09-06-redesign-finish-w3-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan, written before any code; names the three costs verified in the tree, the benchmark-first commit order, and the rule that a fix the benchmark cannot show helping is reverted"
+  - path: docs/work/2026-09-06-redesign-finish-w3-result.html
+    tier: T3
+    action: added
+    distills: "the WU result: delivered, with the three before/after pairs plus three untouched controls that bound the run-to-run noise, the two mechanisms the benchmark refused (the arithmetic UTF-8 scan, and FormRenderer's half of cost 3), the corrected diagnosis of cost 2, and five follow-ups"
+  - path: ui/src/components/TextRenderer.tsx
+    tier: T4
+    action: updated
+    distills: "DEC-16's rule that a built component's TSDoc is its retired design file: a @props line now states that `size` is the byte count its caller already holds, and that re-deriving it means encoding the whole body to read one number off it. This is the only design record this WU moves; FormRenderer's TSDoc is unchanged because its component is"
+t2_waived: "No use case moves and no decision is made. All three costs are cost, not behaviour - the rendered output is identical everywhere the existing suite can see it, which is the proof the WU was asked to produce (741 pre-existing assertions pass unchanged). DEC-22's four forks - absolute, seconds, local, 24h - are preserved exactly and re-asserted by three added boundary tests rather than merely left alone. The one T2-shaped candidate this WU raises, the discipline that a performance fix lands only against a number, is the epic's own stated rule and belongs in its distillation at W10; writing it into a WU report would be duplicating downward. One T1 gap is recorded as a follow-up rather than taken: testing-strategy.html's tooling table does not mention the benchmark, and that edit needs a listed authoriser."
