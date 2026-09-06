@@ -1,0 +1,22 @@
+schema: doc/v1
+epic: E-RFINISH
+wu: E-RFINISH.W2
+changes:
+  - path: docs/decisions/dec-35-citations-resolve-or-fail.html
+    tier: T2
+    action: added
+    distills: "the non-obvious choice this WU made: what counts as a citation (a path, or a two-hump name - the hump is what leaves Inter, JSON and STANDING unasked), what may resolve one (an export, a module basename, an imported binding, a package.json dependency; a path through git ls-files by full path or bare basename), and the refusal of an allowlist. Four alternatives rejected with their reasons: an allowlist, requiring full paths in prose, verifying a :N pin's line, and widening the registry's emitted entry with @anatomy. States its own limit - three of the seven repairs named no identifier and no token check will see the next one"
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "the DEC-35 routing row and v15 -> v16; the index is the only place a reader is told the record exists"
+  - path: docs/work/2026-09-06-redesign-finish-w2-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan, written before the code. Declares the fifth defect the epic did not list (CutMarker's BodyRenderer) and why it is in scope, and the oracle's design; corrected twice before the code commit, once when the tree refuted the planned path rule and once for the seventh repair"
+  - path: docs/work/2026-09-06-redesign-finish-w2-result.html
+    tier: T3
+    action: added
+    distills: "the WU result: delivered, with the red-first transcript, the seven repairs and which of them a check could catch, five deviations, and the design-scope output the cr/v3 note answers"
+t2_waived: null
+date: 2026-09-06
