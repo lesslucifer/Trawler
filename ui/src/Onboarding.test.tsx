@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useReducer } from "react";
 import { expect, test, vi } from "vitest";
 import { Onboarding } from "./Onboarding";
+import onboardingSource from "./Onboarding.tsx?raw";
 import { COPY, reduce, type OnbState } from "./onboardingMachine";
 import { guidedSteps, proxySnippet, proxySteps } from "./setup";
 
@@ -251,6 +252,60 @@ test("a long verdict keeps the fragment on the line and moves its remedy out", (
   expect(screen.getByTestId("set-proxy-remedy")).toHaveTextContent(/point it at Trawler here/);
 });
 
+test("the trust step's remedy is rendered, not just computed", () => {
+  render(
+    <Onboarding
+      state={onboarding}
+      dispatch={vi.fn()}
+      os="macos"
+      trustProbe="untrusted"
+      observed={{ decrypted: false, trafficSeen: true }}
+      onInstallCa={vi.fn()}
+    />,
+  );
+
+  const status = screen.getByTestId("step-trust-ca-status");
+  expect(status).toHaveTextContent("arriving but not decrypting");
+  expect(status).not.toHaveTextContent(/install the certificate on the device/);
+  expect(screen.getByTestId("trust-ca-remedy")).toHaveTextContent(
+    "install the certificate on the device you're capturing from",
+  );
+});
+
+test("an un-probeable trust step still says what will settle it", () => {
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" trustProbe="unknown" />);
+  expect(screen.getByTestId("trust-ca-remedy")).toHaveTextContent("we'll confirm when traffic arrives");
+});
+
+// The failed install already states itself through the action's own Notice; a
+// second copy of the same error under it would say it twice.
+test("a failed install shows its error once, not twice", async () => {
+  const onInstallCa = vi.fn(() => Promise.reject(new Error("declined")));
+  render(<Harness start={onboarding} os="macos" onInstallCa={onInstallCa} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "install certificate" }));
+  expect(await screen.findByText(/use the manual steps below/)).toBeInTheDocument();
+
+  expect(screen.getByTestId("install-ca-status")).toHaveTextContent("declined");
+  expect(screen.queryByTestId("trust-ca-remedy")).toBeNull();
+});
+
+test("the proxy command appears exactly once — the step list is not doubled", () => {
+  render(<Onboarding state={atSetProxy} dispatch={vi.fn()} os="macos" proxyAddr={ADDR} onSetProxy={vi.fn()} />);
+
+  const snippet = proxySnippet("macos", ADDR)!;
+  const steps = screen.getByTestId("proxy-steps");
+  const shown = [...steps.querySelectorAll("li")].filter((li) => li.textContent?.includes(snippet));
+
+  expect(shown).toHaveLength(1);
+  expect(screen.getByRole("button", { name: /proxy command/ })).toBeInTheDocument();
+});
+
+test("the proxy-off command is copyable here too, not a bare string", () => {
+  render(<Onboarding state={atSetProxy} dispatch={vi.fn()} os="macos" proxyAddr={ADDR} onSetProxy={vi.fn()} />);
+  expect(screen.getByRole("button", { name: /proxy-off command/ })).toBeInTheDocument();
+});
+
 test("the proxy status line goes green on a connection even with no decrypt", () => {
   render(
     <Onboarding
@@ -281,8 +336,10 @@ test("back to flows shows only once ever proven", () => {
   expect(screen.getByRole("button", { name: COPY.back })).toBeInTheDocument();
 });
 
-test("no third tone map — the components own tone, the screen does not re-decide it", () => {
-  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" trustProbe="trusted" />);
-  const status = screen.getByTestId("step-trust-ca-status");
-  expect(status.querySelector(".text-ok")).not.toBeNull();
+// A source-level invariant: no rendered assertion can catch a reintroduced tone
+// map, because the screen's output would be indistinguishable from the
+// component's. What is forbidden is mapping a VERDICT tone to a class — plain
+// ink-mute body text is not that, so the check names the two decided tones.
+test("no third tone map — the screen never maps a verdict tone to a class", () => {
+  expect(onboardingSource).not.toMatch(/text-ok|text-warn/);
 });

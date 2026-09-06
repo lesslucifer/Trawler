@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { createEvent, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { CLOSE_COPY, ProxyCloseDialog } from "./ProxyCloseDialog";
 import type { CloseMode } from "./closeConfirm";
 
@@ -188,15 +188,47 @@ describe("the modal shell — three routes out, one outcome", () => {
     invoker.remove();
   });
 
-  it("traps Tab inside the panel — the scrim is not a way out", () => {
+  // jsdom does not move focus on Tab, so asserting "focus is still inside" would
+  // hold with the trap deleted. The discriminating facts are that the wrap was
+  // taken (the event is defaultPrevented) and WHERE focus landed.
+  it("wraps focus from the last stop back to the first — the scrim is not a way out", () => {
     mount("ours");
 
     const dialog = screen.getByTestId("proxy-close-dialog");
     const stops = [...dialog.querySelectorAll<HTMLElement>("button:not([tabindex='-1'])")];
-    const last = stops[stops.length - 1];
-    last.focus();
+    stops[stops.length - 1].focus();
 
-    fireEvent.keyDown(dialog, { key: "Tab" });
-    expect(dialog.contains(document.activeElement)).toBe(true);
+    const forward = createEvent.keyDown(dialog, { key: "Tab" });
+    fireEvent(dialog, forward);
+
+    expect(forward.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(stops[0]);
+  });
+
+  it("wraps backwards from the first stop to the last on shift+Tab", () => {
+    mount("ours");
+
+    const dialog = screen.getByTestId("proxy-close-dialog");
+    const stops = [...dialog.querySelectorAll<HTMLElement>("button:not([tabindex='-1'])")];
+    stops[0].focus();
+
+    const backward = createEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    fireEvent(dialog, backward);
+
+    expect(backward.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(stops[stops.length - 1]);
+  });
+
+  it("leaves Tab alone in the middle of the panel — only the edges wrap", () => {
+    mount("ours");
+
+    const dialog = screen.getByTestId("proxy-close-dialog");
+    const stops = [...dialog.querySelectorAll<HTMLElement>("button:not([tabindex='-1'])")];
+    stops[0].focus();
+
+    const forward = createEvent.keyDown(dialog, { key: "Tab" });
+    fireEvent(dialog, forward);
+
+    expect(forward.defaultPrevented).toBe(false);
   });
 });

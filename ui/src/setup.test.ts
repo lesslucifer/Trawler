@@ -145,25 +145,25 @@ const DECRYPTED: Observed = { decrypted: true, trafficSeen: true };
 test("trustStatus: the local probe is the fast, green ~90% path", () => {
   const v = trustStatus("trusted", NONE, null);
   expect(v).toMatchObject({ glyph: "✓", tone: "ok" });
-  expect(v.message).toMatch(/Trusted on this machine/);
+  expect(v.short).toBe("trusted on this machine");
 });
 
 test("trustStatus: a decrypted flow proves trust even when the probe can't (remote/manual)", () => {
   expect(trustStatus("untrusted", DECRYPTED, null)).toMatchObject({ tone: "ok", glyph: "✓" });
-  expect(trustStatus("unknown", DECRYPTED, null).message).toMatch(/captured traffic/);
+  expect(trustStatus("unknown", DECRYPTED, null).short).toMatch(/confirmed by traffic/);
 });
 
 test("trustStatus: traffic arriving but not decrypting points at the sending device, as a warning not a red error", () => {
   const v = trustStatus("untrusted", TRAFFIC, null);
   expect(v.tone).toBe("warn");
-  expect(v.message).toMatch(/install the certificate on the device you're capturing from/);
+  expect(v.remedy).toMatch(/install the certificate on the device you're capturing from/);
 });
 
 test("trustStatus: an un-probeable OS with no traffic says capture will confirm, never 'not set up'", () => {
   const v = trustStatus("unknown", NONE, null);
   expect(v.glyph).toBe("◐");
-  expect(v.message).toMatch(/we'll confirm when traffic arrives/);
-  expect(v.message).not.toMatch(/not trusted/i);
+  expect(v.remedy).toMatch(/we'll confirm when traffic arrives/);
+  expect(v.short).not.toMatch(/not trusted/i);
 });
 
 test("trustStatus: probed untrusted with nothing seen is a calm 'not trusted yet', not an alarm", () => {
@@ -173,7 +173,7 @@ test("trustStatus: probed untrusted with nothing seen is a calm 'not trusted yet
 });
 
 test("trustStatus: a running install and a failure surface their own transient states", () => {
-  expect(trustStatus("untrusted", NONE, "installing").message).toMatch(/Installing/);
+  expect(trustStatus("untrusted", NONE, "installing").short).toMatch(/installing/);
   expect(trustStatus("untrusted", NONE, null, "denied")).toMatchObject({ tone: "warn" });
 });
 
@@ -193,19 +193,19 @@ test("proxyStatus: the probe or ANY connection turns it green, decrypt or not", 
   expect(proxyStatus("ours", NONE, null)).toMatchObject({ tone: "ok", glyph: "✓" });
   const seen = proxyStatus("none", TRAFFIC, null);
   expect(seen.tone).toBe("ok");
-  expect(seen.message).toMatch(/Receiving traffic/);
+  expect(seen.short).toMatch(/receiving traffic/);
 });
 
 test("proxyStatus: nothing yet vs can't-check are distinct, both calm", () => {
   expect(proxyStatus("none", NONE, null)).toMatchObject({ glyph: "○", tone: "muted" });
-  expect(proxyStatus("unknown", NONE, null).message).toMatch(/we'll confirm when traffic arrives/);
+  expect(proxyStatus("unknown", NONE, null).remedy).toMatch(/we'll confirm when traffic arrives/);
 });
 
 test("proxyStatus: a foreign proxy names the conflict, not a silent 'no traffic'", () => {
   const foreign = proxyStatus("foreign", NONE, null);
   expect(foreign).toMatchObject({ glyph: "○", tone: "muted" });
-  expect(foreign.message).toMatch(/[Aa]nother proxy/);
-  expect(foreign.message).not.toBe(proxyStatus("none", NONE, null).message);
+  expect(foreign.short).toMatch(/another proxy/);
+  expect(foreign.short).not.toBe(proxyStatus("none", NONE, null).short);
 });
 
 test("verifyStatus flips green only on a decrypted flow", () => {
@@ -296,8 +296,11 @@ describe("the short form every verdict carries", () => {
     expect(proxyStatus("none", nothing, null, sprawling).short).toBe("couldn't set the proxy");
   });
 
-  it("leaves the full sentence on message — short is an addition, not a replacement", () => {
-    expect(trustStatus("trusted", nothing, null).message).toBe("Trusted on this machine");
-    expect(proxyStatus("foreign", nothing, null).message).toMatch(/^Another proxy is set on this machine/);
+  it("carries a verdict and nothing else — the instruction is a separate field", () => {
+    const foreign = proxyStatus("foreign", nothing, null);
+
+    expect(foreign.short).toBe("another proxy is set");
+    expect(foreign.short).not.toMatch(/point it at Trawler/);
+    expect(foreign.remedy).toMatch(/^point it at Trawler here/);
   });
 });

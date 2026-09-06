@@ -13,8 +13,6 @@ export interface OnbState {
 }
 
 export type OnbEvent =
-  | { t: "next" }
-  | { t: "back" }
   | { t: "goto"; step: Step }
   | { t: "captured" } // fresh decrypted HTTPS flow — W4 detector dispatches
   | { t: "not-detected" } // launch self-test found nothing — W4 dispatches (W1: on mount)
@@ -27,17 +25,8 @@ export function initial(): OnbState {
   return { phase: "checking", step: "trust-ca", everProven: false };
 }
 
-function shift(step: Step, delta: number): Step {
-  const i = STEPS.indexOf(step);
-  return STEPS[Math.min(STEPS.length - 1, Math.max(0, i + delta))];
-}
-
 export function reduce(s: OnbState, e: OnbEvent): OnbState {
   switch (e.t) {
-    case "next":
-      return { ...s, step: shift(s.step, 1) };
-    case "back":
-      return { ...s, step: shift(s.step, -1) };
     case "goto":
       return { ...s, step: e.step };
     case "captured":

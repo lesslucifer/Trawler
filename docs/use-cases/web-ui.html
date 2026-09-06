@@ -202,7 +202,9 @@
         — so the core counts the tunnel itself: <code>GET /stats</code> returns a monotonic
         <code>connections</code> tally and a <code>connection</code> SSE event fires. That proves "traffic is
         routing through Trawler" even before decryption works. Traffic seen but not decrypting ⇒ the Trust
-        step says "install the certificate on the device you're capturing from".</li>
+        step's verdict reads "arriving but not decrypting" and its remedy says
+        "install the certificate on the device you're capturing from" — the verdict and what to do
+        about it are two elements, so a short verdict never costs the instruction.</li>
         <li><strong>Only a decrypted flow reveals the list.</strong> A probe-green step or a bare connection
         never ends onboarding — the payoff (the last step → flow list) fires solely on the first <code>https://</code>
         flow (a decrypted request the MITM rewrote to absolute form). The last step shows a concrete

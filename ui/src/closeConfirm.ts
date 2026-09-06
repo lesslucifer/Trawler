@@ -62,7 +62,13 @@ export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
     // A failed unset must not quit: the dialog exists to stop the machine being
     // stranded on a dead proxy, and swallowing the error strands it silently.
     // The rejection reaches the dialog, which offers the manual route instead.
-    remove: () => deps.invoke("unset_proxy").then(quit),
+    // Only the unset itself is allowed to report failure — once the proxy IS off,
+    // a window that will not close is not "couldn't turn the proxy off", and
+    // telling the user to undo it by hand would be advice to undo nothing.
+    remove: () =>
+      deps.invoke("unset_proxy").then(() => {
+        void quit();
+      }),
     // Live proxy state is the only source of truth (no persisted marker): keeping
     // the proxy is just quitting — there is nothing to record, and next launch
     // does no reconciliation.

@@ -59,7 +59,7 @@ const SPECIMENS: Record<string, ReactElement> = {
   StatusDot: <collection.StatusDot status="connected" onClick={() => {}} />,
   StatusLine: (
     <collection.StatusLine
-      status={{ glyph: "✓", tone: "ok", message: "trusted", short: "trusted" }}
+      status={{ glyph: "✓", tone: "ok", short: "trusted" }}
       name="CA"
     />
   ),
@@ -116,7 +116,7 @@ describe("@madeof composes — the parts are reused, never re-drawn", () => {
   it("StatusLine renders a TonedText for its glyph", () => {
     const { container } = render(
       <collection.StatusLine
-        status={{ glyph: "⚠", tone: "warn", message: "install failed", short: "install failed" }}
+        status={{ glyph: "⚠", tone: "warn", short: "install failed" }}
       />,
     );
 

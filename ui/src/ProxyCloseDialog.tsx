@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { defaultProxyTarget, proxyOffSteps, PROXY_TARGETS, type ProxyTarget, type HostOs } from "./setup";
+import {
+  defaultProxyTarget,
+  proxyOffSnippet,
+  proxyOffSteps,
+  PROXY_TARGETS,
+  type ProxyTarget,
+  type HostOs,
+} from "./setup";
 import type { CloseMode } from "./closeConfirm";
-import { Button, Checkbox, CopyText, Disclosure, IconButton, Notice, Select, StepList } from "./components/index";
+import { Button, Checkbox, Disclosure, IconButton, Notice } from "./components/index";
+import { ManualSteps, TargetPicker } from "./manualSteps";
 
 // The quit-time proxy dialog, three modes driven by the live proxy status
 // (see closeConfirm.ts):
@@ -30,16 +38,15 @@ export const CLOSE_COPY = {
   quit: "quit",
   turnOff: "turn it off",
   tryAgain: "try again",
+  turningOff: "turning the proxy off — approve the prompt if asked…",
   failed: "couldn't turn the proxy off — try the steps below.",
 } as const;
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-// The build-local modal shell: scrim, panel, focus trap, focus return, Esc and
-// backdrop click. No registry entry owns modality, and generalising a Dialog from
-// the app's only dialog would encode this dialog's shape as though it were
-// general — a sample of one. A second dialog re-opens the question.
+// Build-local by warrant: no registry entry owns modality, and a general Dialog
+// drawn from the app's only dialog would generalise from a sample of one.
 function ModalShell({
   title,
   onCancel,
@@ -111,14 +118,10 @@ function ModalShell({
   );
 }
 
-// A step is a command when it is not a sentence: the resolvers return prose
-// ending in a period, and commands never do.
-const isCommand = (step: string) => !step.endsWith(".");
-
 // Shared by every mode: pick the target, read the steps, copy the command. It is
 // the whole content in "remote" (nothing to act on) and the fallback beneath the
 // action in "ours"/"foreign".
-function ManualRoute({
+function ProxyOffSteps({
   os,
   collapsed,
   defaultOpen,
@@ -128,31 +131,21 @@ function ManualRoute({
   defaultOpen?: boolean;
 }) {
   const [target, setTarget] = useState<ProxyTarget>(defaultProxyTarget(os));
-  // proxyOffSteps returns prose first and, where one exists, the command last.
-  // The command is a payload the user grabs whole, so it renders as CopyText.
-  const off = proxyOffSteps(target);
-  const steps: ReactNode[] = off.map((step, i) =>
-    i === off.length - 1 && isCommand(step) ? (
-      <CopyText key={step} value={step} label="proxy-off command" />
-    ) : (
-      step
-    ),
-  );
 
   const body = (
     <>
-      <div className="mb-2 flex items-center gap-chrome-gap font-ui text-body text-ink-mute">
-        steps for
-        <Select
-          options={[...PROXY_TARGETS]}
-          value={target}
-          onChange={(id) => setTarget(id as ProxyTarget)}
-          label="proxy target"
-        />
-      </div>
-      <div data-testid="proxy-close-steps">
-        <StepList steps={steps} />
-      </div>
+      <TargetPicker
+        options={PROXY_TARGETS}
+        value={target}
+        onChange={(id) => setTarget(id as ProxyTarget)}
+        label="proxy target"
+      />
+      <ManualSteps
+        steps={proxyOffSteps(target)}
+        command={proxyOffSnippet(target)}
+        commandLabel="proxy-off command"
+        testId="proxy-close-steps"
+      />
     </>
   );
 
@@ -182,14 +175,16 @@ export function ProxyCloseDialog({
   onCancel: () => void;
 }) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [remedyState, setRemedyState] = useState<"idle" | "running" | "failed">("idle");
+  const failed = remedyState === "failed";
+  const running = remedyState === "running";
   const copy = CLOSE_COPY[mode];
 
   if (mode === "remote") {
     return (
       <ModalShell title={copy.title} onCancel={onCancel} testId="proxy-close-dialog" mode={mode}>
         <p className="mb-3 font-ui text-body text-ink-mute">{copy.body}</p>
-        <ManualRoute os={os} collapsed={false} />
+        <ProxyOffSteps os={os} collapsed={false} />
         <div className="mb-3">
           <Checkbox checked={dontShowAgain} onChange={setDontShowAgain}>
             {CLOSE_COPY.remote.dontShowAgain}
@@ -205,30 +200,40 @@ export function ProxyCloseDialog({
   }
 
   // onRemove runs synchronously on the click; only its rejection is awaited, so
-  // a handler that throws outright is caught the same as one that rejects.
+  // a handler that throws outright is caught the same as one that rejects. The
+  // button is disabled for the whole in-flight window with a progress line beside
+  // it (fork D4), since unset_proxy is elevation-gated and slow enough to invite
+  // a second click that would fire a second elevation prompt.
   const attemptRemove = () => {
-    setFailed(false);
+    setRemedyState("running");
     try {
-      Promise.resolve(onRemove()).catch(() => setFailed(true));
+      Promise.resolve(onRemove()).catch(() => setRemedyState("failed"));
     } catch {
-      setFailed(true);
+      setRemedyState("failed");
     }
   };
 
   return (
     <ModalShell title={copy.title} onCancel={onCancel} testId="proxy-close-dialog" mode={mode}>
       <p className="mb-3 font-ui text-body text-ink-mute">{copy.body}</p>
+      {running && (
+        <div className="mb-2" data-testid="proxy-close-running">
+          <Notice>{CLOSE_COPY.turningOff}</Notice>
+        </div>
+      )}
       {failed && (
         <div className="mb-2" data-testid="proxy-close-failed">
           <Notice tone="warn">{CLOSE_COPY.failed}</Notice>
         </div>
       )}
-      <ManualRoute os={os} collapsed defaultOpen={failed} />
+      <ProxyOffSteps os={os} collapsed defaultOpen={failed} />
       <div className="flex justify-end gap-chrome-gap">
         <Button onClick={onKeep} frame="bare" tone="mute">
           {CLOSE_COPY.quit}
         </Button>
-        <Button onClick={attemptRemove}>{failed ? CLOSE_COPY.tryAgain : CLOSE_COPY.turnOff}</Button>
+        <Button onClick={attemptRemove} disabled={running}>
+          {failed ? CLOSE_COPY.tryAgain : CLOSE_COPY.turnOff}
+        </Button>
       </div>
     </ModalShell>
   );

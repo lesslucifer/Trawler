@@ -188,14 +188,12 @@ export type TrustProbe = "trusted" | "untrusted" | "unknown";
 export type ProxyProbe = "ours" | "foreign" | "none" | "unknown";
 export type StepTone = "ok" | "warn" | "muted";
 
-// `message` is the full sentence; `short` is the ≤40-char fragment StatusLine
-// renders. Where the sentence carried an instruction, `short` keeps the verdict
-// and `remedy` carries the instruction out to a Notice — a verdict and what to
-// do about it are two elements, not one.
+// `short` is the ≤40-char fragment StatusLine renders — a verdict, not a
+// sentence. Where the verdict also implies an instruction, `remedy` carries it
+// out to a Notice: what is true and what to do about it are two elements.
 export interface StepStatusView {
   glyph: string;
   tone: StepTone;
-  message: string;
   short: string;
   remedy?: string;
 }
@@ -216,7 +214,7 @@ export function trustStatus(
   error?: string,
 ): StepStatusView {
   if (running === "installing")
-    return { glyph: "⟳", tone: "muted", message: "Installing…", short: "installing…" };
+    return { glyph: "⟳", tone: "muted", short: "installing…" };
   // An authoritative positive — the machine trusts the CA, proven by the probe or
   // a decrypted flow — wins over a stale action error: the CA is trusted whatever
   // the last click did.
@@ -224,21 +222,18 @@ export function trustStatus(
     return {
       glyph: "✓",
       tone: "ok",
-      message: "Trusted on this machine",
       short: "trusted on this machine",
     };
   if (seen.decrypted)
     return {
       glyph: "✓",
       tone: "ok",
-      message: "Trusted — confirmed by captured traffic",
       short: "trusted — confirmed by traffic",
     };
   if (error)
     return {
       glyph: "⚠",
       tone: "warn",
-      message: `Install failed — ${error}`,
       short: "install failed",
       remedy: error,
     };
@@ -246,7 +241,6 @@ export function trustStatus(
     return {
       glyph: "⚠",
       tone: "warn",
-      message: "Traffic is arriving but not decrypting — install the certificate on the device you're capturing from.",
       short: "arriving but not decrypting",
       remedy: "install the certificate on the device you're capturing from",
     };
@@ -254,14 +248,12 @@ export function trustStatus(
     return {
       glyph: "◐",
       tone: "muted",
-      message: "Can't check automatically — we'll confirm when traffic arrives.",
       short: "can't check automatically",
       remedy: "we'll confirm when traffic arrives",
     };
   return {
     glyph: "○",
     tone: "muted",
-    message: "Not trusted on this machine yet",
     short: "not trusted on this machine yet",
   };
 }
@@ -273,23 +265,21 @@ export function proxyStatus(
   error?: string,
 ): StepStatusView {
   if (running === "setting")
-    return { glyph: "⟳", tone: "muted", message: "Setting the proxy…", short: "setting the proxy…" };
+    return { glyph: "⟳", tone: "muted", short: "setting the proxy…" };
   // Same rule as trustStatus: an authoritative positive (probe says the system
   // proxy is Trawler, or traffic is actually arriving) wins over a stale set error.
   if (probe === "ours")
     return {
       glyph: "✓",
       tone: "ok",
-      message: "System proxy is set to Trawler",
       short: "system proxy is set to Trawler",
     };
   if (seen.trafficSeen)
-    return { glyph: "✓", tone: "ok", message: "Receiving traffic", short: "receiving traffic" };
+    return { glyph: "✓", tone: "ok", short: "receiving traffic" };
   if (error)
     return {
       glyph: "⚠",
       tone: "warn",
-      message: `Couldn't set the proxy — ${error}`,
       short: "couldn't set the proxy",
       remedy: error,
     };
@@ -297,7 +287,6 @@ export function proxyStatus(
     return {
       glyph: "○",
       tone: "muted",
-      message: "Another proxy is set on this machine — point it at Trawler here, or capture from a device configured to use Trawler.",
       short: "another proxy is set",
       remedy: "point it at Trawler here, or capture from a device configured to use Trawler",
     };
@@ -305,14 +294,12 @@ export function proxyStatus(
     return {
       glyph: "◐",
       tone: "muted",
-      message: "Can't check automatically — we'll confirm when traffic arrives.",
       short: "can't check automatically",
       remedy: "we'll confirm when traffic arrives",
     };
   return {
     glyph: "○",
     tone: "muted",
-    message: "No traffic reaching Trawler yet",
     short: "no traffic reaching Trawler yet",
   };
 }
@@ -322,13 +309,11 @@ export function verifyStatus(seen: Observed): StepStatusView {
     ? {
         glyph: "✓",
         tone: "ok",
-        message: "It's working — capturing traffic.",
         short: "capturing traffic",
       }
     : {
         glyph: "○",
         tone: "muted",
-        message: "Waiting for your first request.",
         short: "waiting for your first request",
       };
 }
@@ -339,24 +324,36 @@ export function proveItSnippet(addr: string): string {
   return `curl -x http://${addr} https://example.com`;
 }
 
-export function proxyOffSteps(t: ProxyTarget): string[] {
+// The off-command where one exists, so a caller can render it as a copyable
+// payload without inferring which step is a command from its punctuation.
+export function proxyOffSnippet(t: ProxyTarget): string | null {
   switch (t) {
     case "macos":
-      return [
-        "Turn it off per enabled service (keeps the saved address):",
-        "networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off",
-      ];
+      return "networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off";
     case "windows":
-      return [
-        "Disable the WinINET proxy (keeps the saved address):",
-        'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f',
-      ];
+      return 'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f';
     case "linux":
-      return ["GNOME — back to no proxy:", "gsettings set org.gnome.system.proxy mode 'none'"];
+      return "gsettings set org.gnome.system.proxy mode 'none'";
+    case "terminal":
+      return "unset HTTPS_PROXY HTTP_PROXY";
+    default:
+      return null;
+  }
+}
+
+export function proxyOffSteps(t: ProxyTarget): string[] {
+  const snippet = proxyOffSnippet(t);
+  switch (t) {
+    case "macos":
+      return ["Turn it off per enabled service (keeps the saved address):", snippet!];
+    case "windows":
+      return ["Disable the WinINET proxy (keeps the saved address):", snippet!];
+    case "linux":
+      return ["GNOME — back to no proxy:", snippet!];
     case "firefox":
       return ["Settings → Network Settings → Settings… → select \"No proxy\"."];
     case "terminal":
-      return ["Clear the environment variables:", "unset HTTPS_PROXY HTTP_PROXY"];
+      return ["Clear the environment variables:", snippet!];
     case "ios-sim":
       return ["Turn the host Mac's proxy off (the macOS steps above), then restart the Simulator."];
     case "android":

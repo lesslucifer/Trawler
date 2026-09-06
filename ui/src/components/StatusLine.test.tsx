@@ -15,17 +15,17 @@ describe("StatusLine", () => {
     ["◐", "muted", "text-ink-mute"],
     ["○", "muted", "text-ink-mute"],
   ] as const)("%s renders in the %s tone", (glyph, tone, token) => {
-    expect(glyphClass({ glyph, tone, message: "a reason", short: "a reason" })).toContain(token);
+    expect(glyphClass({ glyph, tone, short: "a reason" })).toContain(token);
   });
 
   it.each(["✓", "⚠", "◐", "○"])("%s is a second channel, so tone is never the only one", (glyph) => {
-    render(<StatusLine status={{ glyph, tone: "muted", message: "a reason", short: "a reason" }} />);
+    render(<StatusLine status={{ glyph, tone: "muted", short: "a reason" }} />);
     expect(screen.getByText(glyph)).toBeInTheDocument();
   });
 
   it("in-flight draws a spinner instead of a glyph — an animation, not a verdict", () => {
     render(
-      <StatusLine status={{ glyph: "⟳", tone: "muted", message: "Installing…", short: "installing…" }} />,
+      <StatusLine status={{ glyph: "⟳", tone: "muted", short: "installing…" }} />,
     );
 
     expect(screen.getByTestId("status-line-spinner").className).toContain("animate-spin");
@@ -35,7 +35,7 @@ describe("StatusLine", () => {
   it("renders the optional name in body ink, never toned", () => {
     render(
       <StatusLine
-        status={{ glyph: "⚠", tone: "warn", message: "Install failed", short: "install failed" }}
+        status={{ glyph: "⚠", tone: "warn", short: "install failed" }}
         name="Certificate"
       />,
     );
@@ -48,7 +48,7 @@ describe("StatusLine", () => {
   it("renders without a name — the name is optional, not a placeholder", () => {
     render(
       <StatusLine
-        status={{ glyph: "○", tone: "muted", message: "Not trusted yet", short: "not trusted yet" }}
+        status={{ glyph: "○", tone: "muted", short: "not trusted yet" }}
       />,
     );
     expect(screen.getByText("not trusted yet")).toBeInTheDocument();
@@ -57,7 +57,7 @@ describe("StatusLine", () => {
   it("wraps the message rather than truncating it — a cut reason is a wrong reason", () => {
     const short = "arriving but not decrypting";
     render(
-      <StatusLine status={{ glyph: "⚠", tone: "warn", message: "the full sentence", short }} />,
+      <StatusLine status={{ glyph: "⚠", tone: "warn", short }} />,
     );
 
     const rendered = screen.getByText(short);
@@ -71,7 +71,7 @@ describe("StatusLine", () => {
     ["warn", "text-warn"],
     ["muted", "text-ink-mute"],
   ] as const)("the %s verdict's words carry the tone, not just its glyph", (tone, token) => {
-    render(<StatusLine status={{ glyph: "✓", tone, message: "full", short: "the verdict" }} />);
+    render(<StatusLine status={{ glyph: "✓", tone, short: "the verdict" }} />);
 
     const rendered = screen.getByText("the verdict");
     expect(rendered.className).toContain(token);
@@ -83,7 +83,7 @@ describe("StatusLine", () => {
     render(<StatusLine status={status} />);
 
     expect(screen.getByText("can't check automatically")).toBeInTheDocument();
-    expect(screen.queryByText(status.message)).not.toBeInTheDocument();
+    expect(screen.queryByText(/we'll confirm when traffic arrives/)).not.toBeInTheDocument();
   });
 
   it("leaves the remedy to Notice — a verdict and an instruction are two elements", () => {
@@ -97,7 +97,7 @@ describe("StatusLine", () => {
   it("is pure display: no checkbox, no toggle, nothing focusable", () => {
     const { container } = render(
       <StatusLine
-        status={{ glyph: "✓", tone: "ok", message: "Trusted", short: "trusted" }}
+        status={{ glyph: "✓", tone: "ok", short: "trusted" }}
         name="Certificate"
       />,
     );
@@ -146,7 +146,7 @@ describe("StatusLine", () => {
   });
 
   it("composes TonedText — the glyph's tone comes from the primitive", () => {
-    render(<StatusLine status={{ glyph: "✓", tone: "ok", message: "Trusted", short: "trusted" }} />);
+    render(<StatusLine status={{ glyph: "✓", tone: "ok", short: "trusted" }} />);
 
     const glyph = screen.getByText("✓");
     expect(glyph.className).toContain("font-mono");

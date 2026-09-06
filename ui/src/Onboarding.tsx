@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { COPY, STEPS, stepStatus, type OnbEvent, type OnbState, type Step } from "./onboardingMachine";
-import { Button, CopyText, Disclosure, Notice, Select, StatusLine, StepList } from "./components/index";
+import { Button, CopyText, Disclosure, Notice, StatusLine, type NoticeTone } from "./components/index";
+import { ManualSteps, TargetPicker } from "./manualSteps";
 import {
   canAutoSetup,
   defaultProxyTarget,
   defaultTarget,
   guidedSteps,
   proveItSnippet,
+  proxyOffSnippet,
   proxyOffSteps,
   proxySnippet,
   proxyStatus,
@@ -37,7 +39,7 @@ import {
 type ActionState = "idle" | "running" | "done" | "failed";
 
 interface ActionNote {
-  tone: "mute" | "ok" | "warn";
+  tone: NoticeTone;
   text: string;
 }
 
@@ -79,8 +81,8 @@ function useAction(run?: () => Promise<void>) {
   return { state, error, trigger };
 }
 
-// Fork D4: a Button in flight is disabled AND accompanied by a progress line —
-// both halves or neither, so a dead control is never the only signal.
+// Fork D4: disabled in flight AND a progress line beside it — both halves or
+// neither, so a dead control is never the only signal.
 function Action({
   testId,
   label,
@@ -127,31 +129,10 @@ function ManualRoute({
 }) {
   if (!collapsed) return <div className="mt-2">{children}</div>;
   return (
-    <div className="mt-2">
-      <div data-testid="manual">
-        <Disclosure summary="set it up manually" defaultOpen={defaultOpen}>
-          {children}
-        </Disclosure>
-      </div>
-    </div>
-  );
-}
-
-function TargetPicker({
-  options,
-  value,
-  onChange,
-  label,
-}: {
-  options: readonly { id: string; label: string }[];
-  value: string;
-  onChange: (id: string) => void;
-  label: string;
-}) {
-  return (
-    <div className="mb-2 flex items-center gap-chrome-gap font-ui text-body text-ink-mute">
-      steps for
-      <Select options={[...options]} value={value} onChange={onChange} label={label} />
+    <div className="mt-2" data-testid="manual">
+      <Disclosure summary="set it up manually" defaultOpen={defaultOpen}>
+        {children}
+      </Disclosure>
     </div>
   );
 }
@@ -160,11 +141,13 @@ function TrustCa({
   os,
   state,
   error,
+  remedy,
   onInstall,
 }: {
   os: HostOs;
   state: ActionState;
   error?: string;
+  remedy?: string;
   onInstall?: () => void;
 }) {
   const [target, setTarget] = useState<TrustTarget>(defaultTarget(os));
@@ -182,6 +165,11 @@ function TrustCa({
           onClick={onInstall}
         />
       )}
+      {remedy && (
+        <div data-testid="trust-ca-remedy" className="mb-2">
+          <Notice>{remedy}</Notice>
+        </div>
+      )}
       <ManualRoute collapsed={Boolean(auto)} defaultOpen={state === "failed"}>
         <TargetPicker
           options={TARGETS}
@@ -189,14 +177,20 @@ function TrustCa({
           onChange={(id) => setTarget(id as TrustTarget)}
           label="trust target"
         />
-        <div data-testid="guided-steps">
-          <StepList steps={guidedSteps(target)} />
-        </div>
+        <ManualSteps
+          steps={guidedSteps(target)}
+          command={null}
+          commandLabel="certificate command"
+          testId="guided-steps"
+        />
         <div className="mt-2">
           <Disclosure summary="remove the certificate later">
-            <div data-testid="removal-steps">
-              <StepList steps={removalSteps(target)} />
-            </div>
+            <ManualSteps
+              steps={removalSteps(target)}
+              command={null}
+              commandLabel="removal command"
+              testId="removal-steps"
+            />
           </Disclosure>
         </div>
       </ManualRoute>
@@ -264,19 +258,20 @@ function SetProxy({
           onChange={(id) => setTarget(id as ProxyTarget)}
           label="proxy target"
         />
-        <div data-testid="proxy-steps">
-          <StepList
-            steps={[
-              ...proxySteps(target, addr),
-              ...(snippet ? [<CopyText key="snippet" value={snippet} label="proxy command" />] : []),
-            ]}
-          />
-        </div>
+        <ManualSteps
+          steps={proxySteps(target, addr)}
+          command={snippet}
+          commandLabel="proxy command"
+          testId="proxy-steps"
+        />
         <div className="mt-2">
           <Disclosure summary="turn the proxy off later">
-            <div data-testid="proxy-off-steps">
-              <StepList steps={proxyOffSteps(target)} />
-            </div>
+            <ManualSteps
+              steps={proxyOffSteps(target)}
+              command={proxyOffSnippet(target)}
+              commandLabel="proxy-off command"
+              testId="proxy-off-steps"
+            />
           </Disclosure>
         </div>
       </ManualRoute>
@@ -383,6 +378,7 @@ export function Onboarding({
                         os={os}
                         state={install.state}
                         error={install.error}
+                        remedy={install.state === "failed" ? undefined : view.remedy}
                         onInstall={install.trigger}
                       />
                     ) : step === "set-proxy" ? (

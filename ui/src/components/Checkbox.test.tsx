@@ -67,6 +67,18 @@ describe("Checkbox", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("shows where focus is — the ring every other focusable member carries", () => {
+    render(
+      <Checkbox checked={false} onChange={() => {}}>
+        remember this
+      </Checkbox>,
+    );
+
+    const box = screen.getByRole("checkbox", { name: "remember this" });
+    expect(box.className).toContain("focus-visible:outline");
+    expect(box.className).not.toContain("outline-none");
+  });
+
   it("has no indeterminate state — checked is the whole state machine", () => {
     render(
       <Checkbox checked onChange={() => {}}>
