@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d6c479f34851f0dfac99b">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-RFINISH.W2 result (the registry stops citing code that is not there)</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .bad{color:var(--warn);font-weight:600}
+    .good{color:var(--ok);font-weight:600}
+    pre.tb{font-family:var(--mono,monospace);font-size:11.5px;line-height:1.5;margin:0;white-space:pre-wrap}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    .card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper)}
+    .card h4{margin:0 0 6px;font-size:14px}
+    .card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .card p{margin:6px 0;font-size:12.5px;line-height:1.55}
+  </style>
+</head>
+<body data-artifact="wu-result" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-RFINISH.W2 result — delivered: seven false claims gone, and the check that keeps them gone</h1>
+      <p>The epic sent four falsified docstrings. The sweep of all 28 entries found seven false claims across five, and
+      the WU's real product is <code>scripts/design-citations.mjs</code> — the thing that made the extra three
+      findable.</p>
+      <div class="meta">WU result · 2026-09-06 · Trawler · T3 (docs/work/) · <code>wu/redesign-finish/docstrings</code>
+      → <a href="2026-09-06-redesign-finish-plan.html">epic/redesign-finish</a> ·
+      <a href="2026-09-06-redesign-finish-w2-plan.html">the plan</a> ·
+      <a href="../decisions/dec-35-citations-resolve-or-fail.html">DEC-35</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome — delivered</h2>
+    <div class="callout" data-item="outcome" data-c="outcome">
+      <strong>Every name and path a registry docstring cites resolves in the tree it ships with.</strong>
+      <code>node scripts/design-citations.mjs</code> prints nothing and exits <code>0</code>; against the branch point
+      it named four components and exited <code>1</code>. The roster still emits <strong>28</strong> entries, 768 ui
+      tests and 93 Rust tests are green, and no rendered output moved — every edit is inside a <code>/** … */</code>.
+    </div>
+    <table data-c="requirement-check">
+      <thead><tr><th>The requirement said</th><th>At the tip</th></tr></thead>
+      <tbody>
+        <tr><td>the five falsified citations are rewritten to name what the app actually renders</td>
+          <td class="good">✓ seven claims across five entries — the sweep found two more than the epic listed</td></tr>
+        <tr><td>a committed oracle refuses any cited module, component, type or file path the tree cannot reach</td>
+          <td class="good">✓ <code>scripts/design-citations.mjs</code>, asserted by the collection suite and runnable
+            standalone</td></tr>
+        <tr><td>so that DEC-30's thesis is enforced by a test rather than restated</td>
+          <td class="good">✓ <a href="../decisions/dec-35-citations-resolve-or-fail.html">DEC-35</a> records the shape
+            and the four rejected alternatives</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="what-shipped">The seven repairs</h2>
+    <table data-c="repairs">
+      <thead><tr><th>Entry · tag</th><th>Was</th><th>Is</th><th>Caught by</th></tr></thead>
+      <tbody>
+        <tr><td><code>Notice</code> <code>@use</code></td>
+          <td class="bad">“<code>HeaderTable</code> empty/pending … the detail panel's load failures”</td>
+          <td>the detail panel's empty-headers zone and its loading line · BodyViewer's five absences and its load
+            failure · the flow list's two empties</td>
+          <td>the oracle</td></tr>
+        <tr><td><code>Notice</code> <code>@use</code></td>
+          <td class="bad"><code>tone="ok"</code> — “trawler is capturing”</td>
+          <td>the setup screen's “installed” and “proxy set”, the quit dialog's “the proxy is off”</td>
+          <td class="bad">a reader</td></tr>
+        <tr><td><code>CopyButton</code> <code>@use</code></td>
+          <td class="bad">copy-as-curl, copy body, <strong>copy all headers</strong> (serialised by
+            <code>HeaderTable</code>)</td>
+          <td>the detail panel's copy-as-curl, BodyViewer's copy body</td>
+          <td>the oracle · <span class="bad">the phantom third tenant, a reader</span></td></tr>
+        <tr><td><code>CopyButton</code> <code>@avoid</code></td>
+          <td class="bad">fork D2b: BodyViewer's pane, <code>HeaderTable</code>'s rows</td>
+          <td>fork D2b: BodyViewer's pane</td><td>the oracle</td></tr>
+        <tr><td><code>TonedText</code> <code>@anatomy</code></td>
+          <td class="bad">at inherited size (<code>components.tsx:25</code>)</td>
+          <td>at inherited size</td><td>the oracle</td></tr>
+        <tr><td><code>Field</code> <code>@use</code> + <code>@avoid</code></td>
+          <td class="bad">the filter bar's <strong>four fields</strong> (free text, host, method, status) · “four
+            fields share one header row”</td>
+          <td>the filter bar's free-text box and its status box · “the filter bar's four controls share one header
+            row”</td>
+          <td class="bad">a reader</td></tr>
+        <tr><td><code>CutMarker</code> summary</td>
+          <td class="bad">the <code>BodyRenderer</code> family's truncation statement</td>
+          <td>the truncation statement for BodyViewer's renderer family</td><td>the oracle</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="reader-column">
+      <strong>The “caught by” column is the honest half of this WU.</strong> Four of seven are mechanical. Three named
+      no identifier at all — a count, a phantom affordance, a copy string — and no token check will ever see them.
+      <a href="../decisions/dec-35-citations-resolve-or-fail.html">DEC-35</a> states that limit rather than implying
+      the surface is closed.
+    </div>
+
+    <h2 id="deviations">Deviations from the plan</h2>
+    <table data-item="deviations" data-c="deviations">
+      <thead><tr><th>Planned</th><th>Shipped</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>a path resolves “tried against the repo root and against <code>ui/src/</code>”</td>
+          <td><code>git ls-files</code>, matched on full path <em>or</em> bare basename</td>
+          <td><strong>The tree refuted the first rule on its first run.</strong> <code>JsonRenderer</code> and
+            <code>XmlRenderer</code> both cite <code>decode.rs</code>, which is real, at
+            <code>src/api/decode.rs</code>. The rule as planned would have reported two true statements as lies, and the
+            fix — legislating that prose spell out full paths — is a writing rule masquerading as a truth check. The
+            question the oracle asks is whether the repo holds the file. <code>git ls-files</code> also removed the
+            deny-list of build outputs a directory walk would have needed.</td>
+        </tr>
+        <tr>
+          <td><strong>six</strong> edits across five docstrings; red-first names <strong>five citations</strong></td>
+          <td><strong>seven</strong> edits; red-first named <strong>four components</strong></td>
+          <td>Two counting corrections, both made in the plan before the code commit. <code>HeaderTable</code> is one
+            finding per component, not per tag, so the oracle reports four. And <code>Notice</code>'s
+            <code>tone="ok"</code> example quoted a copy string the app never shipped — a seventh repair found while
+            rewriting the tenant list around it.</td>
+        </tr>
+        <tr>
+          <td>the plan listed <strong>five</strong> defects; the epic listed <strong>four</strong></td>
+          <td>the fifth (<code>CutMarker</code> → <code>BodyRenderer</code>) shipped as planned</td>
+          <td>Stated in the plan and unchanged: it is the same defect class, in the same folder, and the epic's
+            criterion is unconditional. Leaving it would have meant the new check carrying a hand-written exemption on
+            its first day.</td>
+        </tr>
+        <tr>
+          <td><em>not planned</em> — <code>design-registry.mjs</code> untouched</td>
+          <td><code>tierBlocks()</code> extracted from <code>entry()</code></td>
+          <td>Both oracles must read the same block, and duplicating the extraction is how two readers of one format
+            drift. <code>entry()</code>'s behaviour is unchanged — its existing fixtures cover both the zero-block and
+            two-block branches, and the roster still emits 28 entries with identical fields.</td>
+        </tr>
+        <tr>
+          <td><em>not planned</em> — no T2 record</td>
+          <td><a href="../decisions/dec-35-citations-resolve-or-fail.html">DEC-35</a></td>
+          <td>The distillation checklist's second row: a non-obvious choice was made. The check's shape carries a rule
+            inside it — <strong>no allowlist</strong> — and the first person to hit a false positive will reach for
+            exactly that. A rule that lives only in an oracle's header comment is a rule nobody reads before breaking
+            it.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <thead><tr><th>Claim</th><th>Command</th><th>Output</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Red first</strong> — run at the branch point, before any docstring edit</td>
+          <td><code>node scripts/design-citations.mjs</code></td>
+          <td><pre class="tb">CopyButton: HeaderTable
+CutMarker: BodyRenderer
+Notice: HeaderTable
+TonedText: components.tsx:25
+exit=1</pre></td></tr>
+        <tr><td>green at the tip</td><td><code>node scripts/design-citations.mjs</code></td>
+          <td><pre class="tb">(no output)
+exit=0</pre></td></tr>
+        <tr><td>the collection's tree assertion reds without the repairs</td>
+          <td><code>pnpm vitest run src/components/collection.test.tsx</code> at the branch point</td>
+          <td><pre class="tb">× no component's TSDoc names a file, module or type the tree cannot reach
+  - Object {}
+  + Object { "CopyButton": ["HeaderTable"], "CutMarker": ["BodyRenderer"],
+             "Notice": ["HeaderTable"], "TonedText": ["components.tsx:25"] }</pre></td></tr>
+        <tr><td>the deleted names are gone from the collection's sources</td>
+          <td><code>grep -rn 'HeaderTable\|components\.tsx\|BodyRenderer' ui/src/components/</code></td>
+          <td>one hit, pre-existing and deliberate: <code>collection.test.tsx:218</code>, the comment explaining why
+            the bare <code>"./components"</code> specifier is forbidden. No source file, no docstring, no fixture —
+            the fixtures use <code>GhostTable</code> and <code>ghost-kit.tsx</code> precisely so this grep stays
+            readable</td></tr>
+        <tr><td>the roster is unchanged in size and shape</td>
+          <td><code>node scripts/design-registry.mjs</code></td><td><code>28 entries</code></td></tr>
+        <tr><td>only prose moved</td><td><code>pnpm vitest run</code></td>
+          <td><code>45 files · 768 tests passed</code> — every specimen mount, every <code>@madeof</code> composition
+            and all five touched components' own unit tests pass <strong>unedited</strong></td></tr>
+        <tr><td>nothing else broke</td>
+          <td><code>cargo test</code> · <code>cargo clippy -D warnings</code> · <code>cargo fmt</code> ·
+            <code>pnpm lint</code></td>
+          <td><code>93 passed</code> · clean · clean · clean</td></tr>
+        <tr><td>the design accounting the gate will ask for</td>
+          <td><code>cargo xtask design-scope epic/redesign-finish HEAD</code></td>
+          <td>5 rendered files — <code>CopyButton</code>, <code>CutMarker</code>, <code>Field</code>,
+            <code>Notice</code>, <code>TonedText</code>. All five declared <code>design.undesigned</code>: <em>a
+            docstring repair renders nothing</em></td></tr>
+        <tr><td>docs green</td><td><code>cargo xtask verify-doc</code></td>
+          <td>plan, result and the decisions index — none red</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation" data-c="distillation">
+      <thead><tr><th>Checklist row</th><th>Answer</th><th>Written to</th></tr></thead>
+      <tbody>
+        <tr><td>Behaviour changed or got defined?</td><td>no — rendered output is byte-identical</td><td>—</td></tr>
+        <tr><td>Non-obvious choice made or reversed?</td><td class="good">yes — what counts as a citation, what may
+          resolve one, and the refusal of an allowlist</td>
+          <td><a href="../decisions/dec-35-citations-resolve-or-fail.html">DEC-35</a> + index row (v15 → v16)</td></tr>
+        <tr><td>Design convention surfaced or contradicted?</td>
+          <td>no — the rulebook governs what a <em>design</em> must consider, and it already routes a component's
+            contract to its TSDoc. Nothing about a screen's markup moved</td><td>—</td></tr>
+        <tr><td>Component map or invariant changed?</td><td>no</td><td>—</td></tr>
+        <tr><td>Repeating process emerged or changed?</td>
+          <td>no. The oracle is not a design-run stage command, so <code>design-flow.html</code>'s command table does
+            not gain a row</td><td>—</td></tr>
+        <tr><td>T0 rule should change?</td><td>no</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p>The T3 docs — this result and <a href="2026-09-06-redesign-finish-w2-plan.html">the plan</a> — are archived by
+      the epic close (W10), with the epic's own docs, per <a href="../decisions/workflow-gates.html">DEC-3</a>.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div class="cards" data-item="follow-ups" data-c="follow-ups">
+      <div class="card">
+        <div class="who">for W10 · epic close</div>
+        <h4>Strike the epic's row</h4>
+        <p>“Four registry docstrings cite code E-REDESIGN deleted” is <strong>absorbed, not re-deferred</strong> — and
+        it was five, then seven claims. The epic result should carry the corrected count.</p>
+      </div>
+      <div class="card">
+        <div class="who">open · addressed to whichever epic next opens the gate</div>
+        <h4>The oracle is not wired into <code>verify-doc</code></h4>
+        <p>The vitest suite already fails the merge, so nothing is unguarded. Wiring it into <code>cargo xtask
+        verify-doc</code> would put it in front of a design run's author too — a real gain, and a gate change this
+        epic's non-goals forbid while the gate judges this epic. Recorded in
+        <a href="../decisions/dec-35-citations-resolve-or-fail.html#alternatives">DEC-35</a> as a later move, not a
+        gap.</p>
+      </div>
+      <div class="card">
+        <div class="who">no owner sought</div>
+        <h4>A prose claim still has no check</h4>
+        <p>Three of the seven repairs named no identifier. The honest position, recorded in
+        <a href="../decisions/dec-35-citations-resolve-or-fail.html#consequences">DEC-35</a>, is that the check narrows
+        the surface and does not close it. <strong>No follow-up is filed</strong> — inventing a checker for English is
+        not a task, it is a way to keep the row open.</p>
+      </div>
+      <div class="card">
+        <div class="who">left alone, deliberately</div>
+        <h4><code>body.ts:53</code> and <code>CopyButton</code>'s icon-only fork</h4>
+        <p>“the <code>BodyRenderer</code> family left open <em>at design time</em>” is a true statement about history in
+        a plain comment outside the registry. And the icon-only form keeps its contract with no call site: a designed
+        affordance without a tenant is a decision the registry may record — a citation of a deleted component is
+        not.</p>
+      </div>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
