@@ -2,6 +2,7 @@ schema: doc/v1
 epic: E-EXPORT
 wu: E-EXPORT.W9
 branch: wu/export/controls-redesign
+t2_waived: "A design run decides how a screen will look and changes no user-observable contract, so there is no T2 fact to synthesise yet: UC-4's surface gains the export, import and clear controls when W6 BUILDS them, and stating them now would put a capability in the use-case KB that the app does not have. The rulebook is untouched for the same reason plus a specific one — the only T2 write-back this line of work owed was run 10's Lexicon question, and W5 already landed it, so `export` has its row and this run inherits it rather than proposing a term. The run's two proposals (promote ModalShell as Dialog; three IconButton glyph entries) are recorded in the run's Proposals list and belong to their owners; a run proposes and an owner performs, so neither is a T2 edit this WU may make."
 changes:
   - path: docs/work/2026-09-06-export-w9-controls-redesign-plan.html
     tier: T3
