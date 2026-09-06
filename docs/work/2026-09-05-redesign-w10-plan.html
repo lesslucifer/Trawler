@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Trawler — E-REDESIGN.W10 plan: build the setup screen + quit dialog</title>
 </head>
-<body>
+<body data-artifact="wu-plan" data-status="ready">
   <header class="doc-hero">
     <div class="inner">
       <h1>E-REDESIGN.W10 — build the setup screen + quit dialog</h1>
@@ -16,7 +16,7 @@
   <main>
 
     <h2 id="requirement">Requirement</h2>
-    <p data-c="req-sentence">
+    <p data-item="requirement" data-c="req-sentence">
       Rebuild <code>Onboarding.tsx</code> and <code>ProxyCloseDialog.tsx</code> from registry
       components exactly as <a href="2026-09-04-redesign-run-9-setup-quit.html">design run #9</a>
       specifies, so that every element on both surfaces is a registry entry or a warranted
@@ -31,7 +31,7 @@
     </div>
 
     <h2 id="maps-to">Mapping</h2>
-    <table data-c="mapping">
+    <table data-item="maps-to" data-c="mapping">
       <thead><tr><th>Field</th><th>Value</th></tr></thead>
       <tbody>
         <tr><td>Epic</td><td><code>E-REDESIGN</code> — <a href="2026-09-04-redesign-plan.html">the epic plan</a>, W10's row</td></tr>
@@ -215,7 +215,7 @@
     </ul>
 
     <h2 id="expected">Expected result</h2>
-    <ul data-c="expected-list">
+    <ul data-item="expected" data-c="expected-list">
       <li>Both screens render from registry components; no hand-rolled equivalent of a registry entry survives in either file.</li>
       <li><code>grep -c 'toneClass' ui/src/Onboarding.tsx</code> → 0; the third tone map is gone.</li>
       <li>No unguarded <code>navigator.clipboard</code> call remains under <code>ui/src/</code>.</li>
@@ -226,7 +226,7 @@
     </ul>
 
     <h2 id="test-plan">Test plan</h2>
-    <table data-c="tests">
+    <table data-item="test-plan" data-c="tests">
       <thead><tr><th>Level</th><th>What it proves</th><th>Where</th></tr></thead>
       <tbody>
         <tr>

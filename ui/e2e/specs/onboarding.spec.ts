@@ -12,7 +12,8 @@ const ports = JSON.parse(readFileSync(PORTS_FILE, "utf8")) as {
 const rowCount = () => $$('[data-testid="flow-row"]').length;
 const hit = () => fetch(`${ports.control}/hit`);
 
-// UC-5 (E-UISETUP) end to end: the real Tauri window against a real ephemeral core.
+// UC-ONBOARD (E-UISETUP, rebuilt by E-REDESIGN.W10) end to end: the real Tauri
+// window against a real ephemeral core.
 // A fresh launch with no decrypted flow shows onboarding; a real proxied HTTPS
 // request (the harness /hit) is decrypted by the core, and the Verify check flips
 // to proven and reveals the flow list. The onboarding assertions must come before
@@ -29,7 +30,7 @@ async function pointAppAtCore() {
   await $("header").waitForExist({ timeout: 15_000 });
 }
 
-describe("UC-5 — onboard to the first captured flow", () => {
+describe("UC-ONBOARD — onboard to the first captured flow", () => {
   before(async () => {
     await pointAppAtCore();
   });
