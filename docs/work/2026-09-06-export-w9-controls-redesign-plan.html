@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d5dcf9f34851f0dfac90a" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-EXPORT.W9 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-EXPORT.W9 — design the capture-management controls, on the screen that now exists</h1>
+      <p>Run 10 designed three controls onto a header of four text fields, against a rulebook and a
+      registry that have both moved since. E-REDESIGN rebuilt that header. This is the run again,
+      on the real screen, with the one thing run 10 was blocked on now built.</p>
+      <div class="meta">v1 · 2026-09-06 · Trawler · T3 WU plan · E-EXPORT.W9 ·
+        <a href="2026-09-04-export-plan.html">epic plan</a> ·
+        <a href="../design-flow.html">design flow</a> ·
+        <a href="../design-rules/design-rules-index.html">rulebook</a> ·
+        <a href="2026-09-05-export-run-10-capture-controls.html">run 10</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      A closed, archived design run over the <strong>post-E-REDESIGN flow-list surface</strong>
+      resolves where the export, import and clear controls live, what the destructive one asks
+      before it acts, how an imported flow is marked in a row without adding a column, how a
+      pasted curl command is accepted and how its refusal reads, and what each control says while
+      it is working — every element resolved <em>reuse</em>, <em>extend</em> or <em>propose</em>
+      against the 28-entry registry, every soft rule receipted against rulebook blob
+      <code>a7f9ae3</code>, and every place run 10's answer no longer holds stated as a change
+      rather than silently re-decided. It supersedes run 10 as the design W6 builds from. No build.
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">
+      <a href="2026-09-04-export-plan.html">E-EXPORT</a> · the epic plan's
+      <a href="2026-09-04-export-plan.html#wus">W5 row</a>, re-run against a baseline that arrived
+      after it closed ·
+      <a href="../use-cases/web-ui.html">UC-4</a>'s surface (the flow list is where the controls
+      live), <a href="../use-cases/web-ui.html">UC-6</a> and
+      <a href="../use-cases/web-ui.html">UC-7</a> (the capabilities the controls reach) ·
+      follows the <a href="../design-flow.html">design flow</a>, judged by
+      <a href="../decisions/dec-24-design-review-dimension.html">DEC-24</a>, handed over per
+      <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a>.
+    </p>
+
+    <h2 id="why-rerun">Why a new run and not an amendment to run 10</h2>
+    <p>
+      Run 10 is <code>data-status="archived"</code> and green. Its stages are not wrong so much as
+      <em>answered about a different screen</em>: four of the five things a design run reads as
+      substrate changed underneath it, and the close step's own rule — ① re-pin the rulebook, and
+      a receipt whose pin no longer matches is <code>receipt·rulebook-stale</code> — is exactly
+      the condition it is now in. Re-opening an archived run to re-pin it inverts that step. The
+      cheaper-looking path is also the one the flow forbids.
+    </p>
+    <table>
+      <thead><tr><th>Substrate</th><th>At run 10</th><th>Today</th><th>What it puts back in play</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>rulebook</td>
+          <td><code>aeff5b0</code></td>
+          <td><code>a7f9ae3</code></td>
+          <td>The receipt must be re-earned against the current list. <code>export</code> now has
+            its own Lexicon row — run 10's Q6 came back as a rule, so this run inherits an answer
+            instead of arguing one.</td>
+        </tr>
+        <tr>
+          <td>registry</td>
+          <td>24 entries</td>
+          <td>28 entries</td>
+          <td><code>Field</code>, <code>StatusDot</code>, <code>Disclosure</code> and
+            <code>Checkbox</code> became entries. Every reuse/propose verdict was reached against
+            a vocabulary that did not have them.</td>
+        </tr>
+        <tr>
+          <td>the header</td>
+          <td>four <code>Field</code>s + a count</td>
+          <td>one <code>Field</code>, two <code>Select</code>s, one <code>Field</code>, a count</td>
+          <td>Run 10's Q1 answer — a trailing cluster on a wrapping flex row — was measured against
+            four text boxes. Two are now popup-bearing dropdowns.</td>
+        </tr>
+        <tr>
+          <td>modality in the tree</td>
+          <td>none — "nothing in the collection is a dialog"</td>
+          <td><code>ModalShell</code> in <code>ui/src/ProxyCloseDialog.tsx</code>, shipped</td>
+          <td>Run 10 proposed <code>AskDialog</code> because there was no modal. There is one now,
+            with a warrant comment that says it stayed local because generalising from
+            <em>a sample of one</em> was the more expensive mistake. This run is the second and
+            third sighting, which is the condition that comment names.</td>
+        </tr>
+        <tr>
+          <td>the curl refusal</td>
+          <td>unbuilt — run 10's one blocked-on entry</td>
+          <td>built (W7): <code>400</code>, plain text, one lowercase sentence naming the token</td>
+          <td>The paste target's error state can be designed against a real contract read from
+            <code>src/api/curl.rs</code>, not a shape requested of a future WU.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="not-assume">What this run reads, and what it may not assume</h2>
+    <p>
+      Every contract it designs against is <strong>built and merged</strong> — this is the first
+      of the epic's two design-bearing WUs with no designed-ahead dependency. The run reads the
+      endpoints from <code>src/api/routes.rs</code> and <code>src/api/mod.rs</code>, the refusal
+      wording from <code>src/api/curl.rs</code>, the screen from <code>ui/src/App.tsx</code>,
+      <code>ui/src/FlowList.tsx</code> and <code>ui/src/Layout.tsx</code>, and modality from
+      <code>ui/src/ProxyCloseDialog.tsx</code> — never from the epic plan's prose and never from
+      run 10's account of any of them.
+    </p>
+    <div class="callout warn">
+      <strong>Run 10 is substrate, not authority.</strong> Where this run reaches the same answer
+      it says so and cites it; where it reaches a different one it must say <em>which stage
+      changed and why</em>, in the review list. An answer that silently flips is the failure mode
+      a second run has that a first run does not.
+    </div>
+
+    <h2 id="questions">What the run has to answer</h2>
+    <table>
+      <thead><tr><th>#</th><th>Question</th><th>Why it is not obvious</th><th>Stage that owns it</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Q1</td>
+          <td>Where do three new controls live on a header carrying a text field, two dropdowns, a
+            status field and a count?</td>
+          <td>Run 10's trailing cluster was sized against four plain boxes. A <code>Select</code>
+            opens a popup, so the trailing edge now neighbours something that overlays; and
+            <code>Field</code>'s <code>@avoid</code> line — never let it grow to fit content,
+            because the fields share one row — is a constraint on the row this cluster joins.
+            <code>choose-before-act</code> still binds the ordering.</td>
+          <td>Layout</td>
+        </tr>
+        <tr>
+          <td>Q2</td>
+          <td>Does the clear confirmation reuse <code>ModalShell</code>, extend it, or propose the
+            registry entry run 10 asked for — and who owns it?</td>
+          <td>The thing exists and is good: focus trap, Esc with a <code>defaultPrevented</code>
+            guard so a <code>Select</code> popup's Esc is not the dialog's, backdrop, focus return
+            to the invoker, initial focus on the action rather than the ✕. It is also
+            <em>screen-local by an explicit warrant</em> that this run's second and third caller
+            directly contradict. Promoting it is a registry change, and the run may propose but
+            not perform one.</td>
+          <td>Elements · Interaction</td>
+        </tr>
+        <tr>
+          <td>Q3</td>
+          <td>How is an imported flow marked in a 30px six-column row, with no new column?</td>
+          <td>The row is unchanged since run 10 (<code>110px 70px 180px 1fr 70px 90px</code>), so
+            the constraint holds — but <code>data-ink-first</code> refuses a badge that informs
+            nothing on the overwhelmingly common captured case, <code>colour-plus-text</code>
+            refuses a tint alone, and <code>DEC-34</code> now bounds what a fixed-height row may
+            do to a value it cannot fit.</td>
+          <td>Elements</td>
+        </tr>
+        <tr>
+          <td>Q4</td>
+          <td>How is a curl command pasted, and where does the refusal land?</td>
+          <td>Nothing in the registry accepts multi-line free text — <code>Field</code> is
+            single-line by contract and a browser-copied command is multi-line with backslash
+            continuations. The refusal is now a real string from a real endpoint, so
+            <code>absence-names-itself</code> and <code>display-equals-payload</code> can be
+            judged against what the server actually returns.</td>
+          <td>Elements · Interaction</td>
+        </tr>
+        <tr>
+          <td>Q5</td>
+          <td>What does each control say while it is working, and what does it say at the end?</td>
+          <td><code>Button</code>'s <code>@states</code> is explicit: no loading state of its own —
+            a slow action needs the disabled control <em>and</em> a progress line, both halves or
+            neither (fork D4). <code>ProxyCloseDialog</code> now ships a worked example of that
+            fork, so the question is whether this screen follows it or has a reason not to.</td>
+          <td>Interaction</td>
+        </tr>
+        <tr>
+          <td>Q6</td>
+          <td>Which of run 10's answers does this run keep, and which does it overturn?</td>
+          <td>A re-run's specific duty. Q6 is not a design question — it is the honesty check that
+            makes the other five readable, and it lands in the review list where a reviewer can
+            see what moved without diffing two archived files.</td>
+          <td>review</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>A closed, archived design run at
+      <code>docs/work/2026-09-06-export-run-11-capture-controls.html</code>:</p>
+      <ul>
+        <li><code>cargo xtask verify-doc</code> green on the run — all eleven items present, the
+          receipt covering every soft slug in rulebook order against blob <code>a7f9ae3</code>,
+          the mockup mounting every <em>reuse</em>/<em>extend</em> from
+          <code>specimens.bundle.js</code> with zero colour literals.</li>
+        <li>All six questions above answered, each in the stage that owns it, none deferred to the
+          build.</li>
+        <li>Every element resolved <em>reuse</em> / <em>extend</em> / <em>propose</em>; every
+          proposal carries what it is, why nothing existing fits, and its owner.</li>
+        <li>The blocked-on list empty, or carrying an explicit escalated entry — run 10's one
+          entry (W7's refusal shape) is now built, so a fresh entry means this run found something
+          new.</li>
+        <li>The review list names every place this run's answer differs from run 10's, and the
+          contract that moved it.</li>
+        <li><code>data-status="archived"</code>, and the rulebook re-pinned at close.</li>
+        <li>W6 cites <em>this</em> run by path and blob (<code>design.implements</code>, DEC-25) —
+          run 10 stays archived as the record of what was decided when, and is not cited by the
+          build.</li>
+      </ul>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table>
+        <thead><tr><th>Level</th><th>What proves it</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="tier">commit unit</td>
+            <td><code>waived: "design-only diff — the WU adds two T3 HTML docs (this plan and the
+              run) and amends the epic plan's WU table, no src/ or ui/src/ bytes"</code>.
+              The run's correctness is not unit-testable; it is proven by the Tier-1 checker on
+              every write and at every turn end.</td>
+          </tr>
+          <tr>
+            <td class="tier">integration</td>
+            <td><code>waived: "no bounded contract changes — every endpoint this run designs
+              against (export, import, ?format=curl, clear, delete-one) is merged and covered by
+              W2/W3/W4/W7's own integration tests"</code>.</td>
+          </tr>
+          <tr>
+            <td class="tier">e2e</td>
+            <td><code>waived: "deferred to the epic's own e2e step — the WebDriver row covering
+              export → clear → import → curl paste needs W6's built controls, which this WU does
+              not build"</code>. The epic plan already owns that row.</td>
+          </tr>
+          <tr>
+            <td class="tier">Tier-1 mechanical</td>
+            <td><code>cargo xtask verify-doc &lt;the run&gt;</code> green — the real gate on this
+              WU's deliverable, run on every write via PostToolUse and at turn end.
+              <code>6·run-closed</code> refuses the merge if the run is left open, and
+              <code>receipt·rulebook-stale</code> refuses a receipt pinned to a rulebook that has
+              moved — the check that sent this WU here in the first place.</td>
+          </tr>
+          <tr>
+            <td class="tier">Tier-3 review</td>
+            <td><code>cargo xtask design-scope epic/export HEAD</code> activates the design
+              dimension; the code-review skill writes a <code>cr/v3</code> note with a
+              <code>design:</code> section. This is the layer that catches a receipt that is
+              complete, fluent and false — and, for a re-run, an overturned answer presented as if
+              it had always been the answer.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        Three waivers, each load-bearing rather than convenient: this WU produces no executable
+        bytes. The gate that holds it is Tier-1 plus the Tier-3 design review — both mandatory,
+        neither skippable.
+      </p>
+    </div>
+
+    <h2 id="distillation">Distillation this WU owes</h2>
+    <table>
+      <thead><tr><th>Doc</th><th>Tier</th><th>What lands</th><th>When</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><a href="../design-rules/design-rules-index.html">design-rules-index.html</a></td>
+          <td class="tier t2">T2</td>
+          <td>Only if the run proposes a vocabulary member and it is confirmed. The Lexicon
+            question run 10 owed is already written back — <code>export</code> has its row — so
+            this run inherits it and adds nothing unless it finds a genuinely new term.</td>
+          <td>At close, same session</td>
+        </tr>
+        <tr>
+          <td>the run doc itself</td>
+          <td class="tier t3">T3</td>
+          <td>Archived in place; W6 cites it by blob. Retired into the built component's TSDoc at
+            W6 per DEC-16, not here.</td>
+          <td>At close</td>
+        </tr>
+        <tr>
+          <td><a href="2026-09-04-export-plan.html">the epic plan</a></td>
+          <td class="tier t3">T3</td>
+          <td>The WU table gains this row and records that the redesign baseline arrived as a
+            back-merge rather than a WU, so a reader is not left looking for a W8 that never
+            existed.</td>
+          <td>With this plan</td>
+        </tr>
+        <tr>
+          <td><a href="../use-cases/web-ui.html">web-ui.html</a></td>
+          <td class="tier t2">T2</td>
+          <td>Nothing. A design run changes no user-observable contract; UC-4's surface gains the
+            controls when W6 builds them.</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

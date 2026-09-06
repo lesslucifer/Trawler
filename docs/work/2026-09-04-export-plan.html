@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-EXPORT — a capture leaves the ring and comes back</h1>
       <p>HAR export and import, a pasted curl command as a flow, a store that can be cleared, and a listing that pages — the first epic in which a flow outlives the process that captured it.</p>
-      <div class="meta">v3 · final · 2026-09-04 · Trawler · T3 epic plan · <span class="badge id">E-EXPORT</span></div>
+      <div class="meta">v4 · 2026-09-06 · Trawler · T3 epic plan · <span class="badge id">E-EXPORT</span> — W9 added; the redesign baseline arrived as a back-merge, not a WU</div>
     </div>
   </header>
   <main>
@@ -352,6 +352,41 @@ flowchart LR
           E-EXPORT.W3 — reuses its <code>source</code> marking and its refusal contract;
           the parser is a second format behind the same import endpoint. Independent of W5/W6,
           though its paste affordance is designed in W5 if it lands first.
+        </p>
+      </div>
+
+      <div data-wu="E-EXPORT.W9">
+        <h3 id="w9">E-EXPORT.W9 — design the controls again, on the screen that now exists</h3>
+        <p data-item="wu-summary">
+          W5 closed a green run (run 10) against a flow list whose header was four text fields, a
+          24-entry registry and rulebook <code>aeff5b0</code>. E-REDESIGN then landed on
+          <code>main</code> and rebuilt that header, took the registry to 28 entries, moved the
+          rulebook to <code>a7f9ae3</code> and shipped the app's first modal
+          (<code>ModalShell</code> in <code>ui/src/ProxyCloseDialog.tsx</code>) — the very thing
+          run 10 had to propose because nothing in the collection was a dialog. W9 re-runs the
+          design over the real surface: the same six questions, answered against what is there,
+          plus the duty a re-run has and a first run does not — to say which of run 10's answers
+          it keeps and which it overturns, and why. Run 10 stays archived as the record of what
+          was decided when; W9 becomes the design W6 builds from. No build.
+        </p>
+        <p data-item="wu-maps-to">
+          E-EXPORT · UC-4's surface · the roadmap's rule that a post-viewer epic ships its own UI
+          controls · re-run because the baseline moved under a closed run, which is the condition
+          <code>receipt·rulebook-stale</code> exists to catch.
+        </p>
+        <p data-item="wu-expected">
+          A closed, archived design run (Tier-1 green, receipt citing every rule slug with a
+          verdict against <code>a7f9ae3</code>, blocked-on list empty or escalated) that W6 cites
+          by path and blob. Every proposal is made here, not invented during the build. The review
+          list names every answer that moved since run 10 and the contract that moved it.
+        </p>
+        <p data-item="wu-deps">
+          E-EXPORT.W2 · W3 · W4 · W7 — every endpoint the run designs against is merged, so unlike
+          run 10 this run has no designed-ahead dependency. Requires the E-REDESIGN baseline, which
+          reached this epic as a back-merge of <code>main</code> rather than as a WU: landed
+          history carries no net-new seam, so the merge hook and the epic walk both skip it
+          (DEC-8). There is no E-EXPORT.W8 — the number was allocated to that integration while it
+          was still framed as a WU, and retired unstarted when it became a back-merge.
         </p>
       </div>
 
