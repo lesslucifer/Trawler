@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d37359f34851f0dfac8b4">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-34: a fixed-height row may truncate</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-34 — a fixed-height virtualized row may truncate, on three conditions</h1>
+      <p><code>wrap-not-truncate</code> reads as absolute and one screen cannot obey it. The rule
+        keeps its predicate; the escape is declared, bounded, and costs a receipt line.</p>
+      <div class="meta">DEC-34 · 2026-09-06 · Trawler · E-REDESIGN.W11 · distilled from the
+        flow-list design run's collision table (archived) · status: <span class="badge auto">active</span></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>The rulebook's <code>wrap-not-truncate</code> says <em>long values wrap — never truncate,
+      never widen the column</em>, checked as no <code>truncate</code>/<code>ellipsis</code>/<code>nowrap</code>
+      on payload elements. The flow list cannot satisfy it. Its rows are virtualized at a fixed
+      30 px — a Frame constraint, not a styling preference — and a URL path is unbounded. Wrapping
+      needs variable row height; virtualization needs a known one. The two cannot both hold.</p>
+    <p>The design run recorded <code>violated</code> on two slugs with the full argument rather
+      than claiming a satisfaction it had not earned, and escalated the missing clause to the
+      epic's distillation. W4 then built the truncating cell and stated the breach in
+      <a href="../use-cases/web-ui.html">UC-4</a>. This record is that escalation, answered.</p>
+
+    <h2 id="decision">Decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>The predicate does not move.</strong> <code>truncate</code> on a payload element
+        stays a Tier-1 red, and no design gets it for free. What this record adds is a
+        <em>named, bounded escape</em>: a screen may record <code>violated</code> against
+        <code>wrap-not-truncate</code> and ship the truncation when all three conditions below
+        hold. The escape is a declaration on the receipt, never a silent pass — a reviewer reads
+        it, and a design that meets none of the three is simply wrong.</p>
+    </div>
+    <table data-c="conditions">
+      <thead><tr><th>#</th><th>Condition</th><th>Why it bounds the escape</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>A declared Frame constraint makes wrapping impossible</strong> —
+            not merely inconvenient. In the flow list: <em>rows are virtualized</em>, which fixes
+            row height before any cell is styled.</td>
+          <td>Ties the escape to a constraint the Frame already stated and a reviewer can check,
+            rather than to the builder's convenience. "It looked untidy" is not a constraint.</td></tr>
+        <tr><td>2</td><td><strong>The full value stays reachable by a named route</strong>, and the
+            route is named in the receipt. In the flow list: the path on the row's
+            <code>title</code>, and both host and path in the detail panel's URI.</td>
+          <td>Truncation may cost a glance, never the data. A cut value with no route to the whole
+            is data loss, and no constraint excuses that.</td></tr>
+        <tr><td>3</td><td><strong>The cut is visible</strong> — an ellipsis, never a hard clip.</td>
+          <td>A silently clipped value reads as a complete one. The user must be able to see that
+            there is more before they go looking for it.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Overrule the design — make the cells wrap.</strong></td>
+          <td>Variable row height ends virtualization, and the list is the screen that must stay
+            fluid under live traffic. The rule would win the argument and lose the screen.</td></tr>
+        <tr><td><strong>Widen the column instead.</strong></td>
+          <td>The rule forbids it in the same breath, and rightly: a path is unbounded, so any
+            width is arbitrary and every other column pays for it.</td></tr>
+        <tr><td><strong>Weaken the predicate — allow <code>truncate</code> on a payload element
+            inside a fixed-height row.</strong></td>
+          <td>The predicate cannot see row height, so the check would have to trust a
+            <code>data-</code> attribute the design writes about itself — a rule that asks the
+            subject whether it is allowed. Worse, it would go quiet: today the violation is
+            <em>stated</em> on the receipt and read by a reviewer, and that is the part worth
+            keeping.</td></tr>
+        <tr><td><strong>A new verdict, <code>violated-by-constraint</code>.</strong></td>
+          <td>A seventh verdict for one case, and it reads as absolution. <code>violated</code>
+            plus a reason is already the honest shape — the receipt says the rule is broken and
+            says why, which is exactly what a reader needs.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul data-c="consequences">
+      <li>The rulebook's <code>wrap-not-truncate</code> row carries the clause and points here;
+        the Tier-1 check text is unchanged, because the check is unchanged.</li>
+      <li>A design run meeting the three conditions writes <code>violated</code> with the
+        constraint, the route to the full value, and the visible cut. A Tier-3 reviewer judges
+        those three, not the truncation itself.</li>
+      <li>The flow list is the one sighting today. <code>display-equals-payload</code> carries the
+        same violation for the same reason — one finding, two slugs — and is answered by the same
+        three conditions.</li>
+      <li>A second sighting is the signal to look again: two screens needing the escape means the
+        payload cell wants a component, which the flow-list run already named as a near-miss
+        proposal awaiting its second call site.</li>
+    </ul>
+
+    <div class="callout warn" data-c="not-this">
+      <p><strong>What this record does not do.</strong> It does not excuse the Tier-1 blindness the
+        same run found — that <code>wrap-not-truncate</code>'s predicate cannot read a mockup's
+        <code>&lt;script type="text/babel"&gt;</code> block at all, so every design run's mounted
+        JSX is unchecked by it. That is a harness hole, it is recorded as an epic follow-up, and it
+        would be a hole whether or not this clause existed.</p>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

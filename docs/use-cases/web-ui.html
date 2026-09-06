@@ -12,9 +12,10 @@
       <p>What a user can do against a running Trawler from a UI, stated as observable contracts. Two
       surfaces, one API: the zero-setup web shell (UC-3) and the native desktop app (UC-4 watch ·
       UC-5 inspect), plus the native app's guided onboarding to the first captured flow (UC-ONBOARD).</p>
-      <div class="meta">v4 · 2026-07-15 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      <div class="meta">v5 · 2026-09-06 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
-      UC-ONBOARD by <span class="badge id">E-UISETUP</span></div>
+      UC-ONBOARD by <span class="badge id">E-UISETUP</span> · all three native surfaces re-designed and
+      rebuilt by <span class="badge id">E-REDESIGN</span></div>
     </div>
   </header>
   <main>
@@ -99,10 +100,13 @@
         <td><code>GET</code>/<code>POST</code>/<code>PUT</code>/<code>PATCH</code>/<code>DELETE</code> read
         apart at a glance in the method column, which previously carried no tone.</td></tr>
       </table>
-      <p><strong>One rule is knowingly unmet.</strong> The host and path cells truncate rather than wrap,
-      because a virtualized fixed-height row cannot both wrap and stay one line. The full value stays
-      reachable — on the row's title and in the detail pane — and the missing rulebook clause is recorded
-      against the epic close rather than papered over.</p>
+      <p><strong>One rule is knowingly unmet, and now bounded.</strong> The host and path cells truncate
+      rather than wrap, because a virtualized fixed-height row cannot both wrap and stay one line. The full
+      value stays reachable — the path on the row's title, both in the detail pane's URI — and the cut is
+      visible as an ellipsis. Those are the three conditions
+      <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a> now sets on the escape: the
+      rulebook clause the design run escalated was written at the epic close, and the rule's Tier-1 red is
+      unchanged.</p>
     </div>
 
     <div class="callout" data-c="uc-4-provenance">
