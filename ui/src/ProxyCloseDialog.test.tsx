@@ -90,17 +90,30 @@ describe("the actionable modes — a proxy is set on this machine", () => {
     expect(onRemove).toHaveBeenCalledTimes(2);
   });
 
-  it("a remedy that resolves without quitting does not strand the dialog in flight", async () => {
-    // onRemove resolves once the unset succeeds; the window destroy that follows
-    // is fire-and-forget, so the button must not sit disabled forever waiting for
-    // a close that may never come.
+  // remove() resolves after the unset succeeds AND the window destroy settles —
+  // and the destroy failing is deliberately swallowed, so a resolved remove can
+  // leave the window open. The proxy IS off at that point, so the dialog must say
+  // so and must not offer to do it again.
+  it("says the proxy is off when the remedy succeeds without closing the window", async () => {
     const onRemove = vi.fn().mockResolvedValue(undefined);
     mount("ours", { onRemove });
 
     fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.turnOff }));
 
-    await waitFor(() => expect(screen.queryByTestId("proxy-close-running")).toBeNull());
-    expect(screen.getByRole("button", { name: CLOSE_COPY.turnOff })).toBeEnabled();
+    await waitFor(() => expect(screen.getByTestId("proxy-close-done")).toBeInTheDocument());
+    expect(screen.getByTestId("proxy-close-done")).toHaveTextContent(CLOSE_COPY.done);
+    expect(screen.queryByTestId("proxy-close-running")).toBeNull();
+  });
+
+  it("does not offer to turn off a proxy it just turned off — no second elevation prompt", async () => {
+    const onRemove = vi.fn().mockResolvedValue(undefined);
+    mount("ours", { onRemove });
+
+    fireEvent.click(screen.getByRole("button", { name: CLOSE_COPY.turnOff }));
+    await waitFor(() => expect(screen.getByTestId("proxy-close-done")).toBeInTheDocument());
+
+    expect(screen.queryByRole("button", { name: CLOSE_COPY.turnOff })).toBeNull();
+    expect(onRemove).toHaveBeenCalledOnce();
   });
 
   it("never offers the opt-out — this mode has something local to fix", () => {

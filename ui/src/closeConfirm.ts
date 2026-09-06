@@ -55,23 +55,26 @@ export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
     };
   }, [deps, proxyAddr]);
 
-  const quit = () => deps.getWindow().destroy();
+  // A window that refuses to close is not something the user can act on from a
+  // dialog that is about the proxy, so every quit path logs and moves on rather
+  // than leaving an unhandled rejection behind.
+  const quit = () =>
+    deps
+      .getWindow()
+      .destroy()
+      .catch((err: unknown) => {
+        console.error("window destroy failed:", err);
+      });
 
   return {
     mode,
     // A failed unset must not quit: the dialog exists to stop the machine being
     // stranded on a dead proxy, and swallowing the error strands it silently.
     // The rejection reaches the dialog, which offers the manual route instead.
-    // Only the unset itself is allowed to report failure — once the proxy IS off,
-    // a window that will not close is not "couldn't turn the proxy off", and
-    // telling the user to undo it by hand would be advice to undo nothing. A
-    // destroy that rejects is swallowed for that reason, not overlooked.
-    remove: () =>
-      deps.invoke("unset_proxy").then(() =>
-        quit().catch((err: unknown) => {
-          console.error("window destroy failed after the proxy was unset:", err);
-        }),
-      ),
+    // Only the unset itself reports failure — once the proxy IS off, a window
+    // that will not close is not "couldn't turn the proxy off", and telling the
+    // user to undo it by hand would be advice to undo nothing.
+    remove: () => deps.invoke("unset_proxy").then(quit),
     // Live proxy state is the only source of truth (no persisted marker): keeping
     // the proxy is just quitting — there is nothing to record, and next launch
     // does no reconciliation.

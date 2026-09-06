@@ -310,6 +310,15 @@ describe("the short form every verdict carries", () => {
 // that command in exactly once — zero would drop the copy affordance, twice
 // would render two CopyTexts for one command.
 describe("every command is present exactly once in the steps that introduce it", () => {
+  it("PROXY_TARGETS covers the whole union, so the cases below are exhaustive", () => {
+    // proxyOffSteps' switch is exhaustive over ProxyTarget (tsc proves that), so
+    // every member it handles must also be offered in the list the screens read.
+    const listed = PROXY_TARGETS.map((t) => t.id).sort();
+    const handled = listed.filter((id) => proxyOffSteps(id).length > 0).sort();
+    expect(handled).toEqual(listed);
+    expect(listed).toHaveLength(7);
+  });
+
   it.each(PROXY_TARGETS.map((t) => t.id))("%s", (id) => {
     const addr = "10.0.0.1:7420";
     const pairs: [string[], string | null][] = [

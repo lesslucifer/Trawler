@@ -8,8 +8,8 @@ import {
   type HostOs,
 } from "./setup";
 import type { CloseMode } from "./closeConfirm";
-import { Button, Checkbox, Disclosure, IconButton, Notice } from "./components/index";
-import { ManualSteps, TargetPicker } from "./manualSteps";
+import { Button, Checkbox, IconButton, Notice } from "./components/index";
+import { ManualFallback, ManualSteps, TargetPicker } from "./manualSteps";
 
 // The quit-time proxy dialog, three modes driven by the live proxy status
 // (see closeConfirm.ts):
@@ -39,6 +39,7 @@ export const CLOSE_COPY = {
   turnOff: "turn it off",
   tryAgain: "try again",
   turningOff: "turning the proxy off — approve the prompt if asked…",
+  done: "the proxy is off. you can quit safely.",
   failed: "couldn't turn the proxy off — try the steps below.",
 } as const;
 
@@ -149,13 +150,16 @@ function ProxyOffSteps({
     </>
   );
 
-  if (!collapsed) return <div className="mb-3">{body}</div>;
   return (
-    <div className="mb-3" data-testid="proxy-close-manual">
-      <Disclosure summary="do it manually instead" defaultOpen={defaultOpen}>
-        {body}
-      </Disclosure>
-    </div>
+    <ManualFallback
+      summary="do it manually instead"
+      collapsed={collapsed}
+      defaultOpen={defaultOpen}
+      testId="proxy-close-manual"
+      className="mb-3"
+    >
+      {body}
+    </ManualFallback>
   );
 }
 
@@ -175,9 +179,10 @@ export function ProxyCloseDialog({
   onCancel: () => void;
 }) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
-  const [remedyState, setRemedyState] = useState<"idle" | "running" | "failed">("idle");
+  const [remedyState, setRemedyState] = useState<"idle" | "running" | "done" | "failed">("idle");
   const failed = remedyState === "failed";
   const running = remedyState === "running";
+  const done = remedyState === "done";
   const copy = CLOSE_COPY[mode];
 
   if (mode === "remote") {
@@ -208,7 +213,7 @@ export function ProxyCloseDialog({
     setRemedyState("running");
     try {
       Promise.resolve(onRemove()).then(
-        () => setRemedyState("idle"),
+        () => setRemedyState("done"),
         () => setRemedyState("failed"),
       );
     } catch {
@@ -224,6 +229,11 @@ export function ProxyCloseDialog({
           <Notice>{CLOSE_COPY.turningOff}</Notice>
         </div>
       )}
+      {done && (
+        <div className="mb-2" data-testid="proxy-close-done">
+          <Notice tone="ok">{CLOSE_COPY.done}</Notice>
+        </div>
+      )}
       {failed && (
         <div className="mb-2" data-testid="proxy-close-failed">
           <Notice tone="warn">{CLOSE_COPY.failed}</Notice>
@@ -234,9 +244,11 @@ export function ProxyCloseDialog({
         <Button onClick={onKeep} frame="bare" tone="mute">
           {CLOSE_COPY.quit}
         </Button>
-        <Button onClick={attemptRemove} disabled={running}>
-          {failed ? CLOSE_COPY.tryAgain : CLOSE_COPY.turnOff}
-        </Button>
+        {!done && (
+          <Button onClick={attemptRemove} disabled={running}>
+            {failed ? CLOSE_COPY.tryAgain : CLOSE_COPY.turnOff}
+          </Button>
+        )}
       </div>
     </ModalShell>
   );

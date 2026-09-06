@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { COPY, STEPS, stepStatus, type OnbEvent, type OnbState, type Step } from "./onboardingMachine";
 import { Button, CopyText, Disclosure, Notice, StatusLine, type NoticeTone } from "./components/index";
-import { ManualSteps, TargetPicker } from "./manualSteps";
+import { ManualFallback, ManualSteps, TargetPicker } from "./manualSteps";
 import {
   canAutoSetup,
   defaultProxyTarget,
@@ -115,28 +115,6 @@ function Action({
   );
 }
 
-// Disclosure always discloses; the host owns the "collapsed or not at all"
-// branch. With an auto path the manual steps hide behind a summary; without one
-// they are the only route, so they render bare.
-function ManualRoute({
-  collapsed,
-  defaultOpen,
-  children,
-}: {
-  collapsed: boolean;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-}) {
-  if (!collapsed) return <div className="mt-2">{children}</div>;
-  return (
-    <div className="mt-2" data-testid="manual">
-      <Disclosure summary="set it up manually" defaultOpen={defaultOpen}>
-        {children}
-      </Disclosure>
-    </div>
-  );
-}
-
 function TrustCa({
   os,
   state,
@@ -174,30 +152,26 @@ function TrustCa({
           <Notice>{remedy}</Notice>
         </div>
       )}
-      <ManualRoute collapsed={Boolean(auto)} defaultOpen={state === "failed"}>
+      <ManualFallback
+        summary="set it up manually"
+        collapsed={Boolean(auto)}
+        defaultOpen={state === "failed"}
+        testId="manual"
+        className="mt-2"
+      >
         <TargetPicker
           options={TARGETS}
           value={target}
           onChange={(id) => setTarget(id as TrustTarget)}
           label="trust target"
         />
-        <ManualSteps
-          steps={guidedSteps(target)}
-          command={null}
-          commandLabel="certificate command"
-          testId="guided-steps"
-        />
+        <ManualSteps steps={guidedSteps(target)} testId="guided-steps" />
         <div className="mt-2">
           <Disclosure summary="remove the certificate later">
-            <ManualSteps
-              steps={removalSteps(target)}
-              command={null}
-              commandLabel="removal command"
-              testId="removal-steps"
-            />
+            <ManualSteps steps={removalSteps(target)} testId="removal-steps" />
           </Disclosure>
         </div>
-      </ManualRoute>
+      </ManualFallback>
     </div>
   );
 }
@@ -256,7 +230,13 @@ function SetProxy({
           <Notice>{remedy}</Notice>
         </div>
       )}
-      <ManualRoute collapsed={Boolean(auto)} defaultOpen={state === "failed"}>
+      <ManualFallback
+        summary="set it up manually"
+        collapsed={Boolean(auto)}
+        defaultOpen={state === "failed"}
+        testId="manual"
+        className="mt-2"
+      >
         <TargetPicker
           options={PROXY_TARGETS}
           value={target}
@@ -279,7 +259,7 @@ function SetProxy({
             />
           </Disclosure>
         </div>
-      </ManualRoute>
+      </ManualFallback>
     </div>
   );
 }
