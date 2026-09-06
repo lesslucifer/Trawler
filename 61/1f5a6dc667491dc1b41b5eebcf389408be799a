@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 611f5a6dc667491dc1b41b5eebcf389408be799a
+base: a0325aaffd4acacf4367f5873f4f7cff313381ec
+tier: key
+signer: vuluu
+report: docs/work/2026-09-05-redesign-w10-result.html
+report_sha256: 6d52fad7e7219c892d857baf17414d9c15d7217d20e08a8fce4f631c3963b85c
+date: 2026-09-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECYRJJmauQlJh1/icJCx8s7S9vz+iz4nxmMO3m6Y0csIc45m1/pfSW6LB
+  z8d5XdXuguOYdEMOfOgdQiwQKCSg8D
+  -----END SSH SIGNATURE-----
