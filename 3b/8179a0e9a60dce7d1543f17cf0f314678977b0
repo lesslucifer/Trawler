@@ -1,0 +1,33 @@
+schema: cr/v3
+scope: "WU wu/redesign/setup-quit-build -> epic/redesign — code reviewed at d48cc94 (round 10: six finders incl. design, fifteen candidates, thirteen refuted, two verified and waived at the owner's close); the tip adds only the docs-only WU result report, harness-checked"
+epic: E-REDESIGN
+wu: E-REDESIGN.W10
+branch: wu/redesign/setup-quit-build
+base: b9e0bdbbb3af1343307dc0c82c6a34f71f0107b0
+head: 3b8179a0e9a60dce7d1543f17cf0f314678977b0
+diff_sha256: a87e6027bd788023991eef096d1604c7f1261c8f2759ce2b7d139c9b0de32739
+dimensions: [correctness, reuse, simplification, efficiency, altitude, design]
+findings: { found: 15, verified: 2, waived: 2 }
+waivers:
+  - finding: "correctness, important — ui/src/setup.ts trafficStatus: a timestamp ahead of now (a backward wall-clock step while the setup screen is open) makes now - at negative, which satisfies <= RECENT_MS and < TUNNEL_GRACE_MS unconditionally, so 'capturing traffic' or 'a connection just arrived…' stands until real time catches up; reproduced by the verifier, and no test covers a future-relative timestamp"
+    reason: "Waived at the owner's direction at close: stop being strict, wrap up, revisit onboarding and quitting in a later epic. It needs an actual backward step of the OS clock (manual change, a large NTP correction) while the transient setup screen is open, self-heals once elapsed time exceeds the step, and misleads only that screen. Recorded as a follow-up in docs/work/2026-09-05-redesign-w10-result.html with its one-line fix (an age >= 0 guard in recent() and the grace check) and the test it needs."
+  - finding: "design, nit — the amended run's IconButton catalog row clears the primary-action @avoid for the new ↓ placement with the ✕'s clause 'a third route to an outcome two buttons already offer', which fits only the dialog's ✕; the ↓'s not-primary warrant is carried elsewhere in the same artifact (the manual-fallback composition, Frame A's 'manual steps present, not leading') but not in that sentence"
+    reason: "Waived at the owner's direction at close. The reuse warrant is established in the artifact, so this is a misattributed sentence rather than an unestablished reuse; recorded as a follow-up for whoever next amends the run, or for the redesign that retires it."
+design:
+  artifacts: [docs/work/2026-09-04-redesign-run-9-setup-quit.html]
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 3, verified: 1, waived: 1 }
+  verdict: PASS
+  implements:
+    - path: docs/work/2026-09-04-redesign-run-9-setup-quit.html
+      blob: b29c435a1e5b18bc22dc92dd553f525036c7a449
+      built: [ui/src/components/Checkbox.tsx, ui/src/manualSteps.tsx, ui/src/Onboarding.tsx, ui/src/ProxyCloseDialog.tsx, ui/src/components/StatusLine.tsx]
+  undesigned:
+    - path: ui/src/App.tsx
+      why: "Wiring only — the probe snapshot (probing, probedAt, both probes under allSettled with a live flag), the window-focus re-probe, the traffic timestamps assembled from latestFlowTimes and lastConnectionAt, and the install/save/set/unset handlers. Every rendered element it mounts belongs to Onboarding or the dialog, both cited above; nothing on App's own surface was re-shaped."
+    - path: ui/src/Gallery.tsx
+      why: "Mechanical compile fixes only — StatusLine specimens moved onto the resolvers' new signatures (trafficStatus in place of verifyStatus; the traffic argument gone from trustStatus/proxyStatus). Gallery is the throwaway dev showcase W11 deletes; no user-facing surface changed."
+    - path: ui/src/components/CopyText.tsx
+      why: "A defect fix inside the existing layout — the rejection handler was a no-op while its sibling CopyButton flashed error through the same shared hook. One transient outcome chip gained a warn variant; no element was added or moved."
+verdict: PASS
+date: 2026-09-06
