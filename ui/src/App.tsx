@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, type TrawlerApi } from "./api";
-import { hostOs, splitProxyAddr, type ProxyProbe, type TrustProbe } from "./setup";
+import { CA_FILENAME, hostOs, splitProxyAddr, type ProxyProbe, type TrustProbe } from "./setup";
+import { saveBody } from "./body";
 import { isDecryptedHttps } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useProxyCloseConfirm } from "./closeConfirm";
@@ -109,6 +110,11 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     reprobe();
   };
 
+  const saveCa = async () => {
+    const pem = await client.caCertPem();
+    await saveBody(new TextEncoder().encode(pem), CA_FILENAME);
+  };
+
   const setProxy = async () => {
     const { host, port } = splitProxyAddr(proxyAddr);
     await invoke("set_proxy", { host, port });
@@ -154,8 +160,10 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           proxyProbe={proxyProbe}
           observed={{ decrypted: isDecryptedHttps(flows), trafficSeen: flows.length > 0 || connections > 0 }}
           onInstallCa={installCa}
+          onSaveCa={saveCa}
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}
+          onRecheck={reprobe}
         />
       </Layout>
     );

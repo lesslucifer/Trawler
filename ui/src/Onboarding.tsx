@@ -4,6 +4,7 @@ import { Button, CopyText, Disclosure, Notice, StatusLine, type NoticeTone } fro
 import { ManualFallback, ManualSteps, TargetPicker } from "./manualSteps";
 import {
   canAutoSetup,
+  CA_FILENAME,
   defaultProxyTarget,
   defaultTarget,
   guidedSteps,
@@ -55,6 +56,12 @@ const SETPROXY_NOTE: Partial<Record<ActionState, ActionNote>> = {
   running: { tone: "mute", text: "setting the proxy — approve the prompt if asked…" },
   done: { tone: "ok", text: "proxy set. we'll confirm it on your first flow." },
   failed: { tone: "warn", text: "automatic setup failed — use the manual steps below." },
+};
+
+const SAVECA_NOTE: Partial<Record<ActionState, ActionNote>> = {
+  running: { tone: "mute", text: "saving…" },
+  done: { tone: "ok", text: `saved as ${CA_FILENAME}. now trust it with the steps below.` },
+  failed: { tone: "warn", text: "couldn't save the certificate — check that Trawler is running." },
 };
 
 const UNSETPROXY_NOTE: Partial<Record<ActionState, ActionNote>> = {
@@ -123,12 +130,14 @@ function TrustCa({
   error,
   remedy,
   onInstall,
+  save,
 }: {
   os: HostOs;
   state: ActionState;
   error?: string;
   remedy?: string;
   onInstall?: () => void;
+  save: ReturnType<typeof useAction>;
 }) {
   const [target, setTarget] = useState<TrustTarget>(defaultTarget(os));
   const auto = onInstall && canAutoSetup(os) && target === defaultTarget(os);
@@ -167,6 +176,18 @@ function TrustCa({
           onChange={(id) => setTarget(id as TrustTarget)}
           label="trust target"
         />
+        {save.trigger && (
+          <div className="mb-2">
+            <Action
+              testId="save-ca"
+              label="save certificate"
+              state={save.state}
+              error={save.error}
+              note={SAVECA_NOTE}
+              onClick={save.trigger}
+            />
+          </div>
+        )}
         <ManualSteps
           steps={guidedSteps(target)}
           command={trustSnippet(target)}
@@ -285,8 +306,10 @@ export function Onboarding({
   proxyProbe = "unknown",
   observed = { decrypted: false, trafficSeen: false },
   onInstallCa,
+  onSaveCa,
   onSetProxy,
   onUnsetProxy,
+  onRecheck,
 }: {
   state: OnbState;
   dispatch: (e: OnbEvent) => void;
@@ -296,10 +319,13 @@ export function Onboarding({
   proxyProbe?: ProxyProbe;
   observed?: Observed;
   onInstallCa?: () => Promise<void>;
+  onSaveCa?: () => Promise<void>;
   onSetProxy?: () => Promise<void>;
   onUnsetProxy?: () => Promise<void>;
+  onRecheck?: () => void;
 }) {
   const install = useAction(onInstallCa);
+  const saveCa = useAction(onSaveCa);
   const setProxyAction = useAction(onSetProxy);
   const unsetProxyAction = useAction(onUnsetProxy);
 
@@ -367,6 +393,14 @@ export function Onboarding({
                   </span>
                 </button>
 
+                {open && onRecheck && step !== "verify" && (
+                  <div className="mt-chrome-y flex justify-end">
+                    <Button onClick={onRecheck} frame="bare" tone="mute">
+                      check again
+                    </Button>
+                  </div>
+                )}
+
                 {open && (
                   <div data-testid="step-body" className="mt-2">
                     <p className="font-ui text-body text-ink-mute">{copy.body}</p>
@@ -377,6 +411,7 @@ export function Onboarding({
                         error={install.error}
                         remedy={view.remedy}
                         onInstall={install.trigger}
+                        save={saveCa}
                       />
                     ) : step === "set-proxy" ? (
                       <SetProxy

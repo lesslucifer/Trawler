@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import App from "./App";
 import type { Filter, FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 import type { OnbState } from "./onboardingMachine";
+import { CA_FILENAME, guidedSteps } from "./setup";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
 // App wires a quit-time close guard (W5); stub the window so onCloseRequested is a
@@ -98,6 +99,7 @@ function mockApi(store: () => FlowSummary[], connections = 0) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   delete window.__TRAWLER_PROXY__;
 });
 
@@ -185,6 +187,33 @@ test("Install fetches the PEM and invokes install_ca; the step reports done, not
   // command exit 0 is a weak signal — the machine stays in onboarding until W4 captures
   expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "active");
   expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
+// The manual steps tell the user to run commands against a file by name. The
+// save has to produce that exact name, or every step after it points at nothing.
+test("Save writes the PEM under the filename the manual steps tell the user to run against", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  const saved: { name?: string; size?: number } = {};
+  vi.stubGlobal("URL", { ...URL, createObjectURL: vi.fn(() => "blob:ca"), revokeObjectURL: vi.fn() });
+  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  const anchorName = vi
+    .spyOn(HTMLAnchorElement.prototype, "download", "set")
+    .mockImplementation(function (this: HTMLAnchorElement, name: string) {
+      saved.name = name;
+    });
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "save certificate" }));
+  await screen.findByText(new RegExp(`saved as ${CA_FILENAME}`));
+
+  expect(api.caCertPem).toHaveBeenCalledOnce();
+  expect(saved.name).toBe(CA_FILENAME);
+  for (const step of guidedSteps("macos")) {
+    if (/certificate as /.test(step)) expect(step).toContain(saved.name!);
+  }
+  anchorName.mockRestore();
+  click.mockRestore();
 });
 
 // Reject one specific command, letting the read-only probes (ca_trusted /

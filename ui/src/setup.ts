@@ -31,7 +31,12 @@ export const TARGETS: readonly { id: TrustTarget; label: string }[] = [
   { id: "android", label: "Android" },
 ];
 
-const DOWNLOAD = "Save Trawler's certificate as trawler-ca.pem.";
+export const CA_FILENAME = "trawler-ca.pem";
+
+// Step one of every manual route names this file, so the screen owes the user
+// a way to produce it — the "save certificate" action, not an instruction to
+// find it themselves.
+const DOWNLOAD = `Save Trawler's certificate as ${CA_FILENAME}.`;
 
 const STEPS: Record<TrustTarget, string[]> = {
   macos: [

@@ -18,7 +18,12 @@ const ADDR = "10.1.2.3:9999";
 function Harness({
   start = onboarding,
   ...props
-}: { start?: OnbState } & Partial<Pick<Parameters<typeof Onboarding>[0], "os" | "onInstallCa">>) {
+}: { start?: OnbState } & Partial<
+  Pick<
+    Parameters<typeof Onboarding>[0],
+    "os" | "onInstallCa" | "onSaveCa" | "onRecheck" | "trustProbe" | "proxyProbe"
+  >
+>) {
   const [state, dispatch] = useReducer(reduce, start);
   return <Onboarding state={state} dispatch={dispatch} {...props} />;
 }
@@ -395,4 +400,63 @@ test("back to flows shows only once ever proven", () => {
 // ink-mute body text is not that, so the check names the two decided tones.
 test("no third tone map — the screen never maps a verdict tone to a class", () => {
   expect(onboardingSource).not.toMatch(/text-ok|text-warn/);
+});
+
+// "Save Trawler's certificate as trawler-ca.pem" named a file the screen never
+// produced — every manual route began with an instruction the user could not
+// carry out. The step is an action, not prose.
+test("the certificate is saved by a button, not by a sentence telling the user to save it", async () => {
+  const onSaveCa = vi.fn(async () => {});
+  render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
+  expect(onSaveCa).toHaveBeenCalledOnce();
+  expect(await screen.findByText(/saved as trawler-ca\.pem/)).toBeInTheDocument();
+});
+
+test("a failed save states why, and never claims the file landed", async () => {
+  const onSaveCa = vi.fn(() => Promise.reject(new Error("GET /ca.crt failed: 500")));
+  render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
+  expect(await screen.findByText(/couldn't save the certificate/)).toBeInTheDocument();
+  expect(screen.getByTestId("save-ca-status")).toHaveTextContent("GET /ca.crt failed: 500");
+  expect(screen.queryByText(/saved as trawler-ca\.pem/)).toBeNull();
+});
+
+// A probe is a reading taken at a moment. Nothing pushes when the user changes
+// the system proxy in System Settings, so a green verdict outlives its truth
+// until something asks again.
+test("each probed step offers a re-check, and asking again re-reads the machine", async () => {
+  const onRecheck = vi.fn();
+  render(<Harness start={onboarding} os="macos" trustProbe="trusted" onRecheck={onRecheck} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "check again" }));
+  expect(onRecheck).toHaveBeenCalledOnce();
+});
+
+test("re-checking reports a proxy that was green and is no longer", async () => {
+  const view = render(
+    <Onboarding
+      state={atSetProxy}
+      dispatch={vi.fn()}
+      os="macos"
+      proxyProbe="ours"
+      onRecheck={vi.fn()}
+    />,
+  );
+  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent(/system proxy is set to Trawler/);
+
+  view.rerender(
+    <Onboarding
+      state={atSetProxy}
+      dispatch={vi.fn()}
+      os="macos"
+      proxyProbe="none"
+      onRecheck={vi.fn()}
+    />,
+  );
+  const status = screen.getByTestId("step-set-proxy-status");
+  expect(status).not.toHaveTextContent(/system proxy is set to Trawler/);
+  expect(screen.getByTestId("step-set-proxy")).not.toHaveAttribute("data-tone", "ok");
 });
