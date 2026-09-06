@@ -1,7 +1,7 @@
 import { humanBytePair } from "../body";
 
 /**
- * CutMarker — the BodyRenderer family's truncation statement: what is shown, of how much, and the way out.
+ * CutMarker — the truncation statement for BodyViewer's renderer family: what is shown, of how much, and the way out.
  * @tier T2 — owns the family's never-truncate-silently rule and the human-readable size form (B · KiB · MiB, one decimal below 10)
  * @anatomy a warn-tone line above a hairline rule: "⚠ showing N of M — save to see all", both sizes human-readable — and never rounded to the same string, which would read as no truncation at all
  * @use from a family member whose rendered output is capped, appended after the last visible line
