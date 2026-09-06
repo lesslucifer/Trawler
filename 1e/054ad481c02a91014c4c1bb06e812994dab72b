@@ -1,0 +1,65 @@
+schema: doc/v1
+epic: E-EXPORT
+branch: epic/export
+changes:
+  - path: docs/decisions/dec-35-har-as-the-interchange-format.html
+    tier: T2
+    action: renamed
+    distills: "DEC-30 -> DEC-35, content otherwise unchanged. The meta line gains 'minted as DEC-30 on the E-EXPORT branch, renumbered at the E-REDESIGN merge', the clause that lets an old citation land. Its one outbound reference (the consequence row pointing at the curl parser's boundary) follows to DEC-37."
+  - path: docs/decisions/dec-36-imported-flows-are-marked.html
+    tier: T2
+    action: renamed
+    distills: "DEC-31 -> DEC-36, same meta clause. Two outbound references follow: the opening sentence citing the interchange record becomes DEC-35, and the W7 consequence row citing the parser becomes DEC-37."
+  - path: docs/decisions/dec-37-curl-parser-accepts-what-a-browser-emits.html
+    tier: T2
+    action: renamed
+    distills: "DEC-32 -> DEC-37, same meta clause. Its 'not a second capture format, not a third provenance' row follows to DEC-35 and DEC-36."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "The three rows keep their prose and take the new ids, and they MOVE: the routing table now reads DEC-29 through DEC-37 in numeric order instead of listing 30/31/32 twice. Nothing about what any record decides changes. Header to v18."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "Four citations retargeted - UC-6's interchange-format and imported-mark links, UC-6's curl-parser link, and UC-7's imported-mark link. E-REDESIGN's own citations in the same file (DEC-31 leg-is-panel-scoped, DEC-32 body-is-the-main-zone, DEC-33, DEC-34) are deliberately untouched, which is why this file was edited by hand rather than swept."
+  - path: docs/work/2026-09-04-export-w2-har-out-plan.html
+    tier: T3
+    action: updated
+    distills: "Citations follow the rename; the W2 plan's distillation row names DEC-35."
+  - path: docs/work/2026-09-04-export-w2-har-out-result.html
+    tier: T3
+    action: updated
+    distills: "Citations follow the rename."
+  - path: docs/work/2026-09-04-export-w3-har-in-plan.html
+    tier: T3
+    action: updated
+    distills: "Citations follow the rename."
+  - path: docs/work/2026-09-04-export-w3-har-in-result.html
+    tier: T3
+    action: updated
+    distills: "Citations follow the rename."
+  - path: docs/work/2026-09-04-export-w4-clear-plan.html
+    tier: T3
+    action: updated
+    distills: "Citations follow the rename."
+  - path: docs/work/2026-09-04-export-w4-clear-result.html
+    tier: T3
+    action: updated
+    distills: "Citations follow the rename."
+  - path: docs/work/2026-09-05-export-w7-curl-in-plan.html
+    tier: T3
+    action: updated
+    distills: "Citations follow the rename."
+  - path: docs/work/2026-09-05-export-w7-curl-in-result.html
+    tier: T3
+    action: updated
+    distills: "Citations follow the rename, including the W7 result's own distillation ledger rows for the three records."
+note: >-
+  No tier gains or loses a fact in this commit: every record decides exactly what it decided
+  before, and the only sentence added anywhere is the mint-and-renumber clause in three meta
+  lines. src/api/har.rs also changes and carries no entry here - it is T4, and the change is a
+  comment naming the record its round-trip property is a claim about. The eight T3 work docs are
+  updated rather than left stale even though DEC-3 will take them out of the tree at the epic's
+  close: while they are tracked they are checked, and the link test that proves this commit safe
+  reads them like any other doc. All thirteen were snapshotted before their first edit, so
+  <doc>.html?diff=latest shows exactly what moved.
