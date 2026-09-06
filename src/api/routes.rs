@@ -68,8 +68,8 @@ pub async fn list_flows(
 
 /// One-shot counterpart to the `connection` SSE event: "has any traffic reached
 /// the proxy yet?" The onboarding reads it once on entry (like W4's `/flows`
-/// read) so the proxy step reflects connections that arrived before the UI
-/// subscribed; live updates then ride the stream.
+/// read) so a core that saw traffic before the UI subscribed reads as idle
+/// rather than as never-used; live updates then ride the stream.
 pub async fn stats(State(state): State<AppState>) -> Json<Value> {
     Json(json!({ "connections": state.store.connection_count() }))
 }

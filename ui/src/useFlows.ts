@@ -12,9 +12,13 @@ export function useFlows(api: TrawlerApi) {
   const [flows, setFlows] = useState<FlowSummary[]>([]);
   // Count of CONNECT tunnels the proxy has opened — every HTTPS attempt, whether
   // or not it later decrypts into a flow (an untrusted-CA handshake produces a
-  // tunnel but no flow). Onboarding treats connections>0 as "proxy is routing";
-  // the flow list itself ignores them. Seeded once from /stats, then bumped live.
+  // tunnel but no flow). Onboarding reads it as "traffic has reached Trawler at
+  // some point" — idle rather than waiting; the flow list itself ignores it.
+  // Seeded once from /stats, then bumped live.
   const [connections, setConnections] = useState(0);
+  // The moment the newest tunnel was seen. Only a live event carries one — the
+  // /stats seed is a count with no time, so it can say "ever", never "now".
+  const [lastConnectionAt, setLastConnectionAt] = useState<number | null>(null);
   // Every host capture has ever seen, which is NOT what `flows` holds: that list
   // is server-filtered, so deriving the host options from it would collapse them
   // to the one already chosen and strand the user there. Accumulated instead, so
@@ -53,7 +57,10 @@ export function useFlows(api: TrawlerApi) {
     api.connectionCount().then((c) => setConnections((n) => Math.max(n, c))).catch(() => {});
     const close = api.stream({
       onEvent: debouncedRefresh,
-      onConnection: () => setConnections((n) => n + 1),
+      onConnection: () => {
+        setConnections((n) => n + 1);
+        setLastConnectionAt(Date.now());
+      },
     });
     return close;
   }, [api, debouncedRefresh]);
@@ -63,7 +70,7 @@ export function useFlows(api: TrawlerApi) {
     [],
   );
 
-  return { filter, flows, hosts, connections, update };
+  return { filter, flows, hosts, connections, lastConnectionAt, update };
 }
 
 function merge(known: string[], list: FlowSummary[]): string[] {

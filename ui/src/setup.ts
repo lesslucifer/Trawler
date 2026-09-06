@@ -31,21 +31,30 @@ export const TARGETS: readonly { id: TrustTarget; label: string }[] = [
   { id: "android", label: "Android" },
 ];
 
-const DOWNLOAD = "Save Trawler's certificate as trawler-ca.pem.";
+export const CA_FILENAME = "trawler-ca.pem";
+
+// Step one of every manual route names this file, so the screen owes the user
+// a way to produce it: the save control sits at the end of this sentence, which
+// is why it carries no terminal period.
+export const SAVE_CA_STEP = `Save Trawler's certificate as ${CA_FILENAME}`;
+const DOWNLOAD = SAVE_CA_STEP;
 
 const STEPS: Record<TrustTarget, string[]> = {
   macos: [
     DOWNLOAD,
-    "Run: sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
+    "Run it in a terminal:",
+    "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
     "Or double-click the file to add it in Keychain Access, then set the Trawler CA to Always Trust.",
   ],
   windows: [
     DOWNLOAD,
-    "In an elevated terminal run: certutil -addstore -f ROOT trawler-ca.pem",
+    "In an elevated terminal run:",
+    "certutil -addstore -f ROOT trawler-ca.pem",
   ],
   linux: [
     DOWNLOAD,
-    "Run: sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
+    "Run it in a terminal:",
+    "sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
     "Chrome reads the NSS store instead: certutil -d sql:$HOME/.pki/nssdb -A -t C,, -n trawler -i trawler-ca.pem",
   ],
   firefox: [
@@ -60,11 +69,28 @@ const STEPS: Record<TrustTarget, string[]> = {
   ],
   android: [
     DOWNLOAD,
-    "Push it to the device: adb push trawler-ca.pem /sdcard/Download/",
+    "Push it to the device:",
+    "adb push trawler-ca.pem /sdcard/Download/",
     "Settings → Security → Encryption & credentials → Install a certificate → CA certificate.",
     "Apps targeting Android 7+ only trust user CAs when their network security config opts in.",
   ],
 };
+
+// The one copyable command per target, or null where the steps are point-and-click.
+// Named here rather than inferred at the call site: the module builds the arrays,
+// so it is the module that knows which element is a command.
+const TRUST_COMMANDS: Record<TrustTarget, string | null> = {
+  macos: "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain trawler-ca.pem",
+  windows: "certutil -addstore -f ROOT trawler-ca.pem",
+  linux: "sudo cp trawler-ca.pem /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates",
+  firefox: null,
+  "ios-sim": null,
+  android: "adb push trawler-ca.pem /sdcard/Download/",
+};
+
+export function trustSnippet(target: TrustTarget): string | null {
+  return TRUST_COMMANDS[target];
+}
 
 export function guidedSteps(target: TrustTarget): string[] {
   return STEPS[target];
@@ -73,14 +99,17 @@ export function guidedSteps(target: TrustTarget): string[] {
 // Trawler's CA is issued with CN "Trawler Proxy CA" — removal keys off that name.
 const REMOVE: Record<TrustTarget, string[]> = {
   macos: [
-    'Run: sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
+    "Run it in a terminal:",
+    'sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
     "Or delete the Trawler Proxy CA entry in Keychain Access → System.",
   ],
   windows: [
-    'In an elevated terminal run: certutil -delstore ROOT "Trawler Proxy CA"',
+    "In an elevated terminal run:",
+    'certutil -delstore ROOT "Trawler Proxy CA"',
   ],
   linux: [
-    "Run: sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
+    "Run it in a terminal:",
+    "sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
     "NSS store: certutil -d sql:$HOME/.pki/nssdb -D -n trawler",
   ],
   firefox: [
@@ -96,6 +125,19 @@ const REMOVE: Record<TrustTarget, string[]> = {
   ],
 };
 
+const REMOVE_COMMANDS: Record<TrustTarget, string | null> = {
+  macos: 'sudo security delete-certificate -c "Trawler Proxy CA" /Library/Keychains/System.keychain',
+  windows: 'certutil -delstore ROOT "Trawler Proxy CA"',
+  linux: "sudo rm /usr/local/share/ca-certificates/trawler-ca.crt && sudo update-ca-certificates --fresh",
+  firefox: null,
+  "ios-sim": null,
+  android: null,
+};
+
+export function removalSnippet(target: TrustTarget): string | null {
+  return REMOVE_COMMANDS[target];
+}
+
 export function removalSteps(target: TrustTarget): string[] {
   return REMOVE[target];
 }
@@ -110,15 +152,22 @@ export function defaultProxyTarget(os: HostOs): ProxyTarget {
   return os === "other" ? "terminal" : os;
 }
 
-export const PROXY_TARGETS: readonly { id: ProxyTarget; label: string }[] = [
-  { id: "macos", label: "macOS" },
-  { id: "windows", label: "Windows" },
-  { id: "linux", label: "Linux (GNOME)" },
-  { id: "firefox", label: "Firefox" },
-  { id: "terminal", label: "Terminal / CLI" },
-  { id: "ios-sim", label: "iOS Simulator" },
-  { id: "android", label: "Android" },
-];
+// Keyed by the union so tsc proves the list offers every target: a member added
+// to ProxyTarget without a label here fails to compile. A runtime check over the
+// list could only ever compare it with itself.
+const PROXY_TARGET_LABELS: Record<ProxyTarget, string> = {
+  macos: "macOS",
+  windows: "Windows",
+  linux: "Linux (GNOME)",
+  firefox: "Firefox",
+  terminal: "Terminal / CLI",
+  "ios-sim": "iOS Simulator",
+  android: "Android",
+};
+
+export const PROXY_TARGETS: readonly { id: ProxyTarget; label: string }[] = (
+  Object.keys(PROXY_TARGET_LABELS) as ProxyTarget[]
+).map((id) => ({ id, label: PROXY_TARGET_LABELS[id] }));
 
 export function splitProxyAddr(addr: string): { host: string; port: number } {
   const at = addr.lastIndexOf(":");
@@ -175,95 +224,133 @@ export function proxySteps(t: ProxyTarget, addr: string): string[] {
   }
 }
 
-// --- Honest per-step status (E-UISETUP.W6) -----------------------------------
-// Each step has two independent truths: a fast LOCAL PROBE (does *this machine*
-// trust the CA / route its proxy through Trawler? — the ~90% case) and OBSERVED
-// TRAFFIC (has any request/connection actually reached Trawler, from any
-// device?). The derivation below turns those into one honest line per step —
-// green when a probe or capture confirms, a clarifying (never alarming) message
-// when neither can, so the remote/manual/un-probeable cases guide instead of
-// mislead. Pure data → unit-tested; the probes themselves live in Rust.
+// --- Two layers of truth (E-REDESIGN.W10) -------------------------------------
+// THIS MACHINE: two read-only probes, re-read on demand — does this host trust
+// the CA, does its system proxy point at Trawler. TRAFFIC: what has reached the
+// proxy, timestamped. A verdict never borrows from the other layer: a flow
+// captured an hour ago says nothing about the proxy now, and a probe says nothing
+// about a phone pointed here. Pure data → unit-tested; the probes live in Rust.
 
-// TODO [UI_DEFER] (E-DFLOW.W5, r3·22): these resolvers return full sentences, so
-// StatusLine's ≤~40-char message contract cannot be met by the component — and a
-// screen must not shorten a domain message itself (StatusLine @avoid). The short
-// form is this module's to return: StepStatusView gains a `short` field beside
-// `message`, filled here per verdict. Deferred because the setup screen still
-// renders these sentences directly; it lands with the screen that consumes
-// StatusLine.
 export type TrustProbe = "trusted" | "untrusted" | "unknown";
 export type ProxyProbe = "ours" | "foreign" | "none" | "unknown";
 export type StepTone = "ok" | "warn" | "muted";
 
+// `short` is the ≤40-char fragment StatusLine renders — a verdict, not a
+// sentence. Where the verdict also implies an instruction, `remedy` carries it
+// out to a Notice: what is true and what to do about it are two elements.
 export interface StepStatusView {
   glyph: string;
   tone: StepTone;
-  message: string;
+  short: string;
+  remedy?: string;
 }
 
-// What the app has observed reaching Trawler this session, plus the running
-// action's transient state. `decrypted` ⇒ a real https:// flow (trust proven);
-// `trafficSeen` ⇒ any connection or flow at all (proxy proven, decrypt or not).
-export interface Observed {
-  decrypted: boolean;
-  trafficSeen: boolean;
+// When each kind of traffic last reached Trawler, as epoch ms; null = not in
+// this session. `ever` also counts what the core saw before the UI subscribed
+// (the /stats tally), which carries no time and so can only ever mean "idle".
+export interface Traffic {
+  lastDecryptedAt: number | null;
+  lastPlainAt: number | null;
+  lastTunnelAt: number | null;
+  ever: boolean;
 }
-export type Running = "installing" | "setting" | null;
 
-export function trustStatus(
-  probe: TrustProbe,
-  seen: Observed,
-  running: Running,
-  error?: string,
-): StepStatusView {
-  if (running === "installing") return { glyph: "⟳", tone: "muted", message: "Installing…" };
-  // An authoritative positive — the machine trusts the CA, proven by the probe or
-  // a decrypted flow — wins over a stale action error: the CA is trusted whatever
-  // the last click did.
-  if (probe === "trusted") return { glyph: "✓", tone: "ok", message: "Trusted on this machine" };
-  if (seen.decrypted)
-    return { glyph: "✓", tone: "ok", message: "Trusted — confirmed by captured traffic" };
-  if (error) return { glyph: "⚠", tone: "warn", message: `Install failed — ${error}` };
-  if (seen.trafficSeen)
-    return {
-      glyph: "⚠",
-      tone: "warn",
-      message: "Traffic is arriving but not decrypting — install the certificate on the device you're capturing from.",
-    };
+export const NO_TRAFFIC: Traffic = {
+  lastDecryptedAt: null,
+  lastPlainAt: null,
+  lastTunnelAt: null,
+  ever: false,
+};
+
+// "Now" is the last 30 s: long enough to read the screen after one curl, short
+// enough that a browser left alone stops reading as captured.
+export const RECENT_MS = 30_000;
+// A tunnel is answered by its decrypted flow within a moment of opening; until
+// then it is neither proof nor failure.
+export const TUNNEL_GRACE_MS = 3_000;
+
+export type Running = "installing" | "setting" | "checking" | null;
+
+const IN_FLIGHT: Record<Exclude<Running, null>, string> = {
+  installing: "installing…",
+  setting: "setting the proxy…",
+  checking: "checking…",
+};
+
+const inFlight = (running: Exclude<Running, null>): StepStatusView => ({
+  glyph: "⟳",
+  tone: "muted",
+  short: IN_FLIGHT[running],
+});
+
+export function trustStatus(probe: TrustProbe, running: Running, error?: string): StepStatusView {
+  if (running) return inFlight(running);
+  // The probe's positive wins over a stale action error: the CA is trusted
+  // whatever the last click did.
+  if (probe === "trusted") return { glyph: "✓", tone: "ok", short: "trusted on this machine" };
+  if (error) return { glyph: "⚠", tone: "warn", short: "install failed", remedy: error };
   if (probe === "unknown")
-    return { glyph: "◐", tone: "muted", message: "Can't check automatically — we'll confirm when traffic arrives." };
-  return { glyph: "○", tone: "muted", message: "Not trusted on this machine yet" };
+    return {
+      glyph: "◐",
+      tone: "muted",
+      short: "can't check automatically",
+      remedy: "step 3 shows whether traffic decrypts",
+    };
+  return { glyph: "○", tone: "muted", short: "not trusted on this machine yet" };
 }
 
-export function proxyStatus(
-  probe: ProxyProbe,
-  seen: Observed,
-  running: Running,
-  error?: string,
-): StepStatusView {
-  if (running === "setting") return { glyph: "⟳", tone: "muted", message: "Setting the proxy…" };
-  // Same rule as trustStatus: an authoritative positive (probe says the system
-  // proxy is Trawler, or traffic is actually arriving) wins over a stale set error.
-  if (probe === "ours")
-    return { glyph: "✓", tone: "ok", message: "System proxy is set to Trawler" };
-  if (seen.trafficSeen)
-    return { glyph: "✓", tone: "ok", message: "Receiving traffic" };
-  if (error) return { glyph: "⚠", tone: "warn", message: `Couldn't set the proxy — ${error}` };
+export function proxyStatus(probe: ProxyProbe, running: Running, error?: string): StepStatusView {
+  if (running) return inFlight(running);
+  if (probe === "ours") return { glyph: "✓", tone: "ok", short: "system proxy is set to Trawler" };
+  if (error) return { glyph: "⚠", tone: "warn", short: "couldn't set the proxy", remedy: error };
   if (probe === "foreign")
     return {
       glyph: "○",
       tone: "muted",
-      message: "Another proxy is set on this machine — point it at Trawler here, or capture from a device configured to use Trawler.",
+      short: "another proxy is set",
+      remedy: "point it at Trawler here, or capture from a device configured to use Trawler",
     };
   if (probe === "unknown")
-    return { glyph: "◐", tone: "muted", message: "Can't check automatically — we'll confirm when traffic arrives." };
-  return { glyph: "○", tone: "muted", message: "No traffic reaching Trawler yet" };
+    return {
+      glyph: "◐",
+      tone: "muted",
+      short: "can't check automatically",
+      remedy: "step 3 shows whether traffic arrives",
+    };
+  return { glyph: "○", tone: "muted", short: "not set on this machine yet" };
 }
 
-export function verifyStatus(seen: Observed): StepStatusView {
-  return seen.decrypted
-    ? { glyph: "✓", tone: "ok", message: "It's working — capturing traffic." }
-    : { glyph: "○", tone: "muted", message: "Waiting for your first request." };
+// Positive evidence outranks a failing tunnel: with one client decrypting and
+// another not, the screen's purpose is met, and the failing client shows the
+// moment the working one goes quiet.
+export function trafficStatus(seen: Traffic, now: number): StepStatusView {
+  const recent = (at: number | null): at is number => at !== null && now - at <= RECENT_MS;
+  if (recent(seen.lastDecryptedAt)) return { glyph: "✓", tone: "ok", short: "capturing traffic" };
+  const tunnel = seen.lastTunnelAt;
+  const unanswered =
+    tunnel !== null && (seen.lastDecryptedAt === null || seen.lastDecryptedAt < tunnel);
+  if (recent(tunnel) && unanswered) {
+    if (now - tunnel < TUNNEL_GRACE_MS)
+      return { glyph: "⟳", tone: "muted", short: "a connection just arrived…" };
+    return {
+      glyph: "⚠",
+      tone: "warn",
+      short: "arriving but not decrypting",
+      remedy:
+        "the client sending it doesn't trust Trawler's certificate — install it there; step 1 covers this machine",
+    };
+  }
+  if (recent(seen.lastPlainAt))
+    return {
+      glyph: "◐",
+      tone: "muted",
+      short: "arriving — plain HTTP only",
+      remedy: "an HTTPS request is what proves decryption",
+    };
+  const anything =
+    seen.ever || seen.lastDecryptedAt !== null || seen.lastPlainAt !== null || tunnel !== null;
+  if (anything) return { glyph: "○", tone: "muted", short: "idle — nothing arriving now" };
+  return { glyph: "○", tone: "muted", short: "waiting for your first request" };
 }
 
 // P1 prove-it: the concrete, copyable command that generates the first request.
@@ -272,24 +359,36 @@ export function proveItSnippet(addr: string): string {
   return `curl -x http://${addr} https://example.com`;
 }
 
-export function proxyOffSteps(t: ProxyTarget): string[] {
+// The off-command where one exists, so a caller can render it as a copyable
+// payload without inferring which step is a command from its punctuation.
+export function proxyOffSnippet(t: ProxyTarget): string | null {
   switch (t) {
     case "macos":
-      return [
-        "Turn it off per enabled service (keeps the saved address):",
-        "networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off",
-      ];
+      return "networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off";
     case "windows":
-      return [
-        "Disable the WinINET proxy (keeps the saved address):",
-        'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f',
-      ];
+      return 'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f';
     case "linux":
-      return ["GNOME — back to no proxy:", "gsettings set org.gnome.system.proxy mode 'none'"];
+      return "gsettings set org.gnome.system.proxy mode 'none'";
+    case "terminal":
+      return "unset HTTPS_PROXY HTTP_PROXY";
+    default:
+      return null;
+  }
+}
+
+export function proxyOffSteps(t: ProxyTarget): string[] {
+  const snippet = proxyOffSnippet(t);
+  switch (t) {
+    case "macos":
+      return ["Turn it off per enabled service (keeps the saved address):", snippet!];
+    case "windows":
+      return ["Disable the WinINET proxy (keeps the saved address):", snippet!];
+    case "linux":
+      return ["GNOME — back to no proxy:", snippet!];
     case "firefox":
       return ["Settings → Network Settings → Settings… → select \"No proxy\"."];
     case "terminal":
-      return ["Clear the environment variables:", "unset HTTPS_PROXY HTTP_PROXY"];
+      return ["Clear the environment variables:", snippet!];
     case "ios-sim":
       return ["Turn the host Mac's proxy off (the macOS steps above), then restart the Simulator."];
     case "android":

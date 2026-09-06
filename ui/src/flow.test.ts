@@ -1,4 +1,4 @@
-import { bodyText, isDecryptedHttps, statusTone, toCurl, toRow } from "./flow";
+import { bodyText, isDecryptedHttps, latestFlowTimes, statusTone, toCurl, toRow } from "./flow";
 import type { BodyView, FlowSummary, FlowView } from "./api";
 
 test("status tone: 2xx ok, 4xx/5xx warn, pending/other muted", () => {
@@ -92,4 +92,24 @@ test("toCurl escapes embedded single quotes in a shell-safe way", () => {
   const body: BodyView = { state: "captured", size: 3, data_base64: b64("it's") };
   const c = toCurl(view({ method: "POST", request_body: body }));
   expect(c).toContain("--data-raw 'it'\\''s'");
+});
+
+// The setup screen judges "now" off these, so the time is each flow's own
+// started_at — never when the list arrived — and a flow that cannot be dated
+// contributes nothing rather than a NaN that would poison the max.
+test("latestFlowTimes takes the newest started_at per kind, decrypted apart from plain", () => {
+  const at = (iso: string, uri: string): FlowSummary => ({ ...flow, started_at: iso, uri });
+
+  expect(
+    latestFlowTimes([
+      at("2026-07-12T10:00:00Z", "https://a.test/"),
+      at("2026-07-12T10:00:05Z", "http://b.test/"),
+      at("2026-07-12T10:00:03Z", "https://c.test/"),
+      at("not a date", "https://d.test/"),
+    ]),
+  ).toEqual({
+    lastDecryptedAt: Date.parse("2026-07-12T10:00:03Z"),
+    lastPlainAt: Date.parse("2026-07-12T10:00:05Z"),
+  });
+  expect(latestFlowTimes([])).toEqual({ lastDecryptedAt: null, lastPlainAt: null });
 });

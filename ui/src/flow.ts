@@ -20,6 +20,25 @@ export function isDecryptedHttps(flows: FlowSummary[]): boolean {
   return flows.some((f) => f.uri.startsWith("https://"));
 }
 
+// When the newest flow of each kind started, as epoch ms. The setup screen reads
+// recency off these — a flow that is old proves nothing about now — so the time
+// is the flow's own started_at, never the moment the list arrived.
+export interface FlowTimes {
+  lastDecryptedAt: number | null;
+  lastPlainAt: number | null;
+}
+
+export function latestFlowTimes(flows: FlowSummary[]): FlowTimes {
+  const times: FlowTimes = { lastDecryptedAt: null, lastPlainAt: null };
+  for (const flow of flows) {
+    const at = Date.parse(flow.started_at);
+    if (Number.isNaN(at)) continue;
+    const key = flow.uri.startsWith("https://") ? "lastDecryptedAt" : "lastPlainAt";
+    times[key] = Math.max(times[key] ?? at, at);
+  }
+  return times;
+}
+
 export interface FlowRow {
   host: string;
   path: string;

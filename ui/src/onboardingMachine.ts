@@ -13,8 +13,6 @@ export interface OnbState {
 }
 
 export type OnbEvent =
-  | { t: "next" }
-  | { t: "back" }
   | { t: "goto"; step: Step }
   | { t: "captured" } // fresh decrypted HTTPS flow — W4 detector dispatches
   | { t: "not-detected" } // launch self-test found nothing — W4 dispatches (W1: on mount)
@@ -27,17 +25,8 @@ export function initial(): OnbState {
   return { phase: "checking", step: "trust-ca", everProven: false };
 }
 
-function shift(step: Step, delta: number): Step {
-  const i = STEPS.indexOf(step);
-  return STEPS[Math.min(STEPS.length - 1, Math.max(0, i + delta))];
-}
-
 export function reduce(s: OnbState, e: OnbEvent): OnbState {
   switch (e.t) {
-    case "next":
-      return { ...s, step: shift(s.step, 1) };
-    case "back":
-      return { ...s, step: shift(s.step, -1) };
     case "goto":
       return { ...s, step: e.step };
     case "captured":
@@ -64,26 +53,26 @@ export function dotStatus(s: OnbState): DotStatus {
 }
 
 export const COPY = {
-  title: "Set up Trawler",
-  subtitle: "Capture your first HTTPS request",
+  title: "set up Trawler",
+  subtitle: "capture your first HTTPS request",
   steps: {
     "trust-ca": {
-      title: "Trust the CA",
-      body: "To read HTTPS traffic, Trawler signs it with its own certificate. Your machine needs to trust that certificate first.",
-      action: "Install certificate",
+      title: "trust the CA",
+      body: "Trawler signs HTTPS with its own certificate; this machine has to trust it.",
+      action: "install certificate",
     },
     "set-proxy": {
-      title: "Set the proxy",
+      title: "set the proxy",
       body: "Send your traffic through Trawler. One click on macOS and Windows; a copy-and-paste command elsewhere.",
-      action: "Set system proxy",
+      action: "set system proxy",
     },
     verify: {
-      title: "Verify",
-      body: "Almost there — now generate some traffic. Open any website, or run the command below. Your first request will show up here.",
+      title: "make a request",
+      body: "run this anywhere on your machine:",
       action: null,
     },
   },
-  back: "‹ Back to flows",
+  back: "back to flows",
   dotTitle: {
     broken: "Not capturing yet — click to set up",
     checking: "Checking…",

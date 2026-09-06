@@ -14,17 +14,13 @@ test("not-detected drops checking into onboarding at the first step", () => {
   });
 });
 
-test("next/back walk the steps and clamp at the ends", () => {
-  const s1 = reduce(onboarding, { t: "next" });
-  expect(s1.step).toBe("set-proxy");
-  const s2 = reduce(s1, { t: "next" });
-  expect(s2.step).toBe("verify");
-  expect(reduce(s2, { t: "next" }).step).toBe("verify"); // clamped
-  expect(reduce(onboarding, { t: "back" }).step).toBe("trust-ca"); // clamped
-});
-
-test("goto jumps straight to a step", () => {
+// goto is the whole navigation: the checklist is re-entered out of order from a
+// step's own header, so there is no prev/next to walk or clamp.
+test("goto jumps straight to a step, forwards or back", () => {
   expect(reduce(onboarding, { t: "goto", step: "verify" }).step).toBe("verify");
+
+  const atLast = reduce(onboarding, { t: "goto", step: "verify" });
+  expect(reduce(atLast, { t: "goto", step: "trust-ca" }).step).toBe("trust-ca");
 });
 
 test("captured proves capture and latches everProven", () => {

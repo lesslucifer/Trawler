@@ -25,7 +25,7 @@ import {
   XmlRenderer,
 } from "./components/index";
 import { HEX_MAX, TEXT_MAX, TREE_MAX } from "./body";
-import { proxyStatus, trustStatus, verifyStatus } from "./setup";
+import { NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus } from "./setup";
 
 // ponytail: throwaway verification screen for E-DFLOW.W5 step 4 — every T1
 // component in every state its design file names, so a human can eyeball what
@@ -105,8 +105,6 @@ const OVERSIZE_JSON = `{"pad":"${"a".repeat(TREE_MAX)}"}`;
 const OVERSIZE_XML = `<order>\n  <note>${"x".repeat(TEXT_MAX)}</note>\n</order>`;
 const OVERSIZE_FORM = `token=${"z".repeat(TEXT_MAX)}&trailing=cut`;
 const OVERSIZE_BYTES = new Uint8Array(HEX_MAX + 10_240).map((_, i) => (i * 7) % 256);
-
-const NOTHING_SEEN = { decrypted: false, trafficSeen: false };
 
 export function Gallery() {
   const [leg, setLeg] = useState("request");
@@ -557,64 +555,61 @@ export function Gallery() {
       <Section title="StatusLine — a resolved verdict (T2)">
         <Row label="the four settled glyphs">
           <div className="flex flex-col gap-chrome-y">
-            <StatusLine status={{ glyph: "✓", tone: "ok", message: "Trusted on this machine" }} />
-            <StatusLine status={{ glyph: "⚠", tone: "warn", message: "Install failed — declined" }} />
-            <StatusLine status={{ glyph: "◐", tone: "muted", message: "Can't check automatically" }} />
-            <StatusLine status={{ glyph: "○", tone: "muted", message: "Not trusted yet" }} />
+            <StatusLine status={{ glyph: "✓", tone: "ok", short: "trusted on this machine" }} />
+            <StatusLine status={{ glyph: "⚠", tone: "warn", short: "install failed" }} />
+            <StatusLine status={{ glyph: "◐", tone: "muted", short: "can't check automatically" }} />
+            <StatusLine status={{ glyph: "○", tone: "muted", short: "not trusted yet" }} />
           </div>
         </Row>
         <Row label="in-flight — a spinner, and it outranks everything">
           <div className="flex flex-col gap-chrome-y">
-            <StatusLine status={{ glyph: "⟳", tone: "muted", message: "Installing…" }} />
+            <StatusLine status={{ glyph: "⟳", tone: "muted", short: "installing…" }} />
             <StatusLine
               name="over a stale error"
-              status={trustStatus("untrusted", NOTHING_SEEN, "installing", "the last install failed")}
+              status={trustStatus("untrusted", "installing", "the last install failed")}
             />
-            <StatusLine
-              name="over a proven positive"
-              status={proxyStatus("ours", { decrypted: true, trafficSeen: true }, "setting")}
-            />
+            <StatusLine name="over a proven positive" status={proxyStatus("ours", "setting")} />
           </div>
         </Row>
         <Row label="the two muted glyphs are different verdicts">
           <div className="flex flex-col gap-chrome-y">
-            <StatusLine
-              name="◐ can't determine"
-              status={trustStatus("unknown", NOTHING_SEEN, null)}
-            />
-            <StatusLine name="○ not yet" status={trustStatus("untrusted", NOTHING_SEEN, null)} />
+            <StatusLine name="◐ can't determine" status={trustStatus("unknown", null)} />
+            <StatusLine name="○ not yet" status={trustStatus("untrusted", null)} />
           </div>
         </Row>
-        <Row label="verifyStatus — the third resolver">
+        <Row label="trafficStatus — the third resolver, judged against a clock">
           <div className="flex flex-col gap-chrome-y">
-            <StatusLine name="Capture" status={verifyStatus({ decrypted: true, trafficSeen: true })} />
-            <StatusLine name="Capture" status={verifyStatus(NOTHING_SEEN)} />
+            <StatusLine
+              name="Capture"
+              status={trafficStatus({ ...NO_TRAFFIC, lastDecryptedAt: Date.now() }, Date.now())}
+            />
+            <StatusLine name="Capture" status={trafficStatus(NO_TRAFFIC, Date.now())} />
           </div>
         </Row>
         <Row label="a foreign proxy — the longest real message in the app">
-          <StatusLine name="System proxy" status={proxyStatus("foreign", NOTHING_SEEN, null)} />
+          <StatusLine name="System proxy" status={proxyStatus("foreign", null)} />
         </Row>
         <Row label="with the name slot">
           <div className="flex flex-col gap-chrome-y">
-            <StatusLine name="Certificate" status={{ glyph: "✓", tone: "ok", message: "Trusted" }} />
-            <StatusLine name="System proxy" status={{ glyph: "○", tone: "muted", message: "Not set" }} />
+            <StatusLine name="Certificate" status={{ glyph: "✓", tone: "ok", short: "trusted" }} />
+            <StatusLine name="System proxy" status={{ glyph: "○", tone: "muted", short: "not set" }} />
           </div>
         </Row>
         <Row label="a long message wraps">
           <StatusLine
-            name="Certificate"
-            status={trustStatus("untrusted", { decrypted: false, trafficSeen: true }, null)}
+            name="Capture"
+            status={trafficStatus({ ...NO_TRAFFIC, lastTunnelAt: 0 }, 10_000)}
           />
         </Row>
         <Row label="precedence — ✓ beats a stale error">
           <div className="flex flex-col gap-chrome-y">
             <StatusLine
               name="probe says trusted"
-              status={trustStatus("trusted", NOTHING_SEEN, null, "install exploded")}
+              status={trustStatus("trusted", null, "install exploded")}
             />
             <StatusLine
-              name="traffic proves it"
-              status={proxyStatus("unknown", { decrypted: true, trafficSeen: true }, null, "set failed")}
+              name="probe says ours"
+              status={proxyStatus("ours", null, "set failed")}
             />
           </div>
         </Row>

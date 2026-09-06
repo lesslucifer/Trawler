@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import App from "./App";
 import type { Filter, FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 import type { OnbState } from "./onboardingMachine";
+import { CA_FILENAME, guidedSteps, TUNNEL_GRACE_MS } from "./setup";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
 // App wires a quit-time close guard (W5); stub the window so onCloseRequested is a
@@ -98,13 +99,14 @@ function mockApi(store: () => FlowSummary[], connections = 0) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   delete window.__TRAWLER_PROXY__;
 });
 
 test("on mount shows the onboarding surface, not the empty flow list", async () => {
   const { api } = mockApi(() => []);
   render(<App api={api} />);
-  expect(await screen.findByText(/Trust the CA/)).toBeInTheDocument();
+  expect(await screen.findByText(/trust the CA/)).toBeInTheDocument();
   expect(screen.queryByTestId("empty")).toBeNull();
 });
 
@@ -113,13 +115,13 @@ test("launch with a pre-existing decrypted HTTPS flow goes straight to the list"
   render(<App api={api} />);
   const row = await screen.findByTestId("flow-row");
   expect(row).toHaveTextContent("example.com");
-  expect(screen.queryByText(/Trust the CA/)).toBeNull();
+  expect(screen.queryByText(/trust the CA/)).toBeNull();
 });
 
 test("launch with only a plain-HTTP flow shows onboarding (http:// is not proof)", async () => {
   const { api } = mockApi(() => [flow({ uri: "http://example.com/" })]);
   render(<App api={api} />);
-  expect(await screen.findByText(/Trust the CA/)).toBeInTheDocument();
+  expect(await screen.findByText(/trust the CA/)).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
@@ -127,25 +129,25 @@ test("a decrypted HTTPS flow arriving live flips Verify green and reveals the li
   let rows: FlowSummary[] = [];
   const { api, fire } = mockApi(() => rows);
   render(<App api={api} />);
-  await screen.findByText(/Trust the CA/); // fresh launch → onboarding
+  await screen.findByText(/trust the CA/); // fresh launch → onboarding
 
   rows = [flow({ uri: "https://example.com/" })];
   fire();
   const row = await screen.findByTestId("flow-row");
   expect(row).toHaveTextContent("example.com");
-  expect(screen.queryByText(/Trust the CA/)).toBeNull();
+  expect(screen.queryByText(/trust the CA/)).toBeNull();
 });
 
 test("a plain-HTTP flow arriving live does not flip out of onboarding", async () => {
   let rows: FlowSummary[] = [];
   const { api, fire } = mockApi(() => rows);
   render(<App api={api} />);
-  await screen.findByText(/Trust the CA/);
+  await screen.findByText(/trust the CA/);
 
   rows = [flow({ uri: "http://example.com/" })];
   fire();
   await waitFor(() => expect(vi.mocked(api.listFlows).mock.calls.length).toBeGreaterThan(1));
-  expect(screen.getByText(/Trust the CA/)).toBeInTheDocument();
+  expect(screen.getByText(/trust the CA/)).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
 });
 
@@ -155,7 +157,7 @@ test("a forced-proven phase reveals the flow list", async () => {
   const row = await screen.findByTestId("flow-row");
   expect(row).toHaveTextContent("example.com");
   expect(row.querySelector(".text-ok")).not.toBeNull();
-  expect(screen.queryByText(/Trust the CA/)).toBeNull();
+  expect(screen.queryByText(/trust the CA/)).toBeNull();
 });
 
 test("tapping the status dot re-opens setup and stays there despite the captured flow", async () => {
@@ -165,10 +167,10 @@ test("tapping the status dot re-opens setup and stays there despite the captured
   render(<App api={api} initialState={PROVEN} />);
   await screen.findByTestId("flow-row");
   fireEvent.click(screen.getByTestId("status-dot"));
-  expect(await screen.findByText(/Trust the CA/)).toBeInTheDocument();
+  expect(await screen.findByText(/trust the CA/)).toBeInTheDocument();
   expect(screen.queryByTestId("flow-row")).toBeNull();
-  expect(screen.getByTestId("onb-exit")).toBeInTheDocument(); // Back to flows, since ever proven
-  fireEvent.click(screen.getByTestId("onb-exit"));
+  expect(screen.getByRole("button", { name: /back to flows/ })).toBeInTheDocument(); // Back to flows, since ever proven
+  fireEvent.click(screen.getByRole("button", { name: /back to flows/ }));
   expect(await screen.findByTestId("flow-row")).toBeInTheDocument();
 });
 
@@ -177,14 +179,41 @@ test("Install fetches the PEM and invokes install_ca; the step reports done, not
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByTestId("install-ca"));
-  await screen.findByText(/confirm it's working at the Verify step/);
+  fireEvent.click(await screen.findByRole("button", { name: "install certificate" }));
+  await screen.findByText(/we'll confirm it on your first flow/);
 
   expect(api.caCertPem).toHaveBeenCalledOnce();
   expect(invoke).toHaveBeenCalledWith("install_ca", { pem: PEM });
   // command exit 0 is a weak signal — the machine stays in onboarding until W4 captures
   expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "active");
   expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
+// The manual steps tell the user to run commands against a file by name. The
+// save has to produce that exact name, or every step after it points at nothing.
+test("Save writes the PEM under the filename the manual steps tell the user to run against", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  const saved: { name?: string; size?: number } = {};
+  vi.stubGlobal("URL", { ...URL, createObjectURL: vi.fn(() => "blob:ca"), revokeObjectURL: vi.fn() });
+  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  const anchorName = vi
+    .spyOn(HTMLAnchorElement.prototype, "download", "set")
+    .mockImplementation(function (this: HTMLAnchorElement, name: string) {
+      saved.name = name;
+    });
+  render(<App api={api} initialState={ONBOARDING} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "save certificate" }));
+  await screen.findByText(new RegExp(`saved as ${CA_FILENAME}`));
+
+  expect(api.caCertPem).toHaveBeenCalledOnce();
+  expect(saved.name).toBe(CA_FILENAME);
+  for (const step of guidedSteps("macos")) {
+    if (/certificate as /.test(step)) expect(step).toContain(saved.name!);
+  }
+  anchorName.mockRestore();
+  click.mockRestore();
 });
 
 // Reject one specific command, letting the read-only probes (ca_trusted /
@@ -203,16 +232,16 @@ test("a rejected install reports failed and keeps the guided steps visible", asy
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={ONBOARDING} />);
 
-  fireEvent.click(await screen.findByTestId("install-ca"));
+  fireEvent.click(await screen.findByRole("button", { name: "install certificate" }));
   await screen.findByText(/use the manual steps below/);
 
   expect(screen.getByTestId("guided-steps")).toHaveTextContent(/security add-trusted-cert/);
-  expect(screen.getByTestId("install-ca-error")).toHaveTextContent("user declined the elevation prompt");
+  expect(screen.getByTestId("install-ca-status")).toHaveTextContent("user declined the elevation prompt");
   expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-status", "active");
 
   const status = screen.getByTestId("step-trust-ca-status");
-  expect(status).toHaveTextContent(/Install failed/);
-  expect(status).not.toHaveTextContent(/Trusted on this machine/);
+  expect(status).toHaveTextContent(/install failed/);
+  expect(status).not.toHaveTextContent(/trusted on this machine/);
 });
 
 test("Set system proxy invokes set_proxy with the configured address; the step stays active, not proven", async () => {
@@ -221,8 +250,8 @@ test("Set system proxy invokes set_proxy with the configured address; the step s
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={AT_SET_PROXY} />);
 
-  fireEvent.click(await screen.findByTestId("set-proxy"));
-  await screen.findByText(/confirm it's working at the Verify step/);
+  fireEvent.click(await screen.findByRole("button", { name: "set system proxy" }));
+  await screen.findByText(/we'll confirm it on your first flow/);
 
   expect(invoke).toHaveBeenCalledWith("set_proxy", { host: "127.0.0.1", port: 7999 });
   expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-status", "active");
@@ -236,7 +265,7 @@ test("a rejected set_proxy reports failed and keeps the snippet visible", async 
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={AT_SET_PROXY} />);
 
-  fireEvent.click(await screen.findByTestId("set-proxy"));
+  fireEvent.click(await screen.findByRole("button", { name: "set system proxy" }));
   await screen.findByText(/use the manual steps below/);
   expect(screen.getByTestId("proxy-steps")).toHaveTextContent(/networksetup/);
   expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-status", "active");
@@ -248,14 +277,17 @@ test("Stop routing invokes unset_proxy after the proxy was set (W5)", async () =
   const { api } = mockApi(() => []);
   render(<App api={api} initialState={AT_SET_PROXY} />);
 
-  fireEvent.click(await screen.findByTestId("set-proxy"));
-  fireEvent.click(await screen.findByTestId("unset-proxy"));
+  fireEvent.click(await screen.findByRole("button", { name: "set system proxy" }));
+  fireEvent.click(await screen.findByRole("button", { name: "stop routing through Trawler" }));
 
-  await screen.findByText(/Set it again to resume/);
+  await screen.findByText(/set it again to resume/);
   expect(invoke).toHaveBeenCalledWith("unset_proxy");
 });
 
-test("a connection event turns the proxy step green while trust warns — no flow, no decrypt", async () => {
+// A tunnel is a live signal about traffic, so it lands on step 3 — first as a
+// connection in its grace, then, once no flow has answered it, as the warning
+// that names the missing certificate. The probed steps never hear about it.
+test("a connection event reaches step 3, not the proxy step — and warns once no flow answers it", async () => {
   onMacHost();
   const { api, fireConnection } = mockApi(() => []); // no flows ever
   render(<App api={api} initialState={AT_SET_PROXY} />);
@@ -263,13 +295,40 @@ test("a connection event turns the proxy step green while trust warns — no flo
 
   fireConnection(); // a tunnel reached the proxy; its handshake failed → no flow
   await waitFor(() =>
-    expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent(/Receiving traffic/),
+    expect(screen.getByTestId("step-verify-status")).toHaveTextContent("a connection just arrived…"),
   );
-  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-tone", "ok");
-  // Trust can't be green (nothing decrypted); it points at the sending device.
-  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent(/device you're capturing from/);
-  // Probe-green/traffic alone never reveals the list — that's still capture-only.
+  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent("can't check automatically");
+  expect(screen.getByTestId("step-set-proxy")).not.toHaveAttribute("data-tone", "ok");
+
+  // The screen's clock ticks on; once the grace is spent the tunnel is a failure.
+  const realNow = Date.now;
+  vi.spyOn(Date, "now").mockImplementation(() => realNow() + TUNNEL_GRACE_MS + 1_000);
+  await waitFor(
+    () => expect(screen.getByTestId("step-verify-status")).toHaveTextContent("arriving but not decrypting"),
+    { timeout: 3_000 },
+  );
+  expect(screen.getByTestId("step-verify")).toHaveAttribute("data-tone", "warn");
+  expect(screen.getByTestId("step-trust-ca")).not.toHaveAttribute("data-tone", "warn");
+  // Traffic alone never reveals the list — that's still capture-only.
   expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
+// The probes are a snapshot of this machine. Two things re-take it without an
+// action: the control above the steps, and the window coming back into focus —
+// which is when the user has just been in System Settings.
+test("check again and window focus each re-read both probes, and the reading is stamped", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await waitFor(() => expect(screen.getByTestId("recheck")).toHaveTextContent(/checked at \d\d:\d\d:\d\d/));
+  const probes = () => vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_status").length;
+  expect(probes()).toBe(2);
+
+  fireEvent.click(screen.getByRole("button", { name: "check again" }));
+  await waitFor(() => expect(probes()).toBe(4));
+
+  fireEvent(window, new Event("focus"));
+  await waitFor(() => expect(probes()).toBe(6));
 });
 
 // Choosing a host offered by the dropdown, rather than typing one: the options

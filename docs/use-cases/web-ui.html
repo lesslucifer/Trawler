@@ -200,7 +200,7 @@
     <h2 id="uc-onboard">UC-ONBOARD — Onboard a fresh machine to the first captured flow</h2>
     <div data-c="uc-onboard-contract">
       <p>On a machine that can't yet decrypt HTTPS, the native app opens a three-step guided setup — Trust
-      the CA · Set the proxy · Verify — instead of the flow list. Its rule
+      the CA · Set the proxy · Make a request — instead of the flow list. Its rule
       (<span class="badge id">E-UISETUP</span>): <strong>do the work for the user in the common case, tell
       the truth in every case, and prove success only by real capture.</strong></p>
       <ul>
@@ -208,27 +208,59 @@
         (install the CA, set the system proxy — both elevation-gated); the per-OS manual steps sit behind a
         "Set it up manually" disclosure that auto-opens if the action fails. Other OSes show the manual steps
         inline. Instructions are always plain text, never markup.</li>
-        <li><strong>Two-truths status per step</strong> (never the stepper cursor — a step is never ✓ just
-        because you clicked past it). Each step's honest status comes from either of two independent signals:
+        <li><strong>Two layers of status, never blended</strong> (never the stepper cursor — a step is never ✓
+        just because you clicked past it; <a href="../decisions/dec-33-two-layers-and-a-clock.html">DEC-33</a>).
         <ul>
-          <li>a fast <em>local probe</em> — does <em>this machine</em> trust the CA / route its system proxy
-          to Trawler? (the ~90% single-machine case; instant, read-only OS queries), or</li>
-          <li><em>observed traffic</em> — has anything actually reached Trawler, from any device?</li>
+          <li><em>This machine</em> — steps 1 and 2 report the two read-only probes and nothing else: does
+          <em>this machine</em> trust the CA, does its system proxy point at Trawler. Their verdicts say "on
+          this machine" and mean it; traffic, however much of it, never turns them green.</li>
+          <li><em>Traffic</em> — step 3 reports what is reaching Trawler <em>now</em>, from timestamps: a
+          decrypted flow inside the last 30 s reads <em>capturing traffic</em>; a tunnel no flow answered
+          reads <em>arriving but not decrypting</em>, with the remedy naming the client that lacks the
+          certificate; plain HTTP only is its own verdict; traffic seen earlier but nothing recent reads
+          <em>idle — nothing arriving now</em>, and the open step dates the last flow. An old flow can only
+          ever produce <em>idle</em>.</li>
         </ul>
-        When the probe can't conclude (un-probeable OS, or a remote device) the wording says so and points
-        at capture — it never shows a false "not set up".</li>
-        <li><strong>The proxy step goes green on <em>any</em> connection, decrypt or not.</strong> An HTTPS
-        attempt from a client that doesn't trust the CA fails its TLS handshake and produces <em>no flow</em>
-        — so the core counts the tunnel itself: <code>GET /stats</code> returns a monotonic
-        <code>connections</code> tally and a <code>connection</code> SSE event fires. That proves "traffic is
-        routing through Trawler" even before decryption works. Traffic seen but not decrypting ⇒ the Trust
-        step says "install the certificate on the device you're capturing from".</li>
+        When a probe can't conclude (an un-probeable OS) the wording says so and points at step 3, where the
+        traffic answer will show — it never shows a false "not set up". A phone that trusts the certificate and
+        points here reads as two true facts side by side: "not trusted on this machine" and "capturing traffic".</li>
+        <li><strong>A tunnel is observable before decryption.</strong> An HTTPS attempt from a client that
+        doesn't trust the CA fails its TLS handshake and produces <em>no flow</em> — so the core counts the
+        tunnel itself: <code>GET /stats</code> returns a monotonic <code>connections</code> tally and a
+        <code>connection</code> SSE event fires. The live event is stamped and feeds step 3's verdict; the
+        tally carries no time and can only distinguish <em>idle</em> from <em>waiting for your first
+        request</em>. The verdict and what to do about it are two elements, so a short verdict never costs the
+        instruction.</li>
         <li><strong>Only a decrypted flow reveals the list.</strong> A probe-green step or a bare connection
-        never ends onboarding — the payoff (Verify → flow list) fires solely on the first <code>https://</code>
-        flow (a decrypted request the MITM rewrote to absolute form). The Verify step shows a concrete
+        never ends onboarding — the payoff (the last step → flow list) fires solely on the first <code>https://</code>
+        flow (a decrypted request the MITM rewrote to absolute form). The last step shows a concrete
         prove-it: open any site, or run a copyable <code>curl -x http://&lt;addr&gt; https://example.com</code>
         with the real proxy address. Capture, once proven, latches (the status dot re-invokes setup on demand;
         "Back to flows" returns).</li>
+        <li><strong>The certificate is saved from the step that names it</strong>
+        (E-REDESIGN.W10). Every manual route's first step names <code>trawler-ca.pem</code>, so that step
+        produces the file: a <strong>↓</strong> ends the sentence, fetches <code>/ca.crt</code> and writes it
+        through the OS save dialog (native) or a download (browser), under exactly the name the following
+        steps run against, with the outcome stated beneath the sentence inside the same step. The save reports what actually happened rather than assuming it: a failure says so,
+        a <em>cancelled</em> dialog says nothing was saved (it resolves exactly like a write), and a save the
+        user <em>renamed</em> — the offered name is only the dialog's default — is confirmed under the name
+        that landed, with the mismatch against the steps below named outright.</li>
+        <li><strong>A probe reading is a dated snapshot, re-taken on demand</strong> (E-REDESIGN.W10).
+        Nothing pushes when the user changes the trust store or the system proxy outside Trawler, so a green
+        verdict outlives its truth until something re-reads the machine. One row above the steps reads
+        <em>checked at HH:MM:SS · check again</em>; the control re-runs both probes, and so does the window
+        regaining focus — the moment the user is most likely to have just changed a setting. While a re-read
+        runs the control is disabled and both probed steps show the in-flight verdict; the answer that comes
+        back replaces the stale one, green or not.</li>
+        <li><strong>A copied command says whether it copied</strong> (E-REDESIGN.W10). Both commands — the
+        prove-it and the per-OS proxy snippet — are the copy target themselves, confirming at the value; a
+        clipboard write the browser refuses says <em>copy failed</em> rather than doing nothing visible.</li>
+        <li><strong>Quitting with a proxy still set asks first, and can fix it</strong> (E-REDESIGN.W10).
+        Where a proxy is set on this machine — Trawler's or another's, since turning the OS proxy off does
+        not depend on whose address is set — the dialog offers to turn it off, and a failed attempt says so
+        and opens the manual steps instead of quitting onto a dead proxy. Where nothing is set locally but a
+        remote device may still route here, it is a notice with a durable "don't show this again". Esc, the
+        backdrop and ✕ all cancel the quit.</li>
       </ul>
     </div>
 
@@ -236,14 +268,16 @@
       <pre class="mermaid">
 flowchart TD
   E["Enter setup (no decrypted flow yet)"] --> PR["Probe this machine: CA trusted? proxy set?"]
-  PR --> ST["Trust and Proxy steps show local status instantly"]
-  E --> W["Watch traffic: GET /stats + connection and flow SSE events"]
-  W --> C{"What arrived?"}
-  C -- "any connection" --> PX["Proxy step green: receiving traffic"]
-  C -- "http flow, no https" --> TR["Trust: not decrypting, install the CA on the sending device"]
-  C -- "https flow (decrypted)" --> OK["Trust green + Verify green: reveal the flow list"]
+  PR --> ST["Steps 1–2: this machine's verdicts, stamped 'checked at'"]
+  ST -. "check again · window focus" .-> PR
+  E --> W["Watch traffic: flow started_at + live connection events"]
+  W --> C{"What arrived in the last 30 s?"}
+  C -- "a decrypted https flow" --> OK["Step 3: capturing traffic → reveal the flow list"]
+  C -- "a tunnel no flow answered" --> TR["Step 3: arriving but not decrypting — the client lacks the CA"]
+  C -- "plain http only" --> PL["Step 3: arriving — plain HTTP only"]
+  C -- "nothing recent" --> ID["Step 3: idle, or waiting — last flow dated"]
       </pre>
-      <div class="caption">Probes light the steps instantly for the local case; observed traffic confirms — and, for a remote device, is the only thing that can. The list reveal is decrypted-flow-only.</div>
+      <div class="caption">Two layers. The probes answer for this machine and are re-read on demand; the traffic verdict answers for the wire, judged against a clock. Neither borrows from the other. The list reveal is decrypted-flow-only.</div>
     </div>
 
     <div class="callout" data-c="uc-onboard-provenance">
@@ -255,7 +289,8 @@ flowchart TD
       the core; they read the real machine so they are not hermetically testable (the status <em>derivation</em>
       they feed is fully unit-tested). This deliberately supersedes two earlier "prove by capture only"
       stances (no trust-store inspection / no OS self-test): the probe covers the 90% for instant honest
-      feedback; capture stays the authority for the remote cases and the sole thing that reveals the list.
+      feedback; capture is the sole thing that reveals the list, and — as of E-REDESIGN.W10 — the sole
+      input to step 3, where it is judged by recency rather than by having ever happened.
       Pinned by <code>tests/e2e_capture.rs::untrusted_https_records_a_connection_not_a_flow</code> (a failed
       handshake bumps <code>/stats</code> + emits <code>connection</code>, records no flow), the status
       derivation + probe-parser unit tests, and the UC-ONBOARD e2e spine. Why these reversals were approved:

@@ -40,7 +40,28 @@ describe("UC-5 — onboard to the first captured flow", () => {
     await expect($('[aria-label="host"]')).not.toBeExisting();
   });
 
-  it("a decrypted HTTPS flow flips Verify green and reveals the list", async () => {
+  // The redesigned surface: a checklist of probed verdicts, not a wizard. The
+  // navigation it deliberately does not ship is as much the contract as the
+  // verdicts it does.
+  it("each step carries a verdict, and there is no prev/next pair", async () => {
+    await expect($('[data-testid="step-trust-ca-status"]')).toBeExisting();
+    await expect($('[data-testid="step-set-proxy-status"]')).toBeExisting();
+    await expect($('[data-testid="step-verify-status"]')).toBeExisting();
+
+    await expect($('[data-testid="onb-next"]')).not.toBeExisting();
+    await expect($('[data-testid="onb-back"]')).not.toBeExisting();
+  });
+
+  it("a step opens from its own header, one body at a time", async () => {
+    await $('[data-testid="step-set-proxy"] button').click();
+    await browser.waitUntil(
+      async () => (await $('[data-testid="step-set-proxy"]').getAttribute("data-status")) === "active",
+      { timeout: 5_000, timeoutMsg: "clicking a step header did not open it" },
+    );
+    await expect($$('[data-testid="step-body"]')).toBeElementsArrayOfSize(1);
+  });
+
+  it("a decrypted HTTPS flow flips the last step green and reveals the list", async () => {
     await hit();
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,

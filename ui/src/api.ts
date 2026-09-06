@@ -100,7 +100,7 @@ export function defaultProxyAddr(): string {
 export interface StreamHandlers {
   onEvent: () => void;
   // A tunnel reached the proxy (may never become a flow — untrusted-CA handshake).
-  // Onboarding's proxy step goes green on this alone; the flow list ignores it.
+  // Onboarding stamps its arrival and judges it by recency; the flow list ignores it.
   onConnection?: () => void;
 }
 

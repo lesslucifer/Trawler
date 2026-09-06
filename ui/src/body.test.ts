@@ -238,3 +238,29 @@ test("saveFilename drops the query and anything a filename cannot carry", () => 
 test("bodyText decodes bytes as UTF-8", () => {
   expect(bodyText(new TextEncoder().encode("héllo"))).toBe("héllo");
 });
+
+// The native dialog resolves to null when the user cancels, which is
+// indistinguishable from a completed write unless saveBody says which happened.
+// Onboarding claims "saved as trawler-ca.pem" on the strength of this answer and
+// then tells the user to run commands against that file, so a cancel reported as
+// a save sends them to a terminal with a file that was never written.
+test("saveBody reports the path it wrote, and null when the native dialog was cancelled", async () => {
+  const bytes = new TextEncoder().encode("pem");
+  vi.stubGlobal("window", { ...globalThis.window, __TAURI_INTERNALS__: {} });
+
+  vi.doMock("@tauri-apps/plugin-dialog", () => ({ save: vi.fn(async () => null) }));
+  const writeFile = vi.fn(async () => {});
+  vi.doMock("@tauri-apps/plugin-fs", () => ({ writeFile }));
+  vi.resetModules();
+  const cancelled = await (await import("./body")).saveBody(bytes, "trawler-ca.pem");
+  expect(cancelled).toBeNull();
+  expect(writeFile).not.toHaveBeenCalled();
+
+  vi.doMock("@tauri-apps/plugin-dialog", () => ({ save: vi.fn(async () => "/tmp/picked.pem") }));
+  vi.resetModules();
+  const written = await (await import("./body")).saveBody(bytes, "trawler-ca.pem");
+  expect(written).toBe("/tmp/picked.pem");
+  // The returned path is a claim that the bytes landed there; assert the write
+  // itself, or a refactor that reports the path without writing passes.
+  expect(writeFile).toHaveBeenCalledWith("/tmp/picked.pem", bytes);
+});

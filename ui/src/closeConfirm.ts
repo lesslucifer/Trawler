@@ -9,14 +9,14 @@ import { splitProxyAddr } from "./setup";
 // ask Rust `proxy_status(host, port)`, which classifies the live system proxy:
 //   "ours"    → a proxy on THIS system routes through Trawler. Quitting silently
 //               would strand the machine on a dead proxy (no internet), so prevent
-//               the close and confirm: Remove (unset_proxy, elevation) or Keep.
-//   "foreign" → some other proxy is active; not ours to remove, but a device
-//               elsewhere might still point here.
+//               the close and confirm: turn it off (unset_proxy, elevation) or quit.
+//   "foreign" → some other proxy is active on THIS system. `unset_proxy` turns the
+//               OS proxy state off without reading whose address is set, so this
+//               is fixable from here too — it offers the same action as "ours".
 //   "none"    → this system is clean, but the proxy could live on another device
 //               (phone / emulator pointed at this machine's LAN IP) we can't read.
-// The last two can't be auto-fixed from here, so they show an info-only notice
-// (how to check / remove) with a durable "don't show again" — never a Remove
-// button, since there's nothing local to remove.
+// Only "none" has nothing local to act on, so it alone is the info-only mode with
+// a durable "don't show again".
 
 type CloseEvent = { preventDefault: () => void };
 type Win = { onCloseRequested: (h: (e: CloseEvent) => void) => Promise<() => void>; destroy: () => Promise<void> };
@@ -24,9 +24,10 @@ type Deps = { getWindow: () => Win; invoke: <T>(cmd: string, args?: Record<strin
 
 const real: Deps = { getWindow: getCurrentWindow as unknown as () => Win, invoke };
 
-// null = no prompt (quit proceeds); "remove" = ours, offer Remove/Keep; "notice" =
-// info-only (can't auto-fix, warn once).
-export type CloseMode = "remove" | "notice";
+// null = no prompt (quit proceeds). "ours" and "foreign" are both actionable — a
+// local proxy is set and `unset_proxy` clears it; they differ only in what the
+// dialog says. "remote" has nothing local to act on, so it warns once.
+export type CloseMode = "ours" | "foreign" | "remote";
 
 export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
   const [mode, setMode] = useState<CloseMode | null>(null);
@@ -39,12 +40,12 @@ export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
       .getWindow()
       .onCloseRequested(async (e) => {
         const status = await deps.invoke<string>("proxy_status", { host, port });
-        if (status === "ours") {
+        if (status === "ours" || status === "foreign") {
           e.preventDefault();
-          setMode("remove");
+          setMode(status);
         } else if (!(await deps.invoke<boolean>("remote_notice_dismissed"))) {
           e.preventDefault();
-          setMode("notice");
+          setMode("remote");
         }
       })
       .then((u) => (disposed ? u() : (unlisten = u)));
@@ -54,11 +55,26 @@ export function useProxyCloseConfirm(proxyAddr: string, deps: Deps = real) {
     };
   }, [deps, proxyAddr]);
 
-  const quit = () => deps.getWindow().destroy();
+  // A window that refuses to close is not something the user can act on from a
+  // dialog that is about the proxy, so every quit path logs and moves on rather
+  // than leaving an unhandled rejection behind.
+  const quit = () =>
+    deps
+      .getWindow()
+      .destroy()
+      .catch((err: unknown) => {
+        console.error("window destroy failed:", err);
+      });
 
   return {
     mode,
-    remove: () => deps.invoke("unset_proxy").catch(() => {}).then(quit),
+    // A failed unset must not quit: the dialog exists to stop the machine being
+    // stranded on a dead proxy, and swallowing the error strands it silently.
+    // The rejection reaches the dialog, which offers the manual route instead.
+    // Only the unset itself reports failure — once the proxy IS off, a window
+    // that will not close is not "couldn't turn the proxy off", and telling the
+    // user to undo it by hand would be advice to undo nothing.
+    remove: () => deps.invoke("unset_proxy").then(quit),
     // Live proxy state is the only source of truth (no persisted marker): keeping
     // the proxy is just quitting — there is nothing to record, and next launch
     // does no reconciliation.
