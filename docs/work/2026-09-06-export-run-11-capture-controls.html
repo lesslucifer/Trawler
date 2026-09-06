@@ -623,9 +623,9 @@ C  → UNCHANGED   ← the whole point of asking</pre>
       import and clear both announce themselves there. Refilling from the mutation's own response
       would give the screen two sources of truth for the same list and a race between them — and
       the responses carry counts, not rows, so they could not refill it anyway. One build fact
-      this depends on, found while reviewing this run: <code>ui/src/api.ts</code> does not yet
-      subscribe to <code>cleared</code>, so W6 must add it or the clear will empty the store and
-      leave the list on screen.</p>
+      this depends on: <code>ui/src/api.ts</code> does not yet subscribe to <code>cleared</code>,
+      which the server does emit, so W6 must add it or the clear will empty the store and leave
+      the list on screen.</p>
       <p><strong>Initial focus lands on the act, not the escape</strong> — the rule
       <code>ModalShell</code> already implements, for the reason its source states: the first
       thing in the DOM is the ✕, and an opening dialog must not put its dismissal under the first
@@ -895,8 +895,7 @@ soft:
       </tbody>
     </table>
     <p><strong>Run 10's five entries, and where each one went.</strong> The superseded run carried
-    five, not one — an earlier draft of this section said "one entry" and was wrong, which the
-    review caught. The accounting:</p>
+    five. The accounting:</p>
     <table>
       <thead><tr><th>Run 10's entry</th><th>Here</th></tr></thead>
       <tbody>
@@ -916,8 +915,7 @@ soft:
         </tr>
         <tr>
           <td>W7's refusal contract does not exist yet.</td>
-          <td><strong>Built.</strong> The wording is read from <code>src/api/curl.rs</code> —
-            which is also how the review caught this run quoting it wrongly.</td>
+          <td><strong>Built.</strong> The wording is read from <code>src/api/curl.rs</code>.</td>
         </tr>
         <tr>
           <td><code>IconButton</code>'s glyph registry has no export, import or clear glyph.</td>
