@@ -120,7 +120,7 @@
             <td>the filter scopes both doors</td>
             <td>export and clear reuse <code>FlowFilter</code></td>
             <td>each label states the scope it acts on</td>
-            <td>✓ "clear 214 flows" — the filtered count<br>✗ "clear all" while a filter hides half</td>
+            <td>✓ "this removes 214 flows" — the filtered count<br>✗ "clear all" while a filter hides half</td>
           </tr>
           <tr>
             <td>the header row is already full</td>
@@ -315,7 +315,7 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
               <details class="why"><summary>why</summary>
                 <p>The question ("this removes 214 flows — the capture is not saved anywhere") is
                 <code>tone="warn"</code>: a failure-or-alarm sentence, the tone's fixed meaning.
-                The refusal ("<code>--data-urlencode</code> is not supported") is warn too. Both
+                The refusal ("unsupported flag <code>--data-urlencode</code>") is warn too. Both
                 clear <span class="avoid">@avoid</span> "transient confirmations of an action" —
                 neither is transient: the ask stands until answered, the refusal until the paste
                 changes.</p>
@@ -619,9 +619,13 @@ C  → UNCHANGED   ← the whole point of asking</pre>
         </tbody>
       </table>
       <p><strong>Why the list refills from the bus, not from the response.</strong>
-      <code>useFlows</code> refetches on any <code>/stream</code> event, and import and clear both
-      announce themselves there. Refilling from the mutation's own response would give the screen
-      two sources of truth for the same list and a race between them.</p>
+      <code>useFlows</code> refetches on any <code>/stream</code> event it is subscribed to, and
+      import and clear both announce themselves there. Refilling from the mutation's own response
+      would give the screen two sources of truth for the same list and a race between them — and
+      the responses carry counts, not rows, so they could not refill it anyway. One build fact
+      this depends on, found while reviewing this run: <code>ui/src/api.ts</code> does not yet
+      subscribe to <code>cleared</code>, so W6 must add it or the clear will empty the store and
+      leave the list on screen.</p>
       <p><strong>Initial focus lands on the act, not the escape</strong> — the rule
       <code>ModalShell</code> already implements, for the reason its source states: the first
       thing in the DOM is the ✕, and an opening dialog must not put its dismissal under the first
@@ -721,7 +725,7 @@ C  → UNCHANGED   ← the whole point of asking</pre>
         mount("m-paste", <>
           <textarea className="a-paste" data-wire="curl-command" readOnly
                     defaultValue={"curl 'https://api.example.com/v1/orders' \\\n  -H 'accept: application/json' \\\n  --data-urlencode 'q=open'"} />
-          <Notice tone="warn">--data-urlencode is not supported</Notice>
+          <Notice tone="warn">unsupported flag --data-urlencode</Notice>
           <span className="a-ask-b">
             <Button onClick={noop} frame="bare" tone="mute">choose a file…</Button>
             <Button onClick={noop}>import</Button>
@@ -800,7 +804,7 @@ soft:
   empty-states-orient: satisfied — a cleared list lands on the existing "no flows yet — send traffic through the proxy"
   familiar-idioms: satisfied — out/in/empty glyphs and a network-table row are the devtools genre; no novelty to justify
   display-equals-payload: satisfied — the pasted command is shown verbatim in mono and never reformatted; the refusal is the server's sentence
-  labels-add-context: satisfied — "clear 214 flows" states the scope the header does not; the ask's detail adds the fact the count cannot
+  labels-add-context: satisfied — "this removes 214 flows" states the scope the header does not; the detail adds the fact the count cannot
   calm-microcopy: satisfied — lowercase, terse, no exclamation — "exporting…", "importing…", "this removes 214 flows"
   one-term-per-concept: inherited — export now has its own Lexicon row (write the capture out as a HAR file); the run uses it and proposes no term
   confirm-at-point: satisfied — the progress line sits in A′ beside the control; the refusal sits under the textarea it is about. No toast
@@ -827,7 +831,7 @@ soft:
         <tr><td><code>DELETE /flows/{id}</code></td><td>deliberately unused</td><td>a per-flow delete is a non-goal here — no Frame goal asks for it, and the row has no width for it</td></tr>
         <tr><td><code>source</code> on the flow</td><td>used</td><td>C · the mark</td></tr>
         <tr><td><code>source</code> in <code>FlowFilter</code></td><td>deliberately unused</td><td>the text channel the mark needs is its label, not a filter control; adding a fifth filter is E-REDESIGN's row to re-open, not this run's</td></tr>
-        <tr><td><code>FlowsCleared</code> + the refetch on any event</td><td>used</td><td>C refills from the bus, which is why every response row says UNCHANGED</td></tr>
+        <tr><td><code>FlowsCleared</code> + the refetch on any event</td><td>used</td><td>C refills from the bus, which is why every response row says UNCHANGED. <strong>The build must subscribe to it:</strong> the server names this event <code>cleared</code> (<code>src/api/view.rs</code>), and <code>stream()</code> in <code>ui/src/api.ts</code> currently registers <code>request</code>, <code>response</code>, <code>evicted</code> and <code>lagged</code> only — a named SSE event with no listener reaches nothing, so a clear would not refresh the list until W6 adds it. The retired web shell did listen for it; the port dropped it.</td></tr>
         <tr><td><code>saveBody</code> returning null</td><td>used</td><td>the cancelled-save row in Interaction</td></tr>
         <tr><td><code>ModalShell</code></td><td>used, via proposal</td><td>E and F; promoting it is the proposal, using it is the design</td></tr>
       </tbody>
@@ -875,12 +879,55 @@ soft:
       <thead><tr><th>What is missing</th><th>Stage</th><th>Whose call</th><th>What the run did meanwhile</th></tr></thead>
       <tbody>
         <tr>
-          <td colspan="4"><strong>Empty.</strong> Run 10 carried one entry — W7's refusal shape,
-          designed ahead of its parser. W7 has since shipped it, and this run read the wording from
-          <code>src/api/curl.rs</code> rather than requesting it. The two facts that could have
-          become entries here are proposals instead, because nothing upstream is missing for
-          either: the modal frame exists and needs promoting, and the glyph registry exists and
-          needs three members.</td>
+          <td>The header's wrap behaviour is untested at this width. A′ adds three 28px controls
+            and a progress line to a row already holding a dot, a title, a field, two dropdowns, a
+            field and a count — <em>more</em> than run 10 measured, because two of those members
+            are now popup-bearing <code>Select</code>s rather than plain boxes.</td>
+          <td>Layout</td>
+          <td>W6, at build, in the real window — and the epic's WebDriver row, which drives the
+            built app at a real size.</td>
+          <td>Put A′ on <code>margin-left:auto</code> so it holds the trailing edge and wraps last,
+            and stated that rule in the overflow line. The design does not depend on the row never
+            wrapping: the header is <code>flex-wrap</code> and grows to a second line rather than
+            clipping, so wrapping is a degradation, not a break. What cannot be settled on paper
+            is the width at which it happens.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>Run 10's five entries, and where each one went.</strong> The superseded run carried
+    five, not one — an earlier draft of this section said "one entry" and was wrong, which the
+    review caught. The accounting:</p>
+    <table>
+      <thead><tr><th>Run 10's entry</th><th>Here</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>The epic plan's confirmation mechanism does not exist — <code>useConfirm</code> is a
+            ~2 s after-the-fact flash, not an ask.</td>
+          <td><strong>Resolved by the baseline.</strong> <code>useConfirm</code> is still that same
+            flash, but the deviation no longer needs an invented component to escape to:
+            <code>ModalShell</code> ships, and the ask is built on it. The plan's claim stays
+            wrong and W6's result still carries the deviation.</td>
+        </tr>
+        <tr>
+          <td><code>focus-returns-to-origin</code> cannot be honoured by this design alone.</td>
+          <td><strong>Receipted <em>satisfied-via-proposal</em></strong> rather than blocked: the
+            behaviour is implemented in <code>ModalShell</code> today, so the proposal promotes
+            working code instead of specifying it.</td>
+        </tr>
+        <tr>
+          <td>W7's refusal contract does not exist yet.</td>
+          <td><strong>Built.</strong> The wording is read from <code>src/api/curl.rs</code> —
+            which is also how the review caught this run quoting it wrongly.</td>
+        </tr>
+        <tr>
+          <td><code>IconButton</code>'s glyph registry has no export, import or clear glyph.</td>
+          <td><strong>Moved to <a href="#proposals">Proposals</a>.</strong> Nothing upstream is
+            missing; the vocabulary is three entries short, and that is a proposal.</td>
+        </tr>
+        <tr>
+          <td>The header's wrap behaviour is untested at this width.</td>
+          <td><strong>Still open — the row above.</strong> Carried rather than dropped: the header
+            is denser than it was when run 10 filed it.</td>
         </tr>
       </tbody>
     </table>
@@ -915,8 +962,9 @@ soft:
         </tr>
         <tr>
           <td>Run 10 filed the missing glyph entries as blocked-on.</td>
-          <td>Moved to Proposals; blocked-on is now empty. Nothing upstream is missing — a short
-            vocabulary is a proposal, not a block.</td>
+          <td>Moved to <strong>Proposals</strong>. Nothing upstream is missing — a short
+            vocabulary is a proposal, not a block. (This row said "blocked-on is now empty" until
+            the review found that it should not be; the list carries run 10's wrap entry.)</td>
           <td><code>blocked-on</code> — the flow's definition: a decision the design cannot make
             because something upstream is missing</td>
         </tr>
@@ -927,6 +975,50 @@ soft:
             comes from (<code>saveBody</code> returns null). E-REDESIGN.W10's review caught this
             exact class — a cancelled save reporting success — in shipped code.</td>
           <td><code>absence-names-itself</code></td>
+        </tr>
+        <tr>
+          <td>Tier-3 review: the mockup's refusal reads "--data-urlencode is not supported", but
+            <code>CurlError::UnsupportedFlag</code>'s Display emits "unsupported flag
+            --data-urlencode", and this run claims it read that wording from the source.</td>
+          <td>The mockup and the Notice row now carry the string the server actually sends.
+            Confirmed against <code>src/api/curl.rs</code> and the assertion in
+            <code>src/api/routes.rs</code> that pins it through the endpoint.</td>
+          <td><code>display-equals-payload</code> — a design that promises the server's sentence
+            verbatim may not illustrate it with a sentence the server never sends</td>
+        </tr>
+        <tr>
+          <td>Tier-3 review: "Run 10 carried one entry" is a miscount — it carried five — and one
+            of them, the header's untested wrap behaviour, was dropped rather than resolved while
+            this run declared its own list empty.</td>
+          <td><strong>Blocked-on</strong>, rewritten: it is no longer empty — the wrap entry is
+            carried and stated as more pressing than run 10 left it, because two header members
+            are now popup-bearing Selects — and a five-row table accounts for each of run 10's
+            entries. <strong>Layout</strong> keeps the <code>margin-left:auto</code> rule that is
+            what the design does about it.</td>
+          <td><code>blocked-on</code> — "gaps escalate, they are never invented" cuts both ways;
+            an empty list bought by dropping an entry is the failure a re-run is most able to
+            commit</td>
+        </tr>
+        <tr>
+          <td>Tier-3 review: the <code>labels-add-context</code> receipt and a Frame example quote
+            the ask as "clear 214 flows", a string the design never specifies.</td>
+          <td>The <strong>receipt</strong> and the <strong>Frame</strong>'s example now quote the
+            design's real copy, "this removes 214 flows". The verdict is unchanged — the rule is
+            satisfied on either string — so this was a citation slip, not an unearned verdict.</td>
+          <td><code>labels-add-context</code> · the receipt's own contract: evidence cites what
+            the design contains</td>
+        </tr>
+        <tr>
+          <td>Tier-3 review (refuted candidate worth keeping): <code>ui/src/api.ts</code> does not
+            subscribe to the <code>cleared</code> SSE event, so "C refills from the bus" would not
+            hold for a clear.</td>
+          <td><strong>Interaction</strong> and the capabilities list — the note under the
+            use-case table and the <code>FlowsCleared</code> row now carry the fact, so W6 cannot
+            ship a clear that empties the store and leaves the list on screen.
+            <em>nothing</em> moved in the design itself: the premise is right and the diff carries
+            no code, so this is not a defect here.</td>
+          <td>the design's own bus premise · <code>ui/src/api.ts</code> against
+            <code>src/api/view.rs</code>'s event names</td>
         </tr>
         <tr>
           <td>Run 10 asked which word the UI uses for the operation, given the rulebook reserved
