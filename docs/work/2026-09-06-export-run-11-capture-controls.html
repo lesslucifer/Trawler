@@ -394,7 +394,7 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
                 all. Its <span class="use">@states</span> covers it: null → tone muted, "…". So a
                 request-only imported flow needs no new state and no new component — it renders as
                 the in-flight shape the store already had between request and reply. Clears
-                <span class="avoid">@avoid</span> "pre-resolving tone at the call site": the raw
+                <span class="avoid">@avoid</span> "pre-resolving tone or formatting at the call site": the raw
                 status goes in, including null.</p>
               </details>
             </td>
@@ -673,16 +673,21 @@ C  → UNCHANGED   ← the whole point of asking</pre>
           { id: "6", at: at(18), m: "GET",    h: "api.example.com", p: "/v1/orders/4821", s: null, d: null, imported: true },
         ];
         const noop = () => {};
+        // App.tsx's own sentinel: Select never returns to unselected, so "any" is a
+        // real chosen option rather than an empty value.
+        const ANY = "\u0000any";
 
         mount("m-head", <>
           <StatusDot status="connected" onClick={noop} />
           <span className="a-title">Trawler</span>
           <Field aria-label="filter" placeholder="filter — free text" value="" onChange={noop}
                  className="min-w-field flex-1" />
-          <Select label="host" placeholder="any host" className="w-field-lg" value={undefined}
-                  onChange={noop} options={[{ id: "a", label: "api.example.com" }]} />
+          <Select label="host" placeholder="any host" className="w-field-lg" value={ANY}
+                  onChange={noop}
+                  options={[{ id: ANY, label: "any host" }, { id: "a", label: "api.example.com" }]} />
           <Select label="method" placeholder="any method" className="w-field-lg" searchable={false}
-                  value={undefined} onChange={noop} options={[{ id: "GET", label: "GET" }]} />
+                  value={ANY} onChange={noop}
+                  options={[{ id: ANY, label: "any method" }, { id: "GET", label: "GET" }]} />
           <Field aria-label="status" placeholder="status" value="" onChange={noop}
                  className="w-field-sm" />
           <TonedText tone="muted" className="whitespace-nowrap">6 flows</TonedText>
