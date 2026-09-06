@@ -43,8 +43,22 @@
     </div>
 
     <h2 id="numbers">The three before/after pairs</h2>
-    <p>Before is a run at <code>bf7a449</code>, the benchmark's own commit, with no <code>src/</code> perf edit
-    in the tree. After is a run of <code>cargo xtask ui bench</code> at the tip. Higher hz is better.</p>
+    <p>After is one run of <code>cargo xtask ui bench</code> at the tip. Higher hz is better. Before was taken
+    two ways, and the rows say which — because three of the cases did not exist at
+    <code>bf7a449</code> and could not have been run there:</p>
+    <table data-c="method">
+      <thead><tr><th>Marked</th><th>How the before number was taken</th></tr></thead>
+      <tbody>
+        <tr><td><strong>at the commit</strong></td><td>a run of the suite as <code>bf7a449</code> shipped it —
+        the benchmark's own commit, with no <code>src/</code> perf edit anywhere in the tree</td></tr>
+        <tr><td><strong>pre-fix sources</strong></td><td>a run of the suite <em>as it stands at the tip</em>,
+        with the pre-fix <code>src/</code> files restored over the tree from <code>7361079</code> and put back
+        afterwards. The three cases added while measuring — the two memo-miss controls and FormRenderer at
+        10 MiB — exist only in the later suite, so this is the only way their before number can be taken at
+        all. It re-measures the whole file, which is why the two timestamp rows carry slightly different
+        before numbers here than the first run recorded.</td></tr>
+      </tbody>
+    </table>
     <table data-c="numbers">
       <thead>
         <tr><th>Cost</th><th>Benchmark case</th><th class="num">before</th><th class="num">after</th><th class="num">×</th></tr>
@@ -53,50 +67,50 @@
         <tr>
           <td rowspan="3"><strong>1</strong><br>TimestampText</td>
           <td>re-render of a 42-row window, every timestamp seen before —
-          <em>the SSE refresh</em></td>
+          <em>the SSE refresh</em><br><span class="meta">pre-fix sources</span></td>
           <td class="num">2,806.62 hz<br>0.356 ms</td><td class="num">8,249.88 hz<br>0.121 ms</td>
           <td class="num good">2.94</td>
         </tr>
         <tr>
           <td>re-render of a 42-row window, every timestamp new — <em>the memo never
-          hits</em></td>
+          hits</em><br><span class="meta">pre-fix sources</span></td>
           <td class="num">1,265.78 hz<br>0.790 ms</td><td class="num">1,325.41 hz<br>0.755 ms</td>
           <td class="num">1.05</td>
         </tr>
         <tr>
-          <td>first mount of a 42-row window</td>
+          <td>first mount of a 42-row window<br><span class="meta">pre-fix sources</span></td>
           <td class="num">1,411.06 hz<br>0.709 ms</td><td class="num">2,283.19 hz<br>0.438 ms</td>
           <td class="num good">1.62</td>
         </tr>
         <tr>
           <td rowspan="3"><strong>2</strong><br>useFlows.merge</td>
-          <td>steady state — 5000 flows, every host known</td>
+          <td>steady state — 5000 flows, every host known<br><span class="meta">at the commit</span></td>
           <td class="num">10.4346 hz<br>95.83 ms</td><td class="num">2,616.10 hz<br>0.382 ms</td>
           <td class="num good">251</td>
         </tr>
         <tr>
-          <td>cold — 5000 flows into an empty set</td>
+          <td>cold — 5000 flows into an empty set<br><span class="meta">at the commit</span></td>
           <td class="num">10.3611 hz<br>96.51 ms</td><td class="num">2,588.83 hz<br>0.386 ms</td>
           <td class="num good">250</td>
         </tr>
         <tr>
-          <td>5000 flows, no two sharing a host — <em>the memo never hits</em></td>
+          <td>5000 flows, no two sharing a host — <em>the memo never hits</em><br><span class="meta">pre-fix sources</span></td>
           <td class="num">9.1192 hz<br>109.66 ms</td><td class="num">19.0964 hz<br>52.37 ms</td>
           <td class="num good">2.09</td>
         </tr>
         <tr>
           <td rowspan="3"><strong>3</strong><br>the size report</td>
-          <td>TextRenderer — 10 MiB, as BodyViewer renders it</td>
+          <td>TextRenderer — 10 MiB, as BodyViewer renders it<br><span class="meta">at the commit</span></td>
           <td class="num">67.3927 hz<br>14.84 ms</td><td class="num">3,475.28 hz<br>0.288 ms</td>
           <td class="num good">51.6</td>
         </tr>
         <tr>
-          <td>FormRenderer — 40k pairs <span class="bad">(fix reverted)</span></td>
+          <td>FormRenderer — 40k pairs <span class="bad">(fix reverted)</span><br><span class="meta">at the commit</span></td>
           <td class="num">1.9237 hz<br>519.8 ms</td><td class="num">1.8901 hz<br>529.1 ms</td>
           <td class="num bad">1.00</td>
         </tr>
         <tr>
-          <td>FormRenderer — 10 MiB <span class="bad">(fix reverted)</span></td>
+          <td>FormRenderer — 10 MiB <span class="bad">(fix reverted)</span><br><span class="meta">pre-fix sources</span></td>
           <td class="num">1.9183 hz<br>521.3 ms</td><td class="num">1.8949 hz<br>527.7 ms</td>
           <td class="num bad">1.00</td>
         </tr>
