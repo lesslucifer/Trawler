@@ -1,0 +1,14 @@
+schema: test/v2
+level: working-unit
+epic: E-RFINISH
+wu: E-RFINISH.W1
+branch: wu/redesign-finish/design-file-skeleton
+tests:
+  unit:
+    count: 1
+    covers: "resolved_from - the relative-path walk the spec assertions stand on: ../../ from docs/work/ and ../../../ from docs/work/components/ both land on doc-assets/components/, and ./ stays in the folder. It is the only unit this WU adds; the assertions that use it are the integration level."
+  integration:
+    count: 3
+    covers: "xtask/tests/verify_doc.rs, read against the real specs in the tree - (1) every doc-assets/ src a spec PRESCRIBES (escaped, inside a template block, which is what separates a prescription from the spec own head) resolves to doc-assets/components/ from the folder that spec artifact lives in; (2) design-flow.html spells doc.rs BUNDLE verbatim, because check_assets matches the src string literally; (3) component-design.html prescribes the Babel tag, without which the text/babel mount never runs and every spec-* host renders empty. All three red against the tip before the corrections (17 passed; 3 failed), green after (20 passed)."
+  e2e:
+    waived: "No user-facing surface, no route and no rendered state - the WU changes two T1 process specs and adds a test over them. The skeleton was still proven end to end by hand and the transcript is in the result: a throwaway component design file built from the old head is refused by check-render.mjs (\"a live component design loads no specimens.bundle.js\"), the same file built from the corrected head reports 2 mounts. The epic e2e is W10 and covers no part of this WU."
