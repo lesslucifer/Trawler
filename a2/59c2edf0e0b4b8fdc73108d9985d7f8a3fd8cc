@@ -1,0 +1,11 @@
+schema: test/v2
+level: commit
+branch: epic/redesign
+tests:
+  unit:
+    waived: "Two generated pnpm config files and nothing else - ui/pnpm-workspace.yaml and ui/e2e/pnpm-workspace.yaml, each four lines of allowBuilds entries produced by `pnpm approve-builds`. There is no unit under a package-manager allow-list: it is read by pnpm before any of this repo's code runs, and no test can exercise it that is not a test of pnpm. The commit falls to the walk only because ui/e2e/ is a declared code path prefix; the file inside it is infra, not a spec."
+verified:
+  - "The claim the commit makes was checked against a simulated clean checkout with no approval file and no postinstall: esbuild still reported 0.28.1, because it ships a per-platform binary package whose postinstall is not load-bearing. So the warning being silenced is noise, not a broken install."
+  - "`pnpm install` exits 0 with the warning present, and xtask/src/ui.rs fails only on a non-zero exit - so cargo xtask ui build|e2e was green before this commit and after it. The behaviour under test did not change; only the install output did."
+  - "The whole epic's e2e suite runs through these files at every cargo xtask ui e2e: 28 assertions green at the epic close, which is the only end-to-end evidence a pnpm workspace file can have."
+note: "Written at the epic close, not at the commit, because the epic walk (check 7) is where the omission surfaced - the pre-push range check did not fire for this commit. The manifest is recorded rather than the seam waived: a walk waiver would say the walk was wrong about this commit, and it was not. The commit itself carries its Reviewed-By trailer, and the two files are unchanged since."
