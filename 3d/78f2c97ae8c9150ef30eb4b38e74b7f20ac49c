@@ -1,0 +1,54 @@
+schema: cr/v3
+scope: "WU wu/redesign/setup-quit-build -> epic/redesign"
+epic: E-REDESIGN
+wu: E-REDESIGN.W10
+branch: wu/redesign/setup-quit-build
+base: b9e0bdbbb3af1343307dc0c82c6a34f71f0107b0
+head: 3d78f2c97ae8c9150ef30eb4b38e74b7f20ac49c
+diff_sha256: ecd22bb53edd9a6270407feed718a368a7245b308a2ffda72de44e3472594f5d
+dimensions: [correctness, reuse, simplification, efficiency, altitude, design]
+findings: { found: 31, verified: 13, waived: 0 }
+rounds:
+  - round: 1
+    tip: 3d78f2c97ae8c9150ef30eb4b38e74b7f20ac49c
+    verified:
+      - "CORRECTNESS/REUSE/ALTITUDE/DESIGN, important — reported independently by FOUR finders. StepStatusView.remedy has exactly one render site (Onboarding.tsx:255-259, inside SetProxy), and TrustCa neither declares nor receives the prop. So three trustStatus remedies are computed, unit-tested, and dropped: notably 'install the certificate on the device you're capturing from'. This is a REGRESSION, not a gap — at b9e0bdb the screen rendered {view.glyph} {view.message} for every step, and that message WAS the full sentence including the instruction. The verifier grepped 'capturing from' repo-wide: it survives only in setup.ts (the data), two unit tests, and docs. No title/aria/alternate path surfaces it. The paired set-proxy test asserts getByTestId('set-proxy-remedy'); the absence of a trust-ca counterpart is why it slipped through."
+      - "ALTITUDE, blocker — docs/use-cases/web-ui.html:205 (the T2 contract this WU itself updated) still states 'Traffic seen but not decrypting => the Trust step says \"install the certificate on the device you're capturing from\"'. After this diff that sentence renders nowhere. The doc asserts a capability the running code lost, which is the worst class of doc defect: it was edited in this WU and left describing the old behaviour."
+      - "CORRECTNESS/REUSE, important — Onboarding.tsx:267-274 renders the proxy command TWICE for all four snippet targets. proxySteps(target, addr) (setup.ts:151,153,155,163) already splices `snippet!` into its array, and SetProxy appends proxySnippet(target, addr) again as a CopyText. Verified by rendering the real component: macOS shows step 2 and step 3 byte-identical. Linux is worse — the duplicate is non-adjacent (command, unrelated sentence, same command). A regression: at base the snippet lived in a separate button OUTSIDE the <ol>. ProxyCloseDialog.tsx:134-141 solves the same problem correctly by REPLACING the trailing step. Tests missed it because they assert toHaveTextContent(/networksetup/), a substring regex that passes at any multiplicity."
+      - "DESIGN, important — Checkbox.tsx:17 declares @states 'hover and focus (the border lifts to ink-mute, one channel)', but the input carries only `accent-ink-mute outline-none`: no border, no hover:, no focus: class, and outline-none removes the native ring. Verifier grepped index.css, tailwind.config.js (plugins: []), and index.html — nothing restores it, and no focus-within/has-[:focus] exists anywhere. accent-color tints the check, not the focus. Every other focusable registry member carries focus-visible:outline, and collection.test.tsx:158 asserts it for the Button family; Checkbox escapes only because it is not a <button>. A WCAG 2.4.7 failure on a control shipped inside a modal, plus a false @states contract in a registry whose TSDoc is normative."
+      - "SIMPLIFICATION/ALTITUDE, important — ProxyCloseDialog.test.tsx:187 'traps Tab inside the panel' verifies nothing. PROVEN BY MUTATION: the verifier deleted the entire Tab branch from ModalShell's trap and the file still passed 28/28. jsdom does not move focus on keyDown, so the assertion (focus is inside the dialog) is already true before the event dispatches. The trap is entirely untested; grep for 'Tab' across all test files finds only this and an unrelated Select case."
+      - "SIMPLIFICATION/ALTITUDE, important — Onboarding.test.tsx:284 'no third tone map' cannot fail for the reason its name gives. PROVEN BY MUTATION: the verifier added a local tone map back into Onboarding.tsx and the file still passed 24/24. The assertion querySelector('.text-ok') is satisfied by StatusLine's own MESSAGE_TONE output regardless of what the screen does, and is monotonic in the direction of the violation."
+      - "SIMPLIFICATION/ALTITUDE, important — StepStatusView.message now has ZERO production consumers. StatusLine renders .short; no other component or screen reads .message (the one grep hit, StatusPill.tsx:15, is an unrelated statuses.message lookup table). All 16 resolver branches still build the full sentence, pinned by a test asserting it. Either the field earns a stated reason to exist or it goes."
+      - "SIMPLIFICATION, important — onboardingMachine.ts:16-17,37-39: the `next`/`back` events and the shift() helper that serves only them are dead after this diff removed the Back/Next buttons. Nothing in production dispatches either (verified by grep excluding tests); the tests now assert the buttons must NOT exist. Two reduce() branches kept alive solely by their own unit test."
+      - "SIMPLIFICATION/REUSE/ALTITUDE, important — ProxyCloseDialog.tsx:116's isCommand() infers 'this is a shell command' from the absence of a trailing period, an unenforced coupling to proxyOffSteps' prose punctuation. The sibling call site does it structurally (proxySnippet), so the same decision is made two ways at two tiers. setup.ts owns which element is the command and should say so."
+      - "REUSE, important — the 'steps for' + Select block is duplicated: ProxyCloseDialog.tsx:143-152 is character-for-character Onboarding.tsx's TargetPicker (same wrapper classes, same label position, same spread) over the same PROXY_TARGETS."
+      - "REUSE, important — Onboarding.tsx:278 passes the proxy-off shell command to StepList as a bare string, so the same command ProxyCloseDialog renders as copyable CopyText is uncopyable in the setup screen. StepList's own @avoid says 'Pass a command step as a CopyText inside the slot'."
+      - "ALTITUDE, important — the test/v2 note's unit accounting is wrong in three places, though every headline number is exactly right (649/45 measured, 566 base, +83). Measured: StatusLine base is 18 cases not 17 (and 'eleven pre-existing tests' matches no counting convention — base has 10 plain it, 12 declarations, 18 cases); setup.test.ts is +35 cases (40 -> 75), not +9, which matches neither the case nor the block delta; and the rollup 'count: 46' is neither the note's own sum of its stated deltas (27) nor the measured sum (52)."
+      - "ALTITUDE, nit x2 — (a) the note's verified[] claims 'every remaining navigator.clipboard call under ui/src is guarded (?. plus both handlers) and inside a component that owns the contract'; FlowDetail.tsx:58 is a screen whose rejection handler is `() => {}`, the exact silent swallow this WU condemns elsewhere in the same note. The code is pre-existing and out of scope, but the note's universal claim about the tree is false as written. (b) ui/src-tauri/src/setup.rs:286-291 still documents 'foreign => some other active proxy (only the remote-device notice)', contradicting the three-mode model this diff shipped where foreign is actionable. src-tauri is untouched by the diff; the comment is one file from the changed contract and the note claims the expected results 'were checked as code facts'."
+    refuted:
+      - "EFFICIENCY x2 — the finder itself declined to report ModalShell's querySelectorAll-per-Tab (correctly: the query MUST be live because Disclosure and Select change the focusable set, so caching would be a correctness bug) and the steps/statusOf rebuilds (3 items, user-driven). The two spread nits it did raise ([...PROXY_TARGETS], [...options] defeating Select's useMemo) are real but bounded at 7 constant options — a few string ops per user-driven render, below the bar."
+      - "REUSE — 'the two local ManualRoute components should be shared.' The finder examined and rejected its own candidate: one is a pure children wrapper, the other owns target state, steps resolution and CopyText mapping, with different summaries and spacing. The shared shape is a four-line branch, too thin to extract. Recorded as a naming nit instead (two incompatible contracts under one name)."
+      - "DESIGN — the run doc's Proposals table still carries the stale 'SegmentedControl's @avoid rules it out' wording that its own round 4 fixed in the Elements row. Out of scope: the artifact is a closed W9 run, unmodified by this diff and arriving via this range's own base. The SHIPPED Checkbox TSDoc does not inherit the error — it correctly cites SegmentedControl's @use, verified verbatim."
+      - "DESIGN — the new-component warrant for Checkbox is adequately stated (the plan's #deviation names the rule departed from, the author's call, the exact cost, and W11 as inheritor), the contingent receipts are both now earned (confirm-at-point via short landing + CopyText guarding both paths; focus-returns-to-origin via the shell capturing and restoring activeElement), and the build followed 'the rule not the specimen' — the remote-mode quit is frame=bare, not the mockup's bordered specimen."
+design:
+  artifacts: []
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 2, verified: 1, waived: 0 }
+  verdict: FAIL
+  implements:
+    - path: docs/work/2026-09-04-redesign-run-9-setup-quit.html
+      blob: 8ef2c0f56edf93119e1572d2ae629a7aa6cf2a5c
+      built: [ui/src/components/Checkbox.tsx]
+  undesigned:
+    - path: ui/src/Onboarding.tsx
+      why: "Rebuilt from design run #9, which the tip ships and which is cited above; the run designed this screen but is not itself modified by this diff, so it is listed here rather than as an artifact under review."
+    - path: ui/src/ProxyCloseDialog.tsx
+      why: "Rebuilt from the same run, including its build-local modal shell — warranted in the run's Proposals table as a composition a general Dialog must not be generalised from on a sample of one."
+    - path: ui/src/components/StatusLine.tsx
+      why: "An extend inside the existing component, not a re-shape: it reads StepStatusView.short instead of .message and tones the message text. The run specifies the change and states it must land in the component's own file."
+    - path: ui/src/components/CopyText.tsx
+      why: "A defect fix inside the existing layout — the rejection handler was a no-op while its sibling CopyButton flashed error through the same shared hook. No element added or moved; one transient outcome chip gained a warn variant."
+    - path: ui/src/Gallery.tsx
+      why: "Mechanical compile fix, no rendered change of substance: seven StatusLine literals gained the now-required `short` field. Gallery is the throwaway dev showcase W11 deletes."
+verdict: FAIL
+date: 2026-09-06
