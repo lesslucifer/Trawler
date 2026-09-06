@@ -39,10 +39,14 @@ function tagsOf(block) {
   return tags;
 }
 
+export function tierBlocks(source) {
+  return [...source.matchAll(/\/\*\*([\s\S]*?)\*\//g)]
+    .map((block) => block[1])
+    .filter((body) => "tier" in tagsOf(body));
+}
+
 export function entry(source, name) {
-  const declared = [...source.matchAll(/\/\*\*([\s\S]*?)\*\//g)]
-    .map((block) => tagsOf(block[1]))
-    .filter((tags) => "tier" in tags);
+  const declared = tierBlocks(source);
   if (declared.length === 0) return null;
   if (declared.length > 1) {
     throw new Error(
@@ -50,7 +54,7 @@ export function entry(source, name) {
     );
   }
 
-  const tags = declared[0];
+  const tags = tagsOf(declared[0]);
   if (!tags.summary) {
     throw new Error(`${name}: the @tier block opens with no summary line — the entry has no one-liner`);
   }

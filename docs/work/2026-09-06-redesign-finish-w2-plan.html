@@ -131,10 +131,15 @@
         alphanumerics</td><td><code>CodeMirror</code> → <code>@codemirror/*</code>, cited by four renderers</td></tr>
       </tbody>
     </table>
-    <p>A <strong>path</strong> resolves if the file exists, tried against the repo root and against
-    <code>ui/src/</code>. The oracle does <em>not</em> verify that a <code>:N</code> pin still points at the right line
-    — it cannot know what the line should say, and a check that only counts lines would pass a rotted pin. That residual
-    is stated here rather than half-solved; the one pin in the corpus is being deleted, not re-aimed.</p>
+    <p>A <strong>path</strong> resolves against <code>git ls-files</code> — “the tree it ships with” is exactly what is
+    tracked, and no deny-list of build outputs can drift out of date — and a <strong>bare basename</strong> resolves as
+    readily as a full path. That last point was forced by the tree: <code>JsonRenderer</code> and <code>XmlRenderer</code>
+    both cite <code>decode.rs</code>, which is real, at <code>src/api/decode.rs</code>. Prose names a module the way a
+    reader says it aloud, and legislating full paths in TSDoc would be a design rule this WU is not entitled to make —
+    so the check asks whether the repo holds the file, not how the docstring spells it.</p>
+    <p>The oracle does <em>not</em> verify that a <code>:N</code> pin still points at the right line — it cannot know
+    what the line should say, and a check that only counts lines would pass a rotted pin. That residual is stated here
+    rather than half-solved; the one pin in the corpus is being deleted, not re-aimed.</p>
     <div class="diagram" data-c="oracle-flow">
       <pre class="mermaid">
 flowchart LR
@@ -157,9 +162,10 @@ flowchart LR
     <div class="cards" data-c="scope">
       <div class="card">
         <div class="who">in</div>
-        <h4>Five docstrings, six edits</h4>
-        <p><code>Notice</code> · <code>CopyButton</code> (two tags) · <code>TonedText</code> · <code>Field</code> (two
-        tags) · <code>CutMarker</code>. Prose only — no signature, no class, no rendered output moves.</p>
+        <h4>Five docstrings, seven edits</h4>
+        <p><code>Notice</code> (two claims in one tag) · <code>CopyButton</code> (two tags) · <code>TonedText</code> ·
+        <code>Field</code> (two tags) · <code>CutMarker</code>. Prose only — no signature, no class, no rendered output
+        moves.</p>
       </div>
       <div class="card">
         <div class="who">in</div>
@@ -176,9 +182,11 @@ flowchart LR
       <div class="card">
         <div class="who">out</div>
         <h4>Prose claims a token cannot check</h4>
-        <p><code>Notice</code>'s “the setup screen's capture-is-working zone” names a real zone that is a
-        <code>StatusLine</code>, not a <code>Notice</code>. It is corrected by hand in this WU; no check can catch the
-        next one, and inventing one is not attempted.</p>
+        <p>Four of the seven edits are the oracle's. <strong><code>Field</code>'s two are not</strong> — “four fields”
+        names no identifier, so only a reader catches it — and neither is <code>Notice</code>'s <code>tone="ok"</code>
+        example <code>"trawler is capturing"</code>, a copy string the app never had: the real capture verdict reads
+        “capturing traffic” and is a <code>StatusLine</code>, not a <code>Notice</code>. All three are corrected by hand
+        here; no token check can catch the next one, and inventing one is not attempted.</p>
       </div>
       <div class="card">
         <div class="who">out</div>
@@ -194,14 +202,14 @@ flowchart LR
       </div>
     </div>
 
-    <h2 id="edits">The six edits, in full</h2>
+    <h2 id="edits">The seven edits, in full</h2>
     <table data-c="edits">
       <thead><tr><th>File · tag</th><th>Before → after</th></tr></thead>
       <tbody>
         <tr>
           <td><code>Notice</code><br><code>@use</code></td>
-          <td><pre class="tb"><span class="gone">— HeaderTable empty/pending, BodyViewer's five absences, the detail panel's load failures, the setup screen's capture-is-working zone</span>
-<span class="good">— the detail panel's empty-headers zone and its loading line, BodyViewer's five absences and its load failure, the flow list's two empties, the setup screen's install and proxy outcomes</span></pre></td>
+          <td><pre class="tb"><span class="gone">(tone="ok" — "trawler is capturing") — HeaderTable empty/pending, BodyViewer's five absences, the detail panel's load failures, the setup screen's capture-is-working zone</span>
+<span class="good">(tone="ok") — the detail panel's empty-headers zone and its loading line, BodyViewer's five absences and its load failure, the flow list's two empties, the setup screen's "installed" and "proxy set", the quit dialog's "the proxy is off"</span></pre></td>
         </tr>
         <tr>
           <td><code>CopyButton</code><br><code>@use</code></td>
@@ -268,8 +276,9 @@ flowchart LR
       <li><code>grep -rn 'HeaderTable\|components\.tsx\|BodyRenderer' ui/src/components/</code> returns
       <strong>nothing</strong>.</li>
       <li><code>node scripts/design-citations.mjs</code> prints nothing and exits <strong>0</strong>. Run against
-      <code>HEAD</code> before the edits it names five citations across four files and exits 1 — the red is recorded in
-      the result.</li>
+      <code>HEAD</code> before the edits it names four components — <code>HeaderTable</code> twice,
+      <code>BodyRenderer</code>, the <code>components.tsx:25</code> pin — and exits 1. The red is recorded in the
+      result.</li>
       <li><code>Field</code>'s <code>@use</code> names what <code>App.tsx</code> renders, and nothing it names is a
       <code>Select</code>.</li>
       <li><code>node scripts/design-registry.mjs</code> still emits <strong>28</strong> entries, and every entry's five
@@ -289,7 +298,7 @@ flowchart LR
           <td><code>ui/src/components/collection.test.tsx</code> — one new describe reading the <em>real</em> tree, beside
           the existing “<code>@avoid</code> alternatives are reachable”, which it generalises from redirects to every
           cited name. Asserts <code>unresolved()</code> is empty, and reports per component so a failure names the file
-          and the token. <strong>Red first</strong> against the tip before the edits: five findings.</td>
+          and the token. <strong>Red first</strong> against the tip before the edits: four findings.</td>
         </tr>
         <tr>
           <td><strong>Unit</strong><br>(the commit)</td>
