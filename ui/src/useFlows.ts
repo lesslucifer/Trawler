@@ -73,7 +73,7 @@ export function useFlows(api: TrawlerApi) {
   return { filter, flows, hosts, connections, lastConnectionAt, update };
 }
 
-function merge(known: string[], list: FlowSummary[]): string[] {
+export function merge(known: string[], list: FlowSummary[]): string[] {
   const seen = new Set(known);
   for (const flow of list) {
     const { host } = toRow(flow);
