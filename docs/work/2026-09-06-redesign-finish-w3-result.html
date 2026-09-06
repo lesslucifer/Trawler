@@ -37,7 +37,7 @@
       after number from the tip. Two of the three are paid — the time column re-renders
       <strong>2.9×</strong> faster where its timestamps repeat — which is what an SSE refresh does — and is
       free rather than faster where they do not, and the host merge <strong>249×</strong> — and the third is paid on the
-      member the benchmark could show it helping (<strong>51.6×</strong>) and
+      member the benchmark could show it helping (<strong>54.1×</strong>) and
       <strong class="bad">reverted</strong> on the member it could not. The 741 assertions that existed before
       this WU all pass unchanged; 14 were added.
     </div>
@@ -360,7 +360,13 @@
         <tr>
           <td><strong>BodyViewer re-decodes the whole body on every render</strong> —
           <code>bodyText(fetched.bytes)</code> in <code>Dispatch</code>, and again inside
-          <code>shownText</code> on every copy. Named out of scope in this WU's plan and still open.</td>
+          <code>shownText</code> on every copy. Named out of scope in this WU's plan and still open — and this
+          WU made the text path's worst case worse: <code>decodeBody</code> costs a body that fails the strict
+          pass two decodes, measured at <strong>9.55 ms against 2.64 ms</strong> over 10 MiB, repeated per
+          render like the rest. A whole body is unaffected (2.57 ms against the lenient decode's 2.64 ms — the
+          strict pass is free, which is the claim the fix was made on, now measured rather than asserted). The
+          fix is right either way: the cheaper alternative it replaced gave a wrong answer. Memoizing the
+          decode on the fetched bytes retires both this row and the doubling.</td>
           <td>this WU's plan, scope table</td>
           <td>whichever WU next opens BodyViewer — W9 opens it for the raw | pretty relabel</td>
         </tr>

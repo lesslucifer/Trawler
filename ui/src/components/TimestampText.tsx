@@ -81,9 +81,9 @@ function render(at: moment.Moment, today: Day, format?: string): string {
   return `${datePart} · ${clock}`;
 }
 
-// "Is this timestamp today" was two moment objects per render — one for the day
-// test and one for the year test. Today's local bounds answer both by
-// comparison, and they only move when the wall clock leaves them.
+// Today's local bounds answer both the day test and the year test by comparison
+// rather than by building a moment to compare against, and move only when the
+// wall clock leaves them.
 interface Day {
   start: number;
   end: number;

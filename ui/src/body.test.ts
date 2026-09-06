@@ -266,10 +266,6 @@ test("saveBody reports the path it wrote, and null when the native dialog was ca
   expect(writeFile).toHaveBeenCalledWith("/tmp/picked.pem", bytes);
 });
 
-// A size taken from the bytes and a size taken from the decoded text agree only
-// where every byte decoded. Downstream that is unknowable — a replacement
-// character the decoder inserted looks exactly like one the body carried — so
-// the decoder reports it.
 describe("decodeBody", () => {
   it("reports a whole decode, and returns what the lenient decoder returns", () => {
     const bytes = new TextEncoder().encode("résumé — naïve");
@@ -291,6 +287,17 @@ describe("decodeBody", () => {
     expect(decoded.whole).toBe(false);
     expect(decoded.text).toBe(bodyText(bytes));
     expect(byteLength(decoded.text)).toBeGreaterThan(bytes.length);
+  });
+
+  // A mark is consumed rather than decoded, so the text comes out shorter than
+  // the bytes without a single one being replaced. The body's size stays its
+  // bytes' — that is what a save writes — and the text's is no longer it.
+  it("calls a body carrying a byte-order mark whole, though the mark leaves its text", () => {
+    const bytes = new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode("hi")]);
+    const decoded = decodeBody(bytes);
+
+    expect(decoded).toEqual({ text: "hi", whole: true });
+    expect(byteLength(decoded.text)).toBe(bytes.length - 3);
   });
 
   it("reports an empty body whole — there is no byte to fail on", () => {
