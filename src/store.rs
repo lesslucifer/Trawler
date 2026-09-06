@@ -110,7 +110,7 @@ impl Store {
 
     /// The proxy opened a tunnel to `authority`. Records "traffic reached us"
     /// even when the exchange never decodes into a flow (untrusted-CA handshake
-    /// failure), so the onboarding proxy step can go green without a decrypt.
+    /// failure), so the onboarding can see an attempt that never decrypted.
     pub fn note_connection(&self, authority: String) {
         self.connections.fetch_add(1, Ordering::Relaxed);
         let _ = self.tx.send(FlowEvent::ConnectionSeen { authority });

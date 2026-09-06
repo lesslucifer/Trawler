@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, type TrawlerApi } from "./api";
-import { hostOs, splitProxyAddr, type ProxyProbe, type TrustProbe } from "./setup";
-import { isDecryptedHttps } from "./flow";
+import { CA_FILENAME, hostOs, splitProxyAddr, type ProxyProbe, type TrustProbe } from "./setup";
+import { saveBody } from "./body";
+import { isDecryptedHttps, latestFlowTimes } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useProxyCloseConfirm } from "./closeConfirm";
 import { Layout } from "./Layout";
@@ -10,12 +11,38 @@ import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
 import { Onboarding } from "./Onboarding";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
-import { Field, StatusDot } from "./components";
+import {
+  Field,
+  HTTP_METHODS,
+  MethodLabel,
+  Select,
+  StatusDot,
+  TonedText,
+  type SelectOption,
+} from "./components/index";
 import { dotStatus, initial, reduce, type OnbState } from "./onboardingMachine";
+
+// Select holds at most one option and never returns to unselected, so "any" is a
+// real choice that happens to mean no filter — not a clear affordance the
+// component's contract rules out.
+const ANY = "\u0000any";
+
+const METHOD_OPTIONS: SelectOption[] = [
+  { id: ANY, label: "any method" },
+  ...HTTP_METHODS.map((m) => ({
+    id: m,
+    label: m,
+    element: <MethodLabel method={m} />,
+  })),
+];
+
+function hostOptions(hosts: string[]): SelectOption[] {
+  return [{ id: ANY, label: "any host" }, ...hosts.map((h) => ({ id: h, label: h }))];
+}
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const { filter, flows, connections, update } = useFlows(client);
+  const { filter, flows, hosts, connections, lastConnectionAt, update } = useFlows(client);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detail = useFlowDetail(client, selectedId);
@@ -46,15 +73,21 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     }
   }, [state.phase, state.everProven, flows]);
 
+  // Which absence the list shows turns on whether the user narrowed it, so an
+  // empty-but-blank field must not count as an active filter.
+  const hasFilter = Object.values(filter).some((v) => (v ?? "") !== "");
+
   const proxyAddr = defaultProxyAddr();
 
-  // Local probes (W6): the fast, ~90% truth for the Trust and Proxy steps — does
-  // *this machine* trust the CA / route its proxy through Trawler? Runs on entry
-  // and re-runs after an action so the step reflects the change immediately;
-  // capture stays the authority for the remote cases. Invoke isn't available in
-  // jsdom, so a failure just leaves the probe "unknown" (capture-will-confirm).
+  // Local probes (W6): does *this machine* trust the CA / route its proxy through
+  // Trawler? A probe is a snapshot, and nothing pushes when the user changes a
+  // setting in System Settings — so it re-runs after an action, on "check again",
+  // and whenever the window regains focus, and the reading carries its time.
+  // Invoke isn't available in jsdom, so a failure leaves the probe "unknown".
   const [trustProbe, setTrustProbe] = useState<TrustProbe>("unknown");
   const [proxyProbe, setProxyProbe] = useState<ProxyProbe>("unknown");
+  const [probing, setProbing] = useState(false);
+  const [probedAt, setProbedAt] = useState<number | null>(null);
   const [probeNonce, setProbeNonce] = useState(0);
   const reprobe = useCallback(() => setProbeNonce((n) => n + 1), []);
 
@@ -62,21 +95,41 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     if (state.phase !== "onboarding") return;
     const { host, port } = splitProxyAddr(proxyAddr);
     let live = true;
-    invoke<TrustProbe>("ca_trusted")
-      .then((p) => live && setTrustProbe(p))
-      .catch(() => live && setTrustProbe("unknown"));
-    invoke<ProxyProbe>("proxy_status", { host, port })
-      .then((p) => live && setProxyProbe(p))
-      .catch(() => live && setProxyProbe("unknown"));
+    setProbing(true);
+    Promise.allSettled([
+      invoke<TrustProbe>("ca_trusted").then(
+        (p) => live && setTrustProbe(p),
+        () => live && setTrustProbe("unknown"),
+      ),
+      invoke<ProxyProbe>("proxy_status", { host, port }).then(
+        (p) => live && setProxyProbe(p),
+        () => live && setProxyProbe("unknown"),
+      ),
+    ]).then(() => {
+      if (!live) return;
+      setProbing(false);
+      setProbedAt(Date.now());
+    });
     return () => {
       live = false;
     };
   }, [state.phase, proxyAddr, probeNonce]);
 
+  useEffect(() => {
+    if (state.phase !== "onboarding") return;
+    window.addEventListener("focus", reprobe);
+    return () => window.removeEventListener("focus", reprobe);
+  }, [state.phase, reprobe]);
+
   const installCa = async () => {
     const pem = await client.caCertPem();
     await invoke("install_ca", { pem });
     reprobe();
+  };
+
+  const saveCa = async () => {
+    const pem = await client.caCertPem();
+    return saveBody(new TextEncoder().encode(pem), CA_FILENAME);
   };
 
   const setProxy = async () => {
@@ -122,10 +175,18 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           proxyAddr={proxyAddr}
           trustProbe={trustProbe}
           proxyProbe={proxyProbe}
-          observed={{ decrypted: isDecryptedHttps(flows), trafficSeen: flows.length > 0 || connections > 0 }}
+          probing={probing}
+          probedAt={probedAt}
+          traffic={{
+            ...latestFlowTimes(flows),
+            lastTunnelAt: lastConnectionAt,
+            ever: flows.length > 0 || connections > 0,
+          }}
           onInstallCa={installCa}
+          onSaveCa={saveCa}
           onSetProxy={setProxy}
           onUnsetProxy={unsetProxy}
+          onRecheck={reprobe}
         />
       </Layout>
     );
@@ -144,20 +205,27 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             value={filter.q ?? ""}
             onChange={(e) => update("q", e.target.value)}
           />
-          <Field
-            aria-label="host"
-            placeholder="host"
+          <Select
+            label="host"
+            placeholder="any host"
             className="w-field-lg"
-            value={filter.host ?? ""}
-            onChange={(e) => update("host", e.target.value)}
+            options={hostOptions(hosts)}
+            value={filter.host || ANY}
+            onChange={(id) => update("host", id === ANY ? "" : id)}
           />
-          <Field
-            aria-label="method"
-            placeholder="method"
-            className="w-field-sm"
-            value={filter.method ?? ""}
-            onChange={(e) => update("method", e.target.value)}
+          <Select
+            label="method"
+            placeholder="any method"
+            className="w-field-lg"
+            searchable={false}
+            options={METHOD_OPTIONS}
+            value={filter.method || ANY}
+            onChange={(id) => update("method", id === ANY ? "" : id)}
           />
+          {/* Status stays free text deliberately. A dropdown of seen codes is
+              possible, but the useful query is a class (4xx) and FlowFilter.status
+              is a u16 — so neither control expresses what a user actually wants.
+              Deferred to a later epic to design the interaction, not half-converted. */}
           <Field
             aria-label="status"
             placeholder="status"
@@ -166,9 +234,9 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
             value={filter.status ?? ""}
             onChange={(e) => update("status", e.target.value)}
           />
-          <span className="whitespace-nowrap text-ink-mute">
+          <TonedText tone="muted" className="whitespace-nowrap">
             {flows.length} {flows.length === 1 ? "flow" : "flows"}
-          </span>
+          </TonedText>
         </>
       }
       detail={
@@ -183,7 +251,7 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
       }
     >
       {closeDialog}
-      <FlowList flows={flows} selectedId={selectedId} onSelect={setSelectedId} />
+      <FlowList flows={flows} selectedId={selectedId} onSelect={setSelectedId} filtered={hasFilter} />
     </Layout>
   );
 }

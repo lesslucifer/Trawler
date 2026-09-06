@@ -286,9 +286,10 @@ pub fn unset_proxy() -> Result<(), String> {
 // The actual system proxy state, classified against Trawler's own address — the
 // quit-time confirm keys off this, NOT off whether we set it this session, so a
 // proxy the user pointed at Trawler by hand is caught too. "ours" ⇒ an active
-// proxy on this system routes through Trawler (Remove offered); "foreign" ⇒ some
-// other active proxy (only the remote-device notice); "none" ⇒ this system is
-// clean (still the remote-device notice — a device elsewhere may point here).
+// proxy on this system routes through Trawler; "foreign" ⇒ some other active
+// proxy on this system — also actionable, since unset_proxy turns the OS proxy
+// state off without reading whose address is set; "none" ⇒ this system is clean
+// (the remote-device notice — a device elsewhere may point here).
 #[derive(Debug, PartialEq, Eq)]
 enum ProxyStatus {
     Ours,

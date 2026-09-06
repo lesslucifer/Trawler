@@ -1,4 +1,4 @@
-import { bodyText, isDecryptedHttps, statusTone, toCurl, toRow } from "./flow";
+import { bodyText, isDecryptedHttps, latestFlowTimes, statusTone, toCurl, toRow } from "./flow";
 import type { BodyView, FlowSummary, FlowView } from "./api";
 
 test("status tone: 2xx ok, 4xx/5xx warn, pending/other muted", () => {
@@ -21,21 +21,14 @@ const flow: FlowSummary = {
   response_body_state: "captured",
 };
 
-test("toRow splits host/path and formats status + duration", () => {
+test("toRow splits a URI into the host and path cells", () => {
   const row = toRow(flow);
   expect(row.host).toBe("example.com");
   expect(row.path).toBe("/a/b?x=1");
-  expect(row.method).toBe("GET");
-  expect(row.status).toBe("200");
-  expect(row.tone).toBe("ok");
-  expect(row.duration).toBe("42 ms");
 });
 
-test("toRow shows placeholders for a pending flow", () => {
-  const row = toRow({ ...flow, status: null, duration_ms: null });
-  expect(row.status).toBe("…");
-  expect(row.tone).toBe("muted");
-  expect(row.duration).toBe("");
+test("toRow formats nothing — time, method, status and duration reach their components raw", () => {
+  expect(Object.keys(toRow(flow)).sort()).toEqual(["host", "path"]);
 });
 
 test("toRow keeps a relative/unparseable URI whole as the path", () => {
@@ -99,4 +92,24 @@ test("toCurl escapes embedded single quotes in a shell-safe way", () => {
   const body: BodyView = { state: "captured", size: 3, data_base64: b64("it's") };
   const c = toCurl(view({ method: "POST", request_body: body }));
   expect(c).toContain("--data-raw 'it'\\''s'");
+});
+
+// The setup screen judges "now" off these, so the time is each flow's own
+// started_at — never when the list arrived — and a flow that cannot be dated
+// contributes nothing rather than a NaN that would poison the max.
+test("latestFlowTimes takes the newest started_at per kind, decrypted apart from plain", () => {
+  const at = (iso: string, uri: string): FlowSummary => ({ ...flow, started_at: iso, uri });
+
+  expect(
+    latestFlowTimes([
+      at("2026-07-12T10:00:00Z", "https://a.test/"),
+      at("2026-07-12T10:00:05Z", "http://b.test/"),
+      at("2026-07-12T10:00:03Z", "https://c.test/"),
+      at("not a date", "https://d.test/"),
+    ]),
+  ).toEqual({
+    lastDecryptedAt: Date.parse("2026-07-12T10:00:03Z"),
+    lastPlainAt: Date.parse("2026-07-12T10:00:05Z"),
+  });
+  expect(latestFlowTimes([])).toEqual({ lastDecryptedAt: null, lastPlainAt: null });
 });

@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Design rules — the KB, one file</h1>
       <p>The enumerable, slug-id'd design rules every Trawler screen design must consider. Hard rules are one-liners — their Tier-1 predicate carries them; soft rules carry the judgment guidance a Tier-3 reviewer needs.</p>
-      <div class="meta">Living T2 · the design-rules KB's single file (index = rulebook) · Trawler · rationale: <a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a> · tokens: DEC-11 · closed vocabulary: <a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a></div>
+      <div class="meta">Living T2 · the design-rules KB's single file (index = rulebook) · Trawler · rationale: <a href="../decisions/dec-14-design-rules-kb.html">DEC-14</a> · tokens: DEC-11 · closed vocabulary: <a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a> · truncation escape: <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a></div>
     </div>
   </header>
   <main>
@@ -86,13 +86,14 @@ flowchart LR
     <table data-c="chromatic-meanings-table">
       <thead><tr><th>Token</th><th>Fixed meaning</th><th>Mapping owned by</th></tr></thead>
       <tbody>
-        <tr><td><code>ok</code></td><td>success outcome (2xx) · confirmation · a request that only reads (GET)</td><td><code>StatusPill</code> status→tone · <code>CopyText</code>/<code>CopyButton</code> confirm · <code>MethodLabel</code> verb→tone</td></tr>
-        <tr><td><code>warn</code></td><td>failure outcome (4xx/5xx) · error states · a request that destroys (DELETE)</td><td><code>StatusPill</code> · <code>MethodLabel</code></td></tr>
+        <tr><td><code>ok</code></td><td>success outcome (2xx) · confirmation · a request that only reads (GET) · <strong>a connection proven live</strong></td><td><code>StatusPill</code> status→tone · <code>CopyText</code>/<code>CopyButton</code> confirm · <code>MethodLabel</code> verb→tone · <code>StatusDot</code> lifecycle→fill</td></tr>
+        <tr><td><code>warn</code></td><td>failure outcome (4xx/5xx) · error states · a request that destroys (DELETE) · <strong>a connection that is not capturing</strong></td><td><code>StatusPill</code> · <code>MethodLabel</code> · <code>StatusDot</code></td></tr>
         <tr><td><code>create</code></td><td>a request that brings a resource into being (POST)</td><td><code>MethodLabel</code> verb→tone</td></tr>
         <tr><td><code>replace</code></td><td>a request that overwrites a resource whole (PUT)</td><td><code>MethodLabel</code> verb→tone</td></tr>
         <tr><td><code>amend</code></td><td>a request that alters part of a resource (PATCH)</td><td><code>MethodLabel</code> verb→tone</td></tr>
         <tr><td><code>syn-key</code> · <code>syn-str</code> · <code>syn-num</code></td><td>the three body-pane syntax roles — a key, a string, a number inside a rendered payload. Punctuation stays <code>ink-mute</code></td><td><code>SourceSurface</code> — the pane JsonRenderer and XmlRenderer share</td></tr>
         <tr><td><em>unknown</em> — neither success nor failure</td><td>no tint — the neutral ink channel is the answer</td><td>— (ink, never a colour)</td></tr>
+        <tr><td><code>ink-mute</code> — <em>not yet known</em></td><td>the answer is still resolving, and the shape must show something meanwhile. A lifecycle state, never a verdict: it says nobody has decided, not that the news is neutral</td><td><code>StatusDot</code> — <code>checking</code>, the one sighting (<a href="../decisions/dec-30-the-three-gap-components.html">DEC-30</a>: <code>DotStatus</code> is a lifecycle, not a <code>StatusTone</code>)</td></tr>
       </tbody>
     </table>
 
@@ -134,7 +135,7 @@ flowchart LR
         <tr><td><code>spacing-scale</code></td><td><strong>Layout spacing from the 8px scale; control chrome from a named chrome token.</strong> Never a raw value, never an inherited default</td><td>every spacing class resolves to a project token in <code>theme.spacing</code> or <code>maxWidth</code>; arbitrary <code>[…]</code> sizes red — and the mockup's own <code>.a-</code> CSS</td><td><code>both</code></td><td>Draft mockup</td></tr>
         <tr><td><code>type-tokens-only</code></td><td>Only the named families, sizes, line heights, tracking and the one weight</td><td>each type class resolves to its config scale; the mockup's own <code>.a-</code> CSS is judged the same way</td><td><code>both</code></td><td>Draft mockup</td></tr>
         <tr><td><code>radius-tokens</code></td><td>Corner radii from the named set</td><td><code>border-radius</code> ∈ the config's <code>borderRadius</code> keys</td><td><code>component</code></td><td>Draft mockup</td></tr>
-        <tr><td><code>wrap-not-truncate</code></td><td>Long values wrap — never truncate, never widen the column</td><td>no <code>truncate</code>/<code>ellipsis</code>/<code>nowrap</code> on payload elements</td><td><code>component</code></td><td>Elements · Draft mockup</td></tr>
+        <tr><td><code>wrap-not-truncate</code></td><td>Long values wrap — never truncate, never widen the column. <strong>One escape</strong>, per <a href="../decisions/dec-34-fixed-height-rows-truncate.html">DEC-34</a>: a declared Frame constraint that makes wrapping impossible (a virtualized fixed-height row) lets a design record <code>violated</code> and ship the cut — if the full value stays reachable by a named route and the cut is visible</td><td>no <code>truncate</code>/<code>ellipsis</code>/<code>nowrap</code> on payload elements — unchanged: the escape is declared on the receipt, never detected</td><td><code>component</code></td><td>Elements · Draft mockup</td></tr>
         <tr><td><code>overflow-declared</code></td><td>A zone with unbounded content declares its scroll cap</td><td><strong>one overflow line under the Layout sketch</strong>, naming every unbounded zone</td><td><code>screen</code></td><td>Layout</td></tr>
         <tr><td><code>state-declarations</code></td><td>Every component declares empty · loading · error · overflow</td><td>states column non-empty per catalog row, read against the registry verdict</td><td><code>component</code></td><td>Elements</td></tr>
         <tr><td><code>zero-accent</code></td><td>No chromatic colour beyond the palette's chromatic set</td><td>chromatic classes ⊆ the config's chromatic set; inline chromatic colour red</td><td><code>both</code></td><td>Elements · Draft mockup</td></tr>

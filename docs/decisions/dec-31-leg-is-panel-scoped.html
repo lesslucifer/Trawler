@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9bbef59f34851f0dfac5ee">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-31: leg selection is the panel's, not the body pane's</title>
+  <style>
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}
+    pre.sk{font-family:var(--mono,monospace);font-size:12px;line-height:1.45;margin:0;
+      white-space:pre;overflow-x:auto;}
+    .scope-flow{color:var(--accent);font-weight:600;}
+    .scope-leg{color:var(--ok);font-weight:600;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-31 — one selector owns the leg, and every zone declares whether it follows one</h1>
+      <p>A detail panel showing a captured exchange has two kinds of fact: those belonging to the
+         flow, and those belonging to one of its two legs. Mixing the scopes is what produced two
+         competing leg switches on one screen.</p>
+      <div class="meta">DEC-31 · 2026-09-05 · Trawler · E-REDESIGN.W5 · distilled from the flow-detail
+        design run (Tune 8, Tune 9) · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>The shipped flow detail panel answered "which leg am I looking at?" <strong>twice, differently</strong>.
+       Its header tables stacked both legs at once — <em>Request headers</em> above
+       <em>Response headers</em> — while the body pane beneath them carried its own
+       request/response toggle (<code>BodyViewer.tsx:148</code>, <code>:196–201</code>
+       <em>as it stood at <code>ca18daa</code></em> — W8 has since deleted it, which is this
+       decision taking effect). Nothing
+       connected the two: scrolling past both header tables and then switching the body's leg was the
+       only way to read one leg's headers beside that leg's body.</p>
+    <div class="callout warn" data-c="two-models">
+      <strong>Two models of one concept is not a layout defect — it is a vocabulary defect.</strong>
+      A reader cannot learn the rule, because there isn't one. The screen was not showing "both legs
+      at once"; only <em>half</em> of it was, and the half that wasn't never said so.
+    </div>
+    <p>The E-REDESIGN.W5 design run met this twice. Its first pass <strong>refused</strong> a leg
+       switch, weighing it against a Frame goal phrased as "compare the two legs" — and never checked
+       whether the panel already contradicted that goal. It did. The refusal was reversed on the
+       second reviewer round, once the shipped toggle was read in the code rather than assumed absent.</p>
+
+    <h2 id="decision">The decision</h2>
+    <table data-c="tbl-decision">
+      <thead><tr><th>Question</th><th>Settled</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Who owns leg selection?</strong></td>
+            <td>The <strong>panel</strong>. One selector, in the pinned identity row, governing every
+                leg-scoped zone at once.</td></tr>
+        <tr><td><strong>What does the body pane own?</strong></td>
+            <td>Its own concerns only — decode (raw&nbsp;|&nbsp;decoded), the renderer dispatch, copy
+                and save, its absences and its cut marker. It <strong>receives</strong> the leg as a
+                prop and selects nothing.</td></tr>
+        <tr><td><strong>What must every zone declare?</strong></td>
+            <td>Its <strong>scope</strong>: <span class="scope-flow">flow-scoped</span> (identical on
+                both legs) or <span class="scope-leg">leg-scoped</span> (follows the selector). This is
+                the load-bearing half — it is what makes the first two answers derivable rather than
+                arbitrary.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="scopes">The two scopes, on the panel this was decided for</h2>
+<pre class="sk">
+┌─────────────────────────────────────────────┐
+│ POST 201 [request│response] 148 ms      ✕   │ ← the selector rides in the
+├─────────────────────────────────────────────┤   row it scopes
+│ https://api.example.io/v2/users?id=7        │ <span class="scope-flow">flow-scoped</span> — one uri, one
+│ HTTP/1.1 → HTTP/2       [ copy as curl ]    │ curl command, both legs'
+├─────────────────────────────────────────────┤ versions. Stated ONCE, and
+│ HEADERS                                     │ deliberately unlabelled
+│   host          api.example.io              │
+├─────────────────────────────────────────────┤ <span class="scope-leg">leg-scoped</span> — replaced when
+│ BODY                                        │ the selector moves. These
+│   ░░░ the selected leg's body ░░░           │ two are the ONLY ones
+└─────────────────────────────────────────────┘
+</pre>
+    <p>A <span class="scope-flow">flow-scoped</span> zone carries <strong>no leg label</strong>. That is
+       not a style preference: a "Request" heading over the uri repeated the identity row when
+       <em>request</em> was selected and contradicted the data when <em>response</em> was. The absence
+       of the label is what keeps the scope legible.</p>
+
+    <h2 id="alternatives">What was rejected, and why</h2>
+    <table data-c="tbl-alts">
+      <thead><tr><th>Alternative</th><th>Why it lost</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Keep both legs stacked</strong><br><span class="meta">the shipped behaviour</span></td>
+          <td>It was never the actual behaviour — the body already toggled. Keeping it would have meant
+              keeping the contradiction, and it forces the reader to scroll one unbounded header
+              collection to reach the other.</td>
+        </tr>
+        <tr>
+          <td><strong>A tablist</strong><br><span class="meta">tabs owning panels</span></td>
+          <td><code>SegmentedControl</code>'s <code>@avoid</code> excludes "tabs that own panels
+              (tablist)". The zones are the screen's, not a tab's subtree; this is a radiogroup that
+              switches content, which is what the component is for.</td>
+        </tr>
+        <tr>
+          <td><strong>A leg switch per zone</strong><br><span class="meta">headers and body each</span></td>
+          <td>The defect, formalised. Two controls for one concept, able to disagree.</td>
+        </tr>
+        <tr>
+          <td><strong>Leave it to the body run (W7)</strong><br><span class="meta">where the epic plan had put it</span></td>
+          <td>W7 owns <code>BodyViewer</code>'s internals; leg is not one. A body-run decision cannot
+              fix a panel-level contradiction, and W7 designing a control the panel had already
+              subsumed is precisely the collision a seam exists to prevent.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">What this forces</h2>
+    <table data-c="tbl-forces">
+      <thead><tr><th>Where</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td><strong>W6</strong><br><span class="meta">build the panel</span></td>
+            <td>The panel holds the leg state and passes it down. The default is
+                <strong>request</strong>, always — the shipped per-flow rule
+                (<code>flow.response_body ? "response" : "request"</code>) would move the screen under
+                the user between flows. <em>Done: W6 built it — one <code>SegmentedControl</code> in the
+                identity row, one <em>Headers</em> and one <em>Body</em> zone following it.</em></td></tr>
+        <tr><td><strong>W7</strong><br><span class="meta">design the body viewer</span></td>
+            <td>The leg switch is <strong>not this run's subject</strong>. Its epic-plan row is struck
+                accordingly.</td></tr>
+        <tr><td><strong>W8</strong><br><span class="meta">build the body viewer</span></td>
+            <td>The <code>ModeButton</code> → <code>SegmentedControl</code> swap applies to the
+                <strong>decode pair only</strong>. The leg pair — <code>BodyViewer.tsx:196–201</code> at <code>ca18daa</code> —
+                is <strong>deleted</strong>, not swapped. <em>Done: W8 deleted it.</em></td></tr>
+        <tr><td><strong>Any later screen</strong><br><span class="meta">that shows per-leg data</span></td>
+            <td>Declare each zone's scope before laying it out. A second sighting of this rule is what
+                would lock it into <a href="../design-rules/design-rules-index.html">the rulebook</a> as
+                a slug; one sighting is a decision, not yet a pattern.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout" data-c="why-recorded">
+      <p><strong>Why this is a record and not just a run.</strong> The reasoning outlives its
+         artifact: it deletes a shipped control, redirects two scheduled WUs, and answers a question
+         any future per-leg screen will meet. Under
+         <a href="dec-16-design-file-retirement.html">DEC-16</a>'s test — a fork "whose reasoning still
+         constrains future work" is preserved, a dead end is not — it is unambiguously the former. The
+         W5 run itself is archived T3 scratch; this is the part that had to survive it.</p>
+    </div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

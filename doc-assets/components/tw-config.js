@@ -15,7 +15,7 @@
  * (captions, fork cards, spec grids). Same values as the theme, derived here so
  * no doc hand-declares them -- fourteen files each carried a copy before W5.
  */
-import cfg from '../../../ui/tailwind.config.js';
+import cfg from '../../ui/tailwind.config.js';
 
 tailwind.config = { theme: cfg.theme };
 

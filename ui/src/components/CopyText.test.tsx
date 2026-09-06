@@ -94,6 +94,31 @@ describe("CopyText", () => {
     expect(screen.queryByText("copied")).not.toBeInTheDocument();
   });
 
+  it("says so when the write is refused — a silent failure looks like a copy", async () => {
+    writeText.mockRejectedValue(new Error("denied"));
+    render(<CopyText value={URI} label="request URI" />);
+
+    fireEvent.click(screen.getByText(URI));
+    await settle();
+
+    expect(screen.getByText("copy failed")).toBeInTheDocument();
+    expect(screen.queryByText("copied")).not.toBeInTheDocument();
+  });
+
+  it("clears the failure on the same ~2 s timer as the confirm", async () => {
+    writeText.mockRejectedValue(new Error("denied"));
+    render(<CopyText value={URI} label="request URI" />);
+
+    fireEvent.click(screen.getByText(URI));
+    await settle();
+    expect(screen.getByText("copy failed")).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(CONFIRM_MS);
+    });
+    expect(screen.queryByText("copy failed")).not.toBeInTheDocument();
+  });
+
   it("keeps the I-beam and never truncates — it is selectable text, not a link", () => {
     render(<CopyText value={URI} label="request URI" />);
 
