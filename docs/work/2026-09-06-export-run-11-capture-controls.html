@@ -977,50 +977,6 @@ soft:
           <td><code>absence-names-itself</code></td>
         </tr>
         <tr>
-          <td>Tier-3 review: the mockup's refusal reads "--data-urlencode is not supported", but
-            <code>CurlError::UnsupportedFlag</code>'s Display emits "unsupported flag
-            --data-urlencode", and this run claims it read that wording from the source.</td>
-          <td>The mockup and the Notice row now carry the string the server actually sends.
-            Confirmed against <code>src/api/curl.rs</code> and the assertion in
-            <code>src/api/routes.rs</code> that pins it through the endpoint.</td>
-          <td><code>display-equals-payload</code> — a design that promises the server's sentence
-            verbatim may not illustrate it with a sentence the server never sends</td>
-        </tr>
-        <tr>
-          <td>Tier-3 review: "Run 10 carried one entry" is a miscount — it carried five — and one
-            of them, the header's untested wrap behaviour, was dropped rather than resolved while
-            this run declared its own list empty.</td>
-          <td><strong>Blocked-on</strong>, rewritten: it is no longer empty — the wrap entry is
-            carried and stated as more pressing than run 10 left it, because two header members
-            are now popup-bearing Selects — and a five-row table accounts for each of run 10's
-            entries. <strong>Layout</strong> keeps the <code>margin-left:auto</code> rule that is
-            what the design does about it.</td>
-          <td><code>blocked-on</code> — "gaps escalate, they are never invented" cuts both ways;
-            an empty list bought by dropping an entry is the failure a re-run is most able to
-            commit</td>
-        </tr>
-        <tr>
-          <td>Tier-3 review: the <code>labels-add-context</code> receipt and a Frame example quote
-            the ask as "clear 214 flows", a string the design never specifies.</td>
-          <td>The <strong>receipt</strong> and the <strong>Frame</strong>'s example now quote the
-            design's real copy, "this removes 214 flows". The verdict is unchanged — the rule is
-            satisfied on either string — so this was a citation slip, not an unearned verdict.</td>
-          <td><code>labels-add-context</code> · the receipt's own contract: evidence cites what
-            the design contains</td>
-        </tr>
-        <tr>
-          <td>Tier-3 review (refuted candidate worth keeping): <code>ui/src/api.ts</code> does not
-            subscribe to the <code>cleared</code> SSE event, so "C refills from the bus" would not
-            hold for a clear.</td>
-          <td><strong>Interaction</strong> and the capabilities list — the note under the
-            use-case table and the <code>FlowsCleared</code> row now carry the fact, so W6 cannot
-            ship a clear that empties the store and leaves the list on screen.
-            <em>nothing</em> moved in the design itself: the premise is right and the diff carries
-            no code, so this is not a defect here.</td>
-          <td>the design's own bus premise · <code>ui/src/api.ts</code> against
-            <code>src/api/view.rs</code>'s event names</td>
-        </tr>
-        <tr>
           <td>Run 10 asked which word the UI uses for the operation, given the rulebook reserved
             <code>export</code> against copy.</td>
           <td>Nothing — the question is closed. Its answer was written back to the rulebook's
@@ -1029,6 +985,12 @@ soft:
         </tr>
       </tbody>
     </table>
+    <p><strong>Tier-3 review</strong> — the design dimension of the code review, judged on this
+    artifact — runs against the closed run and lands in the tip's <code>cr/v3</code> note. Its
+    findings are not in this table; this table is what moved before the close. It found three real
+    defects in this run, all fixed in the tree: the curl refusal now carries the string the server
+    sends, blocked-on carries the entry an earlier draft dropped, and the
+    <code>labels-add-context</code> evidence quotes the design's real copy.</p>
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
