@@ -222,13 +222,17 @@ export function saveFilename(uri: string, leg: Leg, contentType: string | null):
 
 // Native app → OS save dialog (dialog plugin registers the picked path in the
 // fs plugin's scope); plain browser (vite dev) → anchor download.
-export async function saveBody(bytes: Uint8Array, filename: string): Promise<void> {
+// Returns where the bytes landed, or null when the native dialog was cancelled —
+// the two resolve identically otherwise, so a caller that states an outcome (the
+// setup screen names the file it saved) cannot tell them apart without this.
+export async function saveBody(bytes: Uint8Array, filename: string): Promise<string | null> {
   if ("__TAURI_INTERNALS__" in window) {
     const { save } = await import("@tauri-apps/plugin-dialog");
     const { writeFile } = await import("@tauri-apps/plugin-fs");
     const path = await save({ defaultPath: filename });
-    if (path) await writeFile(path, bytes);
-    return;
+    if (!path) return null;
+    await writeFile(path, bytes);
+    return path;
   }
   const url = URL.createObjectURL(new Blob([bytes]));
   const anchor = document.createElement("a");
@@ -236,4 +240,5 @@ export async function saveBody(bytes: Uint8Array, filename: string): Promise<voi
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+  return filename;
 }

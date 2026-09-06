@@ -39,7 +39,9 @@ import {
 // The local action states are proven-by-running only: done/failed report just
 // that the elevated command ran (or didn't). Capture is proven solely by a live
 // flow, so neither action ever transitions the machine.
-type ActionState = "idle" | "running" | "done" | "failed";
+// `nothing` is a run that resolved without doing anything — a cancelled save
+// dialog. Reporting it as done would state an outcome the system never produced.
+type ActionState = "idle" | "running" | "done" | "failed" | "nothing";
 
 interface ActionNote {
   tone: NoticeTone;
@@ -61,6 +63,7 @@ const SETPROXY_NOTE: Partial<Record<ActionState, ActionNote>> = {
 const SAVECA_NOTE: Partial<Record<ActionState, ActionNote>> = {
   running: { tone: "mute", text: "saving…" },
   done: { tone: "ok", text: `saved as ${CA_FILENAME}. now trust it with the steps below.` },
+  nothing: { tone: "mute", text: "nothing was saved — the save was cancelled." },
   failed: { tone: "warn", text: "couldn't save the certificate — check that Trawler is running." },
 };
 
@@ -70,7 +73,7 @@ const UNSETPROXY_NOTE: Partial<Record<ActionState, ActionNote>> = {
   failed: { tone: "warn", text: "couldn't turn the proxy off — follow the steps below instead." },
 };
 
-function useAction(run?: () => Promise<void>) {
+function useAction(run?: () => Promise<boolean | void>) {
   const [state, setState] = useState<ActionState>("idle");
   const [error, setError] = useState<string>();
   const trigger =
@@ -79,7 +82,7 @@ function useAction(run?: () => Promise<void>) {
       setState("running");
       setError(undefined);
       run().then(
-        () => setState("done"),
+        (outcome) => setState(outcome === false ? "nothing" : "done"),
         (err: unknown) => {
           console.error("setup action failed:", err);
           setState("failed");
@@ -319,7 +322,7 @@ export function Onboarding({
   proxyProbe?: ProxyProbe;
   observed?: Observed;
   onInstallCa?: () => Promise<void>;
-  onSaveCa?: () => Promise<void>;
+  onSaveCa?: () => Promise<boolean>;
   onSetProxy?: () => Promise<void>;
   onUnsetProxy?: () => Promise<void>;
   onRecheck?: () => void;

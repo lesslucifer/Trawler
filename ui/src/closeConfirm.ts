@@ -9,7 +9,7 @@ import { splitProxyAddr } from "./setup";
 // ask Rust `proxy_status(host, port)`, which classifies the live system proxy:
 //   "ours"    → a proxy on THIS system routes through Trawler. Quitting silently
 //               would strand the machine on a dead proxy (no internet), so prevent
-//               the close and confirm: Remove (unset_proxy, elevation) or Keep.
+//               the close and confirm: turn it off (unset_proxy, elevation) or quit.
 //   "foreign" → some other proxy is active on THIS system. `unset_proxy` turns the
 //               OS proxy state off without reading whose address is set, so this
 //               is fixable from here too — it offers the same action as "ours".

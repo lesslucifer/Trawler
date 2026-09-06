@@ -215,7 +215,9 @@
         (E-REDESIGN.W10). Every manual route's first step names <code>trawler-ca.pem</code>, so the screen
         produces that file: <strong>save certificate</strong> fetches <code>/ca.crt</code> and writes it
         through the OS save dialog (native) or a download (browser), under exactly the name the following
-        steps run against. A failed save says so and never claims the file landed.</li>
+        steps run against. A failed save says so, a <em>cancelled</em> one says nothing was saved, and
+        neither ever claims the file landed — the native dialog resolves the same way whether the user
+        picked a path or dismissed it, so the save reports which happened rather than assuming.</li>
         <li><strong>A probe reading can be asked for again</strong> (E-REDESIGN.W10). Nothing pushes when the
         user changes the trust store or the system proxy outside Trawler, so a green verdict outlives its
         truth until something re-reads the machine. Each probed step carries <strong>check again</strong>,

@@ -406,7 +406,7 @@ test("no third tone map — the screen never maps a verdict tone to a class", ()
 // produced — every manual route began with an instruction the user could not
 // carry out. The step is an action, not prose.
 test("the certificate is saved by a button, not by a sentence telling the user to save it", async () => {
-  const onSaveCa = vi.fn(async () => {});
+  const onSaveCa = vi.fn(async () => true);
   render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
 
   fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
@@ -459,4 +459,16 @@ test("re-checking reports a proxy that was green and is no longer", async () => 
   const status = screen.getByTestId("step-set-proxy-status");
   expect(status).not.toHaveTextContent(/system proxy is set to Trawler/);
   expect(screen.getByTestId("step-set-proxy")).not.toHaveAttribute("data-tone", "ok");
+});
+
+// A cancelled save resolves exactly like a completed one. Reporting it as done
+// tells the user a file exists, and step 2 then sends them to a terminal to run
+// sudo against it.
+test("a cancelled save says so, and never claims a file that was not written", async () => {
+  const onSaveCa = vi.fn(async () => false);
+  render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
+  expect(await screen.findByText(/nothing was saved/)).toBeInTheDocument();
+  expect(screen.queryByText(/saved as trawler-ca\.pem/)).toBeNull();
 });
