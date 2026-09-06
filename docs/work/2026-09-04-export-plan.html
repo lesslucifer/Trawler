@@ -275,7 +275,7 @@ flowchart LR
       </div>
 
       <div data-wu="E-EXPORT.W5">
-        <h3 id="w5">E-EXPORT.W5 — design: the capture-management controls</h3>
+        <h3 id="w5">E-EXPORT.W5 — design: the capture-management controls <em>(superseded by W9)</em></h3>
         <p data-item="wu-summary">
           A design run over the flow-list surface, following
           <a href="../design-flow.html">the design flow</a>: where export, import and clear
@@ -304,21 +304,24 @@ flowchart LR
       <div data-wu="E-EXPORT.W6">
         <h3 id="w6">E-EXPORT.W6 — build the controls</h3>
         <p data-item="wu-summary">
-          The controls W5 designed, built in <code>ui/src/</code> and cited to that design
+          The controls <strong>W9</strong> designed (run 11, which supersedes W5's run 10),
+          built in <code>ui/src/</code> and cited to that design
           (<code>design.implements</code>, path + blob, per the design→build rule): the API
           client gains <code>exportHar</code>, <code>importHar</code>, <code>importCurl</code>
           and <code>clearFlows</code>; the flow-list surface gains the controls, including the
           curl paste target; the imported mark appears in the row; the clear confirmation is
-          wired through the existing <code>useConfirm</code>. Save and open dialogs go through
+          a modal ask — <em>not</em> <code>useConfirm</code>, which both design runs found to be
+          a ~2 s after-the-fact flash that reports rather than asks, a deviation from this plan
+          that W6's result carries. Save and open dialogs go through
           the Tauri layer the app already uses for native calls.
         </p>
-        <p data-item="wu-maps-to">E-EXPORT · UC-4 amended · implements W5's design.</p>
+        <p data-item="wu-maps-to">E-EXPORT · UC-4 amended · implements W9's design.</p>
         <p data-item="wu-expected">
-          Expected result 6 holds. Every UI-rendering file the diff touches is cited to W5's
-          design or declared undesigned with a reason; W5's design file is retired into the
+          Expected result 6 holds. Every UI-rendering file the diff touches is cited to W9's
+          design or declared undesigned with a reason; W9's design file is retired into the
           built component's TSDoc per <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>.
         </p>
-        <p data-item="wu-deps">E-EXPORT.W5 (the design must close first) · W2 · W3 · W4 (the endpoints it calls).</p>
+        <p data-item="wu-deps">E-EXPORT.W9 (the design it builds from; W5's run 10 is superseded and is not cited) · W2 · W3 · W4 (the endpoints it calls).</p>
       </div>
 
       <div data-wu="E-EXPORT.W7">
@@ -410,7 +413,7 @@ flowchart LR
           <tr><td><code>POST /flows/import</code> with the exported bytes.</td><td>the listing returns the same flows, each <code>source=imported</code>; <code>?source=captured</code> is empty; each is readable at <code>/flows/{id}</code> and its body endpoints</td><td>W3</td></tr>
           <tr><td>Post a truncated copy of the same file.</td><td>refused with a reason; the store still holds exactly the previous import</td><td>W3</td></tr>
           <tr><td>Post a browser-shaped <code>curl</code> command to <code>/flows/import?format=curl</code>, then one carrying an unsupported flag.</td><td>the first appears as a request-only flow marked <code>imported</code>; the second is refused naming the flag</td><td>W7</td></tr>
-          <tr><td>WebDriver: launch the built app against that engine, use the export control, the clear control, the import control on the exported file, then paste a curl command.</td><td>the list empties and refills; the imported rows carry the mark; the pasted request appears</td><td>W5 · W6 · W7</td></tr>
+          <tr><td>WebDriver: launch the built app against that engine, use the export control, the clear control, the import control on the exported file, then paste a curl command.</td><td>the list empties and refills; the imported rows carry the mark; the pasted request appears</td><td>W9 · W6 · W7</td></tr>
         </tbody>
       </table>
       <p>
