@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d4f879f34851f0dfac8cd" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-RFINISH epic plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-RFINISH — epic plan</h1>
+      <p>Finish what E-REDESIGN deferred: pay the debt it named, answer the three design questions
+        it sent to a later run, and re-design the one pair of screens it shipped gated but not endorsed.</p>
+      <div class="meta">v1 · 2026-09-06 · Trawler · T3 (docs/work/) · branch <code>epic/redesign-finish</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">E-REDESIGN put all five shipped screens through the design flow and proved the
+      design&nbsp;→&nbsp;build citation path for the first time. It closed <strong>delivered</strong> — and with ten
+      open follow-ups, because the epic gate is the wrong moment to change unmeasured performance, to widen a
+      pane the shell design owns, or to fix a docstring that has no <code>cr/v3</code> note to live on. Those
+      items were not oversights; each was deferred with a named home, and this epic is that home. It carries
+      three kinds of work. <strong>Debt</strong> — four registry docstrings that cite code E-REDESIGN deleted,
+      three measured-nowhere performance costs the rebuild introduced, and a flow list that cannot say
+      <em>the API is unreachable</em> because <code>useFlows</code> catches and discards every fetch failure.
+      <strong>Design questions</strong> — the detail pane is <code>380px</code> and that width is half the
+      header-wrap cost DEC-32 exists to bound; the status filter is a free-text <code>u16</code> when the useful
+      query is a class; and the payload cell is waiting on its second truncation sighting to earn a registry entry.
+      <strong>A re-design</strong> — W10's own result shipped the setup screen and quit dialog
+      <em>"gated, not endorsed as final"</em>, after eleven review rounds that found the status model wrong at the
+      root; <code>Onboarding.tsx</code> grew 464&nbsp;→&nbsp;563 and <code>ProxyCloseDialog.tsx</code>
+      133&nbsp;→&nbsp;288, and the three shape nits the epic recorded all live in exactly those two files.
+      Why now: every one of these items is addressed, in writing, to <em>"whichever epic next opens this file"</em>,
+      and four different follow-ups name the same three files. Opening them once, together, is the only way to
+      pay them without paying the review cost three times.</p>
+
+    <h2 id="inherited">What this epic inherits</h2>
+    <p>Every row below is an open follow-up at <code>main</code>, verified against the tree rather than trusted
+      from the report. Two rows come from the roadmap's living Deferred backlog, addressed to this epic by the
+      same <em>"whichever epic next opens it"</em> rule.</p>
+    <table data-c="inherited-table">
+      <thead>
+        <tr><th>Deferred item</th><th>Where it came from</th><th>Verified at <code>main</code></th><th>WU</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Four registry docstrings cite code E-REDESIGN deleted</td>
+          <td>E-REDESIGN epic result — <em>"a WU: the next epic that opens the registry"</em></td>
+          <td>✓ <code>Notice</code> and <code>CopyButton</code> both cite <code>HeaderTable</code> (W6 deleted it);
+            <code>TonedText</code>'s <code>@anatomy</code> cites <code>components.tsx:25</code> (W2 deleted the kit);
+            <code>Field</code>'s <code>@use</code> claims <em>"the filter bar's four fields"</em> when two are now
+            <code>Select</code>s</td>
+          <td>W2</td>
+        </tr>
+        <tr>
+          <td>Three performance costs, none measured</td>
+          <td>E-REDESIGN epic result — <em>"a WU with a benchmark first"</em></td>
+          <td>✓ <code>TimestampText</code> builds a <code>moment</code> per render on the virtualized SSE list;
+            <code>useFlows.merge</code> rebuilds a <code>Set</code> and re-parses every URI per debounced refresh;
+            <code>TextRenderer</code>/<code>FormRenderer</code> re-encode the untruncated body through
+            <code>TextEncoder</code> to report a size the fetch already knew</td>
+          <td>W3</td>
+        </tr>
+        <tr>
+          <td>No error state in the flow data</td>
+          <td>Named by E-REDESIGN.W3's design run, still open</td>
+          <td>✓ <code>useFlows.ts</code> — three <code>.catch(() =&gt; {})</code> sites; the screen cannot tell an
+            unreachable API from a quiet proxy</td>
+          <td>W4 · W6</td>
+        </tr>
+        <tr>
+          <td>The detail pane is <code>380px</code>, and that width is half the header-wrap cost</td>
+          <td>E-REDESIGN epic result — <em>"a later epic: a shell design WU"</em></td>
+          <td>✓ <code>ui/tailwind.config.js</code> → <code>pane: "380px"</code>. A 900-character cookie is thirty
+            lines here and twenty at 520px</td>
+          <td>W4 · W6</td>
+        </tr>
+        <tr>
+          <td>The status filter is an exact match behind a free-text box</td>
+          <td>E-REDESIGN epic result — <em>"owner, then a later WU"</em></td>
+          <td>✓ and <strong>narrower than reported</strong>: the method filter is already a <code>Select</code>
+            (W4 landed it). Only status remains — <code>App.tsx</code> renders a numeric <code>Field</code> and
+            <code>FlowQuery.status</code> is <code>Option&lt;u16&gt;</code>, so <code>4xx</code> is inexpressible
+            end to end. The code carries its own deferral comment at the call site</td>
+          <td>W4 · W5 · W6</td>
+        </tr>
+        <tr>
+          <td>The payload cell wants a registry entry on its second sighting</td>
+          <td>DEC-34's own consequence — <em>"whoever designs the second one"</em></td>
+          <td>Open — a near-miss the flow-list run named, awaiting a second call site</td>
+          <td>W4</td>
+        </tr>
+        <tr>
+          <td>Three shape nits, recorded not fixed</td>
+          <td>E-REDESIGN epic result — <em>"whichever WU next opens each file"</em></td>
+          <td>✓ <code>useNow</code> (<code>Onboarding.tsx:137</code>) re-renders the whole step list on a
+            one-second tick where only the traffic verdict depends on it; <code>attemptRemove</code>
+            (<code>ProxyCloseDialog.tsx:231</code>) hand-rolls the shape <code>useAction</code>
+            (<code>Onboarding.tsx:107</code>) already implements; <code>setup.ts</code> carries OS-target data and
+            DEC-33's verdict resolution behind a comment rather than a module boundary</td>
+          <td>W8</td>
+        </tr>
+        <tr>
+          <td>No single test wires <code>closeConfirm.remove</code> into the dialog</td>
+          <td>E-REDESIGN epic result — <em>"a WU touching either file"</em></td>
+          <td>✓ the seam is asserted by convention — each module's tests model it with a comment citing the other</td>
+          <td>W8</td>
+        </tr>
+        <tr>
+          <td>The setup screen and quit dialog, shipped <em>gated but not endorsed as final</em></td>
+          <td>E-REDESIGN.W10's own result, after eleven review rounds</td>
+          <td>✓ <code>Onboarding.tsx</code> 563 lines · <code>ProxyCloseDialog.tsx</code> 288 — the two largest
+            screens in the app, and the home of all three shape nits</td>
+          <td>W7 · W8</td>
+        </tr>
+        <tr>
+          <td><code>BodyViewer</code>'s switch is labelled <code>decoded | raw</code>; the ruling is
+            <code>raw | pretty</code></td>
+          <td>Roadmap Deferred backlog, from E-DFLOW.W6 — <em>"whichever epic next opens BodyViewer"</em></td>
+          <td>✓ <code>BodyViewer.tsx:27–28</code> — one word doing two jobs, the transport switch wearing the
+            pretty-print switch's name</td>
+          <td>W9</td>
+        </tr>
+        <tr>
+          <td><code>component-design.html</code>'s file skeleton still prescribes the pre-bundle
+            <code>tw-config.js</code> loading shape</td>
+          <td>Roadmap Deferred backlog, from E-REDESIGN.W1's review — <em>"whichever epic next revises the
+            design-flow specs"</em></td>
+          <td>✓ DEC-26 made a design file mount from <code>specimens.bundle.js</code>; the T1 skeleton and the
+            artifacts built to it disagree</td>
+          <td>W1</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <div data-item="use-cases">
+      <p>Three native contracts are touched. None is narrowed — DEC-13's standing rule is that a design run may
+        not narrow a shipped capability, and W7 in particular re-designs a screen whose every current promise
+        must survive.</p>
+      <ul>
+        <li><span class="badge id">UC-4</span> <strong>Watch live traffic in the native app.</strong> Two
+          contract-level <em>gains</em>: the list states when the API is unreachable instead of showing a stale
+          list indistinguishable from a quiet proxy (W6), and the status filter accepts a class —
+          <code>4xx</code> — end to end (W5&nbsp;+&nbsp;W6). The detail pane's width becomes a designed value
+          rather than a token nobody chose (W4&nbsp;+&nbsp;W6).</li>
+        <li><span class="badge id">UC-5</span> <strong>Inspect a captured flow.</strong> No capability moves. The
+          body view switch is re-labelled to the terms its contract actually settles on —
+          <code>raw | pretty</code> — closing the one-term-per-concept violation E-DFLOW.W6 recorded (W9). The
+          wider pane changes how much of a long header value is readable without expanding it, which is the
+          observable half of DEC-32.</li>
+        <li><span class="badge id">UC-ONBOARD</span> <strong>Guided onboarding.</strong> The whole contract is
+          re-designed and rebuilt (W7&nbsp;+&nbsp;W8). Everything it promises today must still hold: the two
+          layers and the clock (DEC-33), the CA save step, the copy confirms, the quit remedy, and DEC-13's
+          inherited assertion that <em>stop routing appears only after the proxy was set</em>. A gain is
+          permitted; a loss is a review finding.</li>
+      </ul>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <p>Checkable by a reader who was not here, at the epic tip:</p>
+      <ol>
+        <li><strong>The roadmap's Deferred backlog loses two rows and E-REDESIGN's follow-up list loses eight</strong>
+          — each struck because this epic absorbed it, not because it was re-deferred. The two that remain
+          (Tier-1's blindness to a mockup's mounted JSX, and gate check 8's artifact type) are moved <em>into</em>
+          the backlog as rows of their own, so nothing lives only in an archived report.</li>
+        <li><strong>No registry docstring cites a file or a call site that does not exist.</strong> A grep for
+          <code>HeaderTable</code> and <code>components.tsx</code> across <code>ui/src/components/</code> returns
+          nothing, and <code>Field</code>'s <code>@use</code> names what the filter bar actually renders.</li>
+        <li><strong>A benchmark exists and is committed before any performance edit</strong>, with a
+          before/after number recorded for each of the three costs. A fix that the benchmark cannot show helping
+          is reverted, not kept on the argument that it looks better.</li>
+        <li><strong>The flow list states an unreachable API.</strong> Killing the core with the window open
+          produces a rendered statement, not a frozen list — asserted in e2e.</li>
+        <li><strong><code>GET /flows?status=4xx</code> returns only 4xx flows</strong>, exact codes still work,
+          and a nonsense class is a stated error rather than a silent empty list.</li>
+        <li><strong>Two closed, archived design runs</strong> — the shell/list second pass and the
+          onboarding/quit re-design — each Tier-1 green and Tier-3 judged, each cited by its build WU's
+          <code>cr/v3</code> note through <code>design.implements</code>.</li>
+        <li><strong>Every <code>.tsx</code> this epic touches is accounted for</strong> at every seam: cited to a
+          design, or declared undesigned with a reason that states what the edit did. Gate check 9 proves it.</li>
+        <li><strong>The three shape nits are gone</strong>: the one-second tick re-renders only what depends on
+          it, <code>attemptRemove</code> is a <code>useAction</code> caller, and <code>setup.ts</code>'s two
+          concerns are two modules. The <code>closeConfirm.remove</code> seam has a test that wires the two
+          modules together rather than modelling each side.</li>
+        <li><strong>The body view switch reads <code>raw | pretty</code></strong> in the app, in its tests, and
+          in <code>web-ui.html</code>'s UC-5 contract.</li>
+        <li><strong>The e2e proves all three contracts against the real WebKit window</strong>, with the
+          onboarding spec re-written against the new design and its journey spine intact.</li>
+      </ol>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <ul data-item="non-goals">
+      <li><strong>The two harness/workflow follow-ups.</strong> Tier-1's tokenizer treats
+        <code>&lt;script type="text/babel"&gt;</code> as opaque, so every design run's rendered markup is invisible
+        to the hard-rule predicates; and gate check 8 verifies that <em>some</em> report was attested, not that it
+        is a result report. Both are real, both are <code>xtask</code>/process work, and mixing them into a UI epic
+        would mean changing the gate while the gate is judging this epic's own seams — the exact thing
+        E-REDESIGN's non-goals forbade. They move to the roadmap's Deferred backlog at W10.</li>
+      <li><strong>Re-designing the flow detail panel's zoning.</strong> DEC-32 stands: headers capped and scrolling
+        inside, the body taking the rest, the panel never scrolling as a whole. W4 designs the pane's
+        <em>width</em>, not its zones.</li>
+      <li><strong>Re-designing the flow list's rows.</strong> DEC-34's three conditions bound the truncating cell
+        and the run that wrote them closed green. W4 opens the payload cell only to answer whether the second
+        sighting has arrived.</li>
+      <li><strong>Any capture-core feature.</strong> The one core change in scope is
+        <code>FlowQuery.status</code> accepting a class. HAR, replay, WebSocket, persistence and rules stay on the
+        roadmap where they are sequenced.</li>
+      <li><strong>Making the screens smaller as a goal.</strong> E-REDESIGN refused to claim less code and four of
+        five screens grew. W8 may well shrink <code>Onboarding.tsx</code>, and if it does the number is evidence —
+        but a line count is not an acceptance criterion here either.</li>
+      <li><strong>Revising the design flow itself.</strong> W1 corrects one skeleton that contradicts DEC-26; the
+        stages, the rulebook's structure and the three-tier gate are inputs, not scope.</li>
+    </ul>
+
+    <h2 id="shape">Shape — debt first, then design, then build</h2>
+    <div class="diagram" data-c="shape-diagram">
+      <pre class="mermaid">
+flowchart TD
+  W1["W1 · T1 skeleton vs DEC-26<br/>docs-only, lands first"]
+  W2["W2 · four stale docstrings"]
+  W3["W3 · benchmark, then the three perf fixes"]
+  W4["W4 · design run — shell + list<br/>width · status filter · unreachable · payload cell"]
+  W5["W5 · core: status accepts a class"]
+  W6["W6 · build the shell/list second pass"]
+  W7["W7 · design run — onboarding + quit dialog"]
+  W8["W8 · build both screens<br/>+ the three nits + the seam test"]
+  W9["W9 · BodyViewer: raw | pretty"]
+  W10["W10 · epic close — e2e, distillation, archive"]
+  W1 --> W4
+  W1 --> W7
+  W4 --> W5
+  W4 --> W6
+  W5 --> W6
+  W7 --> W8
+  W3 --> W9
+  W2 --> W10
+  W6 --> W10
+  W8 --> W10
+  W9 --> W10
+      </pre>
+      <div class="caption">W1 lands before either design run so both are built to a skeleton that matches DEC-26.
+        W2, W3 and W9 are independent of the design track and can run alongside it; W9 waits only because it and
+        W3 both open the body family.</div>
+    </div>
+
+    <h2 id="wu-summaries">WU summaries</h2>
+    <p>One block per Working Unit. The full plan for each is its own T3 doc, written before its code.</p>
+    <div data-item="wu-summaries">
+
+      <div data-wu="E-RFINISH.W1">
+        <h3 id="w1">W1 — the design-flow skeleton, corrected to DEC-26</h3>
+        <p data-item="wu-summary">Rewrite <code>component-design.html</code>'s file skeleton so it prescribes the
+          <code>specimens.bundle.js</code> mount DEC-26 established, replacing the pre-bundle
+          <code>tw-config.js</code> loading shape the spec still carries. Docs-only, and T1 — so the commit needs a
+          <code>Reviewed-By</code> trailer naming a listed authoriser. It lands first because two design runs in
+          this epic will be built to this skeleton, and E-REDESIGN's own review found its three design files
+          following DEC-26 <em>instead of</em> the spec they were supposed to follow.</p>
+        <p data-item="wu-maps-to">No UC. Serves W4 and W7 by making the spec they consume true; strikes the
+          roadmap's second Deferred row.</p>
+        <p data-item="wu-expected">The skeleton in <code>component-design.html</code> matches what a design file
+          built today actually does; no design artifact in the tree contradicts the spec it cites.
+          <code>verify-doc</code> green.</p>
+        <p data-item="wu-deps">none</p>
+      </div>
+
+      <div data-wu="E-RFINISH.W2">
+        <h3 id="w2">W2 — four registry docstrings that cite deleted code</h3>
+        <p data-item="wu-summary">Repair the four falsified TSDoc contracts: <code>Notice</code> and
+          <code>CopyButton</code> both point at <code>HeaderTable</code>, which W6 deleted from the detail panel;
+          <code>TonedText</code>'s <code>@anatomy</code> cites <code>components.tsx:25</code>, the legacy kit W2
+          removed; and <code>Field</code>'s <code>@use</code> claims the filter bar's four fields when two are now
+          <code>Select</code>s. Under DEC-16 a built component's TSDoc <em>is</em> its retired design file, so
+          these are not comments — they are the design record, and four of them are lying. The fix was written at
+          E-REDESIGN's gate and refused: a non-test <code>.tsx</code> under <code>ui/src/</code> may not change in
+          a standalone commit, because the design accounting has no <code>cr/v3</code> note to live on. This is
+          that WU. Every touched file is declared under <code>design.undesigned</code> with the reason — a
+          docstring repair renders nothing.</p>
+        <p data-item="wu-maps-to">DEC-16 and DEC-30's thesis: a redirect with no destination is worse than none.
+          No UC behaviour changes.</p>
+        <p data-item="wu-expected">No <code>@use</code>, <code>@avoid</code> or <code>@anatomy</code> in
+          <code>ui/src/components/</code> names a file or call site that does not exist at the tip; the registry
+          still emits 28 entries; the design/vocabulary eslint rule stays clean.</p>
+        <p data-item="wu-deps">none</p>
+      </div>
+
+      <div data-wu="E-RFINISH.W3">
+        <h3 id="w3">W3 — the benchmark, then the three performance costs</h3>
+        <p data-item="wu-summary">Build the measurement first, then fix. A committed benchmark covering the three
+          named costs — <code>TimestampText</code>'s two <code>moment</code> objects per row per render on the
+          virtualized SSE list, <code>useFlows.merge</code>'s <code>Set</code> rebuild and full URI re-parse per
+          debounced refresh, and <code>TextRenderer</code>/<code>FormRenderer</code>'s <code>TextEncoder</code>
+          re-encode of the whole untruncated body on exactly the over-cap path the caps exist to bound — with a
+          recorded before number for each. Then the three fixes, each with an after number. E-REDESIGN refused to
+          make these changes at a merge seam with nothing to show the change helps; the discipline this WU adds is
+          that a fix the benchmark cannot show helping is reverted.</p>
+        <p data-item="wu-maps-to">UC-4 and UC-5 — no observable contract moves; all three are cost, not behaviour.</p>
+        <p data-item="wu-expected">A benchmark runnable from <code>ui/</code> and from <code>cargo xtask</code>,
+          with three before/after pairs in the WU result. Rendered output byte-identical: the existing unit tests
+          for all three components pass unchanged, which is the proof that only cost moved.</p>
+        <p data-item="wu-deps">none</p>
+      </div>
+
+      <div data-wu="E-RFINISH.W4">
+        <h3 id="w4">W4 — design run: the app shell and the flow list, second pass</h3>
+        <p data-item="wu-summary">One run over the shell and the list, answering the four questions E-REDESIGN
+          sent forward. <strong>The pane width</strong> — <code>380px</code> is a token nobody chose, and at that
+          width a 900-character cookie is thirty lines; the run decides a wider fixed width, a draggable split, or
+          that 380 is right, and states the rejected alternatives either way. <strong>The status filter</strong> —
+          the useful query is a class, and the run designs the control before the API is changed to serve it.
+          <strong>The unreachable state</strong> — where a failed fetch is stated, in what words, and how a reader
+          tells it from a quiet proxy; W3's original run named this and it is still open.
+          <strong>The payload cell</strong> — whether DEC-34's second sighting has arrived, making the cell a
+          registry entry rather than a near-miss. The run is Tier-1 green, Tier-3 judged by a reviewer who is not
+          its author, closed and archived.</p>
+        <p data-item="wu-maps-to">UC-4, and UC-5 through the pane width. DEC-32 and DEC-34 are inputs it may cite,
+          not re-open.</p>
+        <p data-item="wu-expected">A closed, archived design run whose Elements stage resolves the status control
+          and the unreachable statement to registry entries or genuine proposals, and whose receipt records the
+          pane-width decision with its alternatives. Any rule it must break is a declared, bounded violation on
+          the receipt. No <code>ui/src/</code> change.</p>
+        <p data-item="wu-deps">W1</p>
+      </div>
+
+      <div data-wu="E-RFINISH.W5">
+        <h3 id="w5">W5 — the core accepts a status class</h3>
+        <p data-item="wu-summary">Widen <code>FlowQuery.status</code> from <code>Option&lt;u16&gt;</code> to
+          accept a class (<code>4xx</code>, <code>5xx</code>, …) alongside an exact code, and make the filter in
+          the store honour it. A malformed class is a stated 400, never a silent empty list. Rust-side only — no
+          <code>ui/src/</code> file is touched, so this WU carries no design accounting. It is separated from W6
+          because the API is the contract the UI then consumes, and an integration test proving
+          <code>GET /flows?status=4xx</code> should exist before anything renders against it.</p>
+        <p data-item="wu-maps-to">UC-4 — the one core change in this epic's scope. Serves W4's designed control.</p>
+        <p data-item="wu-expected"><code>GET /flows?status=4xx</code> returns only 4xx flows;
+          <code>?status=404</code> still returns exactly 404s; <code>?status=9xx</code> is a stated error. Proven
+          by integration tests against an ephemeral core; the wire contract snapshot is updated.</p>
+        <p data-item="wu-deps">W4</p>
+      </div>
+
+      <div data-wu="E-RFINISH.W6">
+        <h3 id="w6">W6 — build the shell and list second pass</h3>
+        <p data-item="wu-summary">Implement W4's design, citing it. The pane width becomes what the run decided;
+          the status <code>Field</code> becomes the designed control and speaks W5's class query; and
+          <code>useFlows</code> stops discarding fetch failures — the three <code>.catch(() =&gt; {})</code> sites
+          gain a state the list can render, so <em>the API is unreachable</em> and <em>the proxy is quiet</em> stop
+          looking identical. If W4 ruled the payload cell a registry entry, it is built here and its design file
+          retired into TSDoc per DEC-16.</p>
+        <p data-item="wu-maps-to">W4's design, through the DEC-25 handoff; UC-4, and UC-5 through the pane width.</p>
+        <p data-item="wu-expected">The shell renders at the designed width; a status class narrows the list; killing
+          the core produces a rendered statement rather than a frozen list. <code>design.implements</code> cites
+          W4's run at the seam, and every other touched <code>.tsx</code> is cited or declared.</p>
+        <p data-item="wu-deps">W4, W5</p>
+      </div>
+
+      <div data-wu="E-RFINISH.W7">
+        <h3 id="w7">W7 — design run: the setup screen and the quit dialog</h3>
+        <p data-item="wu-summary">A complete re-design of <code>Onboarding</code> and <code>ProxyCloseDialog</code>
+          — the pair W10 shipped after eleven review rounds and its own result declined to endorse as final. This
+          run is <em>not</em> blind: DEC-33's two layers and a clock came out of the owner's third round finding
+          the status model wrong at the root, and DEC-13 governs what the screen may promise, so both are inputs
+          the Frame states. What the run owes is the shape those decisions never got: 563 and 288 lines of screen
+          carrying a step list, an OS-target matrix, a CA save step, four independent async actions, a probed
+          traffic verdict on a one-second tick, and a destroy-failed remedy — with no design behind their
+          arrangement. The Frame must state that the reader is a first-run user who has not yet seen any traffic,
+          because that is what decides what is on screen at once.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD. DEC-13 and DEC-33 are inputs; the run may not narrow either.</p>
+        <p data-item="wu-expected">A closed, archived run covering both surfaces, resolving every element to
+          <code>reuse</code> or a genuine <code>propose</code>, and stating in its receipt how each of
+          UC-ONBOARD's current promises survives the new arrangement. No <code>ui/src/</code> change.</p>
+        <p data-item="wu-deps">W1</p>
+      </div>
+
+      <div data-wu="E-RFINISH.W8">
+        <h3 id="w8">W8 — build the setup screen and the quit dialog</h3>
+        <p data-item="wu-summary">Rebuild both screens from W7's design, citing it — and, because this is the WU
+          that opens those files, absorb the three shape nits addressed to it: <code>useNow</code>'s one-second
+          tick is scoped so it re-renders only the traffic verdict that depends on it rather than the whole step
+          list; <code>attemptRemove</code> stops hand-rolling idle/running/done/failed and becomes a
+          <code>useAction</code> caller; and <code>setup.ts</code>'s two concerns — OS-target instructional data
+          and DEC-33's verdict resolution — become two modules instead of one file with a comment between them.
+          Also closes the last recorded gap in the pair: no single test wires <code>closeConfirm.remove</code> into
+          the dialog, so the seam is asserted by construction rather than by convention.</p>
+        <p data-item="wu-maps-to">W7's design, through the DEC-25 handoff; UC-ONBOARD; the three shape nits and the
+          seam test from E-REDESIGN's follow-ups.</p>
+        <p data-item="wu-expected">Both screens render from the design; every UC-ONBOARD promise still holds,
+          including DEC-13's inherited assertion that stop routing appears only after the proxy was set; the
+          one-second tick's re-render scope is proven by test; one test drives
+          <code>closeConfirm.remove</code> through the dialog.</p>
+        <p data-item="wu-deps">W7</p>
+      </div>
+
+      <div data-wu="E-RFINISH.W9">
+        <h3 id="w9">W9 — the body view switch says what it does</h3>
+        <p data-item="wu-summary">The switch is labelled <code>decoded | raw</code> and its confirmed contract
+          settles on <code>raw | pretty</code> — one word doing two jobs, the transport switch wearing the
+          pretty-print switch's name. E-DFLOW.W6 ruled that <code>raw | pretty</code> is correct and
+          <em>the build is what changes</em>, and deferred it on the grounds that a rulebook revision quietly
+          editing UI copy is one nobody can trust. Here it is not quiet: the labels change in
+          <code>BodyViewer.tsx</code>, in its tests, in the e2e that drives them, and in
+          <code>web-ui.html</code>'s UC-5 contract, in one reviewed diff. The touched file is declared under
+          <code>design.undesigned</code> — the run that designed the body viewer resolved this control to
+          <code>SegmentedControl</code> and the change is to two option labels, not to the control.</p>
+        <p data-item="wu-maps-to">UC-5; the rulebook's one-term-per-concept rule; strikes the roadmap's first
+          Deferred row.</p>
+        <p data-item="wu-expected">The app, its tests and UC-5's contract all read <code>raw | pretty</code>; no
+          surface still says <code>decoded</code> for this control.</p>
+        <p data-item="wu-deps">W3</p>
+      </div>
+
+      <div data-wu="E-RFINISH.W10">
+        <h3 id="w10">W10 — epic close</h3>
+        <p data-item="wu-summary">Run the epic e2e over all three contracts against the real window; write the
+          epic result report; distil into T2 — <code>web-ui.html</code> for UC-4's two gains and UC-ONBOARD's
+          re-designed shape, a decision record for anything the two runs escalated, and the design-rules index if
+          a run's declared violation earns a rule amendment. Update the roadmap: strike the two Deferred rows this
+          epic absorbed, strike the eight E-REDESIGN follow-ups it closed, and <em>add</em> the two harness/workflow
+          items as rows of their own so they stop living only in an archived report. Then archive this plan and
+          every WU doc out of git per DEC-3.</p>
+        <p data-item="wu-maps-to">All three UCs; DEC-3; the epic's own distillation plan.</p>
+        <p data-item="wu-expected"><code>cargo xtask ui e2e</code> green with the new assertions;
+          <code>docs/work/</code> empty at the epic tip except this WU's own result; the roadmap's living backlog
+          reflects what is actually outstanding; every component design this epic added resolves to a roster entry
+          or is a recorded drop.</p>
+        <p data-item="wu-deps">W2, W6, W8, W9</p>
+      </div>
+
+    </div>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <p>The epic is proven by <code>cargo xtask ui e2e</code> driving the real WebKit window against an ephemeral
+        core — the same harness E-REDESIGN closed on, extended, never replaced. Four new assertions and one
+        re-write:</p>
+      <table data-c="e2e-table">
+        <thead><tr><th>Spec</th><th>What it proves</th><th>Lands in</th></tr></thead>
+        <tbody>
+          <tr><td><code>flows.spec.ts</code> — UC-4</td>
+            <td>The core is killed with the window open; the list <em>states</em> that it cannot reach the API
+              rather than showing its last flows unchanged. The distinguishing assertion is against a quiet-proxy
+              control: an idle-but-reachable core renders the empty/idle statement, not this one.</td>
+            <td>W6</td></tr>
+          <tr><td><code>flows.spec.ts</code> — UC-4</td>
+            <td>A status class typed into the designed control narrows the list to 4xx flows while 2xx traffic is
+              present, and an exact code still narrows to exactly that code.</td>
+            <td>W6</td></tr>
+          <tr><td><code>flows.spec.ts</code> — UC-5</td>
+            <td>The body view switch reads <code>raw</code> and <code>pretty</code>, and toggling it still yields
+              source text on one side and the rendered form on the other — the label changed, the behaviour did
+              not.</td>
+            <td>W9</td></tr>
+          <tr><td><code>onboarding.spec.ts</code> — UC-ONBOARD</td>
+            <td><strong>Re-written against W7's design</strong>, keeping the journey spine: a fresh launch through
+              probed verdicts to the list reveal, the two layers and the clock, the CA save step, the copy
+              confirms, and the quit remedy. Every assertion the current spec makes must have a successor or a
+              recorded reason it retired — the same coverage-map discipline E-DFLOW.W11 established and
+              E-REDESIGN.W10 executed.</td>
+            <td>W8</td></tr>
+          <tr><td>Integration (Rust)</td>
+            <td><code>GET /flows?status=4xx</code>, <code>?status=404</code> and <code>?status=9xx</code> against
+              an ephemeral core — the API contract W6 then renders against.</td>
+            <td>W5</td></tr>
+        </tbody>
+      </table>
+      <p>No waiver is intended at the epic level. Two WUs will waive a layer and say so in their own notes: W1 is
+        docs-only and therefore exempt rather than waived, and W4 and W7 are design runs whose deliverable is a
+        docs-only artifact judged by Tier-3, not by a test.</p>
+    </div>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <table data-c="distillation-table">
+        <thead><tr><th>Doc</th><th>Tier</th><th>What it will absorb</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../use-cases/web-ui.html">use-cases/web-ui.html</a></td><td>T2</td>
+            <td>UC-4's two gains (the unreachable statement, the status class) and the designed pane width; UC-5's
+              <code>raw | pretty</code> terms; UC-ONBOARD re-stated as the re-designed screens actually behave.
+              → v6.</td></tr>
+          <tr><td><a href="../decisions/decisions-index.html">decisions/</a></td><td>T2</td>
+            <td>New records for what the two runs decide and cannot leave in an archived artifact — expected: the
+              pane-width ruling with its rejected alternatives, and whatever W7 settles about the onboarding
+              screen's arrangement that DEC-33 did not already own. Numbered from DEC-35, each indexed.</td></tr>
+          <tr><td><a href="../design-rules/design-rules-index.html">design-rules/</a></td><td>T2</td>
+            <td>Only if a run's declared violation argues the rule is wrong rather than the design. DEC-14 provides
+              for rulebook growth at distillation; E-REDESIGN made two such amendments and both came from runs that
+              escalated them deliberately.</td></tr>
+          <tr><td><a href="../backlog/roadmap.html">backlog/roadmap.html</a></td><td>T2</td>
+            <td>Two Deferred rows struck (absorbed by W1 and W9); two new rows added for the harness/workflow items
+              this epic declares out of scope; the Consequences paragraph updated with what landed.</td></tr>
+          <tr><td><a href="../component-design.html">component-design.html</a></td><td>T1</td>
+            <td>W1's skeleton correction — the one planned T1 edit, because the spec contradicts DEC-26 and a spec
+              that contradicts a decision is a shape-level defect. Carries a <code>Reviewed-By</code> trailer.</td></tr>
+          <tr><td>T1 — anything else</td><td>T1</td>
+            <td>Not expected. The flow, the rulebook's structure and the gate are inputs. If one of them proves
+              wrong, that is a finding worth its own record, not a quiet edit.</td></tr>
+          <tr><td>T3</td><td>T3</td>
+            <td>This plan, ten WU plans, ten WU results, two design runs and the epic result — archived out of git
+              per DEC-3 at W10, distilled into the rows above first.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions">
+      <table data-c="open-questions-table">
+        <thead><tr><th>Question</th><th>Proposed default</th><th>Decided by</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Is the detail pane a wider fixed width, or a draggable split?</td>
+            <td><strong>A wider fixed width.</strong> A draggable split is a stored preference, a drag affordance
+              and a minimum on both sides — three things the shell does not have today, for a gain the run has not
+              yet shown is needed. If W4 argues otherwise on the evidence, it says so on its receipt and the
+              default loses.</td>
+            <td>W4's design run</td>
+          </tr>
+          <tr>
+            <td>Does the status class belong in the API, or can the client filter what it already has?</td>
+            <td><strong>The API.</strong> The client holds only what the list query returned, so a client-side
+              class filter would narrow a page rather than the capture — which reads as a filter that silently
+              loses flows. W5 exists on this default.</td>
+            <td>W4, confirmed by W5's contract</td>
+          </tr>
+          <tr>
+            <td>Does the onboarding re-design get to change UC-ONBOARD's shape, or must it preserve it?</td>
+            <td><strong>Preserve every promise, permit gains.</strong> DEC-13's standing rule is that a design run
+              may not narrow a shipped capability; E-REDESIGN checked that assertion rather than assuming it, and
+              W7/W8 will do the same. A loss is a review finding.</td>
+            <td>W7's Frame, verified at W8's review</td>
+          </tr>
+          <tr>
+            <td>Has the payload cell's second truncation sighting actually arrived?</td>
+            <td><strong>Assume not.</strong> DEC-34 named it a near-miss awaiting a second call site; if W4's run
+              does not produce one, the cell stays screen-owned and the WU records that the sighting did not come
+              — which is an answer, not a deferral.</td>
+            <td>W4's Elements stage</td>
+          </tr>
+          <tr>
+            <td>Should a performance fix land if the benchmark cannot show it helping?</td>
+            <td><strong>No — revert it.</strong> The whole reason E-REDESIGN refused these at its gate was
+              changing unmeasured performance with nothing to show the change helps. A benchmark that says
+              <em>no difference</em> is a result, and the honest response is to keep the simpler code.</td>
+            <td>W3's result report</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
