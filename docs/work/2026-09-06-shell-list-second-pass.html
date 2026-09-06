@@ -256,7 +256,7 @@ scroll / overflow: A pinned, content-height, wraps to a second line before it
               reproduce. A control that cannot express an unobserved value cannot serve this key. The set is not
               knowable, so <span class="avoid">@avoid</span>'s "a choice among known options" never applies here —
               and it still will not after W5, which is the part the first pass's reasoning could not promise.</p>
-              <p>Lands in <span class="use">@use</span> "any free-text entry … pass value + onChange + aria-label;
+              <p>Lands in <span class="use">@use</span> "any free-text entry … Pass value + onChange + aria-label;
               pass width through <code>className</code>". Clears <span class="avoid">@avoid</span> "validating,
               debouncing, formatting or restricting what is typed" — <strong>and the shipped call site does not</strong>:
               <code>inputMode="numeric"</code> (<code>App.tsx:232</code>) is a keypad hint over a field that must
@@ -303,8 +303,8 @@ scroll / overflow: A pinned, content-height, wraps to a second line before it
               a sibling, so the screen decides <em>that</em> there is an action and its word, and the component owns
               its chrome.</p>
               <p>The <span class="avoid">@avoid</span> line that bites is fork D4: "leaving it enabled while its
-              action is in flight, or disabling it without a progress line beside it — <strong>both halves or
-              neither</strong>". A retry is a fetch, so the design owes both: the Button is disabled for the whole
+              action is in flight, or disabling it without a progress line beside it (fork D4 — <strong>both halves
+              or neither</strong>)". A retry is a fetch, so the design owes both: the Button is disabled for the whole
               in-flight window <em>and</em> the band's detail line becomes "trying 127.0.0.1:7421…" while it is
               awaited. Clears <span class="avoid">@avoid</span> "warn-toning it inside a warn Notice (the message
               owns the alarm, the button is the way out)" — the retry is <code>tone="body"</code>, the default.</p></details>
@@ -322,7 +322,7 @@ scroll / overflow: A pinned, content-height, wraps to a second line before it
               <p>Both keys are matched exactly by the API and both sets are enumerable <em>from what the screen
               already holds</em> — the verbs are closed (<code>HTTP_METHODS</code>), the hosts accumulate as capture
               sees them. That is the difference from <code>status</code>, and it is the whole reason the same
-              near-miss resolves two ways. Clears <span class="avoid">@avoid</span> "two to four options" at eight
+              near-miss resolves two ways. Clears <span class="avoid">@avoid</span> "two to four options" at nine
               verbs, and "multi-select or a clear affordance" via the <code>ANY</code> option the call site supplies
               (<code>App.tsx:28</code>), which is what the component's own contract prescribes.</p>
               <p>One line worth naming for W6: <span class="avoid">@avoid</span> "explaining a failed fetch here:
@@ -442,7 +442,7 @@ more        Secure; SameSite=Lax…</pre>Per its TSDoc — rest · hover/focus/c
           <td><strong>host</strong> · <strong>path</strong><br>T0</td>
           <td>C · cells 3–4<br><span class="v v-local">inline</span> — <a href="#payload-cell">Q4</a></td>
           <td><div class="gist">Still screen-owned: the second sighting did not arrive.</div>
-            <details class="why"><summary>why</summary><p>DEC-34 left this cell a near-miss "awaiting a second call
+            <details class="why"><summary>why</summary><p>DEC-34 left this cell a near-miss "awaiting its second call
             site". <a href="#payload-cell">The criterion and the candidates are below</a> — the one the first pass
             named has since shipped and answered no.</p></details></td>
           <td><pre class="sk">api.example.com
@@ -498,8 +498,8 @@ more        Secure; SameSite=Lax…</pre>Per its TSDoc — rest · hover/focus/c
         <td>Buys 27 characters for 60px of every path cell — and by the marginal ratio it is the
         <em>best</em> step on the table (2.2px per character against 520→560's 2.7), which is precisely why the
         ratio is not the argument. What decides it is where the three lines <em>stop</em>: at ~135 characters they
-        are still inside the opaque part of a session value, so the reader still has to act. The width is spent and
-        the act is not avoided — the smallest change that is still a change.</td>
+        are still inside the opaque part of a session value. The width is spent and the act is not avoided — the
+        smallest change that is still a change.</td>
       </tr>
       <tr>
         <td>560px and wider</td>
@@ -582,7 +582,7 @@ more        Secure; SameSite=Lax…</pre>Per its TSDoc — rest · hover/focus/c
     </table>
 
     <h3 id="payload-cell">Q4 — has the payload cell had its second sighting?</h3>
-    <p>DEC-34 left the cell a near-miss "awaiting a second call site". The question is only answerable against a
+    <p>DEC-34 left the cell a near-miss "awaiting its second call site". The question is only answerable against a
     criterion, so the run states one first: <strong>the cell is a mono, inert wire value whose length has no bound,
     in a box whose height cannot grow, cut visibly with the whole value reachable elsewhere.</strong> All four
     clauses matter — the third is what makes it DEC-34's cell rather than an ordinary span, and the fourth is what
@@ -958,7 +958,7 @@ soft:
   ordering-by-priority: "satisfied — zone order is what-is-it, can-I-believe-it, what-am-I-reading, the evidence, the depth"
   progressive-disclosure: "satisfied — Tune T1: the pane's width is how much of a clamped value is legible before the one act DEC-32 designed"
   data-ink-first: "satisfied — A' adds one hairline and the glyph Notice already owns; no badge, no panel, no second indicator beside the dot"
-  generous-targets: "inherited — the 30px row is the target (first pass); retry is a Button at the collection's hit floor"
+  generous-targets: "satisfied — retry takes Button's non-overridable hit floor, which is where the inheritance actually lives; the 30px row is the first pass's screen-owned target, restated and unmoved"
   motion-informs: "satisfied — nothing animates; the only transience is the in-flight line fork D4 requires, and it names what is awaited"
   empty-states-orient: "satisfied — Tune T4: five absences, each naming what will appear and the act that helps, with a precedence rule so no two are on screen at once"
   familiar-idioms: "satisfied — a connection band above a log table is the devtools idiom, and a typed status pattern is how that genre filters by code"
@@ -971,10 +971,13 @@ soft:
   focus-returns-to-origin: "satisfied — Esc on D returns focus to the row (inherited); Tune T5 gives the self-removing band the same guarantee by moving focus to the list"
   choose-before-act: "satisfied — A holds only choosers; the screen's one action lives in A' below every one of them, beside the thing it acts on"
 </pre>
-    <p>One <code>violated-inherited</code>, one <code>inherited</code> and one
-    <code>satisfied-via-proposal</code> — none of them a dodge. The violation is DEC-34's escape, unchanged and
-    un-re-opened by this pass; the inheritance is a first-pass verdict this run had no occasion to move; the
-    proposal is a word, and it is <a href="#proposals">on the list</a> rather than quietly used. Two slugs that were
+    <p>One <code>violated-inherited</code> and one <code>satisfied-via-proposal</code>, neither a dodge. The
+    violation is DEC-34's escape, unchanged and un-re-opened by this pass; the proposal is a word, and it is
+    <a href="#proposals">on the list</a> rather than quietly used. <strong>No slug takes the formal
+    <code>inherited</code> verdict</strong>, and that is deliberate: <code>inherited</code> is proven by following
+    its citation to a component's TSDoc, so a first-pass decision this run merely restates — the 30px row target,
+    screen-owned under a T3 build-local verdict — is <code>satisfied</code> with the provenance said out loud, not
+    an inheritance. Two slugs that were
     <code>n/a</code> in the first pass are <code>satisfied</code> here — <code>confirm-at-point</code> and
     <code>choose-before-act</code> both govern actions, and this is the pass that gives the screen one.</p>
 
@@ -1036,8 +1039,8 @@ soft:
         <tr>
           <td><strong>a combobox</strong> — a control that offers the five classes <em>and</em> accepts a typed code</td>
           <td>It is the one control that would express both halves of the status query as a menu. But
-          <code>Select</code>'s <span class="avoid">@avoid</span> rules it out by name ("free-text entry — that is a
-          combobox, not this"), so it would be a new entry, on one call site, to save the user five keystrokes over
+          <code>Select</code>'s <span class="avoid">@avoid</span> rules it out by name ("free-text entry (that is a
+          combobox, not this)"), so it would be a new entry, on one call site, to save the user five keystrokes over
           a <code>Field</code> that already accepts both forms. The vocabulary earns an entry on a second call site,
           and there is no first one that needs it.</td>
         </tr>

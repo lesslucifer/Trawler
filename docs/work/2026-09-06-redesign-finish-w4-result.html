@@ -26,7 +26,7 @@
       width chosen with the window that pays for it, the status filter keeps its control and gains a query language,
       the unreachable API has a zone and a sentence, and DEC-34's payload cell has an answer instead of a wait.</p>
       <div class="meta">WU result · 2026-09-06 · Trawler · T3 (docs/work/) ·
-      <code>wu/redesign-finish/shell-list-design</code> → <code>epic/redesign-finish</code> ·
+      <code>wu/redesign-finish/shell-list-design</code> → <a href="2026-09-06-redesign-finish-plan.html">epic/redesign-finish</a> ·
       plan: <a href="2026-09-06-redesign-finish-w4-plan.html">W4 plan</a> ·
       artifact: <a href="2026-09-06-shell-list-second-pass.html">the design run</a></div>
     </div>
@@ -177,7 +177,7 @@
       <tr>
         <td><code>cargo xtask verify-doc</code><br>the run</td>
         <td><pre class="tb">verify-doc green on docs/work/2026-09-06-shell-list-second-pass.html (design-run)
-receipt 17/17 soft · 14 satisfied · 1 inherited · 1 satisfied-via-proposal · 1 violated-inherited
+receipt 17/17 soft · 15 satisfied · 1 satisfied-via-proposal · 1 violated-inherited
 hard rules: 13/13 machine-checked (design)
 design-allow: 0 live suppression(s)</pre></td>
       </tr>
@@ -188,17 +188,24 @@ design-allow: 0 live suppression(s)</pre></td>
 
 ok    _vc.html  (7 mounts, 7 buttons)                   ← same file, bootstrap removed
 ok    _vd.html  (7 mounts, 7 buttons)                   ← same file, bootstrap + async
-ok    _probe-w3.html  (5 mounts, 2 buttons)             ← the first pass's run, control</pre></td>
+ok    _probe-w3.html  (5 mounts, 2 buttons)             ← the first pass's run, control
+
+Later prose-only edits could not be re-rendered: Chrome began aborting (SIGABRT, empty
+stdout) on every invocation. Established by diff instead — the &lt;head&gt; and the whole
+data-item="mockup" block are byte-identical to the state that rendered 7/7, and all 33
+changed lines are prose, quotations and one receipt verdict outside both.</pre></td>
       </tr>
       <tr>
         <td><code>git hash-object</code><br>the rulebook, re-pinned at the close</td>
         <td><pre class="tb">849cc8e0ff423345004cccf79715fc489abc9dbf   — unchanged since the substrate load; the receipt's pin still matches</pre></td>
       </tr>
       <tr>
-        <td>the receipt's three non-satisfactions</td>
-        <td><pre class="tb">display-equals-payload: violated-inherited  — DEC-34's escape, unchanged by this pass
-generous-targets:      inherited          — the 30px row is the first pass's target
-one-term-per-concept:  satisfied-via-proposal — "not answering" is a lexicon proposal</pre></td>
+        <td>the receipt's two non-satisfactions</td>
+        <td><pre class="tb">display-equals-payload: violated-inherited     — DEC-34's escape, unchanged by this pass
+one-term-per-concept:  satisfied-via-proposal  — "not answering" is a lexicon proposal
+
+no slug takes the formal `inherited` verdict: it is proven by following its citation to a
+component's TSDoc, and the one candidate (the 30px row target) is screen-owned under T3</pre></td>
       </tr>
       <tr>
         <td>the diff</td>
