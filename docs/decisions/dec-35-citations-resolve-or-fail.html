@@ -110,8 +110,15 @@
             reads; the oracle reads raw source instead and the roster still emits <strong>28</strong> entries with
             identical fields.</td></tr>
         <tr><td><strong>Wire it into <code>cargo xtask verify-doc</code></strong></td>
-          <td>The vitest suite already fails the merge, and a gate change landing inside an epic the gate is judging is
-            what E-REDESIGN's non-goals forbade. Left open as a later move, not a gap.</td></tr>
+          <td>Rejected on <strong>timing</strong>, not on standing: a gate change landing inside an epic the gate is
+            judging is what E-REDESIGN's non-goals forbade. Be precise about what does <em>not</em> stand in its place —
+            <strong>no hook, gate or CI runs the ui suite at all.</strong> <code>gate0</code>, <code>pre-commit</code>
+            and <code>pre-push</code> are cargo-only; <code>verify-dod</code> reads the <code>test/v2</code> note rather
+            than re-running anything, so it checks an attestation, not a result. This check's standing is therefore an
+            agent running <code>pnpm test</code> and attesting it — <em>identical to all 768 other ui tests, no weaker,
+            and not a backstop</em>. <code>verify-doc</code> already shells out to <code>node</code> for the vocabulary
+            and registry oracles, so the wiring is small and the gain is real. A later move with a named reason, not a
+            gap nobody noticed.</td></tr>
       </tbody>
     </table>
 

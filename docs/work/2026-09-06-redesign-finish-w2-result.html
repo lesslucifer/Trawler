@@ -132,6 +132,17 @@
             two-block branches, and the roster still emits 28 entries with identical fields.</td>
         </tr>
         <tr>
+          <td><em>not planned</em> — a clean first review round</td>
+          <td>round 1 <strong>refused this WU's own documents</strong></td>
+          <td>The correctness finder caught <a href="../decisions/dec-35-citations-resolve-or-fail.html">DEC-35</a> and
+            this result both asserting, as fact, that <em>“the vitest suite already fails the merge”</em>. It does not:
+            <code>gate0</code>, <code>pre-commit</code> and <code>pre-push</code> are cargo-only, <code>verify-dod</code>
+            reads the <code>test/v2</code> note rather than re-running anything, and the repo has no CI. A document
+            asserting a safety property the tree does not have is <strong>the exact defect this WU exists to remove</strong>,
+            committed by the WU that removes it. Both documents corrected before the PASS; the corrected text says what
+            actually stands and why the wiring is still worth doing.</td>
+        </tr>
+        <tr>
           <td><em>not planned</em> — no T2 record</td>
           <td><a href="../decisions/dec-35-citations-resolve-or-fail.html">DEC-35</a></td>
           <td>The distillation checklist's second row: a non-obvious choice was made. The check's shape carries a rule
@@ -219,11 +230,15 @@ exit=0</pre></td></tr>
       <div class="card">
         <div class="who">open · addressed to whichever epic next opens the gate</div>
         <h4>The oracle is not wired into <code>verify-doc</code></h4>
-        <p>The vitest suite already fails the merge, so nothing is unguarded. Wiring it into <code>cargo xtask
-        verify-doc</code> would put it in front of a design run's author too — a real gain, and a gate change this
-        epic's non-goals forbid while the gate judges this epic. Recorded in
-        <a href="../decisions/dec-35-citations-resolve-or-fail.html#alternatives">DEC-35</a> as a later move, not a
-        gap.</p>
+        <p><strong>Nothing runs the ui suite automatically</strong> — not <code>gate0</code>, not
+        <code>pre-commit</code>, not <code>pre-push</code>, and there is no CI in the repo; <code>verify-dod</code>
+        reads the <code>test/v2</code> note rather than re-running anything. So this check is enforced the way all 768
+        other ui tests are: an agent runs <code>pnpm test</code> and attests it. That is no weaker than the rest of the
+        front end, and it is <em>not</em> an automatic backstop — a later WU that reintroduces a stale citation and
+        skips the suite would not be stopped by any gate. <code>verify-doc</code> already shells out to
+        <code>node</code> for the vocabulary and registry oracles, so wiring this one in is small and would give it a
+        real gate. Recorded in
+        <a href="../decisions/dec-35-citations-resolve-or-fail.html#alternatives">DEC-35</a>.</p>
       </div>
       <div class="card">
         <div class="who">no owner sought</div>
@@ -232,6 +247,25 @@ exit=0</pre></td></tr>
         <a href="../decisions/dec-35-citations-resolve-or-fail.html#consequences">DEC-35</a>, is that the check narrows
         the surface and does not close it. <strong>No follow-up is filed</strong> — inventing a checker for English is
         not a task, it is a way to keep the row open.</p>
+      </div>
+      <div class="card">
+        <div class="who">measured, dormant · refuted as a finding</div>
+        <h4>Test-file bindings widen the vocabulary</h4>
+        <p><code>reachable()</code> reads exports and imports from <code>.test.</code> files too, so a name that exists
+        only in a test would resolve. Measured, not estimated: across the whole tree exactly <strong>one</strong> such
+        name matches the two-hump shape — <code>ReactElement</code> — and no docstring cites it. Excluding test files
+        was checked and would break <strong>zero</strong> current citations, so tightening is free whenever someone
+        wants it. Left as-is because <a href="../decisions/dec-35-citations-resolve-or-fail.html#decision">DEC-35</a>
+        states the source as “a binding <em>any file</em> imports” — code and record agree, and breadth is what keeps
+        the allowlist away.</p>
+      </div>
+      <div class="card">
+        <div class="who">raised in review · out of this WU's scope</div>
+        <h4>DEC-21 vs. the untenanted <code>iconOnly</code> prop</h4>
+        <p>A verifier noted that <a href="../decisions/dec-21-props-need-a-truthful-source.html">DEC-21</a>'s “a mode
+        with no tenant is a sibling component deferred” could be raised against <code>CopyButton</code>'s icon-only fork
+        having no call site at all. That is a question about the component's API, which predates this WU and which a
+        docstring repair may not answer. <strong>Addressed to whichever WU next opens <code>CopyButton</code>.</strong></p>
       </div>
       <div class="card">
         <div class="who">left alone, deliberately</div>
