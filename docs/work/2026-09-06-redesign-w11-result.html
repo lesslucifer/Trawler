@@ -184,13 +184,19 @@
             sentence, and the follow-up no longer credits an unwritten document with answering
             anything.</td></tr>
         <tr><td>3</td><td>3 (correctness, efficiency and reuse each re-ran round 2's fixes against
-            the tree)</td><td>0</td>
-          <td>Both candidates refuted on evidence: the coverage map <em>is</em> E-DFLOW.W11's —
+            the tree)</td><td>1</td>
+          <td>Two candidates refuted on evidence: the coverage map <em>is</em> E-DFLOW.W11's —
             its 32 assertions are that epic's own result report's 30 inherited + 1 retired + 1
             answered — and DEC-34's note on Tier-1's blindness names a different predicate
             (<code>wrap-not-truncate</code>) from the one DEC-26 measured
             (<code>check_vocabulary</code>), so it continues a lineage rather than duplicating a
-            record. A third, on this table's own shape, is fixed here.</td></tr>
+            record. The third was this table itself: three findings packed into one cell, against
+            the rule that a wall of text fails review. Split to one row each.</td></tr>
+        <tr><td>4</td><td>1</td><td>1</td>
+          <td>A confirming pass over the whole diff, which found the arithmetic of the row above:
+            it read <em>0 verified</em> while recording a fix it had just made. Corrected to 1.
+            Everything else re-checked clean against the tree — the rulebook blob, the href sweep,
+            the doc count, the design-scope answer, the registry roster and the unit suite.</td></tr>
       </tbody>
     </table>
     <p>Two candidates were refuted on evidence: a <em>64 docs checked</em> count that described the
