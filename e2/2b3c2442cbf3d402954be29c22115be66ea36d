@@ -1,0 +1,14 @@
+schema: test/v2
+level: working-unit
+epic: E-RFINISH
+wu: E-RFINISH.W3
+branch: wu/redesign-finish/perf-bench
+tests:
+  unit:
+    count: 9
+    covers: "xtask/src/ui.rs - `ui bench` takes no arguments and is listed in USAGE. TimestampText.test.tsx (3) - today's bounds and the year's bounds are exact to the millisecond either side, and a timestamp is re-labelled once the clock leaves the day it was rendered under, which is the memo generation asserted through the rendered string rather than through a private helper. flow.test.ts (4) - hostOf returns exactly what a full new URL() parse returns across port, default port, userinfo, IPv6, punycode, query-terminated and slash-less authorities; agrees with toRow on all of them; names no host for a URI that has none; and keeps answering correctly past its own memo bound. TextRenderer.test.tsx (2) - states the size its caller already knew, and derives a byte-identical string when the caller cannot supply one."
+  integration:
+    count: 4
+    covers: "ui/src/perf.test.tsx - the WU contract at each of the three seams, asserted as work not done paired with the output that must not move: (1) FlowList re-rendered ten times parses no timestamp and its time cells are string-identical; (2) a useFlows refresh whose hosts are already known parses no URI, observed by replacing globalThis.URL with a counting subclass across a real debounced refresh, and the host list is identical by reference; (3) TextRenderer and (4) BodyViewer never hand the untruncated body to TextEncoder, with the cut marker string asserted as a literal. All four were run against the pre-fix tree and all four FAIL there (640 stray moment parses, 40 stray URI parses, a 136072-character encode in each of the two body cases). Deterministic and hermetic: call counts and rendered strings, no timing assertion at any level."
+  e2e:
+    waived: "No contract moves - all three costs are cost, not behaviour, and the rendered output is identical everywhere the suite can see it. The only difference an e2e could observe is a duration, which the testing standard forbids asserting at every level. The epic's e2e is W10 and covers no part of this WU. The measurement that does exist is the committed benchmark (cargo xtask ui bench), deliberately outside the suite and outside every gate because wall-clock numbers are not deterministic; the four integration tests are what the gate reads instead."
