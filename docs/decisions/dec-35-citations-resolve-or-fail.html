@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d6af29f34851f0dfac990">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-35: a docstring citation resolves against the tree, or it fails a test</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .bad{color:var(--warn);font-weight:600}
+    .good{color:var(--ok);font-weight:600}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-35 — a docstring citation resolves against the tree, or it fails a test</h1>
+      <p><a href="dec-16-design-file-retirement.html">DEC-16</a> makes a built component's TSDoc its retired design
+         file. A design record that names deleted code is therefore not an untidy comment — it is the contract lying,
+         and until now nothing could tell.</p>
+      <div class="meta">DEC-35 · 2026-09-06 · Trawler · E-RFINISH.W2 · enforces
+        <a href="dec-30-the-three-gap-components.html">DEC-30</a>'s thesis · status: active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p><a href="dec-30-the-three-gap-components.html">DEC-30</a> was minted <em>because</em> two registry entries
+       redirected to components that did not exist: <em>“a redirect with no destination is worse than no redirect. It
+       reads as guidance and resolves to <strong>hand-roll it</strong>.”</em> It fixed those two by building the
+       missing components. It could not fix the class, because nothing read the docstrings.</p>
+    <p>By the time E-RFINISH opened the collection, <strong>seven claims across five of the 28 entries were false</strong>
+       — and every one had survived a full design run, a Tier-3 review and a merge gate:</p>
+    <table data-c="found">
+      <thead><tr><th>Entry</th><th>Claimed</th><th>Deleted by</th></tr></thead>
+      <tbody>
+        <tr><td><code>Notice</code> · <code>CopyButton</code></td>
+          <td class="bad"><code>HeaderTable</code>, and a “copy all headers” affordance</td>
+          <td>E-REDESIGN.W6 · <code>CopyAllHeadersButton</code> was never built at all</td></tr>
+        <tr><td><code>TonedText</code></td><td class="bad">an <code>@anatomy</code> pinned to
+          <code>components.tsx:25</code></td><td>E-REDESIGN.W2, with the legacy kit</td></tr>
+        <tr><td><code>CutMarker</code></td><td class="bad">“the <code>BodyRenderer</code> family”</td>
+          <td>E-DFLOW.W8 dropped the design unbuilt</td></tr>
+        <tr><td><code>Field</code></td><td class="bad">“the filter bar's <strong>four fields</strong>” — two are
+          <code>Select</code>s, the exact thing its own <code>@avoid</code> forbids it from being</td>
+          <td>E-REDESIGN.W4 converted them</td></tr>
+        <tr><td><code>Notice</code></td><td class="bad">a <code>tone="ok"</code> example quoting <em>“trawler is
+          capturing”</em> — a copy string the app never shipped</td><td>never existed</td></tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="why-invisible">
+      <strong>A design record is the one artifact nothing re-reads.</strong> Code has tests, screens have a review, the
+      rulebook has predicates. A retired design file has only the next reader — and the next reader is the person the
+      lie is aimed at.
+    </div>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <strong>Every name and path a registry docstring cites must resolve in the tree that ships with it</strong>, and
+      the collection's test suite refuses the block that does not. What may resolve is <strong>derived from the tree,
+      never transcribed</strong> — <code>scripts/design-citations.mjs</code>, a sibling of the registry oracle.
+    </div>
+    <table data-c="how">
+      <thead><tr><th>Question</th><th>Answer</th><th>Why that answer</th></tr></thead>
+      <tbody>
+        <tr><td>What is a citation?</td>
+          <td>a <strong>path</strong> (<code>x.tsx</code>, optionally <code>:N</code>) and a <strong>two-hump
+            name</strong> — <code>[A-Z][a-z0-9]+([A-Z][a-z0-9]+)+</code></td>
+          <td>a docstring is prose, so shape is the only separator available. The hump admits
+            <code>HeaderTable</code> and <code>StepStatusView</code> while leaving <code>Inter</code>,
+            <code>Pass</code>, <code>Enter</code>, <code>JSON</code>, <code>WCAG</code> and the shouted
+            <code>STANDING</code> unasked</td></tr>
+        <tr><td>What may a name resolve to?</td>
+          <td>an identifier exported under <code>ui/src</code> · a module basename there · a binding any file imports ·
+            a <code>ui/package.json</code> dependency</td>
+          <td>all four are read off the tree, so adding a component, a type or a dependency widens what a docstring may
+            cite <strong>without touching the check</strong></td></tr>
+        <tr><td>What may a path resolve to?</td>
+          <td>anything <code>git ls-files</code> returns, matched on the full path <em>or</em> the bare basename</td>
+          <td>“the tree it ships with” is exactly what is tracked, and no deny-list of build outputs can drift. Prose
+            names a module the way a reader says it aloud — <code>decode.rs</code>, not
+            <code>src/api/decode.rs</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="alternatives">What was rejected, and why</h2>
+    <table data-c="rejected">
+      <thead><tr><th>Rejected</th><th>Why it loses</th></tr></thead>
+      <tbody>
+        <tr><td><strong>An allowlist of names that need not resolve</strong><br><span class="meta">the obvious first
+          reach when a check false-positives</span></td>
+          <td><span class="bad">This is the failure mode wearing the fix's clothes.</span> The first entry costs
+            nothing and every later one is added by whoever is annoyed by the red — which is exactly the person the
+            check exists to stop. Four sources derived from the tree gave <strong>zero</strong> false positives across
+            all 28 entries; the two names that looked like exemptions, <code>CodeMirror</code> and
+            <code>ReactNode</code>, are a dependency and an import and resolve on their own.</td></tr>
+        <tr><td><strong>Require full paths in TSDoc</strong><br><span class="meta">so a path check needs no basename
+          rule</span></td>
+          <td>It would red <code>JsonRenderer</code> and <code>XmlRenderer</code> for citing <code>decode.rs</code>,
+            which is <em>true</em> — the file is at <code>src/api/decode.rs</code>. Legislating how prose spells a
+            module is a writing rule masquerading as a truth check. The question is whether the repo holds the file.</td></tr>
+        <tr><td><strong>Verify a <code>:N</code> pin points at the right line</strong></td>
+          <td>Nothing can know what the line should say, and a check that merely counts lines passes a rotted pin while
+            claiming to have read it. <span class="good">The residual is stated, not half-solved</span> —
+            <code>decisions/</code> already writes “<em>as it stood at <code>&lt;sha&gt;</code></em>” when it must pin
+            a line, and a TSDoc that needs a line number is usually a TSDoc pointing at the wrong thing.</td></tr>
+        <tr><td><strong>Add <code>@anatomy</code> to the registry's emitted entry</strong><br><span class="meta">so the
+          check could read parsed tags</span></td>
+          <td>The emitted shape is consumed by every design run. Widening it to serve a checker changes what an author
+            reads; the oracle reads raw source instead and the roster still emits <strong>28</strong> entries with
+            identical fields.</td></tr>
+        <tr><td><strong>Wire it into <code>cargo xtask verify-doc</code></strong></td>
+          <td>The vitest suite already fails the merge, and a gate change landing inside an epic the gate is judging is
+            what E-REDESIGN's non-goals forbade. Left open as a later move, not a gap.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">What this forces</h2>
+    <table data-c="forces">
+      <thead><tr><th>Who</th><th>What changes</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Any WU deleting a component</strong></td>
+          <td>The collection's suite reds until every entry that named it is rewritten. <a
+            href="dec-16-design-file-retirement.html">DEC-16</a>'s retirement order gains the half it was missing:
+            distil, verify the block, remove — and now, <em>prove the survivors still resolve</em>.</td></tr>
+        <tr><td><strong>Any WU writing a docstring</strong></td>
+          <td>A component may be named before it exists only if it is being added in the same diff. A forward reference
+            to work not yet done is precisely DEC-30's redirect with no destination.</td></tr>
+        <tr><td><strong>Whoever hits a false positive</strong></td>
+          <td>The fix is to make the tree reach the name — export it, import it, depend on it — or to stop citing it.
+            <span class="bad">Not an allowlist.</span></td></tr>
+        <tr><td><strong>What is still only a reader's job</strong></td>
+          <td>Three of the seven repairs named no identifier at all: “four fields”, “copy all headers”, “trawler is
+            capturing”. <strong>A prose claim about tenancy is invisible to a token check</strong>, and no attempt is
+            made to pretend otherwise — the check narrows the surface, it does not close it.</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
