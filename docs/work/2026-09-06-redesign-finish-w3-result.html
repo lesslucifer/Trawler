@@ -39,7 +39,8 @@
       free rather than faster where they do not, and the host merge <strong>249×</strong> — and the third is paid on the
       member the benchmark could show it helping (<strong>54.1×</strong>) and
       <strong class="bad">reverted</strong> on the member it could not. The 741 assertions that existed before
-      this WU all pass unchanged; 14 were added.
+      this WU all pass unchanged; 21 joined them, and one more on the xtask side. Two are named
+      regression tests for a defect this WU's own review found in it.
     </div>
 
     <h2 id="numbers">The three before/after pairs</h2>
@@ -151,8 +152,11 @@
         <div class="who">landed, then reverted</div>
         <h4>FormRenderer's cost is its DOM, not its byte count</h4>
         <p>FormRenderer was given the same <code>size</code> prop as its sibling and it is reverted in the
-        same commit that added it. At 40k pairs it measured 1.9408 → 1.9577 hz; at 10 MiB, where the byte
-        count is largest and the drawn DOM identical, 1.9183 → 1.9332 hz. Both are inside a ±1.7% error.</p>
+        same commit that added it. The pair that decided it was measured in one run, the member with the size
+        and without: 1.9408 against 1.9577 hz at 40k pairs, and 1.9183 against 1.9332 hz at 10 MiB, where the
+        byte count is largest and the drawn DOM identical. Both sit inside that run's ±1.7% error. (The table
+        above reports a different comparison for the same member — this WU's whole before against its tip —
+        and its noisier ±7.1% is the same verdict read another way.)</p>
         <p>The cut leaves it drawing roughly 6000 <code>KeyValueRow</code> nodes, ~520 ms, and the byte count
         is ~3% of that. The epic's rule is explicit — a fix the benchmark cannot show helping is reverted, not
         kept because its sibling's worked.</p>
@@ -185,16 +189,19 @@
         <code>pnpm bench</code> in <code>ui/</code>, <code>cargo xtask ui bench</code> from the root. It is
         not in <code>pnpm test</code> and not in any gate: wall-clock numbers are not deterministic, and the
         gate is served by the counts below instead.</td></tr>
-        <tr><td><strong>Unit</strong></td><td>13 added. <code>xtask/src/ui.rs</code> — <code>ui bench</code>
-        takes no arguments and is in <code>USAGE</code>. <code>TimestampText.test.tsx</code> — today's and the
-        year's bounds are exact to the millisecond, and a timestamp is re-labelled once the clock leaves the
-        day it was rendered under (the memo's generation). <code>flow.test.ts</code> — <code>hostOf</code>
-        returns exactly what a full <code>new URL()</code> parse returns across port, default port, userinfo,
-        IPv6, punycode, query-terminated and slash-less authorities; agrees with <code>toRow</code>; names no
-        host where there is none; and keeps answering correctly past its own memo bound.
-        <code>TextRenderer.test.tsx</code> — states the size its caller knew, derives the identical string
-        when the caller cannot supply one, and <strong>never states a shown size larger than the total</strong>
-        over a body of unreadable bytes.</td></tr>
+        <tr><td><strong>Unit</strong></td><td>16 added. <code>xtask/src/ui.rs</code> (1) —
+        <code>ui bench</code> takes no arguments and is in <code>USAGE</code>.
+        <code>TimestampText.test.tsx</code> (3) — today's and the year's bounds are exact to the millisecond
+        either side, and a timestamp is re-labelled once the clock leaves the day it was rendered under, which
+        is the memo's generation asserted through the rendered string rather than through a private helper.
+        <code>flow.test.ts</code> (5) — <code>hostOf</code> returns exactly what a full <code>new URL()</code>
+        parse returns across port, default port, userinfo, IPv6, punycode, query-terminated and slash-less
+        authorities; agrees with <code>toRow</code>; names no host where there is none; and keeps answering
+        correctly past its own memo bound. <code>body.test.ts</code> (5) — <code>decodeBody</code> reports a
+        whole decode, reports one whole even when the body carries a replacement character of its own, reports
+        a lossy one and still returns text to render, calls a byte-order-marked body whole though the mark
+        leaves its text, and calls an empty body whole. <code>TextRenderer.test.tsx</code> (2) — states the
+        size its caller knew, and derives an identical string when the caller cannot supply one.</td></tr>
         <tr><td><strong>Integration</strong></td><td>6, in <code>ui/src/perf.test.tsx</code> — one per seam,
         each asserting work not done <em>and</em> the output that must not move: the list re-renders ten times
         and parses no timestamp (rendered time cells identical); a refresh whose hosts are already known
@@ -211,9 +218,12 @@
         regression that printed a shown size larger than the total. Ten refuted, two of them by a written ruling
         rather than by argument: <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a> explicitly
         rejects recording rejected alternatives in a component's TSDoc, so leaving FormRenderer's untouched was
-        the rule rather than an omission. Round two, run on the fixed tip, found <strong>five more, every one of
-        them in code this WU had just added</strong> — the fix's own U+FFFD guard, the memo's cap check, its key,
-        its comment, and the report's account of its own method. All five are fixed above, and the deviations table
+        the rule rather than an omission. Round two, run on the fixed tip, found <strong>six more, every one of
+        them in what this WU had just added</strong> — the first fix's own U+FFFD guard, the memo's cap check,
+        its key, its comment, the memo-miss bench's overlapping pool, and this report's account of its own
+        method. Round three found no defect in shipped behaviour and four more inaccuracies in this report,
+        plus one gap in the WU's own discipline: the decode the second round's fix introduced was changed on a
+        claim about its cost and measured only afterwards. All are fixed above, and the deviations table
         carries each.</td></tr>
         <tr><td><strong>Suites</strong></td><td><code>vitest run</code> 761 passed / 45 files — the 741 that
         predate this WU unchanged. <code>cargo test --all</code> green. <code>tsc --noEmit</code> and
@@ -316,6 +326,21 @@
           The rows now carry the method that produced each, and the two routes are described above the table.
           The numbers were right and the method was sound — the account of it was not, which in a repo where
           the report is the durable record is the same kind of defect as a wrong number.</td>
+        </tr>
+        <tr>
+          <td>—</td>
+          <td><strong>The third round found no defect in the shipped behaviour, and one in the WU's own
+          discipline.</strong> The second round's fix swapped a lenient decode for a strict one on the claim
+          that a whole body pays nothing and only a failed body is decoded twice — and measured neither, in a
+          WU whose entire premise is that a cost is a number rather than an assurance. Both are benched now:
+          whole, 388.98 hz against the lenient decode's 379.15, so the claim holds; failed, 104.68 hz —
+          9.55 ms against 2.64 — which is the fallback's real price. The fix stands regardless, because what it
+          replaced answered wrongly, and the price is recorded as a follow-up beside the re-decode it
+          compounds. The round also found this report saying 51.6× in its Outcome and 54.1× in the table
+          beneath it for the same case, an over-count and a misattribution in its own test evidence, a stale
+          error figure on the FormRenderer card, and three comments narrating this WU's history rather than
+          stating what holds. A BOM-prefixed body was raised as a defect and refused — a save writes the mark,
+          so the bytes' length is the size the marker should state — but it was untested, and now is.</td>
         </tr>
         <tr>
           <td>—</td>
