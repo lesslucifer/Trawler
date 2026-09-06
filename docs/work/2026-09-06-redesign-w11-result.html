@@ -112,7 +112,7 @@
           <td><strong>28 passing, 2 spec files, 0 failing</strong> — the epic's e2e evidence,
             listed per contract in <a href="#outcome">Outcome</a> row 3</td></tr>
         <tr><td><code>cargo xtask verify-doc</code> (whole tree)</td>
-          <td><strong>64 docs checked, none red</strong> — after the rulebook blob moved
+          <td><strong>65 docs checked, none red</strong> — re-run at the final tip, after the rulebook blob moved
             <code>aeff5b0</code> → <code>849cc8e</code>. The four design runs pin the old blob and
             stay green because all four are <code>data-status="archived"</code>: a run that closed
             under an older rulebook is a record, not a stale claim.</td></tr>
@@ -166,26 +166,29 @@
             names it a fixed seven-verdict enum — so an addition is the eighth. The rejection
             argued the right thing and miscounted the thing it argued about; it now cites the
             record that owns the vocabulary instead of reasoning past it.</td></tr>
+        <tr><td>2</td><td>4 (reuse and efficiency returned none; the same stale count was found
+            independently by two dimensions)</td><td>3</td>
+          <td>Round 1's own fixes carried the round-2 defects, which is why the round exists.
+            <strong>A permanent T2 doc linked into a doc scheduled for deletion:</strong>
+            <code>use-cases/web-ui.html</code> cited the flow-list design run by
+            <code>&lt;a href&gt;</code>, and the <code>doc/v1</code> note asserted no such link
+            existed — the archive move would have 404'd a citation in a permanent record and
+            reddened verify-doc's link check at the epic gate. Rewritten as plain text marked
+            <em>archived</em>, per the work-planning standard's rule for an archived target, and the
+            note's claim corrected. <strong>The Evidence row still read 64</strong> while this
+            document's own review section said the number was now the re-run's 65 — the round-1 fix
+            explained the discrepancy instead of correcting the row it explained.
+            <strong>The refuted table restated</strong> what the follow-ups row already said; it is
+            now one sentence, and the follow-up no longer credits an unwritten document with
+            answering anything.</td></tr>
       </tbody>
     </table>
-    <p>Two candidates were refuted on evidence, and both refutations are worth keeping:</p>
-    <table data-c="refuted">
-      <thead><tr><th>Claim</th><th>Why it does not hold</th></tr></thead>
-      <tbody>
-        <tr><td>The <code>test/v2</code> note says <em>64 docs checked</em> where the tip's tree
-            holds 65.</td>
-          <td>64 was the tree at the moment the check ran — the 65th is the result report the note
-            is written in, and a doc cannot verify a tree that includes its own unwritten bytes.
-            Re-run over all 65 after the fact: still green. The number is now stated as the
-            re-run's.</td></tr>
-        <tr><td>The epic plan's two deferred items — the E-DFLOW.W11 coverage map and the DEC-13
-            revert question — are dropped, since W11 is the epic close and neither appears.</td>
-          <td>The plan says <em>epic</em> follow-ups, and the work-planning standard gives the epic
-            result report its own <code>follow-ups</code> item, written at the epic seam, not this
-            one. The obligation is live, not discharged — it is carried below so the trail cannot
-            break, and it is answered in the epic result.</td></tr>
-      </tbody>
-    </table>
+    <p>Two candidates were refuted on evidence: a <em>64 docs checked</em> count that described the
+      tree before this report existed (a doc cannot verify a tree containing its own unwritten
+      bytes — the Evidence row above is the re-run over all 65), and a claim that the epic plan's
+      two deferred items were dropped, when the standard gives the <em>epic</em> result report its
+      own follow-ups item at its own seam (the items are carried below, so the trail cannot
+      break).</p>
 
     <h2 id="follow-ups">Follow-ups</h2>
     <table data-item="follow-ups" data-c="follow-ups">
@@ -220,7 +223,8 @@
             (32 assertions classified, executed by W10's rewritten <code>onboarding.spec.ts</code>)
             and the <strong>DEC-13 revert question</strong> (already decided 2026-09-02, a day
             before this epic's plan was written; the inherited assertion survived the rebuild and
-            is asserted at <code>ui/src/App.test.tsx</code>). Both belong in the epic result's
+            is asserted at <code>ui/src/App.test.tsx</code>). Neither is open work this WU shirked —
+            both were settled elsewhere; what is owed is the recording, in the epic result's
             follow-ups, which is the artifact the plan named.</td>
           <td>the epic result</td></tr>
         <tr><td><strong>A second truncation sighting is the signal.</strong> DEC-34's own
