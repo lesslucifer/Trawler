@@ -1,0 +1,38 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W11
+branch: wu/redesign/epic-close
+changes:
+  - path: docs/decisions/dec-34-fixed-height-rows-truncate.html
+    tier: T2
+    action: added
+    distills: "The rulebook clause the flow-list design run escalated to W11 by name, answered. wrap-not-truncate keeps its predicate and its Tier-1 red; a design may record violated and ship the cut only where a declared Frame constraint makes wrapping impossible, the full value stays reachable by a named route, and the cut is visible. Four alternatives recorded as rejected, including weakening the predicate (it cannot see row height, so it would have to trust a data- attribute the design writes about itself) and a seventh verdict violated-by-constraint (reads as absolution). Synthesized UP from the run's collision table, which is archived out of git at the epic close - the argument had to move to a permanent tier or die with the run."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: modified
+    distills: "The DEC-34 row, so the record is reachable index-first per the documentation system's read-index-first rule. Its rejected-alternatives summary carries the review's correction with the record it summarises: an added receipt verdict is the eighth beside DEC-15's fixed seven, not the seventh."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: modified
+    distills: "Two amendments the epic deferred to its close. (1) wrap-not-truncate carries DEC-34's escape clause and points at it; its Tier-1 check text now states the escape is declared on the receipt, never detected - the predicate is unchanged. (2) The chromatic-meanings table gains what DEC-30 argued and W2 deliberately held back so the four screen runs would pin an unchanged substrate: StatusDot as a second owner of ok (a connection proven live) and warn (a connection that is not capturing), and ink-mute as a first-class row - the not-yet-known channel, a lifecycle state and never a verdict. The rulebook blob moves aeff5b0 -> 849cc8e; all four design runs are archived and so exempt from the pin check."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: modified
+    distills: "UC-4's 'one rule knowingly unmet' paragraph named a debt owed to the epic close; it now names the three conditions DEC-34 sets and cites the record, and states precisely which route reaches the full value (the path on the row title, both host and path in the detail pane's URI). Provenance bumped to v5, recording that all three native surfaces were re-designed and rebuilt by E-REDESIGN. No observable contract moves - this WU adds no capability, and the doc says what is true after it rather than what is promised."
+  - path: docs/work/2026-09-06-redesign-w11-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan, written before the code: the requirement, what leaves the tree and what already left (W2 deleted the legacy kit, so W11 inherits a smaller row than the epic plan wrote), the check-9 accounting, the expected result and a per-level test plan with no waiver. Its unit prediction (731 tests) proved wrong at 741 and is corrected in the test/v2 note and the result report rather than edited away."
+  - path: docs/work/2026-09-06-redesign-w11-result.html
+    tier: T3
+    action: added
+    distills: "The WU result: delivered against all five expected-result rows, a review section recording round 1 (three candidates, one verified - DEC-34's verdict miscount - and both refutations kept with their evidence), five deviations with their reasons (chiefly that two rulebook distillations addressed to W11 in writing were found by reading the epic's own escalations and added to the scope), the evidence table, what went to T2, and five follow-ups - including the two this WU deliberately closes on the record rather than doing (Checkbox's absent design file, recorded as a drop with its reason) and the three it hands on (Tier-1's blindness to a mockup's mounted JSX, the detail pane's width, the exact-match filters)."
+  - path: docs/work/2026-09-05-redesign-w10-plan.html
+    tier: T3
+    action: modified
+    distills: "Governance tags only, no content change: the doc shipped without data-artifact, so verify-doc skipped it as ungoverned and it was never judged against the wu-plan checklist. Its four items already existed under untagged headings; they now carry data-item=requirement/maps-to/expected/test-plan and the body declares data-artifact=wu-plan data-status=ready. Green on the checklist it was always supposed to meet - so the artifact archived at the epic close is governed rather than silently exempt."
+t2_synthesis:
+  status: done
+  what: "docs/decisions/dec-34-fixed-height-rows-truncate.html (new), docs/design-rules/design-rules-index.html and docs/use-cases/web-ui.html carry this WU's permanent truth; docs/decisions/decisions-index.html routes to the new record. Nothing under docs/work/ is cited by a T2 doc as a live link - the runs are named in prose so the epic's archive move cannot break a citation."
+  code_change: "ui/src/Gallery.tsx and ui/src/Gallery.test.tsx deleted, ui/src/main.tsx simplified to one mount path, ui/e2e/specs/onboarding.spec.ts relabelled to the contract it proves. None of it moves an observable contract, which is why web-ui.html gains no capability row: a deleted developer-only screen was never a user-facing surface, and UC-4/UC-5/UC-ONBOARD read after this WU exactly as they read before it."
+t1_note: "Untouched. The flow, the rulebook's structure and the gate were inputs to this epic. DEC-34 grows the rulebook's content, which DEC-14 already provides for at distillation; nothing found here argues the method is wrong. The one T1-shaped finding - that wrap-not-truncate's predicate cannot read a mockup's <script type=text/babel> block - is recorded as a follow-up for the harness, not fixed inside this epic."
