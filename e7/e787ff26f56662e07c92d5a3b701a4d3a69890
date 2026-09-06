@@ -1,0 +1,53 @@
+schema: doc/v1
+epic: E-REDESIGN
+branch: epic/redesign
+changes:
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "All three native contracts as they stand after the rebuild. UC-4 gains six observable capabilities (a status announcing its reason phrase, a 24px named capture indicator, a keyboard path into the detail, an empty state that says which nothing it is, chosen-not-typed method and host filters, and a verb toned by what it does to the resource) plus the one rulebook rule it knowingly breaks, now bounded by DEC-34. UC-5 gains the panel-scoped leg selector, every wire value as a copy target, the body as the main zone with the window never scrolling, clamped header values, Esc-dismiss with focus returning to the list, and the epic's two promised contract gains - a body that states its truncation and XML as a real dispatch rather than a fall-through to text. UC-ONBOARD gains the two-layer status model judged against a clock, the CA save step that produces the file the following steps name, copy confirms on both commands, and a quit dialog that offers the remedy. Provenance v5: seeded by E-UISHELL, contracts by E-UIFOUND/E-UIINSPECT/E-UISETUP, all three native surfaces re-designed and rebuilt by E-REDESIGN."
+  - path: docs/decisions/dec-30-the-three-gap-components.html
+    tier: T2
+    action: added
+    distills: "Why the app's one text input, one state dot and one collapse primitive are registry entries rather than screen-local: a thing copied drifts and a platform default nobody picked is invisible to every check. Carries the DotStatus-is-not-StatusTone argument (the tell is authority, not transience), Field's box being Select's box, and what a T1 primitive refuses to decide."
+  - path: docs/decisions/dec-31-leg-is-panel-scoped.html
+    tier: T2
+    action: added
+    distills: "One leg selector, in the panel's identity row, governing the header table and the body pane together - reached independently by two design runs minutes apart on sibling branches. Records what the body pane's own toggle becomes and why a second switching axis was rejected."
+  - path: docs/decisions/dec-32-body-is-the-main-zone.html
+    tier: T2
+    action: added
+    distills: "The panel never scrolls as a whole: headers take their natural height up to a share of the panel and scroll inside, the body takes the rest, and a value past three lines clamps with more/less - lines hidden, never characters. From the owner's round against real traffic, where a wall of cookies buried the body and, through a WebKit quirk, scrolled the window. Records the four rejected alternatives."
+  - path: docs/decisions/dec-33-two-layers-and-a-clock.html
+    tier: T2
+    action: added
+    distills: "The setup screen reads two layers and never blends them: steps 1-2 report this machine from its probes, dated and re-read on demand; step 3 reports traffic from timestamps against a 30-second clock. From the owner's finding that a flow captured before the proxy was turned off kept every step green. Supersedes DEC-13's 'any tunnel turns the proxy step green' clause."
+  - path: docs/decisions/dec-34-fixed-height-rows-truncate.html
+    tier: T2
+    action: added
+    distills: "The rulebook clause the flow-list design run escalated to the epic close, answered: wrap-not-truncate keeps its predicate and its Tier-1 red, and a design may record violated and ship the cut only where a declared Frame constraint makes wrapping impossible, the full value stays reachable by a named route, and the cut is visible. Four alternatives rejected, including weakening the predicate and adding an eighth receipt verdict beside DEC-15's fixed seven. Synthesized up from the design run's collision table, which this same tip archives out of git."
+  - path: docs/decisions/dec-13-onboarding-capabilities.html
+    tier: T2
+    action: updated
+    distills: "Amended where DEC-33 moved it: the connection signal no longer turns the proxy step green - it feeds the third step's traffic verdict, judged by recency. The signal's purpose and the capability are unchanged; what moved is which step it may speak for. The record's separate revert question was already decided on 2026-09-02 and its inherited assertion survived this epic's rebuild, verified at the tip."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "Rows for DEC-30 through DEC-34, so each is reachable index-first per the documentation system's read-index-first rule."
+  - path: docs/design-rules/design-rules-index.html
+    tier: T2
+    action: updated
+    distills: "The two amendments the epic's own runs escalated to its close, held back mid-epic because the rulebook is frozen input for a design run (DEC-14). wrap-not-truncate carries DEC-34's bounded escape, its Tier-1 check text stating that the escape is declared on the receipt and never detected. The chromatic-meanings table gains StatusDot as a second owner of ok and warn, and ink-mute as a first-class row - the not-yet-known channel, a lifecycle state and never a verdict, which is DEC-30's stated consequence finally landed. Rulebook blob aeff5b0 -> 849cc8e; the four archived design runs pin the old blob and stay green, because an archived run is exempt from the pin check by design."
+  - path: docs/backlog/roadmap.html
+    tier: T2
+    action: updated
+    distills: "One deferred item added by W1's review: component-design.html's T1 file skeleton still prescribes the pre-bundle tw-config.js loading shape that DEC-26 replaced, so the spec and the artifacts built to it disagree. Deferred because this epic's non-goals forbid changing the flow spec mid-epic; folded into whichever epic next revises the design-flow specs."
+t2_synthesis:
+  status: done
+  what: "The epic's durable truth is in three T2 locations - use-cases/web-ui.html for what a user can observe, five decision records for why, and the rulebook for what binds the next design. No T1 doc moved: the flow, the rulebook's structure and the gate were inputs to this epic and none proved wrong."
+archived:
+  count: 26
+  where: "docs/.archive/ (gitignored per DEC-3; content remains reachable in git history)"
+  what: "The epic plan, eleven WU plans, nine WU result reports, four closed design runs and the epic result report. docs/work/ is empty at this tip, which check 6 requires. They carry no distilled_to entries here because none appears in the endpoint diff: every one was added and removed inside this epic's own range, so main..tip shows neither endpoint. What each distilled into is recorded in its own WU's doc/v1 note at its seam, and the rows above are the sum."
+  note: "No tracked T1 or T2 doc links into docs/work/. Swept before the move with grep for href into work/ across docs/*.html, use-cases/, decisions/, design-rules/ and backlog/ - it returned exactly one, use-cases/web-ui.html citing the flow-list design run, which W11's review caught and rewrote as plain text marked archived. Left as a link it would have 404'd a citation in a permanent record the moment this commit landed, and reddened verify-doc's link check at this gate."
+t1_note: "Untouched. DEC-34 grows the rulebook's content, which DEC-14 already provides for at distillation; it does not change the method. The one T1-shaped finding - that Tier-1's predicates cannot read a mockup's mounted JSX, because the tokenizer treats a text/babel script body as opaque - is a harness bug recorded as an epic follow-up for xtask, not fixed inside this epic."
