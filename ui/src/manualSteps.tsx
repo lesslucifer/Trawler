@@ -4,12 +4,18 @@ import { CopyText, Disclosure, Select, StepList } from "./components/index";
 // The two screens that show manual instructions share this shape: pick a target,
 // read its steps, grab its command. StepList's @use asks for a command step to
 // arrive as a CopyText, so the command is REPLACED in place rather than appended
-// beside the prose that introduces it.
-function withCommand(steps: string[], command: string | null, label: string): ReactNode[] {
-  if (!command) return steps;
-  return steps.map((step) =>
-    step === command ? <CopyText key={step} value={step} label={label} /> : step,
-  );
+// beside the prose that introduces it — and a step the host renders richer than
+// text (the save-certificate step) is replaced the same way, by its own text.
+function withSlots(
+  steps: string[],
+  command: string | null,
+  label: string,
+  slots: Partial<Record<string, ReactNode>>,
+): ReactNode[] {
+  return steps.map((step) => {
+    if (slots[step] !== undefined) return slots[step];
+    return step === command ? <CopyText value={step} label={label} /> : step;
+  });
 }
 
 export function TargetPicker({
@@ -35,16 +41,18 @@ export function ManualSteps({
   steps,
   command = null,
   commandLabel = "",
+  slots = {},
   testId,
 }: {
   steps: string[];
   command?: string | null;
   commandLabel?: string;
+  slots?: Partial<Record<string, ReactNode>>;
   testId: string;
 }) {
   return (
     <div data-testid={testId}>
-      <StepList steps={withCommand(steps, command, commandLabel)} />
+      <StepList steps={withSlots(steps, command, commandLabel, slots)} />
     </div>
   );
 }

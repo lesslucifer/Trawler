@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { createApi, defaultProxyAddr, type TrawlerApi } from "./api";
 import { CA_FILENAME, hostOs, splitProxyAddr, type ProxyProbe, type TrustProbe } from "./setup";
 import { saveBody } from "./body";
-import { isDecryptedHttps } from "./flow";
+import { isDecryptedHttps, latestFlowTimes } from "./flow";
 import { useFlows, useFlowDetail } from "./useFlows";
 import { useProxyCloseConfirm } from "./closeConfirm";
 import { Layout } from "./Layout";
@@ -42,7 +42,7 @@ function hostOptions(hosts: string[]): SelectOption[] {
 
 export default function App({ api, initialState }: { api?: TrawlerApi; initialState?: OnbState }) {
   const client = useMemo(() => api ?? createApi(), [api]);
-  const { filter, flows, hosts, connections, update } = useFlows(client);
+  const { filter, flows, hosts, connections, lastConnectionAt, update } = useFlows(client);
   const [state, dispatch] = useReducer(reduce, initialState, (s) => s ?? initial());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const detail = useFlowDetail(client, selectedId);
@@ -79,13 +79,15 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
 
   const proxyAddr = defaultProxyAddr();
 
-  // Local probes (W6): the fast, ~90% truth for the Trust and Proxy steps — does
-  // *this machine* trust the CA / route its proxy through Trawler? Runs on entry
-  // and re-runs after an action so the step reflects the change immediately;
-  // capture stays the authority for the remote cases. Invoke isn't available in
-  // jsdom, so a failure just leaves the probe "unknown" (capture-will-confirm).
+  // Local probes (W6): does *this machine* trust the CA / route its proxy through
+  // Trawler? A probe is a snapshot, and nothing pushes when the user changes a
+  // setting in System Settings — so it re-runs after an action, on "check again",
+  // and whenever the window regains focus, and the reading carries its time.
+  // Invoke isn't available in jsdom, so a failure leaves the probe "unknown".
   const [trustProbe, setTrustProbe] = useState<TrustProbe>("unknown");
   const [proxyProbe, setProxyProbe] = useState<ProxyProbe>("unknown");
+  const [probing, setProbing] = useState(false);
+  const [probedAt, setProbedAt] = useState<number | null>(null);
   const [probeNonce, setProbeNonce] = useState(0);
   const reprobe = useCallback(() => setProbeNonce((n) => n + 1), []);
 
@@ -93,16 +95,31 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
     if (state.phase !== "onboarding") return;
     const { host, port } = splitProxyAddr(proxyAddr);
     let live = true;
-    invoke<TrustProbe>("ca_trusted")
-      .then((p) => live && setTrustProbe(p))
-      .catch(() => live && setTrustProbe("unknown"));
-    invoke<ProxyProbe>("proxy_status", { host, port })
-      .then((p) => live && setProxyProbe(p))
-      .catch(() => live && setProxyProbe("unknown"));
+    setProbing(true);
+    Promise.allSettled([
+      invoke<TrustProbe>("ca_trusted").then(
+        (p) => live && setTrustProbe(p),
+        () => live && setTrustProbe("unknown"),
+      ),
+      invoke<ProxyProbe>("proxy_status", { host, port }).then(
+        (p) => live && setProxyProbe(p),
+        () => live && setProxyProbe("unknown"),
+      ),
+    ]).then(() => {
+      if (!live) return;
+      setProbing(false);
+      setProbedAt(Date.now());
+    });
     return () => {
       live = false;
     };
   }, [state.phase, proxyAddr, probeNonce]);
+
+  useEffect(() => {
+    if (state.phase !== "onboarding") return;
+    window.addEventListener("focus", reprobe);
+    return () => window.removeEventListener("focus", reprobe);
+  }, [state.phase, reprobe]);
 
   const installCa = async () => {
     const pem = await client.caCertPem();
@@ -158,7 +175,13 @@ export default function App({ api, initialState }: { api?: TrawlerApi; initialSt
           proxyAddr={proxyAddr}
           trustProbe={trustProbe}
           proxyProbe={proxyProbe}
-          observed={{ decrypted: isDecryptedHttps(flows), trafficSeen: flows.length > 0 || connections > 0 }}
+          probing={probing}
+          probedAt={probedAt}
+          traffic={{
+            ...latestFlowTimes(flows),
+            lastTunnelAt: lastConnectionAt,
+            ever: flows.length > 0 || connections > 0,
+          }}
           onInstallCa={installCa}
           onSaveCa={saveCa}
           onSetProxy={setProxy}

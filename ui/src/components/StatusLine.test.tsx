@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { proxyStatus, trustStatus, type StepStatusView } from "../setup";
+import { NO_TRAFFIC, proxyStatus, trafficStatus, trustStatus, type StepStatusView } from "../setup";
 import { StatusLine } from "./StatusLine";
 
 const glyphClass = (status: StepStatusView) => {
@@ -79,18 +79,18 @@ describe("StatusLine", () => {
   });
 
   it("renders short, never the full sentence — the call site does not shorten", () => {
-    const status = trustStatus("unknown", { decrypted: false, trafficSeen: false }, null);
+    const status = trustStatus("unknown", null);
     render(<StatusLine status={status} />);
 
     expect(screen.getByText("can't check automatically")).toBeInTheDocument();
-    expect(screen.queryByText(/we'll confirm when traffic arrives/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/step 3 shows whether traffic decrypts/)).not.toBeInTheDocument();
   });
 
   it("leaves the remedy to Notice — a verdict and an instruction are two elements", () => {
-    const status = trustStatus("untrusted", { decrypted: false, trafficSeen: true }, null);
+    const status = trafficStatus({ ...NO_TRAFFIC, lastTunnelAt: 0 }, 10_000);
     render(<StatusLine status={status} />);
 
-    expect(status.remedy).toBe("install the certificate on the device you're capturing from");
+    expect(status.remedy).toMatch(/doesn't trust Trawler's certificate/);
     expect(screen.queryByText(status.remedy!)).not.toBeInTheDocument();
   });
 
@@ -108,37 +108,30 @@ describe("StatusLine", () => {
   // The precedence is the contract this component renders, and the reason it is
   // T2. Driven through the real resolvers so a re-ranking in either place reds.
   describe("the resolved verdict it is handed", () => {
-    const seen = { decrypted: false, trafficSeen: false };
-
     it("shows an authoritative positive over a stale action error", () => {
-      render(<StatusLine status={trustStatus("trusted", seen, null, "install exploded")} />);
+      render(<StatusLine status={trustStatus("trusted", null, "install exploded")} />);
 
       expect(screen.getByText("✓")).toBeInTheDocument();
       expect(screen.queryByText(/install exploded/)).not.toBeInTheDocument();
     });
 
     it("shows a running action over every settled verdict, error included", () => {
-      render(<StatusLine status={trustStatus("untrusted", seen, "installing", "boom")} />);
+      render(<StatusLine status={trustStatus("untrusted", "installing", "boom")} />);
 
       expect(screen.getByTestId("status-line-spinner")).toBeInTheDocument();
       expect(screen.getByText("installing…")).toBeInTheDocument();
     });
 
-    it("shows observed proof over a stale error when the probe cannot say", () => {
-      render(
-        <StatusLine
-          status={proxyStatus("unknown", { decrypted: true, trafficSeen: true }, null, "set failed")}
-        />,
-      );
+    it("shows a decrypted flow arriving now as the ok verdict of the traffic layer", () => {
+      const status = trafficStatus({ ...NO_TRAFFIC, lastDecryptedAt: 9_000 }, 10_000);
+      render(<StatusLine status={status} />);
 
-      expect(screen.getByText("receiving traffic")).toBeInTheDocument();
-      expect(glyphClass(proxyStatus("unknown", { decrypted: true, trafficSeen: true }, null, "set failed"))).toContain(
-        "text-ok",
-      );
+      expect(screen.getByText("capturing traffic")).toBeInTheDocument();
+      expect(glyphClass(status)).toContain("text-ok");
     });
 
     it("shows the error when nothing positive outranks it", () => {
-      render(<StatusLine status={proxyStatus("unknown", seen, null, "port busy")} />);
+      render(<StatusLine status={proxyStatus("unknown", null, "port busy")} />);
 
       expect(screen.getByText("couldn't set the proxy")).toBeInTheDocument();
       expect(screen.getByText("⚠")).toBeInTheDocument();

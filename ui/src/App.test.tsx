@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import App from "./App";
 import type { Filter, FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 import type { OnbState } from "./onboardingMachine";
-import { CA_FILENAME, guidedSteps } from "./setup";
+import { CA_FILENAME, guidedSteps, TUNNEL_GRACE_MS } from "./setup";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
 // App wires a quit-time close guard (W5); stub the window so onCloseRequested is a
@@ -284,7 +284,10 @@ test("Stop routing invokes unset_proxy after the proxy was set (W5)", async () =
   expect(invoke).toHaveBeenCalledWith("unset_proxy");
 });
 
-test("a connection event turns the proxy step green while trust warns — no flow, no decrypt", async () => {
+// A tunnel is a live signal about traffic, so it lands on step 3 — first as a
+// connection in its grace, then, once no flow has answered it, as the warning
+// that names the missing certificate. The probed steps never hear about it.
+test("a connection event reaches step 3, not the proxy step — and warns once no flow answers it", async () => {
   onMacHost();
   const { api, fireConnection } = mockApi(() => []); // no flows ever
   render(<App api={api} initialState={AT_SET_PROXY} />);
@@ -292,13 +295,40 @@ test("a connection event turns the proxy step green while trust warns — no flo
 
   fireConnection(); // a tunnel reached the proxy; its handshake failed → no flow
   await waitFor(() =>
-    expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent(/receiving traffic/),
+    expect(screen.getByTestId("step-verify-status")).toHaveTextContent("a connection just arrived…"),
   );
-  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-tone", "ok");
-  // Trust can't be green (nothing decrypted); it points at the sending device.
-  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent(/arriving but not decrypting/);
-  // Probe-green/traffic alone never reveals the list — that's still capture-only.
+  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent("can't check automatically");
+  expect(screen.getByTestId("step-set-proxy")).not.toHaveAttribute("data-tone", "ok");
+
+  // The screen's clock ticks on; once the grace is spent the tunnel is a failure.
+  const realNow = Date.now;
+  vi.spyOn(Date, "now").mockImplementation(() => realNow() + TUNNEL_GRACE_MS + 1_000);
+  await waitFor(
+    () => expect(screen.getByTestId("step-verify-status")).toHaveTextContent("arriving but not decrypting"),
+    { timeout: 3_000 },
+  );
+  expect(screen.getByTestId("step-verify")).toHaveAttribute("data-tone", "warn");
+  expect(screen.getByTestId("step-trust-ca")).not.toHaveAttribute("data-tone", "warn");
+  // Traffic alone never reveals the list — that's still capture-only.
   expect(screen.queryByTestId("flow-row")).toBeNull();
+});
+
+// The probes are a snapshot of this machine. Two things re-take it without an
+// action: the control above the steps, and the window coming back into focus —
+// which is when the user has just been in System Settings.
+test("check again and window focus each re-read both probes, and the reading is stamped", async () => {
+  onMacHost();
+  const { api } = mockApi(() => []);
+  render(<App api={api} initialState={ONBOARDING} />);
+  await waitFor(() => expect(screen.getByTestId("recheck")).toHaveTextContent(/checked at \d\d:\d\d:\d\d/));
+  const probes = () => vi.mocked(invoke).mock.calls.filter(([name]) => name === "ca_trusted" || name === "proxy_status").length;
+  expect(probes()).toBe(2);
+
+  fireEvent.click(screen.getByRole("button", { name: "check again" }));
+  await waitFor(() => expect(probes()).toBe(4));
+
+  fireEvent(window, new Event("focus"));
+  await waitFor(() => expect(probes()).toBe(6));
 });
 
 // Choosing a host offered by the dropdown, rather than typing one: the options

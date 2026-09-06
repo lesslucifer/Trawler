@@ -93,6 +93,21 @@
       <code>/stats</code> is a plain GET like every other route.
     </div>
 
+    <div class="callout" data-c="connection-signal-amended">
+      <strong>Amended 2026-09-06 (E-REDESIGN.W10 ·
+      <a href="dec-32-two-layers-and-a-clock.html">DEC-32</a>): the signal no longer turns the proxy
+      step green.</strong> The owner found, on the running build, that a flow captured before the proxy
+      was turned off kept every step green — so the steps that report <em>this machine</em> (trust, proxy)
+      now read their probes and nothing else, and the connection signal feeds the third step's
+      <em>traffic</em> verdict, judged by recency: a live <code>connection</code> event is stamped on
+      arrival and reads <em>a connection just arrived…</em> then <em>arriving but not decrypting</em>
+      once no flow has answered it; the <code>/stats</code> tally, which carries no time, can only
+      distinguish <em>idle</em> from <em>waiting for your first request</em>. The signal's purpose stands
+      — the pre-decrypt attempt is observable — and the capability is unchanged; what moved is which
+      step it is allowed to speak for. The narrow invariant above reads the same both ways: a probe-green
+      step never ends onboarding, and now a traffic-green step never speaks for the machine.
+    </div>
+
     <h3 id="why-not">Alternatives rejected</h3>
     <table>
       <thead><tr><th>Instead of…</th><th>Rejected because</th></tr></thead>

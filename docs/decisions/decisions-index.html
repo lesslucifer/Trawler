@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v14 · 2026-09-03 · Trawler</div>
+      <div class="meta">v15 · 2026-09-06 · Trawler</div>
     </div>
   </header>
   <main>
@@ -258,6 +258,20 @@
             and narrows W8's <code>ModeButton</code> swap to the decode pair; the leg pair is deleted, not
             swapped. Default leg is <strong>request</strong>, always — the shipped per-flow rule moved the
             screen under the user between flows</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-32-two-layers-and-a-clock.html"><code>dec-32-two-layers-and-a-clock.html</code></a></td>
+          <td><span class="badge id">DEC-32</span></td>
+          <td><strong>The setup screen reads two layers and judges traffic against a clock</strong> — steps 1–2
+            report <em>this machine</em> from the two probes and nothing else, re-read on demand and on window
+            focus with the reading dated; step 3 reports <em>traffic</em> from timestamps, where a decrypted flow
+            inside 30 s is <em>capturing</em>, a tunnel no flow answered is <em>arriving but not decrypting</em>,
+            and anything older is <em>idle</em>. Closes the owner's finding that a flow captured before the proxy
+            was turned off kept every step green. Rejected: a recency window on the borrowed positive (a phone's
+            flow still says nothing about this host), relative time on the verdict (DEC-22), re-probing on an
+            interval, timestamping the tunnel tally in the core. Supersedes DEC-13's "proxy step goes green on any
+            tunnel" clause; the signal itself is unchanged</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

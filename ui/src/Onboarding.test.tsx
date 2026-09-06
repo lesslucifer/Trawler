@@ -4,7 +4,7 @@ import { expect, test, vi } from "vitest";
 import { Onboarding } from "./Onboarding";
 import onboardingSource from "./Onboarding.tsx?raw";
 import { COPY, reduce, type OnbState } from "./onboardingMachine";
-import { guidedSteps, proxySnippet, proxySteps } from "./setup";
+import { guidedSteps, NO_TRAFFIC, proxySnippet, proxySteps, RECENT_MS, SAVE_CA_STEP, TUNNEL_GRACE_MS } from "./setup";
 
 vi.mock("./setup", async (importOriginal) => {
   const mod = await importOriginal<typeof import("./setup")>();
@@ -13,7 +13,12 @@ vi.mock("./setup", async (importOriginal) => {
 
 const onboarding: OnbState = { phase: "onboarding", step: "trust-ca", everProven: false };
 const atSetProxy: OnbState = { phase: "onboarding", step: "set-proxy", everProven: false };
+const atVerify: OnbState = { phase: "onboarding", step: "verify", everProven: false };
 const ADDR = "10.1.2.3:9999";
+
+// Traffic is judged against the screen's own clock, so a fixture states how long
+// ago something arrived rather than when.
+const ago = (ms: number) => Date.now() - ms;
 
 function Harness({
   start = onboarding,
@@ -21,7 +26,15 @@ function Harness({
 }: { start?: OnbState } & Partial<
   Pick<
     Parameters<typeof Onboarding>[0],
-    "os" | "onInstallCa" | "onSaveCa" | "onRecheck" | "trustProbe" | "proxyProbe"
+    | "os"
+    | "onInstallCa"
+    | "onSaveCa"
+    | "onRecheck"
+    | "trustProbe"
+    | "proxyProbe"
+    | "probing"
+    | "probedAt"
+    | "traffic"
   >
 >) {
   const [state, dispatch] = useReducer(reduce, start);
@@ -217,25 +230,56 @@ test("the last step renders the concrete prove-it command with the real address"
   expect(screen.getByText("curl -x http://10.1.2.3:9999 https://example.com")).toBeInTheDocument();
 });
 
-test("the trust status line reflects the probe: trusted → green, untrusted+traffic → device warning", () => {
+test("the trust status line reflects the probe: trusted → green, untrusted → a calm not-yet", () => {
   const { rerender } = render(
     <Onboarding state={onboarding} dispatch={vi.fn()} os="macos" trustProbe="trusted" onInstallCa={vi.fn()} />,
   );
   expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent(/trusted on this machine/);
   expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-tone", "ok");
 
-  rerender(
+  rerender(<Onboarding state={onboarding} dispatch={vi.fn()} os="macos" trustProbe="untrusted" onInstallCa={vi.fn()} />);
+  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent(/not trusted on this machine yet/);
+  expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-tone", "muted");
+});
+
+// The user's own finding: a flow captured earlier kept every step green after
+// the proxy had been turned off. This machine and the traffic are two layers, and
+// a step of one layer never borrows a verdict from the other.
+test("traffic decrypting right now never turns a probed step green — it is step 3's verdict alone", () => {
+  render(
     <Onboarding
-      state={onboarding}
+      state={atVerify}
       dispatch={vi.fn()}
       os="macos"
       trustProbe="untrusted"
-      observed={{ decrypted: false, trafficSeen: true }}
-      onInstallCa={vi.fn()}
+      proxyProbe="none"
+      traffic={{ ...NO_TRAFFIC, lastDecryptedAt: ago(2_000) }}
     />,
   );
-  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent(/arriving but not decrypting/);
-  expect(screen.getByTestId("step-trust-ca")).toHaveAttribute("data-tone", "warn");
+
+  expect(screen.getByTestId("step-verify-status")).toHaveTextContent("capturing traffic");
+  expect(screen.getByTestId("step-verify")).toHaveAttribute("data-tone", "ok");
+  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent("not trusted on this machine yet");
+  expect(screen.getByTestId("step-trust-ca")).not.toHaveAttribute("data-tone", "ok");
+  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent("not set on this machine yet");
+  expect(screen.getByTestId("step-set-proxy")).not.toHaveAttribute("data-tone", "ok");
+});
+
+test("a flow older than the window reads idle, and the open step dates it", () => {
+  const lastDecryptedAt = ago(RECENT_MS + 60_000);
+  render(<Onboarding state={atVerify} dispatch={vi.fn()} traffic={{ ...NO_TRAFFIC, lastDecryptedAt }} />);
+
+  const status = screen.getByTestId("step-verify-status");
+  expect(status).toHaveTextContent("idle — nothing arriving now");
+  expect(status).not.toHaveTextContent(/capturing/);
+  expect(screen.getByTestId("step-verify")).toHaveAttribute("data-tone", "muted");
+  expect(screen.getByTestId("last-flow")).toHaveTextContent(/last flow at \d\d:\d\d:\d\d/);
+});
+
+test("nothing ever seen shows no last-flow line — there is no flow to date", () => {
+  render(<Onboarding state={atVerify} dispatch={vi.fn()} />);
+  expect(screen.getByTestId("step-verify-status")).toHaveTextContent("waiting for your first request");
+  expect(screen.queryByTestId("last-flow")).toBeNull();
 });
 
 // The verdict is a fragment; the instruction it used to carry is a Notice.
@@ -257,29 +301,30 @@ test("a long verdict keeps the fragment on the line and moves its remedy out", (
   expect(screen.getByTestId("set-proxy-remedy")).toHaveTextContent(/point it at Trawler here/);
 });
 
-test("the trust step's remedy is rendered, not just computed", () => {
+test("a tunnel no flow answered warns on step 3 and says whose certificate is missing", () => {
   render(
     <Onboarding
-      state={onboarding}
+      state={atVerify}
       dispatch={vi.fn()}
-      os="macos"
-      trustProbe="untrusted"
-      observed={{ decrypted: false, trafficSeen: true }}
-      onInstallCa={vi.fn()}
+      trustProbe="trusted"
+      traffic={{ ...NO_TRAFFIC, lastTunnelAt: ago(TUNNEL_GRACE_MS + 1_000) }}
     />,
   );
 
-  const status = screen.getByTestId("step-trust-ca-status");
+  const status = screen.getByTestId("step-verify-status");
   expect(status).toHaveTextContent("arriving but not decrypting");
-  expect(status).not.toHaveTextContent(/install the certificate on the device/);
-  expect(screen.getByTestId("trust-ca-remedy")).toHaveTextContent(
-    "install the certificate on the device you're capturing from",
+  expect(status).not.toHaveTextContent(/doesn't trust Trawler's certificate/);
+  expect(screen.getByTestId("verify-remedy")).toHaveTextContent(
+    "the client sending it doesn't trust Trawler's certificate — install it there; step 1 covers this machine",
   );
+  // The probe said trusted; the failing client is somewhere else, and step 1 keeps
+  // saying what it knows rather than borrowing the failure.
+  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent("trusted on this machine");
 });
 
-test("an un-probeable trust step still says what will settle it", () => {
+test("an un-probeable trust step still says where the answer will show", () => {
   render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" trustProbe="unknown" />);
-  expect(screen.getByTestId("trust-ca-remedy")).toHaveTextContent("we'll confirm when traffic arrives");
+  expect(screen.getByTestId("trust-ca-remedy")).toHaveTextContent("step 3 shows whether traffic decrypts");
 });
 
 // The failed install already states itself through the action's own Notice; a
@@ -364,7 +409,7 @@ test("switching target after a failed install keeps the error reachable", async 
   expect(screen.getByTestId("trust-ca-remedy")).toHaveTextContent("elevation declined");
 });
 
-test("the proxy status line goes green on a connection even with no decrypt", () => {
+test("a connection never turns the proxy step green — the proxy step is this machine's probe", () => {
   render(
     <Onboarding
       state={atSetProxy}
@@ -372,12 +417,13 @@ test("the proxy status line goes green on a connection even with no decrypt", ()
       os="macos"
       proxyAddr={ADDR}
       proxyProbe="none"
-      observed={{ decrypted: false, trafficSeen: true }}
+      traffic={{ ...NO_TRAFFIC, lastTunnelAt: ago(TUNNEL_GRACE_MS + 1_000) }}
       onSetProxy={vi.fn()}
     />,
   );
-  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent(/receiving traffic/);
-  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-tone", "ok");
+  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent("not set on this machine yet");
+  expect(screen.getByTestId("step-set-proxy")).toHaveAttribute("data-tone", "muted");
+  expect(screen.getByTestId("step-verify-status")).toHaveTextContent("arriving but not decrypting");
 });
 
 test("an un-probeable host shows 'can't check' rather than a false 'not set up'", () => {
@@ -404,14 +450,28 @@ test("no third tone map — the screen never maps a verdict tone to a class", ()
 
 // "Save Trawler's certificate as trawler-ca.pem" named a file the screen never
 // produced — every manual route began with an instruction the user could not
-// carry out. The step is an action, not prose.
-test("the certificate is saved by a button, not by a sentence telling the user to save it", async () => {
+// carry out. The step that names the file is the step that produces it: the save
+// control ends the sentence, and its outcome lands beneath, inside the same step.
+test("the certificate is saved from the step that names it — a ↓ at the end of the sentence", async () => {
   const onSaveCa = vi.fn(async () => "trawler-ca.pem");
   render(<Harness start={onboarding} os="macos" onSaveCa={onSaveCa} />);
 
-  fireEvent.click(screen.getByRole("button", { name: "save certificate" }));
+  const save = screen.getByRole("button", { name: "save certificate" });
+  const step = save.closest("li")!;
+  expect(screen.getByTestId("guided-steps")).toContainElement(step);
+  expect(step).toHaveTextContent(SAVE_CA_STEP);
+  expect(save).toHaveTextContent("↓");
+
+  fireEvent.click(save);
   expect(onSaveCa).toHaveBeenCalledOnce();
   expect(await screen.findByText(/saved as trawler-ca\.pem/)).toBeInTheDocument();
+  expect(step).toContainElement(screen.getByTestId("save-ca-status"));
+});
+
+test("without a save handler the step stays a sentence, with no dead control", () => {
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} os="linux" />);
+  expect(screen.getByTestId("guided-steps")).toHaveTextContent(SAVE_CA_STEP);
+  expect(screen.queryByRole("button", { name: "save certificate" })).toBeNull();
 });
 
 test("a failed save states why, and never claims the file landed", async () => {
@@ -426,13 +486,40 @@ test("a failed save states why, and never claims the file landed", async () => {
 
 // A probe is a reading taken at a moment. Nothing pushes when the user changes
 // the system proxy in System Settings, so a green verdict outlives its truth
-// until something asks again.
-test("each probed step offers a re-check, and asking again re-reads the machine", async () => {
+// until something asks again. One reading covers both probed steps, so one
+// control re-takes it — above the steps, not inside each.
+test("one check-again for this machine, above the steps, re-reads both probes", () => {
   const onRecheck = vi.fn();
-  render(<Harness start={onboarding} os="macos" trustProbe="trusted" onRecheck={onRecheck} />);
+  render(<Harness start={atVerify} os="macos" trustProbe="trusted" probedAt={Date.now()} onRecheck={onRecheck} />);
 
-  fireEvent.click(screen.getByRole("button", { name: "check again" }));
+  const buttons = screen.getAllByRole("button", { name: "check again" });
+  expect(buttons).toHaveLength(1);
+  expect(screen.getByTestId("recheck")).toContainElement(buttons[0]);
+  expect(screen.getByTestId("recheck")).toHaveTextContent(/checked at \d\d:\d\d:\d\d/);
+  for (const step of ["step-trust-ca", "step-set-proxy", "step-verify"]) {
+    expect(screen.getByTestId(step)).not.toContainElement(buttons[0]);
+  }
+
+  fireEvent.click(buttons[0]);
   expect(onRecheck).toHaveBeenCalledOnce();
+});
+
+// Fork D4: a control disabled in flight needs the progress line beside it. Here
+// the line is the two probed verdicts themselves, in-flight — and only those two,
+// since a probe says nothing about traffic.
+test("while checking, the control is disabled and both probed steps show the in-flight verdict", () => {
+  render(<Harness start={onboarding} os="macos" trustProbe="trusted" proxyProbe="ours" probing onRecheck={vi.fn()} />);
+
+  expect(screen.getByRole("button", { name: "check again" })).toBeDisabled();
+  expect(screen.getByTestId("recheck")).toHaveTextContent("checking this machine…");
+  expect(screen.getByTestId("step-trust-ca-status")).toHaveTextContent("checking…");
+  expect(screen.getByTestId("step-set-proxy-status")).toHaveTextContent("checking…");
+  expect(screen.getByTestId("step-verify-status")).toHaveTextContent("waiting for your first request");
+});
+
+test("without a recheck handler the screen offers no control and states no time", () => {
+  render(<Onboarding state={onboarding} dispatch={vi.fn()} probedAt={Date.now()} />);
+  expect(screen.queryByTestId("recheck")).toBeNull();
 });
 
 test("re-checking reports a proxy that was green and is no longer", async () => {
@@ -457,7 +544,7 @@ test("re-checking reports a proxy that was green and is no longer", async () => 
     />,
   );
   const status = screen.getByTestId("step-set-proxy-status");
-  expect(status).not.toHaveTextContent(/system proxy is set to Trawler/);
+  expect(status).toHaveTextContent("not set on this machine yet");
   expect(screen.getByTestId("step-set-proxy")).not.toHaveAttribute("data-tone", "ok");
 });
 

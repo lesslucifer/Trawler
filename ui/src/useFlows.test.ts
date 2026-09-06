@@ -63,6 +63,25 @@ test("the /stats seed still advances the counter when it is ahead of live bumps"
   expect(result.current.connections).toBe(5);
 });
 
+// A tunnel counted before the UI subscribed has no time, so the seed leaves the
+// timestamp empty; only a live event can say "now", which is what the setup
+// screen's traffic verdict reads.
+test("a live connection is stamped with its time; the /stats seed stamps nothing", async () => {
+  const f = fakeApi();
+  const { result } = renderHook(() => useFlows(f.api));
+  await waitFor(() => expect(f.statsPending()).toBe(true));
+
+  await act(async () => {
+    f.resolveStats(4);
+  });
+  expect(result.current.connections).toBe(4);
+  expect(result.current.lastConnectionAt).toBeNull();
+
+  const before = Date.now();
+  act(() => f.fireConnection());
+  expect(result.current.lastConnectionAt).toBeGreaterThanOrEqual(before);
+});
+
 // The host options must survive their own filter. `flows` is server-filtered, so
 // deriving the options from it would shrink them to the host already chosen and
 // leave the user no way to pick another.

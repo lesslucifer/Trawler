@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-REDESIGN.W10 — build the setup screen + quit dialog</h1>
       <p>The third design of this screen, and the first one built.</p>
-      <div class="meta">Draft v1 · 2026-09-05 · Trawler · branch <code>wu/redesign/setup-quit-build</code></div>
+      <div class="meta">Draft v2 · 2026-09-05, grew 2026-09-06 · Trawler · branch <code>wu/redesign/setup-quit-build</code></div>
     </div>
   </header>
   <main>
@@ -146,6 +146,41 @@
       <p>The contract the design states for the entry is built as given: the states, and the
       label-inside-the-hit-target rule.</p>
     </div>
+
+    <h2 id="grew-at-review">Grew at review — the status model, from the running build</h2>
+    <div class="callout" data-c="grew-at-review">
+      <p><strong>2026-09-06.</strong> The owner operated the built screen and gave four instructions. Three
+      moved the design; the fourth set the bar. The run was <strong>amended inside this WU</strong> under
+      DEC-24/DEC-25 — the amended bytes re-enter Tier-3 on this merge, and the citation re-pins to them —
+      and the why is distilled to <a href="../decisions/dec-32-two-layers-and-a-clock.html">DEC-32</a>.</p>
+    </div>
+    <table data-c="grew-at-review-table">
+      <thead><tr><th>Instruction</th><th>What W10 now also lands</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>the step status is overwritten by traffic that may be old; show this machine's trust, this machine's proxy, and whether NEW traffic is arriving, each as its own fact</td>
+          <td>two layers, never blended: <code>trustStatus</code>/<code>proxyStatus</code> take no traffic input; <code>trafficStatus</code> replaces <code>verifyStatus</code>, reads the newest decrypted / plain / tunnel timestamps against a ticking clock (30 s window, 3 s tunnel grace), and the open step dates the last flow. Nineteen <code>short</code> forms replace sixteen</td>
+          <td><code>setup.ts</code> · <code>flow.ts</code> (<code>latestFlowTimes</code>) · <code>useFlows.ts</code> (<code>lastConnectionAt</code>) · <code>Onboarding.tsx</code> · <code>App.tsx</code></td>
+        </tr>
+        <tr>
+          <td>"check again" should be global, not per step</td>
+          <td>one dated row above the checklist — <em>checked at HH:MM:SS · check again</em> — re-reads both probes; the window regaining focus re-reads them too. While a read runs the control is disabled and both probed steps show <em>⟳ checking…</em> (fork D4)</td>
+          <td><code>Onboarding.tsx</code> (zone R) · <code>App.tsx</code> (<code>probing</code>, <code>probedAt</code>, the focus listener)</td>
+        </tr>
+        <tr>
+          <td>the save should not be a button — embed it in the text or a small download at the end</td>
+          <td>a ↓ <code>IconButton</code> ends the step sentence that names <code>trawler-ca.pem</code>; its outcome lands beneath the sentence inside the same step. <code>ManualSteps</code> gained <code>slots</code> so a host can render one step richer than text</td>
+          <td><code>manualSteps.tsx</code> · <code>Onboarding.tsx</code> · <code>setup.ts</code> (<code>SAVE_CA_STEP</code>)</td>
+        </tr>
+        <tr>
+          <td>think carefully about UI/UX</td>
+          <td>each change above is traced to a Frame driver or a component contract in the amended run before anything moved; the trade each makes is drawn in Tune</td>
+          <td>the run's Review table, five new rows</td>
+        </tr>
+      </tbody>
+    </table>
+    <p><strong>Tests that grew with it:</strong> the resolver table asserts nineteen verdicts literally; <code>trafficStatus</code> has a recency suite (old flow → idle, tunnel in grace → in-flight, unanswered tunnel → warn, positive outranks failing); the screen asserts that decrypting traffic never turns a probed step green, that one check-again exists and re-reads both probes, that window focus re-reads them, and that the ↓ lives inside the step that names the file. Mutation-checked: dropping the recency rule reds two named tests.</p>
+    <p><strong>What this does not do:</strong> the core is untouched — the tunnel tally keeps no clock, so at launch it can only distinguish <em>idle</em> from <em>waiting</em>; the live event carries the time. Connected-client identity (who is sending) is out of W10's scope: <code>hudsucker</code>'s <code>HttpContext</code> carries <code>client_addr</code> but the recorder discards it, and surfacing it is a new capability across core, API and screen — its own WU with its own design run.</p>
 
     <h2 id="modal-shell">The build-local composition</h2>
     <p data-c="modal-shell-row">

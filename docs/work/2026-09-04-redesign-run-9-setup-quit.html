@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Design run #9 — setup + quit dialog</h1>
       <p>The flow applied to <code>Onboarding</code> and <code>ProxyCloseDialog</code>: two surfaces, two Frames, one registry. Run blind to the three archived runs of this screen.</p>
-      <div class="meta">Design run · 2026-09-04 · Trawler · T3 (docs/work/) · E-REDESIGN.W9 · rulebook <code>aeff5b0f</code> · registry 27 entries</div>
+      <div class="meta">Design run · 2026-09-04 · Trawler · T3 (docs/work/) · E-REDESIGN.W9 · rulebook <code>aeff5b0f</code> · registry 27 entries · <strong>amended 2026-09-06 in E-REDESIGN.W10</strong> — the setup screen's status model, from the owner's review of the running build (see <a href="#review">Review</a>)</div>
     </div>
   </header>
 
@@ -53,14 +53,16 @@
          request visible, on their own machine.
 
 <strong>Given</strong> (functional input — received, not designed):
-  trustProbe · proxyProbe · observed.decrypted · observed.trafficSeen
-  onInstallCa (elevated) · onSetProxy (elevated) · onUnsetProxy
-  hostOs · proxyAddr · trustStatus / proxyStatus / verifyStatus
+  this machine — trustProbe · proxyProbe · probing · probedAt (one snapshot,
+  re-taken on demand) · traffic — lastDecryptedAt · lastPlainAt · lastTunnelAt
+  · ever (what reached Trawler, each with its time) · onInstallCa (elevated) ·
+  onSetProxy (elevated) · onUnsetProxy · onSaveCa · onRecheck · hostOs ·
+  proxyAddr · trustStatus / proxyStatus / trafficStatus
 
 <strong>Not given</strong> (may not be assumed to exist):
   per-step completion · whether the user performed a manual step
-  a device other than this host · any system write the two elevated
-  actions do not already own</pre>
+  which device sent a tunnel · a push when a setting changes elsewhere
+  any system write the two elevated actions do not already own</pre>
       <table>
         <thead><tr><th>Driver</th><th>why</th><th>…therefore</th><th>on this screen</th></tr></thead>
         <tbody>
@@ -113,6 +115,24 @@
             <td>they are pasted into a shell</td>
             <td>mono, copy-exact, wrapped</td>
             <td>✓ the curl line copies verbatim<br>✗ a prettified or elided command</td>
+          </tr>
+          <tr>
+            <td>two layers, never one verdict</td>
+            <td>a probe knows the machine, traffic knows the wire</td>
+            <td>steps 1–2 read probes, step 3 reads traffic</td>
+            <td>✓ "not trusted on this machine" beside "capturing traffic"<br>✗ "trusted — confirmed by traffic"</td>
+          </tr>
+          <tr>
+            <td>old traffic is not current traffic</td>
+            <td>a flow from an hour ago proves nothing now</td>
+            <td>the traffic verdict reads a clock</td>
+            <td>✓ "idle — nothing arriving now", the last flow dated<br>✗ "capturing", on a flow from an hour ago</td>
+          </tr>
+          <tr>
+            <td>a probe is a snapshot</td>
+            <td>nothing pushes when a setting changes elsewhere</td>
+            <td>one control re-reads, and the reading is dated</td>
+            <td>✓ "checked at 14:32:05 · check again", once<br>✗ a green that outlives the setting</td>
           </tr>
           <tr><td colspan="4"><strong>Qualities — Tune's yardstick</strong></td></tr>
           <tr>
@@ -231,22 +251,25 @@
 │                                              │
 │      B  title + subtitle                     │ ← centred, static; the only serif on screen
 │                                              │
+│      R          checked at 14:32:05 · check  │ ← one reading of this machine, dated; one
+│                                     again    │   control re-takes it — never one per step
 │      C  step 1 ── verdict                    │ ← closed: title + verdict on one row
 │      ┌────────────────────────────────┐      │
 │      │ D  open step body              │      │ ← exactly one open at a time
 │      │    · what and why (one line)   │      │
 │      │    · action + its note         │      │
-│      │    · manual fallback (closed)  │      │
+│      │    · manual fallback (closed)  │      │   step 1: its first step ends in ↓
 │      └────────────────────────────────┘      │
-│      C  step 2 ── verdict                    │
-│      C  step 3 ── verdict                    │
-│                                              │
+│      C  step 2 ── verdict                    │ ← C1, C2: this machine, from the probes
+│      C  step 3 ── verdict                    │ ← C3: traffic, from a clock; when open, D
+│                                              │   dates the last flow
 └──────────────────────────────────────────────┘
 
-scroll / overflow: A pinned to the top, never scrolls · B+C+D scroll together as
-one column, capped at dialog-max (384px) and centred · D is the only unbounded
-zone — manual steps and a per-OS command grow with the target — and it is capped
-by the column, wrapping rather than truncating; the page scrolls, D never does.</pre>
+scroll / overflow: A pinned to the top, never scrolls · B+R+C+D scroll together
+as one column, capped at dialog-max (384px) and centred · R is one fixed-height
+row · D is the only unbounded zone — manual steps and a per-OS command grow with
+the target — and it is capped by the column, wrapping rather than truncating;
+the page scrolls, D never does.</pre>
 
       <p><strong>B — the quit dialog.</strong> Centred over a scrim; the shell is fixed, the middle is mode-driven.</p>
       <pre class="tb">
@@ -310,9 +333,10 @@ remedy failed, the same slot relabels to "try again" rather than emptying.</pre>
 setup screen
 ├─ A exit bar ──── <span data-key="button">Button</span> ◆
 ├─ B title ─────── screen-owned (serif h2 + note)
+├─ R re-check ──── <span data-key="timestamp-text">TimestampText</span> ◆ (checked at) · <span data-key="button">Button</span> ◆ (check again, bare)
 ├─ C step header ─ <span data-key="status-line">StatusLine</span> ◆ (inside a screen-owned row button)
-└─ D open body ─── <span data-key="notice">Notice</span> ◆ · <span data-key="button">Button</span> ◆ · ▣ manual-fallback · <span data-key="copy-text">CopyText</span> ◆
-   ▣ manual-fallback = <span data-key="disclosure">Disclosure</span> ◆ · <span data-key="select">Select</span> ◆ · <span data-key="step-list">StepList</span> ◆ · <span data-key="copy-text">CopyText</span> ◆
+└─ D open body ─── <span data-key="notice">Notice</span> ◆ · <span data-key="button">Button</span> ◆ · ▣ manual-fallback · <span data-key="copy-text">CopyText</span> ◆ · <span data-key="timestamp-text">TimestampText</span> ◆ (last flow at)
+   ▣ manual-fallback = <span data-key="disclosure">Disclosure</span> ◆ · <span data-key="select">Select</span> ◆ · <span data-key="step-list">StepList</span> ◆ · <span data-key="copy-text">CopyText</span> ◆ · <span data-key="icon-button">IconButton</span> ◆ (↓ save, ending step 1's sentence)
 
 quit dialog
 ├─ ▣ modal-shell (T4, build local) = scrim · panel · focus trap
@@ -350,15 +374,15 @@ quit dialog
           </tr>
           <tr data-key="status-line">
             <td><strong>StatusLine</strong><br>T2</td>
-            <td><em>extend</em> — a toned message; <strong>blocked on <code>StepStatusView.short</code></strong><br>C ×3</td>
+            <td><em>extend</em> — a toned message (landed in W10 with <code>StepStatusView.short</code>)<br>C ×3 — C1, C2 from the two probes; C3 from the traffic clock</td>
             <td>
-              <div class="gist">the verdict shape is exact; the field it needs is missing</div>
-              <details class="why"><div><strong>@use landed:</strong> "a setup precondition … pass the resolver's <code>StepStatusView</code> through unchanged" — this screen is the named tenant. <strong>@avoid that bites:</strong> "shortening a domain message at the call site". The component renders <code>status.message</code>, and its <code>@anatomy</code> caps the message at <em>~40 chars, a fragment not a sentence</em>. <strong>Measured: 4 of 16 verdicts exceed it</strong> (101, 116, 63, 63 chars) and the two <code>error</code> verdicts interpolate an unbounded message. So the reuse is real but not yet buildable — see <a href="#short-field-h2">the short field</a> and <a href="#blocked-on">blocked-on</a>.</div></details>
+              <div class="gist">the verdict shape is exact; each step's resolver reads one layer</div>
+              <details class="why"><div><strong>@use landed:</strong> "a setup precondition … pass the resolver's <code>StepStatusView</code> through unchanged" — this screen is the named tenant. <strong>@avoid that bites:</strong> "shortening a domain message at the call site". The component renders <code>status.message</code>, and its <code>@anatomy</code> caps the message at <em>~40 chars, a fragment not a sentence</em>. <strong>Measured at design time: 4 of 16 verdicts exceeded it</strong> (101, 116, 63, 63 chars) and the two <code>error</code> verdicts interpolated an unbounded message — W10 landed <code>short</code>, see <a href="#short-field-h2">the short field</a>. <strong>Amended:</strong> the resolvers behind C1 and C2 take no traffic input at all — a probe is the whole verdict — and C3's resolver takes the traffic timestamps and a clock. The @avoid "re-resolving or re-ranking the verdict at the call site" is what forbids the screen from blending the two layers itself.</div></details>
             </td>
             <td><pre class="tb">✓  trusted on this machine
 ◐  can't check automatically
-○  no traffic yet
-⟳  installing…</pre>Per its TSDoc: ok · warn · muted·can't-determine · muted·not-yet · in-flight. All five occur here — this screen is the reason the fifth exists.<br><strong>Toning delta (see <a href="#tune">Tune</a>):</strong> the component tones the <em>glyph</em> through <code>TonedText</code> and renders the message <code>ink-mute</code> in every verdict. This run asks for the <strong>message to carry the verdict tone too</strong> — an <em>extend</em> of the component, not a call-site override, since "never re-decide what a component owns" puts the change in <code>StatusLine</code>'s own file.</td>
+○  idle — nothing arriving now
+⟳  checking…</pre>Per its TSDoc: ok · warn · muted·can't-determine · muted·not-yet · in-flight. All five occur here — this screen is the reason the fifth exists, and it now has two in-flight tenants: an action running, and a re-check running (fork D4's progress line for zone R).<br><strong>Toning delta (see <a href="#tune">Tune</a>):</strong> the component tones the <em>glyph</em> through <code>TonedText</code> and renders the message <code>ink-mute</code> in every verdict. This run asks for the <strong>message to carry the verdict tone too</strong> — an <em>extend</em> of the component, not a call-site override, since "never re-decide what a component owns" puts the change in <code>StatusLine</code>'s own file.</td>
           </tr>
           <tr data-key="disclosure">
             <td><strong>Disclosure</strong><br>T1</td>
@@ -374,7 +398,7 @@ quit dialog
           </tr>
           <tr data-key="notice">
             <td><strong>Notice</strong><br>T1</td>
-            <td><em>reuse</em><br>D — the three action notes, plus the two remedy sentences</td>
+            <td><em>reuse</em><br>D — the four action notes (install · set · stop · save), plus the remedy sentences of C1–C3</td>
             <td>
               <div class="gist">one sentence for an outcome, with the action if one exists</div>
               <details class="why"><div><strong>@use landed:</strong> "any zone whose whole content is a STANDING positive outcome (tone=ok)" — "installed. we'll confirm it on your first flow." is standing, not an acknowledgement. <strong>@avoid respected:</strong> "transient confirmations of an action (use confirm-at-point)" — the <em>copy</em> confirms belong to <code>CopyText</code>, never to a Notice · not dismissible · not a toned value (that is <code>TonedText</code>) · <strong>not a status verdict with glyph+name+message</strong>, which is <code>StatusLine</code>'s — so the note and the verdict are two components, not one, and that split is the point.</div></details>
@@ -398,7 +422,7 @@ on your first flow.
           </tr>
           <tr data-key="button">
             <td><strong>Button</strong><br>T1</td>
-            <td><em>reuse</em><br>A (exit) · D (install, set proxy, stop routing) · H (quit + turn it off / try again) — <strong>both surfaces</strong></td>
+            <td><em>reuse</em><br>A (exit) · R (check again, bare) · D (install, set proxy, stop routing) · H (quit + turn it off / try again) — <strong>both surfaces</strong></td>
             <td>
               <div class="gist">worded actions; the in-flight pair is fork D4</div>
               <details class="why"><div><strong>@avoid that shapes the screen:</strong> "leaving it enabled while its action is in flight, or disabling it without a progress line beside it (fork D4 — both halves or neither)". The elevated actions take seconds and a system prompt, so every one renders <em>both</em> halves: the Button disabled for the whole window, and a <code>Notice</code> in the same zone naming what is awaited. Also: no primary/filled variant — "pick which actions to offer instead", which is exactly what the dialog does: <strong>zone position ranks the two actions, since styling cannot</strong>. The remedy sits in G with the content it acts on; the exit sits alone in H. A <code>Button</code> has no way to say "this one matters more", so the design must not ask it to · and no warn-toning the remedy inside a warning (the message owns the alarm).</div></details>
@@ -409,14 +433,27 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
           </tr>
           <tr data-key="icon-button">
             <td><strong>IconButton</strong><br>T1</td>
-            <td><em>reuse</em><br>E — the dialog's ✕</td>
+            <td><em>reuse</em><br>E — the dialog's ✕ · D — the ↓ that ends step 1's "Save Trawler's certificate as trawler-ca.pem"</td>
             <td>
-              <div class="gist">× is unambiguous in a dialog corner</div>
-              <details class="why"><div><strong>@use landed:</strong> "icon-only triggers unambiguous in place: close ×" — and <code>close</code> is already in its glyph registry. <strong>@avoid cleared:</strong> not an action lacking a glyph · not a primary action (it carries no weight at rest, which suits a third route to an outcome two buttons already offer). It also supplies the accessible name the raw <code>&lt;button&gt;✕&lt;/button&gt;</code> gets only from a hand-written <code>aria-label</code>.</div></details>
+              <div class="gist">× and ↓ are each unambiguous where they stand</div>
+              <details class="why"><div><strong>@use landed:</strong> "icon-only triggers unambiguous in place: close ×, save ↓" — both glyphs are already in its registry. <strong>The save placement:</strong> the sentence it ends already says <em>save</em> and names the file, so a worded <code>Button</code> beside it would repeat the sentence (<code>labels-add-context</code>); a glyph at the sentence's end is the label the sentence has left unsaid. Its outcome — saved as <em>x</em>, cancelled, failed — lands as a <code>Notice</code> beneath the sentence, inside the same step, and while it runs the ↓ is disabled with "saving…" beside it (fork D4). <strong>@avoid cleared:</strong> not an action lacking a glyph · not a primary action (it carries no weight at rest, which suits a third route to an outcome two buttons already offer). It also supplies the accessible name the raw <code>&lt;button&gt;✕&lt;/button&gt;</code> gets only from a hand-written <code>aria-label</code>.</div></details>
             </td>
             <td><pre class="tb">┌──────────────────┐
 │ title         ×  │
-└──────────────────┘</pre>Per its TSDoc: rest · hover · focus · active · disabled.</td>
+└──────────────────┘
+1  Save Trawler's certificate
+   as trawler-ca.pem  ↓
+   saved as trawler-ca.pem.</pre>Per its TSDoc: rest · hover · focus · active · disabled.</td>
+          </tr>
+          <tr data-key="timestamp-text">
+            <td><strong>TimestampText</strong><br>T1</td>
+            <td><em>reuse</em><br>R — "checked at" · D — "last flow at", in step 3's open body</td>
+            <td>
+              <div class="gist">a point in time, absolute and local, so a reading can be dated</div>
+              <details class="why"><div><strong>@use landed:</strong> "anywhere a point-in-time label reads against logs" — both stamps here are read against the moment the user changed a setting or sent a request. <strong>@avoid cleared:</strong> not relative (DEC-22: absolute <code>HH:MM:SS</code> is the default and relative is opt-in — the recency judgment lives in the verdict's tone, not in a ticking "3 s ago") · not UTC · not pre-formatted: the raw epoch ms is passed. <strong>Why a stamp at all:</strong> a probe is a snapshot and a verdict is judged against a clock, so both need a time the user can compare with their own — "checked at 14:32:05" tells them whether the reading predates what they just did, and "last flow at 14:02" is what makes "idle" checkable rather than asserted.</div></details>
+            </td>
+            <td><pre class="tb">checked at 14:32:05
+last flow at 14:02:41</pre>—</td>
           </tr>
           <tr data-key="status-dot">
             <td><strong>StatusDot</strong><br>T2</td>
@@ -456,34 +493,37 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
 
       <p><strong>Proposals:</strong> <em>modal-shell</em> (T4, build local) — a scrim + panel + focus trap; nothing in the registry owns modality, and one dialog is too small a sample to design a general entry from. <em>Checkbox</em> (T1, propose → registry) — the app's one boolean control; the registry has none, and unlike modality a checkbox is a primitive whose contract generalises from a single instance.</p>
 
-      <p><strong>What the count says.</strong> Seven registry entries reused across two surfaces and one extended (<code>StatusLine</code>, a toned message), with <code>StatusDot</code> recorded as an explicit non-placement; one build-local composition (<em>modal-shell</em>, T4); and one new registry component proposed (<code>Checkbox</code>, T1). Every local component in today's code resolves away: <code>ActionButton</code> → <code>Button</code> + <code>Notice</code>, <code>ManualPanel</code> → <code>Disclosure</code> + the host's branch, <code>ProveIt</code> → <code>CopyText</code>, the four <code>&lt;ol&gt;</code>s → <code>StepList</code>, both <code>&lt;select&gt;</code>s → <code>Select</code>, the verdict line → <code>StatusLine</code>, and the <code>toneClass</code> map at <code>Onboarding.tsx:360</code> → deleted, since <code>StatusLine</code> and <code>Notice</code> own tone.</p>
+      <p><strong>What the count says.</strong> Eight registry entries reused across two surfaces (<code>TimestampText</code> joining at the amendment, for the two stamps) and one extended (<code>StatusLine</code>, a toned message), with <code>StatusDot</code> recorded as an explicit non-placement; one build-local composition (<em>modal-shell</em>, T4); and one new registry component proposed (<code>Checkbox</code>, T1). Every local component in today's code resolves away: <code>ActionButton</code> → <code>Button</code> + <code>Notice</code>, <code>ManualPanel</code> → <code>Disclosure</code> + the host's branch, <code>ProveIt</code> → <code>CopyText</code>, the four <code>&lt;ol&gt;</code>s → <code>StepList</code>, both <code>&lt;select&gt;</code>s → <code>Select</code>, the verdict line → <code>StatusLine</code>, and the <code>toneClass</code> map at <code>Onboarding.tsx:360</code> → deleted, since <code>StatusLine</code> and <code>Notice</code> own tone.</p>
 
     </div>
 
     <h2 id="short-field-h2">The <code>short</code> field — what the domain must return</h2>
-      <p>Design content, so W10 has no wording left to invent. <code>message</code> stays as it is; <code>short</code> is added beside it and <code>StatusLine</code> reads <code>short</code>. Where a verdict carries a <em>remedy</em>, the remedy leaves the verdict and becomes a <code>Notice</code> in the open step's body — a verdict states, it does not instruct.</p>
+      <p>Design content, so W10 has no wording left to invent. <code>StatusLine</code> reads <code>short</code>; where a verdict carries a <em>remedy</em>, the remedy leaves the verdict and becomes a <code>Notice</code> in the open step's body — a verdict states, it does not instruct. <strong>Amended:</strong> <code>trustStatus</code> and <code>proxyStatus</code> take the probe, the running action and the error — <em>no traffic</em>; the verdicts that used to borrow from traffic (<em>trusted — confirmed by traffic</em>, <em>receiving traffic</em>, <em>arriving but not decrypting</em>) leave steps 1–2. <code>trafficStatus</code> replaces <code>verifyStatus</code> and takes the traffic timestamps and <code>now</code>: a flow is <em>recent</em> inside a 30 s window, and a tunnel no flow has answered is judged only after a 3 s grace.</p>
       <table>
         <thead><tr><th>Resolver · verdict</th><th><code>short</code> (≤40)</th><th>the remedy, if any → <code>Notice</code></th></tr></thead>
         <tbody>
-          <tr><td><code>trustStatus</code> · installing</td><td>installing…</td><td>—</td></tr>
+          <tr><td><code>trustStatus</code> · checking <span class="badge id">new</span></td><td>checking…</td><td>—</td></tr>
+          <tr><td>· installing</td><td>installing…</td><td>—</td></tr>
           <tr><td>· probe trusted</td><td>trusted on this machine</td><td>—</td></tr>
-          <tr><td>· decrypted</td><td>trusted — confirmed by traffic</td><td>—</td></tr>
           <tr><td>· error</td><td>install failed</td><td>the error text, warn tone</td></tr>
-          <tr><td>· traffic, no decrypt <span class="badge id">was 101</span></td><td>arriving but not decrypting</td><td>install the certificate on the device you're capturing from</td></tr>
-          <tr><td>· probe unknown <span class="badge id">was 63</span></td><td>can't check automatically</td><td>we'll confirm when traffic arrives</td></tr>
+          <tr><td>· probe unknown</td><td>can't check automatically</td><td>step 3 shows whether traffic decrypts</td></tr>
           <tr><td>· not trusted</td><td>not trusted on this machine yet</td><td>—</td></tr>
-          <tr><td><code>proxyStatus</code> · setting</td><td>setting the proxy…</td><td>—</td></tr>
+          <tr><td><code>proxyStatus</code> · checking <span class="badge id">new</span></td><td>checking…</td><td>—</td></tr>
+          <tr><td>· setting</td><td>setting the proxy…</td><td>—</td></tr>
           <tr><td>· probe ours</td><td>system proxy is set to Trawler</td><td>—</td></tr>
-          <tr><td>· traffic seen</td><td>receiving traffic</td><td>—</td></tr>
           <tr><td>· error</td><td>couldn't set the proxy</td><td>the error text, warn tone</td></tr>
-          <tr><td>· probe foreign <span class="badge id">was 116</span></td><td>another proxy is set</td><td>point it at Trawler here, or capture from a device configured to use Trawler</td></tr>
-          <tr><td>· probe unknown <span class="badge id">was 63</span></td><td>can't check automatically</td><td>we'll confirm when traffic arrives</td></tr>
-          <tr><td>· none</td><td>no traffic reaching Trawler yet</td><td>—</td></tr>
-          <tr><td><code>verifyStatus</code> · decrypted</td><td>capturing traffic</td><td>—</td></tr>
-          <tr><td>· waiting</td><td>waiting for your first request</td><td>—</td></tr>
+          <tr><td>· probe foreign</td><td>another proxy is set</td><td>point it at Trawler here, or capture from a device configured to use Trawler</td></tr>
+          <tr><td>· probe unknown</td><td>can't check automatically</td><td>step 3 shows whether traffic arrives</td></tr>
+          <tr><td>· none <span class="badge id">reworded</span></td><td>not set on this machine yet</td><td>—</td></tr>
+          <tr><td><code>trafficStatus</code> · a decrypted flow within 30 s</td><td>capturing traffic</td><td>—</td></tr>
+          <tr><td>· a tunnel inside its 3 s grace <span class="badge id">new</span></td><td>a connection just arrived…</td><td>—</td></tr>
+          <tr><td>· a tunnel no flow answered <span class="badge id">moved from step 1</span></td><td>arriving but not decrypting</td><td>the client sending it doesn't trust Trawler's certificate — install it there; step 1 covers this machine</td></tr>
+          <tr><td>· plain HTTP only, within 30 s <span class="badge id">new</span></td><td>arriving — plain HTTP only</td><td>an HTTPS request is what proves decryption</td></tr>
+          <tr><td>· seen before, nothing recent <span class="badge id">new</span></td><td>idle — nothing arriving now</td><td>— (the open step dates the last flow)</td></tr>
+          <tr><td>· nothing ever</td><td>waiting for your first request</td><td>—</td></tr>
         </tbody>
       </table>
-      <p>Sixteen verdicts, all now within the contract, lowercase per <code>calm-microcopy</code>. Four remedies move to <code>Notice</code>; the two <code>error</code> verdicts stop interpolating an unbounded string into a fixed-width line.</p>
+      <p>Nineteen verdicts, all within the contract, lowercase per <code>calm-microcopy</code>. Two absences that were one — <em>never</em> and <em>not now</em> — are two verdicts, and the remedy that named "the device you're capturing from" now sits on the layer that can see that device's tunnel.</p>
 
     <h2 id="interaction">4 · Interaction</h2>
     <table data-item="interaction">
@@ -494,10 +534,30 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
           <td>see which precondition is unmet</td>
           <td>nothing — the screen opens</td>
           <td>
-            <div class="gist">three probed verdicts, step 1 open</div>
-            <details class="why"><div>A → UNCHANGED (no exit until proven — <code>everProven</code> is false) · B → title + subtitle · C ×3 → each <code>StatusLine</code> renders its resolved verdict, including <em>can't-check</em> where the probe is blind · D → step 1's body, its action and a collapsed fallback</div></details>
+            <div class="gist">two probed verdicts and a traffic verdict, step 1 open</div>
+            <details class="why"><div>A → UNCHANGED (no exit until proven — <code>everProven</code> is false) · B → title + subtitle · R → "checking this machine…" with the bare <code>Button</code> disabled while the two probes run, then "checked at 14:32:05 · check again" · C1, C2 → each <code>StatusLine</code> shows <em>⟳ checking…</em> then the probe's verdict, including <em>can't-check</em> where the probe is blind · C3 → <em>waiting for your first request</em>, or <em>idle</em> when the core had seen traffic before the app opened · D → step 1's body, its action and a collapsed fallback</div></details>
           </td>
-          <td>Tab reaches each step header, then the action; no trap</td>
+          <td>Tab reaches the check-again, each step header, then the action; no trap</td>
+        </tr>
+        <tr>
+          <td>re-check this machine</td>
+          <td>a probe is a snapshot</td>
+          <td>presses <em>check again</em></td>
+          <td>
+            <div class="gist">both probed verdicts re-read; the stamp moves</div>
+            <details class="why"><div>R → the <code>Button</code> disabled for the whole in-flight window AND the row reads "checking this machine…" · C1, C2 → <em>⟳ checking…</em>, the in-flight verdict that outranks every settled one — so a green that is about to go stale is not left standing while the answer is fetched (fork D4: the two verdicts are the progress line) · on settle → each verdict is the probe's new answer and R reads "checked at" the new time · C3 → UNCHANGED ← a probe says nothing about traffic, so the traffic verdict never flickers on a re-check</div></details>
+          </td>
+          <td>Enter / Space; focus stays on the button across the transition</td>
+        </tr>
+        <tr>
+          <td>come back from System Settings</td>
+          <td>a probe is a snapshot</td>
+          <td>nothing — the window regains focus</td>
+          <td>
+            <div class="gist">the same re-read, with no click</div>
+            <details class="why"><div>R, C1, C2 → exactly as <em>re-check this machine</em> ← the moment a setting is most likely to have changed is the moment the user returns from changing it, so the reading is re-taken then; "check again" stays for the case where nothing left the window (a terminal alongside)</div></details>
+          </td>
+          <td>passive — the focus event is the trigger; nothing to press</td>
         </tr>
         <tr>
           <td>open a different step</td>
@@ -530,6 +590,16 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
           <td>Tab continues into the now-open fallback in DOM order</td>
         </tr>
         <tr>
+          <td>save the certificate</td>
+          <td>fall back by hand</td>
+          <td>presses the ↓ ending step 1's first sentence</td>
+          <td>
+            <div class="gist">the file the sentence names is produced where it is named</div>
+            <details class="why"><div>D → the <code>IconButton</code> disabled for the in-flight window AND a mute <code>Notice</code> "saving…" beneath the sentence (fork D4) · on resolve → the <code>Notice</code> reads ok "saved as trawler-ca.pem. now trust it with the steps below." — or, when the dialog was given another name, "saved as <em>x</em> — the steps below name trawler-ca.pem, so use <em>x</em> instead" ← the note quotes what landed, never what was asked for · on cancel → mute "nothing was saved — the save was cancelled." ← a cancelled dialog resolves like a write, so the outcome must be stated or a later step sends the user to a file that does not exist · on failure → warn "couldn't save the certificate — check that Trawler is running." · C1 → UNCHANGED, a saved file proves no trust</div></details>
+          </td>
+          <td>Tab reaches the ↓ inside the step; Enter / Space activates</td>
+        </tr>
+        <tr>
           <td>read steps for another target</td>
           <td>fall back by hand</td>
           <td>picks a target in the <code>Select</code></td>
@@ -554,10 +624,30 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
           <td>leave once proven</td>
           <td>runs the command elsewhere</td>
           <td>
-            <div class="gist">verdicts flip on evidence, and the way out appears</div>
-            <details class="why"><div>C ×3 → every verdict re-resolves from <code>observed.decrypted</code>: trust and proxy both read <em>confirmed by traffic</em>, and step 3 reads <em>capturing traffic</em> ← one piece of evidence proves three preconditions, which is why no step self-reports · A → the exit <code>Button</code> appears, now that <code>everProven</code> is true</div></details>
+            <div class="gist">step 3 turns ok on evidence; steps 1–2 keep saying what they know</div>
+            <details class="why"><div>C3 → <em>✓ capturing traffic</em>, from a decrypted flow inside the 30 s window · D (when step 3 is open) → "last flow at 14:32:05" ← the evidence is dated, so a later <em>idle</em> can be checked against it · C1, C2 → UNCHANGED ← the flow proves the wire, not this machine: a phone that trusts the certificate and points here produces exactly this evidence with the host untouched, so the probed verdicts keep reading "on this machine" and the user sees both facts at once · A → the exit <code>Button</code> appears, now that <code>everProven</code> is true</div></details>
           </td>
           <td>focus is untouched — nothing steals it on a background event</td>
+        </tr>
+        <tr>
+          <td>traffic stops</td>
+          <td>honest over encouraging</td>
+          <td>nothing — 30 s pass with no flow</td>
+          <td>
+            <div class="gist">step 3 goes idle; nothing else moves</div>
+            <details class="why"><div>C3 → <em>○ idle — nothing arriving now</em>, muted not warn ← nothing is broken; the machine may be configured and quiet · D (when open) → "last flow at" keeps the time of what did arrive ← the owner's finding that produced this amendment: a flow captured before the proxy was turned off had kept every step green, because "seen" carried no time · C1, C2 → UNCHANGED, and the reading a user takes after turning the proxy off comes from <em>re-check this machine</em>, not from traffic going quiet</div></details>
+          </td>
+          <td>passive — the screen's own clock is the trigger</td>
+        </tr>
+        <tr>
+          <td>a device without the certificate connects</td>
+          <td>the host may not be the captured device</td>
+          <td>points a phone here, no CA on it</td>
+          <td>
+            <div class="gist">a tunnel, then the warning that names the missing certificate</div>
+            <details class="why"><div>C3 → <em>⟳ a connection just arrived…</em> for the 3 s grace a handshake needs ← a tunnel is neither proof nor failure until its flow has had time to follow · then <em>⚠ arriving but not decrypting</em> with the <code>Notice</code> "the client sending it doesn't trust Trawler's certificate — install it there; step 1 covers this machine" ← the screen cannot see which device sent the tunnel, so the remedy names the client rather than guessing, and points at step 1 only for the case where the client is this host · C1 → UNCHANGED — it may well read <em>trusted on this machine</em>, and that is true; the failure is elsewhere · a decrypted flow from any client within the window outranks the warning ← the screen's purpose is met, and the failing client reappears the moment the working one goes quiet</div></details>
+          </td>
+          <td>passive — the tunnel is the trigger</td>
         </tr>
         <tr>
           <td>quit with our proxy set</td>
@@ -613,12 +703,13 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
     </table>
 
     <h2 id="mockup">5 · Draft mockup</h2>
-    <p>Assembled from the real components — <code>window.Trawler</code>, mounted, never redrawn. The toggle flips both surfaces between resting and the failure states the Interaction table names — a failed CA install, and a refused proxy turn-off.</p>
+    <p>Assembled from the real components — <code>window.Trawler</code>, mounted, never redrawn. The toggle flips both surfaces between resting and the failure states the Interaction table names — a failed CA install, a cancelled save, a tunnel no flow answered, and a refused proxy turn-off. Resting shows the amended status model at its most telling: this machine trusts nothing and routes nothing, while step 3 reads <em>idle</em> and dates the flow it once saw.</p>
     <div data-item="mockup">
       <div class="a-mock" id="mock">
         <div class="mb-chrome-gap font-ui text-label uppercase tracking-label text-ink-mute">setup screen · zones A–D</div>
         <div class="a-zone" id="m-exit"></div>
         <div class="a-zone" id="m-title"></div>
+        <div class="a-zone" id="m-recheck"></div>
         <div class="a-zone font-mono" id="m-steps" data-wire="shell command"></div>
         <div class="a-rule"></div>
         <div class="mb-chrome-gap font-ui text-label uppercase tracking-label text-ink-mute">quit dialog · zones E–H — ours / foreign (a local proxy is set)</div>
@@ -631,7 +722,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
         data-label-off="▶ show the failure states" data-label-on="◀ show resting">▶ show the failure states</button>
 
       <script type="text/babel">
-        const { React, createRoot, StepList, StatusLine, Select, Disclosure, Notice, CopyText, Button, IconButton } = window.Trawler;
+        const { React, createRoot, StepList, StatusLine, Select, Disclosure, Notice, CopyText, Button, IconButton, TimestampText } = window.Trawler;
         const { useState } = React;
         const mount = (id, node) => createRoot(document.getElementById(id)).render(node);
 
@@ -652,25 +743,54 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
         const PROVE_IT = "curl -x http://127.0.0.1:7420 https://example.com/";
         const OFF_STEPS = ["open System Settings → Network", "select your active interface → Details → Proxies", "turn off Web Proxy and Secure Web Proxy"];
 
+        const NOW = Date.now();
         const V = {
-          trustNotYet:   { glyph: "○", tone: "muted", message: "not trusted on this machine yet" },
-          trustFailed:   { glyph: "⚠", tone: "warn",  message: "install failed" },
-          proxyCantSee:  { glyph: "◐", tone: "muted", message: "can't check automatically" },
-          verifyWaiting: { glyph: "○", tone: "muted", message: "waiting for your first request" },
+          trustNotYet:   { glyph: "○", tone: "muted", short: "not trusted on this machine yet" },
+          trustFailed:   { glyph: "⚠", tone: "warn",  short: "install failed" },
+          proxyNotYet:   { glyph: "○", tone: "muted", short: "not set on this machine yet" },
+          trafficIdle:   { glyph: "○", tone: "muted", short: "idle — nothing arriving now" },
+          trafficStuck:  { glyph: "⚠", tone: "warn",  short: "arriving but not decrypting" },
         };
 
-        function StepRow({ n, title, view, open, onOpen, children }) {
+        // The state toggle is a class on the mock, so a row that changes verdict
+        // between the two states carries both StatusLines and CSS picks one.
+        function StepRow({ n, title, view, failedView, open, onOpen, children }) {
           return (
             <div className={`my-2 rounded-lg border px-3 py-2 ${open ? "border-ink-mute" : "border-hairline"}`}>
               <button type="button" onClick={onOpen}
                 className="flex w-full items-baseline justify-between gap-2 text-left font-ui text-body text-ink">
                 <span>{n} · {title}</span>
-                <StatusLine status={view} className="shrink-0" />
+                <span className="shrink-0">
+                  <span className={failedView ? "a-base-only" : ""}><StatusLine status={view} /></span>
+                  {failedView && <span className="a-hide-base"><StatusLine status={failedView} /></span>}
+                </span>
               </button>
               {open && <div className="mt-2">{children}</div>}
             </div>
           );
         }
+
+        // One reading of this machine, dated, and the one control that re-takes it.
+        function Recheck() {
+          return (
+            <div className="mb-2 flex items-center justify-end gap-chrome-gap font-ui text-control text-ink-mute">
+              <span>checked at <TimestampText timestamp={NOW} /></span>
+              <Button onClick={() => {}} frame="bare" tone="mute">check again</Button>
+            </div>
+          );
+        }
+
+        // Step 1's first step: the sentence that names the file, ended by the
+        // control that produces it, with the outcome beneath it in the same step.
+        const SAVE_STEP = (
+          <>
+            <span className="flex items-center gap-chrome-gap">
+              Save Trawler's certificate as trawler-ca.pem
+              <IconButton glyph="save" label="save certificate" size={24} onClick={() => {}} />
+            </span>
+            <div className="a-hide-base"><Notice>nothing was saved — the save was cancelled.</Notice></div>
+          </>
+        );
 
         function ManualFallback() {
           const [target, setTarget] = useState("macos");
@@ -680,7 +800,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
                 steps for
                 <Select options={TARGETS} value={target} onChange={setTarget} label="steps for" />
               </div>
-              <StepList steps={STEPS_FOR[target]} />
+              <StepList steps={[SAVE_STEP, ...STEPS_FOR[target]]} />
             </Disclosure>
           );
         }
@@ -690,7 +810,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
           return (
             <>
               <StepRow n="1" title="trust the CA" open={open === "trust"} onOpen={() => setOpen("trust")}
-                view={V.trustNotYet}>
+                view={V.trustNotYet} failedView={V.trustFailed}>
                 <p className="mb-2 font-ui text-body text-ink-mute">
                   Trawler signs HTTPS with its own certificate; this machine has to trust it.
                 </p>
@@ -705,7 +825,7 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
               </StepRow>
 
               <StepRow n="2" title="set the proxy" open={open === "proxy"} onOpen={() => setOpen("proxy")}
-                view={V.proxyCantSee}>
+                view={V.proxyNotYet}>
                 <div className="a-base-only mb-2">
                   <div className="flex gap-chrome-gap">
                     <Button onClick={() => {}}>set system proxy</Button>
@@ -717,13 +837,16 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
                   <Button onClick={() => {}} disabled>set system proxy</Button>
                   <Notice className="mt-2">setting the proxy — approve the prompt if asked…</Notice>
                 </div>
-                <Notice className="mb-2">we'll confirm when traffic arrives.</Notice>
               </StepRow>
 
               <StepRow n="3" title="make a request" open={open === "request"} onOpen={() => setOpen("request")}
-                view={V.verifyWaiting}>
+                view={V.trafficIdle} failedView={V.trafficStuck}>
                 <p className="mb-2 font-ui text-body text-ink-mute">run this anywhere on your machine:</p>
                 <CopyText value={PROVE_IT} label="prove-it command" />
+                <div className="a-hide-base mt-2">
+                  <Notice>the client sending it doesn't trust Trawler's certificate — install it there; step 1 covers this machine</Notice>
+                </div>
+                <p className="mt-2 font-ui text-body text-ink-mute">last flow at <TimestampText timestamp={NOW - 31 * 60_000} /></p>
               </StepRow>
             </>
           );
@@ -815,12 +938,13 @@ installing — approve the prompt…</pre>Per its TSDoc: rest · hover · focus 
             <p className="font-ui text-note text-ink-mute">capture your first HTTPS request</p>
           </div>
         ));
+        mount("m-recheck", <Recheck />);
         mount("m-steps", <Setup />);
         mount("m-dialog", <DialogActionable />);
         mount("m-dialog-remote", <DialogRemote />);
       </script>
     </div>
-    <p><strong>Stubbed:</strong> the elevated actions (no system prompt), the clipboard write behind <code>CopyText</code>, the probe resolvers (four fixed verdicts stand in for the sixteen), the scrim and focus trap — the mockup shows the dialog's panel inline, since modality is the build-local composition's job and not a component's. <strong>Designed, not yet shipped:</strong> step 2's mute remedy <code>Notice</code> — it is the sentence the <a href="#short-field-h2"><code>short</code> field</a> splits out of <code>proxyStatus</code>'s single message, so today's code carries it inside the <code>StatusLine</code> instead. <strong>Screen-owned here:</strong> the step row, the title block, and the one build-local composition (<em>modal-shell</em>); the opt-out is drawn as a raw checkbox standing in for the proposed <code>Checkbox</code>.</p>
+    <p><strong>Stubbed:</strong> the elevated actions (no system prompt), the save dialog behind the ↓, the clipboard write behind <code>CopyText</code>, the probe and traffic resolvers (five fixed verdicts stand in for the nineteen; the mock's clock does not tick), the scrim and focus trap — the mockup shows the dialog's panel inline, since modality is the build-local composition's job and not a component's. <strong>Designed, not yet shipped:</strong> step 2's mute remedy <code>Notice</code> — it is the sentence the <a href="#short-field-h2"><code>short</code> field</a> splits out of <code>proxyStatus</code>'s single message, so today's code carries it inside the <code>StatusLine</code> instead. <strong>Screen-owned here:</strong> the step row, the title block, and the one build-local composition (<em>modal-shell</em>); the opt-out is drawn as a raw checkbox standing in for the proposed <code>Checkbox</code>.</p>
 
     <h2 id="tune">6 · Tune</h2>
     <table data-item="tune">
@@ -912,6 +1036,41 @@ install the certificate on the
 device you're capturing from.</pre></td>
           <td><code>labels-add-context</code><br><code>empty-states-orient</code></td>
         </tr>
+        <tr>
+          <td>the probed steps stop borrowing from traffic</td>
+          <td><pre class="tb">1 · trust the CA    ✓ trusted — confirmed by traffic
+2 · set the proxy   ✓ receiving traffic
+3 · make a request  ✓ capturing traffic
+   ‾‾ one old flow, three greens</pre></td>
+          <td><pre class="tb">1 · trust the CA    ○ not trusted on this machine yet
+2 · set the proxy   ○ not set on this machine yet
+3 · make a request  ○ idle — nothing arriving now
+                    last flow at 14:02:41</pre></td>
+          <td><code>absence-names-itself</code><br><code>empty-states-orient</code></td>
+        </tr>
+        <tr>
+          <td>one re-check for the machine, not one per step</td>
+          <td><pre class="tb">1 · trust the CA    ✓ trusted   [check again]
+2 · set the proxy   ○ not set   [check again]
+3 · make a request  ○ waiting</pre></td>
+          <td><pre class="tb">          checked at 14:32:05 · check again
+1 · trust the CA    ✓ trusted on this machine
+2 · set the proxy   ○ not set on this machine yet
+3 · make a request  ○ waiting for your first request</pre></td>
+          <td><code>data-ink-first</code><br><code>grouping-by-relatedness</code></td>
+        </tr>
+        <tr>
+          <td>the save ends the sentence that names the file</td>
+          <td><pre class="tb">[ save certificate ]
+saved as trawler-ca.pem.
+1  Save Trawler's certificate as trawler-ca.pem.
+2  Run it in a terminal:</pre></td>
+          <td><pre class="tb">1  Save Trawler's certificate as trawler-ca.pem ↓
+   saved as trawler-ca.pem. now trust it with
+   the steps below.
+2  Run it in a terminal:</pre></td>
+          <td><code>labels-add-context</code><br><code>grouping-by-relatedness</code></td>
+        </tr>
       </tbody>
     </table>
     <details class="why">
@@ -924,6 +1083,9 @@ device you're capturing from.</pre></td>
           <li><strong>One action row:</strong> two rounds landed here. First, "keep it" and "quit" proved to be one act under two names (<code>closeConfirm.ts</code> has <code>keep: quit</code>, recording nothing), so the exit collapsed to a single button. Moving the remedy above the <code>Disclosure</code> then created a worse problem: a bordered <code>Button</code> and a <code>Disclosure</code> summary are both <code>min-h-control</code> rows starting at the same x, so they read as a broken pair rather than a hierarchy — and "turn it off" / "turn it off manually" repeated the label two lines apart. The fix puts <strong>both actions back in one row</strong> and leaves the fallback as the only left-aligned control. Ranking comes from <code>frame</code> — bare exit, bordered remedy — which is the ranking channel <code>Button</code> actually offers, since its @avoid forbids a primary variant. The summary reworded to "do it manually instead" so no label repeats. <em>Loops back to Layout: yes</em> — zones G and H were both re-zoned.</li>
           <li><strong>Toned verdict message:</strong> <code>StatusLine</code> tones the glyph and leaves the message <code>ink-mute</code>, so an <em>ok</em> and a <em>warn</em> verdict read identically at a glance and the glyph is the only channel carrying the difference — at 9px. Toning the message puts the top goal ("see which precondition is unmet") in the element that occupies the most width. It does <em>not</em> weaken <code>colour-plus-text</code>: the glyph and the words are still two channels, and the muted tone stays muted so only the two decided verdicts gain colour. <em>Loops back to Layout: no</em> — an extend of the component, landed in its own file.</li>
           <li><strong>Remedy out of the verdict:</strong> a 101-character verdict is not a verdict; it is a verdict plus an instruction, and the instruction has a component. Splitting them is what lets the line stay one line. <em>Loops back to Layout: no</em> — zone D already holds notices.</li>
+          <li><strong>Probes stop borrowing (amendment):</strong> the built screen turned all three steps green on a flow captured before the proxy was turned off, because "seen" was a boolean with no time. Two layers fix it at the root: a probed step reads only its probe, and the traffic step reads timestamps against a clock, so old evidence can only ever say <em>idle</em>. What is given up is the "remote device" positive on steps 1–2 — and that was never a fact about this machine, so the verdict it produced was the lie. The remote case now reads truthfully as "not on this machine" beside "capturing traffic". <em>Loops back to Layout: yes</em> — C1/C2 and C3 are now different kinds of row, and D dates the last flow.</li>
+          <li><strong>One re-check (amendment):</strong> a control per probed step said "this step" when the reading is one reading of one machine — and it put a bare button inside each open body, competing with the action there. One row above the checklist, dated, is the whole affordance; the window's focus event re-takes the reading without it in the common case. <em>Loops back to Layout: yes</em> — zone R is new.</li>
+          <li><strong>The save glyph (amendment):</strong> a worded Button above the step list repeated the sentence beneath it and separated the act from the step it completes. The sentence already carries the verb and the filename, so a ↓ at its end is the whole label left to add, and the outcome lands under the sentence inside the same step. <em>Loops back to Layout: no</em> — zone D's manual fallback is unchanged in shape.</li>
         </ul>
       </div>
     </details>
@@ -932,39 +1094,44 @@ device you're capturing from.</pre></td>
     <pre data-item="receipt">rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
 soft:
   visual-weight-follows-goals: satisfied — verdicts outweigh titles, and Tune toned the verdict message so the top goal owns colour as well as position
-  grouping-by-relatedness: satisfied — one border per step, the only separator; the dialog's two ways out share one row and the manual fallback is the only control outside it
+  grouping-by-relatedness: satisfied — one border per step, the only separator; the re-check row sits directly above the two steps it governs and the save control inside the step it completes; the dialog's two ways out share one row and the manual fallback is the only control outside it
   ordering-by-priority: satisfied — verdict-bearing steps in dependency order, trust before proxy before proof
   progressive-disclosure: satisfied — one open step; the dialog's manual route is collapsed where an action leads and inline where none does
-  data-ink-first: satisfied — Tune removed Back/Next, the copy button and a third dialog control row; the one border left in the dialog's actions is what ranks them
+  data-ink-first: satisfied — Tune removed Back/Next, the copy button, a third dialog control row, two of three re-check buttons and the worded save button; the one border left in the dialog's actions is what ranks them
   generous-targets: satisfied — the whole step header opens it, the whole command copies; inherited from CopyText and Button for the rest
   motion-informs: inherited — the only motion is StatusLine's in-flight spinner and the ~2 s copy confirm, both the components' own
-  empty-states-orient: satisfied — five distinct not-yet verdicts, each naming what will prove it; the remedy Notices say what to do, and the remote mode explains an absence it cannot act on
+  empty-states-orient: satisfied — every not-yet verdict names what will prove it; idle dates the last flow so the absence is checkable, the can't-check remedies point at the step where the answer will show, and the remote mode explains an absence it cannot act on
   familiar-idioms: satisfied — a checklist of preconditions with probed verdicts, the devtools-setup idiom; the nav that made it a wizard is gone
   display-equals-payload: satisfied — both commands render verbatim through CopyText, mono, no view and nothing to name
-  labels-add-context: satisfied — "install certificate" not "install the CA certificate now"; "keep it" retired as a second name for quit, and the fallback reworded to "do it manually instead" so it stops repeating the button above it
-  calm-microcopy: satisfied — all 16 short forms lowercase, no terminal period, no exclamation
+  labels-add-context: satisfied — "install certificate" not "install the CA certificate now"; the save is a ↓ because its sentence already says save and names the file; "checked at" not "this machine checked at", since the steps below say "on this machine"; "keep it" retired as a second name for quit, and the fallback reworded to "do it manually instead" so it stops repeating the button above it
+  calm-microcopy: satisfied — all 19 short forms lowercase, no terminal period, no exclamation; "idle" not "stale" or "stopped"
   one-term-per-concept: satisfied — "copy" and "flow" ("back to flows") per the lexicon, and no rival term for either; "trust", "proxy", "certificate" are domain terms the lexicon does not govern
-  confirm-at-point: satisfied-via-proposal — CopyText confirms at the value; today's two unguarded clipboard calls have no feedback at all, so this is earned only once StepStatusView.short lands with W10's rewrite
-  absence-names-itself: satisfied — not-trusted, can't-check, no-traffic, arriving-not-decrypting and another-proxy-set are five separate verdicts, never one sentence
+  confirm-at-point: satisfied — CopyText confirms at the value, landed in W10; the save's outcome lands beneath the sentence whose ↓ produced it, never in a corner
+  absence-names-itself: satisfied — not-trusted, not-set, can't-check, another-proxy-set, waiting, idle, arriving-not-decrypting and plain-HTTP-only are eight separate verdicts, never one sentence; "never" and "not now" were one absence and are two
   focus-returns-to-origin: blocked — the dialog's focus trap and focus return belong to the build-local modal-shell, which this run proposes rather than designs; the contract is stated in its Elements row, unowned until W10
   choose-before-act: satisfied — the target Select precedes the StepList and command it governs, on both surfaces; the remote opt-out precedes the action that records it
 </pre>
-    <p>Fifteen of the seventeen slugs resolve on this run's own artifacts. Two do not, and say so: <code>confirm-at-point</code> is contingent on the <code>short</code> field landing, and <code>focus-returns-to-origin</code> is genuinely unowned until the modal shell is built.</p>
+    <p>Sixteen of the seventeen slugs resolve on this run's own artifacts. <code>focus-returns-to-origin</code> stays <em>blocked</em> as receipted: the modal shell W10 built owns it, and this run's artifacts still demonstrate nothing about it.</p>
 
     <h2 id="capabilities">Capabilities</h2>
     <table data-item="capabilities">
       <thead><tr><th>Capability</th><th>Verdict</th><th>Where / why</th></tr></thead>
       <tbody>
-        <tr><td><code>trustProbe</code></td><td>used</td><td>step 1's verdict, via <code>trustStatus</code></td></tr>
-        <tr><td><code>proxyProbe</code></td><td>used</td><td>step 2's verdict, via <code>proxyStatus</code></td></tr>
-        <tr><td><code>observed.decrypted</code></td><td>used</td><td>proves all three steps at once; the only thing that turns step 3 ok</td></tr>
-        <tr><td><code>observed.trafficSeen</code></td><td>used</td><td>the arriving-but-not-decrypting verdict, and proxy's positive</td></tr>
+        <tr><td><code>trustProbe</code></td><td>used</td><td>step 1's whole verdict, via <code>trustStatus</code></td></tr>
+        <tr><td><code>proxyProbe</code></td><td>used</td><td>step 2's whole verdict, via <code>proxyStatus</code></td></tr>
+        <tr><td><code>probing</code> · <code>probedAt</code></td><td>used</td><td>zone R — the in-flight verdicts and the disabled control (fork D4), then the stamp</td></tr>
+        <tr><td><code>traffic.lastDecryptedAt</code></td><td>used</td><td>the only thing that turns step 3 ok, and only inside the 30 s window</td></tr>
+        <tr><td><code>traffic.lastTunnelAt</code></td><td>used</td><td>the connection-just-arrived and arriving-but-not-decrypting verdicts</td></tr>
+        <tr><td><code>traffic.lastPlainAt</code></td><td>used</td><td>the plain-HTTP-only verdict; with the decrypted time, the "last flow at" stamp</td></tr>
+        <tr><td><code>traffic.ever</code></td><td>used</td><td>idle rather than waiting, for traffic the core saw before the app subscribed</td></tr>
+        <tr><td><code>onRecheck</code></td><td>used</td><td>zone R's <code>Button</code>, and the window's focus event</td></tr>
+        <tr><td><code>onSaveCa</code></td><td>used</td><td>the ↓ ending step 1's first sentence, with its outcome <code>Notice</code></td></tr>
         <tr><td><code>onInstallCa</code></td><td>used</td><td>step 1's <code>Button</code>, with its fork-D4 progress <code>Notice</code></td></tr>
         <tr><td><code>onSetProxy</code></td><td>used</td><td>step 2's <code>Button</code>, same pair</td></tr>
         <tr><td><code>onUnsetProxy</code></td><td>used</td><td>the stop-routing action, offered once a native set has succeeded</td></tr>
         <tr><td><code>hostOs</code></td><td>used</td><td>picks the default target and decides whether an auto path exists at all</td></tr>
         <tr><td><code>proxyAddr</code></td><td>used</td><td>interpolated into the prove-it command and the per-OS snippet</td></tr>
-        <tr><td>the three resolvers</td><td>used — with a stated gap</td><td>passed through unchanged to <code>StatusLine</code>; they must gain <code>short</code> first</td></tr>
+        <tr><td>the three resolvers</td><td>used</td><td>passed through unchanged to <code>StatusLine</code>; <code>trustStatus</code> and <code>proxyStatus</code> take no traffic, <code>trafficStatus</code> takes the timestamps and a clock</td></tr>
         <tr><td><code>mode</code> (dialog)</td><td>used</td><td>decides body, steps, opt-out and the action set — the dialog's whole branch</td></tr>
         <tr><td><code>onRemove</code></td><td>used</td><td>the <em>turn it off</em> action in zone H, in the ours and foreign modes; the same slot relabels to <em>try again</em> after a failure</td></tr>
         <tr><td><code>onKeep</code></td><td>used — as the exit</td><td>zone H's bare <em>quit</em> when a local proxy is set. It is <code>keep: quit</code> in <code>closeConfirm.ts</code>, so the dialog no longer offers it as a second, separately-named choice</td></tr>
@@ -1003,7 +1170,7 @@ soft:
           <td><code>StepStatusView.short</code> — <code>StatusLine</code> renders <code>status.message</code>, and 4 of 16 verdicts exceed its ~40-char contract (101, 116, 63, 63), while the two error verdicts interpolate without bound</td>
           <td>Elements</td>
           <td>the domain module — <code>setup.ts</code>, per the <code>[UI_DEFER]</code> marker at line 187, which assigned the short form to itself and deferred "until the screen that consumes StatusLine"</td>
-          <td>Specified all 16 short forms and routed the four remedies to <code>Notice</code>, so W10 has wording to build rather than invent. The <code>StatusLine</code> verdict is <em>extend</em> — it also gains the toned message Tune asked for — and stays blocked; <code>confirm-at-point</code> is receipted <em>satisfied-via-proposal</em> rather than satisfied.</td>
+          <td>Specified all 16 short forms and routed the four remedies to <code>Notice</code>, so W10 has wording to build rather than invent. The <code>StatusLine</code> verdict is <em>extend</em> — it also gains the toned message Tune asked for. <strong>Resolved in W10:</strong> <code>short</code> landed, and the amendment re-specified the set at nineteen.</td>
         </tr>
         <tr>
           <td><code>Checkbox</code> (T1) — the registry has no boolean control, and the dialog's remote mode needs one</td>
@@ -1114,6 +1281,31 @@ soft:
           <td><strong>Tier-3 review, round 9 — accepted, not fixed:</strong> the remote mode's <em>quit</em> mounts without <code>frame="bare"</code>, so it renders bordered where zone H's rule says the exit is bare in every mode</td>
           <td><code>mockup</code> — <strong>waived</strong> at the author's direction as mockup fidelity rather than design substance. The written design is unambiguous and W10 builds from it: zone H's rule, Frame B's <em>&#10007; a mode-dependent button set</em>, and both mode rows say the exit is the same bare button in the same corner</td>
           <td>the rulebook's <code>data-ink-first</code> — recorded so W10 builds the rule, not the specimen</td>
+        </tr>
+        <tr>
+          <td><strong>Owner, on the running build:</strong> the status of each step is overwritten by the fact that traffic exists in the back end, but that traffic may be old and does not reflect the actual state — show whether the CA is trusted on this machine, whether the proxy is set on this machine, and whether we are capturing NEW traffic, each as its own fact, in a way an end user understands</td>
+          <td>frame · layout · elements · interaction · mockup · tune · receipt · capabilities — three constraints added to Frame A and its Given re-shaped; zones C1/C2 and C3 became different kinds of row and D dates the last flow; the <code>short</code> table went from sixteen to nineteen with three verdicts leaving steps 1–2; three Interaction rows added and two rewritten; the mockup shows idle beside two not-yets; three Tune rows drawn; four receipt lines re-cited</td>
+          <td><code>DEC-13</code>'s surviving invariant — <em>done = a real decrypted flow, never a self-reported or probe-reported checkbox</em> — read to its end: a decrypted flow is proof of the wire at the moment it was captured, not of this machine now. Frame A's "honest over encouraging": a green that outlives its evidence is the false green that costs an hour</td>
+        </tr>
+        <tr>
+          <td><strong>Owner:</strong> "check again" should not be local to each step — have a global one</td>
+          <td>layout · elements · interaction · mockup · tune — zone R added above the checklist, carrying the stamp and the one bare <code>Button</code>; the per-step controls removed; a Tune row draws the before and after; the window's focus event added as the second trigger</td>
+          <td><code>grouping-by-relatedness</code> — one reading of one machine is one thing, so one control; <code>data-ink-first</code> — two of three buttons informed nothing the first did not; fork D4 — the two in-flight verdicts are the progress line the disabled control needs</td>
+        </tr>
+        <tr>
+          <td><strong>Owner:</strong> the save should not be a button — embed it in the text, or a small download at the end of the text</td>
+          <td>elements · interaction · mockup · tune — <code>IconButton</code>'s placement gained the ↓ ending step 1's first sentence; the worded button above the list removed; the outcome <code>Notice</code> moved beneath the sentence inside the step; a Tune row draws it</td>
+          <td><code>IconButton</code> @use — "save ↓ … wherever the glyph alone carries the action"; <code>labels-add-context</code> — the sentence already says save and names the file, so a worded button beside it repeated it</td>
+        </tr>
+        <tr>
+          <td><strong>Owner:</strong> when changing UI, think carefully about UI/UX — do not make careless decisions</td>
+          <td><code>nothing</code> on its own — it set the bar the three instructions above were answered against: each was traced to a Frame driver or a component contract before anything moved, and the trade each makes is written into Tune</td>
+          <td><code>DEC-15</code> — the flow's stage order is the discipline, Frame before Layout before Elements, because "a convention an agent must remember is a convention an agent forgets"; a change that cannot name the driver it serves is the careless one</td>
+        </tr>
+        <tr>
+          <td><strong>Self-review at amendment:</strong> the mockup's fixed verdicts still used <code>message</code>, the field <code>StatusLine</code> read before W10 landed <code>short</code> — mounted against today's bundle, every verdict rendered blank</td>
+          <td><code>mockup</code> — the five fixed verdicts carry <code>short</code>; the mounted component reads what ships</td>
+          <td><code>DEC-26</code> — a mockup that mounts cannot drift from the component, but it can drift from the component's <em>props</em>; the amendment is the first time this run was mounted after the field moved</td>
         </tr>
       </tbody>
     </table>

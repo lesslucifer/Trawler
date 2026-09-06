@@ -1,6 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { COPY, STEPS, stepStatus, type OnbEvent, type OnbState, type Step } from "./onboardingMachine";
-import { Button, CopyText, Disclosure, Notice, StatusLine, type NoticeTone } from "./components/index";
+import {
+  Button,
+  CopyText,
+  Disclosure,
+  IconButton,
+  Notice,
+  StatusLine,
+  TimestampText,
+  type NoticeTone,
+} from "./components/index";
 import { ManualFallback, ManualSteps, TargetPicker } from "./manualSteps";
 import {
   canAutoSetup,
@@ -8,6 +17,7 @@ import {
   defaultProxyTarget,
   defaultTarget,
   guidedSteps,
+  NO_TRAFFIC,
   proveItSnippet,
   proxyOffSnippet,
   proxyOffSteps,
@@ -17,24 +27,30 @@ import {
   PROXY_TARGETS,
   removalSnippet,
   removalSteps,
+  SAVE_CA_STEP,
   TARGETS,
+  trafficStatus,
   trustSnippet,
   trustStatus,
-  verifyStatus,
   type HostOs,
-  type Observed,
   type ProxyProbe,
   type ProxyTarget,
   type Running,
   type StepStatusView,
+  type Traffic,
   type TrustProbe,
   type TrustTarget,
 } from "./setup";
 
-// The onboarding surface: a checklist of preconditions, each carrying a probed
-// verdict. Not a wizard — the steps are re-entered out of order, so there is no
-// Back/Next pair, and completion is unobservable: `stepStatus` decides which
-// step is OPEN, never whether one is DONE.
+// The onboarding surface: a checklist of preconditions, each carrying a verdict.
+// Not a wizard — the steps are re-entered out of order, so there is no Back/Next
+// pair, and completion is unobservable: `stepStatus` decides which step is OPEN,
+// never whether one is DONE.
+//
+// Two layers of truth, never mixed. Steps 1 and 2 report THIS MACHINE from the
+// two probes, re-read by one global "check again" and whenever the window
+// regains focus. Step 3 reports what is reaching Trawler NOW, from timestamps, so
+// a flow captured an hour ago can only ever read as idle.
 
 // The local action states are proven-by-running only: done/failed report just
 // that the elevated command ran (or didn't). Capture is proven solely by a live
@@ -53,13 +69,13 @@ interface ActionNote {
   text: string;
 }
 
-const INSTALL_NOTE: Partial<Record<ActionState, ActionNote>> = {
+const INSTALL_NOTE: ActionNotes = {
   running: { tone: "mute", text: "installing — approve the system prompt…" },
   done: { tone: "ok", text: "installed. we'll confirm it on your first flow." },
   failed: { tone: "warn", text: "automatic install failed — use the manual steps below." },
 };
 
-const SETPROXY_NOTE: Partial<Record<ActionState, ActionNote>> = {
+const SETPROXY_NOTE: ActionNotes = {
   running: { tone: "mute", text: "setting the proxy — approve the prompt if asked…" },
   done: { tone: "ok", text: "proxy set. we'll confirm it on your first flow." },
   failed: { tone: "warn", text: "automatic setup failed — use the manual steps below." },
@@ -82,7 +98,7 @@ const SAVECA_NOTE: ActionNotes = {
   failed: { tone: "warn", text: "couldn't save the certificate — check that Trawler is running." },
 };
 
-const UNSETPROXY_NOTE: Partial<Record<ActionState, ActionNote>> = {
+const UNSETPROXY_NOTE: ActionNotes = {
   running: { tone: "mute", text: "turning the proxy off — approve the prompt if asked…" },
   done: { tone: "ok", text: "proxy off. set it again to resume routing through Trawler." },
   failed: { tone: "warn", text: "couldn't turn the proxy off — follow the steps below instead." },
@@ -112,64 +128,109 @@ function useAction(run?: () => Promise<string | null | void>) {
   return { state, error, named, trigger };
 }
 
+type ActionHandle = ReturnType<typeof useAction>;
+
+const TICK_MS = 1000;
+
+// Recency is judged against a clock that keeps moving while the screen is open,
+// or a verdict true at mount would stay true forever.
+function useNow(): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), TICK_MS);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+function ActionNote({
+  testId,
+  action,
+  note,
+}: {
+  testId: string;
+  action: ActionHandle;
+  note: ActionNotes;
+}) {
+  const entry = note[action.state];
+  const shown = typeof entry === "function" ? entry(action.named) : entry;
+  if (!shown) return null;
+  return (
+    <div data-testid={`${testId}-status`} data-state={action.state} className="mt-chrome-y">
+      <Notice tone={shown.tone} detail={action.state === "failed" ? action.error : undefined}>
+        {shown.text}
+      </Notice>
+    </div>
+  );
+}
+
 // Fork D4: disabled in flight AND a progress line beside it — both halves or
 // neither, so a dead control is never the only signal.
 function Action({
   testId,
   label,
-  state,
-  error,
+  action,
   note,
-  named,
   onClick,
 }: {
   testId: string;
   label: string;
-  state: ActionState;
-  error?: string;
+  action: ActionHandle;
   note: ActionNotes;
-  named?: string;
   onClick: () => void;
 }) {
-  const entry = note[state];
-  const shown = typeof entry === "function" ? entry(named ?? "") : entry;
   return (
     <div>
-      <Button onClick={onClick} disabled={state === "running"}>
+      <Button onClick={onClick} disabled={action.state === "running"}>
         {label}
       </Button>
-      {shown && (
-        <div data-testid={`${testId}-status`} data-state={state} className="mt-chrome-y">
-          <Notice tone={shown.tone} detail={state === "failed" ? error : undefined}>
-            {shown.text}
-          </Notice>
-        </div>
-      )}
+      <ActionNote testId={testId} action={action} note={note} />
     </div>
+  );
+}
+
+// The step that names the file is the step that produces it: the save control
+// ends the sentence, and its outcome lands beneath, inside the same step.
+function SaveCertificateStep({ save, onSave }: { save: ActionHandle; onSave: () => void }) {
+  return (
+    <>
+      <span className="flex items-center gap-chrome-gap">
+        {SAVE_CA_STEP}
+        <IconButton
+          glyph="save"
+          label="save certificate"
+          size={24}
+          onClick={onSave}
+          disabled={save.state === "running"}
+        />
+      </span>
+      <ActionNote testId="save-ca" action={save} note={SAVECA_NOTE} />
+    </>
   );
 }
 
 function TrustCa({
   os,
-  state,
-  error,
+  install,
   remedy,
   onInstall,
   save,
 }: {
   os: HostOs;
-  state: ActionState;
-  error?: string;
+  install: ActionHandle;
   remedy?: string;
   onInstall?: () => void;
-  save: ReturnType<typeof useAction>;
+  save: ActionHandle;
 }) {
   const [target, setTarget] = useState<TrustTarget>(defaultTarget(os));
   const auto = onInstall && canAutoSetup(os) && target === defaultTarget(os);
   // The action's own Notice already carries the error, but only while it is
   // mounted — switching target unmounts it, so the remedy takes over rather than
   // leaving the failure stated nowhere.
-  const statedByAction = Boolean(auto) && state === "failed";
+  const statedByAction = Boolean(auto) && install.state === "failed";
+  const slots = save.trigger
+    ? { [SAVE_CA_STEP]: <SaveCertificateStep save={save} onSave={save.trigger} /> }
+    : {};
 
   return (
     <div className="mt-2">
@@ -177,8 +238,7 @@ function TrustCa({
         <Action
           testId="install-ca"
           label={COPY.steps["trust-ca"].action}
-          state={state}
-          error={error}
+          action={install}
           note={INSTALL_NOTE}
           onClick={onInstall}
         />
@@ -191,7 +251,7 @@ function TrustCa({
       <ManualFallback
         summary="set it up manually"
         collapsed={Boolean(auto)}
-        defaultOpen={state === "failed"}
+        defaultOpen={install.state === "failed"}
         testId="manual"
         className="mt-2"
       >
@@ -201,23 +261,11 @@ function TrustCa({
           onChange={(id) => setTarget(id as TrustTarget)}
           label="trust target"
         />
-        {save.trigger && (
-          <div className="mb-2">
-            <Action
-              testId="save-ca"
-              label="save certificate"
-              state={save.state}
-              error={save.error}
-              note={SAVECA_NOTE}
-              named={save.named}
-              onClick={save.trigger}
-            />
-          </div>
-        )}
         <ManualSteps
           steps={guidedSteps(target)}
           command={trustSnippet(target)}
           commandLabel="certificate command"
+          slots={slots}
           testId="guided-steps"
         />
         <div className="mt-2">
@@ -238,27 +286,25 @@ function TrustCa({
 function SetProxy({
   os,
   addr,
-  state,
-  error,
+  set,
   remedy,
   onSetProxy,
   unset,
 }: {
   os: HostOs;
   addr: string;
-  state: ActionState;
-  error?: string;
+  set: ActionHandle;
   remedy?: string;
   onSetProxy?: () => void;
-  unset: ReturnType<typeof useAction>;
+  unset: ActionHandle;
 }) {
   const [target, setTarget] = useState<ProxyTarget>(defaultProxyTarget(os));
   const auto = onSetProxy && canAutoSetup(os) && target === defaultProxyTarget(os);
   const snippet = proxySnippet(target, addr);
-  const statedByAction = Boolean(auto) && state === "failed";
+  const statedByAction = Boolean(auto) && set.state === "failed";
   // Offered the moment a native set succeeds; the stop action turns the system
   // proxy back off (idempotent — no-op if it isn't set).
-  const showStop = auto && state === "done";
+  const showStop = auto && set.state === "done";
 
   return (
     <div className="mt-2">
@@ -267,8 +313,7 @@ function SetProxy({
           <Action
             testId="set-proxy"
             label={COPY.steps["set-proxy"].action}
-            state={state}
-            error={error}
+            action={set}
             note={SETPROXY_NOTE}
             onClick={onSetProxy}
           />
@@ -276,8 +321,7 @@ function SetProxy({
             <Action
               testId="unset-proxy"
               label="stop routing through Trawler"
-              state={unset.state}
-              error={unset.error}
+              action={unset}
               note={UNSETPROXY_NOTE}
               onClick={unset.trigger}
             />
@@ -292,7 +336,7 @@ function SetProxy({
       <ManualFallback
         summary="set it up manually"
         collapsed={Boolean(auto)}
-        defaultOpen={state === "failed"}
+        defaultOpen={set.state === "failed"}
         testId="manual"
         className="mt-2"
       >
@@ -323,6 +367,68 @@ function SetProxy({
   );
 }
 
+function MakeRequest({
+  addr,
+  remedy,
+  lastFlowAt,
+}: {
+  addr: string;
+  remedy?: string;
+  lastFlowAt: number | null;
+}) {
+  return (
+    <div className="mt-2">
+      <CopyText value={proveItSnippet(addr)} label="prove-it command" />
+      {remedy && (
+        <div data-testid="verify-remedy" className="mt-2">
+          <Notice>{remedy}</Notice>
+        </div>
+      )}
+      {lastFlowAt !== null && (
+        <p data-testid="last-flow" className="mt-2 font-ui text-body text-ink-mute">
+          last flow at <TimestampText timestamp={lastFlowAt} />
+        </p>
+      )}
+    </div>
+  );
+}
+
+// One reading of this machine governs both probed steps, so one control re-takes
+// it. The time stamps the reading: a probe is a snapshot, and nothing pushes when
+// the user changes a setting elsewhere.
+function Recheck({
+  probing,
+  probedAt,
+  onRecheck,
+}: {
+  probing: boolean;
+  probedAt: number | null;
+  onRecheck: () => void;
+}) {
+  return (
+    <div
+      data-testid="recheck"
+      className="mb-2 flex items-center justify-end gap-chrome-gap font-ui text-control text-ink-mute"
+    >
+      {probing ? (
+        <span>checking this machine…</span>
+      ) : (
+        probedAt !== null && (
+          <span>
+            checked at <TimestampText timestamp={probedAt} />
+          </span>
+        )
+      )}
+      <Button onClick={onRecheck} frame="bare" tone="mute" disabled={probing}>
+        check again
+      </Button>
+    </div>
+  );
+}
+
+const latest = (a: number | null, b: number | null) =>
+  a === null ? b : b === null ? a : Math.max(a, b);
+
 export function Onboarding({
   state,
   dispatch,
@@ -330,7 +436,9 @@ export function Onboarding({
   proxyAddr = "127.0.0.1:7420",
   trustProbe = "unknown",
   proxyProbe = "unknown",
-  observed = { decrypted: false, trafficSeen: false },
+  probing = false,
+  probedAt = null,
+  traffic = NO_TRAFFIC,
   onInstallCa,
   onSaveCa,
   onSetProxy,
@@ -343,7 +451,9 @@ export function Onboarding({
   proxyAddr?: string;
   trustProbe?: TrustProbe;
   proxyProbe?: ProxyProbe;
-  observed?: Observed;
+  probing?: boolean;
+  probedAt?: number | null;
+  traffic?: Traffic;
   onInstallCa?: () => Promise<void>;
   onSaveCa?: () => Promise<string | null>;
   onSetProxy?: () => Promise<void>;
@@ -354,26 +464,19 @@ export function Onboarding({
   const saveCa = useAction(onSaveCa);
   const setProxyAction = useAction(onSetProxy);
   const unsetProxyAction = useAction(onUnsetProxy);
+  const now = useNow();
 
-  // The honest per-step verdict: a local probe or observed traffic, not the
-  // stepper's cursor.
-  const running = (r: Running, active: boolean) => (active ? r : null);
+  // The action the user just took outranks the re-read it triggers, so the line
+  // says "installing…" until the command has exited, then "checking…".
+  const running = (action: ActionHandle, r: Running): Running =>
+    action.state === "running" ? r : probing ? "checking" : null;
+  const failure = (action: ActionHandle) => (action.state === "failed" ? action.error : undefined);
   const statusOf = (step: Step): StepStatusView => {
     if (step === "trust-ca")
-      return trustStatus(
-        trustProbe,
-        observed,
-        running("installing", install.state === "running"),
-        install.state === "failed" ? install.error : undefined,
-      );
+      return trustStatus(trustProbe, running(install, "installing"), failure(install));
     if (step === "set-proxy")
-      return proxyStatus(
-        proxyProbe,
-        observed,
-        running("setting", setProxyAction.state === "running"),
-        setProxyAction.state === "failed" ? setProxyAction.error : undefined,
-      );
-    return verifyStatus(observed);
+      return proxyStatus(proxyProbe, running(setProxyAction, "setting"), failure(setProxyAction));
+    return trafficStatus(traffic, now);
   };
 
   return (
@@ -390,6 +493,8 @@ export function Onboarding({
         <div className="w-full max-w-dialog-max">
           <h2 className="text-center font-serif text-title italic text-ink">{COPY.title}</h2>
           <p className="mb-4 text-center font-ui text-note text-ink-mute">{COPY.subtitle}</p>
+
+          {onRecheck && <Recheck probing={probing} probedAt={probedAt} onRecheck={onRecheck} />}
 
           {STEPS.map((step, i) => {
             const status = stepStatus(state, step);
@@ -419,22 +524,13 @@ export function Onboarding({
                   </span>
                 </button>
 
-                {open && onRecheck && step !== "verify" && (
-                  <div className="mt-chrome-y flex justify-end">
-                    <Button onClick={onRecheck} frame="bare" tone="mute">
-                      check again
-                    </Button>
-                  </div>
-                )}
-
                 {open && (
                   <div data-testid="step-body" className="mt-2">
                     <p className="font-ui text-body text-ink-mute">{copy.body}</p>
                     {step === "trust-ca" ? (
                       <TrustCa
                         os={os}
-                        state={install.state}
-                        error={install.error}
+                        install={install}
                         remedy={view.remedy}
                         onInstall={install.trigger}
                         save={saveCa}
@@ -443,16 +539,17 @@ export function Onboarding({
                       <SetProxy
                         os={os}
                         addr={proxyAddr}
-                        state={setProxyAction.state}
-                        error={setProxyAction.error}
+                        set={setProxyAction}
                         remedy={view.remedy}
                         onSetProxy={setProxyAction.trigger}
                         unset={unsetProxyAction}
                       />
                     ) : (
-                      <div className="mt-2">
-                        <CopyText value={proveItSnippet(proxyAddr)} label="prove-it command" />
-                      </div>
+                      <MakeRequest
+                        addr={proxyAddr}
+                        remedy={view.remedy}
+                        lastFlowAt={latest(traffic.lastDecryptedAt, traffic.lastPlainAt)}
+                      />
                     )}
                   </div>
                 )}

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d03119f34851f0dfac883">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-32: the setup screen reads two layers, and judges traffic against a clock</title>
+  <style>
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}
+    pre.sk{font-family:var(--mono,monospace);font-size:12px;line-height:1.45;margin:0;white-space:pre;overflow-x:auto;}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-32 — this machine and the wire are two layers; a verdict never borrows across them, and traffic is judged against a clock</h1>
+      <p>A probe knows the machine at the moment it ran. A captured flow knows the wire at the moment it
+         was captured. Neither knows the other, and neither knows <em>now</em> unless it carries a time.</p>
+      <div class="meta">DEC-32 · 2026-09-06 · Trawler · E-REDESIGN.W10 · from the owner's review of the running
+        setup screen, distilled with design run #9's amendment · status: active · amends DEC-13's connection-signal clause</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="context">Context</h2>
+    <p>E-UISETUP.W6 gave each setup step "two truths": a local probe <em>or</em> observed traffic, either
+       one turning the step green. The observation was a pair of booleans — <em>decrypted</em>,
+       <em>trafficSeen</em> — with no time attached. On the running build the owner turned the proxy off,
+       came back to the setup screen, and found every step still green: a flow captured an hour earlier was
+       vouching for the proxy, the certificate <em>and</em> the capture, and nothing on screen could say
+       otherwise until something asked the machine again.</p>
+    <div class="callout warn" data-c="the-defect">
+      <strong>The defect was not a stale value. It was a verdict built from evidence that could not
+      support it.</strong> A decrypted flow proves that <em>some</em> client trusted the certificate and
+      routed here <em>at that moment</em>. It proves nothing about this machine's trust store, nothing about
+      this machine's proxy setting, and nothing about now.
+    </div>
+
+    <h2 id="choice">Choice</h2>
+    <table data-c="two-layers">
+      <thead><tr><th>Layer</th><th>Source</th><th>Answers</th><th>Can never say</th><th>On screen</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>this machine</strong></td>
+          <td>two read-only probes — CA in the trust store, system proxy address</td>
+          <td>is <em>this host</em> set up, as of the moment it was asked</td>
+          <td>anything about another device · anything about traffic · anything after the reading</td>
+          <td>steps 1 and 2, verdicts worded "on this machine"; one dated <em>checked at · check again</em>
+              row re-takes both, and so does the window regaining focus</td>
+        </tr>
+        <tr>
+          <td><strong>traffic</strong></td>
+          <td>timestamps — the newest decrypted flow, the newest plain flow, the newest live tunnel; plus
+              whether the core saw anything before the app subscribed</td>
+          <td>what is reaching Trawler <em>now</em>, from any client</td>
+          <td>which device sent it · whether this machine is configured · anything about a flow older than the window</td>
+          <td>step 3, judged against a clock: <em>capturing</em> inside 30 s · a tunnel <em>just arrived</em>
+              for 3 s, then <em>arriving but not decrypting</em> · <em>plain HTTP only</em> · <em>idle</em>, with
+              the last flow dated · <em>waiting</em></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="diagram" data-c="traffic-verdict">
+      <pre class="mermaid">
+flowchart LR
+  T["traffic timestamps + now"] --> D{"decrypted flow within 30 s?"}
+  D -- yes --> OK["✓ capturing traffic"]
+  D -- no --> U{"tunnel within 30 s, no flow after it?"}
+  U -- "younger than 3 s" --> G["⟳ a connection just arrived…"]
+  U -- "older than 3 s" --> W["⚠ arriving but not decrypting"]
+  U -- no --> P{"plain flow within 30 s?"}
+  P -- yes --> PL["◐ arriving — plain HTTP only"]
+  P -- no --> E{"anything, ever?"}
+  E -- yes --> I["○ idle — nothing arriving now"]
+  E -- no --> N["○ waiting for your first request"]
+      </pre>
+      <div class="caption">Positive evidence outranks a failing tunnel: with one client decrypting and another not, the screen's purpose is met, and the failing one shows the moment the working one goes quiet.</div>
+    </div>
+    <table data-c="constants">
+      <thead><tr><th>Constant</th><th>Value</th><th>Why this and not another</th></tr></thead>
+      <tbody>
+        <tr><td>recency window</td><td>30 s</td><td>long enough to read the screen after one <code>curl</code>; short enough that a browser left alone stops reading as captured. The tone flips at the boundary; the time itself is shown absolute (DEC-22), never as a ticking "3 s ago"</td></tr>
+        <tr><td>tunnel grace</td><td>3 s</td><td>a handshake that will succeed produces its flow within a moment; until then the tunnel is neither proof nor failure, and a warning flashed for the 100 ms before every good flow would be noise</td></tr>
+        <tr><td>the <code>/stats</code> tally</td><td>time-less</td><td>it counts tunnels since the core started and carries no clock, so it can only separate <em>idle</em> (something, once) from <em>waiting</em> (nothing, ever) — never say "now"</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Options rejected</h2>
+    <table data-c="rejected">
+      <thead><tr><th>Option</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>Keep "two truths" and put a recency window on the borrowed positive</td><td>a recent decrypted flow still says nothing about <em>this machine</em> — a phone that trusts the certificate produces it with the host untouched. The borrowing was the defect, not its age</td></tr>
+        <tr><td>A per-step "last confirmed at" stamp, one verdict per step</td><td>keeps three verdicts arguing over one fact; the screen still cannot show "not on this machine" beside "capturing", which is the true state of the remote case</td></tr>
+        <tr><td>Relative time on the verdict — "capturing · 4 min ago"</td><td>DEC-22 makes absolute the default for a reason a debugging tool shares: the user compares the stamp with their own clock and logs. Recency is the verdict's tone; the time is a fact</td></tr>
+        <tr><td>No window — "capturing" whenever any flow exists, with the time beside it</td><td>this is what shipped, and it is what the owner reported: a green that outlives its evidence is the false green Frame A names as costing an hour</td></tr>
+        <tr><td>Re-probe on an interval</td><td>two shell commands per tick, forever, to answer a question that changes when the user acts. Re-reading on the action, on demand, and on window focus covers every moment the answer can move</td></tr>
+        <tr><td>Timestamp the tunnel tally in the core</td><td>a core change for a UI verdict; the live event already carries its arrival time, and the seed's only remaining job — <em>idle</em> versus <em>waiting</em> — needs no clock</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul>
+      <li><a href="dec-13-onboarding-capabilities.html">DEC-13</a>'s connection-signal clause — "so the proxy step can go green on any tunnel" — is superseded; the record carries a dated note. The signal, the endpoint and the event are unchanged.</li>
+      <li><code>trustStatus</code> and <code>proxyStatus</code> take no traffic input; there is no argument through which old evidence could reach them. <code>trafficStatus</code> replaces <code>verifyStatus</code> and takes the timestamps and <code>now</code>. A future surface that wants a step to go green on traffic argues with this record first.</li>
+      <li>UC-ONBOARD's contract reads "two layers of status, never blended" in place of "two-truths status per step".</li>
+      <li>Design run #9 was amended inside the build WU under DEC-24/25: its Frame gained three constraints, its Layout a zone, and its <code>short</code> table went from sixteen to nineteen. The amended blob is what the build cites.</li>
+    </ul>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
