@@ -1,0 +1,15 @@
+schema: test/v2
+level: commit
+epic: E-REDESIGN
+branch: epic/redesign
+tests:
+  unit:
+    waived: "TSDoc text only - four docstrings in ui/src/components/{Notice,CopyButton,TonedText,Field}.tsx. No markup, props, behaviour or export changed, so there is nothing a unit test can assert that it was not already asserting: the 741-test suite passes unchanged, which is the evidence that this commit moved no behaviour. The docstrings themselves are not inert, though - scripts/design-registry.mjs parses them into the roster the design flow reads, so the check that matters is that the roster still emits 28 entries with the corrected text, which it does."
+verified:
+  - "node scripts/design-registry.mjs - 28 entries, unchanged in count, with the corrected @use/@avoid/@anatomy lines."
+  - "cd ui && pnpm test - 741 passed, 44 files, identical to before."
+  - "cd ui && pnpm exec eslint src - clean, including the design/vocabulary rule."
+  - "cargo xtask gate0 - green."
+  - "grep -rn 'HeaderTable|components\\.tsx' over ui/src/components/ returns nothing - the three dangling destinations are gone, and the sweep is the check, not a spot fix."
+  - "The Field claim was checked against the built screen rather than assumed: ui/src/App.tsx renders Field at two call sites (free text, status) and Select at two (host, method), so 'four fields' was false and 'two typed keys' is true."
+note: "A standalone commit on the epic branch, outside any WU, from a verified epic-scope finding. Three of the four are the exact defect class DEC-30 exists to name - a registry docstring redirecting to something that does not exist - and this epic created them by deleting HeaderTable (W6) and components.tsx (W2) without sweeping the contracts that cited them. The fourth is a tenancy claim W4 falsified when it turned two of Field's four named filter fields into Selects. None of the four is reachable by any mechanical check the repo has: the roster parses the tags but never resolves the prose inside them, which is why they survived eleven WU reviews and surfaced only at the epic seam."
