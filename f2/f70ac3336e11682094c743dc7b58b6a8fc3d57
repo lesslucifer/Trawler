@@ -1,0 +1,21 @@
+schema: doc/v1
+epic: E-RFINISH
+wu: E-RFINISH.W1
+changes:
+  - path: docs/component-design.html
+    tier: T1
+    action: updated
+    distills: "DEC-26 into the spec that contradicted it: the file skeleton loads the CDN, specimens.bundle.js at ../../../ and Babel and carries the text/babel mount into spec-* hosts, replacing a type=module tw-config.js tag that check-render.mjs refuses; the specimen principle stops teaching the copied className; the scale-down rule stops pricing re-implementation"
+  - path: docs/design-flow.html
+    tier: T1
+    action: updated
+    distills: "the mockup template spells the bundle src doc.rs matches literally - ../../ from docs/work/, where a run lives - so a run pasted from it passes assets.specimen on its first verdict"
+  - path: docs/work/2026-09-06-redesign-finish-w1-plan.html
+    tier: T3
+    action: added
+    distills: "the WU plan, written before the code; declares the two additions to the epic plan W1 row (the sibling spec, and a test where the epic said docs-only)"
+  - path: docs/work/2026-09-06-redesign-finish-w1-result.html
+    tier: T3
+    action: added
+    distills: "the WU result: delivered, with the check-render before/after transcript, the red-before-green failure text, and two follow-ups"
+t2_waived: "No use case moves and no decision is made - this WU copies DEC-26 existing ruling into the two T1 specs that contradicted it, so the T2 fact already exists and duplicating it downward is what the tier rule forbids. The one backlog row it closes (the roadmap Deferred entry naming component-design.html pre-bundle skeleton) is struck at W10, where the epic plan puts every roadmap edit so the living backlog is rewritten once rather than ten times."
