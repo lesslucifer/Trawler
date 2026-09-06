@@ -168,7 +168,7 @@
         re-parse. <code>known</code> holds a handful of hosts, so that rebuild is noise; the 5000
         <code>new URL()</code> parses were all 96 ms of it. The Set is left exactly as it was.</p>
         <p>Splitting the two also priced them: even where the memo never hits, dropping <code>toRow</code>'s
-        discarded <code>pathname + search</code> concatenation is worth 2.09× on its own.</p>
+        discarded <code>pathname + search</code> concatenation is worth 2.11× on its own.</p>
       </div>
     </div>
 
@@ -213,8 +213,8 @@
         <tr><td><strong>E2E</strong></td><td><span class="bad">waived</span> — no contract moves, and the only
         difference an e2e could see here is a duration, which the testing standard forbids asserting at every
         level. The epic's e2e is W10's.</td></tr>
-        <tr><td><strong>Review</strong></td><td><strong>Two rounds</strong>, five isolated finders each, twenty-six
-        verifiers between them. Round one: seventeen candidates, <strong>one confirmed</strong> — a lossy-decode
+        <tr><td><strong>Review</strong></td><td><strong>Three rounds</strong> — fourteen isolated finders and fifteen verifiers
+        between them, then a final audit of this report against the tree. Round one: seventeen candidates, <strong>one confirmed</strong> — a lossy-decode
         regression that printed a shown size larger than the total. Ten refuted, two of them by a written ruling
         rather than by argument: <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a> explicitly
         rejects recording rejected alternatives in a component's TSDoc, so leaving FormRenderer's untouched was
@@ -225,7 +225,7 @@
         plus one gap in the WU's own discipline: the decode the second round's fix introduced was changed on a
         claim about its cost and measured only afterwards. All are fixed above, and the deviations table
         carries each.</td></tr>
-        <tr><td><strong>Suites</strong></td><td><code>vitest run</code> 761 passed / 45 files — the 741 that
+        <tr><td><strong>Suites</strong></td><td><code>vitest run</code> 762 passed / 45 files — the 741 that
         predate this WU unchanged. <code>cargo test --all</code> green. <code>tsc --noEmit</code> and
         <code>eslint .</code> clean, <code>bench/</code> inside the typechecked and linted set.</td></tr>
       </tbody>
@@ -273,8 +273,8 @@
         <tr>
           <td>—</td>
           <td><strong>Added while measuring:</strong> a third <code>merge</code> case where no two flows share
-          a host, so the memo can never hit. Without it the 251× would be a claim about a fixture rather than
-          about the code, and the 2.09× floor it exposes would be invisible.</td>
+          a host, so the memo can never hit. Without it the 249× would be a claim about a fixture rather than
+          about the code, and the 2.11× floor it exposes would be invisible.</td>
         </tr>
         <tr>
           <td>—</td>
@@ -297,7 +297,7 @@
           first-sight one — while <code>flows.bench.ts</code> had carried a deliberate memo-miss control from
           the day it landed. The asymmetry was the omission, not the warm measurement: a flow's
           <code>started_at</code> never changes, so an unscrolled re-render really is all hits. The added case
-          answers what the warm-only suite could not — the miss path does not regress (1.05×), so the memo is
+          answers what the warm-only suite could not — the miss path does not regress (1.03×), so the memo is
           free on a miss and 2.9× on a hit, and the headline belongs to the case it names rather than to the
           component in general.</td>
         </tr>
@@ -346,7 +346,7 @@
           <td>—</td>
           <td><strong>Defect found and fixed in flight:</strong> the memo key's separator went into the source
           as a literal NUL byte, which made git classify <code>TimestampText.tsx</code> as binary — its diffs
-          rendered as <code>Bin 4443 -&gt; 2262 bytes</code> and <code>grep</code> refused to read it. Fixed
+          rendered as <code>Bin 2262 -&gt; 4443 bytes</code> and <code>grep</code> refused to read it. Fixed
           as <code>\u0000</code> in <code>626f91e</code>; the whole tree was then scanned for other NULs and
           has none.</td>
         </tr>
@@ -360,7 +360,7 @@
       it. <a href="../decisions/dec-22-time-is-absolute-and-local.html">DEC-22</a>'s four forks are preserved
       exactly — absolute, seconds, local, 24 h — and were re-asserted, not merely left alone.</p>
       <p>The one design record this WU does change lives in the code, where
-      <a href="../decisions/dec-25-design-build-handoff.html">DEC-16's</a> rule puts it: TextRenderer's TSDoc
+      <a href="../decisions/dec-16-design-file-retirement.html">DEC-16's</a> rule puts it: TextRenderer's TSDoc
       gains a <code>@props</code> line stating that <code>size</code> is the count its caller already holds
       and why re-deriving it is what this WU removed. FormRenderer's TSDoc is unchanged, because its component
       is.</p>
