@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d6ce89f34851f0dfac9a0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-RFINISH.W3 result (the benchmark, then the three performance costs)</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .bad{color:var(--warn);font-weight:600}
+    .good{color:var(--ok);font-weight:600}
+    .num{font-family:var(--mono,monospace);text-align:right;white-space:nowrap}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+    .card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper)}
+    .card h4{margin:0 0 6px;font-size:14px}
+    .card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .card p{margin:6px 0;font-size:12.5px;line-height:1.55}
+    pre.tb{font-family:var(--mono,monospace);font-size:11.5px;line-height:1.5;margin:0;white-space:pre-wrap}
+  </style>
+</head>
+<body data-artifact="wu-result" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-RFINISH.W3 result — the benchmark, then the three performance costs</h1>
+      <p>Delivered. The benchmark landed first and alone, and then refused two of the three fixes the plan
+      proposed — which is the only reason this WU was worth running in this order.</p>
+      <div class="meta">WU result · 2026-09-06 · Trawler · T3 (docs/work/) · <code>wu/redesign-finish/perf-bench</code>
+      → <a href="2026-09-06-redesign-finish-plan.html">epic/redesign-finish</a> ·
+      <a href="2026-09-06-redesign-finish-w3-plan.html">its plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div class="callout" data-item="outcome" data-c="outcome">
+      <strong>Delivered.</strong> <code>pnpm bench</code> and <code>cargo xtask ui bench</code> run the same
+      committed suite; all three named costs carry a before number taken at the benchmark's own commit and an
+      after number from the tip. Two of the three are paid — the time column re-renders
+      <strong>3.0×</strong> faster and the host merge <strong>251×</strong> — and the third is paid on the
+      member the benchmark could show it helping (<strong>51.6×</strong>) and
+      <strong class="bad">reverted</strong> on the member it could not. The 741 assertions that existed before
+      this WU all pass unchanged; 14 were added.
+    </div>
+
+    <h2 id="numbers">The three before/after pairs</h2>
+    <p>Before is a run at <code>bf7a449</code>, the benchmark's own commit, with no <code>src/</code> perf edit
+    in the tree. After is a run of <code>cargo xtask ui bench</code> at the tip. Higher hz is better.</p>
+    <table data-c="numbers">
+      <thead>
+        <tr><th>Cost</th><th>Benchmark case</th><th class="num">before</th><th class="num">after</th><th class="num">×</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="2"><strong>1</strong><br>TimestampText</td>
+          <td>re-render of a 42-row window — <em>the SSE refresh</em></td>
+          <td class="num">2,755.82 hz<br>0.363 ms</td><td class="num">8,350.35 hz<br>0.120 ms</td>
+          <td class="num good">3.03</td>
+        </tr>
+        <tr>
+          <td>first mount of a 42-row window</td>
+          <td class="num">1,331.07 hz<br>0.751 ms</td><td class="num">2,325.01 hz<br>0.430 ms</td>
+          <td class="num good">1.75</td>
+        </tr>
+        <tr>
+          <td rowspan="3"><strong>2</strong><br>useFlows.merge</td>
+          <td>steady state — 5000 flows, every host known</td>
+          <td class="num">10.4346 hz<br>95.83 ms</td><td class="num">2,616.10 hz<br>0.382 ms</td>
+          <td class="num good">251</td>
+        </tr>
+        <tr>
+          <td>cold — 5000 flows into an empty set</td>
+          <td class="num">10.3611 hz<br>96.51 ms</td><td class="num">2,588.83 hz<br>0.386 ms</td>
+          <td class="num good">250</td>
+        </tr>
+        <tr>
+          <td>5000 flows, no two sharing a host — <em>the memo never hits</em></td>
+          <td class="num">9.1192 hz<br>109.66 ms</td><td class="num">19.0964 hz<br>52.37 ms</td>
+          <td class="num good">2.09</td>
+        </tr>
+        <tr>
+          <td rowspan="3"><strong>3</strong><br>the size report</td>
+          <td>TextRenderer — 10 MiB, as BodyViewer renders it</td>
+          <td class="num">67.3927 hz<br>14.84 ms</td><td class="num">3,475.28 hz<br>0.288 ms</td>
+          <td class="num good">51.6</td>
+        </tr>
+        <tr>
+          <td>FormRenderer — 40k pairs <span class="bad">(fix reverted)</span></td>
+          <td class="num">1.9237 hz<br>519.8 ms</td><td class="num">1.8901 hz<br>529.1 ms</td>
+          <td class="num bad">1.00</td>
+        </tr>
+        <tr>
+          <td>FormRenderer — 10 MiB <span class="bad">(fix reverted)</span></td>
+          <td class="num">1.9183 hz<br>521.3 ms</td><td class="num">1.8949 hz<br>527.7 ms</td>
+          <td class="num bad">1.00</td>
+        </tr>
+        <tr>
+          <td colspan="2"><em>controls — cases this WU did not touch</em>: <code>byteLength</code> over 10 MiB ·
+          over the 128 KiB shown slice · TextRenderer with no size supplied</td>
+          <td class="num">73.93 · 5,695 · 67.39 hz</td>
+          <td class="num">71.53 · 5,469 · 68.58 hz</td>
+          <td class="num">≈1.00</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="controls-note">
+      The three controls move by under 4% and bound the run-to-run noise, which is what makes the 1.00 on
+      FormRenderer readable as <em>nothing happened</em> rather than as a small win lost in the error.
+    </div>
+
+    <h2 id="refused">What the benchmark refused</h2>
+    <p>Two of the plan's three proposed mechanisms did not survive measurement. Both are recorded here rather
+    than quietly re-written, because the reason this WU was ordered benchmark-first is that neither could have
+    been caught any other way.</p>
+    <div class="cards" data-c="refused">
+      <div class="card">
+        <div class="who">refuted before it landed</div>
+        <h4>Counting UTF-8 by arithmetic is slower than allocating</h4>
+        <p>The plan proposed replacing <code>new TextEncoder().encode(text).length</code> with a
+        non-allocating scan over code units. Measured over the same 10 MiB body: the scan runs
+        <strong>17.19 ms</strong> against the encoder's <strong>14.16 ms</strong>. A native encode beats a JS
+        loop even when the loop allocates nothing.</p>
+        <p><code>byteLength</code> is therefore <strong>unchanged</strong>. A chunked
+        <code>encodeInto</code> into one reused buffer did measure faster — 8.74 ms — and is recorded as a
+        follow-up rather than taken, because after the real fix nothing calls it on a body that large except
+        FormRenderer.</p>
+      </div>
+      <div class="card">
+        <div class="who">landed, then reverted</div>
+        <h4>FormRenderer's cost is its DOM, not its byte count</h4>
+        <p>FormRenderer was given the same <code>size</code> prop as its sibling and it is reverted in the
+        same commit that added it. At 40k pairs it measured 1.9408 → 1.9577 hz; at 10 MiB, where the byte
+        count is largest and the drawn DOM identical, 1.9183 → 1.9332 hz. Both are inside a ±1.7% error.</p>
+        <p>The cut leaves it drawing roughly 6000 <code>KeyValueRow</code> nodes, ~520 ms, and the byte count
+        is ~3% of that. The epic's rule is explicit — a fix the benchmark cannot show helping is reverted, not
+        kept because its sibling's worked.</p>
+      </div>
+      <div class="card">
+        <div class="who">diagnosis corrected</div>
+        <h4>The Set rebuild was never the cost</h4>
+        <p>E-REDESIGN named <code>merge</code>'s <code>new Set(known)</code> rebuild alongside the URI
+        re-parse. <code>known</code> holds a handful of hosts, so that rebuild is noise; the 5000
+        <code>new URL()</code> parses were all 96 ms of it. The Set is left exactly as it was.</p>
+        <p>Splitting the two also priced them: even where the memo never hits, dropping <code>toRow</code>'s
+        discarded <code>pathname + search</code> concatenation is worth 2.09× on its own.</p>
+      </div>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tbody>
+        <tr><td><strong>Commits</strong></td><td>
+          <code>9c8d2ab</code> plan ·
+          <code>bf7a449</code> the benchmark, alone ·
+          <code>1a07823</code> cost 1 ·
+          <code>3a6ea55</code> cost 2 ·
+          <code>d710e21</code> cost 3 ·
+          <code>626f91e</code> a NUL byte out of the source ·
+          <code>f39892a</code> the integration test
+        </td></tr>
+        <tr><td><strong>Benchmark</strong></td><td><code>ui/bench/</code> — <code>fixtures.ts</code> (pure
+        functions of an index; no network, no files, no randomness) plus one file per cost. Entry points:
+        <code>pnpm bench</code> in <code>ui/</code>, <code>cargo xtask ui bench</code> from the root. It is
+        not in <code>pnpm test</code> and not in any gate: wall-clock numbers are not deterministic, and the
+        gate is served by the counts below instead.</td></tr>
+        <tr><td><strong>Unit</strong></td><td>9 added. <code>xtask/src/ui.rs</code> — <code>ui bench</code>
+        takes no arguments and is in <code>USAGE</code>. <code>TimestampText.test.tsx</code> — today's and the
+        year's bounds are exact to the millisecond, and a timestamp is re-labelled once the clock leaves the
+        day it was rendered under (the memo's generation). <code>flow.test.ts</code> — <code>hostOf</code>
+        returns exactly what a full <code>new URL()</code> parse returns across port, default port, userinfo,
+        IPv6, punycode, query-terminated and slash-less authorities; agrees with <code>toRow</code>; names no
+        host where there is none; and keeps answering correctly past its own memo bound.
+        <code>TextRenderer.test.tsx</code> — states the size its caller knew, and derives the identical string
+        when the caller cannot supply one.</td></tr>
+        <tr><td><strong>Integration</strong></td><td>4, in <code>ui/src/perf.test.tsx</code> — one per seam,
+        each asserting work not done <em>and</em> the output that must not move: the list re-renders ten times
+        and parses no timestamp (rendered time cells identical); a refresh whose hosts are already known
+        parses no URI (host list identical by reference); TextRenderer and BodyViewer never hand the
+        untruncated body to the encoder (cut marker string identical). All four were run against the pre-fix
+        tree and <strong>all four fail there</strong> — 640 stray moment parses, 40 stray URI parses, and a
+        136 072-character encode twice over.</td></tr>
+        <tr><td><strong>E2E</strong></td><td><span class="bad">waived</span> — no contract moves, and the only
+        difference an e2e could see here is a duration, which the testing standard forbids asserting at every
+        level. The epic's e2e is W10's.</td></tr>
+        <tr><td><strong>Suites</strong></td><td><code>vitest run</code> 755 passed / 45 files — the 741 that
+        predate this WU unchanged. <code>cargo test --all</code> green. <code>tsc --noEmit</code> and
+        <code>eslint .</code> clean, <code>bench/</code> inside the typechecked and linted set.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations from the plan</h2>
+    <table data-item="deviations" data-c="deviations">
+      <thead><tr><th>Planned</th><th>What happened, and why</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>The benchmark commit touches no <code>src/</code></td>
+          <td><code>merge</code> gained an <code>export</code> keyword in it, and nothing else. The
+          alternative was to benchmark a copy of <code>merge</code> written into the bench file, which would
+          drift away from the code it claims to speak for. No behaviour edit is in that commit, so the
+          baseline it records is still one nothing was tuned against.</td>
+        </tr>
+        <tr>
+          <td>Cost 3 is <code>byteLength</code> made non-allocating</td>
+          <td>Refuted — the scan is slower than the encoder (17.19 vs 14.16 ms). The fix taken is the one the
+          epic plan's own sentence names: <em>a size the fetch already knew</em>. BodyViewer holds the bytes,
+          <code>HexRenderer</code> has always passed their count that way, and TextRenderer now does too.
+          <code>byteLength</code> is untouched.</td>
+        </tr>
+        <tr>
+          <td>Both character-rendered members are fixed</td>
+          <td>Only TextRenderer. FormRenderer's half was written, measured, and reverted — see above. This is
+          the plan's own stated discipline firing, not a scope cut.</td>
+        </tr>
+        <tr>
+          <td>Cost 2 is the Set rebuild plus the URI re-parse</td>
+          <td>Only the re-parse existed as a cost. The Set is untouched.</td>
+        </tr>
+        <tr>
+          <td>Unit-test the day/year boundary helper directly</td>
+          <td>Tested through the component instead — the bounds are asserted as rendered strings a
+          millisecond either side of midnight and of new year, and the memo's generation as a re-label after
+          the clock moves. The testing standard prefers the observable contract, and the helper stays private.</td>
+        </tr>
+        <tr>
+          <td>A property test over <code>byteLength</code> against <code>TextEncoder</code></td>
+          <td>Dropped with the change it was written for. <code>byteLength</code> is still
+          <code>TextEncoder</code>, so a property test asserting they agree would compare a function with
+          itself.</td>
+        </tr>
+        <tr>
+          <td>—</td>
+          <td><strong>Added while measuring:</strong> a third <code>merge</code> case where no two flows share
+          a host, so the memo can never hit. Without it the 251× would be a claim about a fixture rather than
+          about the code, and the 2.09× floor it exposes would be invisible.</td>
+        </tr>
+        <tr>
+          <td>—</td>
+          <td><strong>Defect found and fixed in flight:</strong> the memo key's separator went into the source
+          as a literal NUL byte, which made git classify <code>TimestampText.tsx</code> as binary — its diffs
+          rendered as <code>Bin 4443 -&gt; 2262 bytes</code> and <code>grep</code> refused to read it. Fixed
+          as <code>\u0000</code> in <code>626f91e</code>; the whole tree was then scanned for other NULs and
+          has none.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation" data-c="distillation">
+      <p><strong>Nothing citable at T2.</strong> No use case moves and no decision is made: all three costs
+      are cost, not behaviour, and the rendered output is identical everywhere the existing suite could see
+      it. <a href="../decisions/dec-22-time-is-absolute-and-local.html">DEC-22</a>'s four forks are preserved
+      exactly — absolute, seconds, local, 24 h — and were re-asserted, not merely left alone.</p>
+      <p>The one design record this WU does change lives in the code, where
+      <a href="../decisions/dec-25-design-build-handoff.html">DEC-16's</a> rule puts it: TextRenderer's TSDoc
+      gains a <code>@props</code> line stating that <code>size</code> is the count its caller already holds
+      and why re-deriving it is what this WU removed. FormRenderer's TSDoc is unchanged, because its component
+      is.</p>
+      <p>One candidate is left for the epic to judge rather than taken here: the discipline itself —
+      <em>a performance fix lands only against a number, and is reverted when the number does not move</em> —
+      is the epic's own stated rule and belongs in its distillation at W10, not duplicated downward into a WU
+      report.</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <thead><tr><th>What</th><th>Where it came from</th><th>Addressed to</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>FormRenderer draws ~6000 rows and costs ~520 ms at the cap.</strong> Now measured, and
+          the largest single cost this benchmark found. The cut bounds the bytes, not the node count — the
+          pair cap DEC-12's family talks about is a character cap, and at 22 characters per pair 128 KiB is
+          thousands of DOM nodes.</td>
+          <td>found by this WU's own benchmark while pricing cost 3</td>
+          <td>a WU with a benchmark first — the case is already committed</td>
+        </tr>
+        <tr>
+          <td><strong>BodyViewer re-decodes the whole body on every render</strong> —
+          <code>bodyText(fetched.bytes)</code> in <code>Dispatch</code>, and again inside
+          <code>shownText</code> on every copy. Named out of scope in this WU's plan and still open.</td>
+          <td>this WU's plan, scope table</td>
+          <td>whichever WU next opens BodyViewer — W9 opens it for the raw | pretty relabel</td>
+        </tr>
+        <tr>
+          <td><strong>A chunked <code>encodeInto</code> is 1.6× on <code>byteLength</code></strong> — 8.74 vs
+          14.16 ms over 10 MiB, measured but not taken, since after cost 3 the only caller on a body that
+          large is FormRenderer. It becomes worth taking if the row above is fixed and the byte count is
+          what is left.</td>
+          <td>measured while refuting the plan's arithmetic scan</td>
+          <td>the FormRenderer WU above, if it needs it</td>
+        </tr>
+        <tr>
+          <td><strong><code>testing-strategy.html</code>'s tooling table does not mention the benchmark.</strong>
+          A future agent finds it through <code>cargo xtask ui --help</code> and this report, not through the
+          standard that lists every other tool. The edit is T1 and needs a listed authoriser, so it is not
+          taken inside a WU whose diff is otherwise unrelated.</td>
+          <td>noticed writing this report</td>
+          <td>W10, with the epic's other T1 judgement</td>
+        </tr>
+        <tr>
+          <td><strong>Nothing stops the next raw NUL.</strong> A control byte in a source file silently
+          removes that file from every diff and every grep — the entire review surface — and no hook, lint or
+          gate check saw it. A one-line check over the diff's code paths would.</td>
+          <td>the defect fixed in <code>626f91e</code></td>
+          <td>a WU on the gate — the roadmap's harness/workflow track</td>
+        </tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
