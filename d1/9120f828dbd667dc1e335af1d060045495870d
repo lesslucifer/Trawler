@@ -1,0 +1,12 @@
+schema: test/v2
+level: working-unit
+epic: E-RFINISH
+wu: E-RFINISH.W4
+branch: wu/redesign-finish/shell-list-design
+tests:
+  unit:
+    waived: "docs-only WU - the diff adds no executable line to assert over. Three T3 HTML documents: the WU plan, the closed design run, and the WU result. No ui/src/, no src/, no xtask/ file is touched, so there is no unit to isolate and a test asserting a document's own prose would assert a copy of the tree."
+  integration:
+    waived: "the artifact's contract is enforced by verify-doc and the design review, not by a test this WU could add. The WU's contract is that a judged design exists, and what proves it is cargo xtask verify-doc over the run - every Tier-1 predicate, including receipt coverage against the rulebook on disk (17/17 soft slugs in rulebook order), the mounted-not-drawn rule, the asset shape and the rulebook pin. That harness is itself covered by xtask/tests/verify_doc.rs and by the flow e2e (e2e_design_flow.rs), both of which this WU consumes rather than extends. Run by hand in addition: node scripts/check-render.mjs, which caught a mockup rendering nothing while every automatic check was green - before 6 empty mounts, after 7 of 7."
+  e2e:
+    waived: "no route, no rendered state and no ui/src/ change; the designed behaviour is proven by W6's e2e where there is a built screen to drive. The epic plan assigns both new UC-4 assertions (the unreachable statement against a quiet-proxy control, and a status class narrowing the list) to W6, and the class query's integration test to W5. Nothing renders differently after this WU."
