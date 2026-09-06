@@ -41,7 +41,7 @@ function Dispatch({ fetched, kind }: { fetched: BodyFetch; kind: BodyKind }) {
     case "hex":
       return <HexRenderer bytes={fetched.bytes} />;
     case "text":
-      return <TextRenderer text={bodyText(fetched.bytes)} />;
+      return <TextRenderer text={bodyText(fetched.bytes)} size={fetched.bytes.length} />;
   }
 }
 
