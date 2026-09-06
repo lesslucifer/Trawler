@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v16 · 2026-09-05 · Trawler</div>
+      <div class="meta">v17 · 2026-09-06 · Trawler</div>
     </div>
   </header>
   <main>
@@ -257,6 +257,95 @@
             expand; curl's runtime defaults are never invented, which is what keeps <code>toCurl → parse</code> an
             exact inverse. The command travels as the raw body under <code>?format=curl</code>, and the refusal
             is HAR import's plain-text <code>400</code>, written to be rendered verbatim on the paste target</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-30-the-three-gap-components.html"><code>dec-30-the-three-gap-components.html</code></a></td>
+          <td><span class="badge id">DEC-30</span></td>
+          <td>The app's <strong>one text input, one state dot and one collapse primitive are registry entries, not
+            screen-local</strong> — closing the phantom-redirect class of bug, where a docstring names a component
+            nobody can open and the instruction resolves to "hand-roll it". The shared argument: a thing copied
+            drifts invisibly (the input's 12-utility class string, copied four times) and a default nobody picked is
+            unreadable to every lint (three raw <code>&lt;details&gt;</code> inheriting a UA triangle from outside the
+            closed vocabulary). Also settles: <code>Field</code> takes <code>Select</code>'s box, class for class
+            (second confirmation of DEC-18, after the shipped input was found 3px/1px off);
+            <code>DotStatus</code> is <em>not</em> <code>StatusTone</code> — the tell is authority, since a tone is a
+            value a caller passes and a lifecycle state is derived, so collapsing them would let a call site render
+            green while the app is still checking (<code>ok</code>/<code>warn</code> gain a second owner,
+            <code>ink-mute</code> its first as the not-yet-known channel); status and navigation are
+            <strong>one</strong> element, which forces a 24px target around the 10px disc and an accessible name the
+            shipped version lacked; native <code>&lt;details&gt;</code> over a div, because replacing correct
+            platform semantics is a regression in a refactor's clothes. Three refusals belong to the host, not the
+            primitive: validity, timing, and "collapsed or not at all". Rejected: raw elements per call site, a dot
+            plus a settings gear, input-specific chrome, a warn border on an unmatched filter, a controlled
+            <code>open</code> pair, reusing <code>Field</code> inside <code>Select</code>'s popup (visual similarity
+            is not tenancy). Distilled from Field F1–F4 · StatusDot S1–S4 · Disclosure D1–D4 under
+            <strong>DEC-16</strong> step ①; DEC-17, DEC-18, DEC-19, DEC-20 and DEC-21 all stand</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-31-leg-is-panel-scoped.html"><code>dec-31-leg-is-panel-scoped.html</code></a></td>
+          <td><span class="badge id">DEC-31</span></td>
+          <td><strong>Leg selection belongs to the panel, not the body pane</strong> — and every zone of a
+            detail screen declares whether it is <em>flow-scoped</em> (identical on both legs, stated once,
+            deliberately unlabelled) or <em>leg-scoped</em> (replaced when the selector moves). Closes a
+            two-models-of-one-concept defect: the shipped flow detail stacked both header legs while
+            <code>BodyViewer</code> carried its own request/response toggle
+            (<code>BodyViewer.tsx:148</code>, <code>:196–201</code> at <code>ca18daa</code>), so the screen answered "which leg?"
+            twice, differently, and nothing connected the answers. Rejected: keeping both legs stacked (it
+            was never the real behaviour), a tablist (<code>SegmentedControl</code>'s <code>@avoid</code>
+            excludes tabs that own panels), a switch per zone (the defect, formalised), and deferring to W7
+            (a body run cannot fix a panel-level contradiction). Forces the leg switch OUT of W7's subjects
+            and narrows W8's <code>ModeButton</code> swap to the decode pair; the leg pair is deleted, not
+            swapped. Default leg is <strong>request</strong>, always — the shipped per-flow rule moved the
+            screen under the user between flows</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-32-body-is-the-main-zone.html"><code>dec-32-body-is-the-main-zone.html</code></a></td>
+          <td><span class="badge id">DEC-32</span></td>
+          <td><strong>A detail panel never scrolls as a whole; the body is its main zone and every other zone is
+            bounded.</strong> Against real traffic the built flow detail put a four-screen header table (three
+            cookies, a token, a CSP, each wrapping to thirty lines in a 380px pane) above the body, and WebKit let
+            that table's overflow leak past its scroll container into the window. Settled: identity row and flow
+            line are chrome at natural height; the headers take their natural height up to 35% of the panel
+            (<code>max-h-zone-cap</code>) and scroll inside, the heading naming the row count; the body takes the
+            rest (<code>flex-1</code>) and scrolls inside; a value past three lines is clamped with
+            <em>more</em>/<em>less</em> under its name — lines hidden, never characters, still copies whole.
+            Rejected: one scroll region (the design as written), tabs (a second switching axis beside DEC-31's),
+            ellipsis truncation (the design's own ✗), a fixed pixel cap (blind to the window), positioning the
+            scroll container alone (fixes the window, not the body). Forces <code>KeyValueRow collapsible</code>,
+            <code>Section className</code>, a body pane that fills its host, and <code>position: relative</code>
+            on every scroll container holding a <code>display:contents</code> grid</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-33-two-layers-and-a-clock.html"><code>dec-33-two-layers-and-a-clock.html</code></a></td>
+          <td><span class="badge id">DEC-33</span></td>
+          <td><strong>The setup screen reads two layers and judges traffic against a clock</strong> — steps 1–2
+            report <em>this machine</em> from the two probes and nothing else, re-read on demand and on window
+            focus with the reading dated; step 3 reports <em>traffic</em> from timestamps, where a decrypted flow
+            inside 30 s is <em>capturing</em>, a tunnel no flow answered is <em>arriving but not decrypting</em>,
+            and anything older is <em>idle</em>. Closes the owner's finding that a flow captured before the proxy
+            was turned off kept every step green. Rejected: a recency window on the borrowed positive (a phone's
+            flow still says nothing about this host), relative time on the verdict (DEC-22), re-probing on an
+            interval, timestamping the tunnel tally in the core. Supersedes DEC-13's "proxy step goes green on any
+            tunnel" clause; the signal itself is unchanged</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-34-fixed-height-rows-truncate.html"><code>dec-34-fixed-height-rows-truncate.html</code></a></td>
+          <td><span class="badge id">DEC-34</span></td>
+          <td><strong>A fixed-height virtualized row may truncate, on three conditions</strong> —
+            <code>wrap-not-truncate</code> keeps its predicate and its Tier-1 red; a design may record
+            <code>violated</code> and ship the cut only where a declared Frame constraint makes wrapping
+            impossible, the full value stays reachable by a named route, and the cut is visible. The escape is
+            declared on the receipt and judged by a reviewer, never detected. Answers the flow-list run's
+            escalation to the epic close. Rejected: overruling the design (variable row height ends
+            virtualization), widening the column (the rule forbids it and a path is unbounded), weakening the
+            predicate (it cannot see row height, so it would have to trust the subject), an eighth verdict
+            <code>violated-by-constraint</code> beside DEC-15's fixed seven (reads as absolution where
+            <code>violated</code> plus a reason is already honest). Carries <code>display-equals-payload</code>'s identical violation</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

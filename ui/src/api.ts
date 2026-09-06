@@ -100,7 +100,7 @@ export function defaultProxyAddr(): string {
 export interface StreamHandlers {
   onEvent: () => void;
   // A tunnel reached the proxy (may never become a flow — untrusted-CA handshake).
-  // Onboarding's proxy step goes green on this alone; the flow list ignores it.
+  // Onboarding stamps its arrival and judges it by recency; the flow list ignores it.
   onConnection?: () => void;
 }
 
@@ -139,7 +139,11 @@ export function createApi(baseUrl?: string): TrawlerApi {
       return (await res.json()) as FlowView;
     },
     async getBody(id, leg, decode) {
-      const query = decode ? "?decode=1" : "";
+      // Raw asks for `source`, not the stored bytes: a compressed body's stored
+      // form is a hex dump of gzip frames, which answers no question a reader
+      // has. `source` reverses only the transport encoding, so raw stays the
+      // bytes the server sent — unindented and untranscoded.
+      const query = decode ? "?decode=1" : "?decode=source";
       const res = await fetch(`${base()}/flows/${encodeURIComponent(id)}/${leg}/body${query}`);
       if (!res.ok) throw new Error(`GET ${leg} body for ${id} failed: ${res.status}`);
       return {

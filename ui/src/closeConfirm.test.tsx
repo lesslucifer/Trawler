@@ -1,7 +1,6 @@
-import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import { useProxyCloseConfirm } from "./closeConfirm";
-import { CLOSE_COPY, ProxyCloseDialog } from "./ProxyCloseDialog";
 
 const ADDR = "127.0.0.1:7420";
 
@@ -34,16 +33,16 @@ async function closeAndWait(f: ReturnType<typeof fakeDeps>) {
   return preventDefault;
 }
 
-test("ours: prevents the quit and opens the Remove/Keep prompt", async () => {
+test("ours: prevents the quit and opens the turn-it-off prompt", async () => {
   const f = fakeDeps("ours");
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
   const preventDefault = await closeAndWait(f);
   expect(preventDefault).toHaveBeenCalledOnce();
-  await waitFor(() => expect(result.current.mode).toBe("remove"));
+  await waitFor(() => expect(result.current.mode).toBe("ours"));
   expect(f.invoke).toHaveBeenCalledWith("proxy_status", { host: "127.0.0.1", port: 7420 });
 });
 
-test("ours + Remove: reverts the proxy then quits", async () => {
+test("ours + turn it off: reverts the proxy then quits", async () => {
   const f = fakeDeps("ours");
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
   await closeAndWait(f);
@@ -54,7 +53,7 @@ test("ours + Remove: reverts the proxy then quits", async () => {
   expect(f.destroy).toHaveBeenCalledOnce();
 });
 
-test("ours + Keep: leaves the proxy up and just quits — no unset, no persisted state", async () => {
+test("ours + quit: leaves the proxy up and just quits — no unset, no persisted state", async () => {
   const f = fakeDeps("ours");
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
   await closeAndWait(f);
@@ -65,22 +64,22 @@ test("ours + Keep: leaves the proxy up and just quits — no unset, no persisted
   expect(f.destroy).toHaveBeenCalledOnce();
 });
 
-test("foreign: shows the info-only notice (no Remove), since a device may still point here", async () => {
+test("foreign: actionable too — unset_proxy turns the OS proxy off whoever set it", async () => {
   const f = fakeDeps("foreign");
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
   const preventDefault = await closeAndWait(f);
   expect(preventDefault).toHaveBeenCalledOnce();
-  await waitFor(() => expect(result.current.mode).toBe("notice"));
+  await waitFor(() => expect(result.current.mode).toBe("foreign"));
 });
 
-test("none: shows the info-only notice too (remote device might route here)", async () => {
+test("none: the remote notice — nothing local to act on", async () => {
   const f = fakeDeps("none");
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
   await closeAndWait(f);
-  await waitFor(() => expect(result.current.mode).toBe("notice"));
+  await waitFor(() => expect(result.current.mode).toBe("remote"));
 });
 
-test("none + notice already dismissed: quits without asking", async () => {
+test("none + remote notice already dismissed: quits without asking", async () => {
   const f = fakeDeps("none", true);
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
   const preventDefault = await closeAndWait(f);
@@ -88,7 +87,7 @@ test("none + notice already dismissed: quits without asking", async () => {
   expect(result.current.mode).toBeNull();
 });
 
-test("notice + don't-show-again: persists the dismissal then quits", async () => {
+test("remote + don't-show-again: persists the dismissal then quits", async () => {
   const f = fakeDeps("none");
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
   await closeAndWait(f);
@@ -99,7 +98,7 @@ test("notice + don't-show-again: persists the dismissal then quits", async () =>
   expect(f.destroy).toHaveBeenCalledOnce();
 });
 
-test("notice + quit without checking the box: quits, does not persist", async () => {
+test("remote + quit without checking the box: quits, does not persist", async () => {
   const f = fakeDeps("none");
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
   await closeAndWait(f);
@@ -119,7 +118,11 @@ test("Cancel dismisses the prompt and does not quit", async () => {
   expect(f.destroy).not.toHaveBeenCalled();
 });
 
-test("a revert that fails still quits (never traps the user)", async () => {
+// The user is never trapped, but a failed unset must not quit: quitting on a
+// proxy that is still up is the stranding this dialog exists to prevent. The
+// rejection reaches the dialog, which offers the manual route and keeps `quit`
+// available beside "try again" — see ProxyCloseDialog.test.tsx.
+test("a revert that fails does not quit — it surfaces, and quit stays a click away", async () => {
   const f = fakeDeps("ours");
   f.invoke.mockImplementation(async (cmd: string) => {
     if (cmd === "proxy_status") return "ours";
@@ -128,57 +131,10 @@ test("a revert that fails still quits (never traps the user)", async () => {
   const { result } = renderHook(() => useProxyCloseConfirm(ADDR, f.deps));
   await closeAndWait(f);
   await act(async () => {
-    await result.current.remove();
+    await expect(result.current.remove()).rejects.toThrow("elevation declined");
   });
+  expect(f.destroy).not.toHaveBeenCalled();
+
+  result.current.keep();
   expect(f.destroy).toHaveBeenCalledOnce();
-});
-
-test("remove-mode dialog: Keep/Remove buttons, internet-loss copy, Esc + backdrop cancel", () => {
-  const onRemove = vi.fn();
-  const onKeep = vi.fn();
-  const onAcknowledge = vi.fn();
-  const onCancel = vi.fn();
-  render(
-    <ProxyCloseDialog
-      mode="remove"
-      os="macos"
-      onRemove={onRemove}
-      onKeep={onKeep}
-      onAcknowledge={onAcknowledge}
-      onCancel={onCancel}
-    />,
-  );
-  expect(screen.getByTestId("proxy-close-dialog")).toHaveTextContent(/internet may stop working/);
-  expect(screen.getByTestId("proxy-close-remove")).toHaveTextContent(CLOSE_COPY.remove.confirm);
-  expect(screen.getByTestId("proxy-close-keep")).toHaveTextContent(CLOSE_COPY.remove.keep);
-  expect(screen.queryByTestId("proxy-close-steps")).toBeNull();
-
-  fireEvent.click(screen.getByTestId("proxy-close-remove"));
-  fireEvent.click(screen.getByTestId("proxy-close-keep"));
-  fireEvent.click(screen.getByTestId("proxy-close-backdrop"));
-  fireEvent.keyDown(screen.getByTestId("proxy-close-dialog"), { key: "Escape" });
-  expect(onRemove).toHaveBeenCalledOnce();
-  expect(onKeep).toHaveBeenCalledOnce();
-  expect(onCancel).toHaveBeenCalledTimes(2);
-  expect(onAcknowledge).not.toHaveBeenCalled();
-});
-
-test("notice-mode dialog: removal steps, don't-show-again checkbox, single Quit that acknowledges", () => {
-  const onAcknowledge = vi.fn();
-  render(
-    <ProxyCloseDialog
-      mode="notice"
-      os="macos"
-      onRemove={vi.fn()}
-      onKeep={vi.fn()}
-      onAcknowledge={onAcknowledge}
-      onCancel={vi.fn()}
-    />,
-  );
-  expect(screen.getByTestId("proxy-close-steps")).toBeInTheDocument();
-  expect(screen.queryByTestId("proxy-close-remove")).toBeNull();
-
-  fireEvent.click(screen.getByTestId("proxy-close-dont-show"));
-  fireEvent.click(screen.getByTestId("proxy-close-quit"));
-  expect(onAcknowledge).toHaveBeenCalledWith(true);
 });

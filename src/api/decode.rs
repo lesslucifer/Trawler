@@ -15,15 +15,7 @@ pub fn decode_body(
     content_encoding: Option<&str>,
     content_type: Option<&str>,
 ) -> Vec<u8> {
-    let decompressed = match content_encoding.map(str::trim).map(str::to_ascii_lowercase).as_deref()
-    {
-        Some("gzip" | "x-gzip") => decompress(GzDecoder::new(raw), raw, MAX_DECODED_LEN),
-        Some("deflate") => decompress(ZlibDecoder::new(raw), raw, MAX_DECODED_LEN),
-        Some("br") => decompress(brotli::Decompressor::new(raw, 4096), raw, MAX_DECODED_LEN),
-        _ => raw.to_vec(),
-    };
-
-    let utf8 = to_utf8(decompressed, content_type);
+    let utf8 = to_utf8(decompress_body(raw, content_encoding), content_type);
 
     if is_json(content_type) {
         pretty_json(utf8)
@@ -88,6 +80,19 @@ fn pretty_xml(bytes: Vec<u8>) -> Vec<u8> {
         return bytes;
     }
     writer.into_inner()
+}
+
+/// The decode chain's first step alone, for `?decode=source`: a compressed body
+/// is unreadable as stored, but reversing the transport encoding is not the same
+/// as re-rendering the payload — the bytes that come back are what the server
+/// actually sent, unindented and untranscoded.
+pub fn decompress_body(raw: &[u8], content_encoding: Option<&str>) -> Vec<u8> {
+    match content_encoding.map(str::trim).map(str::to_ascii_lowercase).as_deref() {
+        Some("gzip" | "x-gzip") => decompress(GzDecoder::new(raw), raw, MAX_DECODED_LEN),
+        Some("deflate") => decompress(ZlibDecoder::new(raw), raw, MAX_DECODED_LEN),
+        Some("br") => decompress(brotli::Decompressor::new(raw, 4096), raw, MAX_DECODED_LEN),
+        _ => raw.to_vec(),
+    }
 }
 
 fn decompress<R: Read>(decoder: R, raw: &[u8], max: usize) -> Vec<u8> {

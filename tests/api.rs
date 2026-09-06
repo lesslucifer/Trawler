@@ -130,6 +130,89 @@ async fn body_endpoints_raw_decode_and_edges() {
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
+// The raw view's contract: a compressed body is readable without being
+// re-rendered. `decode=source` reverses the transport encoding and stops —
+// no pretty-print, so the bytes are what the server actually sent.
+#[tokio::test]
+async fn decode_source_decompresses_without_pretty_printing() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    let minified = br#"{"a":1,"b":[2,3]}"#;
+    let flow = FlowBuilder::new()
+        .req_header("Content-Type", "application/json")
+        .req_header("Content-Encoding", "gzip")
+        .req_body(captured(&gzip(minified)))
+        .build();
+    let id = flow.id;
+    store.insert(flow);
+    let r = router_with(store);
+
+    let (status, _h, source) = get(&r, &format!("/flows/{id}/request/body?decode=source")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(source, minified, "source must be the served bytes, not a re-indented copy");
+
+    let (_s, _h, decoded) = get(&r, &format!("/flows/{id}/request/body?decode=1")).await;
+    assert!(decoded.len() > source.len(), "decoded pretty-prints, source does not");
+}
+
+// An uncompressed body has no transport encoding to reverse, so source and the
+// stored bytes are the same thing — and neither is pretty-printed.
+#[tokio::test]
+async fn decode_source_leaves_an_uncompressed_body_alone() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    let minified = br#"{"a":1}"#;
+    let flow = FlowBuilder::new()
+        .req_header("Content-Type", "application/json")
+        .req_body(captured(minified))
+        .build();
+    let id = flow.id;
+    store.insert(flow);
+    let r = router_with(store);
+
+    let (_s, _h, source) = get(&r, &format!("/flows/{id}/request/body?decode=source")).await;
+    assert_eq!(source, minified);
+}
+
+// Three views means an unrecognised value must still land somewhere defined —
+// the stored bytes, the same as no parameter at all.
+#[tokio::test]
+async fn an_unknown_decode_value_serves_the_stored_bytes() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    let gz = gzip(br#"{"a":1}"#);
+    let flow = FlowBuilder::new()
+        .req_header("Content-Type", "application/json")
+        .req_header("Content-Encoding", "gzip")
+        .req_body(captured(&gz))
+        .build();
+    let id = flow.id;
+    store.insert(flow);
+    let r = router_with(store);
+
+    for value in ["banana", "0", "false", ""] {
+        let (_s, _h, body) = get(&r, &format!("/flows/{id}/request/body?decode={value}")).await;
+        assert_eq!(body, gz, "decode={value} must serve the stored bytes");
+    }
+}
+
+// A header that lies is the case that decides whether losing the stored-bytes
+// view costs anything: decompression fails, falls back to its input, and raw
+// shows exactly what it showed before this view existed.
+#[tokio::test]
+async fn decode_source_falls_back_to_the_stored_bytes_when_the_encoding_lies() {
+    let store = Arc::new(Store::new(1_000_000, 64));
+    let not_really_gzip = b"plain text, no gzip here";
+    let flow = FlowBuilder::new()
+        .req_header("Content-Type", "text/plain")
+        .req_header("Content-Encoding", "gzip")
+        .req_body(captured(not_really_gzip))
+        .build();
+    let id = flow.id;
+    store.insert(flow);
+    let r = router_with(store);
+
+    let (_s, _h, source) = get(&r, &format!("/flows/{id}/request/body?decode=source")).await;
+    assert_eq!(source, not_really_gzip, "a failed decompress serves its input, never an error");
+}
+
 #[tokio::test]
 async fn decode_brotli_charset_and_xml_over_router() {
     let store = Arc::new(Store::new(1_000_000, 64));

@@ -66,7 +66,10 @@ async fn main() {
             .route("/", get(|| async { "hello from origin" }))
             .route("/json", get(json_body))
             .route("/br", get(brotli_json_body))
-            .route("/img", get(png_body));
+            .route("/img", get(png_body))
+            .route("/xml", get(xml_body))
+            .route("/big", get(oversized_text_body))
+            .route("/headers", get(long_headers_body));
         let _ = axum_server::from_tcp_rustls(origin, tls).serve(app.into_make_service()).await;
     });
 
@@ -168,6 +171,46 @@ const PNG_1X1: &[u8] = &[
 
 async fn png_body() -> impl IntoResponse {
     ([(header::CONTENT_TYPE, "image/png")], PNG_1X1)
+}
+
+async fn xml_body() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "application/xml")],
+        r#"<order id="9f3c"><item sku="A-1" qty="2"/></order>"#,
+    )
+}
+
+// Past the UI's 128 KiB render cap and far under the 10 MiB capture cap, so the
+// body is captured whole and the pane must state what it left out.
+async fn oversized_text_body() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/plain")],
+        "trawler ".repeat(25_000),
+    )
+}
+
+// A response whose headers dwarf its body: the shape real traffic has (session
+// cookies, a bearer-sized token, a long CSP), so the inspector's layout can be
+// checked against headers that would otherwise push the body off screen.
+async fn long_headers_body() -> impl IntoResponse {
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+    for i in 0..3 {
+        let cookie = format!("session{i}={}; Path=/; HttpOnly; Secure", "x".repeat(900));
+        headers.append(header::SET_COOKIE, cookie.parse().unwrap());
+    }
+    headers.insert("x-token", format!("Bearer {}", "eyJhbGciOiJIUzI1NiJ9.".repeat(40)).parse().unwrap());
+    headers.insert(
+        header::CONTENT_SECURITY_POLICY,
+        "default-src 'self'; script-src 'self' https://cdn.example.com; img-src * data:; connect-src 'self' https://api.example.com wss://live.example.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'".parse().unwrap(),
+    );
+    for i in 0..12 {
+        headers.insert(
+            axum::http::HeaderName::from_bytes(format!("x-trace-{i}").as_bytes()).unwrap(),
+            format!("{i:08x}-{}", "ab".repeat(16)).parse().unwrap(),
+        );
+    }
+    (headers, r#"{"greeting":"hello","under":"the headers"}"#)
 }
 
 async fn stop_handler(State(ctrl): State<Control>) -> &'static str {
