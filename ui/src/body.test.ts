@@ -3,6 +3,7 @@ import {
   bodyNotice,
   bodyText,
   byteLength,
+  decodeBody,
   formEntries,
   formPairCut,
   hexDump,
@@ -263,4 +264,36 @@ test("saveBody reports the path it wrote, and null when the native dialog was ca
   // The returned path is a claim that the bytes landed there; assert the write
   // itself, or a refactor that reports the path without writing passes.
   expect(writeFile).toHaveBeenCalledWith("/tmp/picked.pem", bytes);
+});
+
+// A size taken from the bytes and a size taken from the decoded text agree only
+// where every byte decoded. Downstream that is unknowable — a replacement
+// character the decoder inserted looks exactly like one the body carried — so
+// the decoder reports it.
+describe("decodeBody", () => {
+  it("reports a whole decode, and returns what the lenient decoder returns", () => {
+    const bytes = new TextEncoder().encode("résumé — naïve");
+
+    expect(decodeBody(bytes)).toEqual({ text: bodyText(bytes), whole: true });
+  });
+
+  it("calls a body whole when it carries a replacement character of its own", () => {
+    const bytes = new TextEncoder().encode("lost: \uFFFD");
+
+    expect(decodeBody(bytes)).toEqual({ text: "lost: \uFFFD", whole: true });
+    expect(byteLength(bodyText(bytes))).toBe(bytes.length);
+  });
+
+  it("reports a lossy decode, and still returns the text to render", () => {
+    const bytes = new Uint8Array([0x68, 0x69, 0xff, 0xfe]);
+    const decoded = decodeBody(bytes);
+
+    expect(decoded.whole).toBe(false);
+    expect(decoded.text).toBe(bodyText(bytes));
+    expect(byteLength(decoded.text)).toBeGreaterThan(bytes.length);
+  });
+
+  it("reports an empty body whole — there is no byte to fail on", () => {
+    expect(decodeBody(new Uint8Array())).toEqual({ text: "", whole: true });
+  });
 });

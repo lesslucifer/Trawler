@@ -6,8 +6,9 @@ const RELATIVE_TICK_MS = 10_000;
 const ABSENT = "—";
 
 // A virtualized list re-renders its whole window on every debounced refresh, so
-// the same handful of timestamps are formatted over and over. The cap is a
-// ceiling on a cache that only ever holds what is on screen.
+// the same handful of timestamps are formatted over and over. Nothing evicts a
+// row that scrolls away, so the cap bounds how many distinct timestamps are
+// remembered between resets — not how many are on screen.
 const MEMO_MAX = 4096;
 
 /**
@@ -53,14 +54,19 @@ function text(timestamp: string | number | Date | null, format?: string): string
   }
 
   const today = day();
-  const key = `${format ?? ""}\u0000${timestamp instanceof Date ? timestamp.getTime() : timestamp}`;
-  const remembered = memo(today.start).get(key);
+  // A Date and a number are keyed alike because moment reads them alike, but a
+  // numeric string is not: moment("1699999999999") is invalid where the number
+  // is a real instant, so the two must never meet on one key.
+  const value = timestamp instanceof Date ? timestamp.getTime() : timestamp;
+  const key = `${format ?? ""}\u0000${typeof value}\u0000${value}`;
+
+  const remembered = cache(today.start).get(key);
   if (remembered !== undefined) return remembered;
 
   const at = moment(timestamp);
-  const rendered = at.isValid() ? render(at, today, format) : ABSENT;
-  memo(today.start).set(key, rendered);
-  return rendered;
+  const result = at.isValid() ? render(at, today, format) : ABSENT;
+  remember(today.start, key, result);
+  return result;
 }
 
 function render(at: moment.Moment, today: Day, format?: string): string {
@@ -105,13 +111,22 @@ function day(): Day {
 // Every remembered string was rendered against one day's bounds, so the day it
 // was rendered under is the generation: crossing midnight abandons the lot
 // rather than serving yesterday's "today".
-let rendered = new Map<string, string>();
+let remembered = new Map<string, string>();
 let generation = 0;
 
-function memo(dayStart: number): Map<string, string> {
-  if (generation !== dayStart || rendered.size >= MEMO_MAX) {
-    rendered = new Map();
+function cache(dayStart: number): Map<string, string> {
+  if (generation !== dayStart) {
+    remembered = new Map();
     generation = dayStart;
   }
-  return rendered;
+  return remembered;
+}
+
+// The cap is checked here and never on the way in: a lookup that enforced it
+// would throw away the entry it was about to find, and would do so on the render
+// that most needs it.
+function remember(dayStart: number, key: string, value: string): void {
+  const store = cache(dayStart);
+  if (store.size >= MEMO_MAX) store.clear();
+  store.set(key, value);
 }

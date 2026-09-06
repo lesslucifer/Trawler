@@ -19,7 +19,10 @@ const ROWS = flows(WINDOW);
 // measured iteration can never wrap back onto a warm one.
 const MISS_ITERATIONS = 400;
 
-const UNSEEN = flows(WINDOW * (MISS_ITERATIONS + 25));
+// flows() is a pure function of its index, so the opening entries of any call are
+// the ones ROWS has already warmed. Dropping that many makes this pool disjoint
+// from ROWS by construction, rather than by warm-up happening to consume them.
+const UNSEEN = flows(WINDOW * (MISS_ITERATIONS + 26)).slice(WINDOW);
 
 function TimeColumn({ rows }: { rows: FlowSummary[] }) {
   return (

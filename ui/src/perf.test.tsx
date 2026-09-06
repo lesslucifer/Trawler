@@ -132,6 +132,10 @@ describe("the live feed's host accumulation", () => {
 const OVER_CAP = "é".repeat(TEXT_MAX + 5000);
 const OVER_CAP_BYTES = new TextEncoder().encode(OVER_CAP);
 
+// Valid UTF-8 whose every character is the one a lossy decode would have
+// produced — the case a scan for that character cannot tell from damage.
+const WHOLE_REPLACEMENTS = new TextEncoder().encode("\uFFFD".repeat(TEXT_MAX + 5000));
+
 describe("the body pane's size report", () => {
   const real = TextEncoder.prototype.encode;
   let encoded: number[] = [];
@@ -198,5 +202,17 @@ describe("the body pane's size report", () => {
     await findByTestId("body-text");
 
     expect(container.textContent).toContain("⚠ showing 384 KiB of 399 KiB — save to see all");
+  });
+
+  // A replacement character the body carries on purpose is valid UTF-8 and its
+  // size is knowable for free — indistinguishable, downstream, from one the
+  // decoder inserted. Reading it as damage would spend a whole-body encode on
+  // exactly the mis-encoded traffic this proxy exists to show.
+  it("keeps the free size for a whole body that carries a replacement character", async () => {
+    const { findByTestId } = viewerOver(WHOLE_REPLACEMENTS, "text/plain");
+    await findByTestId("body-text");
+
+    expect(encoded.length).toBeGreaterThan(0);
+    expect(Math.max(...encoded)).toBeLessThanOrEqual(TEXT_MAX);
   });
 });

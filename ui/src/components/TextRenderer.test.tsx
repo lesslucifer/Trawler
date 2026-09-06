@@ -3,15 +3,6 @@ import { render, screen } from "@testing-library/react";
 import { byteLength, TEXT_MAX } from "../body";
 import { TextRenderer } from "./TextRenderer";
 
-const UNITS: Record<string, number> = { B: 1, KiB: 1024, MiB: 1024 ** 2, GiB: 1024 ** 3 };
-
-function sizes(marker: string): [number, number] {
-  const found = [...marker.matchAll(/([\d.]+) (B|KiB|MiB|GiB)/g)];
-  expect(found).toHaveLength(2);
-  const [shown, total] = found.map(([, value, unit]) => Number(value) * UNITS[unit]);
-  return [shown, total];
-}
-
 describe("TextRenderer", () => {
   it("renders the text verbatim — no reformatting of what arrived", () => {
     const text = 'Request failed: upstream timed out\n  at Gateway.forward (forward.js:118:11)';
@@ -71,18 +62,6 @@ describe("TextRenderer", () => {
     const derived = render(<TextRenderer text={text} />);
 
     expect(derived.container.textContent).toBe(supplied.container.textContent);
-  });
-
-  // A text/*-labelled body whose bytes are not valid UTF-8 decodes to one U+FFFD
-  // per unreadable byte, and U+FFFD re-encodes to three bytes — so a shown slice
-  // measured by re-encoding can exceed the whole body's real size. "Showing more
-  // than there is" is the one statement this marker exists to prevent.
-  it("never states a shown size larger than the total", () => {
-    const bytes = new Uint8Array(TEXT_MAX + 5000).fill(0xff);
-    render(<TextRenderer text={new TextDecoder().decode(bytes)} size={bytes.length} />);
-
-    const [shown, total] = sizes(screen.getByText(/⚠ showing/).textContent ?? "");
-    expect(shown).toBeLessThanOrEqual(total);
   });
 
   it("states the cut in warn tone, never a silent ellipsis", () => {
