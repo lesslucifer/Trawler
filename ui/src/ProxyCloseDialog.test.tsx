@@ -203,6 +203,38 @@ describe("the modal shell — three routes out, one outcome", () => {
     expect(forward.defaultPrevented).toBe(false);
   });
 
+  // Select closes its popup on Escape with preventDefault but no stopPropagation,
+  // so the event still reaches the shell. Closing a dropdown must not cancel the
+  // quit — the user asked to dismiss the list, not the dialog.
+  it("Escape that closed a dropdown does not also cancel the quit", () => {
+    const p = mount("remote");
+
+    fireEvent.click(screen.getByRole("button", { name: "proxy target" }));
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+    const escape = createEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+    Object.defineProperty(escape, "defaultPrevented", { value: true });
+    fireEvent(screen.getByTestId("proxy-close-dialog"), escape);
+
+    expect(p.onCancel).not.toHaveBeenCalled();
+  });
+
+  it("a spent remedy keeps focus in the panel — a disabled control blurs to body", async () => {
+    const onRemove = vi.fn().mockResolvedValue(undefined);
+    mount("ours", { onRemove });
+
+    const remedy = screen.getByRole("button", { name: CLOSE_COPY.turnOff });
+    remedy.focus();
+    fireEvent.click(remedy);
+    await waitFor(() => expect(screen.getByTestId("proxy-close-done")).toBeInTheDocument());
+
+    // jsdom keeps focus on a disabled button; real browsers blur it. The dialog
+    // must not depend on which, so the spent control leaves the tab ring and
+    // focus moves to what remains.
+    expect(screen.getByRole("button", { name: CLOSE_COPY.turnOff })).toBeDisabled();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: CLOSE_COPY.quit }));
+  });
+
   it("is a modal with an accessible name", () => {
     mount("ours");
 
@@ -211,19 +243,21 @@ describe("the modal shell — three routes out, one outcome", () => {
     expect(dialog).toHaveAttribute("aria-label", CLOSE_COPY.ours.title);
   });
 
-  it.each(["ours", "foreign", "remote"] as CloseMode[])(
-    "%s: takes focus into the panel on open, but never onto the dismiss glyph",
-    async (mode) => {
-      mount(mode);
+  // The ✕ is the first stop in the DOM and the manual-steps summary is the next;
+  // opening onto either would put the destructive escape, or an answer to nothing,
+  // under the first Enter.
+  it.each([
+    ["ours", CLOSE_COPY.turnOff],
+    ["foreign", CLOSE_COPY.turnOff],
+    ["remote", CLOSE_COPY.quit],
+  ] as [CloseMode, string][])("%s: opens with focus on the action it asks about", async (mode, action) => {
+    mount(mode);
 
-      await waitFor(() => {
-        expect(screen.getByTestId("proxy-close-panel").contains(document.activeElement)).toBe(true);
-      });
-      // The ✕ is the first stop in the DOM; opening onto it would put the
-      // destructive escape under the first Enter.
-      expect(document.activeElement).not.toHaveAttribute("aria-label", "cancel");
-    },
-  );
+    await waitFor(() => {
+      expect(screen.getByTestId("proxy-close-panel").contains(document.activeElement)).toBe(true);
+    });
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: action }));
+  });
 
   it("returns focus to the invoker when it unmounts", async () => {
     const invoker = document.createElement("button");

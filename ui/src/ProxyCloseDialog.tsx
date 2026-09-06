@@ -68,10 +68,12 @@ function ModalShell({
 
   useEffect(() => {
     invoker.current = document.activeElement;
-    // Not the first stop: that is the ✕, and an opening dialog must not put its
-    // destructive escape under the first Enter.
-    const stops = [...(panel.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
-    (stops.find((el) => el.getAttribute("aria-label") !== "cancel") ?? stops[0])?.focus();
+    // The action the dialog is asking about, not the first thing in the DOM: that
+    // is the ✕, and an opening dialog must not put its destructive escape under
+    // the first Enter — nor the manual-steps summary, which answers nothing.
+    const panelEl = panel.current;
+    const action = panelEl?.querySelector<HTMLElement>('[data-opener="true"] button');
+    (action ?? panelEl?.querySelector<HTMLElement>(FOCUSABLE))?.focus();
     return () => {
       (invoker.current as HTMLElement | null)?.focus?.();
     };
@@ -79,7 +81,10 @@ function ModalShell({
 
   const trap = (event: React.KeyboardEvent) => {
     if (event.key === "Escape") {
-      onCancel();
+      // A nested control that already consumed it — Select closing its popup —
+      // marks the event handled. Dismissing a dropdown is not dismissing the
+      // dialog.
+      if (!event.defaultPrevented) onCancel();
       return;
     }
     if (event.key !== "Tab" || !panel.current) return;
@@ -184,6 +189,7 @@ export function ProxyCloseDialog({
   onAcknowledge: (dontShowAgain: boolean) => void;
   onCancel: () => void;
 }) {
+  const actions = useRef<HTMLDivElement>(null);
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [remedyState, setRemedyState] = useState<"idle" | "running" | "done" | "failed">("idle");
   const failed = remedyState === "failed";
@@ -193,7 +199,12 @@ export function ProxyCloseDialog({
 
   if (mode === "remote") {
     return (
-      <ModalShell title={copy.title} onCancel={onCancel} testId="proxy-close-dialog" mode={mode}>
+      <ModalShell
+        title={copy.title}
+        onCancel={onCancel}
+        testId="proxy-close-dialog"
+        mode={mode}
+      >
         <p className="mb-3 font-ui text-body text-ink-mute">{copy.body}</p>
         <ProxyOffSteps os={os} collapsed={false} />
         <div className="mb-3">
@@ -202,9 +213,11 @@ export function ProxyCloseDialog({
           </Checkbox>
         </div>
         <div className="flex justify-end">
-          <Button onClick={() => onAcknowledge(dontShowAgain)} frame="bare" tone="mute">
-            {CLOSE_COPY.quit}
-          </Button>
+          <span data-opener="true">
+            <Button onClick={() => onAcknowledge(dontShowAgain)} frame="bare" tone="mute">
+              {CLOSE_COPY.quit}
+            </Button>
+          </span>
         </div>
       </ModalShell>
     );
@@ -216,6 +229,13 @@ export function ProxyCloseDialog({
   // it (fork D4), since unset_proxy is elevation-gated and slow enough to invite
   // a second click that would fire a second elevation prompt.
   const attemptRemove = () => {
+    // The remedy is about to be disabled; a browser blurs a focused control when
+    // that happens, dropping focus outside the panel where Tab escapes the modal.
+    // Hand focus to the exit before it goes.
+    const row = actions.current;
+    if (row?.contains(document.activeElement)) {
+      row.querySelector<HTMLElement>('[data-exit="true"] button')?.focus();
+    }
     setRemedyState("running");
     try {
       Promise.resolve(onRemove()).then(
@@ -228,7 +248,12 @@ export function ProxyCloseDialog({
   };
 
   return (
-    <ModalShell title={copy.title} onCancel={onCancel} testId="proxy-close-dialog" mode={mode}>
+    <ModalShell
+      title={copy.title}
+      onCancel={onCancel}
+      testId="proxy-close-dialog"
+      mode={mode}
+    >
       <p className="mb-3 font-ui text-body text-ink-mute">{copy.body}</p>
       {running && (
         <div className="mb-2" data-testid="proxy-close-running">
@@ -246,13 +271,17 @@ export function ProxyCloseDialog({
         </div>
       )}
       <ProxyOffSteps os={os} collapsed defaultOpen={failed} />
-      <div className="flex justify-end gap-chrome-gap">
-        <Button onClick={onKeep} frame="bare" tone="mute">
-          {CLOSE_COPY.quit}
-        </Button>
-        <Button onClick={attemptRemove} disabled={running || done}>
-          {failed ? CLOSE_COPY.tryAgain : CLOSE_COPY.turnOff}
-        </Button>
+      <div ref={actions} className="flex justify-end gap-chrome-gap">
+        <span data-exit="true">
+          <Button onClick={onKeep} frame="bare" tone="mute">
+            {CLOSE_COPY.quit}
+          </Button>
+        </span>
+        <span data-opener="true">
+          <Button onClick={attemptRemove} disabled={running || done}>
+            {failed ? CLOSE_COPY.tryAgain : CLOSE_COPY.turnOff}
+          </Button>
+        </span>
       </div>
     </ModalShell>
   );
