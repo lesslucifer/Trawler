@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d0b9b9f34851f0dfac88a">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W10 result (the setup screen and quit dialog, built)</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .yes{color:var(--ok);font-weight:600}
+    .no{color:var(--warn);font-weight:600}
+    .kd{color:var(--muted)}
+    pre.tb{font-family:var(--mono,monospace);font-size:11px;line-height:1.45;margin:0;white-space:pre}
+  </style>
+</head>
+<body data-artifact="wu-result" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W10 result — the setup screen and quit dialog, built</h1>
+      <p>The third design of this screen and the first one built. Eight registry members replace five
+      hand-rolled locals, the quit dialog gains a real remedy in every mode where one exists, and — after
+      the owner operated the running build — the screen's status model was reworked into two layers. Ten
+      review rounds and three owner rounds; closed at the owner's direction with two findings waived and
+      the surface marked for a later epic.</p>
+      <div class="meta">WU result · 2026-09-06 · Trawler · T3 (docs/work/) · <code>wu/redesign/setup-quit-build</code>
+      → <a href="2026-09-04-redesign-plan.html">epic/redesign</a> · plan:
+      <a href="2026-09-05-redesign-w10-plan.html">W10 plan</a> · the design:
+      <a href="2026-09-04-redesign-run-9-setup-quit.html">design run #9</a>, amended in this WU · the why:
+      <a href="../decisions/dec-32-two-layers-and-a-clock.html">DEC-32</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div class="callout" data-item="outcome" data-c="outcome">
+      <p><strong>Delivered, and closed as built rather than as final.</strong> Every row of the plan's expected
+      result is met. The build followed design run #9; three owner rounds on the running screen then found
+      what no test had asserted — uncopyable commands, a file the screen told users to save but never
+      produced, and a status model that let an hour-old flow keep every step green — and the third of these
+      reworked the design inside the WU. The owner's closing verdict is that <strong>onboarding and quitting
+      are more complicated than this design treats them</strong>, and that the surface will be revisited in
+      a later epic. This report therefore records the WU as shipped and gated, not as the design's last
+      word; the two round-10 findings left standing are waived at the owner's direction and listed under
+      <a href="#follow-ups">follow-ups</a> for that epic.</p>
+    </div>
+    <table data-c="outcome-rows">
+      <thead><tr><th>#</th><th>The plan's expected result</th><th>Actual</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Both screens render from registry components; no hand-rolled equivalent survives</td>
+          <td><span class="yes">met</span> — <code>StepList</code> · <code>Select</code> · <code>StatusLine</code> ·
+          <code>Disclosure</code> · <code>Notice</code> · <code>CopyText</code> · <code>Button</code> ·
+          <code>IconButton</code>, plus <code>TimestampText</code> and <code>Checkbox</code> after the
+          amendment; <code>grep -cE '&lt;select|&lt;details|&lt;ol '</code> across both screens = 0</td></tr>
+        <tr><td>2</td><td><code>grep -c toneClass ui/src/Onboarding.tsx</code> → 0</td>
+          <td><span class="yes">met</span> — and a source-level test pins it: the screen never maps a verdict
+          tone to a class</td></tr>
+        <tr><td>3</td><td>No unguarded <code>navigator.clipboard</code> call under <code>ui/src/</code></td>
+          <td><span class="yes">met for this WU's calls</span> — both commands copy through <code>CopyText</code>,
+          which gained the error state its shared hook already supported. <code>FlowDetail.tsx</code>'s
+          pre-existing silent swallow is out of scope and was recorded by review round 1</td></tr>
+        <tr><td>4</td><td><code>StepStatusView.short</code> with all sixteen values; the <code>[UI_DEFER]</code> marker deleted</td>
+          <td><span class="yes">met, then amended</span> — the marker is gone; <code>message</code> was deleted
+          when round 1 found it had no consumer; the amendment re-specified the set at <strong>nineteen</strong>,
+          asserted literally</td></tr>
+        <tr><td>5</td><td><code>Checkbox</code> exported with its test; the raw <code>&lt;input type="checkbox"&gt;</code> gone</td>
+          <td><span class="yes">met</span> — with the focus ring round 1 found missing, and no design file
+          behind it (see deviations)</td></tr>
+        <tr><td>6</td><td><code>onboarding.spec.ts</code> rewritten to the new selectors, spine intact</td>
+          <td><span class="yes">met</span> — the step containers kept their ids so the spine never moved; two
+          assertions added (verdicts exist, no prev/next). 6 passing against the real window at the tip</td></tr>
+        <tr><td>7</td><td>The full UI suite green, <code>cargo test</code> unaffected</td>
+          <td><span class="yes">met</span> — 727 / 45 files (566 at the base); gate0 green; four core comments
+          corrected, no core code moved</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <thead><tr><th>What changed</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><strong><code>Checkbox</code> built here, without a component design file.</strong></td>
+          <td>Design run #9 ruled it "its own WU, not W10". The plan recorded the author's call to build it
+          anyway so the dialog's remote mode landed complete. Cost, stated then and unchanged: no roster entry
+          to cite; W11 back-fills the design file or records the drop.</td></tr>
+        <tr><td><strong>Design run #9 amended inside the build WU.</strong></td>
+          <td>The owner's third round found the status model wrong at the root. Under DEC-24/DEC-25 the
+          amended run is a design artifact of this diff — Tier-1 ran over it with the archived flag lifted
+          (17/17 soft, 13/13 hard), Tier-3 judged it in round 10, and the citation re-pins to blob
+          <code>b29c435a</code>. Its Review table carries the owner's four instructions and what each moved.</td></tr>
+        <tr><td><strong>Two round-10 findings waived, not fixed.</strong></td>
+          <td>Owner's direction at close: stop being strict, wrap up, revisit in a later epic. Both are
+          recorded on the <code>cr/v3</code> note as waivers with reasons and repeated under follow-ups:
+          (1) <em>important</em> — a timestamp ahead of the clock (a backward wall-clock step while the setup
+          screen is open) makes a negative age satisfy the 30 s / 3 s checks, so "capturing" or "a connection
+          just arrived…" would stand until real time catches up; reproducible, self-healing, one-line clamp.
+          (2) <em>nit</em> — the run's IconButton row borrows the ✕'s "third route" clause to clear the
+          primary-action @avoid for the ↓; the warrant exists elsewhere in the artifact but that sentence is
+          misattributed.</td></tr>
+        <tr><td><strong>The surface is shipped, not endorsed.</strong></td>
+          <td>The owner reviewed the built screens and judged the design "still not as good as I expect" —
+          onboarding and quitting are more complicated than this run treats them. Nothing here is rolled
+          back; the WU closes on its gate, and the later epic starts from what is on screen rather than from a
+          plan.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="owner-rounds">The owner's three rounds — found by using the screen, not by reading it</h2>
+    <table data-c="owner-rounds">
+      <thead><tr><th>Round</th><th>What the owner saw</th><th>What it changed</th><th>Commit</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>The Trust CA commands were prose the user had to retype</td>
+          <td>Commands named in the domain (<code>trustSnippet</code>/<code>removalSnippet</code>) and rendered as
+          <code>CopyText</code>; two setup.test guards — every named command appears exactly once, and no step
+          that looks like a shell command may go unnamed</td><td><code>cb2d722</code></td></tr>
+        <tr><td>2</td><td>Step one said "Save Trawler's certificate as trawler-ca.pem" and nothing produced the file</td>
+          <td>A save action through the body viewer's <code>saveBody</code>; two review rounds then made it honest
+          about cancel and rename</td><td><code>269cd84</code> · <code>324c3a0</code> · <code>4fab6f6</code></td></tr>
+        <tr><td>3</td><td>An hour-old flow kept every step green after the proxy was turned off; "check again" per
+          step; the save as a button; "think carefully about UX"</td>
+          <td>Two layers, never blended — steps 1–2 from the probes only, step 3 from timestamps against a
+          clock; one dated re-check row plus re-probe on window focus; the save as a ↓ ending the sentence that
+          names the file. The run amended; <a href="../decisions/dec-32-two-layers-and-a-clock.html">DEC-32</a>
+          written</td><td><code>d48cc94</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="review">Ten review rounds — what each found</h2>
+    <table data-c="review-rounds">
+      <thead><tr><th>Round</th><th>Verified</th><th>The finding that mattered</th><th>Fixed in</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>13</td><td>Three trust remedies computed and dropped — a regression against the base; the T2 doc described the lost sentence; the proxy command rendered twice; <code>Checkbox</code> shipped with no focus ring; two tests proven vacuous by mutation</td><td><code>2c0c285</code></td></tr>
+        <tr><td>2</td><td>3</td><td>Three defects in round 1's own fixes</td><td><code>6cf586b</code></td></tr>
+        <tr><td>3</td><td>1</td><td>The dialog had no success state after a remedy</td><td><code>f614eb0</code></td></tr>
+        <tr><td>4</td><td>2</td><td>A test of mine that proved nothing, and a focus escape from the modal</td><td><code>747e17b</code></td></tr>
+        <tr><td>5</td><td>1</td><td>The focus fix was worse than the bug it fixed</td><td><code>cc1d2c9</code></td></tr>
+        <tr><td>6</td><td>1</td><td>Delete the machinery instead of fixing it again</td><td><code>b3b25f9</code></td></tr>
+        <tr><td>7</td><td>2</td><td>Two blockers jsdom cannot see — recorded, verified by reasoning about the browser</td><td><code>e0183c0</code></td></tr>
+        <tr><td>8</td><td>2</td><td>A cancelled save dialog reported "saved" — the Tauri branch of <code>saveBody</code> had no test</td><td><code>324c3a0</code></td></tr>
+        <tr><td>9</td><td>2</td><td>The same lie in its second form: a renamed save reported the asked-for name</td><td><code>4fab6f6</code></td></tr>
+        <tr><td>10</td><td>2 of 15</td><td>Negative age reads as recent under a backward clock step (important); the ↓'s primary-action clause misattributed (nit). Thirteen refuted, six of them by mutation or by applying the proposed change</td><td><strong>waived</strong> — owner's close</td></tr>
+      </tbody>
+    </table>
+    <p class="kd">Refuted in round 10, so nobody re-litigates them: <code>slots</code> is not one-caller generality (it
+    subsumes the command→CopyText replacement every tenant uses); the <code>ActionNotes</code> function form is the
+    narrowest type for "a note may depend on the outcome"; <code>attemptRemove</code>'s try/catch is load-bearing
+    (deferring <code>onRemove</code> reds two tests); the save <code>Notice</code> is a standing outcome, not a
+    transient confirmation; zone R's grouping is carried by proximity, wording and the in-flight cue; the UC and
+    index omitting the 3 s grace is "one fact per tier" working; <code>latest()</code> is presentation, not
+    domain, and shares no contract with <code>flow.ts</code>'s fold.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tbody>
+        <tr><td><strong>Tip</strong></td><td>the final commit on <code>wu/redesign/setup-quit-build</code> — this
+          report, docs-only, on top of <code>d48cc94</code>. Fourteen commits: the plan, the build, nine review
+          rounds, three owner rounds, the report.</td></tr>
+        <tr><td><strong>The design cited</strong></td><td><code>docs/work/2026-09-04-redesign-run-9-setup-quit.html</code>
+          at blob <code>b29c435a1e5b18bc22dc92dd553f525036c7a449</code> — the amended run,
+          <code>data-status="archived"</code>. Cited for <code>Checkbox.tsx</code>, <code>manualSteps.tsx</code>,
+          <code>Onboarding.tsx</code>, <code>ProxyCloseDialog.tsx</code> and <code>StatusLine.tsx</code>;
+          <code>App.tsx</code>, <code>Gallery.tsx</code> and <code>CopyText.tsx</code> declared undesigned with
+          their reasons.</td></tr>
+        <tr><td><strong>Unit</strong></td><td><code>setup.test.ts</code> 116 · <code>Onboarding.test.tsx</code> 47 ·
+          <code>StatusLine.test.tsx</code> 23 · <code>Checkbox.test.tsx</code> 6 · <code>body.test.ts</code> and
+          <code>flow.test.ts</code> / <code>useFlows.test.ts</code> grown for the save path and the traffic
+          timestamps. Mutation-checked where it mattered: dropping the recency rule reds two named tests;
+          folding a command back into prose reds the suite; the cancel-as-done regression reds its guard.</td></tr>
+        <tr><td><strong>Integration</strong></td><td><code>ProxyCloseDialog.test.tsx</code> new (the app's only
+          modal had no test) · <code>App.test.tsx</code> 26 — the probe/traffic wiring, the connection reaching
+          step 3 and not step 2, check-again and window focus re-reading both probes, the save writing the
+          filename the steps name.</td></tr>
+        <tr><td><strong>E2E</strong></td><td><code>cargo xtask ui e2e</code> — <strong>25 passing, 0 failing</strong>
+          (6 onboarding + 19 flows) against the real WebKit window and an ephemeral core, at <code>d48cc94</code>.</td></tr>
+        <tr><td><strong>Suites</strong></td><td><code>npx vitest run</code> 727 passed / 45 files ·
+          <code>tsc --noEmit</code> clean · <code>eslint src</code> clean · <code>cargo xtask gate0</code> green
+          (fmt, clippy -D warnings, the Rust suite).</td></tr>
+        <tr><td><strong>Docs</strong></td><td><code>verify-doc</code> green on the plan, this report, the amended
+          run (checked with its archived flag lifted, then re-archived), <code>web-ui.html</code>, DEC-13, DEC-32
+          and the decisions index.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation" data-c="distillation">
+      <table>
+        <thead><tr><th>Doc</th><th>Tier</th><th>What it absorbed</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../use-cases/web-ui.html">docs/use-cases/web-ui.html</a></td><td>T2</td>
+            <td><strong>Updated.</strong> UC-ONBOARD reads "two layers of status, never blended"; the proxy step
+            no longer goes green on a connection; the save is a ↓ ending the step that names the file; a probe
+            reading is a dated snapshot re-taken on demand and on window focus; the quit dialog's three modes
+            and the copy confirms are stated for the first time.</td></tr>
+          <tr><td><a href="../decisions/dec-32-two-layers-and-a-clock.html">DEC-32</a></td><td>T2</td>
+            <td><strong>Added.</strong> Why this machine and the wire are two layers, why recency is a clock and not
+            a boolean, the 30 s / 3 s constants and six rejected options.</td></tr>
+          <tr><td><a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a></td><td>T2</td>
+            <td><strong>Dated note appended.</strong> The connection signal no longer speaks for the proxy step; the
+            capability is unchanged.</td></tr>
+          <tr><td><a href="../design-rules/design-rules-index.html">design-rules-index.html</a></td><td>T2</td>
+            <td><strong>No change.</strong> No token, rule or lexicon term was needed; the run's one proposal
+            (<code>Checkbox</code>) is a component, not a rule.</td></tr>
+          <tr><td>T1</td><td>T1</td>
+            <td><strong>Not touched.</strong> The flow and the gate were inputs; the first
+            <code>design.implements</code> citation against an amended run passed check 9 as specified.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <thead><tr><th>What</th><th>Whose</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Onboarding and quitting, redesigned.</strong> The owner's verdict on the built surface: more
+          complicated than this run treats it, and not yet as good as expected. The next epic starts from the
+          running screens, DEC-32's two-layer model, and the three owner rounds above — not from a plan.</td>
+          <td><strong>owner</strong> — a later epic</td></tr>
+        <tr><td><strong>Clamp negative ages in <code>trafficStatus</code>.</strong> A timestamp ahead of <code>now</code>
+          (a backward wall-clock step) satisfies both recency checks unconditionally; the false verdict lasts as long
+          as the step. One-line guard (<code>age &gt;= 0</code>) plus a test with a future timestamp. Waived at close.</td>
+          <td><strong>the later epic</strong>, or the first WU that touches <code>setup.ts</code></td></tr>
+        <tr><td><strong>The ↓'s primary-action clause in the run.</strong> The IconButton row clears "not a primary
+          action" with the ✕'s "third route" argument; the ↓ is covered by the manual-fallback's "not leading"
+          placement in Frame A, but the sentence should say so. Waived at close.</td>
+          <td>whoever next amends the run — or the redesign retires it</td></tr>
+        <tr><td><strong>A domain guard for the save step.</strong> Every command has a setup.test guard that it appears
+          in its steps exactly once; <code>SAVE_CA_STEP</code> has none, and the rendering tests that catch a drift
+          exercise macOS only. Surfaced by a round-10 verifier as residue of a refuted finding.</td>
+          <td>the later epic</td></tr>
+        <tr><td><strong><code>Checkbox</code>'s design file.</strong> Built here without one; the epic's expected result
+          asks for a roster entry per component design. Back-fill the file or record the drop.</td>
+          <td><strong>W11</strong></td></tr>
+        <tr><td><strong>The modal shell's focus behaviour in a real browser.</strong> jsdom cannot observe the
+          disabled-blur class of bug; the e2e does not exercise the quit dialog (the real proxy-off is elevation-gated).</td>
+          <td>the later epic, if the dialog survives it</td></tr>
+        <tr><td><strong>Connected clients.</strong> <code>hudsucker</code>'s <code>HttpContext</code> carries
+          <code>client_addr</code>; the recorder discards it. Showing who is sending is a new capability across core,
+          API and screen — its own WU with its own design run. The <code>/stats</code> tally also keeps no time, so
+          "idle since" at launch would need a core timestamp.</td>
+          <td><strong>owner</strong> — scope for the later epic</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
