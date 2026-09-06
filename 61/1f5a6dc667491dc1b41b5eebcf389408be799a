@@ -1,0 +1,35 @@
+schema: cr/v3
+scope: "WU wu/redesign/setup-quit-build -> epic/redesign — round 11, re-run over the WHOLE diff after the sync merge with epic/redesign (W6 landed first, so the merge-base moved from b9e0bdb to a0325aa and every earlier round's binding was orphaned by construction). Six finders including design; eleven candidates, eight refuted, three verified and all three waived at the owner's close. The code was reviewed at eef93b7; the two commits above it are docs-only — the result report recording the sync and the DEC-32 -> DEC-33 renumbering, then round 11's own outcome — each harness-checked with verify-doc."
+epic: E-REDESIGN
+wu: E-REDESIGN.W10
+branch: wu/redesign/setup-quit-build
+base: a0325aaffd4acacf4367f5873f4f7cff313381ec
+head: 611f5a6dc667491dc1b41b5eebcf389408be799a
+diff_sha256: 10637d566ab5b42797dead7274cc3c0e43a2fc4a8181e8feaec19b34b0506535
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 11, verified: 3, waived: 3 }
+waivers:
+  - finding: "correctness, important — ui/src/setup.ts:327 trafficStatus: a timestamp ahead of now (a backward wall-clock step while the setup screen is open) makes now - at negative, which satisfies <= RECENT_MS and < TUNNEL_GRACE_MS unconditionally, so 'capturing traffic' or 'a connection just arrived…' stands until real time catches up; no test covers a future-relative timestamp"
+    reason: "Round 10's finding, resurfaced by round 11's correctness finder. ui/src/setup.ts is BYTE-IDENTICAL between d48cc94 (round 10's head) and this tip, so round 10's fresh-verifier verification carries forward rather than being re-run. Waived at the owner's direction at close: stop being strict, wrap up, revisit onboarding and quitting in a later epic. It needs an actual backward step of the OS clock while the transient setup screen is open, self-heals once elapsed time exceeds the step, and misleads only that screen. Recorded as a follow-up in docs/work/2026-09-05-redesign-w10-result.html with its one-line fix (an age >= 0 guard in recent() and the grace check) and the test it needs."
+  - finding: "design, nit — the amended run's IconButton catalog row clears the primary-action @avoid for the new down-arrow placement with the close control's clause 'a third route to an outcome two buttons already offer', which fits only the dialog's close control; the arrow's not-primary warrant is carried elsewhere in the same artifact (the manual-fallback composition, Frame A's 'manual steps present, not leading') but not in that sentence"
+    reason: "Round 10's finding, resurfaced by round 11's design finder. The artifact is unchanged at that row, so round 10's verification carries forward. Waived at the owner's direction at close. The reuse warrant is established in the artifact, so this is a misattributed sentence rather than an unestablished reuse; recorded as a follow-up for whoever next amends the run, or for the redesign that retires it."
+  - finding: "simplification, nit — ui/src/App.test.tsx:470 and :529 carry inline vi.unstubAllGlobals() calls that this WU's own global afterEach (line 102, added by commit 269cd84 inside the reviewed range) has made dead; both are the last statement of their test, so nothing relies on navigator being restored mid-test"
+    reason: "New in round 11, and genuinely in scope: the two inline calls predate the base (W6 5074563 and E-UIINSPECT.W2 5c5f421) but were load-bearing until this WU's afterEach landed, so the diff is what killed them and the pre-existing exclusion does not shield it. Waived at the owner's standing direction at close — the tree was settled and a signature pending, and a two-line deletion in a test file would orphan every binding on the tip for no behavioural gain (the verifier ran the file: 27 tests pass either way). Recorded as a follow-up naming the file that inherits it."
+design:
+  artifacts: [docs/work/2026-09-04-redesign-run-9-setup-quit.html]
+  rulebook: aeff5b0fb4dea94ab5f0b7c385b8188786666e8a
+  findings: { found: 2, verified: 1, waived: 1 }
+  verdict: PASS
+  implements:
+    - path: docs/work/2026-09-04-redesign-run-9-setup-quit.html
+      blob: b29c435a1e5b18bc22dc92dd553f525036c7a449
+      built: [ui/src/components/Checkbox.tsx, ui/src/manualSteps.tsx, ui/src/Onboarding.tsx, ui/src/ProxyCloseDialog.tsx, ui/src/components/StatusLine.tsx]
+  undesigned:
+    - path: ui/src/App.tsx
+      why: "Wiring only — the probe snapshot (probing, probedAt, both probes under allSettled with a live flag), the window-focus re-probe, the traffic timestamps assembled from latestFlowTimes and lastConnectionAt, and the install/save/set/unset handlers. Every rendered element it mounts belongs to Onboarding or the dialog, both cited above; nothing on App's own surface was re-shaped."
+    - path: ui/src/Gallery.tsx
+      why: "Mechanical compile fixes only — StatusLine specimens moved onto the resolvers' new signatures (trafficStatus in place of verifyStatus; the traffic argument gone from trustStatus/proxyStatus). Gallery is the throwaway dev showcase W11 deletes; no user-facing surface changed."
+    - path: ui/src/components/CopyText.tsx
+      why: "A defect fix inside the existing layout — the rejection handler was a no-op while its sibling CopyButton flashed error through the same shared hook. One transient outcome chip gained a warn variant; no element was added or moved."
+verdict: PASS
+date: 2026-09-06
