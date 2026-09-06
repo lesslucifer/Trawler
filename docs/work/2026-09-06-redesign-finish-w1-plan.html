@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d5cf19f34851f0dfac8ff">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-RFINISH.W1 plan (the design specs prescribe the shape the gate enforces)</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .bad{color:var(--warn);font-weight:600}
+    .good{color:var(--ok);font-weight:600}
+    .gone{color:var(--muted);text-decoration:line-through}
+    pre.tb{font-family:var(--mono,monospace);font-size:11.5px;line-height:1.5;margin:0;white-space:pre-wrap}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+    .card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper)}
+    .card h4{margin:0 0 6px;font-size:14px}
+    .card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .card p{margin:6px 0;font-size:12.5px;line-height:1.55}
+  </style>
+</head>
+<body data-artifact="wu-plan" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-RFINISH.W1 — the design specs prescribe the shape the gate enforces</h1>
+      <p>Two T1 specs still tell an author to load the pre-bundle trio. <a href="../decisions/dec-26-the-mockup-mounts.html">DEC-26</a>
+      replaced it with one classic tag, and the checks moved with it — so a design file built to
+      <a href="../component-design.html">component-design.html</a>'s skeleton today is refused by the render gate,
+      and a run built to <a href="../design-flow.html">design-flow.html</a>'s mockup template is refused by
+      <code>assets·specimen</code> for a path that is one directory level short.</p>
+      <div class="meta">WU plan · 2026-09-06 · Trawler · T3 (docs/work/) · <code>wu/redesign-finish/design-file-skeleton</code>
+      → <a href="2026-09-06-redesign-finish-plan.html">epic/redesign-finish</a> ·
+      <a href="../decisions/dec-26-the-mockup-mounts.html">DEC-26</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement" data-c="requirement">
+      <strong>Both T1 design specs prescribe exactly the asset shape their gate enforces</strong> — 
+      <code>component-design.html</code>'s file skeleton loads the CDN, <code>specimens.bundle.js</code> at the depth a
+      file under <code>docs/work/components/</code> reaches it, and Babel, and shows the <code>text/babel</code> mount from
+      <code>window.Trawler</code> into <code>spec-*</code> hosts that <code>check-render.mjs</code> requires; and
+      <code>design-flow.html</code>'s mockup template names the bundle at the exact <code>src</code> string
+      <code>xtask/src/doc.rs</code> matches on — <strong>so that an agent who follows either spec to the letter produces an
+      artifact that passes, and a future divergence between a spec's prescribed path and the gate's constant fails a
+      test instead of a design run.</strong>
+    </div>
+
+    <h2 id="what-is-wrong">What is wrong, verified against the tree</h2>
+    <table data-c="defects">
+      <thead><tr><th>Where</th><th>The spec says</th><th>The gate wants</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>component-design.html:76</code><br>(file skeleton)</td>
+          <td class="bad"><code>&lt;script type="module" src="../doc-assets/components/tw-config.js"&gt;</code></td>
+          <td class="good"><code>&lt;script src="../../../doc-assets/components/specimens.bundle.js"&gt;</code> + Babel</td>
+          <td><code>check-render.mjs:127</code> — “a live component design loads no <code>specimens.bundle.js</code>”. Three
+          faults in one line: the pre-bundle half, a <code>type="module"</code> tag that never executes from
+          <code>file://</code>, and a depth that resolves to <code>docs/work/doc-assets/</code></td>
+        </tr>
+        <tr>
+          <td><code>component-design.html:46</code><br>(principle)</td>
+          <td class="bad">“Load the CDN plus <code>tw-config.js</code> … <strong>the specimen's class string is the
+          component's <code>className</code>, verbatim</strong>”</td>
+          <td class="good">the specimen <em>is</em> the component, mounted — there is no class string to copy</td>
+          <td>the copy-then-don't-drift rule this sentence teaches is the exact gap
+          <a href="../decisions/dec-26-the-mockup-mounts.html">DEC-26</a> closed: a correct copy of every utility is
+          still the doc's own rendering</td>
+        </tr>
+        <tr>
+          <td><code>component-design.html:67</code><br>(specimen rule)</td>
+          <td class="bad">“Fully live when the behavior is cheap to <strong>re-implement in a doc</strong>
+          (CopyText: ~20 lines)”</td>
+          <td class="good">nothing is re-implemented; the scale-down is about the cost of <em>instantiating</em></td>
+          <td>the retired CopyText file already carried the correction in its own callout — it never reached the spec</td>
+        </tr>
+        <tr>
+          <td><code>design-flow.html:256</code><br>(mockup template)</td>
+          <td class="bad"><code>src="../doc-assets/components/specimens.bundle.js"</code></td>
+          <td class="good"><code>src="../../doc-assets/components/specimens.bundle.js"</code></td>
+          <td><code>doc.rs:776</code> matches the <code>src</code> literally, so a run copied from the template fails
+          <code>assets·specimen</code> — “the run does not load … the bundle”. Every shipped run wrote
+          <code>../../</code>; the template never did</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>Depths differ because the artifacts sit at different depths, and both are right:
+    a run is <code>docs/work/&lt;run&gt;.html</code> → <code>../../</code>; a component design file is
+    <code>docs/work/components/&lt;name&gt;.html</code> → <code>../../../</code>. The retired
+    <code>copy-text.html</code> and <code>select.html</code> used the latter and rendered; the shipped runs used the
+    former and gated green.</p>
+
+    <h2 id="scope">Scope — and the one line the epic plan did not have</h2>
+    <div class="cards" data-c="scope-cards">
+      <div class="card">
+        <h4>In, as planned</h4>
+        <div class="who">component-design.html</div>
+        <p>The file skeleton, the specimen principle and the scale-down rule — the three places the spec states a
+        loading or authoring shape DEC-26 replaced.</p>
+      </div>
+      <div class="card">
+        <h4>In, added here</h4>
+        <div class="who">design-flow.html · one path</div>
+        <p>The epic plan named one skeleton; the sibling spec carries the same class of defect on the line the epic's
+        <em>two design runs</em> will actually copy. Correcting a wrong relative depth is not revising the flow — the
+        stages, the rulebook and the three-tier gate are untouched, as the epic's non-goal requires.</p>
+      </div>
+      <div class="card">
+        <h4>In, added here</h4>
+        <div class="who">xtask/tests · one test</div>
+        <p>The epic plan calls W1 docs-only. A docs-only fix leaves the next divergence just as silent as this one
+        was. One integration test pins both specs' prescribed <code>doc-assets/</code> paths to the gate's own
+        constants, so the WU carries a test at its own level instead of a waiver.</p>
+      </div>
+      <div class="card">
+        <h4>Out</h4>
+        <div class="who">the two specs' own heads</div>
+        <p>Both load the CDN + <code>tw-config.js</code> for themselves and render no utility from it. Dead, but it is
+        their rendering, not their prescription — recorded as a follow-up, not fixed here.</p>
+      </div>
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to" data-c="maps-to">
+      <tr><td><strong>Epic</strong></td><td><a href="2026-09-06-redesign-finish-plan.html">E-RFINISH</a> — finish what
+      E-REDESIGN deferred. This is <strong>W1</strong>, and it lands first because
+      <strong>W4</strong> and <strong>W7</strong> are design runs built to these specs.</td></tr>
+      <tr><td><strong>Consumes</strong></td><td><a href="../decisions/dec-26-the-mockup-mounts.html">DEC-26</a> — the
+      mockup mounts the components. Its <em>Consequences</em> already state the shape: one classic tag, Babel in the
+      head, the trio legal only for a run that mounts nothing. This WU copies that ruling into the two specs that
+      still contradict it; it re-opens nothing.</td></tr>
+      <tr><td><strong>Use cases</strong></td><td><strong>None.</strong> No <code>ui/src/</code> file is touched and no
+      UC behaviour moves. Process docs and one xtask test.</td></tr>
+      <tr><td><strong>Closes</strong></td><td>The roadmap's second <em>Deferred</em> row — “<code>component-design.html</code>'s
+      file skeleton still prescribes the pre-bundle <code>tw-config.js</code> loading shape”, addressed by
+      E-REDESIGN.W1's review to whichever epic next revises the design-flow specs.</td></tr>
+      <tr><td><strong>Design accounting</strong></td><td>No UI-rendering file in the diff — gate check 9 has nothing to
+      account for. The <code>cr/v3</code> note carries neither <code>design.implements</code> nor
+      <code>design.undesigned</code>.</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <ul data-item="expected" data-c="expected">
+      <li><strong>The skeleton is copyable.</strong> A file created from <code>component-design.html</code>'s skeleton,
+      filled in and saved under <code>docs/work/components/</code>, loads the bundle and mounts —
+      <code>node scripts/check-render.mjs &lt;file&gt;</code> reports mounts rather than
+      <em>“loads no specimens.bundle.js”</em>.</li>
+      <li><strong>The mockup template is copyable.</strong> The <code>src</code> string in
+      <code>design-flow.html</code>'s template is byte-identical to <code>doc.rs</code>'s <code>BUNDLE</code>
+      constant, so a run pasted from it satisfies <code>assets·specimen</code> on its first verdict.</li>
+      <li><strong>No spec sentence teaches the copied class string.</strong> Grepping the two specs for
+      <code>tw-config</code> returns only their own <code>&lt;head&gt;</code> tags and the sentence that names the trio
+      as the legal shape for a run that mounts nothing — never as an instruction to an author who mounts.</li>
+      <li><strong>The divergence cannot come back silently.</strong> Changing either spec's prescribed path, or
+      <code>doc.rs</code>'s constants, without changing the other turns the new test red.</li>
+      <li><code>cargo xtask verify-doc</code> green on both specs and on this plan; <code>cargo test</code> green.</li>
+    </ul>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Integration</strong><br>(the WU contract)</td>
+          <td><code>xtask/tests/verify_doc.rs</code> — one test reading the two real specs out of the tree. For every
+          <code>doc-assets/components/*.js</code> <code>src</code> a spec <em>prescribes</em> (inside its template
+          block, not its own head), it resolves the relative path against the folder that spec's artifact lives in and
+          asserts it lands on <code>doc-assets/components/</code> at the repo root; and it asserts
+          <code>design-flow.html</code>'s bundle <code>src</code> equals <code>doc.rs</code>'s <code>BUNDLE</code>
+          constant verbatim, because the gate matches that string literally. <strong>Red first</strong>: run against
+          the tip before the doc edits, it fails on <code>design-flow.html</code>'s missing level.</td>
+        </tr>
+        <tr>
+          <td><strong>Unit</strong><br>(the commit)</td>
+          <td>The path-resolution helper the test uses is exercised by the test itself over both real inputs — there is
+          no second unit to isolate, and a stub would assert a copy of the tree rather than the tree. <strong>No
+          waiver is claimed</strong>: the integration test is the code this WU adds, and it covers all of it.</td>
+        </tr>
+        <tr>
+          <td><strong>E2E</strong></td>
+          <td><span class="bad">Waived</span> — <code>waived: "no user-facing surface; the epic's e2e is W10's and this
+          WU adds no screen, no route and no rendered state"</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>Gates</strong></td>
+          <td><code>cargo xtask verify-doc docs/component-design.html docs/design-flow.html
+          docs/work/2026-09-06-redesign-finish-w1-plan.html</code> green (link check reaches ungoverned T1 docs too);
+          <code>cargo test</code>; <code>cargo clippy -D warnings</code>; <code>cargo fmt</code>.</td>
+        </tr>
+        <tr>
+          <td><strong>Manual proof</strong><br>(recorded in the result)</td>
+          <td>A throwaway file built from the corrected skeleton is run through
+          <code>node scripts/check-render.mjs</code> and the output pasted into the WU result — the skeleton is proven
+          by use, not by reading. The file is not committed.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="commits">Commit shape</h2>
+    <table data-c="commits">
+      <tr><td>1</td><td>this plan</td><td>T3 — no <code>Reviewed-By</code></td></tr>
+      <tr><td>2</td><td>the two spec corrections</td><td><strong>T1, rule-bearing</strong> — lands through
+      <code>cargo xtask mr commit</code> with a <code>Reviewed-By</code> trailer naming a listed authoriser</td></tr>
+      <tr><td>3</td><td>the xtask test</td><td>code commit on the WU branch — its own unit coverage</td></tr>
+      <tr><td>4</td><td>the WU result report</td><td>T3, written before the merge</td></tr>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

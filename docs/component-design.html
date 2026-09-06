@@ -43,7 +43,7 @@ flowchart LR
     <h2 id="principles">Principles (apply to every section)</h2>
     <ul data-c="principles">
       <li><strong>Example-first — the reader is not a designer.</strong> Every spec row carries a rendered example beside it (a swatch, a before→after pair, a timeline, a transcript). Terms alone fail review; this was the pilot's hardest-learned lesson.</li>
-      <li><strong>Specimens are written in the app's own Tailwind.</strong> Load the CDN plus <code>tw-config.js</code> (which imports <code>ui/tailwind.config.js</code> directly — no generated copy) and mark every specimen up with utility classes — <code>px-control-x py-control-y text-control rounded-button</code>, never a hand-written rule. <strong>The specimen's class string is the component's <code>className</code>, verbatim</strong>, so the build copies rather than translates and the two cannot drift. Wrap specimens in <code>.app</code>; a value that has no utility needs a named token in the config, not a literal here (E-DFLOW.W5 step 3).</li>
+      <li><strong>A specimen is the component, mounted — not a rendering of it.</strong> <code>specimens.bundle.js</code> compiles <code>ui/src/components/</code>, React and the app's Tailwind theme into one classic script a <code>file://</code> page loads as <code>window.Trawler</code>, so every specimen in the file <em>is</em> what ships and cannot drift from it (<a href="decisions/dec-26-the-mockup-mounts.html">DEC-26</a>). Copying a component's <code>className</code> instead is refused, not reviewed: a faultless copy of every utility is still the doc's own drawing, and that is the one fork no class check can see. Only what has no component to mount is authored here — a proposed part, a rejected fork leg, the doc's scaffolding — in the app's own utility classes (<code>px-control-x py-control-y text-control rounded-button</code>), never a hand-written rule, wrapped in <code>.app</code>. A value with no utility needs a named token in <code>ui/tailwind.config.js</code>, not a literal here (E-DFLOW.W5 step 3).</li>
       <li><strong>Every spec has a why.</strong> Each anatomy part and behavior rule traces to a driver (identity &amp; frame) or a shipped-code precedent (cite <code>file:line</code>). A spec that can't say why is a guess.</li>
       <li><strong>Spec-first, demo-last.</strong> The reader meets the reasoning before the toy: identity &amp; frame → anatomy → behavior → states → forks → API — the live specimen closes the file.</li>
       <li><strong>Forks show their losers.</strong> A settled decision renders its rejected alternatives visually, each with the reason it lost. Review catches ride in the winning card (see the exemplar's cursor sub-fork).</li>
@@ -65,7 +65,7 @@ flowchart LR
       </tbody>
     </table>
     <div class="callout" data-c="specimen-rule">
-      <strong>The specimen scales down, never away.</strong> Fully live when the behavior is cheap to re-implement in a doc (CopyText: ~20 lines). When it isn't — a collapsible JSON tree, a hex grid — a simplified sample stands in: static swatches plus explanation text, diagrams, or visualizations of the hard part. States stay visual either way; only the <em>interactivity</em> is negotiable.
+      <strong>The specimen scales down, never away — and nothing is re-implemented.</strong> These files used to carry a second implementation of the behavior they documented, whose only job was to look like the first; the mount deleted it, so the timeout, the tone swap and the guard a reader exercises are the shipped ones. What still scales down is <em>instantiation</em>: a component too expensive to stand up whole — a collapsible JSON tree, a hex grid over a large body — mounts against a small input, with a diagram or annotated still beside it for the hard part. States stay visual either way; only the <em>interactivity</em> is negotiable.
     </div>
 
     <h2 id="skeleton">File skeleton</h2>
@@ -73,7 +73,8 @@ flowchart LR
       <pre>docs/work/components/<span class="ph">&lt;kebab-name&gt;</span>.html   <span class="ph">← mint data-htmldoc-id · snapshot on create (htmldoc skill)</span>
 
 &lt;head&gt;    <span class="ph">&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;
-          &lt;script type="module" src="../doc-assets/components/tw-config.js"&gt;&lt;/script&gt;   ← imports ui/tailwind.config.js
+          &lt;script src="../../../doc-assets/components/specimens.bundle.js"&gt;&lt;/script&gt;   ← theme, specimen behaviours, the collection — one tag, one order
+          &lt;script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"&gt;&lt;/script&gt;
           &lt;style&gt; doc scaffolding only — never a component rule &lt;/style&gt;</span>
 
 hero      <span class="ph">&lt;Name&gt; &lt;tier badge&gt; · one-liner · status: <strong>draft — awaiting confirmation</strong> · link: registry seed</span>
@@ -85,9 +86,16 @@ forks     <span class="ph">settled + rejected cards, visual</span>
 api       <span class="ph">props table + TSDoc block</span>
 fit       <span class="ph">use / avoid cards</span>
 tokens    <span class="ph">mockup → Tailwind table</span>
-specimen  <span class="ph">live demo (or simplified sample) — last</span></pre>
+specimen  <span class="ph">live demo (or simplified sample) — last</span>
+
+mount     <span class="ph">&lt;script type="text/babel" data-presets="react"&gt;   ← after &lt;/main&gt;, one block for the file
+            const { React, createRoot, &lt;Name&gt; } = window.Trawler;
+            const mount = (id, node) =&gt; createRoot(document.getElementById(id)).render(node);
+            mount("spec-anatomy", &lt;&lt;Name&gt; … /&gt;);   ← every host is an empty div id="spec-*"
+          &lt;/script&gt;</span></pre>
     </div>
-    <p>The part-block grid, swatches, timelines and chips are doc scaffolding: <strong>copy them from the exemplar</strong> — don't reinvent per file. Component styling is <em>not</em> copied at all any more — it is Tailwind utilities from the shared config. Headings and <code>data-c</code> blocks stay direct children of <code>&lt;main&gt;</code> (htmldoc diff rule).</p>
+    <p><strong>Every tag in that head is classic, and none is <code>type="module"</code></strong> — a design file opens by double-click and a <code>file://</code> origin executes no module script and reads no local file, which is why the bundle is compiled at author time rather than loaded at run time. Three levels up because the file sits in <code>docs/work/components/</code>; regenerate with <code>cargo xtask ui specimens</code> after changing <code>ui/src/components/</code>. The bundle is git-ignored, so a stale one is a re-run and never a divergence to reconcile.</p>
+    <p>The part-block grid, swatches, timelines and chips are doc scaffolding: <strong>copy them from the exemplar</strong> — don't reinvent per file. The component's rendering is not authored here at all — it is mounted from the bundle, so the utilities it draws are the ones <code>ui/tailwind.config.js</code> emits for the shipped file. Headings and <code>data-c</code> blocks stay direct children of <code>&lt;main&gt;</code> (htmldoc diff rule).</p>
 
     <h2 id="tsdoc">How the file compresses to TSDoc</h2>
     <table data-c="tsdoc-map">

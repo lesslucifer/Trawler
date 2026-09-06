@@ -773,7 +773,9 @@ const MOUNTED: &[&str] = &["reuse", "extend"];
 const CDN: &str = "https://cdn.tailwindcss.com";
 const THEME: &str = "../../doc-assets/components/tw-config.js";
 const SPECIMEN: &str = "../../doc-assets/components/specimen.js";
-const BUNDLE: &str = "../../doc-assets/components/specimens.bundle.js";
+/// The `src` a design run must carry, matched literally by `check_assets` - so
+/// the run spec's own template is only correct while it spells this string.
+pub const BUNDLE: &str = "../../doc-assets/components/specimens.bundle.js";
 
 fn mounts_owed(elements: &str) -> Vec<String> {
     let mut owed: Vec<String> = catalog_rows(elements)
