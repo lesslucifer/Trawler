@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d35879f34851f0dfac8a4">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-REDESIGN.W11 plan: epic close</title>
+</head>
+<body data-artifact="wu-plan" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-REDESIGN.W11 — epic close</h1>
+      <p>Delete the scaffolding the epic outgrew, prove the three contracts on the rebuilt
+        screens, and leave nothing owed.</p>
+      <div class="meta">v1 · 2026-09-06 · Trawler · T3 (docs/work/) · branch <code>wu/redesign/epic-close</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement" data-c="req-sentence">
+      Delete <code>ui/src/Gallery.tsx</code>, its test and the <code>main.tsx</code> query-string
+      guard that mounts it, so the shipped tree holds no throwaway screen and no dev-only mount
+      path; account for every remaining rendered surface in <code>ui/src/</code> — cited to a
+      design or declared undesigned with a reason; and prove UC-4, UC-5 and UC-ONBOARD end to end
+      against the real window before the epic's docs are distilled to T2 and its
+      <code>docs/work/</code> plans and reports archived out of git.
+    </p>
+
+    <div class="callout" data-c="why-now">
+      <p><strong>Gallery was the epic's own justification, and the epic consumed it.</strong>
+        The <a href="2026-09-04-redesign-plan.html">epic plan</a> opened on the measurement that
+        <code>Gallery.tsx</code> — a self-described throwaway — was the only file importing the
+        registry, so 23 of 24 components had exactly one consumer and it was the scratch screen.
+        Eight WUs later every shipped screen imports the collection. The scratch screen has no
+        remaining reader, and the guard that mounts it is a branch in the app's entry point that
+        no user can reach.</p>
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to" data-c="mapping">
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>Epic</td><td><code>E-REDESIGN</code> — <a href="2026-09-04-redesign-plan.html">the epic plan</a>, W11's row</td></tr>
+        <tr><td>WU</td><td><code>E-REDESIGN.W11</code></td></tr>
+        <tr><td>Branch</td><td><code>wu/redesign/epic-close</code> off <code>epic/redesign</code> at <code>58bb4e5</code> (the W10 merge)</td></tr>
+        <tr><td>Use cases</td><td>UC-4 · UC-5 · UC-ONBOARD — <strong>no contract moves here</strong>. This WU deletes scaffolding and proves what the eight WUs before it landed.</td></tr>
+        <tr><td>Design consumed</td><td><strong>None.</strong> No surface is added and no rendered file changes shape; the two files touched under <code>ui/src/</code> are a deletion and an entry-point branch removal, both declared <code>design.undesigned</code> with their reason.</td></tr>
+        <tr><td>Depends on</td><td>W4, W6, W8, W10 — all merged</td></tr>
+        <tr><td>Test level</td><td>Working Unit → <strong>integration</strong>; the epic's <strong>e2e</strong> runs here as the epic's own proof</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="what-goes">What leaves the tree</h2>
+    <table data-c="deletions">
+      <thead><tr><th>File / hunk</th><th>Why it goes</th><th>What replaces it</th></tr></thead>
+      <tbody>
+        <tr><td><code>ui/src/Gallery.tsx</code> (750 lines)</td>
+          <td>a verification screen for E-DFLOW.W5 step 4, throwaway by its own header comment</td>
+          <td>nothing — the five shipped screens are the collection's consumers now</td></tr>
+        <tr><td><code>ui/src/Gallery.test.tsx</code></td>
+          <td>tests that the throwaway renders</td>
+          <td>nothing — <code>collection.test.tsx</code> already covers the registry's own contract</td></tr>
+        <tr><td><code>ui/src/main.tsx</code> — the <code>?gallery</code> guard</td>
+          <td>a dev-only branch in the app's single mount path, pointing at a deleted module</td>
+          <td>the single <code>render(&lt;App /&gt;)</code> the else-branch already was — with the
+            one-call-site <code>mount</code> helper inlined, since it existed only to serve two</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn" data-c="not-deleted">
+      <p><strong>Two deletions the plan named are already done.</strong>
+        <code>ui/src/components.tsx</code> — the legacy kit — was deleted by <strong>W2</strong>,
+        fixing a review finding that the app kept resolving to it; W2's result carries the account.
+        The <code>TONE_CLASS</code> map went with it. W11 inherits a smaller row than the epic plan
+        wrote, and says so rather than claiming the work twice.</p>
+    </div>
+
+    <h2 id="accounting">Every rendered surface, accounted for</h2>
+    <p>Gate check 9 asks the same question of each non-test <code>.tsx</code> under
+      <code>ui/src/</code> this WU's diff touches: which design, or why none. Two files, two
+      answers — both <code>design.undesigned</code>, because neither adds a surface:</p>
+    <table data-c="check9">
+      <thead><tr><th>File</th><th>Declaration</th><th>Reason</th></tr></thead>
+      <tbody>
+        <tr><td><code>ui/src/Gallery.tsx</code></td><td><code>undesigned</code></td>
+          <td>deleted, not designed — a screen leaving the tree has no design to cite, and the
+            epic's own opening measurement is what removes it</td></tr>
+        <tr><td><code>ui/src/main.tsx</code></td><td><code>undesigned</code></td>
+          <td>bootstrap, not a rendered surface: it mounts <code>&lt;App /&gt;</code> and renders no
+            element of its own. The epic plan named it as bootstrap at the outset</td></tr>
+      </tbody>
+    </table>
+    <p><code>ui/src/Layout.tsx</code> is <strong>not</strong> in this WU's diff — W4 built it from
+      the flow-list-shell run and cited it there. The epic plan's "account for Layout.tsx /
+      main.tsx" row is answered at the epic seam, where <code>design-scope</code> reads the whole
+      range, not here.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <ul data-item="expected" data-c="expected">
+      <li><code>grep -r Gallery ui/src/</code> returns nothing, and <code>main.tsx</code> holds one
+        mount path with no query-string branch.</li>
+      <li><code>cargo xtask design-scope main HEAD</code> over the epic range reports
+        <strong>zero unaccounted surfaces</strong> — every added surface cited, every touched
+        rendered file cited or declared.</li>
+      <li><code>cargo xtask ui e2e</code> is green on the rebuilt screens: UC-4's live row with
+        every column, UC-5's headers / curl / JSON / brotli / image / XML / truncation statement,
+        and UC-ONBOARD's probed verdicts through to the list reveal — the onboarding spec naming
+        the contract it actually proves, which today it labels <code>UC-5</code>.</li>
+      <li>Every component design the epic added resolves to a roster entry at the tip:
+        <code>Field</code>, <code>StatusDot</code>, <code>Disclosure</code> — a 28-entry
+        registry, up from 24.</li>
+      <li>The epic's truth sits in T2 — <code>use-cases/web-ui.html</code> for the three
+        contracts' observable gains, four decision records (DEC-30 … DEC-33) for the reasoning —
+        and <code>docs/work/</code> is empty at the epic tip, its plans and reports archived with
+        lineage per DEC-3.</li>
+    </ul>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr><td><strong>unit</strong></td>
+          <td>The suite loses <code>Gallery.test.tsx</code> and nothing else: 45 files / 742 tests
+            today, 44 / 741 after, with every remaining test green. A deletion's unit evidence is
+            the surviving suite — there is no new behaviour to assert, and the file that tested the
+            deleted screen is deleted with it.</td></tr>
+        <tr><td><strong>integration</strong></td>
+          <td><code>App.test.tsx</code> mounts the app against a mock API and proves the entry
+            point still resolves — the contract the removed guard sat in front of. Run with
+            <code>pnpm test</code>; no new integration file is added, because the WU's contract is
+            "the app still mounts, with one path".</td></tr>
+        <tr><td><strong>e2e</strong></td>
+          <td><code>cargo xtask ui e2e</code> — the epic's proof, run here.
+            <code>flows.spec.ts</code> drives the real WebKit window against an ephemeral
+            <code>run(Config)</code> core for UC-4 and UC-5 (24 assertions incl. the epic's two new
+            contracts: an XML body renders as XML, an over-cap body states its truncation);
+            <code>onboarding.spec.ts</code> proves UC-ONBOARD from a fresh launch to the list
+            reveal. Green here <em>is</em> DoD-E's e2e evidence.</td></tr>
+        <tr><td><strong>doc</strong></td>
+          <td><code>cargo xtask verify-doc docs/work/*.html</code> green on every governed doc —
+            including <code>2026-09-05-redesign-w10-plan.html</code>, which carries no
+            <code>data-artifact</code> today and so was never checked against the WU-plan
+            checklist. It is tagged here so the archived artifact is governed, not silently
+            exempt.</td></tr>
+      </tbody>
+    </table>
+    <p><strong>No waiver.</strong> Every required layer has real evidence at this level.</p>
+
+    <h2 id="sequence">Sequence — the WU, then the epic gate</h2>
+    <div class="diagram" data-c="sequence">
+      <pre class="mermaid">
+flowchart TD
+  A["delete Gallery + its test + the main.tsx guard"] --> B["name the contract onboarding.spec.ts proves"]
+  B --> C["cargo test · pnpm test · eslint · clippy"]
+  C --> D["cargo xtask ui e2e — the epic's e2e"]
+  D --> E["W11 result report"]
+  E --> F["test/v2 + doc/v1 on the tip"]
+  F --> G["code-review skill -> cr/v3 PASS"]
+  G --> H["mr confirm wu — human, printed not run"]
+  H --> I["merge --no-ff into epic/redesign"]
+  I --> J["epic result report · archive docs/work/* per DEC-3"]
+  J --> K["epic notes · epic-scope review vs main"]
+  K --> L["mr confirm epic — human, printed not run"]
+  L --> M["merge --no-ff into main · branches and worktrees deleted"]
+      </pre>
+      <div class="caption">W11 is an ordinary WU with an ordinary gate; the epic gate follows it,
+        on the epic branch, with its own report, notes and signature.</div>
+    </div>
+
+    <h2 id="risks">What could go wrong</h2>
+    <table data-c="risks">
+      <thead><tr><th>Risk</th><th>Handling</th></tr></thead>
+      <tbody>
+        <tr><td>The e2e is the first full run since W10's merge and touches five rebuilt screens
+            at once. A red spec here is an epic-level finding, not a W11 one.</td>
+          <td>Run it before writing any note. A failure is fixed on this branch and re-run — the
+            epic cannot close on an unproven e2e, and a waiver would defeat the WU's only
+            purpose.</td></tr>
+        <tr><td>Archiving <code>docs/work/</code> breaks relative links: verify-doc reds any doc
+            whose <code>href</code> no longer resolves, and T2 records cite the runs.</td>
+          <td>Per the work-planning standard, an archived target is repaired by rewriting the
+            citation as plain text marked archived — never by pointing into
+            <code>docs/.archive/</code>. Every inbound link from T1/T2 is swept before the move.</td></tr>
+        <tr><td>Deleting <code>Gallery.tsx</code> falsifies a T2 record —
+            <a href="../decisions/dec-25-design-build-handoff.html">DEC-25</a> names it among the
+            eight product screens.</td>
+          <td>It does not: that line is a dated measurement of what existed when the decision was
+            taken, and decision records are append-only history. Judged, not assumed — and stated
+            in the result so the next reader need not re-judge it.</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
