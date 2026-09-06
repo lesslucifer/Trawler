@@ -1,0 +1,70 @@
+schema: cr/v3
+scope: "epic E-REDESIGN -> main"
+epic: E-REDESIGN
+branch: epic/redesign
+base: e4deda27a098951372f28f69cdf2211915169672
+head: e7e787ff26f56662e07c92d5a3b701a4d3a69890
+diff_sha256: 5968a4416dcfc13df077d98c8a7fd7b6ff6c624f59e369d97a5b947d2fc52111
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 12, verified: 8, waived: 7 }
+waivers:
+  - finding: "Four registry docstrings cite code this epic deleted: Notice and CopyButton name HeaderTable (removed from FlowDetail by W6), TonedText's @anatomy names components.tsx:25 (the legacy kit W2 deleted), and Field's @use claims the filter bar's four fields where W4 made two of them Selects."
+    reason: "Real, and the exact defect class DEC-30 exists to name - a redirect with no destination. The fix was written and the gate refused it: check 9 at commit level refuses any non-test .tsx under ui/src/ in a standalone commit, because the design accounting has no cr/v3 note to live on, and UI work happens inside a Working Unit. Waived here rather than smuggled in: creating a WU for four TSDoc lines at the epic seam would put unreviewed UI work behind a signature the human is being asked for on something else. Recorded as the epic result's first follow-up, with the account of why it could not land here."
+  - finding: "TimestampText constructs two moment objects per row on every render of the virtualized, SSE-driven flow list, where main used a native new Date().toLocaleTimeString()."
+    reason: "Real and introduced by this epic, but unmeasured, and bounded by the viewport rather than the list - the row count is what the virtualizer mounts, not what capture holds. moment is already the app's date library and the component is a designed registry entry whose contract W3's run settled. Changing it at a merge seam with no benchmark to show the change helps is the wrong moment; it is recorded as a follow-up that starts with a measurement."
+  - finding: "useFlows.merge rebuilds a host Set and re-parses every flow's URI through toRow on every debounced refresh, scaling with the returned list rather than with the new flows in it."
+    reason: "Real and new in this epic - main's useFlows accumulated no hosts at all. The cost is bounded by the server-filtered page and runs at most every 150ms, and the accumulation exists for a correctness reason the code states: deriving host options from the filtered list would collapse them to the one already chosen and strand the user. An incremental rewrite has its own correctness risk and deserves its own WU with a measurement, not a change made while a signature waits."
+  - finding: "TextRenderer and FormRenderer compute CutMarker's total via byteLength(text), re-encoding the whole untruncated body through TextEncoder purely to report its size - on exactly the over-cap path the caps exist to bound, where the body can reach the 64 MiB decode ceiling."
+    reason: "Real, and the sharpest of the three, but the fix is a prop change on two registry components plus their host so the byte count the fetch already knew is threaded through - a contract change to designed components, which is WU work with design accounting, not a gate-time edit. Recorded as a follow-up with the others."
+  - finding: "useNow's one-second tick re-renders the whole onboarding step list where only the traffic verdict depends on it."
+    reason: "A nit, and the timer is correctly cleared on unmount, so this is re-render scope and not a leak. The screen is a three-step setup surface, not a hot path. Recorded."
+  - finding: "ProxyCloseDialog's attemptRemove hand-rolls the idle/running/done/failed shape that Onboarding's useAction already implements."
+    reason: "A nit. The two shapes are genuinely similar and extracting a shared hook would touch two rebuilt screens at the epic seam for no behaviour change. Recorded for whichever WU next opens either file."
+  - finding: "setup.ts now carries two concerns - the OS-target instructional data it always held, and DEC-33's verdict resolution - separated by a comment rather than a module boundary."
+    reason: "A nit, and splitting a module every screen imports is exactly the kind of change that should not ride a merge to main unreviewed at WU level. Recorded."
+design:
+  artifacts:
+    - docs/work/components/disclosure.html
+    - docs/work/components/field.html
+    - docs/work/components/status-dot.html
+  rulebook: 849cc8e0ff423345004cccf79715fc489abc9dbf
+  findings: { found: 1, verified: 1, waived: 1 }
+  verdict: PASS
+  note: "All three left the tree inside this range at bytes the base never held - retired into their components' TSDoc under DEC-16 - so Tier-3 judged them at their last state, 15e996dbf8, which is what design-scope prints and what the gate resolves (DEC-29). The design dimension's one finding is Field's stale @use tenancy, waived above with the other three docstrings for the same reason: it is a non-test .tsx and cannot land in a standalone commit. The four screen design runs are not listed as artifacts because they are absent from both endpoints - added and archived inside this range - which is what design-scope reports; they are still cited below, because a citation answers for a surface and does not depend on the artifact surviving in the tree."
+  implements:
+    - path: docs/work/components/field.html
+      blob: dc8c47b1f45caf027087a23ba77108a0e3f646a4
+      built: [ui/src/components/Field.tsx]
+    - path: docs/work/components/status-dot.html
+      blob: 62d5aa163c9b39a25a6189a0034192d4c2248f0c
+      built: [ui/src/components/StatusDot.tsx]
+    - path: docs/work/components/disclosure.html
+      blob: 46e9879bc6ea68b6aa2b2698856a9961ad3ca037
+      built: [ui/src/components/Disclosure.tsx]
+    - path: docs/work/2026-09-04-flow-list-shell.html
+      blob: c6e7fb0aa5adace8446f25d7c33a90d029cfcbab
+      built: [ui/src/App.tsx, ui/src/FlowList.tsx, ui/src/Layout.tsx]
+    - path: docs/work/2026-09-04-redesign-w5-flow-detail-run.html
+      blob: 1cd046c72e9de3647211da12e31c6d6d7007d7eb
+      built: [ui/src/FlowDetail.tsx]
+    - path: docs/work/2026-09-04-redesign-run-9-body-viewer.html
+      blob: 5b3bd77d872ba6b1552106f061b67c4c2e3f9030
+      built: [ui/src/BodyViewer.tsx]
+    - path: docs/work/2026-09-04-redesign-run-9-setup-quit.html
+      blob: b29c435a1e5b18bc22dc92dd553f525036c7a449
+      built: [ui/src/components/Checkbox.tsx, ui/src/manualSteps.tsx, ui/src/Onboarding.tsx, ui/src/ProxyCloseDialog.tsx, ui/src/components/StatusLine.tsx]
+  undesigned:
+    - path: ui/src/components/CopyText.tsx
+      why: "A defect fix inside the existing layout: the rejection handler was a no-op while its sibling CopyButton flashed an error through the same shared hook. One transient outcome chip gained a warn variant; no element was added or moved."
+    - path: ui/src/components/KeyValueRow.tsx
+      why: "An opt-in collapsible prop, off by default, so every existing tenant renders what it did. When set, the value cell clamps to three wire lines with a more/less control shown only where a layout measurement finds real overflow. Added because the owner's round against real traffic found thirty-line cookies burying the body; DEC-32 records the rule and the rejected alternatives."
+    - path: ui/src/components/MethodLabel.tsx
+      why: "Exports the nine-verb set its own tone map already half-held, so the filter dropdown draws from the component that renders the verbs instead of keeping a third copy. TSDoc and one exported constant - no rendered output changed."
+    - path: ui/src/components/Section.tsx
+      why: "A className pass-through onto the section element in both variants, defaulting to empty - the same affordance five sibling components already have. It adds no layout of its own; a host uses it to make the zone a flex column with a height cap, which DEC-32's zoning cannot express on a member that owns no height. Plus a one-line TSDoc fix naming Disclosure, which its @avoid had referred to in lowercase and so pointed at nothing."
+    - path: ui/src/components/Select.tsx
+      why: "One clause added to the existing @avoid line, recording that a clearable filter supplies its own 'any' option rather than asking for the clear affordance the contract forbids. Documentation of a constraint the component already enforced - no behaviour, markup or prop change."
+    - path: ui/src/main.tsx
+      why: "Bootstrap, not a rendered surface: it mounts <App /> and renders no element of its own. The epic's last WU deleted the dev-only ?gallery branch that lazily mounted a throwaway verification screen, and inlined the one-call-site mount helper that existed only to serve that branch."
+verdict: PASS
+date: 2026-09-06
