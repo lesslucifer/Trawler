@@ -1,0 +1,27 @@
+schema: test/v2
+level: epic
+epic: E-REDESIGN
+branch: epic/redesign
+tests:
+  e2e:
+    count: 28
+    where: "ui/e2e/specs/flows.spec.ts (22) + ui/e2e/specs/onboarding.spec.ts (6), run by cargo xtask ui e2e"
+    note: "The epic's proof, run at its close on the rebuilt screens, driving the real Tauri/WebKit window against an ephemeral run(Config) core. UC-4 (9): a proxied request lands as a row carrying every column; a status carries its reason phrase so tone is never the only channel; the method filter offers verbs rather than free text; a filter narrows, an unmatched one states that the query excludes the traffic, and clearing restores; the host filter offers the hosts capture has seen; the header row does not wrap; the keyboard alone selects a row and opens its detail. UC-5 (13): the panel opens on the request leg with headers, timing and versions; the leg selector switches headers and body together; JSON renders copy-exact; raw shows the served source; curl copies and the button reverts; Esc dismisses; a brotli body decodes through the UI; a compressed body's raw is source, not a hex dump of frames; an image dispatches; an XML body renders as XML rather than falling through to text; the body stays on screen under a wall of headers with the window never scrolling; a long header value clamps to three lines and expands on more; an over-cap body states its truncation. UC-ONBOARD (6): a fresh launch shows onboarding not the list; each step carries a verdict with no prev/next pair; a step opens from its own header, one body at a time; a decrypted HTTPS flow flips the last step and reveals the list; a filter narrows and clears; a second request appends without a refresh. The last two contracts in UC-5 - XML as a real dispatch, and a stated truncation - are the two gains the epic plan promised and are new here."
+  integration:
+    count: 44
+    where: "ui/src/**/*.test.ts(x) - the Vitest suite mounts each rebuilt screen against a mock API"
+    note: "Every screen the epic rebuilt carries its own file, including FlowList.test.tsx, which did not exist before this epic (FlowList was the only screen in ui/src/ with no adjacent test). App.test.tsx covers the shell, the entry point and the onboarding wiring; collection.test.tsx covers the registry's own contract across all 28 entries."
+  unit:
+    count: 741
+    where: "cd ui && pnpm test - 44 files"
+    note: "566 at the epic's base, 741 at its tip. Every commit in the epic carries unit tests for what it added or changed; the pre-push hook ran the suite on every push, and the pre-commit hook ran fmt + clippy on every commit."
+verified:
+  - "cargo xtask ui e2e - 28 passing, 2 spec files, 0 failing, against a real ephemeral core."
+  - "cd ui && pnpm test - 741 passed, 44 files, 0 failed."
+  - "cd ui && pnpm exec eslint src - clean, including the design/vocabulary lint over all of ui/src/."
+  - "cargo test + cargo clippy -D warnings + cargo fmt --check - green (cargo xtask gate0)."
+  - "cargo xtask verify-doc over every tracked doc - 40 docs, none red, after the 26 work docs left the tree."
+  - "node scripts/design-registry.mjs - 28 entries, up from 24 at the epic's base. Field, StatusDot and Disclosure (the three the epic designed and built) and Checkbox (built in W10 without a design file, recorded as a drop) all resolve."
+  - "Every one of the eleven WU seams carries a green dod/v1 receipt, written by the gate itself and re-verified by this epic's walk (check 7)."
+  - "DEC-13's inherited assertion checked rather than assumed: 'Stop routing appears only after the proxy was set' survived the rebuild - the showStop gating is unchanged in ui/src/Onboarding.tsx and the assertion lives in ui/src/App.test.tsx. A design run may not narrow a shipped capability, and none did."
+note: "The three defects the epic plan named are gone and each is pinned: bodies state their truncation (e2e), 403 carries its reason phrase (e2e), and exactly one StatusPill exists, deriving tone from the raw status rather than taking a pre-resolved one (unit + the deleted legacy kit). The standing waiver on clipboard payloads under WebDriver holds: the real OS clipboard cannot be read there, so curl and copy payloads are asserted through a recording stub installed via WebDriver and the real write stays a recorded manual check."
