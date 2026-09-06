@@ -35,7 +35,8 @@
       <strong>Delivered.</strong> <code>pnpm bench</code> and <code>cargo xtask ui bench</code> run the same
       committed suite; all three named costs carry a before number taken at the benchmark's own commit and an
       after number from the tip. Two of the three are paid — the time column re-renders
-      <strong>3.0×</strong> faster and the host merge <strong>251×</strong> — and the third is paid on the
+      <strong>2.9×</strong> faster where its timestamps repeat — which is what an SSE refresh does — and is
+      free rather than faster where they do not, and the host merge <strong>251×</strong> — and the third is paid on the
       member the benchmark could show it helping (<strong>51.6×</strong>) and
       <strong class="bad">reverted</strong> on the member it could not. The 741 assertions that existed before
       this WU all pass unchanged; 14 were added.
@@ -50,15 +51,22 @@
       </thead>
       <tbody>
         <tr>
-          <td rowspan="2"><strong>1</strong><br>TimestampText</td>
-          <td>re-render of a 42-row window — <em>the SSE refresh</em></td>
-          <td class="num">2,755.82 hz<br>0.363 ms</td><td class="num">8,350.35 hz<br>0.120 ms</td>
-          <td class="num good">3.03</td>
+          <td rowspan="3"><strong>1</strong><br>TimestampText</td>
+          <td>re-render of a 42-row window, every timestamp seen before —
+          <em>the SSE refresh</em></td>
+          <td class="num">2,806.62 hz<br>0.356 ms</td><td class="num">8,249.88 hz<br>0.121 ms</td>
+          <td class="num good">2.94</td>
+        </tr>
+        <tr>
+          <td>re-render of a 42-row window, every timestamp new — <em>the memo never
+          hits</em></td>
+          <td class="num">1,265.78 hz<br>0.790 ms</td><td class="num">1,325.41 hz<br>0.755 ms</td>
+          <td class="num">1.05</td>
         </tr>
         <tr>
           <td>first mount of a 42-row window</td>
-          <td class="num">1,331.07 hz<br>0.751 ms</td><td class="num">2,325.01 hz<br>0.430 ms</td>
-          <td class="num good">1.75</td>
+          <td class="num">1,411.06 hz<br>0.709 ms</td><td class="num">2,283.19 hz<br>0.438 ms</td>
+          <td class="num good">1.62</td>
         </tr>
         <tr>
           <td rowspan="3"><strong>2</strong><br>useFlows.merge</td>
@@ -161,26 +169,36 @@
         <code>pnpm bench</code> in <code>ui/</code>, <code>cargo xtask ui bench</code> from the root. It is
         not in <code>pnpm test</code> and not in any gate: wall-clock numbers are not deterministic, and the
         gate is served by the counts below instead.</td></tr>
-        <tr><td><strong>Unit</strong></td><td>9 added. <code>xtask/src/ui.rs</code> — <code>ui bench</code>
+        <tr><td><strong>Unit</strong></td><td>10 added. <code>xtask/src/ui.rs</code> — <code>ui bench</code>
         takes no arguments and is in <code>USAGE</code>. <code>TimestampText.test.tsx</code> — today's and the
         year's bounds are exact to the millisecond, and a timestamp is re-labelled once the clock leaves the
         day it was rendered under (the memo's generation). <code>flow.test.ts</code> — <code>hostOf</code>
         returns exactly what a full <code>new URL()</code> parse returns across port, default port, userinfo,
         IPv6, punycode, query-terminated and slash-less authorities; agrees with <code>toRow</code>; names no
         host where there is none; and keeps answering correctly past its own memo bound.
-        <code>TextRenderer.test.tsx</code> — states the size its caller knew, and derives the identical string
-        when the caller cannot supply one.</td></tr>
-        <tr><td><strong>Integration</strong></td><td>4, in <code>ui/src/perf.test.tsx</code> — one per seam,
+        <code>TextRenderer.test.tsx</code> — states the size its caller knew, derives the identical string
+        when the caller cannot supply one, and <strong>never states a shown size larger than the total</strong>
+        over a body of unreadable bytes.</td></tr>
+        <tr><td><strong>Integration</strong></td><td>5, in <code>ui/src/perf.test.tsx</code> — one per seam,
         each asserting work not done <em>and</em> the output that must not move: the list re-renders ten times
         and parses no timestamp (rendered time cells identical); a refresh whose hosts are already known
         parses no URI (host list identical by reference); TextRenderer and BodyViewer never hand the
         untruncated body to the encoder (cut marker string identical). All four were run against the pre-fix
         tree and <strong>all four fail there</strong> — 640 stray moment parses, 40 stray URI parses, and a
-        136 072-character encode twice over.</td></tr>
+        136 072-character encode twice over. The fifth is the regression test for the
+        lossy-decode defect, asserting the exact marker BodyViewer's own dispatch produces.</td></tr>
         <tr><td><strong>E2E</strong></td><td><span class="bad">waived</span> — no contract moves, and the only
         difference an e2e could see here is a duration, which the testing standard forbids asserting at every
         level. The epic's e2e is W10's.</td></tr>
-        <tr><td><strong>Suites</strong></td><td><code>vitest run</code> 755 passed / 45 files — the 741 that
+        <tr><td><strong>Review</strong></td><td>One round, five isolated finders plus twelve verifiers. Seventeen
+        candidates raised, <strong>one confirmed</strong> — the lossy-decode regression above, verified with the
+        exact arithmetic and the dispatch path traced. Ten refuted, two of them by a written ruling rather than
+        by argument: <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a> explicitly rejects
+        recording rejected alternatives in a component's TSDoc, so leaving FormRenderer's untouched was the
+        rule rather than an omission. The blocker raised against the benchmark's warm memo was refuted for the
+        case it named and left a real gap beside it, now closed. One candidate's verifier died on a session
+        limit rather than a verdict; the re-run judged it.</td></tr>
+        <tr><td><strong>Suites</strong></td><td><code>vitest run</code> 757 passed / 45 files — the 741 that
         predate this WU unchanged. <code>cargo test --all</code> green. <code>tsc --noEmit</code> and
         <code>eslint .</code> clean, <code>bench/</code> inside the typechecked and linted set.</td></tr>
       </tbody>
@@ -230,6 +248,31 @@
           <td><strong>Added while measuring:</strong> a third <code>merge</code> case where no two flows share
           a host, so the memo can never hit. Without it the 251× would be a claim about a fixture rather than
           about the code, and the 2.09× floor it exposes would be invisible.</td>
+        </tr>
+        <tr>
+          <td>—</td>
+          <td><strong>Regression this WU introduced, found by its own review and fixed:</strong> a
+          <code>text/*</code>-labelled body is dispatched on its declared type, never on its bytes, so an
+          unreadable one reaches TextRenderer — routine on a MITM proxy, where a mislabelled charset is one of
+          the things the proxy exists to reveal. Its byte count and its decoded text's byte count then measure
+          different things, and taking the first as <code>total</code> while measuring the shown slice with the
+          second printed <em>showing 384 KiB of 133 KiB</em> — shown greater than total, inverting the one
+          statement CutMarker exists to make. Every test written for the <code>size</code> prop used
+          well-formed multi-byte text, where the two counts coincide by construction and cannot show it. Fixed
+          in <code>c31ee98</code>: the caller's size is refused where the shown slice carries a replacement
+          character, which is bounded by the cap. Two named regression tests, one per seam, each failing
+          against the unguarded version.</td>
+        </tr>
+        <tr>
+          <td>—</td>
+          <td><strong>Benchmark gap, found by its own review and closed:</strong> both timestamp cases ran
+          against a memo warmed by the setup render, so the suite priced the repeat case and never the
+          first-sight one — while <code>flows.bench.ts</code> had carried a deliberate memo-miss control from
+          the day it landed. The asymmetry was the omission, not the warm measurement: a flow's
+          <code>started_at</code> never changes, so an unscrolled re-render really is all hits. The added case
+          answers what the warm-only suite could not — the miss path does not regress (1.05×), so the memo is
+          free on a miss and 2.9× on a hit, and the headline belongs to the case it names rather than to the
+          component in general.</td>
         </tr>
         <tr>
           <td>—</td>
