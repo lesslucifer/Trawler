@@ -86,7 +86,7 @@
           amended run is a design artifact of this diff — Tier-1 ran over it with the archived flag lifted
           (17/17 soft, 13/13 hard), Tier-3 judged it in round 10, and the citation re-pins to blob
           <code>b29c435a</code>. Its Review table carries the owner's four instructions and what each moved.</td></tr>
-        <tr><td><strong>Two round-10 findings waived, not fixed.</strong></td>
+        <tr><td><strong>Three findings waived, not fixed — two from round 10, one from round 11.</strong></td>
           <td>Owner's direction at close: stop being strict, wrap up, revisit in a later epic. Both are
           recorded on the <code>cr/v3</code> note as waivers with reasons and repeated under follow-ups:
           (1) <em>important</em> — a timestamp ahead of the clock (a backward wall-clock step while the setup
@@ -94,7 +94,10 @@
           just arrived…" would stand until real time catches up; reproducible, self-healing, one-line clamp.
           (2) <em>nit</em> — the run's IconButton row borrows the ✕'s "third route" clause to clear the
           primary-action @avoid for the ↓; the warrant exists elsewhere in the artifact but that sentence is
-          misattributed.</td></tr>
+          misattributed. (3) <em>nit</em>, round 11 — this WU's global <code>afterEach</code> in
+          <code>App.test.tsx</code> unstubs globals after every test, which leaves two of W6's inline
+          <code>vi.unstubAllGlobals()</code> calls dead; the diff is what killed them, so the pre-existing
+          exclusion does not shield it. A two-line deletion in a test file, behaviour-neutral either way.</td></tr>
         <tr><td><strong>The surface is shipped, not endorsed.</strong></td>
           <td>The owner reviewed the built screens and judged the design "still not as good as I expect" —
           onboarding and quitting are more complicated than this run treats them. Nothing here is rolled
@@ -131,7 +134,7 @@
       </tbody>
     </table>
 
-    <h2 id="review">Ten review rounds — what each found</h2>
+    <h2 id="review">Eleven review rounds — what each found</h2>
     <table data-c="review-rounds">
       <thead><tr><th>Round</th><th>Verified</th><th>The finding that mattered</th><th>Fixed in</th></tr></thead>
       <tbody>
@@ -145,6 +148,7 @@
         <tr><td>8</td><td>2</td><td>A cancelled save dialog reported "saved" — the Tauri branch of <code>saveBody</code> had no test</td><td><code>324c3a0</code></td></tr>
         <tr><td>9</td><td>2</td><td>The same lie in its second form: a renamed save reported the asked-for name</td><td><code>4fab6f6</code></td></tr>
         <tr><td>10</td><td>2 of 15</td><td>Negative age reads as recent under a backward clock step (important); the ↓'s primary-action clause misattributed (nit). Thirteen refuted, six of them by mutation or by applying the proposed change</td><td><strong>waived</strong> — owner's close</td></tr>
+        <tr><td>11</td><td>3 of 11</td><td>Re-run over the whole diff after the sync merge, against the moved base. Rounds 10's two resurface on byte-identical code and artifact, so their verifications and waivers carry forward. One new: this WU's global <code>afterEach</code> unstubs globals, which leaves two of W6's inline <code>vi.unstubAllGlobals()</code> calls dead. Eight refuted — among them the two command tables (lookup keys a bidirectional test pins), the dialog's remove lifecycle (a modal focus contract the onboarding hook has no business owning) and the receipt's confirm-at-point citation (the rule's audit test is spatial, not durational)</td><td><strong>waived</strong> — owner's close</td></tr>
       </tbody>
     </table>
     <p class="kd">Refuted in round 10, so nobody re-litigates them: <code>slots</code> is not one-caller generality (it
@@ -231,6 +235,11 @@
           action" with the ✕'s "third route" argument; the ↓ is covered by the manual-fallback's "not leading"
           placement in Frame A, but the sentence should say so. Waived at close.</td>
           <td>whoever next amends the run — or the redesign retires it</td></tr>
+        <tr><td><strong>Two dead cleanup calls in <code>App.test.tsx</code>.</strong> This WU's global
+          <code>afterEach</code> already unstubs globals, so W6's inline calls at the end of two inspector tests
+          are now redundant. Delete both. Waived at close only because the tree was settled and a signature
+          pending; nothing depends on them either way.</td>
+          <td>the first WU that touches <code>App.test.tsx</code></td></tr>
         <tr><td><strong>A domain guard for the save step.</strong> Every command has a setup.test guard that it appears
           in its steps exactly once; <code>SAVE_CA_STEP</code> has none, and the rendering tests that catch a drift
           exercise macOS only. Surfaced by a round-10 verifier as residue of a refuted finding.</td>
