@@ -44,6 +44,43 @@ export interface FlowRow {
   path: string;
 }
 
+// The host alone, for callers that want no other part of the URI. Asked of every
+// flow on every refresh, over a list that is mostly the same hosts as the last
+// one — so the parse is remembered under the URI's authority, which is the only
+// part a host is derived from. The memo never answers on its own: a miss parses
+// the same string the full URI would have parsed to, so a stale or evicted entry
+// costs time and never correctness.
+const HOST_MEMO_MAX = 1024;
+
+let hostByAuthority = new Map<string, string>();
+
+export function hostOf(uri: string): string {
+  const key = authority(uri);
+  const remembered = hostByAuthority.get(key);
+  if (remembered !== undefined) return remembered;
+
+  let host = "";
+  try {
+    host = new URL(key).host;
+  } catch {
+    // relative/opaque URI — it names no host
+  }
+
+  if (hostByAuthority.size >= HOST_MEMO_MAX) hostByAuthority = new Map();
+  hostByAuthority.set(key, host);
+  return host;
+}
+
+// Everything up to the path, when the URI has that shape at all. A URI whose
+// authority is ended by "?" or "#" rather than "/", and one with no "://" to
+// measure from, key on themselves — correct, and simply not shared.
+function authority(uri: string): string {
+  const scheme = uri.indexOf("://");
+  if (scheme < 0) return uri;
+  const path = uri.indexOf("/", scheme + 3);
+  return path < 0 ? uri : uri.slice(0, path);
+}
+
 // Splits a flow's URI into the two payload cells the list shows side by side.
 // The row's other four values are passed raw to the components that own their
 // formatting — TimestampText, MethodLabel, StatusPill and DurationText each

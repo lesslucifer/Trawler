@@ -1,4 +1,4 @@
-import { bodyText, isDecryptedHttps, latestFlowTimes, statusTone, toCurl, toRow } from "./flow";
+import { bodyText, hostOf, isDecryptedHttps, latestFlowTimes, statusTone, toCurl, toRow } from "./flow";
 import type { BodyView, FlowSummary, FlowView } from "./api";
 
 test("status tone: 2xx ok, 4xx/5xx warn, pending/other muted", () => {
@@ -112,4 +112,57 @@ test("latestFlowTimes takes the newest started_at per kind, decrypted apart from
     lastPlainAt: Date.parse("2026-07-12T10:00:05Z"),
   });
   expect(latestFlowTimes([])).toEqual({ lastDecryptedAt: null, lastPlainAt: null });
+});
+
+// hostOf answers from a memo keyed on the URI's authority, so what matters is
+// that it is indistinguishable from the parse it stands in for — including on
+// the URIs whose authority the shortcut does not recognise.
+describe("hostOf", () => {
+  const cases = [
+    "https://api.example.com/v2/thing?page=2",
+    "https://api.example.com/v2/other",
+    "https://api.example.com",
+    "https://api.example.com:8443/x",
+    "https://api.example.com:443/x",
+    "http://api.example.com:80/x",
+    "https://user:secret@api.example.com/x",
+    "http://[2001:db8::1]:8080/x",
+    "https://XN--e1afmkfd.xn--p1ai/x",
+    "https://api.example.com?only=query",
+    "https://api.example.com#only-fragment",
+    "http:example.com/no-slashes",
+  ];
+
+  it("returns exactly what a full URL parse returns", () => {
+    for (const uri of cases) {
+      expect(hostOf(uri)).toBe(new URL(uri).host);
+    }
+  });
+
+  it("agrees with toRow, which parses the whole URI for its path", () => {
+    for (const uri of cases) {
+      expect(hostOf(uri)).toBe(toRow({ ...flow, uri }).host);
+    }
+  });
+
+  it("names no host for a URI that has none, rather than inventing one", () => {
+    expect(hostOf("/relative/path")).toBe("");
+    expect(hostOf("mailto:someone@example.com")).toBe("");
+    expect(hostOf("")).toBe("");
+  });
+
+  it("is stable across repeats — a second ask is the same answer, not a fresh guess", () => {
+    expect(hostOf("https://repeat.example.com/one")).toBe("repeat.example.com");
+    expect(hostOf("https://repeat.example.com/two")).toBe("repeat.example.com");
+    expect(hostOf("https://repeat.example.com/one")).toBe("repeat.example.com");
+  });
+
+  // The memo is bounded, and the bound is a size limit on a cache — never a
+  // limit on what merge can accumulate.
+  it("keeps answering correctly past its own memo bound", () => {
+    for (let i = 0; i < 2500; i += 1) {
+      expect(hostOf(`https://h${i}.example.com/x`)).toBe(`h${i}.example.com`);
+    }
+    expect(hostOf("https://h0.example.com/y")).toBe("h0.example.com");
+  });
 });
