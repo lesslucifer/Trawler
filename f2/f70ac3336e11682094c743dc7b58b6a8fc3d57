@@ -1,0 +1,13 @@
+schema: cr/v3
+scope: "WU E-RFINISH.W1 (design-file-skeleton) -> epic/redesign-finish"
+epic: E-RFINISH
+wu: E-RFINISH.W1
+branch: wu/redesign-finish/design-file-skeleton
+base: e736800125879fb67c82f018f712350d957b621f
+head: f2f70ac3336e11682094c743dc7b58b6a8fc3d57
+diff_sha256: 3a559db1906b1cf472dcde1f22a665a26315147c54135cf2145540f6c4c6cd68
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 5, verified: 0, waived: 0 }
+waivers: []
+verdict: PASS
+date: 2026-09-06
