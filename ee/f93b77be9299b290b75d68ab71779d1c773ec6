@@ -1,0 +1,34 @@
+schema: doc/v1
+epic: E-REDESIGN
+wu: E-REDESIGN.W10
+branch: wu/redesign/setup-quit-build
+changes:
+  - path: docs/work/2026-09-04-redesign-run-9-setup-quit.html
+    tier: T3
+    action: updated
+    distills: "The closed design run, AMENDED inside the build WU under DEC-24/DEC-25 — the amended bytes are a design artifact of this diff (design-scope lists it) and the citation re-pins to blob b29c435a. What moved, from the owner's review of the running build: Frame A's Given re-shaped into two layers (this machine: the probes plus probing/probedAt; traffic: three timestamps plus ever) and its Not given gaining 'which device sent a tunnel' and 'a push when a setting changes elsewhere'; three constraints added (two layers never one verdict · old traffic is not current traffic · a probe is a snapshot); Layout A gaining zone R (the dated re-check row) and its overflow line naming it fixed-height; Elements gaining a TimestampText row (reuse, for the two stamps), IconButton's placement gaining the ↓ that ends the save sentence, StatusLine's row reading one layer per step and its stale 'blocked on short' state closed; the short table re-specified at NINETEEN verdicts with three leaving steps 1–2; Interaction gaining five rows (re-check · window focus · save · traffic stops · a device without the certificate connects) and two rewritten (land · first request); the mockup mounting TimestampText and the save IconButton, showing idle beside two not-yets, and fixing a latent drift — its fixed verdicts still used `message`, the field StatusLine read before W10 landed `short`, so every mounted verdict rendered blank; Tune gaining three drawn rows; six receipt lines re-cited and confirm-at-point promoted from satisfied-via-proposal to satisfied now that W10 landed it; Capabilities re-answered for the new Given; the Review table gaining five rows naming what the owner said, what it moved and the contract it hit. Tier-1 was run with the archived flag lifted — green, 17/17 soft receipted, 13/13 hard machine-checked — then the run was re-archived, so the amendment is checked, not smuggled."
+  - path: docs/work/2026-09-05-redesign-w10-plan.html
+    tier: T3
+    action: updated
+    distills: "A 'Grew at review' section: the four owner instructions, what W10 now also lands for each and where, the tests that grew with it, the mutation check, and what this WU deliberately does not do — the core keeps no clock on the tunnel tally, and connected-client identity (hudsucker's client_addr, discarded by the recorder) is named as its own WU with its own design run rather than folded into this screen."
+  - path: docs/use-cases/web-ui.html
+    tier: T2
+    action: updated
+    distills: "UC-ONBOARD's contract moves from 'two-truths status per step' to 'two layers of status, never blended': steps 1–2 report this machine from the probes and nothing else; step 3 reports traffic from timestamps against a clock, with the five verdicts named and an old flow only ever producing idle. The clause 'the proxy step goes green on any connection' is REPLACED by 'a tunnel is observable before decryption' — the signal now feeds step 3, and the time-less /stats tally can only separate idle from waiting. The save bullet now describes the ↓ ending the step sentence; the re-check bullet describes one dated row, window focus as a second trigger, and the in-flight state. The flow diagram is redrawn for two layers, and the provenance callout's 'capture stays the authority for the remote cases' is corrected to what is now true: capture is the sole input to step 3, judged by recency."
+  - path: docs/decisions/dec-13-onboarding-capabilities.html
+    tier: T2
+    action: updated
+    distills: "Append-only dated note under the connection-signal section: the signal no longer turns the proxy step green; what moved is which step it may speak for, not the capability. Points at DEC-33."
+  - path: docs/decisions/dec-33-two-layers-and-a-clock.html
+    tier: T2
+    action: added
+    distills: "Minted as DEC-32 in this WU and renumbered DEC-33 at the sync merge, because W6's DEC-32 (body is the main zone) landed on the epic first — this record had not landed, so the index's append-only rule is untouched. The why that code cannot hold: a probe knows the machine at the moment it ran, a flow knows the wire at the moment it was captured, neither knows the other or 'now' without a time. The two-layer table (source · answers · can never say · on screen), the traffic verdict as a flowchart, the three constants with their reasons (30 s window, 3 s grace, the time-less tally), six rejected options (a recency window on the borrowed positive · per-step stamps · relative time · no window · interval re-probing · timestamping the tally in the core), and the consequences for DEC-13, the resolvers' signatures, UC-ONBOARD and the amended run."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-33's routing row, appended after W6's DEC-32 at the sync merge — the merge's one conflict, resolved by hand with both rows kept; meta bumped to v15 · 2026-09-06."
+  - path: docs/work/2026-09-05-redesign-w10-result.html
+    tier: T3
+    action: added
+    distills: "The WU result report: every plan row met; the deviations named — Checkbox built without a design file, design run #9 amended inside the WU, two round-10 findings waived at the owner direction, and the surface shipped but not endorsed (the owner judged onboarding and quitting more complicated than this design treats them, to be revisited in a later epic); the three owner rounds and ten review rounds tabled with what each found and where it was fixed; evidence (727 UI tests, 25 e2e, gate0, verify-doc, the amended run cited at blob b29c435a); distillation; and seven follow-ups the later epic inherits, led by the negative-age clamp and the redesign itself. After the sync merge: a fifth deviation row (synced to the epic before landing, DEC-32 → DEC-33, every binding re-made on the merged tip) and the evidence rows re-stated for the merged tree — 742 / 45 vitest, 28 / 0 e2e, gate0, the tip named as the sync merge."
+t2_note: "Two T2 docs carry this round's truth. docs/use-cases/web-ui.html states WHAT a user now observes (two layers, the dated re-check, the ↓); docs/decisions/dec-33-two-layers-and-a-clock.html states WHY the layers may never be blended and why recency is a clock, not a boolean — a rule a future surface must argue with before turning a step green on traffic. DEC-13 is amended by a dated note rather than edited, per the append-only convention. The design rules KB is untouched: 'idle' is domain microcopy with no rival term, not a lexicon concept, and no new token, key binding or rule was needed — the amendment reused eight registry entries and proposed nothing."
