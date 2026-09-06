@@ -159,7 +159,7 @@
     <h2 id="budget">The arithmetic Q1 turns on</h2>
     <p>The pane's width reads as taste and is not: the pane and the list divide one window, and the list's cost is
     fixed in the same file. <code>path = window − pane − 612</code>, where 612 is five fixed columns (520), five
-    <code>gap-3</code> gaps (60) and the row's <code>px-4</code> (32) — <code>FlowList.tsx:9, 14, 135</code>.</p>
+    <code>gap-3</code> gaps (60) and the row's <code>px-4</code> (32) — <code>FlowList.tsx:9, 15, 135</code>.</p>
     <table data-c="budget">
       <tr><th>window</th><th class="num">pane 380<br><em>shipped</em></th><th class="num">pane 440</th><th class="num">pane 520<br><em>chosen</em></th><th class="num">pane 560</th></tr>
       <tr><td>800 — the declared minimum</td><td class="num win">−192</td><td class="num win">−252</td><td class="num win">−332</td><td class="num win">−372</td></tr>
@@ -252,7 +252,7 @@ scroll / overflow: A pinned, content-height, wraps to a second line before it
               known, so the miss by kind does not land, and the input stays a pattern.</p>
               <p>Lands in <span class="use">@use</span> "any free-text entry … pass value + onChange + aria-label;
               pass width through <code>className</code>". Clears <span class="avoid">@avoid</span> "validating,
-              formatting or restricting what is typed" — <strong>and the shipped call site does not</strong>:
+              debouncing, formatting or restricting what is typed" — <strong>and the shipped call site does not</strong>:
               <code>inputMode="numeric"</code> (<code>App.tsx:232</code>) is a keypad hint over a field that must
               now accept a letter. It goes. Width moves <code>w-field-sm</code> → <code>w-field</code> (80 → 128px)
               so the placeholder is not itself truncated; the header wraps before it clips, so the cost is the
@@ -1153,8 +1153,8 @@ soft:
         client holds only what the last query returned, so a client-side class filter narrows a page and reads as a
         filter that silently loses flows. W5's contract is downstream of <a href="#elements">the
         <code>Field</code> row</a>, which states exactly what the field will send.</td>
-        <td>the epic plan's open-question row · <code>Field</code>'s <span class="avoid">@avoid</span> "validating
-        or restricting what is typed"</td>
+        <td>the epic plan's open-question row · <code>Field</code>'s <span class="avoid">@avoid</span> "validating,
+        debouncing, formatting or restricting what is typed"</td>
       </tr>
       <tr>
         <td><em>Owner, in the epic plan's open questions:</em> "Has the payload cell's second truncation sighting
