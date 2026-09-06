@@ -1,0 +1,25 @@
+schema: cr/v3
+scope: "WU E-RFINISH.W2 docstrings -> epic/redesign-finish (round 2; round 1 ran on tip 1648a84 and confirmed one blocker, fixed in 68363f6)"
+epic: E-RFINISH
+wu: E-RFINISH.W2
+branch: wu/redesign-finish/docstrings
+base: 73610795ded1befe9c269afbe38a366f87a8ca87
+head: 68363f646207442fb1f4239a3ff45ca67499c96f
+diff_sha256: df924247563008f199111612efd22092406b2e02dceb0a1a2c4259c164cda7da
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 4, verified: 0, waived: 0 }
+waivers: []
+design:
+  undesigned:
+    - path: ui/src/components/CopyButton.tsx
+      why: "prose only, inside the TSDoc block. @use dropped a copy-all-headers tenant the app has never had and re-named the two real ones; @avoid dropped HeaderTable's rows from fork D2b's adjacency examples. Verified against FlowDetail.tsx:115 and BodyViewer.tsx:106 - the component's props, markup, classes and rendered output are byte-identical, so there is no surface for a design to answer for"
+    - path: ui/src/components/CutMarker.tsx
+      why: "prose only - the summary line stopped naming BodyRenderer, a design file E-DFLOW.W8 dropped unbuilt, and now names BodyViewer's renderer family, which is what TextRenderer, HexRenderer and FormRenderer actually compose it from. No render change"
+    - path: ui/src/components/Field.tsx
+      why: "prose only - @use stopped claiming the filter bar's four fields when App.tsx:201-233 renders Field, Select, Select, Field, and @avoid now says four controls rather than four fields. The claim was checked against the call site; the input element, its classes and its props are untouched"
+    - path: ui/src/components/Notice.tsx
+      why: "prose only - @use dropped HeaderTable and a detail-panel load failure that does not exist, and dropped a tone=ok example quoting a copy string the app never shipped. The replacement tenants were each verified live (FlowDetail.tsx:25,85 - BodyViewer.tsx:114,116 - FlowList.tsx:35,37 - Onboarding.tsx:74,80 - ProxyCloseDialog.tsx:265). Nothing rendered moved"
+    - path: ui/src/components/TonedText.tsx
+      why: "prose only - @anatomy dropped a components.tsx:25 pin whose file was deleted with the legacy kit. One parenthetical removed from a comment; the span, its classes and its tone lookup are unchanged"
+verdict: PASS
+date: 2026-09-06
