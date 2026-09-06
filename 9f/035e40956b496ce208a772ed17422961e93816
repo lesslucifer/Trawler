@@ -1,0 +1,26 @@
+schema: cr/v3
+scope: "WU E-RFINISH.W4 (shell-list-design) -> epic/redesign-finish"
+epic: E-RFINISH
+wu: E-RFINISH.W4
+branch: wu/redesign-finish/shell-list-design
+base: 73610795ded1befe9c269afbe38a366f87a8ca87
+head: 9f035e40956b496ce208a772ed17422961e93816
+diff_sha256: e08f13f7c311d578ffa38ffeaddab4cddaf70c0134490ae2c4dd4cdc07f51200
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 13, verified: 2, waived: 0 }
+waivers: []
+verified:
+  - location: "docs/work/2026-09-06-redesign-finish-w4-plan.html + docs/work/2026-09-06-shell-list-second-pass.html"
+    claim: "FlowList.tsx:14 is cited as the carrier of the header row's gap-3 and px-4; line 14 is data-wire=\"none\" and the className is line 15. The plan's adjacent row already cites :15 for the same line."
+    severity: nit
+  - location: "docs/work/2026-09-06-shell-list-second-pass.html - the Field Elements row and the Elements review row"
+    claim: "Two quotation-marked Field @avoid excerpts drop words with no ellipsis: the TSDoc reads \"validating, debouncing, formatting or restricting what is typed\". Isolated slips - the doc's other quotations are verbatim and mark truncation with an ellipsis."
+    severity: nit
+refuted: 11
+design:
+  artifacts: [docs/work/2026-09-06-shell-list-second-pass.html]
+  rulebook: 849cc8e0ff423345004cccf79715fc489abc9dbf
+  findings: { found: 3, verified: 0, waived: 0 }
+  verdict: PASS
+verdict: FAIL
+date: 2026-09-06
