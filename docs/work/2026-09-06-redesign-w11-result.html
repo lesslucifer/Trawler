@@ -155,6 +155,38 @@
       </tbody>
     </table>
 
+    <h2 id="review">What the review found</h2>
+    <table data-c="review">
+      <thead><tr><th>Round</th><th>Candidates</th><th>Verified</th><th>What moved</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>3 (from 5 finders — simplification and efficiency returned none)</td><td>1</td>
+          <td>DEC-34 called a hypothetical <code>violated-by-constraint</code> <em>a seventh
+            verdict</em>. The receipt enum already holds seven (<code>VERDICTS</code> in
+            <code>xtask/src/doc.rs</code>), and <a href="../decisions/dec-15-design-run-enforcement.html">DEC-15</a>
+            names it a fixed seven-verdict enum — so an addition is the eighth. The rejection
+            argued the right thing and miscounted the thing it argued about; it now cites the
+            record that owns the vocabulary instead of reasoning past it.</td></tr>
+      </tbody>
+    </table>
+    <p>Two candidates were refuted on evidence, and both refutations are worth keeping:</p>
+    <table data-c="refuted">
+      <thead><tr><th>Claim</th><th>Why it does not hold</th></tr></thead>
+      <tbody>
+        <tr><td>The <code>test/v2</code> note says <em>64 docs checked</em> where the tip's tree
+            holds 65.</td>
+          <td>64 was the tree at the moment the check ran — the 65th is the result report the note
+            is written in, and a doc cannot verify a tree that includes its own unwritten bytes.
+            Re-run over all 65 after the fact: still green. The number is now stated as the
+            re-run's.</td></tr>
+        <tr><td>The epic plan's two deferred items — the E-DFLOW.W11 coverage map and the DEC-13
+            revert question — are dropped, since W11 is the epic close and neither appears.</td>
+          <td>The plan says <em>epic</em> follow-ups, and the work-planning standard gives the epic
+            result report its own <code>follow-ups</code> item, written at the epic seam, not this
+            one. The obligation is live, not discharged — it is carried below so the trail cannot
+            break, and it is answered in the epic result.</td></tr>
+      </tbody>
+    </table>
+
     <h2 id="follow-ups">Follow-ups</h2>
     <table data-item="follow-ups" data-c="follow-ups">
       <thead><tr><th>What</th><th>Whose</th></tr></thead>
@@ -183,6 +215,14 @@
             Open exactly as W3 left it and W4 confirmed: a <code>Select</code> for method is legal
             today, but a status-class query (<code>4xx</code>) needs the API to accept one.</td>
           <td>owner, then a later WU</td></tr>
+        <tr><td><strong>Carried to the epic result, not settled here:</strong> the epic plan
+            deferred two items to the close — the <strong>E-DFLOW.W11 coverage map</strong>
+            (32 assertions classified, executed by W10's rewritten <code>onboarding.spec.ts</code>)
+            and the <strong>DEC-13 revert question</strong> (already decided 2026-09-02, a day
+            before this epic's plan was written; the inherited assertion survived the rebuild and
+            is asserted at <code>ui/src/App.test.tsx</code>). Both belong in the epic result's
+            follow-ups, which is the artifact the plan named.</td>
+          <td>the epic result</td></tr>
         <tr><td><strong>A second truncation sighting is the signal.</strong> DEC-34's own
             consequence: two screens needing the escape means the payload cell wants a registry
             entry, which the flow-list run already named as a near-miss awaiting a second call
