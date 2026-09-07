@@ -1,0 +1,271 @@
+schema: test/v2
+level: working-unit
+epic: E-EXPORT
+wu: E-EXPORT.W9
+branch: wu/export/controls-redesign
+tests:
+  unit:
+    waived: "design-only diff — the WU adds two T3 HTML docs (the plan and the run) and amends the epic plan's WU table. No src/ or ui/src/ byte changes, so there is nothing a unit test could assert. The run's own correctness is not unit-testable; it is held by the Tier-1 checker on every write and at every turn end, which is a stronger and already-wired gate than a test asserting the file parses."
+  integration:
+    waived: "no bounded contract changes. Every endpoint the run designs against — GET /flows/export, POST /flows/import, ?format=curl, DELETE /flows, DELETE /flows/{id} — is merged and covered by W2/W3/W4/W7's own integration tests. This run reads their shapes; it does not alter one."
+  e2e:
+    waived: "deferred to the epic's own e2e step, which already owns the row: WebDriver drives the built app through export → clear → import → curl paste. That needs W6's built controls, which this WU deliberately does not build."
+verified:
+  - "cargo xtask verify-doc <the run> — green as design-run: 17/17 soft slugs receipted (14 satisfied, 2 inherited, 1 satisfied-via-proposal), 13/13 hard rules machine-checked, 0 design-allow suppressions."
+  - "node scripts/check-render.mjs <the run> — ok, 6 mounts, 12 buttons, clean console over a real file:// origin with no flags. This is the check the Tier-1 predicates cannot make: a component that throws leaves an empty div beside correct prose, which reads as 'no specimen here' rather than 'broken'."
+  - "The rulebook was re-pinned at close (step 1) and still hashes a7f9ae3 — it did not move under the run."
+  - "cargo xtask design-scope epic/export HEAD — exactly one design artifact to judge, the run itself."
+  - "cargo xtask gate0 — fmt + clippy -D warnings + the full suite green."
+  - "doc-assets/components/specimens.bundle.js rebuilt before the mockup was written, so the mounted collection is the 28-entry one and not the 24-entry bundle left over from run 10's session."
+  - "Round 1 of the code review, re-verified after the fix: verify-doc green on both docs, check-render ok (6 mounts, 12 buttons, clean console), the rulebook re-pinned at a7f9ae3 for the second close."
+  - "Round 10 re-verified on this tip, with the archived run temporarily reopened so the checks actually ran: verify-doc green as design-run — 17/17 soft (14 satisfied, 2 inherited, 1 satisfied-via-proposal), 13/13 hard, 0 suppressions — then re-archived; check-render ok, 7 mounts, 15 buttons, clean console."
+  - "Rounds 11-13 re-verified on this tip: cargo xtask verify-doc over all three touched docs — none red; the run green as design-run at 17/17 soft (14 satisfied, 2 inherited, 1 satisfied-via-proposal), 13/13 hard, 0 suppressions. The run was reopened for the rework and re-archived at the close, so the checks actually ran rather than being exempted."
+  - "cargo xtask ui specimens --check — ok, 7 mounts, 15 buttons, clean console. The button count reconciles, counted in the browser rather than remembered: 10 mounted — 4 in the header (StatusDot, the two Select triggers, the ⋮ trigger) and 3 each in the ask and the paste — plus the 5 state toggles the doc itself draws. M's rows are role=menuitem spans, not buttons, which is what 'drawn, not mounted' means in the count."
+  - "MEASURED rather than asserted, in headless Chrome, because three rounds of prose review had passed claims no checker reads. Hairline contrast — #3f3a36 on canvas-soft #383330 = 1.11:1; on canvas #2b2622 = 1.33:1."
+  - "CORRECTED at round 15, and the correction is the point. The TimestampText widths were first taken on the run doc itself, which ships no @font-face and whose bundle carries only the font TOKEN - so over file:// font-mono falls through to ui-monospace and the figures were a fallback face's. Re-measured against the DM Mono files shipped in ui/dist/assets with document.fonts.check confirming the load, cross-checked by getBoundingClientRect and canvas measureText: same-day 14:22:03 = 57.6px, cross-day 06/09 · 14:22:03 = 115.2px, cross-year = 151.2px. That is an exact 7.2px per character - DM Mono's 0.6em advance at text-body's 12px, confirmed against the hmtx table of the shipped woff2 (advance 600/1000 em). The mark is the exception and round 15's second pass caught it: U+2191 is absent from DM Mono's cmap in BOTH shipped subsets, so the mark is a fallback glyph at ~7.23px, not DM Mono at 7.2px. The @font-face unicode-range does list U+2191 and that is what misled the first verifier - the descriptor is a fetch hint, and in this bundle it is copy-identical across Inter, DM Mono and Instrument Serif, so it asserts nothing about coverage. cmap membership governs. The mark's width never entered the column arithmetic (its box is a fixed 16px reserve, not a measurement), so no figure moved. The tell that the first set was wrong needs no browser: 64.22/8, 120.88/16 and 163.47/21 imply 8.03, 7.56 and 7.78px per character, and a monospaced face has ONE advance. A stated measurement has to name the face it was taken in, and the run's Stubbed list now discloses that this page is not that face."
+  - "The no-reflow claim for A′'s slot, measured in both states rather than argued: slot 80.0px, trigger 28.0px, one 8.0px gap between them, both members at an identical x, so A′ is 116.0px whichever fact the slot shows. That measurement is what let the fork-D4 pair be stated as costing no movement. The figures this entry carried before round 14 — four x positions and gaps of 8/8/16px — were the REJECTED three-inline-control option's, measured before T8 and never re-taken; the code review caught the same stale numbers in the run doc and in this note."
+  - "The wrap band, scanned in 2px steps on this doc's own markup: A holds one line down to 782px with no actions, 942px with three inline controls, 846px with the single trigger; A′ measures 116.0px. Against tauri.conf.json's minWidth of 800 that is what chose the menu, and what puts minWidth 850 in Blocked-on."
+  - "The menu popup checked for opacity and stacking rather than eyeballed: computed background rgb(43, 38, 34) with no alpha, z-index 20, and elementFromPoint at the panel's centre returns a menu item — so nothing behind it shows through. A suspected transparency was investigated and found not to exist, and no finding was written for it."
+  - "The rulebook re-pinned at the close for the fourth time and still hashes a7f9ae3becf27694bfc1ffb9f0b43f87c9abb7e2; cargo xtask design-scope epic/export HEAD reports exactly one artifact to judge, matching the receipt's pin."
+  - "Round 14, fixing the round-13 review's six verified findings: the run reopened, verify-doc green as design-run (17/17 soft — 14 satisfied, 2 inherited, 1 satisfied-via-proposal — 13/13 hard, 0 suppressions), re-archived; ui specimens --check ok at 7 mounts and 15 buttons. Every count the notes and the run now assert was re-derived from the file or the render rather than carried: elements 11, interaction 11, capabilities 12 with 2 deliberately unused, proposals 4, blocked-on 2, tune T1-T8, review 29 rows, state toggles 5."
+  - "The two closing tables measured in the browser after a finding that reading them was not enough: Blocked-on now 4 headers against two 4-cell rows, and run 10's accounting 2 headers against five 2-cell rows. Before the fix the accounting table had 2 headers and a 4-cell last row, because the cross-year entry had been appended to the wrong table — two cells rendered under no heading, and data-item=blocked-on held one entry while the run had two. No gate reads either fact."
+note: >-
+  A design WU produces no executable bytes, so three waivers is the honest shape rather than a
+  convenient one, and the load-bearing gates are Tier-1 plus the Tier-3 design review. What is
+  worth recording as testing is the render check: run 10 could not have caught a broken mount
+  either, and the failure mode is silent by construction. `ui specimens --check` reports 7 mounts
+  and none empty. The doc itself makes 6 mount() calls, into 6 ids - the gate's count runs one
+  above a doc's mount() calls (run 10: 4 calls, 5 reported), so the seventh is the gate's own root
+  and not a mount this doc declares. Two separate facts, stated separately, because reconciling
+  them by assertion is how this WU produced four of its findings.
+  One environmental finding, fixed locally and not committed because it is not a repo fact: this
+  worktree's ui/node_modules/.bin/esbuild was a pnpm shim that wrapped esbuild's native Go binary
+  with `node`, so `cargo xtask ui specimens` died with a SyntaxError dumping the Mach-O header.
+  pnpm install reported "Already up to date" and did not regenerate it. Repaired by rewriting the
+  shim to exec the platform binary directly; node_modules is git-ignored, so nothing about that
+  repair is in the diff. Worth naming because the next agent to rebuild the bundle in a fresh
+  worktree will hit it, and because the bundle being stale is exactly the failure that would have
+  let this run mount 24-entry components while claiming 28.
+  A second environmental note: xtask's test binaries are cached in a target/ symlinked to the main
+  checkout, so two suites first failed against paths in a deleted worktree (TRA-RD-W7). Touching
+  the sources to force a rebuild made them green; no source change was involved.
+  Round 1 of the review confirmed three findings and refuted three; the two that mattered were
+  both this run claiming more than it had earned, and both were fixed in the commit that followed
+  it, now an ancestor of this tip. The
+  mockup's curl refusal was a string the server never sends ("--data-urlencode is not supported"
+  where CurlError::UnsupportedFlag emits "unsupported flag --data-urlencode"), which mattered
+  because the run asserted in three places that it had read that wording from src/api/curl.rs and
+  its Stubbed list did not name the wording as illustrative. And blocked-on was declared empty on
+  a miscount: run 10 carried five entries, not one, and while four are genuinely disposed of the
+  fifth — the header's untested wrap behaviour — was dropped rather than carried. It is carried
+  now and stated as more pressing than run 10 left it, because two header members are now
+  popup-bearing Selects where run 10 measured four plain boxes. A third finding, a receipt
+  quoting copy the design does not contain, was a citation slip that left its verdict standing.
+  One refuted candidate is recorded as a build fact rather than discarded: ui/src/api.ts does not
+  subscribe to the `cleared` SSE event the server emits, so W6 must add the listener or a clear
+  will empty the store and leave the list on screen. The diff carries no code, so this is not a
+  defect in it; the run now states it where the build will read it.
+  Round 2 re-reviewed round 1's fix as unreviewed text and confirmed one finding, refuting two.
+  The fix had recorded the Tier-3 round as four rows in the run's own review list; that list is
+  for what moved before the close, and the Tier-3 verdict's home is this note's sibling, the cr/v3
+  note (design-flow section 8, DEC-24, which warns that re-emitting a finding elsewhere doubles
+  the artifact and buries it). Run 10 states the same rule in its own review table and two earlier
+  post-review fixes followed it. The rows are gone and the rule is stated. Refuted: the carried
+  wrap entry is a real blocked-on entry rather than a mis-filed test item, because the row shape's
+  "what the run did meanwhile" column exists precisely so an entry can carry an interim answer and
+  still be blocked; and "there is no E-EXPORT.W8" holds under the workflow's own definition of a
+  Working Unit. Round 2 also caught a stale note rather than a stale doc: the doc/v1 note had been
+  carried onto the fixed tip unchanged and still described an empty blocked-on list. Both notes are
+  now written against the tip they are attached to.
+  Round 3 found that round 2's fix had overshot in three places, all the same mistake: the
+  paragraph replacing the deleted rows named the findings and asserted they were fixed, its count
+  of them was wrong because the commit writing it was fixing a fourth, and a parenthetical left on
+  a review row recorded that a review had corrected the document. All three are gone; the run now
+  states the rule in run 10's exact words and stops, which is what this repo's two earlier
+  post-Tier-3 fixes did.
+  A second environmental finding, alongside the esbuild shim: scripts/check-render.mjs is
+  sensitive to CDN latency. It samples the page on a fixed budget, and the mockup compiles through
+  Babel standalone fetched from jsdelivr; when that fetch is slow the script has not run at
+  sampling time and every mount reads empty. Measured at 5.2s for babel.min.js during this
+  session, with the checker reporting "empty mounts: m-head, m-labels, m-rows, m-ask, m-paste".
+  The already-merged run 10 fails identically in the same minute and passes when the CDN is fast,
+  so this is the harness and the network, not either document. This run passed the check cleanly
+  three times (6 mounts, 12 buttons, clean console) when the CDN was responsive; a red from this
+  checker should be re-run before it is believed.
+  Round 4 found that round 3's own claim - "the run's body now carries no review-process
+  narrative at all" - was false in three places, all outside the review table and so untouched by
+  trimming it: Interaction attributed the cleared-SSE fact to "reviewing this run", and two
+  blocked-on sentences narrated what the review had caught. Each wrapped a real design fact in a
+  review-process clause; the clauses are gone and the facts stay. Four rounds have now found the
+  same class four times, each in the previous round's fix, which is the argument for reviewing a
+  fix as unreviewed work rather than trusting it. The body is now verified clean by grep for "the
+  review", "the reviewer", "reviewing this run" and "Tier-3 review" outside the review item -
+  only the closing rule sentence run 10 also carries survives.
+  Round 5 ran a design finder plus a fresh-eyes finder over the other five dimensions, on the
+  argument that four rounds of one defect class is evidence the other classes were under-examined.
+  It found two, both new: the mockup mounted StatusDot with status="capturing", which is not a
+  member of DotStatus, so the fill class and the accessible name both resolved to undefined on the
+  one component whose contract is that each state owns its phrase and its tint (now "connected",
+  what dotStatus() returns once a decrypted flow is seen); and the Button row described
+  ProxyCloseDialog as "two bare mute buttons" when its escape is bare-mute and its act takes the
+  defaults - the mockup already had the real asymmetry, so the prose was corrected to it rather
+  than the mockup bent to the prose. The receipt was unaffected: its destructive-reads-as-
+  destructive row cites the warn Notice, never button symmetry.
+  The StatusDot defect is the one worth carrying forward as a limit of this project's gates: no
+  mechanical check can see it. verify-doc greens it, and check-render only fails an EMPTY mount -
+  this one rendered a real button around a real span, because the doc's JSX goes through browser
+  Babel, which strips types without checking them. A wrong-but-renders prop literal in a mockup is
+  invisible to every automated gate here and is caught only by reading the component's @states.
+  Every other prop the mockup passes was then audited against its component's real type and is
+  sound: TimestampText accepts string|number|Date|null so the epoch is valid, Select's value may
+  be undefined, TonedText's "muted" is a real tone, StatusPill takes null.
+  Round 6 aimed at the two docs the earlier rounds had barely read - the WU plan and the epic plan
+  - and found the costliest defect of the review there rather than in the run. Adding the W9 row
+  had not reconciled the W6 block: in four places it still sent the build to W5's design, while
+  W9's row said run 11 supersedes run 10 and W6 cites run 11. A builder following it would have
+  cited an archived run pinned to a rulebook blob that no longer exists, and 9.design would have
+  bound the citation to it. Fixed throughout, with the W5 heading marked superseded and the e2e
+  Covers column reading W9. The same block also still told W6 to wire the clear confirmation
+  through useConfirm, which both runs found impossible; it now states the modal ask and names the
+  deviation, so the plan no longer instructs the one thing its own designs twice refuted.
+  A third finding corrected an overcount in the run: four answers moved, not five - Layout's
+  placement was re-derived and held. That also settles a disagreement between two finders, since
+  an earlier round had asserted the five-count matched five delta spans; of the six spans, one
+  documents the answer that was kept and one sits inside the review table.
+  Round 6b closed two more of the mockup-fidelity class. The two Selects were mounted with an
+  undefined value against option lists with no "any" entry, so they rendered Select's muted
+  nothing-selected branch - a state the real screen can never reach for these two controls, since
+  App.tsx always puts ANY first and always passes filter.host || ANY. They now mount as the app
+  mounts them. This was NOT a width error: the placeholder and the real label are the same
+  strings, so the Layout measurement claims about the space left for A' stand. And a StatusPill
+  @avoid was quoted with two words missing; rather than fix the instance, all twelve quoted
+  @use/@avoid citations in the run were audited against the emitted registry and all twelve are
+  verbatim.
+  Three defects of one shape have now been found - StatusDot with a non-member status, the Button
+  precedent, and the Selects - and the shape is worth stating as a standing limit: a mount that
+  renders happily while misrepresenting its component or the screen is invisible to every
+  automated gate in this project, because the doc's JSX runs through browser Babel with no type
+  checking and check-render only fails an EMPTY mount. Reading each component's own TSDoc against
+  each mount is the only thing that catches it.
+  Round 7 asked the question the first six rounds never did - not "is this statement true" but "is
+  this design any good" - and returned three blockers plus three missing paths, none of which the
+  eighteen earlier findings had touched. The Frame claimed imported rows were filterable when the
+  design ships no filter control and the mark's colour-plus-text argument was resting on that
+  absent filter. absence-names-itself claimed four wordings while a cleared capture reused the
+  never-captured one, which is the precise failure FlowList.tsx's own comment exists to prevent;
+  clearing now has its own words and W6 adds the third case to Absence. And the clear ask focused
+  the destructive button, because ModalShell's "focus the act" rule was copied from a dialog whose
+  focused act is CORRECTIVE - there was never a precedent for reflex-focusing something
+  irreversible, so the marker moves to [cancel] and the Dialog proposal now separates the
+  mechanism (the component's) from the choice of which control is marked (the caller's).
+  Three paths a build would have had to invent are designed: whether the import ask closes on
+  success, the cancelled file picker (symmetric to the cancelled save, which WAS designed), and
+  what each door does when the request itself fails rather than when a curl command is refused.
+  A parallel sweep closed the mockup-fidelity class with five more: the ask shows the title row and
+  the close control ModalShell always renders, the column labels are text-body rather than label,
+  every row cell carries its data-wire, the status Field declares its numeric input mode, and the
+  28px-vs-30px row height is disclosed instead of silently contradicting the Frame - the spacing
+  scale has no 30px member, which is why FlowList sets it inline, and that gap is now on the
+  record.
+  Round 8 found the review's most damning result and two consequences of round 7's own fix.
+  The damning one: run 10 had specified "focus on [cancel] - the safe answer", and run 11 put it
+  on [clear] and carried that for six rounds. The WU plan's own callout names that exact failure -
+  an answer that silently flips - and the apparatus built to catch it did not. The run now cites
+  run 10 as holding the answer and states that an earlier draft had it wrong.
+  Round 7's title row had also broken the mechanism its focus fix relied on: ModalShell focuses
+  the control marked data-opener OR falls back to the panel's first focusable element, which with
+  a title row is the close control - so an ask marking nothing opens on its own dismiss. The
+  design now says [cancel] carries the marker, and all three descriptions of the Dialog proposal
+  state the mechanism rather than ProxyCloseDialog's use of it.
+  Round 7's title/Notice split had left five places quoting the old single-sentence question,
+  including the labels-add-context and calm-microcopy receipt rows - round 1's defect recurring
+  because copy changed without the receipt being re-read. All five are consistent now. Also fixed:
+  a second "plus the source filter" clause the earlier edit missed, and the new "capture cleared"
+  detail, which spoke in a descriptive voice where its two siblings in FlowList.tsx are
+  imperatives carrying the proxy address.
+  The cleared state is mounted rather than asserted - a third toggle shows the list after a clear,
+  so every state this run designs is in the assembly. check-render: 7 mounts, 15 buttons, clean
+  console. Counts on this tip, verified rather than remembered: 11 interaction rows, 10 catalog
+  entries, 1 blocked-on entry, 6 review rows, 12 capabilities, 3 tune calls.
+  Round 9 found the rule this run derived and did not propose - which control a destructive ask
+  focuses - now a third proposal (safe-answer-takes-focus, owner the rulebook). Checked rather
+  than assumed: "destructive" appears zero times in the rulebook, and the rulebook's own growth
+  mechanism says a design needing a rule that is not there proposes it.
+  Round 9b found a SECOND run-10 answer silently dropped, one round after the first. Run 10 said
+  the paste ask opens with focus in the textarea; run 11 never said it, and once the title row
+  landed that omission means F would open focused on its own close control. The marker cannot
+  express the fix either - ModalShell selects [data-opener="true"] button, so a textarea can never
+  be named by it - which makes round 8's "the caller marks which control" true for the clear ask
+  and quietly false for the paste. The run holds run 10's answer, and the Dialog proposal carries
+  this as a required CHANGE rather than a rename.
+  Two silently-dropped run-10 answers in two rounds is a pattern about this run, not about either
+  finding. Round 10 is aimed at it directly: an exhaustive answer-by-answer comparison of run 10
+  against run 11, so the class is closed rather than sampled.
+  Round 10 returned four more, all four alive since the first draft and none reachable by the nine
+  rounds before it. The receipt's own summary paragraph claimed to name every moved verdict and
+  named two of three - generous-targets had gone satisfied -> inherited undisclosed, which is a
+  receipt contradicting itself about its own completeness. Tune T4 had been dropped while the
+  mockup prose kept its conclusion ("the absent mark holds its own width"), so the mockup drew the
+  un-tuned 110px cell 1; restored with this run's arithmetic rather than run 10's, since this
+  run's mark is 12px and run 10's was 16px, giving 122px. source in FlowFilter had flipped from
+  used to deliberately unused with nothing said, which is the one kind of silent change a build
+  reads as an instruction. And a cleared list had moved onto a new third absence against run 10's
+  answer, well argued and unmarked.
+  The direction of the walk is the finding, not the four items. Nine rounds read this document and
+  asked whether its statements were true; they were true. A dropped answer leaves no false
+  statement behind - it leaves nothing, and nothing is not reviewable from the near side. Only the
+  round that walked run 10 and used its answers as the checklist found them, and it found all four
+  at once. That is now a proposal against docs/design-flow.html: a re-run closes against the run
+  it supersedes, as a step in the close sequence.
+  A standing gate gap found while checking this round: verify-doc is EXEMPT on a run whose
+  data-status is archived (and on draft), so the receipt and rulebook checks had not been running
+  on any edit made after the close - every round since the archive was greened by an exemption,
+  not by a check. Reopening this round (status removed, checked, re-archived) immediately caught a
+  review row citing no contract, which had been landing green. The exemption is defensible for
+  runs closed under an older contract, but it means an archived run under active edit is
+  unchecked, and nothing says so at the point of editing.
+  Also repaired: a sentence my overlapping round-7/8 edits had left unparseable, and a false claim
+  that both FlowList absences carry a proxy address - only one does, the other reads "clear a
+  field to widen the search".
+  Note-handling error worth recording, since these notes are gate evidence: while moving the notes
+  forward I read them from the wrong sha (the round-9 commit rather than the one they were
+  attached to), which wrote a 1.4KB fragment over the 16KB test note on the tip and deleted the
+  doc note outright. Both were rebuilt from the intact copies still attached to 9484377. Nothing
+  was lost - notes stay on the sha they were written for - but a note moved by a script that does
+  not verify its source is a receipt that can be silently truncated.
+  Rounds 12 and 13 are human design review, and both rejections were correct. What they have in
+  common is that neither was findable by reading the document: the run's statements were true and
+  its structure was green. They were findable only by RENDERING the mockup and looking at it,
+  which no round before 12 had done. Round 12 found the mockup's fixture rendering differently
+  depending on the day it was read (TimestampText forks on "is this today", and the fixture
+  hardcoded the day it was written), and a separator drawn at 1.11:1 against the surface it sat
+  on. Round 13 found that the header was two lines across a 142px band of allowed window widths,
+  because nobody had measured the wrap threshold against tauri.conf.json's minWidth.
+  The standing limit this establishes, and it is a gap in the toolchain rather than in the run:
+  verify-doc reads structure and never prose or pixels, and check-render fails only an EMPTY
+  mount. A mockup that renders in the right place in the wrong colour, at the wrong width, or
+  differently tomorrow than today is green by both gates. Every defect rounds 12 and 13 found is
+  in that blind spot. A design run that is never rendered and inspected has not been reviewed,
+  whatever its checkers say.
+  Discipline note, since round 11's worst finding was a fabricated measurement: every magnitude
+  claimed in rounds 12-13 was measured in the browser and the numbers are listed above. Two
+  intermediate errors were caught by that discipline rather than by review — a hypothesis that
+  the doc was missing tw-config.js (false: the specimens bundle inlines it, minified to _I.config)
+  and an A′ width written as 206.8px where the arithmetic gives 212.8px. Both were corrected
+  before the commit; the first was never written into the doc at all.
+  Round 13's review returned FAIL on six verified findings and they are fixed in THIS commit,
+  which is the tip this note is attached to. Four were one defect repeated - a value moved and a sentence quoting the old value
+  survived - and one of those four was written and contradicted inside a single commit. The fifth
+  was altitude: the T1 paragraph performing the close-sequence step also narrated this WU's six
+  reversals and nine rounds, so the mechanism stays in docs/design-flow.html and the incident
+  moved to DEC-38, a T2 record this WU now adds. The sixth was this WU's doc note contradicting
+  itself about whether that T1 step was performed or proposed while carrying three different
+  proposal counts; it was rebuilt rather than appended to, which is the actual lesson - appending
+  a CORRECTION paragraph leaves the sentence it contradicts standing in the same scalar.
+  The standing limit this WU is evidence for, recorded because it will outlive the WU: neither
+  gate reads what rounds 12-14 found. verify-doc reads structure and never prose or pixels; the
+  render gate fails only an EMPTY mount. A mockup that renders in the right place in the wrong
+  colour, at the wrong width, or differently tomorrow than today is green by both - so is a
+  four-cell row under two headers, and so is a measured figure belonging to a rejected option.
+  Rounds 1-11 read this document; rounds 12-14 rendered it and counted it, and everything they
+  found was invisible to every check.
