@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d6abd9f34851f0dfac98e">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Design run: the app shell and the flow list, second pass (E-RFINISH.W4)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px;}
+    td:first-child{white-space:nowrap;}
+    .gist{font-weight:600;}
+    details.why{margin-top:4px;}
+    details.why summary{cursor:pointer;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+    details.why > *{font-size:12px;line-height:1.55;}
+    .v{font-weight:600;white-space:nowrap;}
+    .v-reuse{color:var(--ok);} .v-propose{color:var(--warn);} .v-local{color:var(--accent);}
+    .use{color:var(--ok);} .avoid{color:var(--warn);}
+    .num{font-family:var(--mono,monospace);text-align:right;white-space:nowrap;}
+    .win{color:var(--warn);font-weight:600;}
+    pre.sk,pre.tb{font-size:12px;line-height:1.45;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px 12px;overflow-x:auto;margin:0;}
+    pre.tb{font-size:11.5px;}
+    .ex-ok,.ex-no{display:block;font-size:12px;line-height:1.5;}
+    .ex-ok .g{color:var(--ok);font-weight:600;} .ex-no .g{color:var(--warn);font-weight:600;}
+    /* mockup surface — assembly only; every component is mounted, never drawn.
+       Colours come from the bundle's .app custom properties, never literals. */
+    .app{background:var(--a-canvas);color:var(--a-ink);font-family:var(--a-ui);border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+    .a-mock{display:flex;flex-direction:column;}
+    .a-head{display:flex;align-items:center;gap:12px;padding:8px 16px;background:var(--a-soft);border-bottom:1px solid var(--a-line);flex-wrap:wrap;}
+    .a-band{display:none;padding:4px 16px;border-bottom:1px solid var(--a-line);}
+    .a-mock.unreachable .a-band{display:block;}
+    .a-mock.unreachable.empty .a-band{display:none;}
+    .a-body{display:flex;min-height:0;flex:1;height:256px;}
+    .a-main{display:flex;flex-direction:column;min-width:0;flex:1;overflow:hidden;}
+    .a-side{flex-shrink:0;border-left:1px solid var(--a-line);background:var(--a-soft);overflow:auto;}
+    .a-hrow,.a-row{display:grid;gap:12px;align-items:center;padding:0 16px;}
+    .a-hrow{border-bottom:1px solid var(--a-line);padding-top:4px;padding-bottom:4px;
+      font-size:10px;letter-spacing:.025em;text-transform:uppercase;color:var(--a-mute);}
+    .a-row{height:28px;border-bottom:1px solid var(--a-line);cursor:pointer;}
+    .a-row.sel{background:var(--a-soft);}
+    .a-scroll{min-height:0;flex:1;overflow:auto;}
+    .a-empty{padding:48px 16px;display:flex;justify-content:center;}
+    .a-count{white-space:nowrap;}
+    .a-title{font-family:var(--a-serif,serif);font-style:italic;font-size:18px;}
+    .a-kv{display:grid;grid-template-columns:auto 1fr;column-gap:12px;row-gap:4px;}
+    .a-mock.empty .a-scroll,.a-mock.empty .a-hrow{display:none;}
+    .a-mock:not(.empty) .a-empty{display:none;}
+    .a-mock.empty .a-c-full,.a-mock:not(.empty) .a-c-none{display:none;}
+    .a-e-down{display:none;}
+    .a-mock.unreachable .a-e-down{display:block;}
+    .a-mock.unreachable .a-e-quiet{display:none;}
+    .statebtn{margin-top:8px;margin-right:8px;font-size:12px;padding:4px 10px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--ink);cursor:pointer;}
+  </style>
+</head>
+<body data-artifact="design-run" data-status="archived">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run — the app shell and the flow list, second pass</h1>
+      <p>The same screen, a year of decisions later. One run answers the four questions E-REDESIGN sent forward:
+      the detail pane's width, the control the status filter needs to express a class, where an unreachable API is
+      stated, and whether DEC-34's payload cell has had its second sighting.</p>
+      <div class="meta">Design run · 2026-09-06 · Trawler · T3 (docs/work/) ·
+      <a href="2026-09-06-redesign-finish-w4-plan.html">E-RFINISH.W4</a> · UC-4 · UC-5 (pane width) ·
+      flow: <a href="../design-flow.html">design-flow</a> · rulebook pinned <code>849cc8e</code> ·
+      registry 28 entries · first pass: E-REDESIGN.W3 (archived) · builds in <strong>W5</strong> + <strong>W6</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="frame">1 · Frame</h2>
+    <div data-item="frame" data-c="frame">
+      <p><strong>Purpose:</strong> the first pass's developer, same screen — is what it shows still true, and is
+      the pane beside it readable?</p>
+      <p><strong>Given</strong> (functional input — received, not designed): live SSE flow stream · server-side
+      filter, four keys · every fetch answers or fails · per-flow status, method, URI, start, duration · the ring's
+      capacity · a decrypted-HTTPS proof · connection count · the window width the shell declares.</p>
+      <p><strong>Not given</strong>: which failure a failed fetch was — refused, dead and unrouted arrive alike ·
+      a match count · whether a typed status exists in the capture · a persisted window size or split.</p>
+      <table data-c="frame-table">
+        <tr><th>Driver</th><th>why</th><th>…therefore</th><th>on this screen</th></tr>
+        <tr><td colspan="4"><em><strong>Goals</strong> — the ranking is the visual hierarchy</em></td></tr>
+        <tr>
+          <td><strong>know the list is true</strong></td>
+          <td>a stale list answers every question wrongly</td>
+          <td>a broken connection outranks the list</td>
+          <td><span class="ex-ok"><span class="g">✓</span> a band above the rows, read before them</span><span class="ex-no"><span class="g">✗</span> a frozen list that still looks live</span></td>
+        </tr>
+        <tr>
+          <td><strong>find the failure</strong><br><em>inherited</em></td>
+          <td>debugging starts at what broke</td>
+          <td>outcome keeps the only chromatic channel</td>
+          <td><span class="ex-ok"><span class="g">✓</span> the status column is untouched by this pass</span><span class="ex-no"><span class="g">✗</span> a warn band competing with a 500</span></td>
+        </tr>
+        <tr>
+          <td><strong>read a long value uninvited</strong></td>
+          <td>a session cookie is thirty lines at 380px</td>
+          <td>pane width is what the clamp reveals</td>
+          <td><span class="ex-ok"><span class="g">✓</span> three clamped lines reach a cookie's first attribute</span><span class="ex-no"><span class="g">✗</span> three lines that break mid-value</span></td>
+        </tr>
+        <tr>
+          <td><strong>ask for a class, not a code</strong></td>
+          <td>the useful query is 4xx, not 404</td>
+          <td>the control takes both forms, and says so</td>
+          <td><span class="ex-ok"><span class="g">✓</span> the placeholder reads "status — 404 or 4xx"</span><span class="ex-no"><span class="g">✗</span> a numeric keypad hint over a field taking letters</span></td>
+        </tr>
+        <tr>
+          <td><strong>identify the request</strong><br><em>inherited</em></td>
+          <td>a verb and a path name it to its author</td>
+          <td>the path cell keeps width the pane takes</td>
+          <td><span class="ex-ok"><span class="g">✓</span> 308px of path at the window this run declares</span><span class="ex-no"><span class="g">✗</span> 68px of path — nine characters of nothing</span></td>
+        </tr>
+        <tr><td colspan="4"><em><strong>Constraints</strong> — hard boundaries</em></td></tr>
+        <tr>
+          <td><strong>the window is one budget</strong></td>
+          <td>pane and list divide a single width</td>
+          <td>every pane pixel is a path pixel</td>
+          <td><span class="ex-ok"><span class="g">✓</span> a width chosen with the window it needs</span><span class="ex-no"><span class="g">✗</span> a wider pane at the same window</span></td>
+        </tr>
+        <tr>
+          <td><strong>the row's columns are input</strong></td>
+          <td>the epic's non-goal keeps the row grammar</td>
+          <td>612px is a constant, not a variable</td>
+          <td><span class="ex-ok"><span class="g">✓</span> the run measures them and escalates</span><span class="ex-no"><span class="g">✗</span> a pane paid for by narrowing host</span></td>
+        </tr>
+        <tr>
+          <td><strong>a failed fetch names no cause</strong></td>
+          <td>refused, dead and unrouted look alike</td>
+          <td>the words state what is unknown</td>
+          <td><span class="ex-ok"><span class="g">✓</span> "no answer from 127.0.0.1:7421"</span><span class="ex-no"><span class="g">✗</span> "trawler has crashed", which nothing observed</span></td>
+        </tr>
+        <tr>
+          <td><strong>rows are virtualized</strong><br><em>inherited</em></td>
+          <td>thousands of flows at one row height</td>
+          <td>row height is fixed; cells cannot reflow</td>
+          <td><span class="ex-ok"><span class="g">✓</span> DEC-34's escape stands, unre-opened</span><span class="ex-no"><span class="g">✗</span> a band that pushes rows to variable heights</span></td>
+        </tr>
+        <tr><td colspan="4"><em><strong>Qualities</strong> — Tune's yardstick</em></td></tr>
+        <tr>
+          <td><strong>still at rest</strong><br><em>inherited</em></td>
+          <td>traffic arrives while nobody is looking</td>
+          <td>arrival changes content, never chrome</td>
+          <td><span class="ex-ok"><span class="g">✓</span> a new row appears and nothing animates</span><span class="ex-no"><span class="g">✗</span> a connection band that blinks or slides</span></td>
+        </tr>
+        <tr>
+          <td><strong>says what it cannot know</strong></td>
+          <td>silence reads as calm, and here it is not</td>
+          <td>an unknown is stated, never implied</td>
+          <td><span class="ex-ok"><span class="g">✓</span> "the rows below are the last it sent"</span><span class="ex-no"><span class="g">✗</span> one empty list standing for three causes</span></td>
+        </tr>
+      </table>
+      <table data-c="frame-nongoals">
+        <tr><th>Non-goals</th><td>the detail panel's zones (DEC-32) · the row grammar and DEC-34's escape · the
+        API's error body and its wording (W5) · the onboarding phase's header (W7) · a persisted split or window
+        size · sorting, grouping or column configuration</td></tr>
+      </table>
+    </div>
+
+    <h2 id="budget">The arithmetic Q1 turns on</h2>
+    <p>The pane's width reads as taste and is not: the pane and the list divide one window, and the list's cost is
+    fixed in the same file. <code>path = window − pane − 612</code>, where 612 is five fixed columns (520), five
+    <code>gap-3</code> gaps (60) and the row's <code>px-4</code> (32) — <code>FlowList.tsx:9, 15, 135</code>.</p>
+    <table data-c="budget">
+      <tr><th>window</th><th class="num">pane 380<br><em>shipped</em></th><th class="num">pane 440</th><th class="num">pane 520<br><em>chosen</em></th><th class="num">pane 560</th></tr>
+      <tr><td>800 — the declared minimum</td><td class="num win">−192</td><td class="num win">−252</td><td class="num win">−332</td><td class="num win">−372</td></tr>
+      <tr><td>1200 — today's default</td><td class="num">208</td><td class="num">148</td><td class="num win">68</td><td class="num win">28</td></tr>
+      <tr><td>1280</td><td class="num">288</td><td class="num">228</td><td class="num">148</td><td class="num">108</td></tr>
+      <tr><td><strong>1440 — the default this run declares</strong></td><td class="num">448</td><td class="num">388</td><td class="num"><strong>308</strong></td><td class="num">268</td></tr>
+      <tr><td>1680</td><td class="num">688</td><td class="num">628</td><td class="num">548</td><td class="num">508</td></tr>
+    </table>
+    <p>A negative number is not a narrow column — it is the row's fixed tracks overflowing their box. The row region
+    is <code>overflow-auto</code> and the column-label row above it is not, so below that width the labels and the
+    cells they name scroll apart, and <a href="#layout">Layout</a>'s own overflow line ("C has NO horizontal scroll")
+    stops being true. <strong>That threshold is shipped, not introduced here</strong>: at 380 it is
+    <code>992</code>, and the app declares a minimum of 800. Widening the pane raises it to
+    <code>1132</code>. The run states the number and <a href="#blocked-on">escalates the fix</a> rather than
+    paying for the pane by narrowing a column the epic's non-goals put out of scope.</p>
+    <p>What the width buys is on the other side of the same identity. DEC-32 clamps a long header value to three
+    lines with <code>more</code>/<code>less</code> under its name, so the pane's width is not how tall a cookie is —
+    it is <strong>how much of one is legible before the reader has to act</strong>. Value column ≈
+    <code>pane − 116</code> (the Section's <code>px-4</code>, the grid gap, and a <code>set-cookie</code> name
+    column), at ~7.2px per mono character:</p>
+    <table data-c="clamp">
+      <tr><th>pane</th><th class="num">value column</th><th class="num">chars per line</th><th class="num">visible in three clamped lines</th><th>what that reaches</th></tr>
+      <tr><td>380 <em>shipped</em></td><td class="num">264</td><td class="num">36</td><td class="num">~108</td><td>a JWT's header segment; a cookie broken mid-value</td></tr>
+      <tr><td>440</td><td class="num">324</td><td class="num">45</td><td class="num">~135</td><td>60&nbsp;px of path spent for 27 characters</td></tr>
+      <tr><td><strong>520</strong></td><td class="num">404</td><td class="num">56</td><td class="num">~168</td><td>a cookie's value past its first attribute; a JWT into its payload</td></tr>
+      <tr><td>560</td><td class="num">444</td><td class="num">61</td><td class="num">~183</td><td>15 more characters, for 40&nbsp;px more of every path</td></tr>
+    </table>
+
+    <h2 id="layout">2 · Layout</h2>
+    <div data-item="layout" data-c="layout">
+      <pre class="sk">┌──────────────────────────────────────────────────────────────────────────┐
+│ A  header — dot · title · filter · host · method · status · count        │ ← pinned, wraps before it clips
+├──────────────────────────────────────────────────────────────────────────┤
+│ A′ connection band — absent while the API answers                        │ ← pinned under A, full width: it
+├────────────────────────────────────────────────┬─────────────────────────┤   qualifies C and D alike
+│ B  column labels                               │                         │ ← pinned under A′, one line
+├────────────────────────────────────────────────┤  D  detail pane         │
+│ C  flow rows                                   │     520px               │ ← the only vertical scroller
+│      time · method · host · path · status · dur│     (DEC-32 owns its    │
+│      ·                                         │      zones; this run    │
+│      ·                                         │      owns its width)    │
+└────────────────────────────────────────────────┴─────────────────────────┘
+   priority: C is the screen. A′ outranks it when present — a list whose truth is
+   in doubt is read after the doubt. A is standing chrome, B is C's contract,
+   D is absent until a row is selected.
+
+scroll / overflow: A pinned, content-height, wraps to a second line before it
+  clips · A′ pinned, content-height, one Notice; absent while the API answers,
+  and absent when C is empty (the statement moves into C — see the absence
+  table) · B pinned, one line, never scrolls · C the single vertical scroll
+  region, virtualized, capped by the capture ring (owner: the core's ring) ·
+  C has NO horizontal scroll at any window width the shell declares — true at
+  window ≥ 1132 with the pane open, and the shell's declared minimum is the
+  open question this run escalates · D scrolls its own zones per DEC-32, never
+  as a whole, at a fixed 520px (owner: this run).</pre>
+      <p>A′ is the one zone this pass adds, and it spans the full width rather than sitting inside C because what it
+      states is the app's connection, not the list's content — the same failure empties D's fetch. Zone order stays
+      the debugging read order, with the new zone inserted where its precedence puts it: <em>what is it</em> (A),
+      <em>can I believe any of this</em> (A′), <em>what am I reading</em> (B), <em>the evidence</em> (C),
+      <em>the depth</em> (D).</p>
+    </div>
+
+    <h2 id="elements">3 · Elements</h2>
+    <div data-item="elements" data-map data-c="elements">
+      <pre class="sk">shell
+├─ A  header ──── <span data-key="status-dot">StatusDot</span> · title (inline) · <span data-key="field">Field</span> ×2 ◆ · <span data-key="select">Select</span> ×2 ◆ · <span data-key="toned-text">TonedText</span> (count)
+├─ A′ band ────── <span data-key="notice">Notice</span> ◆ (warn) + <span data-key="button">Button</span> ◆ (retry) in its action slot
+├─ B  labels ──── column label row ▣
+├─ C  list ─────── <span data-key="notice">Notice</span> ◆ (three absences) · FlowRow ▣ ×n
+└─ D  detail ──── <span data-key="section">Section</span> · <span data-key="key-value-row">KeyValueRow</span> — DEC-32's zones, at this run's width
+
+▣ column label row = 6 × uppercase-mute label (inline, screen-owned)
+▣ FlowRow = <span data-key="timestamp-text">TimestampText</span> · <span data-key="method-label">MethodLabel</span> · host (inline) · path (inline)
+            · <span data-key="status-pill">StatusPill</span> · <span data-key="duration-text">DurationText</span></pre>
+      <table data-c="elements-table">
+        <tr><th>Component</th><th>Placement · verdict</th><th>Fit</th><th>Shape · States</th></tr>
+        <tr>
+          <td><strong data-key="field">Field</strong> (status)<br>T1</td>
+          <td>A · filter bar<br><span class="v v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">The near-miss was the contract, not the control.</div>
+            <details class="why"><summary>why</summary>
+              <p><strong>The first pass reached this verdict too, and left it resting on the wrong leg.</strong>
+              Its per-key table already ruled "<code>Field</code>, but not a <code>Select</code> either: the useful
+              query is a class (4xx), which neither control expresses" — a verdict about what the
+              <em>API</em> could not serve, which is why it went to that run's blocked-on list as one of three
+              options rather than closing. Read that way, <code>Field</code> survived only because nothing better
+              was expressible; the moment W5 makes <code>4xx</code> expressible, that argument expires and the
+              <code>Select</code> question is open again.</p>
+              <p>So this run re-asks it on the control's own terms, and <code>Field</code> wins on a second,
+              durable leg: a <code>Select</code> can offer only what its caller passes, and the caller can pass only
+              what capture has already seen — the same accumulation <code>hosts</code> uses. But
+              <em>filtering for a 404 before any 404 has arrived is the debugging act</em>: set the filter, then
+              reproduce. A control that cannot express an unobserved value cannot serve this key. The set is not
+              knowable, so <span class="avoid">@avoid</span>'s "a choice among known options" never applies here —
+              and it still will not after W5, which is the part the first pass's reasoning could not promise.</p>
+              <p>Lands in <span class="use">@use</span> "any free-text entry … Pass value + onChange + aria-label;
+              pass width through <code>className</code>". Clears <span class="avoid">@avoid</span> "validating,
+              debouncing, formatting or restricting what is typed" — <strong>and the shipped call site does not</strong>:
+              <code>inputMode="numeric"</code> (<code>App.tsx:232</code>) is a keypad hint over a field that must
+              now accept a letter. It goes. Width moves <code>w-field-sm</code> → <code>w-field</code> (80 → 128px)
+              so the placeholder is not itself truncated; the header wraps before it clips, so the cost is the
+              bar's second line at a narrow window, never a hidden control.</p>
+              <p><strong>What the field accepts:</strong> <code>404</code> (unchanged) or <code>4xx</code> (W5).
+              Anything else is a stated rejection at the list, <a href="#absences">its own absence</a> — never the
+              silent frozen list <code>App.tsx</code> produces today for <code>status=abc</code>.</p></details>
+          </td>
+          <td><pre class="sk">┌────────────────────────┐
+│ status — 404 or 4xx    │
+└────────────────────────┘</pre>Per its TSDoc — rest·empty · rest·filled · hover/focus. No error state, by contract.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="notice">Notice</strong><br>T1</td>
+          <td>A′ and C<br><span class="v v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">Four absences, four sentences, one component — and a failure is one of them.</div>
+            <details class="why"><summary>why</summary>
+              <p><span class="use">@use</span> names both jobs literally: "any zone that has nothing to show and
+              must say which nothing it is" <em>and</em> "any zone whose load failed". The failure case is
+              <code>tone="warn"</code>, whose ⚠ glyph is the text channel <code>colour-plus-text</code> needs, and
+              whose <code>action</code> slot is where retry lives.</p>
+              <p>Clears <span class="avoid">@avoid</span> "a dismissible message" — the band cannot be dismissed; it
+              leaves when the API answers. Clears "wrapping a notice in a card or panel of its own": A′ is a zone
+              with the same bottom hairline A and B carry, not a boxed alert. Clears "a status verdict with a
+              glyph+name+message shape (that is <code>StatusLine</code>)" — the band has no verdict name and no
+              precedence ladder; it is one sentence about one thing.</p></details>
+          </td>
+          <td><pre class="sk">⚠ trawler is not answering
+  no answer from 127.0.0.1:7421 —
+  the rows below are the last it sent
+  [ retry ]</pre>Per its TSDoc — mute bare · mute + detail · warn + ⚠ · any tone + action slot.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="button">Button</strong><br>T1</td>
+          <td>A′ · Notice's action slot<br><span class="v v-reuse">reuse</span></td>
+          <td>
+            <div class="gist"><span class="use">@use</span> names "retry"; fork D4 names what in-flight costs.</div>
+            <details class="why"><summary>why</summary>
+              <p><span class="use">@use</span> "any action that needs a word and is not a copy: <strong>retry</strong>,
+              close, save, submit". It arrives through <code>Notice</code>'s <code>@madeof</code> slot rather than as
+              a sibling, so the screen decides <em>that</em> there is an action and its word, and the component owns
+              its chrome.</p>
+              <p>The <span class="avoid">@avoid</span> line that bites is fork D4: "leaving it enabled while its
+              action is in flight, or disabling it without a progress line beside it (fork D4 — <strong>both halves
+              or neither</strong>)". A retry is a fetch, so the design owes both: the Button is disabled for the whole
+              in-flight window <em>and</em> the band's detail line becomes "trying 127.0.0.1:7421…" while it is
+              awaited. Clears <span class="avoid">@avoid</span> "warn-toning it inside a warn Notice (the message
+              owns the alarm, the button is the way out)" — the retry is <code>tone="body"</code>, the default.</p></details>
+          </td>
+          <td><pre class="sk">[ retry ]     rest
+[ retry ]     disabled, 38%
+              + "trying …" in the line above</pre>Per its TSDoc — rest · hover · focus · active · disabled. No loading state of its own.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="select">Select</strong> ×2<br>T1</td>
+          <td>A · host, method<br><span class="v v-reuse">reuse</span></td>
+          <td>
+            <div class="gist">Landed between the passes; judged here, and it holds for these two keys.</div>
+            <details class="why"><summary>why</summary>
+              <p>Both keys are matched exactly by the API and both sets are enumerable <em>from what the screen
+              already holds</em> — the verbs are closed (<code>HTTP_METHODS</code>), the hosts accumulate as capture
+              sees them. That is the difference from <code>status</code>, and it is the whole reason the same
+              near-miss resolves two ways. Clears <span class="avoid">@avoid</span> "two to four options" at nine
+              verbs, and "multi-select or a clear affordance" via the <code>ANY</code> option the call site supplies
+              (<code>App.tsx:28</code>), which is what the component's own contract prescribes.</p>
+              <p>One line worth naming for W6: <span class="avoid">@avoid</span> "explaining a failed fetch here:
+              stop passing <code>isLoading</code> and render your own <code>Notice</code>". When the API is not
+              answering, the host options are stale — the component must not be asked to say so. A′ says it, once,
+              for every zone. That is the same rule that keeps the list from saying it twice.</p></details>
+          </td>
+          <td><pre class="sk">any host   ▾
+any method ▾</pre>Per its TSDoc — rest · open · filtering · no-match · loading · nothing-selected.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="status-dot">StatusDot</strong><br>T2</td>
+          <td>A · leading<br><span class="v v-reuse">reuse</span> — unchanged</td>
+          <td>
+            <div class="gist">It answers "is this set up", not "is the app hearing back".</div>
+            <details class="why"><summary>why</summary>
+              <p>A tempting move this run <strong>rejects</strong>: making the dot warn when the API stops answering.
+              Its three states are a capture lifecycle — <code>broken</code> is "setup incomplete or capture never
+              proven", and an unreachable core is neither; the proof that capture works remains a true historical
+              fact. Folding transport into the same disc would make one indicator mean two things and leave the user
+              unable to tell a CA that was never trusted from a core that just died.</p>
+              <p><span class="avoid">@avoid</span> "deriving the status from app phase inside the component" is why
+              this is even a screen-level question: <code>dotStatus()</code> owns the mapping (DEC-20), and a screen
+              may not re-decide it. The band is the second indicator, and the two are read together: the dot is the
+              standing answer, A′ is the live one.</p></details>
+          </td>
+          <td><pre class="sk">● Trawler</pre>Per its TSDoc — broken · checking · connected.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="toned-text">TonedText</strong><br>T1</td>
+          <td>A · trailing<br><span class="v v-reuse">reuse</span> — unchanged</td>
+          <td>
+            <div class="gist">The count keeps its number while the list is stale, and A′ says why.</div>
+            <details class="why"><summary>why</summary>
+              <p>The count is true of the rows on screen — it is not a claim about the capture. Blanking it to
+              "—" would invent a second way of saying what A′ already says, and <code>absence-names-itself</code>
+              is about giving each cause <em>one</em> voice, not a chorus. Tone stays <code>muted</code>; warning
+              the count would put a second chromatic channel beside the status column, which the Frame's
+              <em>find the failure</em> goal forbids.</p>
+              <p>Clears <span class="avoid">@avoid</span> "a toned sentence or prose with an action (use
+              <code>Notice</code> — Inter, message, action slot)" — which is the line that decides the whole shape
+              of Q3: the failure needed a sentence and an act, so it went to A′ as a <code>Notice</code> rather than
+              being crammed into the count that sits three pixels away. Also clears "relying on colour alone": the
+              word "flows" is the text channel whatever the tone.</p></details>
+          </td>
+          <td><pre class="sk">214 flows</pre>Per its TSDoc — tone:muted.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="section">Section</strong> · <strong data-key="key-value-row">KeyValueRow</strong><br>T1</td>
+          <td>D · per DEC-32<br><span class="v v-reuse">reuse</span> — width only</td>
+          <td>
+            <div class="gist">This run changes the box, never what is in it.</div>
+            <details class="why"><summary>why</summary>
+              <p>They are here because the pane's <em>width</em> is only observable through them: DEC-32 gave
+              <code>KeyValueRow</code> the three-line clamp, and <a href="#budget">the clamp table</a> is what the
+              width decides. Clears <code>KeyValueRow</code>'s <span class="avoid">@avoid</span> "truncating the
+              value itself — the clamp hides lines, never characters" — widening the pane hides fewer lines and cuts
+              no character, which is the one way to buy legibility here without touching the component.</p>
+              <p><span class="use">@use</span> "collapsible where a collection of long values (cookies, tokens,
+              policies) would otherwise bury its neighbours" — unchanged. Nothing in DEC-32's zoning is re-opened.</p></details>
+          </td>
+          <td><pre class="sk">set-cookie  sid=aG9sZH…; Path=/;
+more        Secure; SameSite=Lax…</pre>Per its TSDoc — rest · hover/focus/confirming · collapsed · expanded.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="timestamp-text">TimestampText</strong><br>T1</td>
+          <td>C · cell 1<br><span class="v v-reuse">reuse</span> — unchanged</td>
+          <td><div class="gist">Its <span class="use">@use</span> names this cell; absolute is the default.</div>
+            <details class="why"><summary>why</summary><p>Judged in the first pass against
+            <span class="avoid">@avoid</span> "relative as a list-column default"; nothing in this pass touches the
+            cell, and the run re-states the verdict rather than letting an unmentioned component read as an
+            oversight.</p></details></td>
+          <td><pre class="sk">14:22:07</pre>Per its TSDoc — S1 same-day · S2 cross-day · S4 em-dash.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="method-label">MethodLabel</strong><br>T2</td>
+          <td>C · cell 2<br><span class="v v-reuse">reuse</span> — unchanged</td>
+          <td><div class="gist">Owns verb→tone; <code>min-w-verb</code> is why the cell never pushes.</div>
+            <details class="why"><summary>why</summary><p>Unchanged from the first pass, and the reason A′ is a
+            <em>zone</em>: its tone is the second chromatic channel on the row and the band's warn would be a third.
+            Clears <span class="avoid">@avoid</span> "per-call-site verb styling — the mapping lives here; every
+            tone is a closed-palette token, never an inline tint (DEC-17)", which a per-row staleness mark would
+            have broken outright.</p></details></td>
+          <td><pre class="sk">GET   POST  DELETE</pre>Per its TSDoc — five toned verbs + ink-body fallback.</td>
+        </tr>
+        <tr>
+          <td><strong data-key="status-pill">StatusPill</strong><br>T2</td>
+          <td>C · cell 5<br><span class="v v-reuse">reuse</span> — unchanged</td>
+          <td><div class="gist">Owns status→tone and the reason phrase.</div>
+            <details class="why"><summary>why</summary><p>The class filter narrows <em>which</em> pills are on
+            screen and changes nothing about them: <span class="avoid">@avoid</span> "pre-resolving tone or formatting at
+            the call site" still holds, and the design passes the raw status exactly as before. A class query is a list
+            question, not a cell question.</p></details></td>
+          <td><pre class="sk">200   404   …</pre>Per its TSDoc — ok · warn · muted, null → "…".</td>
+        </tr>
+        <tr>
+          <td><strong data-key="duration-text">DurationText</strong><br>T1</td>
+          <td>C · cell 6<br><span class="v v-reuse">reuse</span> — unchanged</td>
+          <td><div class="gist">Pending holds the column so nothing shifts when it resolves.</div>
+            <details class="why"><summary>why</summary><p>Unchanged. Clears <span class="avoid">@avoid</span> "a
+            live-ticking counter while in-flight", which the <em>still at rest</em> quality wants — and which the
+            band inherits: it appears and holds, it does not pulse.</p></details></td>
+          <td><pre class="sk">  84 ms
+ 1.2 s</pre>Per its TSDoc — fast · slow · pending.</td>
+        </tr>
+        <tr>
+          <td><strong>FlowRow</strong><br>T3</td>
+          <td>C · repeating<br><span class="v v-local">build local</span> — unchanged</td>
+          <td><div class="gist">A screen's list row is T3; reuse waived by the tier model.</div>
+            <details class="why"><summary>why</summary><p>The grid, the fixed 30px height, the selection wash and
+            the listbox behaviour are all the first pass's and all stand. The only thing this pass changes about the
+            row is how much width its <code>1fr</code> cell is left — which is <a href="#budget">the budget
+            table</a>, not a row decision.</p></details></td>
+          <td><pre class="sk">14:22:07 GET  api.x  /v1/o…  200  84 ms</pre>rest · hover · selected · focus.</td>
+        </tr>
+        <tr>
+          <td><strong>host</strong> · <strong>path</strong><br>T0</td>
+          <td>C · cells 3–4<br><span class="v v-local">inline</span> — <a href="#payload-cell">Q4</a></td>
+          <td><div class="gist">Still screen-owned: the second sighting did not arrive.</div>
+            <details class="why"><summary>why</summary><p>DEC-34 left this cell a near-miss "awaiting its second call
+            site". <a href="#payload-cell">The criterion and the candidates are below</a> — the one the first pass
+            named has since shipped and answered no.</p></details></td>
+          <td><pre class="sk">api.example.com
+/v1/orders?id=4</pre>rest only — inert text.</td>
+        </tr>
+        <tr>
+          <td><strong>column labels</strong> · <strong>title</strong><br>T0</td>
+          <td>B · six · A · after the dot<br><span class="v v-local">inline</span> — unchanged</td>
+          <td><div class="gist">A token pattern and a wordmark; neither is vocabulary.</div>
+            <details class="why"><summary>why</summary><p><code>uppercase-mute-labels</code> binds the label
+            pattern as a token set checked on the built surface, and the serif wordmark has one call site and no
+            states. Both verdicts are the first pass's, restated because this pass re-zones the region above
+            them.</p></details></td>
+          <td><pre class="sk">TIME  METHOD  HOST     Trawler</pre>rest only.</td>
+        </tr>
+      </table>
+      <p><strong>T4 break-down:</strong> shell (T4 composition) → header row (T3) · <strong>connection band
+      (T3, new)</strong> · column label row (T3) · list region (T3) · <code>FlowRow</code> (T3) · detail pane (T4,
+      DEC-32). The T4 itself is <code>Layout.tsx</code> — flex zoning and nothing else, plus one conditional zone.</p>
+      <p><strong>Wire markup:</strong> <code>data-wire="collection"</code> <code>data-order="wire"</code> on the row
+      region — flows render in the order <code>/flows</code> returns them, and a status class narrows that list
+      without reordering it. <code>data-wire</code> on each payload cell: <code>started_at</code>,
+      <code>method</code>, <code>host</code>, <code>path</code>, <code>status</code>, <code>duration_ms</code>. A′
+      renders no payload — it is a sentence about the transport — and the header's chrome carries
+      <code>data-wire="none"</code>.</p>
+      <p><strong>Proposals:</strong> one, and it is a word rather than a component — <em>not answering</em>, the
+      lexicon's missing term for a core that received a request and returned nothing. <em>See
+      <a href="#proposals">the proposals list</a>.</em></p>
+    </div>
+
+    <h3 id="pane-width">Q1 — the pane's width, and the window that pays for it</h3>
+    <table data-c="pane-width">
+      <tr><th>Candidate</th><th>Verdict</th><th>Why</th></tr>
+      <tr>
+        <td><strong>520px fixed, with the app's default window moved 1200 → 1440</strong></td>
+        <td><strong class="v-reuse">chosen</strong></td>
+        <td>Both halves of the identity improve at the window the app actually opens at: the clamp shows ~168
+        characters instead of ~108 (a cookie past its first attribute, a JWT into its payload) and the path cell
+        goes 208 → 308px. The vocabulary does not grow — <code>pane</code> is one token whose value changes, which
+        is what DEC-17 asks for instead of a literal at the call site. It lands as
+        <a href="#proposals">two configuration lines in W6</a>: the token, and the window that pays for it.</td>
+      </tr>
+      <tr>
+        <td>380px — keep it</td>
+        <td class="v-propose">rejected</td>
+        <td>Three clamped lines reach ~108 characters, which breaks a session cookie mid-value and shows a JWT's
+        header and nothing else. DEC-32 exists to bound the header zone's cost; at this width it bounds it to
+        something that cannot be read, and every long value becomes a two-act read.</td>
+      </tr>
+      <tr>
+        <td>440px</td>
+        <td class="v-propose">rejected</td>
+        <td>Buys 27 characters for 60px of every path cell — and by the marginal ratio it is the
+        <em>best</em> step on the table (2.2px per character against 520→560's 2.7), which is precisely why the
+        ratio is not the argument. What decides it is where the three lines <em>stop</em>: at ~135 characters they
+        are still inside the opaque part of a session value. The width is spent and the act is not avoided — the
+        smallest change that is still a change.</td>
+      </tr>
+      <tr>
+        <td>560px and wider</td>
+        <td class="v-propose">rejected</td>
+        <td>15 more characters for another 40px of path. Past ~56 characters a line, the clamp's three lines already
+        carry a whole cookie value; the marginal width belongs to the zone the Frame ranks higher.</td>
+      </tr>
+      <tr>
+        <td>a bounded share — <code>min(40%, 520px)</code></td>
+        <td class="v-propose">rejected</td>
+        <td>Measured, not assumed: at 1280 it gives 512px (8px from the fixed choice) and at 1440 it is capped at
+        520 — identical. It differs only below ~1300, where it does not fix the real problem either (at 800 it still
+        leaves the list 480px against 612px of fixed tracks). Complexity with no behaviour behind it.</td>
+      </tr>
+      <tr>
+        <td>a draggable split</td>
+        <td class="v-propose">rejected</td>
+        <td>The epic's own reasoning, and this run found no evidence against it: a stored preference, a drag
+        affordance and a minimum on both sides are three things the shell does not have, for a gain nothing here
+        showed was needed. A fixed width that is <em>chosen</em> answers the complaint that 380 was not.</td>
+      </tr>
+      <tr>
+        <td>raise the minimum window to 1132+</td>
+        <td class="v-propose">rejected</td>
+        <td>It would make the arithmetic true by refusing a window the list alone uses perfectly well today
+        (at 800 with no pane, the path cell is 188px). Narrowing a shipped capability to make a design's numbers
+        work is what DEC-13 forbids. <a href="#blocked-on">Escalated instead.</a></td>
+      </tr>
+    </table>
+
+    <h3 id="absences">Every way the shell has nothing — or nothing true — to show</h3>
+    <table data-c="absences">
+      <tr><th>Cause</th><th>Zone</th><th>Wording</th><th>Distinct because</th></tr>
+      <tr>
+        <td>nothing captured yet<br><em>no filter active</em></td><td>C</td>
+        <td>"no flows yet" <span style="color:var(--muted)">· detail:</span> "send traffic through the proxy —
+        127.0.0.1:<strong>7420</strong>"</td>
+        <td>Inherited, unchanged. The user can act, so the wording names the act — and names the
+        <strong>proxy</strong> port, which is what tells it apart from the row below.</td>
+      </tr>
+      <tr>
+        <td>the filter matches nothing<br><em>filter active</em></td><td>C</td>
+        <td>"no flows match this filter" <span style="color:var(--muted)">· detail:</span> "clear a field to widen
+        the search"</td>
+        <td>Inherited, unchanged. Traffic exists and the query excludes it; telling the user to send traffic they
+        have already sent is the failure this sentence prevents.</td>
+      </tr>
+      <tr>
+        <td><strong>the API is not answering</strong><br><em>rows on screen</em></td><td>A′</td>
+        <td>⚠ "trawler is not answering" <span style="color:var(--muted)">· detail:</span> "no answer from
+        127.0.0.1:<strong>7421</strong> — the rows below are the last it sent" <span style="color:var(--muted)">·
+        action:</span> retry</td>
+        <td><strong>New.</strong> A different address (the API, not the proxy), a different act (retry, not send),
+        and a different subject: the rows are not absent, they are unverified. The first pass named this absence and
+        left it undesigned because the data layer could not enter the state; W6 gives it one.</td>
+      </tr>
+      <tr>
+        <td><strong>the API is not answering</strong><br><em>no rows</em></td><td>C</td>
+        <td>the same sentence, in the row region</td>
+        <td><strong>The precedence rule.</strong> It outranks both absences above: an empty list means nothing when
+        the list could not be fetched, and "no flows yet" would tell the user to send traffic that could not be
+        shown either way. The statement <em>sits immediately above what it is about</em> — over the stale rows when
+        there are rows, in their place when there are none — so it is never said twice and the region is never
+        blank.</td>
+      </tr>
+      <tr>
+        <td><strong>the filter is not a status</strong></td><td>C</td>
+        <td>"4xz is not a status" <span style="color:var(--muted)">· detail:</span> "type a code (404) or a class
+        (4xx)"</td>
+        <td><strong>New</strong>, and it is a rejection rather than a failure: the API answered, and said no. Today
+        <code>status=abc</code> is a 400 that <code>useFlows</code> discards, so the list silently freezes — the one
+        state on this screen where the user's own keystroke causes an unexplained stall.</td>
+      </tr>
+      <tr>
+        <td>the ring dropped the selected flow</td><td>D</td>
+        <td>— <em>not this run's</em></td>
+        <td>Named to be dismissed: it belongs to the detail pane, whose flow id no longer resolves, and the
+        lexicon's "no longer captured" stays reserved for it.</td>
+      </tr>
+    </table>
+
+    <h3 id="payload-cell">Q4 — has the payload cell had its second sighting?</h3>
+    <p>DEC-34 left the cell a near-miss "awaiting its second call site". The question is only answerable against a
+    criterion, so the run states one first: <strong>the cell is a mono, inert wire value whose length has no bound,
+    in a box whose height cannot grow, cut visibly with the whole value reachable elsewhere.</strong> All four
+    clauses matter — the third is what makes it DEC-34's cell rather than an ordinary span, and the fourth is what
+    the escape's conditions are about.</p>
+    <table data-c="payload-cell">
+      <tr><th>Candidate at this tip</th><th>mono</th><th>inert</th><th>unbounded</th><th>cut</th><th>Verdict</th></tr>
+      <tr><td><code>FlowDetail.tsx:112</code> — the protocol-version line, the sighting the first pass predicted</td>
+        <td>✓</td><td>✓</td><td class="win">✗</td><td class="win">✗</td>
+        <td><strong>no</strong> — <code>HTTP/1.1 → HTTP/2</code> has a maximum width and is never cut. A bounded
+        mono span is not this cell; it is a span.</td></tr>
+      <tr><td><code>FlowDetail.tsx:110</code> — the URI, the identity bar's own long value</td>
+        <td>✓</td><td class="win">✗</td><td>✓</td><td class="win">✗</td>
+        <td><strong>no</strong>, and instructively: the identity bar wanted <code>CopyText</code> — it wraps with
+        <code>break-all</code>, copies on click and is never cut. The pane has height to spend, so it never needed
+        the escape. <em>The predicted second sighting arrived and answered no.</em></td></tr>
+      <tr><td><code>KeyValueRow</code>'s name cell</td><td>✓</td><td>✓</td><td class="win">✗</td><td class="win">✗</td>
+        <td><strong>no</strong> — <code>nowrap</code> on a header name, inside a component that owns it. Nothing for
+        a screen to reuse.</td></tr>
+      <tr><td>this run's own additions (A′)</td><td class="win">✗</td><td class="win">✗</td><td class="win">✗</td><td class="win">✗</td>
+        <td><strong>no</strong> — a sentence and a button. The band renders no payload at all.</td></tr>
+    </table>
+    <p><strong>Verdict: the sighting has not arrived, and the cell stays screen-owned in <code>FlowList</code>.</strong>
+    This is an answer, not a deferral — the vocabulary is not short of anything, because no second surface in the app
+    puts an unbounded wire value in a box that cannot grow, and this epic ships no second list. The criterion above is
+    the test the next run applies instead of a judgement call; the near-miss row stays in
+    <a href="#proposals">proposals</a> with it attached.</p>
+
+    <h2 id="interaction">4 · Interaction</h2>
+    <div data-item="interaction" data-c="interaction">
+      <table data-c="interaction-table">
+        <tr><th>Use case</th><th>Goal</th><th>User does</th><th>Screen responds</th><th>Keyboard path</th></tr>
+        <tr>
+          <td>narrow to a class</td>
+          <td>ask for a class</td>
+          <td>types <code>4xx</code> in the status field</td>
+          <td><div class="gist">Rows replace after 150 ms; only 4xx survives.</div><details class="why"><summary>zone → delta</summary><pre class="sk">C → rows replaced after 150 ms (server-side, W5)
+C → empty → "no flows match this filter"
+A → count follows the filtered list
+A → the other three controls UNCHANGED ← nothing is disabled mid-typing
+A′ → UNCHANGED ← a narrowed list is not a broken one</pre></details></td>
+          <td>Tab across the bar; typing filters — no commit key, per the first pass's convention</td>
+        </tr>
+        <tr>
+          <td>mistype the status</td>
+          <td>ask for a class</td>
+          <td>types <code>4xz</code></td>
+          <td><div class="gist">The list says the query is wrong, not that nothing matched.</div><details class="why"><summary>zone → delta</summary><pre class="sk">C → rows replaced by "4xz is not a status"
+A → count reads 0 flows ← true of what is shown
+A′ → UNCHANGED ← the API answered; it said no
+A → the field keeps the text ← nothing is corrected for the user</pre></details></td>
+          <td>none of its own — the correction is more typing</td>
+        </tr>
+        <tr>
+          <td>the API stops answering</td>
+          <td>know the list is true</td>
+          <td>nothing — the core dies under the window</td>
+          <td><div class="gist">A′ appears above the rows; the rows stay exactly as they are.</div><details class="why"><summary>zone → delta</summary><pre class="sk">A′ → appears: warn Notice + retry
+C → rows UNCHANGED ← they were true when they arrived; discarding
+     evidence on a transient failure is the worse error
+A → count UNCHANGED ← it counts the rows on screen, not the capture
+A → dot UNCHANGED ← capture health is not transport health
+D → its own load failure is covered by A′, said once</pre></details></td>
+          <td>none — no user act to bind</td>
+        </tr>
+        <tr>
+          <td>the API stops answering, with nothing captured</td>
+          <td>know the list is true</td>
+          <td>nothing</td>
+          <td><div class="gist">The statement moves into the empty region; A′ stays away.</div><details class="why"><summary>zone → delta</summary><pre class="sk">C → "trawler is not answering" in place of "no flows yet"
+A′ → ABSENT ← the statement sits above what it is about, and
+     with no rows there is nothing above to qualify
+B → UNCHANGED ← the contract still describes the columns</pre></details></td>
+          <td>Tab reaches retry wherever it renders</td>
+        </tr>
+        <tr>
+          <td>retry the connection</td>
+          <td>know the list is true</td>
+          <td>clicks retry</td>
+          <td><div class="gist">Both halves of fork D4, then the band leaves and focus lands.</div><details class="why"><summary>zone → delta</summary><pre class="sk">A′ → button disabled AND detail becomes "trying 127.0.0.1:7421…"
+     ← fork D4: both halves or neither
+A′ → on success: the band leaves; focus moves to the list region
+     ← focus-returns-to-origin's spirit: a surface that removes
+       itself may not leave focus on &lt;body&gt;
+A′ → on failure: the band stays, the button re-enables
+C  → rows replaced by the fresh list</pre></details></td>
+          <td>Tab to retry, Enter or Space — the rulebook's "activate the focused element", via Button</td>
+        </tr>
+        <tr>
+          <td>inspect one flow</td>
+          <td>find the failure</td>
+          <td>clicks a row</td>
+          <td><div class="gist">D opens at 520px; the path cell absorbs all of it.</div><details class="why"><summary>zone → delta</summary><pre class="sk">D → opens at 520px with that flow
+C → row takes the selected wash
+C → the five fixed columns hold; path loses 520px ← the budget,
+     stated: 308px of path at the declared window
+A, A′, B → UNCHANGED</pre></details></td>
+          <td>↑ / ↓ move selection without wrap · Enter or Space opens D — inherited, unchanged</td>
+        </tr>
+        <tr>
+          <td>read a long header value</td>
+          <td>read a long value uninvited</td>
+          <td>looks at the pane; then clicks <code>more</code></td>
+          <td><div class="gist">Three lines carry ~168 characters before any act is needed.</div><details class="why"><summary>zone → delta</summary><pre class="sk">D → the clamp shows three lines of ~56 characters
+D → "more" expands in place, per DEC-32
+C, A, A′ → UNCHANGED ← the pane never re-lays the screen out</pre></details></td>
+          <td>KeyValueRow's own — the more/less toggle is a Button</td>
+        </tr>
+        <tr>
+          <td>watch traffic arrive</td>
+          <td>find the failure <em>(inherited)</em></td>
+          <td>nothing — leaves the screen open</td>
+          <td><div class="gist">Rows append; the read position never moves.</div><details class="why"><summary>zone → delta</summary><pre class="sk">C → a row appends in wire order
+C → scroll position UNCHANGED
+A → count increments
+A′ → UNCHANGED ← an answering API says nothing at all</pre></details></td>
+          <td>none — no user act to bind</td>
+        </tr>
+      </table>
+      <p><strong>What this stage found.</strong> Two things, both from the keyboard column. Retry is the shell's
+      first action that <em>removes its own surface</em>, so the focus it leaves behind is a design decision and not
+      the component's — <code>Button</code> returns focus to nothing when it stops existing. And the in-flight
+      window is not a detail: <code>Button</code>'s fork D4 makes "disabled" and "a progress line" a single
+      indivisible obligation, so a retry that merely greys out would be a contract violation, not a rough edge.</p>
+    </div>
+
+    <h2 id="mockup">5 · Draft mockup</h2>
+    <div data-item="mockup" data-c="mockup">
+      <p>Assembled from the real collection — every <em>reuse</em> above is mounted from <code>window.Trawler</code>,
+      never drawn. Screen-owned: the zoning, the grid, the row, the label row, the band's box. Two toggles, for the
+      two states the <a href="#interaction">Interaction table</a> names that are not a pointer act: the API stops
+      answering, and the capture is empty.</p>
+      <p><strong>The pane is mounted at <code>w-pane</code> — the token, not a number</strong>, so it renders at
+      whatever the vocabulary currently says: 380px, the width this run <a href="#pane-width">rejects</a>. That is
+      not a compromise, it is the closed vocabulary working: a magnitude the config does not hold cannot be written
+      into a doc's own CSS (DEC-17), so a chosen width is <a href="#proposals">proposed</a> and lands in the
+      config, and this archived run then renders the decision without being edited. What is on screen below is
+      therefore the <em>before</em> — the case the clamp comparison argues against.</p>
+      <div class="app">
+        <div class="a-mock" id="mock">
+          <div class="a-head" id="m-head" data-wire="none"></div>
+          <div class="a-band" id="m-band"></div>
+          <div class="a-body">
+            <div class="a-main">
+              <div class="a-hrow" id="m-labels"></div>
+              <div class="a-scroll"><div id="m-rows" data-wire="collection" data-order="wire"></div></div>
+              <div class="a-empty" id="m-empty"></div>
+            </div>
+            <div class="a-side w-pane" id="m-pane"></div>
+          </div>
+        </div>
+      </div>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="unreachable"
+        data-label-off="▶ stop the API answering" data-label-on="◀ let the API answer">▶ stop the API answering</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="empty"
+        data-label-off="▶ empty the capture" data-label-on="◀ refill the capture">▶ empty the capture</button>
+      <script type="text/babel">
+        const { React, createRoot, StatusDot, Field, Select, TonedText, Notice, Button,
+                TimestampText, MethodLabel, StatusPill, DurationText, Section, KeyValueRow } = window.Trawler;
+        const mount = (id, node) => createRoot(document.getElementById(id)).render(node);
+        const COLS = "110px 70px 180px 1fr 70px 90px";
+        const LABELS = ["Time", "Method", "Host", "Path", "Status", "Duration"];
+
+        /* Same-day by construction: a live list shows today's flows, so TimestampText
+           renders S1 rather than ageing overnight into the cross-day prefix. */
+        const NOW = new Date();
+        const at = (s) => { const d = new Date(NOW); d.setHours(14, 22, s, 0); return d.toISOString(); };
+        const FLOWS = [
+          { id: "1", at: at(7), m: "GET", h: "api.example.com", p: "/v1/orders?id=4821", s: 200, d: 84 },
+          { id: "2", at: at(9), m: "POST", h: "api.example.com", p: "/v1/orders", s: 201, d: 1240 },
+          { id: "3", at: at(11), m: "GET", h: "cdn.example.com", p: "/assets/app.a91f3c.js", s: 304, d: 12 },
+          { id: "4", at: at(14), m: "DELETE", h: "api.example.com", p: "/v1/sessions/self", s: 403, d: 96 },
+          { id: "5", at: at(16), m: "PATCH", h: "api.example.com", p: "/v1/orders/4821?fields=status,total,customer", s: 500, d: 2310 },
+          { id: "6", at: at(18), m: "GET", h: "api.example.com", p: "/v1/orders/4821", s: null, d: null },
+        ];
+        const HOSTS = [
+          { id: "any", label: "any host" },
+          { id: "api.example.com", label: "api.example.com" },
+          { id: "cdn.example.com", label: "cdn.example.com" },
+        ];
+        const METHODS = [
+          { id: "any", label: "any method" },
+          ...["GET", "POST", "PUT", "PATCH", "DELETE"].map((m) => ({ id: m, label: m, element: <MethodLabel method={m} /> })),
+        ];
+
+        const COOKIE = "sid=aG9sZC1teS1iZWVyLXRoaXMtaXMtYS12ZXJ5LWxvbmctc2Vzc2lvbi12YWx1ZQ; Path=/; Domain=.example.com; Expires=Wed, 09 Sep 2026 07:28:00 GMT; Max-Age=259200; Secure; HttpOnly; SameSite=Lax";
+        const CSP = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.example.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://api.example.com";
+
+        mount("m-head", <>
+          <StatusDot status="connected" onClick={() => {}} />
+          <span className="a-title">Trawler</span>
+          <Field aria-label="filter" placeholder="filter — free text" className="min-w-field flex-1" value="" onChange={() => {}} />
+          <Select label="host" placeholder="any host" className="w-field-lg" options={HOSTS} value="any" onChange={() => {}} />
+          <Select label="method" placeholder="any method" className="w-field-lg" searchable={false} options={METHODS} value="any" onChange={() => {}} />
+          <Field aria-label="status" placeholder="status — 404 or 4xx" className="w-field" value="" onChange={() => {}} />
+          <TonedText tone="muted" className="a-count">
+            <span className="a-c-full">{FLOWS.length} flows</span><span className="a-c-none">0 flows</span>
+          </TonedText>
+        </>);
+
+        const notAnswering = (trailing) => (
+          <Notice tone="warn"
+            detail={`no answer from 127.0.0.1:7421 — ${trailing}`}
+            action={<Button onClick={() => {}}>retry</Button>}>
+            trawler is not answering
+          </Notice>
+        );
+
+        mount("m-band", notAnswering("the rows below are the last it sent"));
+
+        document.getElementById("m-labels").style.gridTemplateColumns = COLS;
+        mount("m-labels", <>
+          {LABELS.map((l, i) => (
+            <span key={l} className={i === 4 ? "text-center" : i === 5 ? "text-right" : undefined}>{l}</span>
+          ))}
+        </>);
+
+        mount("m-rows", <>
+          {FLOWS.map((f) => (
+            <div key={f.id} className={`a-row${f.id === "4" ? " sel" : ""}`}
+                 style={{ gridTemplateColumns: COLS }} title={f.p}>
+              <TimestampText timestamp={f.at} />
+              <MethodLabel method={f.m} />
+              <span data-wire="host" className="truncate font-mono text-body text-ink-body">{f.h}</span>
+              <span data-wire="path" className="truncate font-mono text-body text-ink-body">{f.p}</span>
+              <span className="text-center"><StatusPill status={f.s} /></span>
+              <span className="text-right"><DurationText value={f.d} /></span>
+            </div>
+          ))}
+        </>);
+
+        mount("m-empty", <>
+          <span className="a-e-quiet">
+            <Notice detail="send traffic through the proxy — 127.0.0.1:7420">no flows yet</Notice>
+          </span>
+          <span className="a-e-down">{notAnswering("nothing has reached the window")}</span>
+        </>);
+
+        mount("m-pane", <Section title="Headers · 2">
+          <dl className="a-kv" data-wire="collection" data-order="wire">
+            <KeyValueRow name="set-cookie" value={COOKIE} collapsible />
+            <KeyValueRow name="content-security-policy" value={CSP} collapsible />
+          </dl>
+        </Section>);
+      </script>
+      <p><strong>What the assembly shows that the tables could not.</strong> The clamped <code>set-cookie</code>
+      at the shipped 380px stops inside the opaque session value — three lines that answer nothing, which is
+      <a href="#tune">Tune T1</a>'s whole argument standing there in the live component rather than in a table.
+      The connection toggle shows the band taking the top of the screen while the six rows below it stay exactly as
+      they were, which is the call the design had to make and the one a reader can disagree with on sight. Toggling
+      <em>both</em> shows the precedence rule: the band goes, and its sentence stands where "no flows yet" would
+      have been.</p>
+      <p><em>Stubbed:</em> live arrival, the SSE stream, server-side filtering, real virtualization (six rows stand
+      in for the windowed list), the retry fetch and its in-flight window, and the detail pane's other zones —
+      <code>FlowDetail</code> is a screen, not a collection entry, so the pane mounts the two components whose
+      behaviour the width decision is actually about.</p>
+    </div>
+
+    <h2 id="tune">6 · Tune</h2>
+    <table data-item="tune" data-c="tune">
+      <tr><th>Call</th><th>Before</th><th>After</th><th>Slug</th></tr>
+      <tr>
+        <td><strong>T1 · the clamp had nothing to clamp to</strong></td>
+        <td><pre class="tb">set-cookie  sid=aG9sZC1teS1iZWVy
+more        LXRoaXMtaXMtYS12ZXJ5
+            LWxvbmctc2Vzc2lvbi12
+            ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+      three lines, still inside
+      the opaque value</pre></td>
+        <td><pre class="tb">set-cookie  sid=aG9sZC1teS1iZWVyLXRoaXMtaXMtYS12
+more        ZXJ5LWxvbmctc2Vzc2lvbi12YWx1ZQ; Path=/;
+            Domain=.example.com; Expires=Wed, 09 Sep
+            ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+      three lines reach the attributes</pre></td>
+        <td><code>progressive-disclosure</code></td>
+      </tr>
+      <tr>
+        <td><strong>T2 · the status field lied about its input</strong></td>
+        <td><pre class="tb">┌──────────┐
+│ status   │  inputMode="numeric"
+└──────────┘  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+   a keypad over a field that
+   must accept "4xx"</pre></td>
+        <td><pre class="tb">┌────────────────────────┐
+│ status — 404 or 4xx    │  no inputMode
+└────────────────────────┘
+   the placeholder is the
+   whole contract</pre></td>
+        <td><code>labels-add-context</code></td>
+      </tr>
+      <tr>
+        <td><strong>T3 · a dead core looked like a quiet proxy</strong></td>
+        <td><pre class="tb">● Trawler  [filter][host][meth][st]  214 flows
+──────────────────────────────────────────────
+TIME     METHOD HOST    PATH     STATUS  DUR
+14:22:07 GET    api.x   /v1/o…   200     84 ms
+   ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+   unchanged for ten minutes, and
+   nothing on screen says why</pre></td>
+        <td><pre class="tb">● Trawler  [filter][host][meth][st]  214 flows
+──────────────────────────────────────────────
+⚠ trawler is not answering
+  no answer from 127.0.0.1:7421 — the rows
+  below are the last it sent      [ retry ]
+──────────────────────────────────────────────
+TIME     METHOD HOST    PATH     STATUS  DUR</pre></td>
+        <td><code>absence-names-itself</code></td>
+      </tr>
+      <tr>
+        <td><strong>T4 · two statements for one cause</strong></td>
+        <td><pre class="tb">⚠ trawler is not answering
+──────────────────────────────
+      no flows yet
+   send traffic through the
+   proxy — 127.0.0.1:7420
+   ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+   advice that cannot work</pre></td>
+        <td><pre class="tb">──────────────────────────────
+   ⚠ trawler is not answering
+     no answer from
+     127.0.0.1:7421
+     [ retry ]
+   ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+   one cause, one sentence,
+   where the rows would be</pre></td>
+        <td><code>empty-states-orient</code></td>
+      </tr>
+      <tr>
+        <td><strong>T5 · retry left focus nowhere</strong></td>
+        <td><pre class="tb">[ retry ] ──click──▶ band unmounts
+    ↑
+  focus was here          focus: &lt;body&gt;</pre></td>
+        <td><pre class="tb">[ retry ] ──click──▶ [ retry ] disabled
+                     "trying 127.0.0.1:7421…"
+                        │ success
+                        ▼
+                     focus → the list region</pre></td>
+        <td><code>focus-returns-to-origin</code></td>
+      </tr>
+      <details class="why"><summary>why — and which loop back to Layout</summary>
+        <ul>
+          <li><strong>T1</strong> — the run's central call, and the one that turned a taste question into an
+          arithmetic one. DEC-32 clamps to three lines precisely so the header zone cannot bury the body; at 380px
+          those three lines carry ~108 characters, which for the values that clamp at all (cookies, tokens,
+          policies) is the part with no information in it. The width is the clamp's resolution.
+          <strong>Loops back to Layout: yes</strong> — zone D's declared width changed, and the overflow line
+          changed with it.</li>
+          <li><strong>T2</strong> — found by reading the call site rather than the design: the field carries a
+          numeric keypad hint it can no longer honour. Small, and the kind of thing that survives three passes
+          because nobody owns it. <strong>No.</strong></li>
+          <li><strong>T3</strong> — the finding the first pass left on its blocked-on list, now buildable because
+          W6 gives <code>useFlows</code> a failure to report. The choice worth naming is that the rows
+          <em>stay</em>: they were true when they arrived, and a debugger who just lost the core still wants the
+          last thing it saw. <strong>Yes</strong> — A′ is a new zone.</li>
+          <li><strong>T4</strong> — caught in the assembly, not in the tables: with both toggles on, the screen said
+          the API was unreachable <em>and</em> told the user to send traffic through the proxy. Two sentences, one
+          of them impossible to act on. The precedence rule came out of seeing it. <strong>No</strong> — same
+          zones, different occupancy.</li>
+          <li><strong>T5</strong> — from the Interaction table's keyboard column, which is what that column is for.
+          A surface that removes itself is not covered by any component's contract, so the screen owes the
+          answer. <strong>No.</strong></li>
+          <li>One call loops back to Layout, and it is T1 by way of T3: the width changed a zone's declaration, and
+          the band added a zone. Both are recorded in <a href="#layout">the sketch and its overflow line</a> rather
+          than left as prose.</li>
+        </ul>
+      </details>
+    </table>
+
+    <h2 id="receipt">Receipt</h2>
+    <pre data-item="receipt" data-c="receipt">rulebook: 849cc8e0ff423345004cccf79715fc489abc9dbf
+soft:
+  visual-weight-follows-goals: "satisfied — the new top goal owns the new top zone: A' sits above the rows it qualifies, and nothing else moved above the status column"
+  grouping-by-relatedness: "satisfied — A' is one zone with one hairline, matching A and B's rhythm; it spans the full width because the failure it names is D's too"
+  ordering-by-priority: "satisfied — zone order is what-is-it, can-I-believe-it, what-am-I-reading, the evidence, the depth"
+  progressive-disclosure: "satisfied — Tune T1: the pane's width is how much of a clamped value is legible before the one act DEC-32 designed"
+  data-ink-first: "satisfied — A' adds one hairline and the glyph Notice already owns; no badge, no panel, no second indicator beside the dot"
+  generous-targets: "satisfied — retry takes Button's non-overridable hit floor, which is where the inheritance actually lives; the 30px row is the first pass's screen-owned target, restated and unmoved"
+  motion-informs: "satisfied — nothing animates; the only transience is the in-flight line fork D4 requires, and it names what is awaited"
+  empty-states-orient: "satisfied — Tune T4: five absences, each naming what will appear and the act that helps, with a precedence rule so no two are on screen at once"
+  familiar-idioms: "satisfied — a connection band above a log table is the devtools idiom, and a typed status pattern is how that genre filters by code"
+  display-equals-payload: "violated-inherited — host and path stay truncated views under DEC-34's escape, unchanged by this pass; the count is the payload of the rows shown, and A' says why those rows are all there is"
+  labels-add-context: "satisfied — Tune T2: the placeholder gains only the form it accepts; the band names the address (7421) the proxy sentence does not"
+  calm-microcopy: "satisfied — lowercase, terse, no exclamation: \"trawler is not answering\", \"4xz is not a status\", \"retry\""
+  one-term-per-concept: "satisfied-via-proposal — every term is the lexicon's except \"not answering\", proposed as its term for a core that received a request and returned nothing"
+  confirm-at-point: "satisfied — retry's feedback is its own line and the band's departure, at the interaction point; no toast, and no confirmation of an act that is not done"
+  absence-names-itself: "satisfied — Tune T3 and T4: the two inherited absences keep their words, two new ones get their own, and the precedence rule keeps a cause from being stated twice"
+  focus-returns-to-origin: "satisfied — Esc on D returns focus to the row (inherited); Tune T5 gives the self-removing band the same guarantee by moving focus to the list"
+  choose-before-act: "satisfied — A holds only choosers; the screen's one action lives in A' below every one of them, beside the thing it acts on"
+</pre>
+    <p>One <code>violated-inherited</code> and one <code>satisfied-via-proposal</code>, neither a dodge. The
+    violation is DEC-34's escape, unchanged and un-re-opened by this pass; the proposal is a word, and it is
+    <a href="#proposals">on the list</a> rather than quietly used. <strong>No slug takes the formal
+    <code>inherited</code> verdict</strong>, and that is deliberate: <code>inherited</code> is proven by following
+    its citation to a component's TSDoc, so a first-pass decision this run merely restates — the 30px row target,
+    screen-owned under a T3 build-local verdict — is <code>satisfied</code> with the provenance said out loud, not
+    an inheritance. Two slugs that were
+    <code>n/a</code> in the first pass are <code>satisfied</code> here — <code>confirm-at-point</code> and
+    <code>choose-before-act</code> both govern actions, and this is the pass that gives the screen one.</p>
+
+    <h2 id="capabilities">Capabilities</h2>
+    <table data-item="capabilities" data-c="capabilities">
+      <tr><th>Given</th><th>Verdict</th><th>Where / why</th></tr>
+      <tr><td>live SSE flow stream</td><td>used</td><td>Zone C appends in wire order; unchanged from the first pass, and the reason A′ does not replace the rows when it appears.</td></tr>
+      <tr><td>server-side filter, four keys</td><td>used</td><td>Two <code>Select</code>s and two <code>Field</code>s in A. The status key's language widens to a class; the other three are untouched.</td></tr>
+      <tr><td>every fetch answers or fails</td><td><strong>used — newly</strong></td><td>The half that was being discarded is the whole of Q3: A′ exists because a failure is a fact the screen receives and was throwing away (<code>useFlows.ts:38, 57, 99</code>).</td></tr>
+      <tr><td>status · method · URI · start · duration</td><td>used</td><td>The six row cells, one per value; the URI's full form is D's.</td></tr>
+      <tr><td>the window width the shell declares</td><td><strong>used — newly</strong></td><td>Q1's other half. The pane's width is chosen with the default window, and the two move together (1200 → 1440) because one without the other is half an answer.</td></tr>
+      <tr><td>decrypted-HTTPS proof signal</td><td>used</td><td>Reaches the screen as <code>StatusDot</code>'s resolved status. This run decides only that transport health does <em>not</em> join it.</td></tr>
+      <tr><td>the ring's capacity</td><td>deliberately unused</td><td>Named in the overflow line as C's cap and its owner, never rendered — a capacity gauge carries nothing the user can act on.</td></tr>
+      <tr><td>connection count</td><td>deliberately unused</td><td>Onboarding consumes it. On this screen a tunnel that never became a flow is not a row, and the dot already answers "is capture working".</td></tr>
+    </table>
+
+    <h2 id="proposals">Proposals</h2>
+    <div data-item="proposals" data-c="proposals">
+      <table data-c="proposals-table">
+        <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
+        <tr>
+          <td><strong>token value</strong></td>
+          <td><code>pane</code>: <strong>380px → 520px</strong> in <code>ui/tailwind.config.js</code>, with the app's
+          default window moving 1200 → 1440 in <code>tauri.conf.json</code>. One token, one value — no entry is
+          added and none is removed.</td>
+          <td>Nothing existing fits <em>literally</em>: the vocabulary holds no 520, and the two nearest members
+          (<code>dialog-max</code> 384, <code>pane-label</code> 256) name other jobs. Under DEC-17 a magnitude with
+          no token is not a value a design may write, which is why this is a proposal rather than something the
+          mockup could simply draw. The window's default is not a token at all — it is the shell's own
+          configuration, and it travels with the width because <a href="#budget">one without the other</a> leaves
+          68px of path.</td>
+          <td><strong>W6</strong>, at build — the two lines it lands before it cites this run.</td>
+        </tr>
+        <tr>
+          <td><strong>lexicon term</strong></td>
+          <td><strong>not answering</strong> — the app sent a request to the core's API and got nothing back.
+          Never "offline", "disconnected", "down", "error".</td>
+          <td>The lexicon has a term for every absence in the capture (<em>none</em>, <em>no longer captured</em>,
+          <em>first flow</em>) and none for a broken connection to the core, because until this run no surface could
+          observe one. The candidates all overclaim: "offline" and "down" assert a cause the client cannot know
+          (<a href="#frame">Frame: a failed fetch names no cause</a>), and "error" is the word the rulebook already
+          reserves for a zone whose load failed rather than for the state itself.</td>
+          <td>The rulebook, at <strong>W10</strong>'s distillation — DEC-14 keeps it frozen mid-run.</td>
+        </tr>
+      </table>
+      <p><strong>No component proposal</strong>, and that is a finding rather than an absence of pressure: three of
+      the four questions resolved to an existing entry used differently (a <code>Field</code> whose query language
+      widened, a <code>Notice</code> in a new zone, a <code>Button</code> in its slot), and the fourth was explicitly
+      a question about whether the vocabulary should grow.</p>
+      <table data-c="near-misses">
+        <tr><th>Nearly proposed</th><th>Why it stayed out</th></tr>
+        <tr>
+          <td><strong>the payload cell</strong> — the mono, inert, unbounded, visibly-cut wire cell that
+          <code>host</code> and <code>path</code> are</td>
+          <td>Second sighting still has not arrived — <a href="#payload-cell">four candidates tested against a
+          stated criterion</a>, including the one the first pass predicted. The criterion travels with the row so
+          the next run tests rather than judges.</td>
+        </tr>
+        <tr>
+          <td><strong>a combobox</strong> — a control that offers the five classes <em>and</em> accepts a typed code</td>
+          <td>It is the one control that would express both halves of the status query as a menu. But
+          <code>Select</code>'s <span class="avoid">@avoid</span> rules it out by name ("free-text entry (that is a
+          combobox, not this)"), so it would be a new entry, on one call site, to save the user five keystrokes over
+          a <code>Field</code> that already accepts both forms. The vocabulary earns an entry on a second call site,
+          and there is no first one that needs it.</td>
+        </tr>
+        <tr>
+          <td><strong>a status <code>Select</code></strong> of the classes plus the codes capture has seen</td>
+          <td>The near-symmetry with the host <code>Select</code> is what makes it tempting, and the asymmetry is
+          decisive: a host is only worth filtering to <em>after</em> you have seen it, and a status is most worth
+          filtering to <em>before</em> — set 404, then reproduce. A control offering only observed codes cannot
+          express the debugging act.</td>
+        </tr>
+      </table>
+    </div>
+
+    <h2 id="blocked-on">Blocked-on</h2>
+    <table data-item="blocked-on" data-c="blocked-on">
+      <tr><th>What is missing</th><th>Stage</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
+      <tr>
+        <td><strong>The shell has no arrangement for a window narrower than its own content.</strong> With the pane
+        open, the row's fixed tracks (612px) overflow below a window of 1132px — 992px at the shipped width — and
+        the app declares a minimum of 800. Below the threshold the row region scrolls horizontally while the column
+        labels above it do not, so the labels and the cells they name come apart, and
+        <a href="#layout">Layout</a>'s overflow line stops being true.</td>
+        <td>Layout — found by the budget arithmetic, confirmed in the assembly</td>
+        <td><strong>Not this run's, twice over.</strong> The two fixes both sit outside its scope: narrowing the
+        row's fixed columns is the row grammar the epic's non-goals reserve, and a second arrangement (the pane
+        overlaying the list below a breakpoint) is a screen this run was not asked to design and a navigation model
+        the shell does not have. A later WU, or the epic that next opens <code>FlowList</code>'s grid.</td>
+        <td>Stated the threshold as a number rather than a worry, at both widths, and refused the two ways of making
+        it disappear on paper: raising the minimum window would narrow a capability the list alone uses today
+        (DEC-13), and paying for the pane out of the <code>host</code> column would decide the row's grammar in a run
+        whose non-goals forbid it. Moved the <em>default</em> window instead (1200 → 1440), which is this run's to
+        move and puts the shipped experience 308px clear of the threshold.</td>
+      </tr>
+      <tr>
+        <td><strong>The wording of a rejected status class is half the API's.</strong> The screen states
+        "4xz is not a status", but whether the core answers 400 with a body the screen can quote, or a bare status
+        the screen must paraphrase, is not decided at this tip.</td>
+        <td>Elements — <a href="#absences">absences</a></td>
+        <td><strong>W5</strong>, whose contract this run is upstream of.</td>
+        <td>Designed the sentence the screen owns and the form the field accepts, so W5 has a consumer to write its
+        error against. If W5's rejection carries a quotable message, W6 uses it as the detail line; if not, the
+        sentence stands alone. Either way the failure is stated rather than swallowed, which is the part that
+        matters.</td>
+      </tr>
+      <tr>
+        <td><strong>The detail pane discards its own fetch failures.</strong>
+        <code>useFlowDetail</code> (<code>useFlows.ts:99</code>) catches and drops, so an unreachable core leaves
+        the pane on "loading this flow…" indefinitely. A′ covers the <em>statement</em> — one cause, said once —
+        but not whether the pane retries or gives up.</td>
+        <td>Elements — Layout, when A′ was given the full width</td>
+        <td><strong>W6</strong>, at build. It is the same <code>.catch(() =&gt; {})</code> family Q3 opens.</td>
+        <td>Put A′ above D as well as above C, so the pane's silence is explained by the zone that already explains
+        the list's. Did not design a second message for it: <code>absence-names-itself</code> is about giving each
+        <em>cause</em> its own words, and this is one cause with two symptoms.</td>
+      </tr>
+      <tr>
+        <td><strong>Tier-1 still cannot see a mockup's mounted markup.</strong> The tokenizer treats
+        <code>&lt;script type="text/babel"&gt;</code> as opaque, and the flow spec requires the mockup to mount from
+        exactly such a block — so this run's <code>truncate</code> cells, like the first pass's, are invisible to
+        <code>wrap-not-truncate·payload</code> and every hard rule reports green over markup it never read.</td>
+        <td>Draft mockup — inherited from the first pass, re-verified here</td>
+        <td>The harness. E-RFINISH declares it a non-goal and moves it to the roadmap's backlog at
+        <strong>W10</strong>.</td>
+        <td>Did not rely on the blindness: the truncation is declared in prose and on the receipt as
+        <code>violated-inherited</code>, exactly as the first pass declared it. Recorded again so the item does not
+        live only in an archived report.</td>
+      </tr>
+      <tr>
+        <td><strong>Nothing on the merge path opens a design run in a browser.</strong> The render gate
+        (<code>cargo xtask ui specimens --check</code>) is a command an agent must remember to run:
+        <code>verify-doc</code> checks that the bundle is <em>loaded</em> and that no component is hand-drawn in
+        static HTML, neither of which fails when the mockup renders nothing. This run reached
+        13/13 hard rules green with six empty mounts.</td>
+        <td>Draft mockup — found by running the gate by hand at the close</td>
+        <td>The harness — <code>xtask</code>. The same owner as the row above, and the same reason it is not this
+        run's: changing the gate while it judges this epic's seams is E-RFINISH's declared non-goal.</td>
+        <td>Ran the gate by hand, and it earned its keep immediately: it caught a mockup that rendered nothing
+        while every automatic check was green. Two things are named rather than fixed. <strong>The gate is not
+        wired</strong> — the cheap fix is one line, since <code>verify-doc</code> already shells out to node for the
+        registry and <code>check-render</code> already exits non-zero, but wiring it is a gate change and the run
+        that would benefit is the one proposing it. <strong>And the shape it caught is everyone's</strong>: the
+        htmldoc skeleton's bootstrap is a <code>type="module"</code> tag, which defers
+        <code>DOMContentLoaded</code>, which is the event Babel's transform hangs on — so <em>every</em> design run
+        in the repo renders a blank mockup whenever the doc server is slow. This run carries <code>async</code> on
+        its own bootstrap and proved it by A/B; putting <code>async</code> in the skeleton is the htmldoc skill's
+        call, not a WU's.</td>
+      </tr>
+      <tr>
+        <td><strong>Two health indicators, and no evidence about how they read together.</strong> The dot answers
+        "is this set up" and A′ answers "is the app hearing back". A user could read a green dot as a live
+        connection.</td>
+        <td>Elements — the <code>StatusDot</code> row</td>
+        <td><code>StatusDot</code>'s own contract, not a screen's — DEC-20 puts the mapping in
+        <code>dotStatus()</code>, and a design run may not re-decide what a component owns.</td>
+        <td>Left the dot untouched and said why in its Elements row rather than folding transport into a lifecycle
+        that has no state for it. If W6's e2e or a later run finds the pair misread, the fix belongs to the
+        component's design file and the change is a state, not a screen.</td>
+      </tr>
+    </table>
+
+    <h2 id="review">Review</h2>
+    <table data-item="review" data-c="review">
+      <tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr>
+      <tr>
+        <td><em>Owner, in the epic plan's open questions:</em> "Is the detail pane a wider fixed width, or a
+        draggable split? … A wider fixed width. If W4 argues otherwise on the evidence, it says so on its receipt
+        and the default loses."</td>
+        <td><strong>Layout</strong> and <strong>Tune T1</strong>. The default held, but not as stated: the run found
+        that a wider fixed width alone makes the screen worse at the window the app opens at
+        (<a href="#budget">68px of path at 1200</a>), so the answer is a width <em>and</em> a window — 520px with
+        the default moved to 1440. <a href="#pane-width">Six candidates are on the record</a>, each with the number
+        that decided it, including the two the epic named.</td>
+        <td><code>progressive-disclosure</code> — the clamp is the act, and the width is what precedes it ·
+        <a href="../decisions/dec-32-body-is-the-main-zone.html">DEC-32</a>, whose three-line clamp is what makes
+        width measurable at all · <a href="../decisions/dec-17-closed-vocabulary.html">DEC-17</a> — the value moves,
+        the token does not multiply</td>
+      </tr>
+      <tr>
+        <td><em>Owner, in the epic plan's open questions:</em> "Does the status class belong in the API, or can the
+        client filter what it already has? … The API."</td>
+        <td><strong>Elements</strong> — confirmed, and the reason is now in the artifact rather than the plan: the
+        client holds only what the last query returned, so a client-side class filter narrows a page and reads as a
+        filter that silently loses flows. W5's contract is downstream of <a href="#elements">the
+        <code>Field</code> row</a>, which states exactly what the field will send.</td>
+        <td>the epic plan's open-question row · <code>Field</code>'s <span class="avoid">@avoid</span> "validating,
+        debouncing, formatting or restricting what is typed"</td>
+      </tr>
+      <tr>
+        <td><em>Owner, in the epic plan's open questions:</em> "Has the payload cell's second truncation sighting
+        actually arrived? … Assume not."</td>
+        <td><strong>Elements</strong> — the run refused to assume in either direction and
+        <a href="#payload-cell">tested four candidates against a stated criterion</a>, including
+        <code>FlowDetail</code>'s identity bar, which is the sighting the first pass predicted and which has since
+        shipped. It answered no by wanting <code>CopyText</code> instead. The default was right; the reason is now
+        checkable.</td>
+        <td>DEC-34's own consequence clause ("whoever designs the second one") · <code>CopyText</code>'s
+        <span class="use">@use</span> "the request URI"</td>
+      </tr>
+      <tr>
+        <td><em>Owner, in the epic plan:</em> "the run designs the control before the API is changed to serve it"
+        and "the unreachable state — where a failed fetch is stated, in what words, and how a reader tells it from a
+        quiet proxy".</td>
+        <td><strong>Elements</strong> and <strong>Interaction</strong>. The two questions turned out to be one
+        design: the same swallowed failure that hides an unreachable core also hides the 400 a malformed status
+        returns, so <code>status=abc</code> freezes the list today with nothing on screen to say so.
+        <a href="#absences">The absence table</a> gives them separate sentences because they are separate causes —
+        one is the API not answering, the other is the API answering "no".</td>
+        <td><code>absence-names-itself</code> · <code>Notice</code>'s <span class="use">@use</span> "any zone whose
+        load failed" · <code>useFlows.ts:38</code></td>
+      </tr>
+      <tr>
+        <td><em>The assembled mockup, with both toggles on:</em> the screen claimed the API was unreachable and, in
+        the same view, told the user to send traffic through the proxy.</td>
+        <td><strong>Tune T4</strong> and <a href="#absences">the absence table</a>'s precedence rule, then
+        <strong>Layout</strong>'s overflow line: A′ is absent when C is empty, because the statement belongs
+        immediately above what it is about and with no rows there is nothing to qualify. The mockup's CSS carries
+        the same rule, so the assembly demonstrates it rather than describing it.</td>
+        <td><code>empty-states-orient</code> ("a retry button on a flow the ring has dropped" is the same fault:
+        advice that cannot work) · <code>absence-names-itself</code></td>
+      </tr>
+      <tr>
+        <td><em>The Interaction table's keyboard column, against <code>Button</code>'s TSDoc:</em> retry is an
+        action in flight, and it removes its own surface on success.</td>
+        <td><strong>Elements</strong> — the <code>Button</code> row now traces fork D4 ("both halves or neither"),
+        so the design owes a disabled button <em>and</em> a line naming what is awaited — and <strong>Tune
+        T5</strong>, which moves focus to the list rather than letting it fall to
+        <code>&lt;body&gt;</code>.</td>
+        <td><code>Button</code>'s <span class="avoid">@avoid</span> fork D4 · <code>focus-returns-to-origin</code></td>
+      </tr>
+      <tr>
+        <td><em>The render gate, on the finished run:</em> <code>node scripts/check-render.mjs</code> reported
+        "empty mounts: m-head, m-band, m-labels, m-rows, m-empty, m-pane" — the mockup rendered
+        <strong>nothing at all</strong>, while <code>verify-doc</code> reported 13/13 hard rules and
+        <code>assets·specimen</code> green.</td>
+        <td><strong>Draft mockup</strong> — and nothing about the design. The cause is the doc's own bootstrap:
+        Babel transforms <code>type="text/babel"</code> on <code>DOMContentLoaded</code>, and a
+        <code>type="module"</code> script <em>defers that event until its own fetch settles</em> — so while
+        <code>htmldoc.wfomobile.com</code> answered in ~6 s, every mount stayed empty and no console error was
+        raised. Established by A/B rather than by reasoning: the same file with the bootstrap removed mounts 7 of 7,
+        and with <code>async</code> on it — which takes a module script off the
+        <code>DOMContentLoaded</code> critical path — it mounts 7 of 7 with the bootstrap intact. The run carries
+        <code>async</code>, the first diagnosis (a raw <code>&lt;body&gt;</code> in a prose
+        <code>&lt;pre&gt;</code>, since escaped) was <em>wrong</em> and is recorded as wrong, and
+        <a href="#blocked-on">blocked-on</a> carries the general fix.</td>
+        <td><a href="../decisions/dec-26-the-mockup-mounts.html"><code>DEC-26</code></a> — the mockup mounts the
+        components; a mockup that renders nothing is the same artifact as one that draws them, only harder to
+        notice</td>
+      </tr>
+      <tr>
+        <td><em>The Elements stage, re-reading the first pass's escalation:</em> the status field was recorded as a
+        near-miss against <code>Field</code>'s <span class="avoid">@avoid</span> "a choice among known options".</td>
+        <td><strong>Elements</strong> — not a reversal: the first pass ruled <code>Field</code> too. What moved is
+        the leg it stands on. That run rejected <code>Select</code> because the API could not serve a class, which
+        is an argument W5 is about to expire; <a href="#elements">the row</a> now rejects it because the set of
+        useful statuses is <em>unknowable</em> — a <code>Select</code> can only offer codes capture has already
+        seen, and filtering for a 404 before one arrives is the debugging act. The verdict survives W5 instead of
+        depending on it.</td>
+        <td><code>Field</code>'s <span class="avoid">@avoid</span> "a miss by kind" · <code>Select</code>'s
+        <span class="use">@use</span> "any single choice from five or more options" · <code>store.rs:66</code></td>
+      </tr>
+    </table>
+    <p><em>Tier-3 review — the design dimension of the code review, judged on this artifact — runs against the closed
+    run and lands in the tip's <code>cr/v3</code> note. Its findings are not in this table; this table is what moved
+    <em>before</em> the close.</em></p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js" async></script>
+</body>
+</html>
