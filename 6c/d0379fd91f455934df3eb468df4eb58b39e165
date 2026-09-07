@@ -32,8 +32,11 @@ note: >-
   A design WU produces no executable bytes, so three waivers is the honest shape rather than a
   convenient one, and the load-bearing gates are Tier-1 plus the Tier-3 design review. What is
   worth recording as testing is the render check: run 10 could not have caught a broken mount
-  either, and the failure mode is silent by construction. All seven mounts render, which is every
-  mount the doc declares.
+  either, and the failure mode is silent by construction. `ui specimens --check` reports 7 mounts
+  and none empty. The doc itself makes 6 mount() calls, into 6 ids - the gate's count runs one
+  above a doc's mount() calls (run 10: 4 calls, 5 reported), so the seventh is the gate's own root
+  and not a mount this doc declares. Two separate facts, stated separately, because reconciling
+  them by assertion is how this WU produced four of its findings.
   One environmental finding, fixed locally and not committed because it is not a repo fact: this
   worktree's ui/node_modules/.bin/esbuild was a pnpm shim that wrapped esbuild's native Go binary
   with `node`, so `cargo xtask ui specimens` died with a SyntaxError dumping the Mach-O header.
