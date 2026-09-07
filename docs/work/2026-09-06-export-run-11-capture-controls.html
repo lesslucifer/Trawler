@@ -698,8 +698,9 @@ importing…</pre>Per its TSDoc — tone:ok · warn · muted. The tone prop is t
       (T0, proposed as the promoted component) · Notice (T1) · Button ×2 (T1) · focus trap
       (behaviour, no tier).</p>
       <p><strong>Proposals:</strong> <code>Dialog</code> (T2 widget — promote the shipped
-      <code>ModalShell</code>) · one <code>IconButton</code> glyph entry, the import face. See
-      <a href="#proposals">Proposals</a>.</p>
+      <code>ModalShell</code>) · <code>Menu</code> (T2 widget) · one <code>IconButton</code> glyph
+      entry, the overflow face <code>⋮</code> · the soft rule
+      <code>safe-answer-takes-focus</code>. See <a href="#proposals">Proposals</a>.</p>
     </div>
 
     <h2 id="interaction">4 · Interaction</h2>
@@ -1072,8 +1073,14 @@ C  → UNCHANGED   ← the whole point of asking</pre>
       explicitly may not excuse for a size. The 2px is immaterial to every question this run
       answers, and the Frame states the real 30px. Worth recording as a vocabulary gap: the app
       ships a row height its own scale cannot express, which is why the component sets it inline.</p>
-      <p><em>Stubbed:</em> the import face (the one glyph passed as <code>children</code> — see
-      <a href="#proposals">Proposals</a>; export mounts the registry's own <code>save</code>) ·
+      <p><em>Stubbed:</em> the overflow face <code>⋮</code> (the one glyph passed as
+      <code>children</code> — see <a href="#proposals">Proposals</a>; the three acts are words
+      inside M, so no other face is spent) · <strong>the mono face</strong>: this page ships no
+      <code>@font-face</code> and the bundle carries only the <em>token</em>, so over
+      <code>file://</code> <code>font-mono</code> falls through to <code>ui-monospace</code> and
+      the timestamps here are not drawn in <code>DM Mono</code>. Any width taken off this page is
+      a fallback width — <a href="#tune">T3</a>'s figures were re-measured against the shipped
+      <code>ui/dist</code> font files, not against this render ·
       the focus trap and scrim behaviour of the proposed
       <code>Dialog</code>, drawn here because the component is proposed, not built · the native
       save and open dialogs · live SSE, filtering and virtualization · the textarea's editing (it
@@ -1183,16 +1190,19 @@ A is two lines below 846px
         (<span class="use">@states</span> S1/S2): it renders <code>14:22:03</code> when the flow
         is <em>today</em> and <code>06/09 · 14:22:03</code> when it is not. Measured in the app's
         own <code>font-mono</code> at <code>text-body</code> with <code>tabular-nums</code>:
-        <strong>64.22px</strong> for S1, <strong>120.88px</strong> for S2, <strong>163.47px</strong>
-        for the cross-year form, and <strong>12.19px</strong> for the <code>↑</code> mark. So S2
-        plus the mark needs ~137px, and every number the earlier drafts reached — run 10's 126px,
+        <strong>57.6px</strong> for S1, <strong>115.2px</strong> for S2, <strong>151.2px</strong>
+        for the cross-year form, and <strong>7.2px</strong> for the <code>↑</code> mark — an exact
+        7.2px per character, which is <code>DM Mono</code>'s 0.6em advance at
+        <code>text-body</code>. So S2 plus the mark's reserved 16px needs
+        <strong>131.2px</strong>, and every number the earlier drafts reached — run 10's 126px,
         this run's 122px, the shipped <code>FlowList</code>'s own 110px — is too narrow for it.
         <strong>And S2 is not the rare case here: it is the case this run's own feature creates.</strong>
         A HAR you were handed was captured on another machine on another day, so an imported row
         is a cross-day row almost by definition — the rows that carry the mark are the same rows
         that carry the wide timestamp, and the design added them. Cell 1 therefore takes
-        <code>field-lg</code> (160px), which holds 136.9px of content with room and is a token
-        rather than an arithmetic result.
+        <code>field-lg</code> (160px), which holds 131.2px of content with 28.8px to spare and is
+        a token rather than an arithmetic result. <code>field</code> (128px) is the next token down
+        and 131.2px does not fit it, so the choice is forced rather than picked.
         <span class="was">The call as first written moved 110px → 122px on the reserved mark's
         12px, and the round-10 draft before it moved 110px → 126px on a 16px mark it had inferred
         from run 10's own arithmetic. Both were answering a question that was not the binding one,
@@ -1394,8 +1404,8 @@ soft:
         <tr>
           <td>A cross-<em>year</em> timestamp still overflows cell 1.
             <code>TimestampText</code> appends the year when the flow is not from the current one
-            (<code>DD/MM/YYYY · HH:mm:ss</code>), which measures 163.47px — 179.5px with the mark,
-            against cell 1's 160px. Importing a HAR kept from last year is an ordinary thing to
+            (<code>DD/MM/YYYY · HH:mm:ss</code>), which measures 151.2px — 167.2px with the mark's
+            reserve, against cell 1's 160px, so it overruns by 7.2px. Importing a HAR kept from last year is an ordinary thing to
             do.</td>
           <td>Elements · Tune</td>
           <td>W6 at build, or the flow-detail run — the two exits are a wider cell 1 (paid for out
@@ -1499,7 +1509,7 @@ soft:
             here is 12px, not 16px, so the width is <strong>122px</strong>. The mockup constant and
             the <code>visual-weight-follows-goals</code> line follow it. W6 builds 122px.
             <span class="was">Superseded this round: the mark was never the binding variable. See
-            <a href="#tune">T3</a> — the timestamp's own cross-day form needs 120.88px on its own,
+            <a href="#tune">T3</a> — the timestamp's own cross-day form needs 115.2px on its own,
             so 122px overflows, and cell 1 is now <code>field-lg</code>.</span></td>
           <td><code>visual-weight-follows-goals</code> · the mockup drew a number the prose
             contradicted</td>
@@ -1812,6 +1822,23 @@ soft:
             cross-reference ("the row above") that pointed into the other table.</td>
           <td><code>blocked-on</code> — the flow's item definition: the list is the element, so
             an entry beside it is not on it · the same render-don't-read lesson as T3's fixture</td>
+        </tr>
+        <tr>
+          <td>The round-14 code review, on the numbers <a href="#tune">T3</a> calls measured: they
+            were taken on this page, which loads no mono webfont.</td>
+          <td><a href="#tune">T3</a> and <a href="#blocked-on">Blocked-on</a>. Re-measured against
+            the shipped <code>ui/dist</code> font files: <strong>57.6 / 115.2 / 151.2px</strong>
+            for S1 / S2 / cross-year and <strong>7.2px</strong> for the mark — an exact 7.2px per
+            character, <code>DM Mono</code>'s 0.6em advance at <code>text-body</code>. The old
+            figures implied three different per-character widths, which no monospaced face can do.
+            Both conclusions survive: cell 1 stays <code>field-lg</code>, now with 28.8px spare
+            and <code>field</code> ruled out by arithmetic rather than by assertion, and cross-year
+            still overruns — by 7.2px, not 19.5px. The fallback is disclosed in
+            <a href="#mockup">Stubbed</a> so the next reader does not re-measure here. Separately,
+            two pre-T8 lines still called the proposed glyph "the import face"; the entry is the
+            overflow face <code>⋮</code>, and both now say so.</td>
+          <td><code>display-equals-payload</code> — a stated measurement names the face it was
+            taken in · <code>reuse-or-propose</code>, on which face the run actually spends</td>
         </tr>
       </tbody>
     </table>
