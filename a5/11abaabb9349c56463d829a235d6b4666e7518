@@ -1,0 +1,57 @@
+schema: cr/v3
+scope: "WU controls-redesign -> epic/export (round 11, verification round after round 10)"
+epic: E-EXPORT
+wu: E-EXPORT.W9
+branch: wu/export/controls-redesign
+base: 1e054ad481c02a91014c4c1bb06e812994dab72b
+head: a511abaabb9349c56463d829a235d6b4666e7518
+diff_sha256: 39f8c1df41df5b1070b58b780938c24a130cdd07b370ea0120923a579185e1ab
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 11, verified: 6, waived: 0 }
+verified:
+  - id: 1
+    severity: important
+    location: docs/work/2026-09-04-export-plan.html:334
+    finding: "The W7 block still calls the curl-paste target 'the same import control W5 designs'. Round 6 reconciled W6 to cite W9; W7 was never swept. No docs/decisions/ entry (dec-14..dec-37 checked) assigns that design to W5 deliberately."
+  - id: 2
+    severity: important
+    location: docs/work/2026-09-04-export-plan.html:357
+    finding: "W7 says 'its paste affordance is designed in W5 if it lands first'. W5's heading is marked superseded in the same file, and W9's own deps require W7 merged BEFORE the design run - so the conditional hedges on an ordering that cannot occur. v3-plan residue the v4 pass missed."
+  - id: 3
+    severity: important
+    location: docs/work/2026-09-06-export-run-11-capture-controls.html:909-911
+    finding: "Tune T4's why-block asserts 'Run 10's mark was 16px; this run's is the 12px .a-mark' to explain 122px vs run 10's 126px. FALSE: run 10's .a-mark rule (run-10:43) is byte-identical to run 11's, both width:12px. The 16px figure exists only in run 10's receipt prose (run-10:557), which contradicts run 10's own CSS. The fix for round 10's finding manufactured a measurement to justify its number instead of reporting the inconsistency it had found. 122px itself is correct and independently confirmed; only the causal explanation is fabricated."
+  - id: 4
+    severity: important
+    location: docs/work/2026-09-06-export-run-11-capture-controls.html:1105-1112
+    finding: "The Q6 accounting row is wrong in both directions. It names 'the ask's focused button' as re-derived-and-held, but that discussion (655-659, 702-712) contains no mention of run 10 and no held/holds language anywhere in the document; and it omits Tune T4 (907-909, 'The answer is held; the number is not'), which is a genuine held case. Verified correct counts: 8 moved, 3 held (Layout's placement 217, the paste's initial focus 612, Tune T4's arithmetic 907). A ninth delta marker at 569 ('the state run 10 did not name') is an addition, neither moved nor held, and the sentence's two-category framing has no slot for it. This is the THIRD self-referential completeness claim in this document to assert coverage it does not have, and it was introduced by the edit that fixed the second."
+  - id: 5
+    severity: nit
+    location: docs/work/2026-09-06-export-run-11-capture-controls.html:860-892,939
+    finding: "Run 10's Tune T2 (count precedes the action cluster, slug choose-before-act) is held in run 11's mockup (770-771) but cited nowhere. Run 11's receipt line for the same slug (939) substitutes two different facts - 'A' sits after the filters' and 'the file picker precedes import' - without noting that run 10's own justification for that slug was dropped. Held-silently, the category the run itself names as non-ideal (1116), against the plan's Q6 duty to say so and cite it."
+  - id: 6
+    severity: important
+    location: docs/work/2026-09-06-export-run-11-capture-controls.html:1018
+    finding: "The Proposals table's fourth row (kind: process) proposes a new step in design-flow.html's own close sequence. design-flow.html:309 scopes that table to 'every entry the design needed and the vocabulary lacked' - components, tokens, rulebook rules, glyph names, per DEC-17's closed vocabulary. A change to the flow's procedure is not a vocabulary gap, and none of the five closing lists is documented as the home for feedback on the flow itself. documentation-system.html:192 supplies the real channel ('Repeating process emerged or changed? -> Relevant T1 process doc'), which with CLAUDE.md's same-session distillation rule means design-flow.html is edited now, not left as a proposal awaiting an unscheduled confirmation. A T3 work doc is archived and never re-read, so parking the lesson here loses it."
+refuted:
+  - "reuse: the TonedText-over-Notice warrant ignores Onboarding.tsx's non-dialog Notice precedent - the run asserts no categorical rule, only that Notice's glyph and block would compete with the filters in a tight horizontal row; Onboarding is a roomy vertical stack, and fork D4 is sourced canonically from Button.tsx's TSDoc, not from either screen."
+  - "simplification x3: the D1 review row quoting the receipt's fixed phrase, the safe-answer proposal restating the rulebook gap, and the epic plan stating 'there is no W8' twice - each pair serves a different documented list contract (design-flow.html:309/312), and this project's closing lists are written to stand alone. One claim also cited line numbers that hold unrelated text."
+design:
+  artifacts: [docs/work/2026-09-06-export-run-11-capture-controls.html]
+  rulebook: a7f9ae3becf27694bfc1ffb9f0b43f87c9abb7e2
+  findings: { found: 3, verified: 3, waived: 0 }
+  verdict: FAIL
+note: >-
+  Round 11 is a verification round over round 10's four repairs, and three of its six verified
+  findings are defects introduced BY those repairs (3, 4, and 6). The pattern this document keeps
+  failing in is now unambiguous and is worth stating plainly: every self-referential summary it
+  writes - the receipt paragraph, the Q6 accounting row - claims a completeness it does not have,
+  and each repair of one has introduced the next. Finding 3 is the worst of them, because the
+  repair did not merely miscount: it invented a measurement that the superseded run's own CSS
+  contradicts, in the course of fixing a finding about silent reversals. A summary that asserts
+  its own coverage should be treated as the highest-risk sentence in a design run, not the
+  closing formality it looks like.
+  Finding 1 and 2 are the same class one level up: round 6 fixed the W6 block it was shown and
+  did not sweep the class, leaving W7 pointing at a superseded design.
+verdict: FAIL
+date: 2026-09-07
