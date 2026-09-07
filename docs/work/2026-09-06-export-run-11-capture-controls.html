@@ -954,6 +954,22 @@ soft:
               consume it but must not mint it</td>
           </tr>
           <tr>
+            <td>soft rule</td>
+            <td><strong>A destructive ask focuses the answer that does nothing.</strong> A
+              rulebook row — proposed slug <code>safe-answer-takes-focus</code>: when a
+              confirmation guards an act that cannot be undone, initial focus goes to the refusal,
+              so the reflexive Enter is the one with no consequence.</td>
+            <td>The rulebook has no rule on this — the word "destructive" does not appear in it.
+              <code>focus-returns-to-origin</code> governs focus <em>after</em> a surface closes,
+              not initial focus on open; <code>confirm-at-point</code> is about where feedback
+              lands; the keyboard conventions say Enter activates what is focused but never which
+              control a destructive ask should focus. This run had to decide it from a Frame
+              constraint, and got it wrong first — the reason to write it down is that the next
+              screen with an irreversible act should not have to derive it again.</td>
+            <td>the rulebook (<code>docs/design-rules/design-rules-index.html</code>), confirmed
+              at a distillation — a run proposes a rule, it does not add one</td>
+          </tr>
+          <tr>
             <td>vocabulary</td>
             <td>Three <code>IconButton</code> glyph entries — out, in, empty — added to the
               <code>GlyphName</code> registry beside <code>close</code> and <code>save</code>.</td>
@@ -965,7 +981,7 @@ soft:
           </tr>
         </tbody>
       </table>
-      <p>Neither proposal blocks W6. The build can ship with the glyphs as
+      <p>None of the three blocks W6. The build can ship with the glyphs as
       <code>children</code> and the frame built local; both would then be paid down when the
       owners act. What the run must not do is <em>invent</em> either during the build, which is
       what recording them here prevents.</p>
