@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-CRSCOPE
+wu: E-CRSCOPE.W1
+base: 5d76d97c80d5d214cfff42f831ea3dc0160e5529
+tip: 904375ed34acb3768c7fc66e4721f44d270c4367
+diff_sha256: efdedceb80637ff17fe3e408b936340dd05be166d034a5975f3f27828114a19a
+checks: [notes, manifest, review, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-09-07
