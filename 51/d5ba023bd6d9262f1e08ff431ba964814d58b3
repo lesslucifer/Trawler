@@ -253,8 +253,10 @@ note: >-
   the doc was missing tw-config.js (false: the specimens bundle inlines it, minified to _I.config)
   and an A′ width written as 206.8px where the arithmetic gives 212.8px. Both were corrected
   before the commit; the first was never written into the doc at all.
-  Round 13's review returned FAIL on six verified findings and they are fixed in THIS commit,
-  which is the tip this note is attached to. Four were one defect repeated - a value moved and a sentence quoting the old value
+  Round 13's review returned FAIL on six verified findings, fixed in 6cd0379 - which was the tip
+  when this paragraph was written and is now an ancestor of it. The wording is corrected rather
+  than left standing, because "THIS commit" in a note that gets carried forward is the same
+  moving-value defect the paragraph goes on to describe. Four were one defect repeated - a value moved and a sentence quoting the old value
   survived - and one of those four was written and contradicted inside a single commit. The fifth
   was altitude: the T1 paragraph performing the close-sequence step also narrated this WU's six
   reversals and nine rounds, so the mechanism stays in docs/design-flow.html and the incident
