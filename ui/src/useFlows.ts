@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Filter, FlowSummary, FlowView, TrawlerApi } from "./api";
-import { toRow } from "./flow";
+import { hostOf } from "./flow";
 
 const DEBOUNCE_MS = 150;
 
@@ -73,10 +73,10 @@ export function useFlows(api: TrawlerApi) {
   return { filter, flows, hosts, connections, lastConnectionAt, update };
 }
 
-function merge(known: string[], list: FlowSummary[]): string[] {
+export function merge(known: string[], list: FlowSummary[]): string[] {
   const seen = new Set(known);
   for (const flow of list) {
-    const { host } = toRow(flow);
+    const host = hostOf(flow.uri);
     if (host) seen.add(host);
   }
   return seen.size === known.length ? known : [...seen].sort();

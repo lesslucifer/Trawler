@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9d66ef9f34851f0dfac967">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-RFINISH.W3 plan (the benchmark, then the three performance costs)</title>
+  <style>
+    table{font-size:13px}
+    td:first-child{white-space:nowrap}
+    .bad{color:var(--warn);font-weight:600}
+    .good{color:var(--ok);font-weight:600}
+    .num{font-family:var(--mono,monospace);text-align:right;white-space:nowrap}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+    .card{border:1px solid var(--line);border-radius:8px;padding:12px 14px;background:var(--paper)}
+    .card h4{margin:0 0 6px;font-size:14px}
+    .card .who{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .card p{margin:6px 0;font-size:12.5px;line-height:1.55}
+    code.f{white-space:nowrap}
+  </style>
+</head>
+<body data-artifact="wu-plan" data-status="ready">
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-RFINISH.W3 — the benchmark, then the three performance costs</h1>
+      <p>E-REDESIGN named three costs and refused to fix any of them at a merge seam with nothing to show a fix
+      helps. This WU builds the measurement first and commits it, then pays each cost against a recorded
+      before number — and reverts any fix the benchmark cannot show helping.</p>
+      <div class="meta">WU plan · 2026-09-06 · Trawler · T3 (docs/work/) · <code>wu/redesign-finish/perf-bench</code>
+      → <a href="2026-09-06-redesign-finish-plan.html">epic/redesign-finish</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement" data-c="requirement">
+      <strong>A committed benchmark measures the three named costs before any of them is edited, and each
+      fix is kept only on a recorded improvement against it</strong> — <code>pnpm bench</code> from
+      <code>ui/</code> and <code>cargo xtask ui bench</code> both run the same suite, covering
+      TimestampText's per-row moment construction on a virtualized re-render, <code>useFlows</code>'s host
+      merge over a refreshed list, and the character-rendered members' byte-size report on an over-cap body;
+      each of the three carries a before and an after number in the WU result, and every existing unit test
+      for the touched modules passes unchanged, which is the proof that only cost moved.
+    </div>
+
+    <h2 id="costs">The three costs, verified in the tree</h2>
+    <p>Each row is read off the tip, not trusted from E-REDESIGN's report. “Per what” is the multiplier that
+    makes the cost matter — a cost paid once at mount is not what any of these are.</p>
+    <table data-c="costs">
+      <thead>
+        <tr><th>Cost</th><th>Where</th><th>What it does now</th><th>Per what</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1 · moment per row</strong></td>
+          <td><a href="../../ui/src/components/TimestampText.tsx">TimestampText.tsx</a></td>
+          <td><code>moment(timestamp)</code> parses the ISO string, then <code>render</code> builds a second
+          <code>moment()</code> for the same-day test and a third for the same-year test, then formats.
+          Nothing is remembered between renders.</td>
+          <td>every visible row × every SSE event — the list re-renders on each debounced refresh and the
+          window is ~30 rows deep with 12 overscan</td>
+        </tr>
+        <tr>
+          <td><strong>2 · the host merge</strong></td>
+          <td><a href="../../ui/src/useFlows.ts">useFlows.ts</a> <code>merge</code></td>
+          <td>allocates <code>new Set(known)</code>, then calls <code>toRow</code> on every flow — a full
+          <code>new URL()</code> parse plus a <code>pathname + search</code> concatenation whose result is
+          discarded, since only <code>host</code> is read.</td>
+          <td>the whole returned list × every debounced refresh — and the list is whatever
+          <code>GET /flows</code> returns, so a 5 000-flow capture re-parses 5 000 URIs to learn nothing new</td>
+        </tr>
+        <tr>
+          <td><strong>3 · the byte count</strong></td>
+          <td><a href="../../ui/src/components/TextRenderer.tsx">TextRenderer.tsx</a> ·
+          <a href="../../ui/src/components/FormRenderer.tsx">FormRenderer.tsx</a></td>
+          <td><code>byteLength(text)</code> = <code>new TextEncoder().encode(text).length</code> — allocates a
+          byte array as large as the entire body to read <code>.length</code> off it and throw it away.</td>
+          <td>exactly the over-cap path the caps exist to bound: the body is over
+          <code>TEXT_MAX</code> (128 KiB) and may be the full 10 MiB capture cap, and the allocation is paid on
+          every render of that pane</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout warn" data-c="third-cost-note">
+      Cost 3's marker states <em>shown of total</em>. <code>byteLength(shown)</code> is bounded by
+      <code>TEXT_MAX</code> and is not the cost; <code>byteLength(text)</code> over the untruncated body is.
+      The fix must leave both numbers bit-identical — a cut marker that rounds two different sizes to the same
+      string is the exact false statement <code>humanBytePair</code> exists to prevent.
+    </div>
+
+    <h2 id="order">Order — the measurement is a commit of its own</h2>
+    <div class="diagram" data-c="order">
+      <pre class="mermaid">
+flowchart LR
+  P["plan (this doc)"] --> B["commit 1 · the benchmarkharness + 3 benches + xtask entrypointNO src edit"]
+  B --> N["record BEFORE"]
+  N --> F1["commit 2 · cost 1TimestampText"]
+  F1 --> F2["commit 3 · cost 2useFlows.merge"]
+  F2 --> F3["commit 4 · cost 3utf8 length"]
+  F3 --> A["record AFTER · per fix"]
+  A --> D{"did the bench move?"}
+  D -- yes --> R["keep · number in the result"]
+  D -- no --> X["revert that commit"]
+  R --> RES["commit 5 · WU result"]
+  X --> RES
+      </pre>
+      <div class="caption">The benchmark lands before any <code>src/</code> edit, so the before number is
+      recorded by a commit that could not have been tuned to flatter a fix.</div>
+    </div>
+
+    <h2 id="bench">The benchmark</h2>
+    <p>Vitest already runs the front end at every level, and it ships <code>vitest bench</code> (tinybench) —
+    so the suite needs no new dependency, no new runner and no new config file, and it reuses the jsdom
+    environment the component tests already prove out.</p>
+    <table data-c="bench-shape">
+      <thead><tr><th>Piece</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><code>ui/bench/*.bench.ts</code></td><td>one file per cost, matched by Vitest's default
+        benchmark include; outside <code>ui/src/</code> so it is not a code path the DoD gate or the design
+        accounting reads</td></tr>
+        <tr><td><code>pnpm bench</code></td><td><code>vitest bench --run</code> — the <code>ui/</code>
+        entrypoint</td></tr>
+        <tr><td><code>cargo xtask ui bench</code></td><td>the repo entrypoint, alongside
+        <code>build</code>/<code>dev</code>/<code>e2e</code>: <code>pnpm install</code> then
+        <code>pnpm bench</code>, same as every other <code>ui</code> subcommand</td></tr>
+        <tr><td>fixtures</td><td>generated in-process from a seeded counter — no network, no files, no
+        <code>Math.random</code>; the same list of flows and the same body text every run, so two runs differ
+        only in timing</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="bench-not-a-test">
+      <strong>A benchmark is not a test and does not join the suite.</strong> Wall-clock numbers are not
+      deterministic, so <code>pnpm bench</code> stays out of <code>pnpm test</code> and out of every gate — it
+      is a tool the WU result quotes. What the gate sees instead is the unit and integration layers below,
+      which assert the cost's <em>disappearance</em> deterministically (a spy counts calls; a call count is
+      the same on every machine).
+    </div>
+
+    <h2 id="fixes">The three fixes</h2>
+    <div class="cards" data-c="fixes">
+      <div class="card">
+        <div class="who">Cost 1 · TimestampText</div>
+        <h4>Remember the now, remember the string</h4>
+        <p>The two “now” moments become one pair of local day/year boundary instants, computed once and
+        reused until the wall clock leaves the cached day — an <code>isSame(now, "day")</code> is a numeric
+        range test, not an allocation.</p>
+        <p>Then the formatted string is memoized on <code>(format, timestamp)</code>, keyed to that same day
+        generation so a midnight crossing cannot serve yesterday's answer. A virtualized list re-rendering the
+        same thirty timestamps on every SSE event then parses each one once, not once per event.</p>
+        <p><code>format="relative"</code> is never memoized — its whole contract is that it changes while the
+        input does not.</p>
+      </div>
+      <div class="card">
+        <div class="who">Cost 2 · useFlows.merge</div>
+        <h4>Keep the set, and stop parsing what was already parsed</h4>
+        <p>The accumulated host set survives across refreshes instead of being rebuilt from the array each
+        time, and <code>merge</code> asks for the host alone rather than calling <code>toRow</code>, whose
+        path half it discards.</p>
+        <p>The <code>new URL()</code> parse is memoized on the URI's scheme-and-authority prefix — a cheap
+        slice — so a refresh over 5 000 flows drawn from a handful of hosts parses a handful of URIs. The map
+        is bounded and cleared wholesale on overflow; correctness never depends on a hit.</p>
+      </div>
+      <div class="card">
+        <div class="who">Cost 3 · byteLength</div>
+        <h4>Count the bytes without materialising them</h4>
+        <p><code>byteLength</code> keeps its signature and its answer and loses its allocation: UTF-8 length is
+        arithmetic over code units — 1, 2 or 3 bytes, and 4 for a well-formed surrogate pair — so the count is
+        a scan with no array behind it.</p>
+        <p>A lone surrogate is the one place the two implementations could disagree;
+        <code>TextEncoder</code> emits U+FFFD (3 bytes) for it and so must this. That is a property test, not
+        a hand-picked case.</p>
+      </div>
+    </div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to" data-c="maps-to">
+      <tbody>
+        <tr><td><strong>Epic</strong></td><td><a href="2026-09-06-redesign-finish-plan.html">E-RFINISH</a> — W3,
+        the third of the three debt items, and the only one the epic plan requires to prove itself with a
+        number</td></tr>
+        <tr><td><strong>Use cases</strong></td><td><a href="../use-cases/web-ui.html">UC-4</a> (watch live
+        traffic) and <a href="../use-cases/web-ui.html">UC-5</a> (inspect a captured flow) — <em>no observable
+        contract moves</em>. All three are cost, not behaviour: the same rows, the same clock text, the same
+        cut marker, the same host options.</td></tr>
+        <tr><td><strong>Dependencies</strong></td><td>none. W9 waits on this WU only because it opens the same
+        body family.</td></tr>
+        <tr><td><strong>Design accounting</strong></td><td>three UI-rendering files change —
+        <code>TimestampText.tsx</code>, <code>TextRenderer.tsx</code>, <code>FormRenderer.tsx</code>. Each is
+        declared <code>design.undesigned</code> with the reason that its rendered output is unchanged by
+        construction and its existing tests prove it. <code>useFlows.ts</code> and <code>body.ts</code> are
+        logic modules, outside the rule.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <ul data-item="expected" data-c="expected">
+      <li><code>pnpm bench</code> from <code>ui/</code> and <code>cargo xtask ui bench</code> from the repo
+      root both run the same three benchmark files and print an ops/sec figure for each.</li>
+      <li>The WU result carries <strong>three before/after pairs</strong>, each quoted from a run of the
+      committed benchmark, with the before taken at the benchmark's own commit — before any
+      <code>src/</code> edit existed.</li>
+      <li>Every existing unit test for <code>TimestampText</code>, <code>TextRenderer</code>,
+      <code>FormRenderer</code>, <code>useFlows</code> and <code>body</code> passes
+      <strong>unchanged</strong> — no assertion is relaxed, retimed or deleted to accommodate a fix. A fix that
+      needs a test edited to stay green is a behaviour change and is reverted.</li>
+      <li>A spy-based test proves each cost is gone rather than merely faster: the timestamp of a re-rendered
+      row is parsed once, not once per render; a second refresh over the same hosts parses no URI; and an
+      over-cap body is never handed to <code>TextEncoder</code> at all.</li>
+      <li>Any fix whose benchmark shows no improvement is <strong>reverted</strong>, and the WU result records
+      the number that condemned it — a reverted fix is an outcome, not a failure.</li>
+    </ul>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <thead><tr><th>Level</th><th>What asserts what</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Unit</strong><br><span class="meta">per commit</span></td>
+          <td>
+            <p><em>Commit 1 (benchmark)</em> — <code>xtask/src/ui.rs</code>: <code>ui bench</code> is a
+            recognised subcommand and <code>ui bench --forever</code> is a usage error, in the same shape as
+            the two subcommand tests already there.</p>
+            <p><em>Commit 2</em> — the day/year boundary helper: a timestamp inside today's local bounds is
+            same-day, one a millisecond either side is not; the cached boundary is recomputed once the clock
+            leaves it (fake timers, never <code>sleep</code>). Memo: two renders of the same timestamp yield
+            one <code>moment</code> parse, a relative render is never served from the memo, and the memo is
+            abandoned across a day boundary.</p>
+            <p><em>Commit 3</em> — host extraction returns exactly what <code>new URL().host</code> returns
+            (port kept, default port dropped, userinfo stripped, IPv6 bracketed, an opaque URI → empty), and a
+            repeated authority is served from the memo; the memo's overflow clear loses no host from the
+            accumulated set.</p>
+            <p><em>Commit 4</em> — <code>byteLength</code> agrees with <code>TextEncoder</code> over ASCII,
+            2-, 3- and 4-byte code points, an empty string, a lone high surrogate, a lone low surrogate and a
+            well-formed pair; and a <strong>property test</strong> over generated strings, since “agrees with
+            TextEncoder for all inputs” is an all-input invariant and the surrogate cases are exactly where a
+            hand-picked list stops.</td>
+        </tr>
+        <tr>
+          <td><strong>Integration</strong><br><span class="meta">the WU contract</span></td>
+          <td>
+            <p>One file, <code>ui/src/perf.test.tsx</code>, asserting the WU's own sentence at the seam each
+            cost lives on — the cost is gone <em>and</em> the render is unchanged, which is the pair the
+            requirement claims:</p>
+            <ol>
+              <li><strong>The list.</strong> Render <code>FlowList</code> over a fixed set of flows, re-render
+              it the way an SSE refresh does, and assert the <code>moment</code> parse count does not grow with
+              the number of re-renders — while the rendered time cells are string-identical before and
+              after.</li>
+              <li><strong>The feed.</strong> Drive <code>useFlows</code> through two refreshes over the same
+              list with a spy on the <code>URL</code> constructor, and assert the second refresh parses nothing
+              — while <code>hosts</code> holds exactly the same values it holds today.</li>
+              <li><strong>The pane.</strong> Render <code>TextRenderer</code> and <code>FormRenderer</code>
+              over a body past <code>TEXT_MAX</code> with a spy on <code>TextEncoder.prototype.encode</code>,
+              and assert no call receives the untruncated body — while the cut marker's two sizes are the exact
+              strings the pre-fix implementation produced, captured as literals in the test.</li>
+            </ol>
+            <p>Deterministic and hermetic by construction: call counts and rendered strings, no timing
+            assertion anywhere. The benchmark is the tool that says <em>how much</em>; these say
+            <em>whether</em>.</p>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>E2E</strong></td>
+          <td><span class="bad">waived</span> — the epic's e2e is W10's, and it proves the three use-case
+          contracts. This WU moves no contract: an e2e that could see a difference here would be asserting a
+          duration, which the testing standard forbids at every level.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 id="scope">Scope</h2>
+    <table data-c="scope">
+      <tbody>
+        <tr><td class="good">In</td><td>the benchmark harness and its <code>xtask</code> entrypoint; the three
+        named costs and nothing else in those files</td></tr>
+        <tr><td class="good">In</td><td><code>byteLength</code> in <code>body.ts</code> — the two renderers'
+        cost is one shared function, so it is fixed once where it lives rather than twice at the call
+        sites</td></tr>
+        <tr><td class="bad">Out</td><td><code>BodyViewer</code>'s <code>bodyText(fetched.bytes)</code>, which
+        re-decodes the whole body on every render of the pane and inside <code>shownText</code>. It is a real
+        cost of the same family, and it is not one of the three this WU was given a benchmark for — recorded as
+        a follow-up so it lands with its own before number.</td></tr>
+        <tr><td class="bad">Out</td><td>the virtualizer's window size, the debounce interval, and the shape of
+        <code>GET /flows</code>. Tuning the amount of work asked for is a different question from making the
+        work cheap, and only the second one was deferred to this WU.</td></tr>
+        <tr><td class="bad">Out</td><td>replacing <code>moment</code>. TimestampText's <code>@tier</code>
+        contract names it, and swapping a parser is a behaviour change wearing a performance costume — this WU
+        stops calling it needlessly, which is a different thing.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="risks">What could go wrong, and what stops it</h2>
+    <table data-c="risks">
+      <thead><tr><th>Risk</th><th>Guard</th></tr></thead>
+      <tbody>
+        <tr><td>A memo serves a stale clock string across midnight.</td><td>The memo is keyed to the day
+        generation it was filled under; a unit test crosses the boundary with fake timers.</td></tr>
+        <tr><td>A hand-written UTF-8 count disagrees with <code>TextEncoder</code> on some input.</td><td>A
+        property test over generated strings, plus the lone-surrogate cases named explicitly — the one input
+        class where the two could ever differ.</td></tr>
+        <tr><td>A cheap host parse gets an edge case wrong and a host silently vanishes from the
+        filter.</td><td>The memo caches the result of the <em>real</em> <code>new URL()</code> parse; nothing
+        is parsed cheaply. The slice only decides whether the parse is needed.</td></tr>
+        <tr><td>A fix looks good and does nothing.</td><td>It is reverted, and its number goes in the result.
+        That is the discipline the epic plan wrote this WU to add.</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

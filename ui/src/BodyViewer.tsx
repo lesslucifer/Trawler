@@ -4,6 +4,7 @@ import {
   bodyKind,
   bodyNotice,
   bodyText,
+  decodeBody,
   hexDump,
   rawKind,
   saveBody,
@@ -40,8 +41,15 @@ function Dispatch({ fetched, kind }: { fetched: BodyFetch; kind: BodyKind }) {
       return <ImageRenderer bytes={fetched.bytes} contentType={fetched.contentType} />;
     case "hex":
       return <HexRenderer bytes={fetched.bytes} />;
-    case "text":
-      return <TextRenderer text={bodyText(fetched.bytes)} />;
+    case "text": {
+      const decoded = decodeBody(fetched.bytes);
+      return (
+        <TextRenderer
+          text={decoded.text}
+          size={decoded.whole ? fetched.bytes.length : undefined}
+        />
+      );
+    }
   }
 }
 

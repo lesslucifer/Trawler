@@ -41,6 +41,26 @@ export function bodyText(bytes: Uint8Array): string {
   return new TextDecoder().decode(bytes);
 }
 
+export interface DecodedBody {
+  text: string;
+  whole: boolean;
+}
+
+// Whether every byte decoded is a fact only the decoder holds. Bytes that are
+// not valid UTF-8 yield one replacement character each, and each of those
+// re-encodes to three — so past that point a size taken from the bytes and a
+// size taken from the text have stopped measuring the same thing, and a reader
+// downstream cannot tell a replacement character from one the body carried on
+// purpose. The strict pass is the same single decode the lenient one was; only
+// a body that fails it is decoded twice.
+export function decodeBody(bytes: Uint8Array): DecodedBody {
+  try {
+    return { text: new TextDecoder("utf-8", { fatal: true }).decode(bytes), whole: true };
+  } catch {
+    return { text: bodyText(bytes), whole: false };
+  }
+}
+
 // ponytail: hex view caps at 4 KiB — a full capture-cap body would be ~600k DOM
 // lines; raise the cap or virtualize if inspecting deep binary ever matters.
 export const HEX_MAX = 4096;
