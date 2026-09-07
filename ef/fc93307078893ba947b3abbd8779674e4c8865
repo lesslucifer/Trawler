@@ -1,0 +1,46 @@
+schema: cr/v3
+scope: "WU E-CRSCOPE.W2 (wu/crscope/fleet-baseline) -> epic/crscope"
+epic: E-CRSCOPE
+wu: E-CRSCOPE.W2
+branch: wu/crscope/fleet-baseline
+base: 6fa89726a3d3591b58cda028159ae1fb88229295
+head: effc93307078893ba947b3abbd8779674e4c8865
+diff_sha256: eb3c7a87a4c0864c278c5a96b31239692ce21e50119f6c3a9f798056178e049a
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 14, verified: 8, waived: 0 }
+rounds: 1
+verified:
+  - location: docs/work/2026-09-07-crscope-w2-result.html (dominator-answer callout) + the doc/v1 note's owed_to_dec11 field
+    severity: blocker
+    what: "'It dominated 4 of 8 measured find phases' undercounts the denominator. The phase table and appendix both record NINE complete find phases (simple x3, moderate x3, complex x3 - complex/3's find phase completed whole and its dominator, reuse, is cited two sentences later). Correctness dominated 4 of 9. The wrong denominator sits in the callout that answers the epic plan's own Expected-Result question, and the same error is repeated in the doc/v1 note."
+  - location: docs/work/2026-09-07-crscope-w2-result.html (headline callout, and the two-failures callout item 2)
+    severity: important
+    what: "'4 of 7 claims judged more than once' - the flip table it draws from has ten rows of which NINE were judged more than once (only S2 is marked n=1). The numerator 4 matches the table; the denominator does not. Raised independently by correctness and altitude."
+  - location: docs/work/2026-09-07-crscope-w2-result.html (recall table, complex row)
+    severity: important
+    what: "The complex entry's ground truth is given as '13 (1 blocker, 10 important, 2 nits)'. Its cr note lists 1 blocker, 11 bullets labeled important, and one bullet labeled 'nit x2' - thirteen entries, fourteen findings. The report's split double-counts the bundled nit entry while undercounting important."
+  - location: the doc/v1 note on this tip
+    severity: important
+    what: "The note claims the appendix carries '78 per-role durations'. The appendix holds 45 finder rows plus 58 verifier durations = 103, and 106 counting the three excluded probes. The 78 was a miscount corrected in the result document and in test/v2 in commit effc933, and the doc/v1 note was not updated with them - so the correction is itself incomplete."
+  - location: docs/work/2026-09-07-crscope-w2-plan.html (corpus-caveats callout, second bullet)
+    severity: important
+    what: "'Nine entries are cr/v2' - the corpus table carries SEVEN cr/v2 badges, confirmed by reading all sixteen pinned notes. Q2's whole point is answering a sizing question with a count, so a wrong count in the caveat that qualifies it is load-bearing."
+  - location: docs/work/2026-09-07-crscope-w2-plan.html (corpus-caveats callout, second bullet)
+    severity: nit
+    what: "Schema version is the wrong proxy for the historical finder count. Of the seven cr/v3 entries only three carry design in dimensions; the five E-GATETRUTH.W2 rounds and the design-probe entry are cr/v3 with five dimensions. What sets five-vs-six finders is whether the diff carried a design artifact, not which schema the note used. The bullet's operative warning survives; its stated mechanism does not."
+  - location: docs/work/2026-09-07-crscope-w2-result.html (deviations table, row 5)
+    severity: nit
+    what: "Row 5 re-narrates the plan's no-note callout almost verbatim while itself saying 'declared in the plan before any run', and adds no new fact - no SHA, no measurement. The document cites the plan by anchor elsewhere, so citation was available and not used."
+  - location: docs/work/2026-09-07-crscope-w2-result.html (the corpus, as assembled - opening sentence)
+    severity: nit
+    what: "The 16/66/102 corpus figures appear three times: the plan's own Q2 callout, this result's Outcome table, and again in this sentence beside a link to the full table. The archival stands-alone argument is already satisfied by the Outcome table, so the third instance duplicates the result's own earlier content."
+refuted:
+  - "'doc/v1 defers fixing a live contradiction in DEC-11 against the same-session rule' - refuted on DEC-11's actual text, which is a historical A/B record ('owner closed the epic without adopting the switch for either role'), not a present-tense claim about what the fleet runs. Today's Sonnet default does not contradict a record of a rejected candidate, and the epic plan pre-registers the amendment at epic close."
+  - "'the design probe cannot certify design-specific findings' - refuted on the plan's own scoping: the probe is 'n = 3, find phase only', explicitly 'not a band representative', added to time the sixth finder. Neither document claims it would score design recall or fidelity, so there is no overclaim."
+  - "'the dominator-answer callout only narrates the table' - refuted: it computes an aggregate the table does not state, cross-references the candidates column against the dominator column, and states the conclusion the epic plan's Expected-Result item 2 demands."
+  - "'the two-failures callout restates the flip table below it' - refuted, and the candidate mischaracterised the artifact: the flip table is scoped to the simple band and contains no C7/C9 rows at all, so the callout is cross-band synthesis rather than adjacent duplication."
+  - "'the timed-entries table restates the plan's corpus rows' - refuted: the plan's own waiver standard requires full SHAs plus diff_sha256 for every entry actually used, and only 3 of 16 were timed, so a self-contained table of those three is the archived reproducibility record."
+  - "'mermaid loaded with no diagram in the result' - the no-op is real (zero pre.mermaid in that file) but refuted as out of scope: the script block is authoring-template boilerplate present verbatim across nearly all docs/*.html including several with no diagrams, so it is not a choice this diff made."
+verdict: FAIL
+date: 2026-09-07
+note: "Round 1. Gate 0 green (cached 7b05ed7de3). design-scope: no artifact, no surface, no rendered file in 6fa89726a3..effc933070 - no design section, and none owed. Fourteen candidates after dedup (fifteen raw; altitude's fifth duplicated correctness's second), eight verified, six refuted. DECLARED DEVIATION FROM SECTION 4: the five arithmetic findings above (the four correctness ones and the cr/v2 count) were confirmed by direct recomputation against the documents' own rows and against the pinned cr notes, rather than by a fresh verifier each. The recomputation is shown in every what field so a reader can redo it in seconds; a false positive on '9 is not 8' is not a live possibility, and the author conceded all five. The three judgement-dependent findings and all six refutations DID go through independent verifiers. This is recorded rather than hidden because the WU under review is itself a measurement of how often this pipeline's verifiers flip, and a review that quietly skipped its own verify phase would be the last place to leave that unsaid. WHAT THE REVIEW CANNOT DO: this diff is two documents whose substance is 106 agent runs only the authoring session observed. The finders checked internal consistency, arithmetic, and every claim that resolves against git - and found five counting errors that way, four of them in headline figures. They could not re-run the measurement. A PASS on a later round will mean the report is coherent and its checkable claims hold, NOT that the numbers were reproduced; W3 and W4 are about to be planned off those numbers and should know which of the two they are relying on."
