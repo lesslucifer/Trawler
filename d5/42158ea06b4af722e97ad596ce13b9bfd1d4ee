@@ -1,0 +1,91 @@
+schema: doc/v1
+epic: E-EXPORT
+wu: E-EXPORT.W9
+branch: wu/export/controls-redesign
+changes:
+  - path: docs/work/2026-09-06-export-w9-controls-redesign-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan, written before the run. The requirement sentence; why a new run rather than an amendment to run 10 (the close step is re-pin, green, archive — re-opening an archived run to re-pin it inverts it, and receipt·rulebook-stale is precisely the condition run 10 is now in); a four-row substrate table naming what moved (rulebook aeff5b0 → a7f9ae3, registry 24 → 28, the header's four Fields → Field + two Selects + Field, and modality from 'nothing in the collection is a dialog' to a shipped ModalShell); the note that every contract is now merged so this run designs ahead of nothing, where run 10 carried W7's refusal as a blocked-on; six questions with the stage that owns each, including Q6, the duty a re-run has and a first run does not; the expected result naming that W6 cites THIS run and not run 10; the test plan with three reasoned waivers; and the distillation owed, which is deliberately almost nothing because a design run changes no user-observable contract."
+  - path: docs/work/2026-09-06-export-run-11-capture-controls.html
+    tier: T3
+    action: added
+    distills: "Design run 11, closed and archived, at the state seventeen review rounds left it (1-15, with 6b and 9b). All eleven items. The Frame's Given is entirely merged capability, and its constraints include three the earlier run could not state — two header neighbours open popups, saveBody returns null on cancel, and the window's configured minimum is 800px. Layout keeps run 10's trailing-cluster placement for a second reason (a Select's popup must not be covered by the acts) and then recomposes A from one flat twelve-px queue of eight members into three groups at widths the app already ships. Elements resolves eleven entries including M, the menu. Interaction is eleven use cases, each with its zone→delta trace behind a gist, including the cancelled save and the refused paste. The mockup MOUNTS the real Field, Select, StatusDot, IconButton, TonedText, Notice, Button, StatusPill, MethodLabel, TimestampText and DurationText from the specimens bundle, over a date-relative fixture and five state toggles. Tune runs T1–T8, ending at T8 — the three capture acts collapse behind one ⋮ trigger, so A′ is a slot and a 28px control at 116.0px, measured. The receipt covers all 17 soft slugs (14 satisfied, 2 inherited, 1 satisfied-via-proposal). Capabilities answers all twelve Givens including two deliberately unused. Proposals carries FOUR entries — Dialog (promote ModalShell), Menu (an action menu, because Select disqualifies itself twice in its own @avoid), the soft rule safe-answer-takes-focus, and one IconButton glyph entry for ⋮ — every one of them owned elsewhere, because a run proposes and an owner performs. Blocked-on carries TWO — tauri.conf.json's minWidth must rise 800 → 850, and a cross-year timestamp overruns cell 1 by 7.2px (167.2px against 160px) with DEC-34's escape unavailable because the detail pane shows no timestamp — beside a five-row accounting of each of run 10's five entries. The Review list is 30 rows. T3's widths are measured against the DM Mono files shipped in ui/dist, NOT against this page - the run doc loads no @font-face, so font-mono falls back over file:// and its Stubbed list says so. What the run's body does NOT carry is any narrative about its own review process; the design dimension's findings live in this tip's cr/v3 note (design-flow section 8, DEC-24, whose rejected-alternatives table names 'keep the verdict inline in the run doc' by title)."
+  - path: docs/work/2026-09-04-export-plan.html
+    tier: T3
+    action: updated
+    distills: "The WU table gains the W9 block — summary, mapping, expected result and dependencies — stating that every endpoint it designs against is merged, that the E-REDESIGN baseline reached this epic as a back-merge of landed history rather than as a WU (so the merge hook and the epic walk both skip that seam, DEC-8), and that there is no E-EXPORT.W8: the number was allocated to that integration while it was still framed as a WU and retired unstarted when it became a back-merge. The W6 block is reconciled to it, which adding the W9 row alone had not done: in four places it still sent the build to W5's design, so it now names W9 throughout, the W5 heading is marked superseded, and the e2e Covers column reads W9 - without this the plan contradicted itself about which design 9.design would bind W6's citation to. The same block also stopped instructing W6 to wire the clear confirmation through useConfirm, which both design runs found to be a ~2 s flash that reports rather than asks; it states the modal ask and names the deviation, which W6's result carries. Header to v4."
+  - path: docs/design-flow.html
+    tier: T1
+    action: updated
+    distills: "THE ONE T1 CHANGE IN THIS WU, and the reason this commit carries a human Reviewed-By trailer. The close sequence gains a new step ① — walk the run this one supersedes, stage by stage, and classify every answer in it as held, changed or dropped, because an unclassified answer is the defect and a held answer must be cited rather than left to be inferred — with the later steps renumbered ②-⑤ and two stale cross-references to the old numbering repaired (line 52's 'step 3 before step 4' and line 375's 'close's step 1'). The step is PERFORMED here, not proposed: round 10 had filed it in the run's Proposals list, and Proposals is for entries the design needed and the vocabulary lacked, which a change to the flow's own procedure is not. Its rationale paragraph states the mechanism ONLY — a changed answer leaves a false statement, which review finds; a dropped answer leaves nothing, so a reader testing the new run's statements has no location at which it is wrong — at the altitude of its two sibling callouts. The evidence that produced the step is not in T1: it is DEC-38. This amends the procedure every future design run follows on the strength of one WU's experience, which is why it is called out plainly and why the signature on this commit is where that was accepted."
+  - path: docs/decisions/dec-38-the-predecessor-is-the-checklist.html
+    tier: T2
+    action: added
+    distills: "Why a re-run's close walks its predecessor, and the evidence for it. The mechanism as a three-row table — a disclosed change needs no finding, a silent change leaves a false statement a reader can test, and a DROPPED answer leaves nothing, so the search over the new run's statements cannot contain it. Then E-EXPORT.W9 as the unintended experiment, round by round: the eight rounds that read only the new run found 0 inherited answers moved in silence and were RIGHT about every statement they tested; round 8 found 1, round 9b found 1, and round 10, walking run 10 end to end, found 4 — six in total, every one from a round that opened the predecessor. Carries the choice (close step ①, first because every later step reads the new run; Tier-3 is the only reader that can refuse an unclassified answer and must be handed the predecessor's path) and four rejected options — leave it to the review, make it a receipt item, file it as a vocabulary Proposal, put the step last. This record is where the incident is kept, so design-flow.html can state the mechanism and stop."
+  - path: docs/decisions/decisions-index.html
+    tier: T2
+    action: updated
+    distills: "DEC-38 registered — the record's file, its id, the one-paragraph substance (the walk, why a dropped answer is invisible from the near side, the six reversals and the eight-versus-three round split, that nothing machine-checks it, and the three rejected homes) and status active. Append-only as the index's own rules require; no existing record is superseded, because the flow had no step covering this and no record claimed otherwise."
+note: >-
+  One T1 change, two T2 changes, three T3 docs. The T1 change is
+  docs/design-flow.html — the close sequence's new step ① — and it is what the human Reviewed-By
+  trailer on this commit signs. That is stated first because it is the change a reader must not
+  miss - a design WU that amends the process every future design run follows.
+
+  T2 is two records and no contract. docs/decisions/ gains DEC-38, the incident behind step ①,
+  and decisions-index.html registers it. What T2 does NOT gain is a use-case or rulebook edit,
+  and that silence is the correct outcome rather than an omission - a design run decides how a
+  screen will look and changes no user-observable contract, so UC-4's surface gains the export,
+  import and clear controls when W6 BUILDS them; stating them now would put a capability in the
+  use-case KB that the app does not have. The rulebook is untouched for the same reason plus a
+  specific one - the only T2 write-back this line of work owed was run 10's Lexicon question, and
+  W5 already landed it, so `export` has its row and this run consumes it (receipt verdict -
+  inherited) rather than proposing a term.
+
+  The run's own four proposals are NOT T2 edits this WU may make, and none was made - Dialog
+  (promote ModalShell) and Menu belong to the collection, safe-answer-takes-focus belongs to the
+  rulebook, and the ⋮ glyph entry belongs to IconButton's TSDoc. A run proposes and an owner
+  performs. Two of the four moved during the rework - the glyph entries went from three faces to
+  one, because with the acts collapsed into a menu they are words and no face is spent on any of
+  them; and Menu was added, because Select disqualifies itself twice in its own @avoid and the
+  collection has no action menu at 28 entries. Two proposed components is a lot of proposed
+  surface for one design, and Proposals says so explicitly - W6 may build both local and mint
+  neither, the way this run's ask is local.
+
+  The close-sequence step is the one place where this WU performed rather than proposed, and the
+  distinction is deliberate. A vocabulary or component gap is a proposal because an owner exists
+  who must decide it. A defect in the flow's own procedure has no such owner short of the flow
+  doc itself, and documentation-system.html's checklist routes a changed process to its T1 doc in
+  the same session - while a T3 run is archived and never re-read, so leaving it as a proposal
+  would have lost it.
+
+  One item is deliberately NOT distilled and is recorded as owed instead - tauri.conf.json's
+  minWidth must rise from 800 to 850 for the header to hold one line at every reachable width.
+  The window config is not a design artifact and not a doc, so it sits in the run's Blocked-on
+  with W6 named as owner, beside the cross-year timestamp overflow, rather than being quietly
+  changed here.
+
+  One fact per tier held deliberately - the endpoint shapes live in src/api/routes.rs and are
+  named in the run only by what the screen needs from them; the component contracts live in each
+  component's TSDoc and the run cites @use/@avoid rather than restating states; the run's
+  own account of which capability is used or deliberately unused lives in its capabilities table
+  rather than being repeated in the Frame, which is why the Frame's Given line is a terse
+  ·-separated list; and DEC-38 holds the incident so design-flow.html can hold the mechanism
+  alone.
+
+  Every doc was snapshotted before its first edit this session and DEC-38 at creation, so
+  <doc>.html?diff=latest shows exactly what changed. verify-doc over all 59 governed docs in the
+  tree - none red; the run itself green as design-run at 17/17 soft, 13/13 hard, 0 suppressions,
+  which required reopening it for the fix and re-archiving it at the close so the checks actually
+  ran. `ui specimens --check` renders it at 7 mounts and 15 buttons. design-flow.html and both
+  decisions docs are ungoverned by verify-doc - it reports them ungoverned rather than green - so
+  what was checked on them instead is that every relative href resolves on disk and that each
+  renders in headless Chrome with no page error.
+
+  A standing limit worth recording, because this WU is its evidence - neither gate reads what
+  these rounds found. verify-doc reads structure and never prose or pixels; the render gate fails
+  only an EMPTY mount. A mockup that renders in the right place in the wrong colour, at the wrong
+  width, or differently tomorrow than today is green by both, and a four-cell row under two
+  headers is green by both. Rounds 1-11 read this document; rounds 12-14 rendered it, and
+  everything they found was invisible to every check.
