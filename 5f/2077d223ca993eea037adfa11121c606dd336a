@@ -1,0 +1,20 @@
+schema: doc/v1
+epic: E-CRSCOPE
+wu: E-CRSCOPE.W2
+branch: wu/crscope/fleet-baseline
+changes:
+  - path: docs/work/2026-09-07-crscope-w2-plan.html
+    tier: T3
+    action: added
+    distills: "The WU plan, pinned before any run: the replay protocol (an instrumented replay of sections 3/3b and 4, never a review - sections 2 and 6 omitted because every corpus tip is reachable from main and a replay that wrote its note would overwrite the very record this epic uses as ground truth), the corpus mining rule (an entry is a note's own base..head pair, labeled with what that note recorded FOR THAT HEAD), the band rule from the diff's own facts, and four numbered reproducibility checks standing in for the waived test layers. Amended once to v2, on the record: cargo xtask design-scope showed that none of the three timed entries carries a design artifact, so the section 3b finder would never spawn, and a fourth find-only entry was added to measure it."
+  - path: docs/work/2026-09-07-crscope-w2-result.html
+    tier: T3
+    action: added
+    distills: "The result: the measured configuration, the per-band cost tables with their spreads, the recall and verdict-fidelity findings, eight declared deviations, and an appendix carrying all 103 per-role durations (45 finder rows plus 58 verifier rows; 106 roles counting the three excluded calibration probes) because the session log that produced them does not outlive the session. Two shortfalls are recorded as shortfalls rather than re-scoped - the design probe never ran and complex run 3's verify phase was killed by a session rate limit - and both are handed forward as follow-ups 1 and 2."
+t2_synthesis:
+  status: deferred
+  why: "Deliberate, and it is the epic plan's own instruction: all of E-CRSCOPE distils to docs/decisions/workflow-gates.html as an amendment to DEC-11, and a baseline is only citable once the epic says whether the configuration changed. W3 and W4 consume these numbers first. Editing DEC-11 now would either state a before-arm with no after-arm beside it, or pre-empt a verdict W3 has not reached. No use case is touched: E-CRSCOPE serves no UC-* by construction, and this WU changes no proxy, API, flow-model or UI behaviour - it changes no code at all."
+  code_change: "None. The diff is two T3 documents."
+  owed_to_dec11: "Three things this WU establishes that the amendment must carry, recorded here so they cannot be lost between WUs. (1) DEC-11's find/verify figures are superseded by the per-band table, and its claim that the correctness finder is the find-phase dominator must be REMOVED rather than updated: it dominated 4 of the 9 complete find phases, and on the simple band the dominator changed in every run while the diff did not. (2) The fleet's model is configured by CLAUDE_CODE_SUBAGENT_MODEL in an untracked per-machine settings file, so any DEC recording a per-role model must also name the mechanism it replaces. (3) C6's reasoning is re-confirmed and its target is not - verifier quality is the binding constraint, and it binds on the arm already in production."
+t1_note: "Untouched, and checked rather than assumed. workflow.html owns the gate contract and testing-strategy.html owns the test charter; this WU alters neither - it runs the review fleet as a measurement and ships no mechanism. The epic plan states that a T1 change here would be an escalation rather than a quiet edit; none was needed."
+skill_note: ".claude/skills/code-review/ is UNCHANGED and was required to be: the epic freezes the quality bar so that any measured delta is attributable to configuration alone. The rubric blob every replay read is 755e70bc, this tip's copy, pinned deliberately because the oldest corpus entry's own tip carries an older rubric (df07e603) - stated in the result's deviations rather than left implicit."
