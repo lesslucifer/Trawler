@@ -269,3 +269,18 @@ note: >-
   four-cell row under two headers, and so is a measured figure belonging to a rejected option.
   Rounds 1-11 read this document; rounds 12-14 rendered it and counted it, and everything they
   found was invisible to every check.
+  REVIEW SCOPE, recorded so the cr/v3 PASS is not read as more than it is. The full diff was
+  reviewed at tip c3d8835 (10 findings, 6 verified) and again at 6cd0379 with six independent
+  finders and one fresh verifier per candidate (11 candidates, 2 verified). The three commits
+  after that were reviewed proportionately rather than by another full run - three agents over
+  round 15's delta covering all five dimensions plus design (3 candidates, 3 verified), and one
+  adjudicator on the font conflict. Across the WU: 14 candidates, 5 verified, 0 waived, and all
+  five fixed, which is what the PASS rests on together with gate0 green. Two deliberate
+  departures from the skill: the "forced rather than picked" design finding was accepted and
+  fixed without a fresh verifier because it was not disputed, and the two font claims went to one
+  adjudicator rather than one verifier each because they resolve to a single question. Rounds 16
+  and 16b - the fallback-glyph correction and the removal of the rotting round counts - were
+  author-applied fixes to verified findings and to a class the review had already named; they
+  were NOT independently re-judged, because the owner directed the review to close at 16 rounds
+  for a docs-only Working Unit. A later reader wanting that last delta judged should read
+  git diff 6cd0379..51d5ba0, which is 3 files and 67 insertions.
