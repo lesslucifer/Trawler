@@ -1,0 +1,64 @@
+schema: cr/v3
+scope: "WU fleet-baseline -> epic/crscope"
+epic: E-CRSCOPE
+wu: E-CRSCOPE.W2
+branch: wu/crscope/fleet-baseline
+base: 6fa89726a3d3591b58cda028159ae1fb88229295
+head: 9981d2879e52ccbb3b821516491c56aa02a9baa1
+diff_sha256: 7343072bfcb57a474f915373cdafdb68e956aa0db11bad25db35c54f8ca20e5f
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 72, verified: 35, waived: 2 }
+rounds:
+  - { n: 1, candidates: 13, verified: 7, refuted: 6 }
+  - { n: 2, candidates: 12, verified: 8, refuted: 4 }
+  - { n: 3, candidates: 14, verified: 5, refuted: 9 }
+  - { n: 4, candidates: 9, verified: 3, refuted: 6 }
+  - { n: 5, candidates: 9, verified: 4, refuted: 5 }
+  - { n: 6, candidates: 7, verified: 2, refuted: 5 }
+  - { n: 7, candidates: 6, verified: 4, refuted: 2 }
+  - { n: 8, candidates: 1, verified: 1, refuted: 0 }
+  - { n: 9, candidates: 1, verified: 1, refuted: 0, note: "reuse dimension did not run - see waivers" }
+waivers:
+  - finding: "Round 9's reuse dimension never reported: the finder was killed by the session API rate limit (HTTP 429, resets 20:30 Australia/Perth)."
+    reason: "Accepted at the caller's explicit direction to close the review at round 9. The risk this leaves is bounded and named: reuse is the dimension that found the note-versus-document drift class, and the only change since its last complete pass - round 8's tip, where it verified the drift removal complete, both pointers resolving, every anchor resolving, and every cross-stated fact in agreement, having pulled the four historical cr notes to ground-truth the corpus table - is one distillation bullet plus the same rewording in the doc/v1 note. That edit shape is precisely what has drifted before, and it was not independently swept. Correctness did check the bullet against its note mirror this round and found no drift, which covers part but not all of what reuse would have."
+  - finding: "Round 9's single finding was fixed without an independent verifier: A9-1, the distillation bullet contradicting itself over whether the target-has-moved claim was W2's to establish."
+    reason: "Accepted at the caller's direction. The claim was self-evident on the text - the bullet opened by reserving the target claim from W2 and closed by handing the amendment both - and the orchestrator confirmed it by reading the passage rather than by spawning a fresh verifier per section 4. So the fix rests on the orchestrator's own judgement of its own prose, which is the arrangement this WU spent nine rounds demonstrating to be unreliable."
+verdict: PASS
+date: 2026-09-07
+summary: |
+  Nine rounds on a two-document diff. 72 candidates, 35 verified and fixed, 37
+  refuted on evidence. Gate 0 green at every round; no design artifact in scope,
+  so five dimensions throughout and no design section here.
+
+  Where the defects were. Not one verified finding across nine rounds touched the
+  raw per-role appendix, and round 6 confirmed commit by commit that it was never
+  edited. Eight were derived-layer arithmetic - a find/verify ratio range, three
+  pooled medians, a misapplied superlative, three phase-path cells - and all eight
+  are mechanically checkable against the appendix, which is why follow-up 7 hands
+  W3 that check and the test/v2 note records it as a fifth reproducibility check
+  the plan never asked for. The rest were narrative: two label counts needing
+  external cr notes, one causal misattribution, a dead anchor and unrendered
+  mermaid labels, prose disagreeing with an adjacent table, and prose disagreeing
+  with the tip's own notes.
+
+  That last class is the run's own finding about itself. It was the headline
+  defect in four consecutive rounds - a count or taxonomy restated in a git note
+  and left to drift from the document. Round 7 stopped patching it and removed the
+  source: the review tally now lives only in the result's evidence table and the
+  defect taxonomy only in follow-up 7, with both notes pointing rather than
+  copying. Rounds 8 and 9 found none of that class.
+
+  Two instrument failures stand in the artifact, both declared: role self-timing
+  is unusable, and five phase-table cells are lower bounds whose true values died
+  with the session log. Two shortfalls stand too - the design probe never ran, so
+  the epic's section 3b requirement is wholly unmet, and the complex band's verify
+  is n=2 and cannot be completed because the candidate text did not survive. All
+  four are recorded as such and owned by follow-ups 1, 8 and 9's deviations rather
+  than re-scoped away.
+
+  The verdict is PASS on the caller's instruction to close at round 9, not on a
+  clean sweep: two waivers above name what that costs. Rounds 8 and 9 each found
+  exactly one defect where earlier rounds found seven and eight, and both were in
+  the report's account of itself rather than in its measurements - but the trend
+  is four data points, and this WU has already had two findings refuted for
+  asserting trends from counts this small, so no convergence claim is made here.
