@@ -32,19 +32,20 @@
       a dropped answer contributes none, so the search space does not contain it.</div>
 
     <p>E-EXPORT.W9 ran the experiment without meaning to. It re-ran a superseded design over sixteen review
-      rounds, and the rounds divide exactly on which document they read:</p>
+      rounds — the count is <em>as at this record</em>, and the split below is what matters, not the
+      total — and the rounds divide exactly on which document they read:</p>
     <table data-c="rounds">
       <thead><tr><th>Rounds</th><th>What they read</th><th>Inherited answers found moved in silence</th></tr></thead>
       <tbody>
-        <tr><td>1 – 7, 9, 11 – 14</td><td>the new run only, asking whether its statements were true</td><td><strong>0</strong> — and every statement they tested <em>was</em> true. They found other defects, in quantity; none was an inherited answer</td></tr>
+        <tr><td>every other round<br><span class="kd">1 – 7, 9, 11 – 14 at this record</span></td><td>the new run only, asking whether its statements were true</td><td><strong>0</strong> — and every statement they tested <em>was</em> true. They found other defects, in quantity; none was an inherited answer</td></tr>
         <tr><td>8</td><td>one inherited answer, checked against the predecessor</td><td><strong>1</strong> — the predecessor had the focus answer right and the re-run had flipped it</td></tr>
         <tr><td>9b</td><td>the same, one answer further</td><td><strong>1</strong></td></tr>
         <tr><td>10</td><td>the predecessor end to end, every answer classified</td><td><strong>4</strong>, each of which had survived every earlier round</td></tr>
       </tbody>
     </table>
     <div class="caption">Six in total, and every one of them from one of the three rounds that opened the
-      predecessor. The thirteen rounds that did not were not careless; they were asking a question that cannot
-      return these six.</div>
+      predecessor. Every round that did not was not careless; each was asking a question that cannot
+      return these six — which is why the ratio, not the tally, is the finding.</div>
 
     <h2 id="choice">Choice</h2>
     <div class="callout" data-c="choice">
@@ -57,7 +58,7 @@
     </div>
     <p>Nothing machine-checks it. <a href="../design-flow.html#review-tier">Tier-3</a> is the only reader that
       can, and it must be handed the predecessor's path — a reviewer given only the new run is structurally in
-      the position of the thirteen rounds that found none of the six.</p>
+      the position of every round that found none of the six.</p>
 
     <h2 id="options">Options rejected</h2>
     <table data-c="options">
@@ -65,7 +66,7 @@
       <tbody>
         <tr><td><strong>Leave it to the review</strong> — reviewers should walk the predecessor</td>
           <td>they will, once told which document that is and that the walk is owed. Absent both, the review
-            reads what it was given; W9's thirteen new-run-only rounds are the demonstration. The obligation has to sit
+            reads what it was given; W9's new-run-only rounds are the demonstration. The obligation has to sit
             where the predecessor's identity is known, which is the run's own close</td></tr>
         <tr><td><strong>Make it a receipt item</strong> — a table of the predecessor's answers with a verdict each</td>
           <td>the receipt is the run's claim about itself against the rulebook, and its coverage is checked
