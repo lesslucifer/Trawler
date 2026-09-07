@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: c056afeda80af4bbe646628d8f293af4f7901416
+base: 1e054ad481c02a91014c4c1bb06e812994dab72b
+tier: key
+signer: vuluu
+report: docs/work/2026-09-06-export-w9-controls-redesign-result.html
+report_sha256: 4dfb0215250634d2d82ef7d3d7a5570bddd762f93534bacad31f3141ff6bbe44
+date: 2026-09-07
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAED7s44cjU7L/Xm7bYfhMyn/T4ZrnHgKYzJLQ5GLxtZ/s+1fgAlF245aYv
+  HNzUx3+scOg2Nn3Y2wLcwxTf8goEIJ
+  -----END SSH SIGNATURE-----
