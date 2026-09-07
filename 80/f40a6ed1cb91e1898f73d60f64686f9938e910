@@ -1,0 +1,16 @@
+  Round 9 found the rule this run derived and did not propose - which control a destructive ask
+  focuses - and it is now a third proposal (safe-answer-takes-focus, owner the rulebook). Checked
+  rather than assumed: "destructive" appears zero times in the rulebook, and its own growth
+  mechanism says a design needing a rule that is not there proposes it.
+  Round 9b found a SECOND run-10 answer this run had silently dropped, one round after the first.
+  Run 10 said the paste ask opens with focus in the textarea; run 11 never said it, and after the
+  title row landed that omission means F would open focused on its own close control. The marker
+  cannot express the fix either - ModalShell selects [data-opener="true"] button, so a textarea
+  can never be named by it - which makes round 8's "the caller marks which control" true for the
+  clear ask and quietly false for the paste. The run holds run 10's answer and the Dialog proposal
+  now carries this as a required CHANGE, not a rename.
+  Two silently-dropped run-10 answers in two rounds is a pattern about this run rather than about
+  either finding, and the next round is aimed at it directly: an exhaustive answer-by-answer
+  comparison of run 10 against run 11, so the class is closed rather than sampled.
+  Also repaired: a sentence my overlapping round-7/8 edits had left unparseable, and a false claim
+  that both FlowList absences carry a proxy address - only one does.
