@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 9981d2879e52ccbb3b821516491c56aa02a9baa1
+base: 6fa89726a3d3591b58cda028159ae1fb88229295
+tier: key
+signer: vuluu
+report: docs/work/2026-09-07-crscope-w2-result.html
+report_sha256: 6af61e395356ccc6c338b68ab6032809b2e332a9be300cbe8758f59646a4d9c4
+date: 2026-09-07
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDyZRui+7BrKfNBqk7s9Afm1+lvxpOZwmAlcQaS3athpz6CbOBFsZG9lO
+  GnoU2zEtYGU53TpXj9djq6WgkYuQMC
+  -----END SSH SIGNATURE-----
