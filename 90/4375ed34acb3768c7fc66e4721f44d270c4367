@@ -1,0 +1,34 @@
+schema: cr/v3
+scope: "WU E-CRSCOPE.W1 (the per-worktree Gate 0 green slot) -> epic/crscope"
+epic: E-CRSCOPE
+wu: E-CRSCOPE.W1
+branch: wu/crscope/worktree-cache-slot
+base: 5d76d97c80d5d214cfff42f831ea3dc0160e5529
+head: 904375ed34acb3768c7fc66e4721f44d270c4367
+diff_sha256: efdedceb80637ff17fe3e408b936340dd05be166d034a5975f3f27828114a19a
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 12, verified: 5, waived: 0 }
+history:
+  - round: 1
+    tip: dcd9f0b2cf9a8f8956de6ee703b46cf2fd2579a7
+    found: 6
+    verified: 3
+    what: "Correctness: the slot was read off the git dir's path shape, so a repository living in a directory called `worktrees` took the slot worktrees/.git instead of main - benign (nothing could collide) but a guess, and one that would have to be made again for every layout git supports. Fixed by asking git for --git-dir and --git-common-dir in the one spawn already paid for; regression test written first and observed failing. Reuse: the test Worktree struct duplicated Repo's shape - Repo::worktree() now returns a Repo. Simplification: three tests repeated one five-line arrangement - now fleet(). REFUTED: the slot resolved twice per gate (once on the skip path, the second only after cargo ran, ~8.5ms inside a multi-second gate); a filesystem check on repo/.git replacing the spawn (wrong under --separate-git-dir, underspecified for submodules, bare repos and subdirectory invocation - each built in a temp dir to check); and the gate0.rs comment restating DEC-11 (it carries no decision framing, only the guardrail at the line, in the style the DEC-2 comment above it already set)."
+  - round: 2
+    tip: 38a42d76dc769d3c66535c6bb6a147f7ade3bf3a
+    found: 5
+    verified: 1
+    what: "Reuse: ignore_target() reproduced verbatim a sequence already inline in the pre-existing gitignore test - that test now calls the helper, and writes the cache's current path rather than the pre-slot one this WU had made stale. REFUTED: a missing docs/backlog/ row (the WU-result checklist puts debt in Follow-ups, docs/work/ empties at the epic gate rather than the WU seam, and E-REDESIGN.W11 deferred three follow-ups identically without backlog rows); orphaned slot files accumulating (64 bytes each, four live, reclaimed by the cargo clean DEC-11 already names, and a cleanup pass would race git worktree add); worktree_slot's two-line-parse error arm as dead code (it guards a subprocess output contract; removing it forces a panic or a silent guess for a function whose wrong answer shares a slot); and DEC-11's per-checkout clause (the rationale for a file over a git note, not an isolation claim)."
+  - round: 3
+    tip: d24e1098ddde2620739b81975cf5661329bd28cf
+    found: 1
+    verified: 1
+    what: "Simplification, found by cross-compiling rather than reading: the unix-only test apparatus - the worktree_slot import, the Round enum, gate() and Repo::worktree - carried no cfg gate, so a non-unix build reported all four as dead code, which under clippy -D warnings is a red gate. Gated to match. Recorded at nit rather than the important claimed, because mr.rs shows the repo already tolerates the pattern and the gate runs on macOS. The correctness and altitude/efficiency sweeps returned nothing; the altitude sweep re-derived every number in the report against the tip and independently traced the stale binary's 238 to sibling worktree TRA-RFINISH-W3, which holds exactly 238 tests and whose target/ resolves to the same physical directory as this one's."
+  - round: 4
+    tip: bbc16b1
+    found: 0
+    verified: 0
+    what: "The confirming pass, and what ends the review. Re-ran the suite from a forced rebuild (242, not the stale 238), re-checked clippy -D warnings, and traced every unix-only symbol this WU adds to confirm round 3's gating is neither too narrow nor too wide - slot_of and worktree_slot stay ungated in git.rs, correctly, since their tests use no unix-only API. Empty findings."
+note: "Gate 0 green at the tip, re-run from a FORCED REBUILD. That caveat is the review's own finding rather than boilerplate: worktrees share target/debug/xtask and one target/, so cargo can judge a sibling's artifacts fresh and run them as yours - observed twice here, once with two neighbours' gates writing slots using this branch's xtask, once with cargo test running a stale binary that omitted four tests present in the source. Gate 0 can therefore report green for code it never compiled; its cached key is sound about the TREE and cannot see whose binaries ran. Recorded as a follow-up for the epic close, deliberately not fixed here - it is gate soundness rather than the cache, and widening this WU into it is the scope creep the epic's non-goals forbid. The final commit (904375e) is the result report's own record of rounds 3 and 4, a doc-only delta over the tip round 4 swept (bbc16b1); its factual claims were checked against the tip before it landed."
+verdict: PASS
+date: 2026-09-07
