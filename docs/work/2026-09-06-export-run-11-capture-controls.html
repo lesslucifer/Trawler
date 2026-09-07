@@ -51,6 +51,9 @@
     /* state switching — CSS, not script */
     .a-mock.clearing .a-scrim-clear{display:flex;}
     .a-mock.pasting .a-scrim-paste{display:flex;}
+    .a-cleared{display:none;justify-content:center;padding:48px;}
+    .a-mock.cleared .a-cleared{display:flex;}
+    .a-mock.cleared .a-scroll{display:none;}
     .statebtn{margin-top:8px;margin-right:6px;font-size:12px;padding:4px 10px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--ink);cursor:pointer;}
   </style>
 </head>
@@ -122,7 +125,7 @@
             <td>the filter scopes both doors</td>
             <td>export and clear reuse <code>FlowFilter</code></td>
             <td>each label states the scope it acts on</td>
-            <td>✓ "this removes 214 flows" — the filtered count<br>✗ "clear all" while a filter hides half</td>
+            <td>✓ "clear 214 flows?" — the filtered count<br>✗ "clear all" while a filter hides half</td>
           </tr>
           <tr>
             <td>the header row is already full</td>
@@ -322,8 +325,12 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
             <td>
               <div class="gist">One sentence at a tone, action slot left empty.</div>
               <details class="why"><summary>why</summary>
-                <p>The question ("this removes 214 flows — the capture is not saved anywhere") is
-                <code>tone="warn"</code>: a failure-or-alarm sentence, the tone's fixed meaning.
+                <p>The ask splits its words: the panel's title asks the question and carries the
+                scope ("clear 214 flows?"), and the <code>Notice</code> carries the consequence
+                ("the capture is not saved anywhere") at <code>tone="warn"</code> — a
+                failure-or-alarm sentence, the tone's fixed meaning. The split is forced rather
+                than chosen: the frame always renders a title, so putting the whole question in
+                the Notice would say it twice.
                 The refusal ("unsupported flag <code>--data-urlencode</code>") is warn too. Both
                 clear <span class="avoid">@avoid</span> "transient confirmations of an action" —
                 neither is transient: the ask stands until answered, the refusal until the paste
@@ -338,7 +345,8 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
                 share a sentence, because telling someone to send traffic they have already sent
                 is the failure the second exists to prevent. A cleared capture is exactly that
                 person. So clearing lands on a third: <strong>"capture cleared"</strong>, detail
-                <strong>"new flows appear as traffic arrives"</strong>. W6 adds the third case to
+                <strong>"send traffic through the proxy — 127.0.0.1:7420"</strong>, the same
+                imperative-and-address shape its two siblings use. W6 adds the third case to
                 <code>Absence</code>; reusing the never-captured wording would re-introduce the
                 bug that component's comment guards against.</p>
                 <p>The action slot stays empty on purpose. <code>Notice</code> can hold a
@@ -347,8 +355,8 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
                 act is a dark pattern.</p>
               </details>
             </td>
-            <td><pre class="tb">⚠ this removes 214 flows
-  the capture is not saved anywhere</pre>Per its TSDoc — mute · warn · ok, bare or with detail,
+            <td><pre class="tb">clear 214 flows?        ← the title
+⚠ the capture is not saved anywhere</pre>Per its TSDoc — mute · warn · ok, bare or with detail,
               with or without the action slot.</td>
           </tr>
           <tr>
@@ -422,8 +430,9 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
                 <p><code>ModalShell</code> in <code>ui/src/ProxyCloseDialog.tsx</code> owns the
                 scrim, the focus trap, Esc (guarded on <code>defaultPrevented</code>, so a
                 <code>Select</code> closing its popup is not the dialog closing), backdrop
-                dismiss, focus return to the invoker, and initial focus on the action rather than
-                the ✕. That is precisely what this run needs, twice.</p>
+                dismiss, focus return to the invoker, and initial focus on whichever control the
+                caller marks — falling back to the panel's first focusable element, which with a
+                title row is the ✕. That is precisely what this run needs, twice.</p>
                 <p>It is screen-local by an explicit warrant in its own source: <em>"no registry
                 entry owns modality, and a general Dialog drawn from the app's only dialog would
                 generalise from a sample of one."</em> That warrant is a promise about a
@@ -470,7 +479,10 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
                 because there the sample is three.</p>
                 <p>The text channel satisfying <code>colour-plus-text</code> is the glyph's
                 <code>title</code>/<code>aria-label</code> ("imported") plus the
-                <code>source</code> filter — not a colour. The mark is ink-mute, deliberately not
+                — a text channel on its own, and the only one this design ships. It deliberately
+                does <em>not</em> rest on a <code>?source=</code> filter: the capability exists on
+                the API and this run adds no control for it, so citing one would be citing
+                something the screen does not have. The mark is ink-mute, deliberately not
                 chromatic, because being imported is not an outcome.</p>
               </details>
             </td>
@@ -632,7 +644,7 @@ C       → UNCHANGED in every case   ← nothing partial was applied</pre>
             <td>
               <div class="gist">It asks first, names the count, and focuses the safe answer.</div>
               <details class="why"><summary>zone → delta</summary>
-                <pre class="tb">E  → opens, "this removes 214 flows"
+                <pre class="tb">E  → opens, titled "clear 214 flows?"
    → focus on [cancel], NOT on [clear]
 C  → UNCHANGED until answered</pre>
               </details>
@@ -648,6 +660,7 @@ C  → UNCHANGED until answered</pre>
               <details class="why"><summary>zone → delta</summary>
                 <pre class="tb">E  → closes
 C  → empties to Notice "capture cleared"   ← NOT "no flows yet"
+   → detail says how to refill it, as its siblings do
 A  → the count reads 0</pre>
               </details>
             </td>
@@ -698,6 +711,7 @@ C  → UNCHANGED   ← the whole point of asking</pre>
             <div class="a-main">
               <div class="a-hrow" id="m-labels"></div>
               <div class="a-scroll"><div id="m-rows" data-wire="collection" data-order="wire"></div></div>
+              <div class="a-cleared" id="m-cleared"></div>
             </div>
           </div>
           <div class="a-scrim a-scrim-clear bg-scrim"><div class="a-ask" id="m-ask"></div></div>
@@ -708,6 +722,8 @@ C  → UNCHANGED   ← the whole point of asking</pre>
               data-label-off="▶ show the clear ask" data-label-on="◀ show the list">▶ show the clear ask</button>
       <button class="statebtn" data-state-toggle="mock" data-state-class="pasting"
               data-label-off="▶ show the paste, refused" data-label-on="◀ show the list">▶ show the paste, refused</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="cleared"
+              data-label-off="▶ show the list after a clear" data-label-on="◀ show the list">▶ show the list after a clear</button>
       <script type="text/babel">
         const { React, createRoot, Field, Select, StatusDot, TonedText, IconButton, Notice,
                 Button, TimestampText, MethodLabel, StatusPill, DurationText } = window.Trawler;
@@ -775,6 +791,9 @@ C  → UNCHANGED   ← the whole point of asking</pre>
             </div>
           ))}
         </>);
+
+        mount("m-cleared",
+          <Notice detail="send traffic through the proxy — 127.0.0.1:7420">capture cleared</Notice>);
 
         mount("m-ask", <>
           <span className="a-ask-h">
@@ -879,11 +898,11 @@ soft:
   data-ink-first: satisfied — the mark costs nothing when absent; a seventh column and a tinted row both rejected on this test
   generous-targets: inherited — IconButton's 28px square with padding beyond the glyph is the component's guarantee
   motion-informs: satisfied — nothing animates; the progress line is a state that ends, not a transition
-  empty-states-orient: satisfied — a cleared list says "capture cleared" and what brings rows back; the two existing absences keep their own wordings
+  empty-states-orient: satisfied — a cleared list says "capture cleared" and, in its siblings' imperative voice, how to bring rows back; the two existing absences keep their own wordings
   familiar-idioms: satisfied — out/in/empty glyphs and a network-table row are the devtools genre; no novelty to justify
   display-equals-payload: satisfied — the pasted command is shown verbatim in mono and never reformatted; the refusal is the server's sentence
-  labels-add-context: satisfied — "this removes 214 flows" states the scope the header does not; the detail adds the fact the count cannot
-  calm-microcopy: satisfied — lowercase, terse, no exclamation — "exporting…", "importing…", "this removes 214 flows"
+  labels-add-context: satisfied — the title "clear 214 flows?" states the scope the header does not, and the Notice adds the consequence the count cannot
+  calm-microcopy: satisfied — lowercase, terse, no exclamation — "exporting…", "importing…", "clear 214 flows?", "capture cleared"
   one-term-per-concept: inherited — export now has its own Lexicon row (write the capture out as a HAR file); the run uses it and proposes no term
   confirm-at-point: satisfied — the progress line sits in A′ beside the control; the refusal sits under the textarea it is about. No toast
   absence-names-itself: satisfied — cancelled save, refused command, empty-by-clear, empty-by-filter and never-captured are five wordings; clearing gets its own because telling someone to send traffic they just sent is the failure that message exists to prevent
