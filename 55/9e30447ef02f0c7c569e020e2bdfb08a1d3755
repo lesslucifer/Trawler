@@ -1,0 +1,73 @@
+schema: cr/v3
+scope: "WU E-RFINISH.W3 (the benchmark, then the three performance costs) -> epic/redesign-finish"
+epic: E-RFINISH
+wu: E-RFINISH.W3
+branch: wu/redesign-finish/perf-bench
+base: 73610795ded1befe9c269afbe38a366f87a8ca87
+head: 559e30447ef02f0c7c569e020e2bdfb08a1d3755
+diff_sha256: 727d2eeb9a68e3a96ca2224fdb9fd16423490cef8d0d6d406cbf4292d2a8a1ed
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+rounds: 3
+findings: { found: 56, verified: 18, waived: 0 }
+notes: >-
+  Three rounds of five isolated finders, fifteen verifiers, then a final audit of the WU
+  result report against the tree. Every one of the eighteen verified findings was in code or
+  prose this WU itself added, and every one is fixed on this tip - none waived, none deferred.
+  Round one found the regression that mattered: BodyViewer passing the fetched byte count as
+  the cut marker's total diverges from the shown slice's re-encoded count for a body that is
+  not valid UTF-8, printing "showing 384 KiB of 133 KiB" - shown greater than total, which
+  inverts the one statement CutMarker exists to make. Round two found the first fix's own
+  guard was a proxy: it read a replacement character in the shown slice as proof of a lossy
+  decode, but a body can carry that character on purpose, so a valid body with a free accurate
+  size was charged a whole-body encode - the false positive landing on exactly the mis-encoded
+  traffic this proxy exists to reveal. The fact moved to decodeBody, where the decoder answers
+  it rather than a reader guessing. Round two also found the memo enforcing its cap on lookups
+  as well as inserts, an untyped memo key on which a numeric string collides with the number
+  moment reads differently, a comment claiming the cache holds only what is on screen when
+  nothing evicts a scrolled-away row, a memo-miss bench whose purity rested on warm-up
+  happening to consume an overlapping pool, and a report claiming every before number came
+  from a run at the benchmark's own commit when three of the cases did not exist there. Round
+  three found no defect in shipped behaviour and one in the WU's own discipline - the decode
+  the second round introduced was changed on a claim about its cost and measured only
+  afterwards (whole 388.98 hz against the lenient decode's 379.15, so the claim held; failed
+  9.55 ms against 2.64, which is the fallback's real price, now recorded) - plus a factor
+  contradicting the table two lines beneath it and three comments narrating the work rather
+  than stating what holds. The final audit found seven further stale claims in the report,
+  all the same mistake: the numbers table was corrected and the prose quoting it was not.
+  Ten refusals are worth recording because they were settled by evidence rather than argument.
+  DEC-16 expressly refuses rejected-alternative rationale in a component's TSDoc, so leaving
+  FormRenderer's untouched was the rule, not an omission. hostOf cannot silently diverge from
+  toRow because a test pins them across a table of URI shapes, and toRow needs a full parse
+  for its path regardless. A BOM-prefixed body was raised as a defect and refused in the
+  opposite direction: a save writes the mark, so the bytes' length is the correct total and
+  the decoded text's would undercount - the invariant only widens. And the blocker raised
+  against the benchmark's warm memo was refuted for the case it names, because a flow's
+  started_at never changes, so an unscrolled re-render genuinely is all hits.
+  Gate 0 is green on this tip. It was red on the previous session's attempt, on two SSH-signing
+  tests in files this diff does not touch, reproducible at the base commit and caused by macOS
+  Directory Services failing to resolve the uid so ssh-keygen could not run; no evidence was
+  written until the machine recovered and the trio passed on this exact unchanged tree.
+design:
+  undesigned:
+    - path: ui/src/BodyViewer.tsx
+      why: >-
+        Its text-kind dispatch decodes through decodeBody and passes the fetched byte count only
+        where the decode read every byte. No surface is shaped: the same renderer receives the
+        same text, one further prop carries a number the fetch already held, and the pane's own
+        assertions pass untouched. The edit routes a fact to the component that reports it.
+    - path: ui/src/components/TextRenderer.tsx
+      why: >-
+        Gained an optional size prop, and a TSDoc line stating the contract a caller must honour
+        to pass it, so the cut marker's total is taken rather than re-derived by encoding the
+        whole body. Rendered output is identical for every body whose decode read every byte,
+        and the seven assertions that predate this WU pass unchanged. A byte count is arithmetic,
+        not a design question.
+    - path: ui/src/components/TimestampText.tsx
+      why: >-
+        The formatted string is remembered under the day it was rendered under, and today's local
+        bounds answer the day and year tests by comparison instead of by building two moments per
+        render. All four of DEC-22's forks - absolute, seconds, local, 24h - are preserved and
+        re-asserted by three added boundary tests, and the eleven assertions that predate this WU
+        pass unchanged. Only cost moved.
+verdict: PASS
+date: 2026-09-07
