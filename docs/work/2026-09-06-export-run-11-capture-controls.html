@@ -351,7 +351,13 @@ scroll / overflow: A pinned, content-height, wraps before it clips — A′ is
                 because after a clear the remedy genuinely is the same. The heading is what
                 separates them, and it is the half that says which absence this is. W6 adds the third case to
                 <code>Absence</code>; reusing the never-captured wording would re-introduce the
-                bug that component's comment guards against.</p>
+                bug that component's comment guards against.
+                <span class="was">Run 10 answered this the other way — its outcome table and its
+                <code>empty-states-orient</code> line both had a clear land on the existing
+                "no flows yet — send traffic through the proxy". That answer is overturned here,
+                and the thing that overturned it is a build fact run 10 did not cite: the comment
+                in <code>FlowList.tsx</code> saying the two shipped absences must not share a
+                sentence, for precisely the reason a cleared list makes live.</span></p>
                 <p>The action slot stays empty on purpose. <code>Notice</code> can hold a
                 <code>Button</code>, which would make the whole ask one component. Rejected: the
                 ask needs two answers, the slot takes one, and a cancel that is not a peer of the
@@ -732,7 +738,7 @@ C  → UNCHANGED   ← the whole point of asking</pre>
         const { React, createRoot, Field, Select, StatusDot, TonedText, IconButton, Notice,
                 Button, TimestampText, MethodLabel, StatusPill, DurationText } = window.Trawler;
         const mount = (id, node) => createRoot(document.getElementById(id)).render(node);
-        const COLS = "110px 70px 180px 1fr 70px 90px";
+        const COLS = "122px 70px 180px 1fr 70px 90px";
         const LABELS = ["Time", "Method", "Host", "Path", "Status", "Duration"];
         const at = (s) => new Date(2026, 8, 6, 14, 22, s).getTime();
         const FLOWS = [
@@ -869,6 +875,14 @@ C  → UNCHANGED   ← the whole point of asking</pre>
           <td><code>absence-names-itself</code></td>
         </tr>
         <tr>
+          <td>the reserved mark widens the column</td>
+          <td><pre class="tb">110px  ⇩ 14:22:07
+       14:22:09</pre></td>
+          <td><pre class="tb">122px  ⇩ 14:22:07
+          14:22:09</pre></td>
+          <td><code>visual-weight-follows-goals</code></td>
+        </tr>
+        <tr>
           <td>the paste offers the file, not the reverse</td>
           <td><pre class="tb">[import]  [paste instead…]</pre></td>
           <td><pre class="tb">[choose a file…]  [import]</pre></td>
@@ -885,6 +899,17 @@ C  → UNCHANGED   ← the whole point of asking</pre>
         name was the only place that could say so without spending header width. A user who has a
         curl command in the clipboard and reads "import a har file" concludes this screen cannot
         take it. Loops back to Layout: no.</li>
+        <li><strong>the reserved mark.</strong> Cell 1 holds a timestamp that every row has and a
+        mark that few rows have. If the mark renders only when present, an imported row's
+        timestamp sits left of every captured row's, which in a virtualized list of mostly-captured
+        rows reads as jitter rather than as information — so the absent mark holds its width. That
+        reservation has to come from somewhere, and the shipped column has no slack: cell 1 grows
+        by exactly the reserved width. <span class="was">Run 10 reached this same answer in its own
+        T4 and sized the column 110px → 126px. The answer is held; the number is not, and the
+        difference is this run's, not a correction of run 10's.</span> Run 10's mark was 16px; this
+        run's is the 12px <code>.a-mark</code> the mockup actually renders, so the same arithmetic
+        lands on 122px. Loops back to Layout: <strong>yes</strong> — the sketch's cell-1 width is
+        the tuned one, and W6 builds 122px, not <code>FlowList</code>'s current 110px.</li>
         <li><strong>the paste's button order.</strong> First draft put <code>import</code> first
         and the file picker second, which reads as "act, then choose what you are acting on".
         Reversed: the thing that decides <em>what is being imported</em> comes before the thing
@@ -895,7 +920,7 @@ C  → UNCHANGED   ← the whole point of asking</pre>
     <h2 id="receipt">Receipt</h2>
     <pre data-item="receipt" data-c="receipt">rulebook: a7f9ae3becf27694bfc1ffb9f0b43f87c9abb7e2
 soft:
-  visual-weight-follows-goals: satisfied — C owns the weight; A′ is bare glyphs at rest, no fill
+  visual-weight-follows-goals: satisfied — C owns the weight; A′ is bare glyphs at rest, no fill; Tune T4 spends 12px of cell 1 on the reserved mark rather than a column
   grouping-by-relatedness: satisfied — one hairline in A′, between the two additive doors and the destructive one
   ordering-by-priority: satisfied — out, then in, then empty; the two safe doors precede the one that destroys
   progressive-disclosure: satisfied — the ask and the paste are absent until asked for; the row's mark is the scan level
@@ -912,12 +937,18 @@ soft:
   absence-names-itself: satisfied — cancelled save, refused command, empty-by-clear, empty-by-filter and never-captured are five wordings; clearing gets its own because telling someone to send traffic they just sent is the failure that message exists to prevent
   focus-returns-to-origin: satisfied-via-proposal — the proposed Dialog owns it, implemented already in ModalShell
   choose-before-act: satisfied — A′ sits after the filters that scope it; in F the file picker precedes import</pre>
-    <p>Two verdicts are worth the reader's attention. <code>one-term-per-concept</code> is
-    <em>inherited</em> rather than <em>satisfied-via-proposal</em> because run 10's proposal
-    already landed in the rulebook — the word <code>export</code> has a row, so this run consumes
-    a rule instead of arguing one. <code>focus-returns-to-origin</code> is
-    <em>satisfied-via-proposal</em> and not <em>inherited</em>, because until the promotion is
-    performed the behaviour lives in a screen this screen does not import.</p>
+    <p><strong>Three verdict words moved from run 10, and these are all three.</strong>
+    <code>one-term-per-concept</code> is <em>inherited</em> rather than
+    <em>satisfied-via-proposal</em> because run 10's proposal already landed in the rulebook — the
+    word <code>export</code> has a row, so this run consumes a rule instead of arguing one.
+    <code>focus-returns-to-origin</code> is <em>satisfied-via-proposal</em> and not
+    <em>inherited</em>, because until the promotion is performed the behaviour lives in a screen
+    this screen does not import. <code>generous-targets</code> is <em>inherited</em> where
+    <span class="was">run 10 wrote <em>satisfied</em></span>: run 10 earned the word partly with
+    the ask's own full-width <code>Button</code> hit areas, which it was placing itself. This run
+    places no hit area of its own — every target here is an <code>IconButton</code> or a
+    <code>Dialog</code> button, and the floor is the component's guarantee, not this design's
+    achievement. <em>Inherited</em> is the weaker and the truer word.</p>
 
     <h2 id="capabilities">Capabilities</h2>
     <table data-item="capabilities" data-c="capabilities">
@@ -931,7 +962,7 @@ soft:
         <tr><td><code>DELETE /flows</code>, filtered</td><td>used</td><td>A′ · ⌫, via E</td></tr>
         <tr><td><code>DELETE /flows/{id}</code></td><td>deliberately unused</td><td>a per-flow delete is a non-goal here — no Frame goal asks for it, and the row has no width for it</td></tr>
         <tr><td><code>source</code> on the flow</td><td>used</td><td>C · the mark</td></tr>
-        <tr><td><code>source</code> in <code>FlowFilter</code></td><td>deliberately unused</td><td>the text channel the mark needs is its label, not a filter control; adding a fifth filter is E-REDESIGN's row to re-open, not this run's</td></tr>
+        <tr><td><code>source</code> in <code>FlowFilter</code></td><td>deliberately unused</td><td>the text channel the mark needs is its label, not a filter control; adding a fifth filter is E-REDESIGN's row to re-open, not this run's. <span class="was">Run 10 marked this capability <em>used</em>, arguing the filter is what stops the mark being decoration. The redesigned header is why the answer moved: run 10 sketched the filters itself and could spend a fourth slot freely, where this run mounts the shipped four-control bar and a fifth control is a change to a surface E-REDESIGN owns. The decoration worry is answered instead by the mark carrying its own accessible name.</span></td></tr>
         <tr><td><code>FlowsCleared</code> + the refetch on any event</td><td>used</td><td>C refills from the bus, which is why every response row says UNCHANGED. <strong>The build must subscribe to it:</strong> the server names this event <code>cleared</code> (<code>src/api/view.rs</code>), and <code>stream()</code> in <code>ui/src/api.ts</code> currently registers <code>request</code>, <code>response</code>, <code>evicted</code> and <code>lagged</code> only — a named SSE event with no listener reaches nothing, so a clear would not refresh the list until W6 adds it. The retired web shell did listen for it; the port dropped it.</td></tr>
         <tr><td><code>saveBody</code> returning null</td><td>used</td><td>the cancelled-save row in Interaction</td></tr>
         <tr><td><code>ModalShell</code></td><td>used, via proposal</td><td>E and F; promoting it is the proposal, using it is the design</td></tr>
@@ -982,6 +1013,25 @@ soft:
               call sites arrive at once. The <span class="avoid">@avoid</span> line "actions with
               no fitting glyph" is currently true of all three.</td>
             <td><code>IconButton</code>'s design file / TSDoc</td>
+          </tr>
+          <tr>
+            <td>process</td>
+            <td><strong>A re-run closes against the run it supersedes, not against itself.</strong>
+              When a design run has a predecessor, closing it requires one pass that walks the
+              <em>old</em> run stage by stage and classifies every answer in it as held, changed, or
+              dropped — the superseded run's answers being the checklist, and an unclassified answer
+              being the defect. Proposed as a step in the close sequence, before the review list is
+              filled.</td>
+            <td>The flow's close sequence has no step that reads the predecessor. This run carried
+              four silent reversals through six review rounds — including a receipt paragraph
+              claiming completeness it did not have — and every one of them survived because the
+              rounds read <em>this</em> document and asked whether its statements were true. They
+              were. A dropped answer leaves no false statement behind to find; it leaves nothing,
+              and nothing is not reviewable from the near side. The one round that walked run 10
+              found all four at once, which is the evidence that the direction of the walk is the
+              whole mechanism.</td>
+            <td>the design flow (<code>docs/design-flow.html</code>), confirmed at a distillation —
+              a run proposes a step, it does not amend the flow</td>
           </tr>
         </tbody>
       </table>
@@ -1054,9 +1104,62 @@ soft:
         <tr>
           <td>The WU plan's Q6: say which of run 10's answers this run keeps and which it
             overturns, rather than presenting a re-run as a first run.</td>
-          <td>Added the <span class="was">italic</span> delta notes through Layout, Elements and
-            Interaction, and this table. Four answers moved and one was re-derived and held (Layout's placement, which now holds for a second reason); the Lexicon question closed on its own.</td>
+          <td>Added the <span class="was">italic</span> delta notes, which are now the index of
+            every place the two runs differ: eight answers moved, and three were re-derived and
+            held with the holding said out loud (Layout's placement, the ask's focused button, the
+            paste's initial focus). The Lexicon question closed on its own. The count was wrong in
+            six successive drafts of this row — see the four rows below.</td>
           <td>the W9 plan's <code>Q6</code> — a re-run's stated duty</td>
+        </tr>
+        <tr>
+          <td>Q6 again, and this time as an audit rather than a reading: walk run 10 end to end and
+            classify <em>every</em> answer as held-and-cited, held-silently, changed-and-recorded,
+            or changed/dropped with nothing said. The first six review rounds had only checked
+            whether this document's statements were true, which is a different question.</td>
+          <td>Four silent reversals, listed in the next four rows. All four had survived every
+            earlier round. The delta notes above are the repair; the standing lesson is in
+            <a href="#proposals">Proposals</a> — Q6 is not checkable by reading the new run, only
+            by walking the old one.</td>
+          <td>the W9 plan's <code>Q6</code> · <code>D1</code> — a receipt that contradicts itself</td>
+        </tr>
+        <tr>
+          <td>The receipt's own summary paragraph said "two verdicts are worth the reader's
+            attention" and named two. Three had moved: <code>generous-targets</code> went from
+            <em>satisfied</em> to <em>inherited</em> undisclosed, so the paragraph's completeness
+            claim was false.</td>
+          <td>Receipt: the paragraph now names three and says so, and
+            <code>generous-targets</code> carries why the weaker word is the truer one — this run
+            places no hit area of its own.</td>
+          <td><code>D1</code> — the receipt is the artifact's own claim about itself</td>
+        </tr>
+        <tr>
+          <td>Run 10's Tune T4 grew cell 1 from 110px so the reserved import mark would not push
+            timestamps out of line. This run kept the conclusion in the mockup prose ("the absent
+            mark holds its own width") but dropped the tune call, and the mockup drew the
+            un-tuned 110px.</td>
+          <td>Tune gained T4 back, with this run's own arithmetic rather than run 10's: the mark
+            here is 12px, not 16px, so the width is <strong>122px</strong>. The mockup constant and
+            the <code>visual-weight-follows-goals</code> line follow it. W6 builds 122px.</td>
+          <td><code>visual-weight-follows-goals</code> · the mockup drew a number the prose
+            contradicted</td>
+        </tr>
+        <tr>
+          <td><code>source</code> in <code>FlowFilter</code> flipped from <em>used</em> to
+            <em>deliberately unused</em> with no note — a reversal of a capability verdict, which
+            is the one kind of change a build reads as instruction.</td>
+          <td>Capabilities: the row now carries why the redesigned header moved the answer — run 10
+            was sketching the filter bar and could spend a slot; this run mounts the shipped one,
+            where a fifth control is E-REDESIGN's change to make.</td>
+          <td><code>capabilities</code> — the flow's list: a verdict on it is what the build reads
+            as permission or prohibition, so a flip is an instruction</td>
+        </tr>
+        <tr>
+          <td>A cleared list lands on a new third absence, "capture cleared". Run 10 had it land on
+            the existing "no flows yet". Well argued here, never marked as a reversal.</td>
+          <td>Elements: the third-absence paragraph now says it overturns run 10 and names what
+            overturned it — the comment in <code>FlowList.tsx</code>, a build fact run 10 never
+            cited.</td>
+          <td><code>absence-names-itself</code> · <code>empty-states-orient</code></td>
         </tr>
         <tr>
           <td>Run 10 drew <code>Field</code> as a bare <code>&lt;input&gt;</code>. Both filter
