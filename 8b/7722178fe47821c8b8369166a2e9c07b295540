@@ -1,0 +1,27 @@
+schema: cr/v3
+scope: "WU E-RFINISH.W4 (shell-list-design) -> epic/redesign-finish"
+epic: E-RFINISH
+wu: E-RFINISH.W4
+branch: wu/redesign-finish/shell-list-design
+base: 73610795ded1befe9c269afbe38a366f87a8ca87
+head: 8b7722178fe47821c8b8369166a2e9c07b295540
+diff_sha256: 9a0e3fb89ae5b6fb4c84c1f7aa50acda6acf59a8b222fed77887e958f22fec39
+dimensions: [correctness, reuse, simplification, efficiency, altitude]
+findings: { found: 13, verified: 1, waived: 0 }
+waivers: []
+verified:
+  - location: "the tip's doc/v1 note, the shell-list-second-pass entry"
+    claim: "the receipt tally read \"14 satisfied, 1 inherited\" - stale, copied forward across the generous-targets downgrade. The receipt has 15 satisfied and no formal inherited, which the result's own evidence table already stated."
+    severity: important
+    resolved: "the note was rewritten before this verdict. A note is not part of diff_sha256, so the reviewed bytes are unchanged and this PASS still binds them."
+refuted: 12
+rounds: 4
+history: "Rounds 1-3 verified 8 findings, all fixed and each in its own commit: an off-by-one FlowList.tsx citation; four quotations spliced across an internal gap (Field x2, StatusPill, Button); a verb count inherited rather than computed (eight for nine); a \"worst ratio on the table\" superlative the doc's own two tables falsify; a claimed inversion of the first pass that inverted nothing (both passes ruled Field - what moved is the leg the verdict stands on); and generous-targets tagged with the formal inherited verdict where only the Button half reached a component TSDoc. Round 4 found nothing in the documents."
+design:
+  artifacts: [docs/work/2026-09-06-shell-list-second-pass.html]
+  rulebook: 849cc8e0ff423345004cccf79715fc489abc9dbf
+  findings: { found: 3, verified: 0, waived: 0 }
+  verdict: PASS
+  notes: "Tier-3 recomputed every numeric claim (612 = 520+60+32, the 992/1132 thresholds, all four pane candidates, the marginal-ratio comparison), traced Q4's four candidates to source, and checked every reuse fit against its @use/@avoid. Two residual imprecisions were examined and ruled below the bar rather than fixed: the choose-before-act evidence says \"A holds only choosers\" where zone A also leads with the interactive StatusDot (the verdict itself is defensible - the rule binds controls that act on what the choosers chose, and the dot re-invokes setup), and one blocked-on row names \"StatusDot's design file\" where DEC-16 makes a built component's contract its TSDoc."
+verdict: PASS
+date: 2026-09-07
