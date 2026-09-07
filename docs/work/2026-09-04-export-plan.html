@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-EXPORT — a capture leaves the ring and comes back</h1>
       <p>HAR export and import, a pasted curl command as a flow, a store that can be cleared, and a listing that pages — the first epic in which a flow outlives the process that captured it.</p>
-      <div class="meta">v3 · final · 2026-09-04 · Trawler · T3 epic plan · <span class="badge id">E-EXPORT</span></div>
+      <div class="meta">v4 · 2026-09-06 · Trawler · T3 epic plan · <span class="badge id">E-EXPORT</span> — W9 added; the redesign baseline arrived as a back-merge, not a WU</div>
     </div>
   </header>
   <main>
@@ -275,7 +275,7 @@ flowchart LR
       </div>
 
       <div data-wu="E-EXPORT.W5">
-        <h3 id="w5">E-EXPORT.W5 — design: the capture-management controls</h3>
+        <h3 id="w5">E-EXPORT.W5 — design: the capture-management controls <em>(superseded by W9)</em></h3>
         <p data-item="wu-summary">
           A design run over the flow-list surface, following
           <a href="../design-flow.html">the design flow</a>: where export, import and clear
@@ -304,21 +304,24 @@ flowchart LR
       <div data-wu="E-EXPORT.W6">
         <h3 id="w6">E-EXPORT.W6 — build the controls</h3>
         <p data-item="wu-summary">
-          The controls W5 designed, built in <code>ui/src/</code> and cited to that design
+          The controls <strong>W9</strong> designed (run 11, which supersedes W5's run 10),
+          built in <code>ui/src/</code> and cited to that design
           (<code>design.implements</code>, path + blob, per the design→build rule): the API
           client gains <code>exportHar</code>, <code>importHar</code>, <code>importCurl</code>
           and <code>clearFlows</code>; the flow-list surface gains the controls, including the
           curl paste target; the imported mark appears in the row; the clear confirmation is
-          wired through the existing <code>useConfirm</code>. Save and open dialogs go through
+          a modal ask — <em>not</em> <code>useConfirm</code>, which both design runs found to be
+          a ~2 s after-the-fact flash that reports rather than asks, a deviation from this plan
+          that W6's result carries. Save and open dialogs go through
           the Tauri layer the app already uses for native calls.
         </p>
-        <p data-item="wu-maps-to">E-EXPORT · UC-4 amended · implements W5's design.</p>
+        <p data-item="wu-maps-to">E-EXPORT · UC-4 amended · implements W9's design.</p>
         <p data-item="wu-expected">
-          Expected result 6 holds. Every UI-rendering file the diff touches is cited to W5's
-          design or declared undesigned with a reason; W5's design file is retired into the
+          Expected result 6 holds. Every UI-rendering file the diff touches is cited to W9's
+          design or declared undesigned with a reason; W9's design file is retired into the
           built component's TSDoc per <a href="../decisions/dec-16-design-file-retirement.html">DEC-16</a>.
         </p>
-        <p data-item="wu-deps">E-EXPORT.W5 (the design must close first) · W2 · W3 · W4 (the endpoints it calls).</p>
+        <p data-item="wu-deps">E-EXPORT.W9 (the design it builds from; W5's run 10 is superseded and is not cited) · W2 · W3 · W4 (the endpoints it calls).</p>
       </div>
 
       <div data-wu="E-EXPORT.W7">
@@ -328,7 +331,8 @@ flowchart LR
           (<code>toCurl</code>, <code>ui/src/flow.ts:67</code>): a parser that turns a pasted
           <code>curl</code> command line into a flow, reached as
           <code>POST /flows/import?format=curl</code> and, in the app, as a paste target on
-          the same import control W5 designs. It accepts exactly the set settled in question 8
+          the same import control W9 designs (run 11; W5's run 10 is superseded and is not
+          cited). It accepts exactly the set settled in question 8
           — what a browser's "Copy as cURL" and Trawler's own <code>toCurl</code> emit, with
           <code>-u</code> and <code>--compressed</code> expanded into the headers they imply,
           shell quoting and backslash line-continuations handled, and transfer-only flags
@@ -350,8 +354,45 @@ flowchart LR
         </p>
         <p data-item="wu-deps">
           E-EXPORT.W3 — reuses its <code>source</code> marking and its refusal contract;
-          the parser is a second format behind the same import endpoint. Independent of W5/W6,
-          though its paste affordance is designed in W5 if it lands first.
+          the parser is a second format behind the same import endpoint. Independent of W6/W9 as
+          a parser, and ordered before them rather than beside them: W9's design run requires W7
+          merged, so the paste affordance is designed in W9's run 11 — unconditionally, not
+          whichever of the two lands first — and built in W6.
+        </p>
+      </div>
+
+      <div data-wu="E-EXPORT.W9">
+        <h3 id="w9">E-EXPORT.W9 — design the controls again, on the screen that now exists</h3>
+        <p data-item="wu-summary">
+          W5 closed a green run (run 10) against a flow list whose header was four text fields, a
+          24-entry registry and rulebook <code>aeff5b0</code>. E-REDESIGN then landed on
+          <code>main</code> and rebuilt that header, took the registry to 28 entries, moved the
+          rulebook to <code>a7f9ae3</code> and shipped the app's first modal
+          (<code>ModalShell</code> in <code>ui/src/ProxyCloseDialog.tsx</code>) — the very thing
+          run 10 had to propose because nothing in the collection was a dialog. W9 re-runs the
+          design over the real surface: the same six questions, answered against what is there,
+          plus the duty a re-run has and a first run does not — to say which of run 10's answers
+          it keeps and which it overturns, and why. Run 10 stays archived as the record of what
+          was decided when; W9 becomes the design W6 builds from. No build.
+        </p>
+        <p data-item="wu-maps-to">
+          E-EXPORT · UC-4's surface · the roadmap's rule that a post-viewer epic ships its own UI
+          controls · re-run because the baseline moved under a closed run, which is the condition
+          <code>receipt·rulebook-stale</code> exists to catch.
+        </p>
+        <p data-item="wu-expected">
+          A closed, archived design run (Tier-1 green, receipt citing every rule slug with a
+          verdict against <code>a7f9ae3</code>, blocked-on list empty or escalated) that W6 cites
+          by path and blob. Every proposal is made here, not invented during the build. The review
+          list names every answer that moved since run 10 and the contract that moved it.
+        </p>
+        <p data-item="wu-deps">
+          E-EXPORT.W2 · W3 · W4 · W7 — every endpoint the run designs against is merged, so unlike
+          run 10 this run has no designed-ahead dependency. Requires the E-REDESIGN baseline, which
+          reached this epic as a back-merge of <code>main</code> rather than as a WU: landed
+          history carries no net-new seam, so the merge hook and the epic walk both skip it
+          (DEC-8). There is no E-EXPORT.W8 — the number was allocated to that integration while it
+          was still framed as a WU, and retired unstarted when it became a back-merge.
         </p>
       </div>
 
@@ -375,7 +416,7 @@ flowchart LR
           <tr><td><code>POST /flows/import</code> with the exported bytes.</td><td>the listing returns the same flows, each <code>source=imported</code>; <code>?source=captured</code> is empty; each is readable at <code>/flows/{id}</code> and its body endpoints</td><td>W3</td></tr>
           <tr><td>Post a truncated copy of the same file.</td><td>refused with a reason; the store still holds exactly the previous import</td><td>W3</td></tr>
           <tr><td>Post a browser-shaped <code>curl</code> command to <code>/flows/import?format=curl</code>, then one carrying an unsupported flag.</td><td>the first appears as a request-only flow marked <code>imported</code>; the second is refused naming the flag</td><td>W7</td></tr>
-          <tr><td>WebDriver: launch the built app against that engine, use the export control, the clear control, the import control on the exported file, then paste a curl command.</td><td>the list empties and refills; the imported rows carry the mark; the pasted request appears</td><td>W5 · W6 · W7</td></tr>
+          <tr><td>WebDriver: launch the built app against that engine, use the export control, the clear control, the import control on the exported file, then paste a curl command.</td><td>the list empties and refills; the imported rows carry the mark; the pasted request appears</td><td>W9 · W6 · W7</td></tr>
         </tbody>
       </table>
       <p>
@@ -398,7 +439,7 @@ flowchart LR
           <tr><td><code>docs/design-rules/design-rules-index.html</code></td><td>T2</td><td>W5's lexicon answer: <em>export</em> as an operation name versus the reserved <em>copy</em> meaning — the rulebook's Lexicon row updated, or a new row, per what the run decides</td></tr>
           <tr><td><code>docs/architecture.html</code></td><td>T1</td><td>only if the store's shape changed at the seam level — removal and ingest are new store capabilities, so the module's one-line contract there is re-checked at close and edited only if it is now false</td></tr>
           <tr><td><code>docs/backlog/roadmap.html</code></td><td>T2</td><td>E-EXPORT struck from the Wave-2 sequence, landed-so-far updated; <strong>a Deferred row for streaming a cap-sized export</strong> (deferred at plan review — revisit when a real capture proves the one-shot response too heavy), plus anything else punted during the work</td></tr>
-          <tr><td>this plan + the six WU results + the epic result</td><td>T3</td><td>archived out of git at close per <a href="../decisions/decisions-index.html">DEC-3</a></td></tr>
+          <tr><td>this plan + the eight WU results (W1–W7 and W9; there is no W8) + the epic result</td><td>T3</td><td>archived out of git at close per <a href="../decisions/decisions-index.html">DEC-3</a></td></tr>
         </tbody>
       </table>
       <p>

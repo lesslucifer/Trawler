@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6a9ed28f9f34851f0dfacc4c" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-EXPORT.W9 result: the capture-management controls, designed</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-EXPORT.W9 result — the capture-management controls, designed</h1>
+      <p>Export, import and clear get a home on the shipped screen: one <code>⋮</code> trigger at the header's
+        trailing edge, the three acts as words inside a menu, and a modal ask in front of the destructive one.
+        The deliverable is a design, not code — W6 builds from it.</p>
+      <div class="meta">v1 · 2026-09-07 · Trawler · T3 WU result · <span class="badge id">E-EXPORT.W9</span> ·
+        <a href="2026-09-06-export-w9-controls-redesign-plan.html">WU plan</a> ·
+        <a href="2026-09-06-export-run-11-capture-controls.html">design run 11</a> ·
+        <a href="2026-09-04-export-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p><strong>Delivered</strong>, against the requirement as written: design run 11 is closed and archived,
+      and W6 cites it rather than the superseded run 10. The screen it designs is the one that now ships, not
+      the one run 10 imagined.</p>
+      <table>
+        <thead><tr><th>Zone</th><th>What it is</th><th>Settled at</th></tr></thead>
+        <tbody>
+          <tr><td><strong>A′</strong></td><td>a <code>field-sm</code> slot holding the count at rest and the
+            in-flight line during a transfer, plus one 28px <code>⋮</code> trigger — <strong>116.0px</strong>
+            total, identical in both states, measured</td><td>Layout · Tune T5, T6, T8</td></tr>
+          <tr><td><strong>M</strong></td><td>the three acts as words — <em>export as har…</em>,
+            <em>import…</em>, <em>clear…</em> — with a hairline before the destructive one, on
+            <code>canvas</code> where that token reaches 1.33:1</td><td>Tune T1, T8</td></tr>
+          <tr><td><strong>E</strong></td><td>a modal ask for clear, scope in the title, consequence in a
+            <code>Notice</code>, initial focus on <strong>cancel</strong></td><td>Interaction · Tune T4</td></tr>
+          <tr><td><strong>F</strong></td><td>the import target: file picker first, then <code>import</code>;
+            the refusal is the server's own sentence, shown verbatim</td><td>Tune T4</td></tr>
+          <tr><td><strong>cell 1</strong></td><td><code>field-lg</code> (160px), sized by the timestamp
+            <em>import</em> produces rather than by the mark</td><td>Tune T3</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="shipped">What shipped</h2>
+    <table data-c="shipped">
+      <thead><tr><th>Artifact</th><th>Tier</th><th>What it carries</th></tr></thead>
+      <tbody>
+        <tr><td><a href="2026-09-06-export-run-11-capture-controls.html">design run 11</a></td><td>T3</td>
+          <td>all eleven items: Frame, Layout, Elements (11 entries), Interaction (11 use cases), a mockup that
+            <em>mounts</em> the registry over a date-relative fixture and five state toggles, Tune T1–T8, the
+            17-slug receipt, Capabilities (12 Givens, 2 deliberately unused), Proposals (4), Blocked-on (2)
+            beside a five-row accounting of run 10's entries, and a 30-row Review list</td></tr>
+        <tr><td><a href="../design-flow.html#close">design-flow</a></td><td><strong>T1</strong></td>
+          <td>close step ① — walk the run this one supersedes and classify every answer in it. The one change
+            needing a human signature</td></tr>
+        <tr><td><a href="../decisions/dec-38-the-predecessor-is-the-checklist.html">DEC-38</a></td><td>T2</td>
+          <td>why that step exists: a dropped answer leaves nothing for a reader of the new run to test</td></tr>
+        <tr><td><a href="2026-09-04-export-plan.html">epic plan</a></td><td>T3</td>
+          <td>the W9 block, and W6 reconciled to cite W9 in all four places it still named W5</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="calls">Contract calls the plan left to the build</h2>
+    <table data-c="calls">
+      <thead><tr><th>Call</th><th>Answer</th></tr></thead>
+      <tbody>
+        <tr><td>Where the three acts live</td><td>behind one trigger, measured rather than argued: the header
+          is <code>flex-wrap</code>, and three inline controls hold one line only to 942px against a configured
+          minimum of 800 — a 142px band of reachable widths where the header is two lines. One trigger holds to
+          846px</td></tr>
+        <tr><td>Whether the clear confirmation uses <code>useConfirm</code></td><td>No. Both runs found it a
+          ~2 s flash that reports rather than asks. A modal ask, and the deviation is named</td></tr>
+        <tr><td>Which word the UI uses</td><td>Inherited — <code>export</code> has its Lexicon row from W5's
+          distillation, so this run consumes it rather than proposing a term</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table>
+        <thead><tr><th>From</th><th>What changed, and why</th></tr></thead>
+        <tbody>
+          <tr><td>the plan's expectation of a vocabulary Proposal for the close-sequence lesson</td>
+            <td><strong>Performed instead.</strong> Proposals is for entries the design needed and the
+              vocabulary lacked; a change to the flow's own procedure is neither. It went to T1 with its
+              incident in DEC-38</td></tr>
+          <tr><td>run 10's cell-1 arithmetic (110 → 122 → 126px)</td>
+            <td>All three overflow. The column is bound by the timestamp, not the mark, and an imported HAR is
+              cross-day almost by definition — so the feature creates its own worst case. 160px</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="review">The review rounds</h2>
+    <table data-c="review">
+      <thead><tr><th>Tip</th><th>Candidates</th><th>Verified</th><th>What they were</th></tr></thead>
+      <tbody>
+        <tr><td><code>c3d8835</code></td><td>10</td><td>6</td><td>four stale values, one T1 altitude, one
+          self-contradicting note</td></tr>
+        <tr><td><code>6cd0379</code></td><td>11</td><td>2</td><td>T3's widths measured in a fallback face; two
+          passages naming a dropped glyph</td></tr>
+        <tr><td><code>d542158</code></td><td>3</td><td>3</td><td>the fix itself named the wrong face for the
+          mark; a "forced" claim that was not forced; the fallback path named an intermediate Chrome skips</td></tr>
+      </tbody>
+    </table>
+    <p><strong>One class, six times:</strong> a value moved and a sentence quoting the old value survived. The
+    sixth was fixed structurally rather than corrected again — DEC-38's round counts now state a split
+    as-at-the-record rather than a tally the next round falsifies. <strong>And the reviews that found things
+    were the ones that rendered and measured</strong>: every defect that would have reached built code came from
+    a round that opened a browser, not one that read the prose.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table>
+        <thead><tr><th>Check</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><code>cargo xtask verify-doc</code>, all governed docs</td><td>59 checked, none red; the run
+            green as <code>design-run</code> — 17/17 soft (14 satisfied · 2 inherited · 1
+            satisfied-via-proposal), 13/13 hard, 0 suppressions</td></tr>
+          <tr><td><code>cargo xtask ui specimens --check</code></td><td>ok — 7 mounts, 15 buttons, clean
+            console. The doc makes 6 <code>mount()</code> calls; the gate counts one above that</td></tr>
+          <tr><td><code>cargo xtask gate0</code></td><td>green — fmt · clippy <code>-D warnings</code> · full
+            suite</td></tr>
+          <tr><td>timestamp widths, from the shipped font binary</td><td>57.6 / 115.2 / 151.2px for same-day,
+            cross-day and cross-year — an exact 7.2px per character, <code>DM Mono</code>'s 0.6em advance at
+            <code>text-body</code>, read off the <code>hmtx</code> table. The <code>↑</code> mark is ~7.23px
+            and is a <em>fallback</em> glyph: <code>U+2191</code> is absent from that face's
+            <code>cmap</code></td></tr>
+          <tr><td>the wrap band, scanned in 2px steps</td><td>782px shipped · 942px with three inline
+            controls · 846px with one trigger, against <code>minWidth</code> 800</td></tr>
+          <tr><td>hairline contrast</td><td><code>#3f3a36</code> on <code>canvas-soft</code> = 1.11:1; on
+            <code>canvas</code> = 1.33:1 — which is why the boundary moved into the popup</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <table>
+        <thead><tr><th>Tier</th><th>Done</th></tr></thead>
+        <tbody>
+          <tr><td>T1</td><td><a href="../design-flow.html#close">design-flow</a> close step ①, later steps
+            renumbered, two stale cross-references repaired</td></tr>
+          <tr><td>T2</td><td><a href="../decisions/dec-38-the-predecessor-is-the-checklist.html">DEC-38</a>
+            added and registered in the index</td></tr>
+          <tr><td>T2 <em>not</em> done, deliberately</td><td>UC-4 gains the controls when W6 <strong>builds</strong>
+            them — stating them now would put a capability in the use-case KB that the app does not have. The
+            rulebook is untouched: <code>export</code> already has its row</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <ul data-item="follow-ups" data-c="follow-ups">
+      <li><strong>W6 builds A′, M, E and F</strong>, citing this run. Two proposed components (Dialog, Menu) may
+        be built local; neither may be minted into the registry here.</li>
+      <li><strong><code>minWidth</code> 800 → 850</strong> in <code>ui/src-tauri/tauri.conf.json</code>. Not a
+        design artifact, so this run could not change it — W6, and the epic's WebDriver row is the only thing
+        that can confirm it.</li>
+      <li><strong>A cross-year timestamp overruns cell 1 by 7.2px.</strong> DEC-34's escape is unavailable —
+        the detail pane shows no timestamp, so the full value has no named route. W6 at build, or the
+        flow-detail run.</li>
+      <li><strong>A flow change worth making:</strong> render-and-measure belongs at stage 1, not at round 12.
+        Every defect in this WU that would have reached built code came from a round that rendered the mockup;
+        the rounds that only read prose found defects the editing had itself introduced.</li>
+    </ul>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
